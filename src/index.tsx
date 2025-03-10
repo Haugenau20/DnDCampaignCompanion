@@ -40,7 +40,7 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <ThemeProvider>
-      <BrowserRouter basename="/DnDRecap">
+      <BrowserRouter>
         <NavigationProvider>
           <RouterWrapper />
         </NavigationProvider>
