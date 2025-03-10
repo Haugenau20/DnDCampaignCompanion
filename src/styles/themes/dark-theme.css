@@ -1,0 +1,733 @@
+/* src/styles/themes/dark-theme.css */
+
+/* Apply styles only when data-theme="dark" is set */
+[data-theme="dark"] {
+  /* Semantic aliases for theme variables */
+  --dark-bg: var(--color-background-primary);
+  --dark-bg-secondary: var(--color-background-secondary);
+  --dark-bg-accent: var(--color-background-accent);
+  --dark-text: var(--color-text-primary);
+  --dark-text-secondary: var(--color-text-secondary);
+  --dark-accent: var(--color-accent);
+  --dark-primary: var(--color-primary);
+  --dark-card-border: var(--color-card-border);
+  --dark-card-bg: var(--color-card-background);
+  
+  /* Buttons*/
+  --dark-button-primary-bg: var(--color-button-primary-background);
+  --dark-button-primary-text: var(--color-button-primary-text);
+  --dark-button-primary-hover: var(--color-button-primary-hover);
+  --dark-button-secondary-bg: var(--color-button-secondary-background);
+  --dark-button-secondary-text: var(--color-button-secondary-text);
+  --dark-button-secondary-hover: var(--color-button-secondary-hover);
+  --dark-button-link-bg: var(--color-button-link-background);
+  --dark-button-link-text: var(--color-button-link-text);
+  --dark-button-link-hover: var(--color-button-link-hover);
+  --dark-button-outline-bg: var(--color-button-outline-background);
+  --dark-button-outline-text: var(--color-button-outline-text);
+  --dark-button-outline-hover: var(--color-button-outline-hover);
+  --dark-button-outline-border: var(--color-button-outline-border);
+  --dark-button-ghost-bg: var(--color-button-ghost-background);
+  --dark-button-ghost-text: var(--color-button-ghost-text);
+  --dark-button-ghost-hover: var(--color-button-ghost-hover);
+  
+  /* UI-specific aliases */
+  --dark-heading: var(--color-ui-heading);
+  --dark-input-bg: var(--color-ui-inputBackground);
+  --dark-input-border: var(--color-ui-inputBorder);
+  --dark-placeholder: var(--color-ui-inputPlaceholder);
+  --dark-status-general: var(--color-ui-statusGeneral);
+  --dark-status-active: var(--color-ui-statusActive);
+  --dark-status-completed: var(--color-ui-statusCompleted);
+  --dark-status-failed: var(--color-ui-statusFailed);
+  --dark-status-unknown: var(--color-ui-statusUnknown);
+  --dark-status-text: var(--color-ui-statusText);
+  --dark-header-bg: var(--color-ui-headerBackground);
+  --dark-footer-bg: var(--color-ui-footerBackground);
+  --dark-hover-light: var(--color-ui-hoverLight);
+  --dark-hover-medium: var(--color-ui-hoverMedium);
+  --dark-icon-bg: var(--color-ui-iconBackground);
+  --dark-icon-border: var(--color-ui-iconBorder);
+}
+
+/* Base theme styles */
+.dark-theme {
+  background-color: var(--dark-bg);
+  color: var(--dark-text);
+  font-family: var(--font-primary);
+}
+
+.dark-primary {
+  color: var(--dark-primary);
+}
+
+.dark-accent {
+  color: var(--dark-accent);
+}
+
+.dark-bg-secondary {
+  background-color: var(--dark-bg-secondary);
+}
+
+/* Enhanced card styling */
+.dark-card {
+  border: 1px solid var(--dark-card-border);
+  border-radius: var(--border-radius-md);
+  background-color: var(--dark-card-bg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+/* Card hover effect */
+.dark-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Heading styles - Ensure good readability */
+.dark-heading {
+  font-family: var(--font-heading);
+  color: var(--dark-heading);
+  margin-bottom: 0.75rem;
+}
+
+/* ====== Button styles ====== */
+.dark-button {
+  transition: all 0.2s ease;
+  position: relative;
+  font-family: var(--font-primary);
+  font-weight: 500;
+}
+
+.dark-button:hover {
+  background-color: var(--dark-button-primary-hover);
+}
+
+/* Variant-specific button styling */
+.dark-button-primary {
+  background-color: var(--dark-button-primary-bg);
+  color: var(--dark-button-primary-text);
+}
+
+.dark-button-primary:hover {
+  background-color: var(--dark-button-primary-hover); 
+}
+
+.dark-button-secondary {
+  background-color: var(--dark-button-secondary-bg);
+  color: var(--dark-button-secondary-text);
+}
+
+.dark-button-secondary:hover {
+  background-color: var(--dark-button-secondary-hover);
+}
+
+.dark-button-outline {
+  background-color: var(--dark-button-outline-bg);
+  border: 1px solid var(--dark-button-outline-border);
+  color: var(--dark-button-outline-text);
+}
+
+.dark-button-outline:hover {
+  background-color: var(--dark-button-outline-hover); 
+}
+
+.dark-button-ghost {
+  background-color: var(--dark-button-ghost-bg);
+  color: var(--dark-button-ghost-text);
+}
+
+.dark-button-ghost:hover {
+  background-color: var(--dark-button-ghost-hover); 
+}
+
+.dark-button-link {
+  background-color: var(--dark-button-link-bg);
+  color: var(--dark-button-link-text);
+  text-decoration: none;
+}
+
+.dark-button-link:hover {
+  text-decoration: underline;
+  background-color: var(--dark-button-link-hover);
+}
+
+/* Input styles */
+.dark-input {
+  background-color: var(--dark-input-bg);
+  border-color: var(--dark-input-border);
+  color: var(--dark-text);
+}
+
+.dark-input:focus {
+  border-color: var(--color-ui-inputBorderFocus);
+  box-shadow: 0 0 0 2px var(--color-ui-inputRingFocus);
+}
+
+/* Error state */
+.dark-input-error {
+  border-color: var(--color-ui-inputErrorBorder);
+}
+
+.dark-input-error:focus {
+  border-color: var(--color-ui-inputErrorFocus);
+  box-shadow: 0 0 0 2px var(--color-ui-inputErrorRing);
+}
+
+/* Success state */
+.dark-input-success {
+  border-color: var(--color-ui-inputSuccessBorder);
+}
+
+.dark-input-success:focus {
+  border-color: var(--color-ui-inputSuccessFocus);
+  box-shadow: 0 0 0 2px var(--color-ui-inputSuccessRing);
+}
+
+/* Form label */
+.dark-form-label {
+  color: var(--color-ui-formLabelText);
+}
+
+/* Form helper text */
+.dark-form-helper {
+  color: var(--color-ui-formHelperText);
+}
+
+/* Form error text */
+.dark-form-error {
+  color: var(--color-ui-formErrorText);
+}
+
+/* Form success text */
+.dark-form-success {
+  color: var(--color-ui-formSuccessText);
+}
+
+/* Disabled state */
+.dark-input:disabled {
+  background-color: var(--color-ui-formDisabledBg);
+  opacity: 0.7;
+}
+
+.dark-input::placeholder {
+  color: var(--dark-placeholder);
+  opacity: 1;
+}
+
+/* Typography styles */
+.dark-typography {
+  font-family: var(--font-primary);
+  color: var(--dark-text);
+}
+
+.dark-typography-heading {
+  font-family: var(--font-heading);
+  color: var(--dark-heading);
+}
+
+.dark-typography-secondary {
+  color: var(--dark-text-secondary);
+  font-family: var(--font-secondary);
+}
+
+.dark-typography-label {
+  color: var(--dark-text);
+  font-weight: 500;
+}
+
+/* Status indicators */
+.dark-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dark-status-general {
+  color: var(--dark-status-general);
+}
+
+.dark-status-active {
+  color: var(--dark-status-active);
+}
+
+.dark-status-completed {
+  color: var(--dark-status-completed);
+}
+
+.dark-status-failed {
+  color: var(--dark-status-failed);
+}
+
+/* Navigation styles */
+.dark-navigation {
+  background-color: var(--dark-input-bg);
+  border-bottom: 1px solid var(--dark-card-border);
+}
+
+.dark-navigation-item {
+  color: var(--dark-text-secondary);
+  transition: all 0.2s ease;
+}
+
+.dark-navigation-item:hover {
+  color: var(--dark-heading);
+  background-color: var(--dark-hover-light);
+}
+
+.dark-navigation-item-active {
+  color: var(--dark-heading);
+  background-color: var(--dark-hover-medium);
+  font-weight: 500;
+}
+
+/* Header styles */
+.dark-header {
+  background-color: var(--dark-header-bg);
+  color: var(--dark-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.dark-header-title {
+  color: var(--dark-heading);
+  font-family: var(--font-heading);
+}
+
+/* Footer styles */
+.dark-footer {
+  background-color: var(--dark-footer-bg);
+  color: var(--dark-text-secondary);
+}
+
+/* Content area */
+.dark-content {
+  background-color: var(--dark-bg);
+}
+
+/* Search component */
+.dark-search {
+  background-color: var(--dark-input-bg);
+  border: 1px solid var(--dark-card-border);
+  color: var(--dark-text);
+  transition: all 0.2s ease;
+}
+
+.dark-search:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.dark-search-results {
+  background-color: var(--dark-input-bg);
+  border: 1px solid var(--dark-card-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark-search-result {
+  transition: background-color 0.1s ease;
+}
+
+.dark-search-result:hover {
+  background-color: var(--dark-hover-light);
+}
+
+.dark-search-result-selected {
+  background-color: var(--dark-hover-medium);
+}
+
+/* Dropdown component - ensure solid background */
+.dark-dropdown {
+  background-color: var(--dark-input-bg) !important;
+  border: 1px solid var(--dark-card-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  opacity: 1 !important;
+}
+
+.dark-dropdown-item {
+  color: var(--dark-text);
+  transition: background-color 0.1s ease;
+}
+
+.dark-dropdown-item:hover {
+  background-color: var(--dark-hover-light);
+}
+
+.dark-dropdown-item-active {
+  background-color: var(--dark-hover-medium);
+  color: var(--dark-heading);
+}
+
+/* Dialog styles - ensure solid background */
+.dark-dialog {
+  background-color: var(--dark-card-bg);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--dark-card-border);
+}
+
+.dark-dialog-backdrop {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Quest Card styles */
+.dark-quest-card {
+  border-left: 4px solid var(--dark-status-active);
+}
+
+.dark-quest-card-active {
+  border-left: 4px solid var(--dark-status-active);
+}
+
+.dark-quest-card-completed {
+  border-left: 4px solid var(--dark-status-completed);
+}
+
+.dark-quest-card-failed {
+  border-left: 4px solid var(--dark-status-failed);
+}
+
+.dark-progress-container {
+  background-color: var(--dark-bg-secondary);
+}
+
+.dark-progress-bar {
+  background-color: var(--dark-status-active);
+}
+
+.dark-progress-bar-active {
+  background-color: var(--dark-status-active);
+}
+
+.dark-progress-bar-completed {
+  background-color: var(--dark-status-completed);
+}
+
+.dark-progress-bar-failed {
+  background-color: var(--dark-status-failed);
+}
+
+.dark-objective-completed {
+  background-color: var(--dark-status-active);
+  border-color: var(--dark-status-active);
+}
+
+.dark-objective-pending {
+  border-color: var(--dark-bg-secondary);
+}
+
+/* NPC Card styles */
+.dark-npc-card {
+  border-left: 4px solid var(--dark-status-active);
+}
+
+.dark-npc-card-alive {
+  border-left: 4px solid var(--dark-status-completed);
+}
+
+.dark-npc-card-missing {
+  border-left: 4px solid var(--dark-status-unknown);
+}
+
+.dark-npc-card-deceased {
+  border-left: 4px solid var(--dark-status-failed);
+}
+
+.dark-npc-status-alive {
+  color: var(--dark-status-completed);
+}
+
+.dark-npc-status-deceased {
+  color: var(--dark-status-failed);
+}
+
+.dark-npc-status-missing {
+  color: var(--dark-status-unknown);
+}
+
+.dark-npc-status-unknown {
+  color: var(--dark-status-unknown);
+}
+
+.dark-npc-relationship-friendly {
+  color: var(--dark-status-completed);
+}
+
+.dark-npc-relationship-hostile {
+  color: var(--dark-status-failed);
+}
+
+.dark-npc-relationship-neutral {
+  color: var(--dark-text-secondary);
+}
+
+.dark-npc-relationship-unknown {
+  color: var(--dark-text-secondary);
+}
+
+.dark-note {
+  background-color: var(--dark-bg-secondary);
+  border: 1px solid var(--dark-card-border);
+}
+
+/* Location Card styles */
+.dark-location-card {
+  border-left: 4px solid var(--dark-status-active);
+}
+
+.dark-location-card-explored {
+  border-left: 4px solid var(--dark-status-completed);
+}
+
+.dark-location-card-visited {
+  border-left: 4px solid var(--dark-status-unknown);
+}
+
+.dark-location-card-known {
+  border-left: 4px solid var(--dark-text-secondary);
+}
+
+.dark-location-status-explored {
+  color: var(--dark-status-completed);
+}
+
+.dark-location-status-known {
+  color: var(--dark-text-secondary);
+}
+
+.dark-location-status-visited {
+  color: var(--dark-status-unknown);
+}
+
+/* Location type colors */
+.dark-location-type-region {
+  color: var(--color-primary);
+}
+
+.dark-location-type-city {
+  color: var(--color-secondary);
+}
+
+.dark-location-type-town {
+  color: var(--color-accent);
+}
+
+.dark-location-type-village {
+  color: var(--color-accent);
+  opacity: 0.8;
+}
+
+.dark-location-type-dungeon {
+  color: var(--color-ui-statusFailed);
+}
+
+.dark-location-type-landmark {
+  color: var(--color-ui-statusActive);
+}
+
+.dark-location-type-building {
+  color: var(--color-ui-statusGeneral);
+}
+
+.dark-location-type-poi {
+  color: var(--color-ui-statusCompleted);
+}
+
+/* Spinner border colors */
+.dark-spinner-border {
+  border-color: var(--color-ui-inputBorder);
+  border-top-color: var(--color-primary);
+}
+
+/* Divider styles (for hierarchical connections) */
+.dark-divider {
+  border-color: var(--color-card-border);
+}
+
+.dark-tag {
+  background-color: var(--dark-bg-secondary);
+  border: 1px solid var(--dark-card-border);
+}
+
+/* Book Viewer styles - ensure readability with bright text */
+.dark-book {
+  background-color: var(--dark-card-bg);
+  border: 1px solid var(--dark-card-border);
+}
+
+.dark-book-header {
+  background-color: var(--dark-bg-secondary);
+  border-bottom: 1px solid var(--dark-card-border);
+}
+
+.dark-book-nav {
+  background-color: var(--dark-bg-secondary);
+  border-bottom: 1px solid var(--dark-card-border);
+}
+
+.dark-book-content-area {
+  background-color: var(--dark-card-bg);
+  border: 1px solid var(--dark-card-border);
+}
+
+.dark-book-content {
+  font-family: var(--font-primary);
+}
+
+.dark-book-text {
+  color: var(--dark-text);
+  font-family: var(--font-primary);
+}
+
+.dark-book-pagination {
+  background-color: var(--dark-bg-secondary);
+  border-top: 1px solid var(--dark-card-border);
+}
+
+.dark-page-nav-button {
+  background-color: transparent;
+  color: var(--dark-text);
+}
+
+.dark-page-nav-button:hover {
+  background-color: var(--dark-hover-light);
+  color: var(--dark-heading);
+}
+
+.dark-progress-container {
+  background-color: var(--dark-bg-secondary);
+}
+
+.dark-progress-bar {
+  background-color: var(--dark-status-active);
+}
+
+.dark-hint {
+  background-color: var(--dark-bg-secondary);
+  color: var(--dark-text);
+  border: 1px solid var(--dark-card-border);
+}
+
+/* Scrollbar styling */
+.dark-theme::-webkit-scrollbar {
+  width: 10px;
+}
+
+.dark-theme::-webkit-scrollbar-track {
+  background: var(--dark-bg);
+}
+
+.dark-theme::-webkit-scrollbar-thumb {
+  background: var(--dark-card-border);
+  border-radius: 0;
+  border: 2px solid var(--dark-bg);
+}
+
+.dark-theme::-webkit-scrollbar-thumb:hover {
+  background: var(--dark-text-secondary);
+}
+
+/* Rumor Card styles */
+.dark-rumor-card {
+  border-left: 4px solid var(--dark-status-active);
+}
+
+.dark-rumor-card-confirmed {
+  border-left: 4px solid var(--dark-status-completed);
+}
+
+.dark-rumor-card-unconfirmed {
+  border-left: 4px solid var(--dark-status-unknown);
+}
+
+.dark-rumor-card-false {
+  border-left: 4px solid var(--dark-status-failed);
+}
+
+.dark-rumor-status-confirmed {
+  color: var(--dark-status-completed);
+}
+
+.dark-rumor-status-unconfirmed {
+  color: var(--dark-status-unknown);
+}
+
+.dark-rumor-status-false {
+  color: var(--dark-status-failed);
+}
+
+.dark-rumor-status-border-confirmed {
+  border-color: var(--dark-status-completed);
+}
+
+.dark-rumor-status-border-unconfirmed {
+  border-color: var(--dark-status-unknown);
+}
+
+.dark-rumor-status-border-false {
+  border-color: var(--dark-status-failed);
+}
+
+/* Override for Admin Panel to ensure solid background */
+.dark-dialog .dark-card {
+  background-color: var(--dark-card-bg);
+  border: 1px solid var(--dark-card-border);
+}
+
+/* Force solid backgrounds for any transparent elements */
+.dark-theme [class*="dropdown"],
+.dark-theme [class*="menu"],
+.dark-theme [class*="popover"] {
+  background-color: var(--dark-card-bg) !important;
+  opacity: 1 !important;
+}
+
+/* Icon Style */
+.dark-icon-bg {
+  background-color: var(--dark-icon-bg);
+  border: 1px solid var(--dark-icon-border);
+}
+
+/* Selectable Item Style */
+.dark-selectable-item {
+  border: 2px solid transparent;
+  background-color: var(--dark-bg);
+  transition: all 0.2s ease;
+}
+
+.dark-selectable-item:hover {
+  background-color: var(--dark-bg-accent);
+}
+
+.dark-selected-item {
+  background-color: var(--dark-bg-accent);
+  border: 2px solid var(--dark-primary);
+}
+
+.dark-highlighted-item {
+  outline: 2px solid var(--color-primary);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 0 0 2px var(--color-background-primary);
+}
+
+.dark-success-icon-bg {
+  background-color: var(--color-ui-inputSuccessRing);
+  opacity: 0.2;
+}
+
+.dark-success-icon {
+  color: var(--color-ui-formSuccessText);
+}
+
+.dark-error-bg {
+  background-color: var(--color-ui-errorBackground);
+  color: var(--color-ui-statusFailed);
+}
+
+.dark-delete-button {
+  background-color: var(--color-ui-deleteButtonBackground);
+  color: var(--color-ui-statusFailed);
+}
+
+.dark-delete-button:hover {
+  background-color: var(--color-ui-deleteButtonHover);
+}

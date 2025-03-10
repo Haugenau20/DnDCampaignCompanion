@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>D&D Campaign Companion</title>
+    <script>
+        // Store the segment after the GitHub Pages domain
+        const segment = window.location.pathname.slice(1);
+        const l = window.location;
+        // Store query string if present
+        const query = l.search || '';
+        // Store hash if present
+        const hash = l.hash || '';
+        // Build redirect URL
+        const url = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/' +
+            segment.split('/')[0] + '/?route=' + 
+            segment.slice(segment.indexOf('/') + 1) + query + hash;
+        
+        // Redirect to the new URL
+        window.location.href = url;
+    </script>
+</head>
+<body>
+</body>
+</html>

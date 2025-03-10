@@ -1,0 +1,18 @@
+<!-- public/decorative/corner-dragon.svg -->
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <path 
+    d="M10,90 Q30,90 30,70 Q30,50 50,50 Q70,50 70,30 Q70,10 90,10"
+    fill="none"
+    stroke="#8B4513"
+    stroke-width="4"
+    stroke-linecap="round"
+  />
+  <path 
+    d="M20,80 Q35,80 35,65 Q35,50 50,50 Q65,50 65,35 Q65,20 80,20"
+    fill="none"
+    stroke="#DAA520"
+    stroke-width="2"
+    stroke-linecap="round"
+    opacity="0.6"
+  />
+</svg>

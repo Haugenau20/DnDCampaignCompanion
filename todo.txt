@@ -1,0 +1,12 @@
+Implement the full CRUD for all feature pages.
+
+Make completed quests be default hidden with option to expand?
+Make active quests be on the top of the list?
+
+User should be able to change their password.
+
+Fix mobile layout issues on certain pages. (Big update) 
+
+Fix/Implement proper searching
+
+"Add note" and "Edit" button clashes rn

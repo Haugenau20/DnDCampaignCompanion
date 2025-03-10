@@ -1,0 +1,251 @@
+﻿
+DnDRecap
+│   ├── src
+│   │   ├── utils
+│   │   │   ├── __dev__
+│   │   │   │   └── sessionTester.ts
+│   │   │   ├── user-utils.ts
+│   │   │   ├── theme-utils.ts
+│   │   │   ├── search.ts
+│   │   │   ├── navigation.ts
+│   │   │   └── export-utils.ts
+│   │   ├── types
+│   │   │   ├── user.ts
+│   │   │   ├── theme.ts
+│   │   │   ├── story.ts
+│   │   │   ├── search.ts
+│   │   │   ├── saga.ts
+│   │   │   ├── rumor.ts
+│   │   │   ├── quest.ts
+│   │   │   ├── npc.ts
+│   │   │   └── location.ts
+│   │   ├── themes
+│   │   │   ├── medievalTheme.ts
+│   │   │   ├── lightTheme.ts
+│   │   │   ├── index.ts
+│   │   │   └── darkTheme.ts
+│   │   ├── test-utils
+│   │   │   └── test-utils.tsx
+│   │   ├── styles
+│   │   │   ├── themes
+│   │   │   │   ├── medieval-theme.css
+│   │   │   │   ├── light-theme.css
+│   │   │   │   └── dark-theme.css
+│   │   │   └── globals.css
+│   │   ├── services
+│   │   │   ├── search
+│   │   │   │   └── SearchService.ts
+│   │   │   ├── firebase
+│   │   │   │   └── FirebaseService.ts
+│   │   │   └── index.ts
+│   │   ├── scripts
+│   │   │   ├── migrateToFirebase.ts
+│   │   │   └── migrateNewChapter.ts
+│   │   ├── pages
+│   │   │   ├── story
+│   │   │   │   ├── StorySelectionPage.tsx
+│   │   │   │   ├── StoryPage.tsx
+│   │   │   │   ├── SagaPage.tsx
+│   │   │   │   ├── SagaEditPage.tsx
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ChaptersPage.tsx
+│   │   │   │   ├── ChapterEditPage.tsx
+│   │   │   │   └── ChapterCreatePage.tsx
+│   │   │   ├── rumors
+│   │   │   │   ├── RumorsPage.tsx
+│   │   │   │   ├── RumorEditPage.tsx
+│   │   │   │   ├── RumorCreatePage.tsx
+│   │   │   │   └── index.ts
+│   │   │   ├── quests
+│   │   │   │   ├── QuestsPage.tsx
+│   │   │   │   ├── QuestEditPage.tsx
+│   │   │   │   ├── QuestCreatePage.tsx
+│   │   │   │   └── index.ts
+│   │   │   ├── npcs
+│   │   │   │   ├── NPCsPage.tsx
+│   │   │   │   ├── NPCsEditPage.tsx
+│   │   │   │   ├── NPCsCreatePage.tsx
+│   │   │   │   └── index.ts
+│   │   │   ├── locations
+│   │   │   │   ├── LocationsPage.tsx
+│   │   │   │   ├── LocationEditPage.tsx
+│   │   │   │   ├── LocationCreatePage.tsx
+│   │   │   │   └── index.ts
+│   │   │   ├── PrivacyPolicyPage.tsx
+│   │   │   ├── HomePage.tsx
+│   │   │   └── ContactPage.tsx
+│   │   ├── hooks
+│   │   │   ├── useSessionManager.ts
+│   │   │   ├── useSearch.ts
+│   │   │   ├── useRumorData.ts
+│   │   │   ├── useQuests.ts
+│   │   │   ├── useNPCData.ts
+│   │   │   ├── useNavigation.ts
+│   │   │   ├── useLocationData.ts
+│   │   │   ├── useFirebaseData.ts
+│   │   │   └── useChapterData.ts
+│   │   ├── context
+│   │   │   ├── ThemeContext.tsx
+│   │   │   ├── StoryContext.tsx
+│   │   │   ├── SearchContext.tsx
+│   │   │   ├── RumorContext.tsx
+│   │   │   ├── QuestContext.tsx
+│   │   │   ├── NPCContext.tsx
+│   │   │   ├── NavigationContext.tsx
+│   │   │   ├── LocationContext.tsx
+│   │   │   └── FirebaseContext.tsx
+│   │   ├── constants
+│   │   │   └── time.ts
+│   │   ├── config
+│   │   │   └── buildConfig.ts
+│   │   ├── components
+│   │   │   ├── shared
+│   │   │   │   ├── ThemeSelector.tsx
+│   │   │   │   ├── SearchBar.tsx
+│   │   │   │   └── ErrorBoundary.tsx
+│   │   │   ├── layout
+│   │   │   │   ├── sidebars
+│   │   │   │   │   ├── StorySidebar.tsx
+│   │   │   │   │   └── QuestSidebar.tsx
+│   │   │   │   ├── Sidebar.tsx
+│   │   │   │   ├── Navigation.tsx
+│   │   │   │   ├── Layout.tsx
+│   │   │   │   ├── Header.tsx
+│   │   │   │   ├── Footer.tsx
+│   │   │   │   └── Breadcrumb.tsx
+│   │   │   ├── features
+│   │   │   │   ├── story
+│   │   │   │   │   ├── books
+│   │   │   │   │   │   ├── index.ts
+│   │   │   │   │   │   ├── BookRibbed.tsx
+│   │   │   │   │   │   ├── BookRed.tsx
+│   │   │   │   │   │   ├── BookPurple.tsx
+│   │   │   │   │   │   ├── BookOrnate.tsx
+│   │   │   │   │   │   ├── BookManuscript.tsx
+│   │   │   │   │   │   ├── BookJeweled.tsx
+│   │   │   │   │   │   ├── BookGreen.tsx
+│   │   │   │   │   │   ├── BookClasped.tsx
+│   │   │   │   │   │   ├── BookBrown.tsx
+│   │   │   │   │   │   ├── BookBlue.tsx
+│   │   │   │   │   │   └── BookAged.tsx
+│   │   │   │   │   ├── TableView.tsx
+│   │   │   │   │   ├── SlidingChapters.tsx
+│   │   │   │   │   ├── LatestChapter.tsx
+│   │   │   │   │   ├── DeleteConfirmationDialog.tsx
+│   │   │   │   │   ├── ChapterForm.tsx
+│   │   │   │   │   ├── BookViewer.tsx
+│   │   │   │   │   └── BookshelfView.tsx
+│   │   │   │   ├── rumors
+│   │   │   │   │   ├── RumorForm.tsx
+│   │   │   │   │   ├── RumorDirectory.tsx
+│   │   │   │   │   ├── RumorCard.tsx
+│   │   │   │   │   ├── RumorBatchActions.tsx
+│   │   │   │   │   ├── ConvertToQuestDialog.tsx
+│   │   │   │   │   └── CombineRumorsDialog.tsx
+│   │   │   │   ├── quests
+│   │   │   │   │   ├── QuestTracker.tsx
+│   │   │   │   │   ├── QuestFormSections.tsx
+│   │   │   │   │   ├── QuestEditForm.tsx
+│   │   │   │   │   ├── QuestCreateForm.tsx
+│   │   │   │   │   └── QuestCard.tsx
+│   │   │   │   ├── npcs
+│   │   │   │   │   ├── NPCLegend.tsx
+│   │   │   │   │   ├── NPCForm.tsx
+│   │   │   │   │   ├── NPCEditForm.tsx
+│   │   │   │   │   ├── NPCDirectory.tsx
+│   │   │   │   │   └── NPCCard.tsx
+│   │   │   │   ├── locations
+│   │   │   │   │   ├── LocationFormSections.tsx
+│   │   │   │   │   ├── LocationEditForm.tsx
+│   │   │   │   │   ├── LocationDirectory.tsx
+│   │   │   │   │   ├── LocationCreateForm.tsx
+│   │   │   │   │   ├── LocationCombobox.tsx
+│   │   │   │   │   └── LocationCard.tsx
+│   │   │   │   ├── contact
+│   │   │   │   │   └── ContactForm.tsx
+│   │   │   │   └── auth
+│   │   │   │       ├── UserProfileButton.tsx
+│   │   │   │       ├── UserProfile.tsx
+│   │   │   │       ├── SignInForm.tsx
+│   │   │   │       ├── SessionTimeoutWarning.tsx
+│   │   │   │       ├── SessionManager.tsx
+│   │   │   │       ├── RegistrationForm.tsx
+│   │   │   │       ├── PrivacyNotice.tsx
+│   │   │   │       └── AdminPanel.tsx
+│   │   │   └── core
+│   │   │       ├── __tests__
+│   │   │       │   ├── Card.test.tsx
+│   │   │       │   └── Button.test.tsx
+│   │   │       ├── Typography.tsx
+│   │   │       ├── Input.tsx
+│   │   │       ├── Dialog.tsx
+│   │   │       ├── Card.tsx
+│   │   │       └── Button.tsx
+│   │   ├── __mocks__
+│   │   │   ├── mockData.ts
+│   │   │   └── fileMock.ts
+│   │   ├── setupTests.ts
+│   │   ├── index.tsx
+│   │   └── App.tsx
+│   ├── public
+│   │   ├── decorative
+│   │   │   ├── scroll-end.svg
+│   │   │   ├── parchment-texture.svg
+│   │   │   └── corner-dragon.svg
+│   │   ├── manifest.json
+│   │   ├── index.html
+│   │   └── 404.html
+│   ├── functions
+│   │   ├── src
+│   │   │   ├── index.ts
+│   │   │   └── contact.ts
+│   │   ├── lib
+│   │   │   ├── index.js.map
+│   │   │   ├── index.js
+│   │   │   ├── contact.js.map
+│   │   │   └── contact.js
+│   │   ├── tsconfig.json
+│   │   ├── tsconfig.dev.json
+│   │   ├── package-lock.json
+│   │   ├── package.json
+│   │   ├── .gitignore
+│   │   └── .eslintrc.js
+│   ├── docs
+│   │   ├── technical
+│   │   │   ├── implementation-guides
+│   │   │   │   └── authentication-flow.md
+│   │   │   └── api
+│   │   ├── requirements
+│   │   │   ├── user-management.md
+│   │   │   ├── rumor-management.md
+│   │   │   ├── public-sample-data.md
+│   │   │   └── chapter-management.md
+│   │   ├── futureThoughts
+│   │   ├── design
+│   │   │   ├── ui
+│   │   │   │   └── page-layouts
+│   │   │   │       └── rumors.md
+│   │   │   └── architecture
+│   │   └── README.md
+│   ├── .github
+│   │   └── workflows
+│   │       └── npm-publish-github-packages.yml
+│   ├── tsconfig.json
+│   ├── todo.txt
+│   ├── tailwind.config.js
+│   ├── saga.txt
+│   ├── recaps.txt
+│   ├── README.md
+│   ├── projectStructure.txt
+│   ├── postcss.config.js
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── LICENSE
+│   ├── jest.config.ts
+│   ├── firebase.json
+│   ├── dirTree.ps1
+│   ├── copyfiles.ps1
+│   ├── copyFeatureFiles.ps1
+│   ├── chapter.json
+│   ├── .gitignore
+│   └── .firebaserc

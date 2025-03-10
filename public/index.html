@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="D&D Campaign Companion - Track your adventures, quests, and NPCs"
+    />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <title>D&D Campaign Companion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=MedievalSharp&family=Crimson+Text:wght@400;600&family=Share+Tech+Mono&family=Fondamento&family=Gentium+Book+Basic:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+      // Redirect script for client-side routing
+      (function() {
+        // Check if we need to redirect
+        const redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        
+        // If we have a stored route
+        if (redirect && redirect !== location.href) {
+          // Save the route parameter to session storage
+          const urlParams = new URLSearchParams(window.location.search);
+          const route = urlParams.get('route');
+          if (route) {
+            // Remove the route parameter and redirect to the actual route
+            window.history.replaceState(null, null, '/' + redirect.split('/')[0] + '/' + route);
+          }
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

@@ -1,0 +1,8 @@
+{
+    "short_name": "D&D Companion",
+    "name": "D&D Campaign Companion",
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#000000",
+    "background_color": "#ffffff"
+  }
