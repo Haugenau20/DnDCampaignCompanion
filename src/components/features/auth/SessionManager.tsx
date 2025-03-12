@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import useSessionManager from '../../../hooks/useSessionManager';
 import { useGroups } from '../../../context/firebase';
 import { useTheme } from '../../../context/ThemeContext';
@@ -16,18 +16,28 @@ const SessionManager: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const { activeGroupUserProfile } = useGroups();
   const { setTheme } = useTheme();
   
-  // Sync theme from user profile when signed in
+  // Use a ref to track if theme has been applied from profile
+  const initialThemeApplied = useRef(false);
+  
+  // Sync theme from user profile when signed in, but only once after login
   useEffect(() => {
-    if (activeGroupUserProfile?.preferences?.theme) {
+    if (activeGroupUserProfile?.preferences?.theme && !initialThemeApplied.current) {
       const savedTheme = activeGroupUserProfile.preferences.theme;
       
       // Check if the saved theme is a valid ThemeName
       if (isValidTheme(savedTheme)) {
         console.log('Applying saved theme preference:', savedTheme);
         setTheme(savedTheme);
+        // Mark that we've applied the initial theme
+        initialThemeApplied.current = true;
       } else {
         console.warn('Invalid theme found in user preferences:', savedTheme);
       }
+    }
+    
+    // Reset the flag when user profile becomes null (logout)
+    if (!activeGroupUserProfile) {
+      initialThemeApplied.current = false;
     }
   }, [activeGroupUserProfile, setTheme]);
   

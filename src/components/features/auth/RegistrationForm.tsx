@@ -36,6 +36,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [groupId, setGroupId] = useState<string | null>(null);
 
   const { validateUsername } = useUser();
   const { signUpWithToken, validateToken} = useInvitations();
@@ -45,8 +46,14 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const token = query.get('token');
+    const groupIdParam = query.get('groupId');
+    
     if (token) {
       setInviteToken(token);
+    }
+    
+    if (groupIdParam) {
+      setGroupId(groupIdParam);
     }
   }, [location]);
 
@@ -123,33 +130,34 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
+  
     // Validate token is valid
     if (!tokenVerified) {
       setError("Invalid or expired invitation token");
       return;
     }
-
+  
     // Validate email
     if (!email || !isEmailValid(email)) {
       setError("Please enter a valid email address");
       return;
     }
-
+  
     // Validate passwords match
     if (password !== confirmPassword) {
       setError("Passwords don't match");
       return;
     }
-
+  
     // Validate username is valid and available
     if (!usernameValid || !usernameAvailable) {
       setError("Please choose a valid and available username");
       return;
     }
-
+  
     setLoading(true);
     try {
+      // Pass the groupId from the URL
       await signUpWithToken(inviteToken, email, password, username);
       if (onSuccess) onSuccess();
     } catch (err) {

@@ -103,7 +103,7 @@ import {
      * @returns Validation result object
      */
     public async validateGroupUsername(groupId: string, username: string): Promise<UsernameValidationResult> {
-      // Check username format
+      // Check username format first
       const usernameRegex = /^[a-zA-Z0-9æøåÆØÅ_-]{3,20}$/;
       if (!usernameRegex.test(username)) {
         return {
@@ -112,13 +112,30 @@ import {
         };
       }
       
-      // Check availability in group
-      const isAvailable = await this.isUsernameAvailableInGroup(groupId, username);
-      
-      return {
-        isValid: true,
-        isAvailable
-      };
+      try {
+        // Check availability in group
+        const isAvailable = await this.isUsernameAvailableInGroup(groupId, username);
+        
+        if (!isAvailable) {
+          // Return a specific error for taken usernames
+          return {
+            isValid: true,
+            isAvailable: false,
+            error: 'Username already taken'
+          };
+        }
+        
+        // Username is valid and available
+        return {
+          isValid: true,
+          isAvailable: true
+        };
+      } catch (err) {
+        return {
+          isValid: false,
+          error: 'Error checking username availability'
+        };
+      }
     }
   
     /**

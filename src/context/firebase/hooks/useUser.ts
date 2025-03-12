@@ -64,14 +64,22 @@ export function useUser() {
     try {
       setError(null);
       
-      if (!activeGroupId) {
-        throw new Error('No active group selected');
+      // Get groupId from URL or use activeGroupId
+      const urlParams = new URLSearchParams(window.location.search);
+      const groupIdFromUrl = urlParams.get('groupId');
+      const groupId = groupIdFromUrl || activeGroupId;
+      
+      if (!groupId) {
+        throw new Error('No group ID available');
       }
       
-      return await firebaseServices.user.validateGroupUsername(activeGroupId, username);
+      return await firebaseServices.user.validateGroupUsername(groupId, username);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred validating username');
-      throw err;
+      console.error('Username validation error:', err);
+      return {
+        isValid: false,
+        error: 'Error checking username'
+      };
     }
   }, [activeGroupId, setError]);
 

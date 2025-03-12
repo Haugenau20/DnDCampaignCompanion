@@ -270,7 +270,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
       setSaving(true);
       setError(null);
       
-      // Update theme context
+      // Update theme context immediately
       setTheme(themeName as any);
       setThemeDropdownOpen(false);
       

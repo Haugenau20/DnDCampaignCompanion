@@ -209,7 +209,7 @@ export const SearchBar: React.FC = () => {
         <SearchIcon 
           className={clsx(
             "absolute left-3 top-1/2 transform -translate-y-1/2",
-            `${themePrefix}-typography-secondary`
+            `${themePrefix}-primary`
           )}
           size={18}
         />

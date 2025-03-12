@@ -21,12 +21,6 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 
-// Helper function to generate registration link
-const generateRegistrationLink = (token: string): string => {
-  const baseUrl = window.location.origin + window.location.pathname;
-  return `${baseUrl}?register=true&token=${token}`;
-};
-
 const TokenManagementView: React.FC = () => {
   const { 
     generateRegistrationToken,
@@ -34,7 +28,7 @@ const TokenManagementView: React.FC = () => {
     deleteRegistrationToken
   } = useInvitations();
   
-  const { activeGroup } = useGroups();
+  const { activeGroup, activeGroupId } = useGroups();
   const { theme } = useTheme();
   const themePrefix = theme.name;
   
@@ -58,6 +52,13 @@ const TokenManagementView: React.FC = () => {
   });
   
   const [copySuccess, setCopySuccess] = useState(false);
+
+  // Helper function to generate registration link
+  const generateRegistrationLink = (token: string): string => {
+    const baseUrl = window.location.origin + window.location.pathname;
+    // Include the groupId in the link - this is crucial for the token validation to work
+    return `${baseUrl}?register=true&token=${token}&groupId=${activeGroupId}`;
+  };
 
   // Load tokens on mount
   useEffect(() => {

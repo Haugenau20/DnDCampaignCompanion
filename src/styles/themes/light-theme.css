@@ -314,6 +314,7 @@
 .light-search {
   background-color: var(--light-input-bg);
   border: 1px solid var(--light-card-border);
+  color: var(--light-text);
   transition: all 0.2s ease;
 }
 

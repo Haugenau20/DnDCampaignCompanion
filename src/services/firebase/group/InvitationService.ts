@@ -79,33 +79,36 @@ import {
       return token;
     }
   
-    /**
-     * Validate a registration token and get its associated group ID
-     * @param token The token to validate
-     * @returns Object with validation result and group ID
-     */
-    public async validateRegistrationToken(token: string): Promise<{isValid: boolean, groupId?: string}> {
-      // Query all groups' registration tokens using a collection group query
-      const q = query(
-        collectionGroup(this.db, 'registrationTokens'),
-        where('token', '==', token),
-        where('used', '==', false),
-        limit(1)
-      );
+  /**
+   * Validate a registration token and get its associated group ID
+   * @param token The token to validate
+   * @returns Object with validation result and group ID
+   */
+  public async validateRegistrationToken(token: string): Promise<{isValid: boolean, groupId?: string}> {
+    try {
+      // Extract group ID from URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const groupId = urlParams.get('groupId');
       
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
+      // If no groupId provided, token cannot be validated
+      if (!groupId) {
         return { isValid: false };
       }
       
-      // Extract group ID from the document path (format: groups/{groupId}/registrationTokens/{tokenId})
-      const docPath = snapshot.docs[0].ref.path;
-      const pathParts = docPath.split('/');
-      const groupId = pathParts[1]; // Index 1 should be the groupId
+      // Direct document lookup with groupId and token
+      const docRef = doc(this.db, 'groups', groupId, 'registrationTokens', token);
+      const docSnap = await getDoc(docRef);
       
-      return { isValid: true, groupId };
+      // Check if token exists and hasn't been used
+      if (docSnap.exists() && docSnap.data().used !== true) {
+        return { isValid: true, groupId };
+      }
+      
+      return { isValid: false };
+    } catch (error) {
+      return { isValid: false };
     }
+  }
   
     /**
      * Get registration tokens for a specific group (admin only)
@@ -191,26 +194,46 @@ import {
   
     /**
      * Sign up with an invite token and user-provided email
+     * @param token Registration token for the group
+     * @param email User's email address
+     * @param password User's password
+     * @param username Username to use in the group
+     * @param groupId Optional groupId (if already known from URL)
+     * @returns The created user
      */
     public async signUpWithToken(
       token: string, 
       email: string, 
       password: string, 
-      username: string
+      username: string,
+      groupId?: string
     ): Promise<any> {
-      // First, validate the token and get the group ID
-      const { isValid, groupId } = await this.validateRegistrationToken(token);
-      
-      if (!isValid || !groupId) {
-        throw new Error('Invalid or expired invitation token');
+      // First, validate the token and get the group ID if not provided
+      let targetGroupId = groupId;
+      if (!targetGroupId) {
+        const { isValid, groupId: validatedGroupId } = await this.validateRegistrationToken(token);
+        
+        if (!isValid || !validatedGroupId) {
+          throw new Error('Invalid or expired invitation token');
+        }
+        
+        targetGroupId = validatedGroupId;
+      } else {
+        // If groupId was provided, still verify the token is valid
+        const docRef = doc(this.db, 'groups', targetGroupId, 'registrationTokens', token);
+        const docSnap = await getDoc(docRef);
+        
+        if (!docSnap.exists() || docSnap.data().used === true) {
+          throw new Error('Invalid or expired invitation token');
+        }
       }
-      
+
       // Validate the username is available in this group
-      const isUsernameAvailable = await this.userService.isUsernameAvailableInGroup(groupId, username);
+      const isUsernameAvailable = await this.userService.isUsernameAvailableInGroup(targetGroupId, username);
       if (!isUsernameAvailable) {
         throw new Error('Username is already taken in this group');
       }
-  
+
       try {
         // Create Firebase Auth user first (outside the transaction)
         const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
@@ -225,14 +248,14 @@ import {
           transaction.set(globalUserDocRef, {
             id: user.uid,
             email: email,
-            groups: [groupId],
-            activeGroupId: groupId,
+            groups: [targetGroupId],
+            activeGroupId: targetGroupId,
             lastLogin: now,
             createdAt: now
           });
           
           // Create group-specific user profile
-          const groupUserDocRef = doc(this.db, 'groups', groupId, 'users', user.uid);
+          const groupUserDocRef = doc(this.db, 'groups', targetGroupId, 'users', user.uid);
           transaction.set(groupUserDocRef, {
             userId: user.uid,
             username: username,
@@ -245,7 +268,7 @@ import {
           
           // Create username reservation in group
           const usernameLower = username.toLowerCase();
-          const usernameDocRef = doc(this.db, 'groups', groupId, 'usernames', usernameLower);
+          const usernameDocRef = doc(this.db, 'groups', targetGroupId, 'usernames', usernameLower);
           transaction.set(usernameDocRef, {
             userId: user.uid,
             originalUsername: username,
@@ -253,7 +276,7 @@ import {
           });
           
           // Mark token as used
-          const tokenDocRef = doc(this.db, 'groups', groupId, 'registrationTokens', token);
+          const tokenDocRef = doc(this.db, 'groups', targetGroupId, 'registrationTokens', token);
           transaction.update(tokenDocRef, {
             used: true,
             usedAt: now,
@@ -262,7 +285,7 @@ import {
         });
         
         // Set the active group context
-        this.setActiveGroup(groupId);
+        this.setActiveGroup(targetGroupId);
         
         return user;
       } catch (error) {
