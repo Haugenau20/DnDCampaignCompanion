@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Quest } from '../types/quest';
 import { useFirebaseData } from './useFirebaseData';
-import { useFirebase } from '../context/FirebaseContext';
+import { useAuth } from '../context/firebase';
 
 /**
  * Hook for managing Quest data fetching and state
@@ -11,7 +11,7 @@ import { useFirebase } from '../context/FirebaseContext';
 export const useQuestData = () => {
   const [quests, setQuests] = useState<Quest[]>([]);
   const { getData, loading, error, data } = useFirebaseData<Quest>({ collection: 'quests' });
-  const { user } = useFirebase();
+  const { user } = useAuth();
 
   /**
    * Fetch Quests from Firebase

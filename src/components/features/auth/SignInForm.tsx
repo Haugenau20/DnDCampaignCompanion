@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useFirebase } from '../../../context/FirebaseContext';
+import { useAuth } from '../../../context/firebase';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';
 import Button from '../../core/Button';
@@ -23,7 +23,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess }) => {
   const { theme } = useTheme();
   const themePrefix = theme.name;
 
-  const { signIn } = useFirebase();
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

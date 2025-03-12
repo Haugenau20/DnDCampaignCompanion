@@ -6,7 +6,7 @@ import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import RumorForm from '../../components/features/rumors/RumorForm';
 import { useRumors } from '../../context/RumorContext';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import { useNavigation } from '../../hooks/useNavigation';
 import { useTheme } from '../../context/ThemeContext';
 import clsx from 'clsx';
@@ -16,7 +16,7 @@ const RumorEditPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
   const { rumorId } = useParams<{ rumorId: string }>();
   const { rumors, isLoading, error } = useRumors();
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const { theme } = useTheme();
   const themePrefix = theme.name;
   

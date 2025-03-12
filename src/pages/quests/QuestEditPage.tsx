@@ -6,7 +6,7 @@ import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import QuestEditForm from '../../components/features/quests/QuestEditForm';
 import { useQuests } from '../../context/QuestContext';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import { useNavigation } from '../../context/NavigationContext';
 import { useTheme } from '../../context/ThemeContext';
 import clsx from 'clsx';
@@ -16,7 +16,7 @@ const QuestEditPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
   const { questId } = useParams<{ questId: string }>();
   const { quests, loading, error, refreshQuests } = useQuests();
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const { theme } = useTheme();
   const themePrefix = theme.name;
   

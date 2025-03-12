@@ -5,7 +5,7 @@ import Card from '../../core/Card';
 import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import Input from '../../core/Input';
-import { useFirebase } from '../../../context/FirebaseContext';
+import { useAuth } from '../../../context/firebase';
 import { useRumors } from '../../../context/RumorContext';
 import { useNavigation } from '../../../hooks/useNavigation';
 import { useNPCs } from '../../../context/NPCContext';
@@ -49,7 +49,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [noteInput, setNoteInput] = useState('');
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const { updateRumorNote, updateRumorStatus, convertToQuest } = useRumors();
   const { navigateToPage, createPath } = useNavigation();
   const { getNPCById } = useNPCs();

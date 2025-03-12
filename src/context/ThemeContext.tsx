@@ -8,34 +8,58 @@ import '../styles/themes/medieval-theme.css';
 import '../styles/themes/light-theme.css';
 import '../styles/themes/dark-theme.css';
 
-const ThemeContext = createContext<ThemeContextState | undefined>(undefined);
+// Default theme that will always be available
+export const defaultTheme = themes.light;
+
+// Create context with guaranteed default values
+const ThemeContext = createContext<ThemeContextState>({
+  theme: defaultTheme,
+  setTheme: () => {} // No-op function as default
+});
 
 const THEME_STORAGE_KEY = 'medieval-companion-theme';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize theme from localStorage or light
-  const [currentTheme, setCurrentTheme] = useState<Theme>(() => {
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    return themes[savedTheme as ThemeName] || themes.light;
-  });
+  // Start with the theme from localStorage if available, defaultTheme otherwise
+  const savedThemeName = localStorage.getItem(THEME_STORAGE_KEY);
+  const initialTheme = savedThemeName && themes[savedThemeName as ThemeName] 
+    ? themes[savedThemeName as ThemeName] 
+    : defaultTheme;
+    
+  // Initialize with saved theme right away to prevent flashing
+  const [currentTheme, setCurrentTheme] = useState<Theme>(initialTheme);
+  
+  // Apply saved theme immediately on component mount
+  useEffect(() => {
+    applyThemeToDOM(currentTheme);
+  }, []);
 
   // Update localStorage and CSS variables when theme changes
   useEffect(() => {
-    localStorage.setItem(THEME_STORAGE_KEY, currentTheme.name);
-    
-    // Update CSS variables
-    const root = document.documentElement;
-    
-    // Set theme name as data attribute for global styling
-    root.dataset.theme = currentTheme.name;
-    
-    // Set theme class on body to enable theme-specific selectors
-    document.body.className = '';
-    document.body.classList.add(`${currentTheme.name}-theme`);
-    
-    // Apply all theme values to CSS variables
-    applyThemeToCssVariables(currentTheme, root);
+    applyThemeToDOM(currentTheme);
   }, [currentTheme]);
+  
+  // Separate function to apply theme to DOM
+  const applyThemeToDOM = (theme: Theme) => {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme.name);
+      
+      // Update CSS variables
+      const root = document.documentElement;
+      
+      // Set theme name as data attribute for global styling
+      root.dataset.theme = theme.name;
+      
+      // Set theme class on body to enable theme-specific selectors
+      document.body.className = '';
+      document.body.classList.add(`${theme.name}-theme`);
+      
+      // Apply all theme values to CSS variables
+      applyThemeToCssVariables(theme, root);
+    } catch (error) {
+      console.error('Error applying theme:', error);
+    }
+  };
 
   // Separate function to apply theme values to CSS variables for readability
   const applyThemeToCssVariables = (theme: Theme, root: HTMLElement) => {
@@ -78,20 +102,46 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const setTheme = (themeName: ThemeName) => {
-    setCurrentTheme(themes[themeName]);
+    try {
+      setCurrentTheme(themes[themeName] || defaultTheme);
+    } catch (error) {
+      console.error('Error setting theme:', error);
+      setCurrentTheme(defaultTheme);
+    }
+  };
+
+  // Create context value with guaranteed theme
+  const contextValue = {
+    theme: currentTheme || defaultTheme, // Ensure theme is never undefined
+    setTheme
   };
 
   return (
-    <ThemeContext.Provider value={{ theme: currentTheme, setTheme }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );
 };
 
-export const useTheme = () => {
+/**
+ * Use the theme context with guaranteed fallback to default theme
+ * This hook will never return undefined, protecting components from errors
+ */
+export const useTheme = (): ThemeContextState => {
   const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+  
+  // If context is somehow unavailable, return default
+  if (!context) {
+    console.warn('Theme context not available, using default');
+    return { 
+      theme: defaultTheme, 
+      setTheme: () => {} 
+    };
   }
-  return context;
+  
+  // Ensure theme is never undefined
+  return {
+    ...context,
+    theme: context.theme || defaultTheme
+  };
 };

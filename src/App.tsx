@@ -6,7 +6,7 @@ import { SearchProvider } from './context/SearchContext';
 import { NPCProvider } from './context/NPCContext';
 import { StoryProvider } from './context/StoryContext';
 import { LocationProvider } from './context/LocationContext';
-import { FirebaseProvider } from './context/FirebaseContext';
+import { FirebaseProvider } from './context/firebase/FirebaseContext';
 import { RumorProvider } from './context/RumorContext';
 import { QuestProvider } from './context/QuestContext';
 import ErrorBoundary from './components/shared/ErrorBoundary';
@@ -14,6 +14,7 @@ import Layout from './components/layout/Layout';
 import SessionTimeoutWarning from './components/features/auth/SessionTimeoutWarning';
 import SessionManager from './components/features/auth/SessionManager';
 import PrivacyNotice from './components/features/auth/PrivacyNotice';
+import GroupSelectorModal from './components/features/groups/GroupSelectorModal';
 
 // Import pages
 import HomePage from './pages/HomePage';
@@ -45,34 +46,35 @@ const App: React.FC = () => {
                   <RumorProvider>
                     <QuestProvider>
                       <SearchProvider>
-                      <Layout>
-                        <SessionTimeoutWarning />
-                        <PrivacyNotice />
-                        <Routes>
-                          <Route path="/" element={<HomePage />} />
-                          <Route path="/story" element={<StorySelectionPage />} />
-                          <Route path="/story/chapters" element={<ChaptersPage />} />
-                          <Route path="/story/chapters/:chapterId" element={<StoryPage />} />
-                          <Route path="/story/saga" element={<SagaPage />} />
-                          <Route path="/story/saga/edit" element={<SagaEditPage />} />
-                          <Route path="/story/chapters/create" element={<ChapterCreatePage />} />
-                          <Route path="/story/chapters/edit/:chapterId" element={<ChapterEditPage />} />
-                          <Route path="/quests" element={<QuestsPage />} />
-                          <Route path="/quests/create" element={<QuestCreatePage />} />
-                          <Route path="/quests/edit/:questId" element={<QuestEditPage />} />
-                          <Route path="/npcs" element={<NPCsPage />} />
-                          <Route path="/npcs/create" element={<NPCsCreatePage />} />
-                          <Route path="/npcs/edit/:npcId" element={<NPCsEditPage />} />
-                          <Route path="/locations" element={<LocationsPage />} />
-                          <Route path="/locations/create" element={<LocationCreatePage />} />
-                          <Route path="/locations/edit/:locationId" element={<LocationEditPage />} />
-                          <Route path="/rumors" element={<RumorsPage />} />
-                          <Route path="/rumors/create" element={<RumorCreatePage />} />
-                          <Route path="/rumors/edit/:rumorId" element={<RumorEditPage />} />
-                          <Route path="/privacy" element={<PrivacyPolicyPage />} />
-                          <Route path="/contact" element={<ContactPage />} />
-                        </Routes>
-                      </Layout>
+                        <Layout>
+                          <SessionTimeoutWarning />
+                          <PrivacyNotice />
+                          <GroupSelectorModal />
+                          <Routes>
+                            <Route path="/" element={<HomePage />} />
+                            <Route path="/story" element={<StorySelectionPage />} />
+                            <Route path="/story/chapters" element={<ChaptersPage />} />
+                            <Route path="/story/chapters/:chapterId" element={<StoryPage />} />
+                            <Route path="/story/saga" element={<SagaPage />} />
+                            <Route path="/story/saga/edit" element={<SagaEditPage />} />
+                            <Route path="/story/chapters/create" element={<ChapterCreatePage />} />
+                            <Route path="/story/chapters/edit/:chapterId" element={<ChapterEditPage />} />
+                            <Route path="/quests" element={<QuestsPage />} />
+                            <Route path="/quests/create" element={<QuestCreatePage />} />
+                            <Route path="/quests/edit/:questId" element={<QuestEditPage />} />
+                            <Route path="/npcs" element={<NPCsPage />} />
+                            <Route path="/npcs/create" element={<NPCsCreatePage />} />
+                            <Route path="/npcs/edit/:npcId" element={<NPCsEditPage />} />
+                            <Route path="/locations" element={<LocationsPage />} />
+                            <Route path="/locations/create" element={<LocationCreatePage />} />
+                            <Route path="/locations/edit/:locationId" element={<LocationEditPage />} />
+                            <Route path="/rumors" element={<RumorsPage />} />
+                            <Route path="/rumors/create" element={<RumorCreatePage />} />
+                            <Route path="/rumors/edit/:rumorId" element={<RumorEditPage />} />
+                            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                            <Route path="/contact" element={<ContactPage />} />
+                          </Routes>
+                        </Layout>
                       </SearchProvider>
                     </QuestProvider>
                   </RumorProvider>

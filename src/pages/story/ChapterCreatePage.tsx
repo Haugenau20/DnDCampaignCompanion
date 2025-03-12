@@ -6,7 +6,7 @@ import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useStory } from '../../context/StoryContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigation } from '../../context/NavigationContext';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import { BookPlus } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -18,7 +18,7 @@ const ChapterCreatePage: React.FC = () => {
   const { theme } = useTheme();
   const themePrefix = theme.name;
   const { navigateToPage } = useNavigation();
-  const { user } = useFirebase();
+  const { user } = useAuth();
 
   // Redirect if user is not signed in
   useEffect(() => {

@@ -3,8 +3,7 @@ import React, { createContext, useContext, useCallback } from 'react';
 import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types/rumor';
 import { useRumorData } from '../hooks/useRumorData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useFirebase } from './FirebaseContext';
-import FirebaseService from '../services/firebase/FirebaseService';
+import { useAuth, useUser, useFirestore } from './firebase';
 import { getUserDisplayName } from '../utils/user-utils';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
@@ -14,8 +13,9 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { addData, updateData, deleteData } = useFirebaseData<Rumor>({
     collection: 'rumors'
   });
-  const { user, userProfile } = useFirebase();
-  const firebaseService = FirebaseService.getInstance();
+  const { user } = useAuth();
+  const { userProfile } = useUser();
+  const { setDocument } = useFirestore();
 
   // Get rumor by ID
   const getRumorById = useCallback((id: string) => {
@@ -293,9 +293,9 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       : crypto.randomUUID();
     
     // Use Firebase service to add quest
-    await firebaseService.setDocument('quests', questId, {
+    await setDocument('quests', questId, {
       ...questData,
-      id: questId, // Include the ID in the document
+      id: questId,
       dateAdded: now,
       createdBy: user.uid,
       createdByUsername: displayName
@@ -327,7 +327,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     refreshRumors();
     return questId;
-  }, [user, userProfile, getRumorById, updateData, refreshRumors, firebaseService, getUserDisplayName]);
+  }, [user, userProfile, getRumorById, updateData, refreshRumors, getUserDisplayName]);
 
   const value: RumorContextValue = {
     rumors,

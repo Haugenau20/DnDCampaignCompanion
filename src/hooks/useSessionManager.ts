@@ -1,6 +1,6 @@
+// src/hooks/useSessionManager.ts
 import { useEffect, useCallback, useRef } from 'react';
-import { useFirebase } from '../context/FirebaseContext';
-import FirebaseService from '../services/firebase/FirebaseService';
+import { useAuth } from '../context/firebase';
 import { 
   ACTIVITY_UPDATE_THROTTLE,
   SESSION_CHECK_INTERVAL 
@@ -21,16 +21,15 @@ const ACTIVITY_EVENTS = [
  * Implements sliding window approach for session timeouts
  */
 export const useSessionManager = () => {
-  const { signOut, user } = useFirebase();
-  const firebaseService = FirebaseService.getInstance();
+  const { signOut, user, refreshSession, checkSessionExpired } = useAuth();
   const lastActivityUpdate = useRef<number>(Date.now());
   
   // Check session status and log out if expired
   const checkSession = useCallback(() => {
-    if (firebaseService.checkSessionExpired()) {
+    if (checkSessionExpired()) {
       signOut();
     }
-  }, [signOut, firebaseService]);
+  }, [signOut, checkSessionExpired]);
   
   // Update activity timestamp
   const updateActivity = useCallback(() => {
@@ -38,9 +37,9 @@ export const useSessionManager = () => {
     // Only update if enough time has passed since the last update
     if (now - lastActivityUpdate.current > ACTIVITY_UPDATE_THROTTLE) {
       lastActivityUpdate.current = now;
-      firebaseService.updateLastActivity();
+      refreshSession();
     }
-  }, [firebaseService]);
+  }, [refreshSession]);
   
   // Set up activity tracking
   useEffect(() => {

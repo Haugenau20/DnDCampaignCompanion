@@ -3,13 +3,13 @@ import React, { useEffect } from 'react';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
 import RumorForm from '../../components/features/rumors/RumorForm';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import { useNavigation } from '../../hooks/useNavigation';
 import { ArrowLeft } from 'lucide-react';
 
 const RumorCreatePage: React.FC = () => {
   const { navigateToPage } = useNavigation();
-  const { user } = useFirebase();
+  const { user } = useAuth();
 
   // Redirect if not authenticated
   useEffect(() => {

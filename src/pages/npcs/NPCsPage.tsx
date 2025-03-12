@@ -1,24 +1,33 @@
 // src/pages/npcs/NPCsPage.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import NPCDirectory from '../../components/features/npcs/NPCDirectory';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
 import { useNPCData } from '../../hooks/useNPCData';
 import { NPC } from '../../types/npc';
 import { useNavigation } from '../../context/NavigationContext';
 import { useTheme } from '../../context/ThemeContext';
 import clsx from 'clsx';
-import { Plus, Users, Loader2 } from 'lucide-react';
+import { Plus, Users, Loader2, AlertCircle } from 'lucide-react';
 
 const NPCsPage: React.FC = () => {
   // Hooks
-  const { user } = useFirebase();
+  const { user } = useAuth();
+  const { activeGroupId } = useGroups();
+  const { activeCampaignId } = useCampaigns();
   const { npcs, loading, error, refreshNPCs } = useNPCData();
   const { navigateToPage } = useNavigation();
   const { theme } = useTheme();
   const themePrefix = theme.name;
+
+  // Check for missing context
+  const contextError = useMemo(() => {
+    if (!activeGroupId) return "Please select a group to view NPCs";
+    if (!activeCampaignId) return "Please select a campaign to view NPCs";
+    return null;
+  }, [activeGroupId, activeCampaignId]);
 
   // Calculate stats for display
   const stats = useMemo(() => ({
@@ -36,6 +45,23 @@ const NPCsPage: React.FC = () => {
           <div className="flex items-center gap-4">
             <Loader2 className={clsx("w-6 h-6 animate-spin", `${themePrefix}-primary`)} />
             <Typography>Loading NPCs...</Typography>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show context error state
+  if (contextError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="p-8">
+          <div className="flex flex-col items-center gap-4">
+            <AlertCircle className={clsx("w-12 h-12", `${themePrefix}-status-warning`)} />
+            <Typography variant="h3">{contextError}</Typography>
+            <Typography color="secondary">
+              You must select a group and campaign to view and manage NPCs.
+            </Typography>
           </div>
         </Card>
       </div>

@@ -9,8 +9,7 @@ import { Book, Edit, Loader2 } from 'lucide-react';
 import { SagaData } from '../../types/saga';
 import { useNavigation } from '../../context/NavigationContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useFirebase } from '../../context/FirebaseContext';
-import FirebaseService from '../../services/firebase/FirebaseService';
+import { useAuth, useFirestore } from '../../context/firebase';
 import clsx from 'clsx';
 
 // Constants for saga default content and tips
@@ -26,7 +25,8 @@ const SAGA_WRITING_TIPS = [
 const SagaPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
   const { theme } = useTheme();
-  const { user } = useFirebase();
+  const { user } = useAuth();
+  const { getDocument } = useFirestore();
   const themePrefix = theme.name;
   const [data, setData] = useState<SagaData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,8 +39,7 @@ const SagaPage: React.FC = () => {
       setError(null);
       
       try {
-        const firebaseService = FirebaseService.getInstance();
-        const sagaData = await firebaseService.getDocument<SagaData>('saga', 'sagaData');
+        const sagaData = await getDocument<SagaData>('saga', 'sagaData');
         
         if (sagaData) {
           setData(sagaData);
@@ -57,7 +56,7 @@ const SagaPage: React.FC = () => {
     };
 
     fetchSaga();
-  }, []);
+  }, [getDocument]);
 
   // Breadcrumb items
   const breadcrumbItems = [

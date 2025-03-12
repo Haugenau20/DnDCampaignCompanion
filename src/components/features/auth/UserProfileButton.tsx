@@ -1,51 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useFirebase } from '../../../context/FirebaseContext';
+// src/components/features/auth/UserProfileButton.tsx
+import React, { useState } from 'react';
+import { useAuth, useGroups } from '../../../context/firebase';
 import { useTheme } from '../../../context/ThemeContext';
 import Button from '../../core/Button';
 import Dialog from '../../core/Dialog';
-import { LogIn, LogOut, User, UserPlus, ShieldAlert } from 'lucide-react';
+import { LogIn, User, ShieldAlert } from 'lucide-react';
 import SignInForm from './SignInForm';
 import UserProfile from './UserProfile';
-import RegistrationForm from './RegistrationForm';
-import AdminPanel from './AdminPanel';
+import AdminPanel from './adminPanel/AdminPanel';
 import { ThemeName } from '../../../types/theme';
+import clsx from 'clsx';
 
 const UserProfileButton: React.FC = () => {
-  const { user, userProfile, signOut } = useFirebase();
+  const { user, loading } = useAuth();
+  const { activeGroupUserProfile } = useGroups();
   const { setTheme } = useTheme();
   const [showSignIn, setShowSignIn] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
-  
-  // Use a ref to track if we've already loaded the theme from preferences
-  const initialThemeLoadedRef = useRef(false);
 
-  const isAdmin = userProfile?.isAdmin || false;
-
-  // Sync theme from user profile only on initial login
-  useEffect(() => {
-    // Only apply theme from preferences if:
-    // 1. User profile is loaded (after login)
-    // 2. We haven't already loaded the theme (to prevent overriding manual changes)
-    if (userProfile?.preferences?.theme && !initialThemeLoadedRef.current) {
-      setTheme(userProfile.preferences.theme as ThemeName);
-      // Mark that we've loaded the theme from preferences
-      initialThemeLoadedRef.current = true;
-    }
-    
-    // Reset the flag when user logs out
-    if (!userProfile) {
-      initialThemeLoadedRef.current = false;
-    }
-  }, [userProfile, setTheme]);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (err) {
-      console.error('Error signing out:', err);
-    }
-  };
+  const isAdmin = activeGroupUserProfile?.role === 'admin' || false;
 
   const handleProfileClick = () => {
     setShowProfile(true);
@@ -67,27 +41,17 @@ const UserProfileButton: React.FC = () => {
             variant="ghost"
             onClick={handleProfileClick}
             startIcon={<User className="w-5 h-5" />}
-          >
-            {userProfile?.username || 'Profile'}
-          </Button>
+          />
           
           {isAdmin && (
             <Button
               variant="ghost"
               onClick={handleAdminClick}
               startIcon={<ShieldAlert className="w-5 h-5" />}
-            >
-              Admin
-            </Button>
+              className="hidden md:flex"
+              aria-label="Admin Panel"
+            />
           )}
-          
-          <Button
-            variant="ghost"
-            onClick={handleSignOut}
-            startIcon={<LogOut className="w-5 h-5" />}
-          >
-            Sign Out
-          </Button>
         </div>
       ) : (
         <div className="flex items-center gap-2">
@@ -116,7 +80,7 @@ const UserProfileButton: React.FC = () => {
       <Dialog
         open={showProfile}
         onClose={() => setShowProfile(false)}
-        title={`${userProfile?.username}'s profile` || 'Your Profile'}
+        title={`${activeGroupUserProfile?.username}'s profile` || 'Your Profile'}
         maxWidth="max-w-md"
       >
         <UserProfile 

@@ -5,7 +5,7 @@ import Card from '../../core/Card';
 import Button from '../../core/Button';
 import Input from '../../core/Input';
 import { useQuests } from '../../../context/QuestContext';
-import { useFirebase } from '../../../context/FirebaseContext';
+import { useAuth } from '../../../context/firebase';
 import { useFirebaseData } from '../../../hooks/useFirebaseData';
 import { useNavigation } from '../../../context/NavigationContext';
 import { useTheme } from '../../../context/ThemeContext';
@@ -37,7 +37,7 @@ const NPCCard: React.FC<NPCCardProps> = ({
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [noteInput, setNoteInput] = useState('');
   const { getQuestById } = useQuests();
-  const { user } = useFirebase(); // Get authentication state
+  const { user } = useAuth(); // Get authentication state
   const { updateData } = useFirebaseData<NPC>({ collection: 'npcs' });
   const { navigateToPage, createPath } = useNavigation();
   const { theme } = useTheme();

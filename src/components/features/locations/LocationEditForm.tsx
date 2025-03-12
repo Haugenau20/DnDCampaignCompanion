@@ -17,7 +17,7 @@ import { AlertCircle, Save, X } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 import { getUserDisplayName } from '../../../utils/user-utils';
-import { useFirebase } from '../../../context/FirebaseContext';
+import { useAuth, useUser } from '../../../context/firebase';
 
 interface LocationEditFormProps {
   /** The location being edited */
@@ -36,7 +36,8 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
     // Form state initialized with existing location data
     const [formData, setFormData] = useState<Location>(location);
     // Firebase user for attribution
-    const { user, userProfile } = useFirebase();
+    const { user } = useAuth();
+    const { userProfile } = useUser();
     
     // Keep selection state local until form submission
     const [isQuestDialogOpen, setIsQuestDialogOpen] = useState(false);

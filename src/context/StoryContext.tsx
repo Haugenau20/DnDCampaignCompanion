@@ -3,8 +3,8 @@ import React, { createContext, useContext, useCallback, useState } from 'react';
 import { Chapter, ChapterProgress, StoryProgress } from '../types/story';
 import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useFirebase } from './FirebaseContext';
-import FirebaseService from '../services/firebase/FirebaseService';
+import { useAuth } from './firebase';
+import firebaseServices from '../services/firebase';
 
 interface StoryContextState {
   chapters: Chapter[];
@@ -55,17 +55,13 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { 
     updateData, 
     addData, 
-    deleteData,
-    setDocument
+    deleteData
   } = useFirebaseData<Chapter>({ collection: 'chapters' });
   // Create a separate instance for story progress
   const { updateData: updateProgressData } = useFirebaseData<StoryProgress>({ collection: 'story-progress' });
   
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const [isUpdating, setIsUpdating] = useState(false);
-  
-  // Get the Firebase service instance
-  const fbService = FirebaseService.getInstance();
 
   // Generate a consistent ID for a chapter based on its order
   const generateChapterId = (order: number) => {
@@ -257,7 +253,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Create all chapters with their new IDs and orders
       for (const updatedChapter of updatedChapters) {
         console.log(`Creating chapter ${updatedChapter.id} (order ${updatedChapter.order})`);
-        await setDocument(updatedChapter.id, updatedChapter);
+        await firebaseServices.document.setDocument('chapters', updatedChapter.id, updatedChapter);
       }
       
       // Refresh chapters to get updated state
@@ -270,7 +266,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsUpdating(false);
     }
-  }, [updateData, refreshChapters, chapters, getChapterById, user, setDocument, deleteData]);
+  }, [updateData, refreshChapters, chapters, getChapterById, user, deleteData]);
 
   // Safer method for creating a new chapter with proper ordering
   const createChapter = useCallback(async (chapterData: Omit<Chapter, 'id'>) => {
@@ -309,10 +305,10 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           order: shiftedOrder
         };
         
-        await setDocument(newId, updatedChapter);
+        await firebaseServices.document.setDocument('chapters', newId, updatedChapter);
         
         // Verify it exists before deleting the old one
-        const newExists = await fbService.getDocument('chapters', newId);
+        const newExists = await firebaseServices.document.getDocument('chapters', newId);
         if (!newExists) {
           throw new Error(`Failed to shift chapter ${oldId} to ${newId}`);
         }
@@ -333,10 +329,10 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
       
       // Add chapter to Firebase
-      await setDocument(chapterId, newChapter);
+      await firebaseServices.document.setDocument('chapters', chapterId, newChapter);
       
       // Verify it exists
-      const exists = await fbService.getDocument('chapters', chapterId);
+      const exists = await firebaseServices.document.getDocument('chapters', chapterId);
       if (!exists) {
         throw new Error('Failed to create new chapter');
       }
@@ -352,7 +348,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsUpdating(false);
     }
-  }, [refreshChapters, chapters, user, setDocument, deleteData, fbService]);
+  }, [refreshChapters, chapters, user, deleteData]);
 
   // Safer method for deleting a chapter
   const deleteChapter = useCallback(async (chapterId: string) => {
@@ -396,10 +392,10 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           order: shiftedOrder
         };
         
-        await setDocument(newId, updatedChapter);
+        await firebaseServices.document.setDocument('chapters', newId, updatedChapter);
         
         // Verify it exists before deleting the old one
-        const newExists = await fbService.getDocument('chapters', newId);
+        const newExists = await firebaseServices.document.getDocument('chapters', newId);
         if (!newExists) {
           throw new Error(`Failed to shift chapter ${oldId} to ${newId}`);
         }
@@ -418,7 +414,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsUpdating(false);
     }
-  }, [deleteData, refreshChapters, getChapterById, chapters, user, setDocument, fbService]);
+  }, [deleteData, refreshChapters, getChapterById, chapters, user]);
 
   // Reorder chapters to ensure consistent numbering
   const reorderChapters = useCallback(async () => {
@@ -446,10 +442,10 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           };
           
           // Create new document with updated ID
-          await setDocument(newId, updatedChapter);
+          await firebaseServices.document.setDocument('chapters', newId, updatedChapter);
           
           // Verify it exists
-          const newExists = await fbService.getDocument('chapters', newId);
+          const newExists = await firebaseServices.document.getDocument('chapters', newId);
           if (!newExists) {
             throw new Error(`Failed to reorder chapter ${chapter.id} to ${newId}`);
           }
@@ -465,7 +461,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('Failed to reorder chapters:', error);
       throw error;
     }
-  }, [chapters, refreshChapters, user, setDocument, deleteData, fbService]);
+  }, [chapters, refreshChapters, user, deleteData]);
 
   const isLoading = chaptersLoading || isUpdating;
 

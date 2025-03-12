@@ -1,5 +1,6 @@
+// src/components/features/auth/UserProfile.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useFirebase } from '../../../context/FirebaseContext';
+import { useAuth, useGroups, useUser } from '../../../context/firebase';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';
 import Button from '../../core/Button';
@@ -21,13 +22,9 @@ const generateId = (): string => {
 };
 
 const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
-  const { 
-    user, 
-    userProfile, 
-    changeUsername, 
-    validateUsername, 
-    updateUserProfile 
-  } = useFirebase();
+  const { user } = useAuth();
+  const { activeGroup, activeGroupUserProfile } = useGroups();
+  const { validateUsername, updateUserProfile, updateGroupUserProfile } = useUser();
   
   const { theme, setTheme } = useTheme();
   const themePrefix = theme.name;
@@ -53,31 +50,20 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
 
   // Initialize form with user data
   useEffect(() => {
-    if (userProfile) {
-      setNewUsername(userProfile.username || '');
+    if (activeGroupUserProfile) {
+      setNewUsername(activeGroupUserProfile.username || '');
       
       // Set the active character ID from the user profile
-      setActiveCharacterId(userProfile.activeCharacterId || null);
+      setActiveCharacterId(activeGroupUserProfile.activeCampaignId || null);
       
       // Initialize character names from profile
-      if (userProfile.characterNames && userProfile.characterNames.length > 0) {
-        // Convert string array to CharacterNameEntry array for backwards compatibility
-        if (typeof userProfile.characterNames[0] === 'string') {
-          setCharacterNames(
-            (userProfile.characterNames as string[]).map(name => ({
-              id: generateId(),
-              name
-            }))
-          );
-        } else {
-          // Already in the new format
-          setCharacterNames(userProfile.characterNames as CharacterNameEntry[]);
-        }
+      if (activeGroupUserProfile.characters && activeGroupUserProfile.characters.length > 0) {
+        setCharacterNames(activeGroupUserProfile.characters);
       } else {
         setCharacterNames([]);
       }
     }
-  }, [userProfile]);
+  }, [activeGroupUserProfile]);
   
   // Close theme dropdown when clicking outside
   useEffect(() => {
@@ -95,7 +81,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
 
   // Username validation with debounce
   useEffect(() => {
-    if (!isEditingUsername || !newUsername || newUsername === userProfile?.username) {
+    if (!isEditingUsername || !newUsername || !activeGroup || newUsername === activeGroupUserProfile?.username) {
       setUsernameValid(true);
       setUsernameAvailable(true);
       setUsernameError(null);
@@ -131,10 +117,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [newUsername, validateUsername, isEditingUsername, userProfile?.username]);
+  }, [newUsername, validateUsername, isEditingUsername, activeGroupUserProfile?.username, activeGroup]);
 
   const handleAddCharacterName = async () => {
-    if (!newCharacterName.trim() || !user || saving) return;
+    if (!newCharacterName.trim() || !user || saving || !activeGroup) return;
     
     try {
       setSaving(true);
@@ -157,10 +143,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
         setActiveCharacterId(newActiveId);
       }
       
-      // Update in database immediately
-      await updateUserProfile(user.uid, {
-        characterNames: updatedCharacterNames,
-        activeCharacterId: newActiveId
+      // Update in database
+      await updateGroupUserProfile(user.uid, {
+        characters: updatedCharacterNames,
+        activeCampaignId: newActiveId
       });
       
       // Clear input field
@@ -184,7 +170,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
   };
 
   const handleUpdateCharacterName = async () => {
-    if (!editingCharacterId || !newCharacterName.trim() || !user || saving) return;
+    if (!editingCharacterId || !newCharacterName.trim() || !user || saving || !activeGroup) return;
     
     try {
       setSaving(true);
@@ -199,9 +185,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
       
       setCharacterNames(updatedCharacterNames);
       
-      // Update in database immediately
-      await updateUserProfile(user.uid, {
-        characterNames: updatedCharacterNames
+      // Update in database
+      await updateGroupUserProfile(user.uid, {
+        characters: updatedCharacterNames
       });
       
       // Reset state
@@ -222,7 +208,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
   };
 
   const handleSetActiveCharacter = async (id: string) => {
-    if (!user || saving) return;
+    if (!user || saving || !activeGroup) return;
     
     try {
       setSaving(true);
@@ -231,9 +217,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
       // Update local state
       setActiveCharacterId(id);
       
-      // Update in database immediately
-      await updateUserProfile(user.uid, {
-        activeCharacterId: id
+      // Update in database
+      await updateGroupUserProfile(user.uid, {
+        activeCampaignId: id
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to set active character');
@@ -245,7 +231,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
   };
 
   const handleDeleteCharacterName = async (id: string) => {
-    if (!user || saving) return;
+    if (!user || saving || !activeGroup) return;
     
     try {
       setSaving(true);
@@ -262,10 +248,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
         setActiveCharacterId(newActiveId);
       }
       
-      // Update in database immediately
-      await updateUserProfile(user.uid, {
-        characterNames: updatedCharacterNames,
-        activeCharacterId: newActiveId
+      // Update in database
+      await updateGroupUserProfile(user.uid, {
+        characters: updatedCharacterNames,
+        activeCampaignId: newActiveId
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete character name');
@@ -278,7 +264,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
   };
 
   const handleChangeTheme = async (themeName: string) => {
-    if (!user || saving) return;
+    if (!user || saving || !activeGroup) return;
     
     try {
       setSaving(true);
@@ -289,9 +275,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
       setThemeDropdownOpen(false);
       
       // Save preference to database
-      await updateUserProfile(user.uid, {
+      await updateGroupUserProfile(user.uid, {
         preferences: {
-          ...(userProfile?.preferences || {}),
+          ...(activeGroupUserProfile?.preferences || {}),
           theme: themeName
         }
       });
@@ -304,9 +290,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
 
   const handleSubmitUsername = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!user || !userProfile || !usernameValid || !usernameAvailable || saving) return;
+    if (!user || !activeGroupUserProfile || !usernameValid || !usernameAvailable || saving || !activeGroup) return;
     
-    if (newUsername === userProfile.username) {
+    if (newUsername === activeGroupUserProfile.username) {
       setIsEditingUsername(false);
       return;
     }
@@ -316,7 +302,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
       setError(null);
       
       // Update username
-      await changeUsername(user.uid, newUsername);
+      await updateGroupUserProfile(user.uid, {
+        username: newUsername
+      });
       
       // Close edit mode
       setIsEditingUsername(false);
@@ -327,11 +315,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
     }
   };
 
-  if (!user || !userProfile) {
+  if (!user || !activeGroupUserProfile || !activeGroup) {
     return (
       <Card>
         <Card.Content>
-          <Typography>You must be signed in to view your profile.</Typography>
+          <Typography>You must be signed in and part of a group to view your profile.</Typography>
         </Card.Content>
       </Card>
     );
@@ -344,6 +332,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
   return (
     <Card className="max-w-md mx-auto">
       <Card.Content className="space-y-8">
+        {/* Group Display */}
+        <div className="space-y-1">
+          <Typography variant="body-sm" color="secondary">Current Group</Typography>
+          <Typography variant="h4">{activeGroup.name}</Typography>
+        </div>
+        
         {/* Email section */}
         <div className="space-y-1">
           <Typography variant="body-sm" color="secondary">Email</Typography>
@@ -353,7 +347,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
         {/* Username section */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Typography variant="body-sm" color="secondary">Username</Typography>
+            <Typography variant="body-sm" color="secondary">Username in this Group</Typography>
             {!isEditingUsername ? (
               <Button
                 type="button"
@@ -371,7 +365,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
                 size="sm"
                 onClick={() => {
                   setIsEditingUsername(false);
-                  setNewUsername(userProfile.username);
+                  setNewUsername(activeGroupUserProfile.username);
                 }}
                 startIcon={<X size={16} />}
               >
@@ -389,7 +383,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
                   required
                   disabled={saving}
                   error={usernameError || undefined}
-                  successMessage={usernameValid && usernameAvailable && newUsername !== userProfile.username ? "Username available" : undefined}
+                  successMessage={usernameValid && usernameAvailable && newUsername !== activeGroupUserProfile.username ? "Username available" : undefined}
                   endIcon={
                     checking ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -404,15 +398,23 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
               <Button
                 type="submit"
                 size="sm"
-                disabled={saving || !usernameValid || !usernameAvailable || newUsername === userProfile.username}
+                disabled={saving || !usernameValid || !usernameAvailable || newUsername === activeGroupUserProfile.username}
                 isLoading={saving}
               >
                 Save
               </Button>
             </form>
           ) : (
-            <Typography>{userProfile.username}</Typography>
+            <Typography>{activeGroupUserProfile.username}</Typography>
           )}
+        </div>
+
+        {/* User Role */}
+        <div className="space-y-1">
+          <Typography variant="body-sm" color="secondary">Role in this Group</Typography>
+          <Typography color={activeGroupUserProfile.role === 'admin' ? 'primary' : 'default'}>
+            {activeGroupUserProfile.role === 'admin' ? 'Administrator' : 'Member'}
+          </Typography>
         </div>
 
         {/* Active Character Display */}

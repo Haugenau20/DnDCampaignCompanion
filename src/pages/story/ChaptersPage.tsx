@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useStory } from '../../context/StoryContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import Typography from '../../components/core/Typography';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import Button from '../../components/core/Button';
@@ -35,7 +35,7 @@ const ChaptersPage: React.FC = () => {
   const { chapters, storyProgress, isLoading } = useStory();
   const { navigateToPage } = useNavigation();
   const { theme } = useTheme();
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const themePrefix = theme.name;
 
   // Save view preference when it changes

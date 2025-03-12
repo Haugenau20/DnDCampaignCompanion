@@ -10,7 +10,7 @@ import Button from '../../components/core/Button';
 import { useStory } from '../../context/StoryContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import { Book, Menu, Loader2, Edit, Plus, Settings } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -29,7 +29,7 @@ const StoryPage: React.FC = () => {
     getPreviousChapter
   } = useStory();
   const { theme } = useTheme();
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const themePrefix = theme.name;
   
   const [currentChapter, setCurrentChapter] = useState(

@@ -9,7 +9,7 @@ import Input from '../../core/Input';
 import Button from '../../core/Button';
 import Card from '../../core/Card';
 import Dialog from '../../core/Dialog';
-import { useFirebase } from '../../../context/FirebaseContext';
+import { useAuth, useUser } from '../../../context/firebase';
 import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 import { AlertCircle, Save, X, Users, MapPin } from 'lucide-react';
@@ -64,7 +64,8 @@ const RumorForm: React.FC<RumorFormProps> = ({
   const { npcs } = useNPCs();
   const { locations } = useLocations();
   const { addRumor, updateRumor } = useRumors();
-  const { user, userProfile } = useFirebase();
+  const { user } = useAuth();
+  const { userProfile } = useUser();
 
   // Pre-populate form if editing an existing rumor
   useEffect(() => {

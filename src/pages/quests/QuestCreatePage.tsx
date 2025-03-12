@@ -3,14 +3,14 @@ import React, { useEffect, useState } from 'react';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
 import QuestCreateForm from '../../components/features/quests/QuestCreateForm';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRumors } from '../../context/RumorContext';
 import { ArrowLeft } from 'lucide-react';
 
 const QuestCreatePage: React.FC = () => {
   const { navigateToPage, getCurrentQueryParams } = useNavigation();
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const { getRumorById } = useRumors();
   const [initialData, setInitialData] = useState<any>(null);
   const { fromRumor } = getCurrentQueryParams();

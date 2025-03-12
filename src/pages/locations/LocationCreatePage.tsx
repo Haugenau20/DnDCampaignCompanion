@@ -3,12 +3,12 @@ import React, { useEffect } from 'react';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
 import LocationCreateForm from '../../components/features/locations/LocationCreateForm';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 
 const LocationCreatePage: React.FC = () => {
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const { navigateToPage } = useNavigation();
   
   // Redirect if not authenticated

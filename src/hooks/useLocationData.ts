@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Location } from '../types/location';
 import { useFirebaseData } from './useFirebaseData';
-import { useFirebase } from '../context/FirebaseContext';
+import { useAuth } from '../context/firebase';
 
 /**
  * Hook for managing location data fetching and state
@@ -11,7 +11,7 @@ import { useFirebase } from '../context/FirebaseContext';
 export const useLocationData = () => {
   const [locations, setLocations] = useState<Location[]>([]);
   const { getData, loading, error, data } = useFirebaseData<Location>({ collection: 'locations' });
-  const { user } = useFirebase();
+  const { user } = useAuth();
 
   /**
    * Fetch locations from Firebase

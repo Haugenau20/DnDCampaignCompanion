@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useFirebase } from '../../../context/FirebaseContext';
+import { useInvitations, useUser } from '../../../context/firebase';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';
 import Button from '../../core/Button';
@@ -37,7 +37,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { signUpWithToken, validateUsername, validateToken } = useFirebase();
+  const { validateUsername } = useUser();
+  const { signUpWithToken, validateToken} = useInvitations();
   const location = useLocation();
   
   // Extract token from query parameters on load

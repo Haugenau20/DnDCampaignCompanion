@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Quest } from '../../../types/quest';
 import { useNPCs } from '../../../context/NPCContext';
-import { useFirebase } from '../../../context/FirebaseContext';
+import { useAuth } from '../../../context/firebase';
 import Typography from '../../core/Typography';
 import Card from '../../core/Card';
 import Button from '../../core/Button';
@@ -28,7 +28,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const { getNPCById } = useNPCs();
   const { locations } = useLocations();
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const { navigateToPage, createPath } = useNavigation();
   const { theme } = useTheme();
   const themePrefix = theme.name;

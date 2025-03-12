@@ -10,3 +10,7 @@ Fix mobile layout issues on certain pages. (Big update)
 Fix/Implement proper searching
 
 "Add note" and "Edit" button clashes rn
+
+The ContextSwitcher doesnt properly update the UI when switching between campaigns.
+
+When a preffered theme is set, the user cant change theme using the theme palette.

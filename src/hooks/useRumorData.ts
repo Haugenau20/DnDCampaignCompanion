@@ -2,12 +2,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Rumor } from '../types/rumor';
 import { useFirebaseData } from './useFirebaseData';
-import { useFirebase } from '../context/FirebaseContext';
+import { useAuth } from '../context/firebase';
 
 export const useRumorData = () => {
   const [rumors, setRumors] = useState<Rumor[]>([]);
   const { getData, loading, error, data } = useFirebaseData<Rumor>({ collection: 'rumors' });
-  const { user } = useFirebase();
+  const { user } = useAuth();
 
   /**
    * Fetch rumors from Firebase

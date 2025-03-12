@@ -9,7 +9,7 @@ import Dialog from '../../core/Dialog';
 import { Save, X, Users, Scroll } from 'lucide-react';
 import { useQuests } from '../../../context/QuestContext';
 import { useTheme } from '../../../context/ThemeContext';
-import { useFirebase } from '../../../context/FirebaseContext';
+import { useAuth, useUser } from '../../../context/firebase';
 import clsx from 'clsx';
 import { getUserDisplayName } from '../../../utils/user-utils';
 
@@ -35,7 +35,8 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
   const themePrefix = theme.name;
 
   // Firebase user for attribution
-  const { user, userProfile } = useFirebase();
+  const { user } = useAuth();
+  const { userProfile } = useUser();
 
   // Form state initialized with existing NPC data
   const [formData, setFormData] = useState<NPC>(npc);

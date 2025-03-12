@@ -15,7 +15,7 @@ import {
 } from './LocationFormSections';
 import { AlertCircle, Save, X } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
-import { useFirebase } from '../../../context/FirebaseContext';
+import { useAuth, useUser } from '../../../context/firebase';
 import clsx from 'clsx';
 import { getUserDisplayName } from '../../../utils/user-utils';
 
@@ -44,7 +44,8 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
   const [isNPCDialogOpen, setIsNPCDialogOpen] = useState(false);
   const [selectedNPCs, setSelectedNPCs] = useState<Set<string>>(new Set()); 
   // Firebase user for attribution
-  const { user, userProfile } = useFirebase();
+  const { user } = useAuth();
+  const { userProfile } = useUser();
   
   // Get NPCs data
   const { npcs } = useNPCs();

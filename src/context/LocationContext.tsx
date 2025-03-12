@@ -3,13 +3,14 @@ import React, { createContext, useContext, useCallback } from 'react';
 import { Location, LocationStatus, LocationContextValue, LocationNote } from '../types/location';
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useFirebase } from './FirebaseContext';
+import { useAuth, useUser } from './firebase';
 
 const LocationContext = createContext<LocationContextValue | undefined>(undefined);
 
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { locations, loading, error } = useLocationData();
-  const { user, userProfile } = useFirebase();
+  const { user } = useAuth();
+  const { userProfile } = useUser();
   const { updateData } = useFirebaseData<Location>({ collection: 'locations' });
 
   // Get location by ID

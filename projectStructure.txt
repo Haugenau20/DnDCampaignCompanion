@@ -1,5 +1,5 @@
 ﻿
-DnDRecap
+DnDCampaignCompanion
 │   ├── src
 │   │   ├── utils
 │   │   │   ├── __dev__
@@ -8,7 +8,8 @@ DnDRecap
 │   │   │   ├── theme-utils.ts
 │   │   │   ├── search.ts
 │   │   │   ├── navigation.ts
-│   │   │   └── export-utils.ts
+│   │   │   ├── export-utils.ts
+│   │   │   └── attribution-utils.ts
 │   │   ├── types
 │   │   │   ├── user.ts
 │   │   │   ├── theme.ts
@@ -36,7 +37,23 @@ DnDRecap
 │   │   │   ├── search
 │   │   │   │   └── SearchService.ts
 │   │   │   ├── firebase
-│   │   │   │   └── FirebaseService.ts
+│   │   │   │   ├── user
+│   │   │   │   │   └── UserService.ts
+│   │   │   │   ├── group
+│   │   │   │   │   ├── InvitationService.ts
+│   │   │   │   │   └── GroupService.ts
+│   │   │   │   ├── data
+│   │   │   │   │   └── DocumentService.ts
+│   │   │   │   ├── core
+│   │   │   │   │   ├── ServiceRegistry.ts
+│   │   │   │   │   └── BaseFirebaseService.ts
+│   │   │   │   ├── config
+│   │   │   │   │   └── firebaseConfig.ts
+│   │   │   │   ├── campaign
+│   │   │   │   │   └── CampaignService.ts
+│   │   │   │   ├── auth
+│   │   │   │   │   └── AuthService.ts
+│   │   │   │   └── index.ts
 │   │   │   └── index.ts
 │   │   ├── scripts
 │   │   │   ├── migrateToFirebase.ts
@@ -78,13 +95,23 @@ DnDRecap
 │   │   │   ├── useSessionManager.ts
 │   │   │   ├── useSearch.ts
 │   │   │   ├── useRumorData.ts
-│   │   │   ├── useQuests.ts
+│   │   │   ├── useQuestData.ts
 │   │   │   ├── useNPCData.ts
 │   │   │   ├── useNavigation.ts
 │   │   │   ├── useLocationData.ts
 │   │   │   ├── useFirebaseData.ts
 │   │   │   └── useChapterData.ts
 │   │   ├── context
+│   │   │   ├── firebase
+│   │   │   │   ├── hooks
+│   │   │   │   │   ├── useUser.ts
+│   │   │   │   │   ├── useInvitations.ts
+│   │   │   │   │   ├── useGroups.ts
+│   │   │   │   │   ├── useFirestore.ts
+│   │   │   │   │   ├── useCampaigns.ts
+│   │   │   │   │   └── useAuth.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   └── FirebaseContext.tsx
 │   │   │   ├── ThemeContext.tsx
 │   │   │   ├── StoryContext.tsx
 │   │   │   ├── SearchContext.tsx
@@ -93,7 +120,7 @@ DnDRecap
 │   │   │   ├── NPCContext.tsx
 │   │   │   ├── NavigationContext.tsx
 │   │   │   ├── LocationContext.tsx
-│   │   │   └── FirebaseContext.tsx
+│   │   │   └── GroupContext.tsx
 │   │   ├── constants
 │   │   │   └── time.ts
 │   │   ├── config
@@ -102,7 +129,9 @@ DnDRecap
 │   │   │   ├── shared
 │   │   │   │   ├── ThemeSelector.tsx
 │   │   │   │   ├── SearchBar.tsx
-│   │   │   │   └── ErrorBoundary.tsx
+│   │   │   │   ├── ErrorBoundary.tsx
+│   │   │   │   ├── ContextSwitcher.tsx
+│   │   │   │   └── AttributionInfo.tsx
 │   │   │   ├── layout
 │   │   │   │   ├── sidebars
 │   │   │   │   │   ├── StorySidebar.tsx
@@ -161,17 +190,28 @@ DnDRecap
 │   │   │   │   │   ├── LocationCreateForm.tsx
 │   │   │   │   │   ├── LocationCombobox.tsx
 │   │   │   │   │   └── LocationCard.tsx
+│   │   │   │   ├── groups
+│   │   │   │   │   ├── GroupSelectorModal.tsx
+│   │   │   │   │   ├── GroupSelector.tsx
+│   │   │   │   │   └── GroupDropdown.tsx
 │   │   │   │   ├── contact
 │   │   │   │   │   └── ContactForm.tsx
+│   │   │   │   ├── campaigns
+│   │   │   │   │   └── CampaignSelector.tsx
 │   │   │   │   └── auth
+│   │   │   │       ├── adminPanel
+│   │   │   │       │   ├── UserManagementView.tsx
+│   │   │   │       │   ├── TokenManagementView.tsx
+│   │   │   │       │   ├── GroupManagementView.tsx
+│   │   │   │       │   ├── CampaignManagementView.tsx
+│   │   │   │       │   └── AdminPanel.tsx
 │   │   │   │       ├── UserProfileButton.tsx
 │   │   │   │       ├── UserProfile.tsx
 │   │   │   │       ├── SignInForm.tsx
 │   │   │   │       ├── SessionTimeoutWarning.tsx
 │   │   │   │       ├── SessionManager.tsx
 │   │   │   │       ├── RegistrationForm.tsx
-│   │   │   │       ├── PrivacyNotice.tsx
-│   │   │   │       └── AdminPanel.tsx
+│   │   │   │       └── PrivacyNotice.tsx
 │   │   │   └── core
 │   │   │       ├── __tests__
 │   │   │       │   ├── Card.test.tsx
@@ -219,6 +259,7 @@ DnDRecap
 │   │   │   ├── user-management.md
 │   │   │   ├── rumor-management.md
 │   │   │   ├── public-sample-data.md
+│   │   │   ├── group-scaling.md
 │   │   │   └── chapter-management.md
 │   │   ├── futureThoughts
 │   │   ├── design
@@ -229,12 +270,13 @@ DnDRecap
 │   │   └── README.md
 │   ├── .github
 │   │   └── workflows
-│   │       └── npm-publish-github-packages.yml
+│   │       ├── firebase-hosting-pull-request.yml
+│   │       └── firebase-hosting-merge.yml
+│   ├── .firebase
+│   │   └── hosting.YnVpbGQ.cache
 │   ├── tsconfig.json
 │   ├── todo.txt
 │   ├── tailwind.config.js
-│   ├── saga.txt
-│   ├── recaps.txt
 │   ├── README.md
 │   ├── projectStructure.txt
 │   ├── postcss.config.js

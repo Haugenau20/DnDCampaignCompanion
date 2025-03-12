@@ -7,7 +7,7 @@ import RumorDirectory from '../../components/features/rumors/RumorDirectory';
 import CombineRumorsDialog from '../../components/features/rumors/CombineRumorsDialog';
 import ConvertToQuestDialog from '../../components/features/rumors/ConvertToQuestDialog';
 import { useRumors } from '../../context/RumorContext';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import { useNavigation } from '../../hooks/useNavigation';
 import { useTheme } from '../../context/ThemeContext';
 import clsx from 'clsx';
@@ -22,7 +22,7 @@ import {
 
 const RumorsPage: React.FC = () => {
   // Auth state
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const { rumors, isLoading, error, combineRumors, convertToQuest } = useRumors();
   const { navigateToPage } = useNavigation();
   const { theme } = useTheme();

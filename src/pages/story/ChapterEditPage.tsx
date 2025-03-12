@@ -8,7 +8,7 @@ import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useStory } from '../../context/StoryContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigation } from '../../context/NavigationContext';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import { BookOpen } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -26,7 +26,7 @@ const ChapterEditPage: React.FC = () => {
   const { theme } = useTheme();
   const themePrefix = theme.name;
   const { navigateToPage } = useNavigation();
-  const { user } = useFirebase();
+  const { user } = useAuth();
   
   const [chapter, setChapter] = useState(chapterId ? getChapterById(chapterId) : undefined);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);

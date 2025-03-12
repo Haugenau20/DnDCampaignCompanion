@@ -9,7 +9,7 @@ import Card from '../../core/Card';
 import Dialog from '../../core/Dialog';
 import { useQuests } from '../../../context/QuestContext';
 import { useTheme } from '../../../context/ThemeContext';
-import { useFirebase } from '../../../context/FirebaseContext';
+import { useAuth, useUser } from '../../../context/firebase';
 import clsx from 'clsx';
 import { getUserDisplayName } from '../../../utils/user-utils';
 
@@ -29,7 +29,8 @@ const NPCForm: React.FC<NPCFormProps> = ({
   const themePrefix = theme.name;
 
   // Firebase user for attribution
-  const { user, userProfile } = useFirebase();
+  const { user } = useAuth();
+  const { userProfile } = useUser();
 
   // Form state
   const [formData, setFormData] = useState<Partial<NPC>>({

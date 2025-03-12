@@ -1,14 +1,17 @@
 // context/NPCContext.tsx
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { NPC, NPCContextValue, NPCContextState, NPCRelationship, NPCNote } from '../types/npc';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
+import { useGroups, useCampaigns } from './firebase';
 
 const NPCContext = createContext<NPCContextValue | undefined>(undefined);
 
 export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use the NPCData hook for basic CRUD operations
-  const { npcs, loading, error, refreshNPCs } = useNPCData();
+  const { npcs, loading, error, refreshNPCs, hasRequiredContext } = useNPCData();
+  const { activeGroupId } = useGroups();
+  const { activeCampaignId } = useCampaigns();
   
   // Additional Firebase hook for specific updates
   const { updateData } = useFirebaseData<NPC>({
@@ -43,6 +46,11 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Update NPC note
   const updateNPCNote = useCallback(async (npcId: string, note: NPCNote) => {
+    if (!hasRequiredContext) {
+      console.error('Cannot update NPC note: No group or campaign selected');
+      return;
+    }
+
     const npc = getNPCById(npcId);
     if (npc) {
       const updatedNPC = {
@@ -52,10 +60,15 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await updateData(npcId, updatedNPC);
       refreshNPCs(); // Refresh to get updated data
     }
-  }, [getNPCById, updateData, refreshNPCs]);
+  }, [getNPCById, updateData, refreshNPCs, hasRequiredContext]);
 
   // Update NPC relationship
   const updateNPCRelationship = useCallback(async (npcId: string, relationship: NPCRelationship) => {
+    if (!hasRequiredContext) {
+      console.error('Cannot update NPC relationship: No group or campaign selected');
+      return;
+    }
+
     const npc = getNPCById(npcId);
     if (npc) {
       const updatedNPC = {
@@ -65,12 +78,19 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await updateData(npcId, updatedNPC);
       refreshNPCs(); // Refresh to get updated data
     }
-  }, [getNPCById, updateData, refreshNPCs]);
+  }, [getNPCById, updateData, refreshNPCs, hasRequiredContext]);
+
+  // Error message for missing context
+  const contextError = useMemo(() => {
+    if (!activeGroupId) return "Please select a group to view NPCs";
+    if (!activeCampaignId) return "Please select a campaign to view NPCs";
+    return null;
+  }, [activeGroupId, activeCampaignId]);
 
   const value: NPCContextValue = {
     npcs,
     isLoading: loading,
-    error,
+    error: contextError || error,
     getNPCById,
     getNPCsByQuest,
     getNPCsByLocation,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useFirebase } from '../../../context/FirebaseContext';
+import { useAuth } from '../../../context/firebase'
 import Button from '../../core/Button';
 import Typography from '../../core/Typography';
 import Dialog from '../../core/Dialog';
@@ -25,7 +25,7 @@ const SessionTimeoutWarning: React.FC = () => {
   const [warningType, setWarningType] = useState<WarningType>(WarningType.INACTIVITY);
   const [timeRemaining, setTimeRemaining] = useState(5); // in minutes
   const [rememberMe, setRememberMe] = useState(false);
-  const { user, refreshSession, signOut, renewSession } = useFirebase();
+  const { user, refreshSession, signOut, renewSession } = useAuth();
   const { theme } = useTheme();
   const themePrefix = theme.name;
   

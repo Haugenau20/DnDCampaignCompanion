@@ -3,7 +3,7 @@ import React, { createContext, useContext, useCallback } from 'react';
 import { Quest, QuestStatus } from '../types/quest';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useFirebase } from './FirebaseContext';
+import { useAuth, useUser } from './firebase';
 import { getUserDisplayName } from '../utils/user-utils';
 
 // Context interface
@@ -35,7 +35,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { addData, updateData, deleteData } = useFirebaseData<Quest>({
     collection: 'quests'
   });
-  const { user, userProfile } = useFirebase();
+  const { user } = useAuth();
+  const { userProfile } = useUser();
 
   // Get quests by status
   const getQuestsByStatus = useCallback((status: QuestStatus) => {

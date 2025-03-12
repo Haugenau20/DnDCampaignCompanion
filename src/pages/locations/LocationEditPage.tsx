@@ -6,7 +6,7 @@ import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import LocationEditForm from '../../components/features/locations/LocationEditForm';
 import { useLocations } from '../../context/LocationContext';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import { useNavigation } from '../../context/NavigationContext';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
@@ -15,7 +15,7 @@ import clsx from 'clsx';
 const LocationEditPage: React.FC = () => {
   const { locationId } = useParams<{ locationId: string }>();
   const { locations, isLoading, error } = useLocations();
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const { navigateToPage } = useNavigation();
   const { theme } = useTheme();
   const themePrefix = theme.name;

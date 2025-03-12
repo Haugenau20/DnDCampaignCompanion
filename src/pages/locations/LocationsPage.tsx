@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import Typography from '../../components/core/Typography';
 import Card from '../../components/core/Card';
 import LocationDirectory from '../../components/features/locations/LocationDirectory';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import { useFirebaseData } from '../../hooks/useFirebaseData';
 import { Location } from '../../types/location'; 
 import { Map, MapPin, Eye, EyeOff, Plus } from 'lucide-react';
@@ -14,7 +14,7 @@ import clsx from 'clsx';
 
 const LocationsPage: React.FC = () => {
   // Auth state
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const { data: locations, loading, error } = useFirebaseData<Location>({
     collection: 'locations'
   });

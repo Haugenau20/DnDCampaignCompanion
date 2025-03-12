@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Chapter } from '../types/story';
 import { useFirebaseData } from './useFirebaseData';
-import { useFirebase } from '../context/FirebaseContext';
+import { useAuth } from '../context/firebase';
 
 /**
  * Hook for managing chapter data fetching and state
@@ -11,7 +11,7 @@ import { useFirebase } from '../context/FirebaseContext';
 export const useChapterData = () => {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const { getData, loading, error, data } = useFirebaseData<Chapter>({ collection: 'chapters' });
-  const { user } = useFirebase();
+  const { user } = useAuth();
 
   /**
    * Fetch chapters from Firebase

@@ -7,11 +7,10 @@ import Card from '../../components/core/Card';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigation } from '../../context/NavigationContext';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth, useFirestore } from '../../context/firebase';
 import { useStory } from '../../context/StoryContext';
 import { Book, Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
 import { SagaData } from '../../types/saga';
-import FirebaseService from '../../services/firebase/FirebaseService';
 import { exportChaptersAsText } from '../../utils/export-utils';
 import clsx from 'clsx';
 import Dialog from '../../components/core/Dialog';
@@ -22,8 +21,9 @@ const SAGA_DEFAULT_OPENING = "In a realm where magic weaves through the fabric o
 const SagaEditPage: React.FC = () => {
   const { theme } = useTheme();
   const { navigateToPage } = useNavigation();
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const { chapters } = useStory();
+  const { getDocument, setDocument } = useFirestore();
   const themePrefix = theme.name;
   
   const [title, setTitle] = useState('The Campaign Saga');
@@ -40,8 +40,7 @@ const SagaEditPage: React.FC = () => {
       setLoading(true);
       
       try {
-        const firebaseService = FirebaseService.getInstance();
-        const sagaData = await firebaseService.getDocument<SagaData>('saga', 'sagaData');
+        const sagaData = await getDocument<SagaData>('saga', 'sagaData');
         
         if (sagaData) {
           setTitle(sagaData.title);
@@ -59,7 +58,7 @@ const SagaEditPage: React.FC = () => {
     };
 
     fetchSaga();
-  }, []);
+  }, [getDocument]);
 
   // Redirect if not signed in
   useEffect(() => {
@@ -95,8 +94,6 @@ const SagaEditPage: React.FC = () => {
         throw new Error('Content is required');
       }
       
-      const firebaseService = FirebaseService.getInstance();
-      
       // Update or create saga document
       const sagaData: SagaData = {
         title: title.trim(),
@@ -105,7 +102,7 @@ const SagaEditPage: React.FC = () => {
         version: '1.0' // Simple versioning for now
       };
       
-      await firebaseService.setDocument('saga', 'sagaData', sagaData);
+      await setDocument('saga', 'sagaData', sagaData);
       
       setSuccess('Saga updated successfully');
       

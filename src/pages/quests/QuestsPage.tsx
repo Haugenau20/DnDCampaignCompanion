@@ -6,7 +6,7 @@ import Input from '../../components/core/Input';
 import Button from '../../components/core/Button';
 import { QuestStatus } from '../../types/quest';
 import QuestCard from '../../components/features/quests/QuestCard';
-import { useFirebase } from '../../context/FirebaseContext';
+import { useAuth } from '../../context/firebase';
 import { useQuests } from '../../context/QuestContext';
 import { useNavigation } from '../../hooks/useNavigation';
 import { useTheme } from '../../context/ThemeContext';
@@ -24,7 +24,7 @@ import {
 
 const QuestsPage: React.FC = () => {
   // Auth state
-  const { user } = useFirebase();
+  const { user } = useAuth();
   const { navigateToPage } = useNavigation();
   const { theme } = useTheme();
   const themePrefix = theme.name;
