@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: nom install --legacy-peer-deps
+        run: npm install --legacy-peer-deps
       - name: Build
         run: npm run build
       - uses: FirebaseExtended/action-hosting-deploy@v0
