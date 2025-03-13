@@ -8,11 +8,12 @@ import {
     query, 
     where 
   } from 'firebase/firestore';
-  import BaseFirebaseService from '../core/BaseFirebaseService';
-  import ServiceRegistry from '../core/ServiceRegistry';
-  import UserService from '../user/UserService';
-  import { Group } from '../../../types/user';
-  
+import BaseFirebaseService from '../core/BaseFirebaseService';
+import ServiceRegistry from '../core/ServiceRegistry';
+import UserService from '../user/UserService';
+import { Group } from '../../../types/user';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+
   /**
    * GroupService manages group operations
    */
@@ -196,54 +197,17 @@ import {
         throw new Error('Not authenticated');
       }
       
-      // Check if current user is admin of this group
-      const adminProfileDoc = await getDoc(doc(this.db, 'groups', groupId, 'users', currentUserId));
-      if (!adminProfileDoc.exists() || adminProfileDoc.data().role !== 'admin') {
-        throw new Error('Only group admins can remove users');
+      try {
+        // Call the Cloud Function instead of attempting to modify data directly
+        const functions = getFunctions();
+        const removeUserFn = httpsCallable(functions, 'removeUserFromGroup');
+        
+        const result = await removeUserFn({ groupId, userId });
+        console.log('User removal result:', result.data);
+      } catch (err) {
+        console.error('Error removing user from group:', err);
+        throw err;
       }
-      
-      // Check if target user is also an admin
-      const targetUserDoc = await getDoc(doc(this.db, 'groups', groupId, 'users', userId));
-      if (targetUserDoc.exists() && targetUserDoc.data().role === 'admin') {
-        throw new Error('Cannot remove another admin from the group');
-      }
-      
-      // Use a transaction to update all necessary documents
-      await runTransaction(this.db, async (transaction) => {
-        // Get the user's profile to update their global groups list
-        const globalUserDocRef = doc(this.db, 'users', userId);
-        const globalUserSnapshot = await transaction.get(globalUserDocRef);
-        
-        if (globalUserSnapshot.exists()) {
-          const userData = globalUserSnapshot.data();
-          const updatedGroups = (userData.groups || []).filter((g: string) => g !== groupId);
-          
-          // Update the global user profile
-          transaction.update(globalUserDocRef, {
-            groups: updatedGroups,
-            // Clear activeGroupId if it matches the group being removed
-            ...(userData.activeGroupId === groupId ? { activeGroupId: null } : {})
-          });
-        }
-        
-        // Get the user's username in this group
-        const groupUserDocRef = doc(this.db, 'groups', groupId, 'users', userId);
-        const groupUserSnapshot = await transaction.get(groupUserDocRef);
-        
-        if (groupUserSnapshot.exists()) {
-          const groupUserData = groupUserSnapshot.data();
-          const username = groupUserData.username;
-          
-          if (username) {
-            // Delete the username reservation
-            const usernameDocRef = doc(this.db, 'groups', groupId, 'usernames', username.toLowerCase());
-            transaction.delete(usernameDocRef);
-          }
-        }
-        
-        // Delete the group user profile
-        transaction.delete(groupUserDocRef);
-      });
     }
   
     /**

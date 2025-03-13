@@ -262,7 +262,7 @@ import {
             role: 'member',
             joinedAt: now,
             preferences: {
-              theme: 'default'
+              theme: 'light'
             }
           });
           

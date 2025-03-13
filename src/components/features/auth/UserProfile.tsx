@@ -5,8 +5,10 @@ import Typography from '../../core/Typography';
 import Input from '../../core/Input';
 import Button from '../../core/Button';
 import Card from '../../core/Card';
-import { User, Save, Edit, Check, X, Loader2, AlertCircle, PlusCircle, Trash2, Palette, ChevronDown, Star } from 'lucide-react';
+import { Edit, Check, X, Loader2, AlertCircle, PlusCircle, Trash2, ChevronDown, Star, LogOut } from 'lucide-react';
 import { CharacterNameEntry } from '../../../types/user';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import Dialog from '../../core/Dialog';
 import { useTheme } from '../../../context/ThemeContext';
 import { themes } from '../../../themes';
 import clsx from 'clsx';
@@ -21,10 +23,10 @@ const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 };
 
-const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
-  const { user } = useAuth();
-  const { activeGroup, activeGroupUserProfile } = useGroups();
-  const { validateUsername, updateUserProfile, updateGroupUserProfile } = useUser();
+const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
+  const { user, signOut } = useAuth();
+  const { activeGroup, activeGroupUserProfile, activeGroupId, refreshGroups } = useGroups();
+  const { validateUsername, updateGroupUserProfile } = useUser();
   
   const { theme, setTheme } = useTheme();
   const themePrefix = theme.name;
@@ -47,6 +49,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
   const [newCharacterName, setNewCharacterName] = useState('');
   const [editingCharacterId, setEditingCharacterId] = useState<string | null>(null);
   const [activeCharacterId, setActiveCharacterId] = useState<string | null>(null);
+
+  const [showGroupLeaveDialog, setShowGroupLeaveDialog] = useState(false);
+  const [showAccountDeleteDialog, setShowAccountDeleteDialog] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [leavingGroup, setLeavingGroup] = useState(false);
 
   // Initialize form with user data
   useEffect(() => {
@@ -118,6 +125,74 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
 
     return () => clearTimeout(timer);
   }, [newUsername, validateUsername, isEditingUsername, activeGroupUserProfile?.username, activeGroup]);
+
+  const handleGroupLeave = async () => {
+    if (!user || !activeGroup || leavingGroup) return;
+    
+    try {
+      setLeavingGroup(true);
+      setError(null);
+      
+      // Use dedicated function for group leaving
+      const functions = getFunctions();
+      const removeUserFn = httpsCallable(functions, 'removeUserFromGroup');
+      
+      await removeUserFn({ 
+        groupId: activeGroupId, 
+        userId: user.uid 
+      });
+      
+      setShowGroupLeaveDialog(false);
+      
+      // After successful group leave, redirect to group selection
+      if (onCancel) onCancel();
+      
+      // Force refresh of groups
+      if (refreshGroups) {
+        await refreshGroups();
+      }
+      
+      // Redirect to appropriate page
+      window.location.href = '/';
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to leave group');
+    } finally {
+      setLeavingGroup(false);
+    }
+  };
+  
+  const handleAccountDelete = async () => {
+    if (!user || deletingAccount) return;
+    
+    try {
+      setDeletingAccount(true);
+      setError(null);
+      
+      // Call the cloud function
+      const functions = getFunctions();
+      const deleteUserFn = httpsCallable(functions, 'deleteUser');
+      
+      await deleteUserFn({ userId: user.uid });
+      
+      setShowAccountDeleteDialog(false);
+      
+      // After successful account deletion, show confirmation
+      if (onCancel) onCancel();
+      
+      // Force sign out
+      await signOut();
+      
+      // Optionally show a success message
+      // You could use a toast notification library for this
+      
+      // Redirect to home page
+      window.location.href = '/';
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete account');
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
 
   const handleAddCharacterName = async () => {
     if (!newCharacterName.trim() || !user || saving || !activeGroup) return;
@@ -604,6 +679,107 @@ const UserProfile: React.FC<UserProfileProps> = ({ onSaved, onCancel }) => {
             </div>
           )}
         </div>
+
+        <div className="space-y-6 pt-6 mt-6 border-t">          
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              color="error"
+              onClick={() => setShowGroupLeaveDialog(true)}
+              startIcon={<LogOut size={16} />}
+              className="w-full"
+            >
+              Leave Group
+            </Button>
+          </div>
+          
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              color="error"
+              onClick={() => setShowAccountDeleteDialog(true)}
+              startIcon={<Trash2 size={16} />}
+              className="w-full"
+            >
+              Delete Account
+            </Button>
+          </div>
+        </div>
+
+        {/* Group Leave Confirmation Dialog */}
+        <Dialog
+          open={showGroupLeaveDialog}
+          onClose={() => setShowGroupLeaveDialog(false)}
+          title="Confirm Group Leave"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <Typography>
+              Are you sure you want to leave the group <strong>{activeGroup?.name}</strong>?
+            </Typography>
+            <Typography color="error">
+              Leaving this group will remove your access to all content within it. You can rejoin later if you have an invitation.
+            </Typography>
+            <div className="flex justify-end gap-4 mt-6">
+              <Button
+                variant="ghost"
+                onClick={() => setShowGroupLeaveDialog(false)}
+                disabled={leavingGroup}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                color="error"
+                onClick={handleGroupLeave}
+                isLoading={leavingGroup}
+                startIcon={<LogOut size={16} />}
+              >
+                Leave Group
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+
+        {/* Account Deletion Confirmation Dialog */}
+        <Dialog
+          open={showAccountDeleteDialog}
+          onClose={() => setShowAccountDeleteDialog(false)}
+          title="Confirm Account Deletion"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <Typography>
+              Are you sure you want to permanently delete your account?
+            </Typography>
+            <Typography color="error">
+              This will:
+            </Typography>
+            <ul className={clsx("list-disc pl-5 space-y-1", `${themePrefix}-typography`)}>
+              <li>Remove your access to all groups</li>
+              <li>Delete all your user profiles and settings</li>
+              <li>This action is permanent and cannot be undone</li>
+            </ul>
+            <div className="flex justify-end gap-4 mt-6">
+              <Button
+                variant="ghost"
+                onClick={() => setShowAccountDeleteDialog(false)}
+                disabled={deletingAccount}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                color="error"
+                onClick={handleAccountDelete}
+                isLoading={deletingAccount}
+                startIcon={<Trash2 size={16} />}
+              >
+                Delete My Account
+              </Button>
+            </div>
+          </div>
+        </Dialog>
 
         {/* Error message */}
         {error && (

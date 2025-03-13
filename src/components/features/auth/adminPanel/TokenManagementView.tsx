@@ -55,9 +55,9 @@ const TokenManagementView: React.FC = () => {
 
   // Helper function to generate registration link
   const generateRegistrationLink = (token: string): string => {
-    const baseUrl = window.location.origin + window.location.pathname;
+    const baseUrl = window.location.origin;
     // Include the groupId in the link - this is crucial for the token validation to work
-    return `${baseUrl}?register=true&token=${token}&groupId=${activeGroupId}`;
+    return `${baseUrl}?join=true&token=${token}&groupId=${activeGroupId}`;
   };
 
   // Load tokens on mount
@@ -439,7 +439,13 @@ const TokenManagementView: React.FC = () => {
           </div>
           
           <Typography color="secondary" variant="body-sm">
-            This link contains a token that allows anyone with the link to register an account. The token can only be used once.
+            This link contains a token that allows anyone with the link to join this group. The token can only be used once.
+          </Typography>
+          <Typography color="secondary" variant="body-sm">
+            New users: Use link to create a new account.
+          </Typography>
+          <Typography color="secondary" variant="body-sm">
+            Existing users: Sign in and press "Join a Group".
           </Typography>
           
           <div className="flex justify-end mt-4">

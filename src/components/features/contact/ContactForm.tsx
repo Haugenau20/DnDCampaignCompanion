@@ -9,7 +9,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 
 // Adjust this URL to match your deployed Firebase function
-const CONTACT_FUNCTION_URL = 'https://europe-west1-dndrecap-e3913.cloudfunctions.net/sendContactEmail';
+const CONTACT_FUNCTION_URL = 'https://europe-west1-dnd-campaign-companion.cloudfunctions.net/sendContactEmail';
 
 interface ContactFormProps {
   onSuccess?: () => void;

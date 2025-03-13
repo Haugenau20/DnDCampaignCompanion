@@ -4,20 +4,20 @@ import { useAuth, useGroups } from '../../../context/firebase';
 import { useTheme } from '../../../context/ThemeContext';
 import Button from '../../core/Button';
 import Dialog from '../../core/Dialog';
-import { LogIn, User, ShieldAlert } from 'lucide-react';
+import { LogIn, User, ShieldAlert, UserPlus } from 'lucide-react';
 import SignInForm from './SignInForm';
 import UserProfile from './UserProfile';
 import AdminPanel from './adminPanel/AdminPanel';
-import { ThemeName } from '../../../types/theme';
-import clsx from 'clsx';
+import JoinGroupDialog from '../groups/JoinGroupDialog';
 
 const UserProfileButton: React.FC = () => {
-  const { user, loading } = useAuth();
-  const { activeGroupUserProfile } = useGroups();
+  const { user } = useAuth();
+  const { activeGroupUserProfile, refreshGroups } = useGroups();
   const { setTheme } = useTheme();
   const [showSignIn, setShowSignIn] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showJoinGroupDialog, setShowJoinGroupDialog] = useState(false);
 
   const isAdmin = activeGroupUserProfile?.role === 'admin' || false;
 
@@ -42,6 +42,15 @@ const UserProfileButton: React.FC = () => {
             onClick={handleProfileClick}
             startIcon={<User className="w-5 h-5" />}
           />
+
+          {user && (
+            <Button
+              variant="ghost"
+              onClick={() => setShowJoinGroupDialog(true)}
+              startIcon={<UserPlus className="w-5 h-5" />}
+              aria-label="Join a Group"
+            />
+          )}
           
           {isAdmin && (
             <Button
@@ -100,6 +109,18 @@ const UserProfileButton: React.FC = () => {
           onClose={() => setShowAdmin(false)}
         />
       </Dialog>
+
+      {/* Join Group Dialog */}
+      <JoinGroupDialog
+        open={showJoinGroupDialog}
+        onClose={() => setShowJoinGroupDialog(false)}
+        onSuccess={() => {
+          // After successful join, refresh the groups list
+          if (refreshGroups) {
+            refreshGroups();
+          }
+        }}
+      />
     </>
   );
 };
