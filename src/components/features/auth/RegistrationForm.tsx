@@ -5,9 +5,10 @@ import Input from '../../core/Input';
 import Button from '../../core/Button';
 import Card from '../../core/Card';
 import { useLocation } from 'react-router-dom';
-import { LogIn, AlertCircle, UserPlus, Check, X, Loader2 } from 'lucide-react';
+import { LogIn, AlertCircle, UserPlus, Check, X, Loader2, Shield } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
+import { validatePassword } from '../../../utils/password-validation';
 
 interface RegistrationFormProps {
   onSuccess?: () => void;
@@ -37,6 +38,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [groupId, setGroupId] = useState<string | null>(null);
+  
+  // New password validation state
+  const [passwordValidation, setPasswordValidation] = useState<{isValid: boolean, errors: string[]}>({
+    isValid: false,
+    errors: []
+  });
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
 
   const { validateUsername } = useUser();
   const { signUpWithToken, validateToken} = useInvitations();
@@ -121,6 +129,17 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     return () => clearTimeout(timer);
   }, [username, validateUsername]);
 
+  // Validate password when it changes
+  useEffect(() => {
+    if (!password) {
+      setPasswordValidation({ isValid: false, errors: [] });
+      return;
+    }
+    
+    const validation = validatePassword(password);
+    setPasswordValidation(validation);
+  }, [password]);
+
   // Validate email format
   const isEmailValid = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -143,6 +162,12 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
       return;
     }
   
+    // Validate password meets requirements
+    if (!passwordValidation.isValid) {
+      setError("Your password doesn't meet the requirements");
+      return;
+    }
+    
     // Validate passwords match
     if (password !== confirmPassword) {
       setError("Passwords don't match");
@@ -165,6 +190,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  // Toggle password requirements visibility
+  const togglePasswordRequirements = () => {
+    setShowPasswordRequirements(!showPasswordRequirements);
   };
 
   return (
@@ -228,14 +258,77 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
             />
           </div>
 
-          <Input
-            label="Password *"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={loading || tokenVerified !== true}
-          />
+          <div className="relative">
+            <Input
+              label="Password *"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={loading || tokenVerified !== true}
+              onFocus={() => setShowPasswordRequirements(true)}
+              error={password.length > 0 && !passwordValidation.isValid ? "Password doesn't meet requirements" : undefined}
+              successMessage={password.length > 0 && passwordValidation.isValid ? "Password meets requirements" : undefined}
+              endIcon={
+                password ? (
+                  passwordValidation.isValid ? (
+                    <Check className={clsx("w-4 h-4", `${themePrefix}-form-success`)} />
+                  ) : (
+                    <X className={clsx("w-4 h-4", `${themePrefix}-form-error`)} />
+                  )
+                ) : null
+              }
+            />
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm" 
+              onClick={togglePasswordRequirements}
+              className="mt-1"
+              startIcon={<Shield size={16} />}
+            >
+              {showPasswordRequirements ? "Hide" : "Show"} password requirements
+            </Button>
+            
+            {/* Password requirements list */}
+            {showPasswordRequirements && (
+              <div className={clsx(
+                "mt-2 p-3 text-sm rounded-md",
+                `${themePrefix}-bg-secondary`
+              )}>
+                <Typography variant="body-sm" className="mb-1 font-medium">
+                  Password must:
+                </Typography>
+                <ul className="space-y-1 list-disc pl-5">
+                  <li className={clsx(
+                    password.length >= 8 ? `${themePrefix}-form-success` : `${themePrefix}-typography-secondary`
+                  )}>
+                    Be at least 8 characters long
+                  </li>
+                  <li className={clsx(
+                    /[A-Z]/.test(password) ? `${themePrefix}-form-success` : `${themePrefix}-typography-secondary`
+                  )}>
+                    Include at least one uppercase letter (A-Z)
+                  </li>
+                  <li className={clsx(
+                    /[a-z]/.test(password) ? `${themePrefix}-form-success` : `${themePrefix}-typography-secondary`
+                  )}>
+                    Include at least one lowercase letter (a-z)
+                  </li>
+                  <li className={clsx(
+                    /[0-9]/.test(password) ? `${themePrefix}-form-success` : `${themePrefix}-typography-secondary`
+                  )}>
+                    Include at least one number (0-9)
+                  </li>
+                  <li className={clsx(
+                    /[^A-Za-z0-9]/.test(password) ? `${themePrefix}-form-success` : `${themePrefix}-typography-secondary`
+                  )}>
+                    Include at least one special character (e.g., !@#$%^&*)
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
 
           <Input
             label="Confirm Password *"
@@ -265,6 +358,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 tokenVerified !== true || 
                 !usernameValid || 
                 !usernameAvailable || 
+                !passwordValidation.isValid || 
                 password !== confirmPassword ||
                 !isEmailValid(email) ||
                 password.length === 0
