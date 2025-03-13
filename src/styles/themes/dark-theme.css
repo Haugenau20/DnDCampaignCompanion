@@ -432,6 +432,22 @@
   border-left: 4px solid var(--dark-status-failed);
 }
 
+.dark-npc-card-friendly {
+  border-left: 4px solid var(--dark-status-completed);
+}
+
+.dark-npc-card-hostile {
+  border-left: 4px solid var(--dark-status-failed);
+}
+
+.dark-npc-card-neutral {
+  border-left: 4px solid var(--dark-primary);
+}
+
+.dark-npc-card-unknown {
+  border-left: 4px solid var(--dark-status-unknown);
+}
+
 .dark-npc-status-alive {
   color: var(--dark-status-completed);
 }

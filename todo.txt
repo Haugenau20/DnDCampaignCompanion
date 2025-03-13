@@ -13,10 +13,4 @@ Fix/Implement proper searching
 
 The ContextSwitcher doesnt properly update the UI when switching between campaigns.
 
-Story, Saga, Quest, Rumor, and Location should be updated to correctly save/fetch data from the new group/campaign system. 
-
-User "Leave group" throws a "only Group admins can remove users" error right now. it should be possible for a user to leave the group.
-
-When deleting account, page should refresh to show the new signed out state.
-
 rework of how the header is displayed. maybe a sidebar? maybe like dnd beyon? 

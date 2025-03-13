@@ -535,6 +535,22 @@
   border-left: 4px solid var(--medieval-status-failed);
 }
 
+.medieval-npc-card-friendly {
+  border-left: 4px solid var(--medieval-status-completed);
+}
+
+.medieval-npc-card-hostile {
+  border-left: 4px solid var(--medieval-status-failed);
+}
+
+.medieval-npc-card-neutral {
+  border-left: 4px solid var(--medieval-status-active);
+}
+
+.medieval-npc-card-unknown {
+  border-left: 4px solid var(--medieval-status-unknown);
+}
+
 .medieval-npc-status-alive {
   color: var(--medieval-status-completed);
 }
