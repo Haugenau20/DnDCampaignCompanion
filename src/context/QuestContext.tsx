@@ -3,7 +3,7 @@ import React, { createContext, useContext, useCallback } from 'react';
 import { Quest, QuestStatus } from '../types/quest';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useAuth, useUser } from './firebase';
+import { useAuth, useUser, useGroups, useCampaigns } from './firebase';
 import { getUserDisplayName } from '../utils/user-utils';
 
 // Context interface
@@ -24,6 +24,7 @@ interface QuestContextValue {
   markQuestCompleted: (questId: string, dateCompleted?: string) => Promise<void>;
   markQuestFailed: (questId: string) => Promise<void>;
   refreshQuests: () => Promise<void>;
+  hasRequiredContext: boolean;
 }
 
 // Create the context but DON'T export it (to match NPCContext pattern)
@@ -31,12 +32,19 @@ const QuestContext = createContext<QuestContextValue | undefined>(undefined);
 
 export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use the useQuestData hook to handle data fetching
-  const { quests, loading, error, getQuestById, refreshQuests } = useQuestData();
+  const { quests, loading, error, getQuestById, refreshQuests: fetchQuests, hasRequiredContext } = useQuestData();
   const { addData, updateData, deleteData } = useFirebaseData<Quest>({
     collection: 'quests'
   });
   const { user } = useAuth();
   const { userProfile } = useUser();
+  const { activeGroupId } = useGroups();
+  const { activeCampaignId } = useCampaigns();
+
+  // Create a wrapper for fetchQuests that returns void instead of Quest[]
+  const refreshQuests = useCallback(async (): Promise<void> => {
+    await fetchQuests();
+  }, [fetchQuests]);
 
   // Get quests by status
   const getQuestsByStatus = useCallback((status: QuestStatus) => {
@@ -74,6 +82,10 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('User must be authenticated to update quest status');
     }
 
+    if (!activeGroupId || !activeCampaignId) {
+      throw new Error('Group and campaign context must be set to update quest status');
+    }
+
     const quest = getQuestById(questId);
     if (!quest) {
       throw new Error('Quest not found');
@@ -94,12 +106,16 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     await updateData(questId, updatedQuest);
     await refreshQuests();
-  }, [user, userProfile, getQuestById, updateData, refreshQuests]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, refreshQuests]);
 
   // Update quest objective completion status
   const updateQuestObjective = useCallback(async (questId: string, objectiveId: string, completed: boolean) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to update objectives');
+    }
+
+    if (!activeGroupId || !activeCampaignId) {
+      throw new Error('Group and campaign context must be set to update objectives');
     }
 
     const quest = getQuestById(questId);
@@ -133,12 +149,16 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     await updateData(questId, updatedQuest);
     await refreshQuests();
-  }, [user, userProfile, getQuestById, updateData, refreshQuests]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, refreshQuests]);
 
   // Add quest
   const addQuest = useCallback(async (questData: Omit<Quest, 'id'>) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to add quests');
+    }
+  
+    if (!activeGroupId || !activeCampaignId) {
+      throw new Error('Group and campaign context must be set to add quests');
     }
   
     const now = new Date().toISOString();
@@ -171,12 +191,16 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await addData(newQuest, id);
     await refreshQuests();
     return id;
-  }, [user, userProfile, addData, refreshQuests, generateQuestId]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, addData, refreshQuests, generateQuestId]);
 
   // Update existing quest
   const updateQuest = useCallback(async (quest: Quest) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to update quests');
+    }
+
+    if (!activeGroupId || !activeCampaignId) {
+      throw new Error('Group and campaign context must be set to update quests');
     }
 
     const displayName = getUserDisplayName(userProfile);
@@ -191,7 +215,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     await updateData(quest.id, updatedQuest);
     await refreshQuests();
-  }, [user, userProfile, updateData, refreshQuests]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, updateData, refreshQuests]);
 
   // Delete quest
   const deleteQuest = useCallback(async (questId: string) => {
@@ -199,14 +223,22 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('User must be authenticated to delete quests');
     }
 
+    if (!activeGroupId || !activeCampaignId) {
+      throw new Error('Group and campaign context must be set to delete quests');
+    }
+
     await deleteData(questId);
     await refreshQuests();
-  }, [user, deleteData, refreshQuests]);
+  }, [user, activeGroupId, activeCampaignId, deleteData, refreshQuests]);
 
   // Mark quest as completed
   const markQuestCompleted = useCallback(async (questId: string, dateCompleted?: string) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to complete quests');
+    }
+
+    if (!activeGroupId || !activeCampaignId) {
+      throw new Error('Group and campaign context must be set to complete quests');
     }
 
     const quest = getQuestById(questId);
@@ -236,12 +268,16 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     await updateData(questId, updatedQuest);
     await refreshQuests();
-  }, [user, userProfile, getQuestById, updateData, refreshQuests]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, refreshQuests]);
 
   // Mark quest as failed
   const markQuestFailed = useCallback(async (questId: string) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to mark quests as failed');
+    }
+
+    if (!activeGroupId || !activeCampaignId) {
+      throw new Error('Group and campaign context must be set to mark quests as failed');
     }
 
     const quest = getQuestById(questId);
@@ -262,7 +298,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     await updateData(questId, updatedQuest);
     await refreshQuests();
-  }, [user, userProfile, getQuestById, updateData, refreshQuests]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, refreshQuests]);
 
   const value = {
     quests,
@@ -280,7 +316,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     deleteQuest,
     markQuestCompleted,
     markQuestFailed,
-    refreshQuests
+    refreshQuests,
+    hasRequiredContext
   };
 
   return (

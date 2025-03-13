@@ -2,16 +2,26 @@
 import React, { useEffect, useState } from 'react';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
+import Card from '../../components/core/Card';
 import QuestCreateForm from '../../components/features/quests/QuestCreateForm';
-import { useAuth } from '../../context/firebase';
+import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRumors } from '../../context/RumorContext';
-import { ArrowLeft } from 'lucide-react';
+import { useQuests } from '../../context/QuestContext';
+import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+import clsx from 'clsx';
 
 const QuestCreatePage: React.FC = () => {
   const { navigateToPage, getCurrentQueryParams } = useNavigation();
   const { user } = useAuth();
   const { getRumorById } = useRumors();
+  const { hasRequiredContext } = useQuests();
+  const { activeGroupId } = useGroups();
+  const { activeCampaignId } = useCampaigns();
+  const { theme } = useTheme();
+  const themePrefix = theme.name;
+  
   const [initialData, setInitialData] = useState<any>(null);
   const { fromRumor } = getCurrentQueryParams();
 
@@ -51,6 +61,42 @@ const QuestCreatePage: React.FC = () => {
       navigateToPage('/quests');
     }
   }, [user, navigateToPage]);
+
+  // Show context selection message if needed
+  if (!hasRequiredContext) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-8 flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigateToPage('/quests')}
+            startIcon={<ArrowLeft />}
+          >
+            Back to Quests
+          </Button>
+          <Typography variant="h1">
+            Create New Quest
+          </Typography>
+        </div>
+
+        <Card>
+          <Card.Content className="text-center py-12">
+            <AlertCircle className={clsx("w-12 h-12 mx-auto mb-4", `${themePrefix}-typography-secondary`)} />
+            <Typography variant="h3" className="mb-2">
+              {!activeGroupId 
+                ? "No Group Selected" 
+                : "No Campaign Selected"}
+            </Typography>
+            <Typography color="secondary" className="mb-6">
+              {!activeGroupId 
+                ? "Please select a group to create quests." 
+                : "Please select a campaign within your group to create quests."}
+            </Typography>
+          </Card.Content>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">

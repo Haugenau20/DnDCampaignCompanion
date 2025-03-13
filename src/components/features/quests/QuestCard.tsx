@@ -234,7 +234,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
                           <div className="flex items-start gap-2 text-left">
                             <MapPin 
                               size={16} 
-                              className={`mt-1 ${themePrefix}-location-status-visited`}
+                              className={`mt-1 ${themePrefix}-location-status-explored`}
                             />
                             <div className="flex-1">
                               <Typography variant="body-sm" className="font-medium">
@@ -273,27 +273,6 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
 
             {/* NPCs */}
             <div className="space-y-4">
-              {/* Important Quest NPCs */}
-              {quest.importantNPCs && quest.importantNPCs.length > 0 && (
-                <div>
-                  <Typography variant="h4" className="mb-2">
-                    Important NPCs
-                  </Typography>
-                  <div className="space-y-3">
-                    {quest.importantNPCs.map((npc, index) => (
-                      <div key={index}>
-                        <Typography variant="body" className="font-medium">
-                          {npc.name}
-                        </Typography>
-                        <Typography color="secondary">
-                          {npc.description}
-                        </Typography>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Related NPCs from Directory */}
               {quest.relatedNPCIds && quest.relatedNPCIds.length > 0 && (
                 <div>

@@ -3,13 +3,13 @@ import { useQuests } from '../../../context/QuestContext';
 import Typography from '../../core/Typography';
 import Card from '../../core/Card';
 import Button from '../../core/Button';
-import { MapPin, ChevronRight } from 'lucide-react';
+import { MapPin, ChevronRight, AlertCircle } from 'lucide-react';
 import { useNavigation } from '../../../context/NavigationContext';
 import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 
 const QuestSidebar = () => {
-  const { quests } = useQuests();
+  const { quests, hasRequiredContext } = useQuests();
   const { navigateToPage, createPath } = useNavigation();
   const { theme } = useTheme();
   const themePrefix = theme.name;
@@ -26,6 +26,41 @@ const QuestSidebar = () => {
       return acc;
     }, {} as Record<string, typeof quests>);
   }, [quests]);
+
+  // If missing context, show a notice
+  if (!hasRequiredContext) {
+    return (
+      <div className="p-4">
+        <Card>
+          <Card.Content className="p-4 text-center">
+            <AlertCircle className={clsx("w-8 h-8 mx-auto mb-2", `${themePrefix}-typography-secondary`)} />
+            <Typography variant="body-sm" color="secondary">
+              Select a group and campaign to view quests
+            </Typography>
+          </Card.Content>
+        </Card>
+      </div>
+    );
+  }
+
+  // If no quests, show a message
+  if (quests.length === 0) {
+    return (
+      <div className="p-4">
+        <Card>
+          <Card.Content className="space-y-4">
+            <Typography variant="h4" className="flex items-center gap-2">
+              <MapPin className={clsx("w-5 h-5", `${themePrefix}-primary`)} />
+              Quests by Location
+            </Typography>
+            <Typography color="secondary" variant="body-sm">
+              No quests available yet
+            </Typography>
+          </Card.Content>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">

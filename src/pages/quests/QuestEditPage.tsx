@@ -6,17 +6,19 @@ import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import QuestEditForm from '../../components/features/quests/QuestEditForm';
 import { useQuests } from '../../context/QuestContext';
-import { useAuth } from '../../context/firebase';
+import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
 import { useNavigation } from '../../context/NavigationContext';
 import { useTheme } from '../../context/ThemeContext';
 import clsx from 'clsx';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 
 const QuestEditPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
   const { questId } = useParams<{ questId: string }>();
-  const { quests, loading, error, refreshQuests } = useQuests();
+  const { quests, loading, error, refreshQuests, hasRequiredContext } = useQuests();
   const { user } = useAuth();
+  const { activeGroupId } = useGroups();
+  const { activeCampaignId } = useCampaigns();
   const { theme } = useTheme();
   const themePrefix = theme.name;
   
@@ -28,6 +30,42 @@ const QuestEditPage: React.FC = () => {
       navigateToPage('/quests');
     }
   }, [user, navigateToPage]);
+
+  // Show context selection message if needed
+  if (!hasRequiredContext) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-8 flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigateToPage('/quests')}
+            startIcon={<ArrowLeft />}
+          >
+            Back to Quests
+          </Button>
+          <Typography variant="h1">
+            Edit Quest
+          </Typography>
+        </div>
+
+        <Card>
+          <Card.Content className="text-center py-12">
+            <AlertCircle className={clsx("w-12 h-12 mx-auto mb-4", `${themePrefix}-typography-secondary`)} />
+            <Typography variant="h3" className="mb-2">
+              {!activeGroupId 
+                ? "No Group Selected" 
+                : "No Campaign Selected"}
+            </Typography>
+            <Typography color="secondary" className="mb-6">
+              {!activeGroupId 
+                ? "Please select a group to edit quests." 
+                : "Please select a campaign within your group to edit quests."}
+            </Typography>
+          </Card.Content>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -6,7 +6,7 @@ import Input from '../../components/core/Input';
 import Button from '../../components/core/Button';
 import { QuestStatus } from '../../types/quest';
 import QuestCard from '../../components/features/quests/QuestCard';
-import { useAuth } from '../../context/firebase';
+import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
 import { useQuests } from '../../context/QuestContext';
 import { useNavigation } from '../../hooks/useNavigation';
 import { useTheme } from '../../context/ThemeContext';
@@ -19,7 +19,8 @@ import {
   Search, 
   MapPin, 
   Loader2,
-  Plus 
+  Plus,
+  AlertCircle 
 } from 'lucide-react';
 
 const QuestsPage: React.FC = () => {
@@ -29,8 +30,12 @@ const QuestsPage: React.FC = () => {
   const { theme } = useTheme();
   const themePrefix = theme.name;
   
+  // Group and campaign context
+  const { activeGroupId } = useGroups();
+  const { activeCampaignId } = useCampaigns();
+  
   // Get quests data
-  const { quests, loading, error } = useQuests();
+  const { quests, loading, error, hasRequiredContext } = useQuests();
   
   // URL and filters state
   const { getCurrentQueryParams } = useNavigation();
@@ -81,6 +86,29 @@ const QuestsPage: React.FC = () => {
       return true;
     });
   }, [quests, statusFilter, locationFilter, searchQuery]);
+
+  // Show context selection message if needed
+  if (!activeGroupId || !activeCampaignId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="p-8 max-w-md">
+          <Card.Content className="text-center">
+            <AlertCircle className={clsx("w-12 h-12 mx-auto mb-4", `${themePrefix}-typography-secondary`)} />
+            <Typography variant="h3" className="mb-2">
+              {!activeGroupId 
+                ? "No Group Selected" 
+                : "No Campaign Selected"}
+            </Typography>
+            <Typography color="secondary" className="mb-6">
+              {!activeGroupId 
+                ? "Please select a group to view quests." 
+                : "Please select a campaign within your group to view quests."}
+            </Typography>
+          </Card.Content>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
