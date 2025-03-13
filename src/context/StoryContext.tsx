@@ -3,7 +3,7 @@ import React, { createContext, useContext, useCallback, useState } from 'react';
 import { Chapter, ChapterProgress, StoryProgress } from '../types/story';
 import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useAuth } from './firebase';
+import { useAuth, useGroups, useCampaigns } from './firebase';
 import firebaseServices from '../services/firebase';
 
 interface StoryContextState {
@@ -36,6 +36,8 @@ interface StoryContextValue extends StoryContextState {
   deleteChapter: (chapterId: string) => Promise<void>;
   /** Reorder chapters after deletion or insertion */
   reorderChapters: () => Promise<void>;
+  /** Whether the required context (group and campaign) is available */
+  hasRequiredContext: boolean;
 }
 
 const StoryContext = createContext<StoryContextValue | undefined>(undefined);
@@ -51,16 +53,26 @@ const defaultProgress: StoryProgress = {
 
 export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use existing hooks for data
-  const { chapters, loading: chaptersLoading, error: chaptersError, refreshChapters } = useChapterData();
+  const { 
+    chapters, 
+    loading: chaptersLoading, 
+    error: chaptersError, 
+    refreshChapters,
+    hasRequiredContext 
+  } = useChapterData();
+  
   const { 
     updateData, 
     addData, 
     deleteData
   } = useFirebaseData<Chapter>({ collection: 'chapters' });
+  
   // Create a separate instance for story progress
   const { updateData: updateProgressData } = useFirebaseData<StoryProgress>({ collection: 'story-progress' });
   
   const { user } = useAuth();
+  const { activeGroupId } = useGroups();
+  const { activeCampaignId } = useCampaigns();
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Generate a consistent ID for a chapter based on its order
@@ -96,6 +108,11 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     progress: Partial<ChapterProgress>
   ) => {
     try {
+      if (!hasRequiredContext) {
+        console.warn('Cannot update chapter progress: no active group or campaign');
+        return;
+      }
+      
       const updatedProgress = {
         ...defaultProgress,
         chapterProgress: {
@@ -114,11 +131,16 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (error) {
       console.error('Failed to update chapter progress:', error);
     }
-  }, [updateProgressData, refreshChapters]);
+  }, [updateProgressData, refreshChapters, hasRequiredContext]);
 
   // Update current chapter
   const updateCurrentChapter = useCallback(async (chapterId: string) => {
     try {
+      if (!hasRequiredContext) {
+        console.warn('Cannot update current chapter: no active group or campaign');
+        return;
+      }
+      
       const updatedProgress = {
         ...defaultProgress,
         currentChapter: chapterId,
@@ -129,11 +151,16 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (error) {
       console.error('Failed to update current chapter:', error);
     }
-  }, [updateProgressData]);
+  }, [updateProgressData, hasRequiredContext]);
 
   // Mark chapter as complete
   const markChapterComplete = useCallback(async (chapterId: string) => {
     try {
+      if (!hasRequiredContext) {
+        console.warn('Cannot mark chapter complete: no active group or campaign');
+        return;
+      }
+      
       const chapter = getChapterById(chapterId);
       if (!chapter) return;
 
@@ -144,7 +171,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (error) {
       console.error('Failed to mark chapter as complete:', error);
     }
-  }, [getChapterById, updateChapterProgress]);
+  }, [getChapterById, updateChapterProgress, hasRequiredContext]);
 
   // Calculate reading progress
   const getReadingProgress = useCallback(() => {
@@ -163,6 +190,10 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('You must be signed in to update chapters');
     }
   
+    if (!hasRequiredContext) {
+      throw new Error('No active group or campaign selected');
+    }
+    
     setIsUpdating(true);
     try {
       // Get the chapter to update
@@ -266,12 +297,16 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsUpdating(false);
     }
-  }, [updateData, refreshChapters, chapters, getChapterById, user, deleteData]);
+  }, [updateData, refreshChapters, chapters, getChapterById, user, deleteData, hasRequiredContext]);
 
   // Safer method for creating a new chapter with proper ordering
   const createChapter = useCallback(async (chapterData: Omit<Chapter, 'id'>) => {
     if (!user) {
       throw new Error('You must be signed in to create chapters');
+    }
+
+    if (!hasRequiredContext) {
+      throw new Error('No active group or campaign selected');
     }
 
     setIsUpdating(true);
@@ -348,12 +383,16 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsUpdating(false);
     }
-  }, [refreshChapters, chapters, user, deleteData]);
+  }, [refreshChapters, chapters, user, deleteData, hasRequiredContext]);
 
   // Safer method for deleting a chapter
   const deleteChapter = useCallback(async (chapterId: string) => {
     if (!user) {
       throw new Error('You must be signed in to delete chapters');
+    }
+
+    if (!hasRequiredContext) {
+      throw new Error('No active group or campaign selected');
     }
 
     setIsUpdating(true);
@@ -414,12 +453,16 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsUpdating(false);
     }
-  }, [deleteData, refreshChapters, getChapterById, chapters, user]);
+  }, [deleteData, refreshChapters, getChapterById, chapters, user, hasRequiredContext]);
 
   // Reorder chapters to ensure consistent numbering
   const reorderChapters = useCallback(async () => {
     if (!user) {
       throw new Error('You must be signed in to reorder chapters');
+    }
+
+    if (!hasRequiredContext) {
+      throw new Error('No active group or campaign selected');
     }
 
     try {
@@ -461,15 +504,18 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('Failed to reorder chapters:', error);
       throw error;
     }
-  }, [chapters, refreshChapters, user, deleteData]);
+  }, [chapters, refreshChapters, user, deleteData, hasRequiredContext]);
 
   const isLoading = chaptersLoading || isUpdating;
+
+  // Prepare appropriate error message
+  const contextError = chaptersError || (!hasRequiredContext ? 'Please select a group and campaign' : null);
 
   const value: StoryContextValue = {
     chapters,
     storyProgress: defaultProgress,
     isLoading,
-    error: chaptersError,
+    error: contextError,
     getChapterById,
     updateChapterProgress,
     updateCurrentChapter,
@@ -480,7 +526,8 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     createChapter,
     updateChapter,
     deleteChapter,
-    reorderChapters
+    reorderChapters,
+    hasRequiredContext
   };
 
   return (

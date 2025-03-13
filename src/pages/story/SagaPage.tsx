@@ -1,15 +1,15 @@
 // pages/story/SagaPage.tsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import BookViewer from '../../components/features/story/BookViewer';
 import Typography from '../../components/core/Typography';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import { Book, Edit, Loader2 } from 'lucide-react';
-import { SagaData } from '../../types/saga';
+import { useSagaData } from '../../hooks/useSagaData';
 import { useNavigation } from '../../context/NavigationContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useAuth, useFirestore } from '../../context/firebase';
+import { useAuth } from '../../context/firebase';
 import clsx from 'clsx';
 
 // Constants for saga default content and tips
@@ -26,37 +26,8 @@ const SagaPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
   const { theme } = useTheme();
   const { user } = useAuth();
-  const { getDocument } = useFirestore();
+  const { saga, loading, error, hasRequiredContext } = useSagaData();
   const themePrefix = theme.name;
-  const [data, setData] = useState<SagaData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Load saga data
-  useEffect(() => {
-    const fetchSaga = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const sagaData = await getDocument<SagaData>('saga', 'sagaData');
-        
-        if (sagaData) {
-          setData(sagaData);
-        } else {
-          // No saga data, but we'll handle this with placeholder content
-          setData(null);
-        }
-      } catch (err) {
-        console.error('Error loading saga:', err);
-        setError('Error Loading Saga. Sign in to view content.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSaga();
-  }, [getDocument]);
 
   // Breadcrumb items
   const breadcrumbItems = [
@@ -77,8 +48,8 @@ const SagaPage: React.FC = () => {
 
   // Generate content based on whether saga exists
   const getSagaContent = () => {
-    if (data && data.content) {
-      return data.content;
+    if (saga && saga.content) {
+      return saga.content;
     }
     
     // If no saga exists, return default content with tips
@@ -101,8 +72,21 @@ const SagaPage: React.FC = () => {
 
   // Get title
   const getSagaTitle = () => {
-    return data?.title || "The Campaign Saga";
+    return saga?.title || "The Campaign Saga";
   };
+
+  // Handle context errors
+  if (!hasRequiredContext) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className={clsx("p-8", `${themePrefix}-card`)}>
+          <Typography className={`${themePrefix}-typography`}>
+            Please select a group and campaign to view the saga.
+          </Typography>
+        </Card>
+      </div>
+    );
+  }
 
   // Loading state
   if (loading) {
@@ -140,9 +124,9 @@ const SagaPage: React.FC = () => {
         {/* Page Header */}
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {data && data.lastUpdated && (
+            {saga && saga.lastUpdated && (
               <Typography variant="body-sm" color="secondary" className="hidden md:block">
-                Last updated: {new Date(data.lastUpdated).toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})}
+                Last updated: {new Date(saga.lastUpdated).toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})}
               </Typography>
             )}
           </div>

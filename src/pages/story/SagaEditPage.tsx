@@ -7,11 +7,12 @@ import Card from '../../components/core/Card';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigation } from '../../context/NavigationContext';
-import { useAuth, useFirestore } from '../../context/firebase';
-import { useStory } from '../../context/StoryContext';
+import { useAuth } from '../../context/firebase';
+import { useSagaData } from '../../hooks/useSagaData';
 import { Book, Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
 import { SagaData } from '../../types/saga';
 import { exportChaptersAsText } from '../../utils/export-utils';
+import { useStory } from '../../context/StoryContext';
 import clsx from 'clsx';
 import Dialog from '../../components/core/Dialog';
 
@@ -23,42 +24,26 @@ const SagaEditPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
   const { user } = useAuth();
   const { chapters } = useStory();
-  const { getDocument, setDocument } = useFirestore();
+  const { saga, loading, error, hasRequiredContext, saveSaga } = useSagaData();
   const themePrefix = theme.name;
   
   const [title, setTitle] = useState('The Campaign Saga');
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showExportInfo, setShowExportInfo] = useState(false);
 
-  // Fetch existing saga data
+  // Initialize form with saga data once loaded
   useEffect(() => {
-    const fetchSaga = async () => {
-      setLoading(true);
-      
-      try {
-        const sagaData = await getDocument<SagaData>('saga', 'sagaData');
-        
-        if (sagaData) {
-          setTitle(sagaData.title);
-          setContent(sagaData.content);
-        } else {
-          // Initialize with default content
-          setContent(SAGA_DEFAULT_OPENING);
-        }
-      } catch (err) {
-        console.error('Error loading saga for editing:', err);
-        setError('Failed to load saga content. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSaga();
-  }, [getDocument]);
+    if (saga) {
+      setTitle(saga.title);
+      setContent(saga.content);
+    } else if (!loading && hasRequiredContext) {
+      // Initialize with default content
+      setContent(SAGA_DEFAULT_OPENING);
+    }
+  }, [saga, loading, hasRequiredContext]);
 
   // Redirect if not signed in
   useEffect(() => {
@@ -78,9 +63,9 @@ const SagaEditPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user || saving) return;
+    if (!user || saving || !hasRequiredContext) return;
     
-    setError(null);
+    setLocalError(null);
     setSuccess(null);
     setSaving(true);
     
@@ -102,17 +87,21 @@ const SagaEditPage: React.FC = () => {
         version: '1.0' // Simple versioning for now
       };
       
-      await setDocument('saga', 'sagaData', sagaData);
+      const success = await saveSaga(sagaData);
       
-      setSuccess('Saga updated successfully');
-      
-      // Automatically navigate back after short delay
-      setTimeout(() => {
-        navigateToPage('/story/saga');
-      }, 1500);
+      if (success) {
+        setSuccess('Saga updated successfully');
+        
+        // Automatically navigate back after short delay
+        setTimeout(() => {
+          navigateToPage('/story/saga');
+        }, 1500);
+      } else {
+        throw new Error('Failed to save saga');
+      }
       
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred while saving');
+      setLocalError(err instanceof Error ? err.message : 'An error occurred while saving');
     } finally {
       setSaving(false);
     }
@@ -125,22 +114,47 @@ const SagaEditPage: React.FC = () => {
   // Function to handle exporting chapters as text
   const handleExportChapters = () => {
     if (chapters.length === 0) {
-      setError('No chapters available to export');
+      setLocalError('No chapters available to export');
       return;
     }
     
     try {
       exportChaptersAsText(chapters);
     } catch (err) {
-      setError('Failed to export chapters');
+      setLocalError('Failed to export chapters');
       console.error('Export error:', err);
     }
   };
+
+  // Handle context errors
+  if (!hasRequiredContext) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className={clsx("p-8", `${themePrefix}-card`)}>
+          <Typography className={`${themePrefix}-typography`}>
+            Please select a group and campaign to edit the saga.
+          </Typography>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Typography>Loading...</Typography>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className={clsx("p-8", `${themePrefix}-card`)}>
+          <Typography color="error">
+            {error}
+          </Typography>
+        </Card>
       </div>
     );
   }
@@ -189,9 +203,9 @@ const SagaEditPage: React.FC = () => {
           <form onSubmit={handleSubmit}>
             <Card.Content className="space-y-6">
               {/* Error/Success Messages */}
-              {error && (
+              {localError && (
                 <div className={clsx("p-4 mb-4 rounded-md", `${themePrefix}-note`)}>
-                  <Typography color="error">{error}</Typography>
+                  <Typography color="error">{localError}</Typography>
                 </div>
               )}
               
