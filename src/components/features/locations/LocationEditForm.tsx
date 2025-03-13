@@ -17,7 +17,7 @@ import { AlertCircle, Save, X } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 import { getUserDisplayName } from '../../../utils/user-utils';
-import { useAuth, useUser } from '../../../context/firebase';
+import { useAuth, useUser, useGroups, useCampaigns } from '../../../context/firebase';
 
 interface LocationEditFormProps {
   /** The location being edited */
@@ -38,6 +38,8 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
     // Firebase user for attribution
     const { user } = useAuth();
     const { userProfile } = useUser();
+    const { activeGroupId } = useGroups();
+    const { activeCampaignId } = useCampaigns();
     
     // Keep selection state local until form submission
     const [isQuestDialogOpen, setIsQuestDialogOpen] = useState(false);
@@ -48,6 +50,9 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
     const [selectedNPCs, setSelectedNPCs] = useState<Set<string>>(
       new Set(location.connectedNPCs || [])
     );
+
+    // Check if we have required context
+    const hasRequiredContext = !!activeGroupId && !!activeCampaignId;
   
   // Get NPCs data
   const { npcs } = useNPCs();
@@ -77,6 +82,11 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
       return;
     }
 
+    // Check if we have required context
+    if (!user || !activeGroupId || !activeCampaignId) {
+      throw new Error('User must be authenticated and group/campaign context must be set to update a location');
+    }
+
     try {
       // Get user info for attribution
       const displayName = getUserDisplayName(userProfile);
@@ -98,6 +108,28 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
       console.error('Failed to update location:', err);
     }
   };
+
+  // If we don't have required context, show a message
+  if (!hasRequiredContext) {
+    return (
+      <Card>
+        <Card.Content className="text-center py-8">
+          <Typography variant="h3" className="mb-4">
+            No Active Group or Campaign
+          </Typography>
+          <Typography color="secondary" className="mb-4">
+            Please select a group and campaign to edit a location.
+          </Typography>
+          <Button
+            variant="ghost"
+            onClick={onCancel}
+          >
+            Go Back
+          </Button>
+        </Card.Content>
+      </Card>
+    );
+  }
 
   return (
     <Card>

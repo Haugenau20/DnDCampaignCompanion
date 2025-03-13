@@ -1,4 +1,4 @@
-// LocationCreateForm.tsx
+// components/features/locations/LocationCreateForm.tsx
 import React, { useState } from 'react';
 import { Location } from '../../../types/location';
 import { useFirebaseData } from '../../../hooks/useFirebaseData';
@@ -15,7 +15,7 @@ import {
 } from './LocationFormSections';
 import { AlertCircle, Save, X } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
-import { useAuth, useUser } from '../../../context/firebase';
+import { useAuth, useUser, useGroups, useCampaigns } from '../../../context/firebase';
 import clsx from 'clsx';
 import { getUserDisplayName } from '../../../utils/user-utils';
 
@@ -43,14 +43,20 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
   const [selectedQuests, setSelectedQuests] = useState<Set<string>>(new Set());
   const [isNPCDialogOpen, setIsNPCDialogOpen] = useState(false);
   const [selectedNPCs, setSelectedNPCs] = useState<Set<string>>(new Set()); 
+  
   // Firebase user for attribution
   const { user } = useAuth();
   const { userProfile } = useUser();
+  const { activeGroupId } = useGroups();
+  const { activeCampaignId } = useCampaigns();
   
   // Get NPCs data
   const { npcs } = useNPCs();
   const { theme } = useTheme();
   const themePrefix = theme.name;
+
+  // Check if we have required context
+  const hasRequiredContext = !!activeGroupId && !!activeCampaignId;
 
   // Firebase hook - only used during final submission
   const { addData, loading, error } = useFirebaseData<Location>({
@@ -85,6 +91,11 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
       return;
     }
 
+    // Check if we have required context
+    if (!user || !activeGroupId || !activeCampaignId) {
+      throw new Error('User must be authenticated and group/campaign context must be set to create a location');
+    }
+
     try {
       const displayName = getUserDisplayName(userProfile);
       const currentDate = new Date().toISOString();
@@ -113,6 +124,28 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
       console.error('Failed to create location:', err);
     }
   };
+
+  // If we don't have required context, show a message
+  if (!hasRequiredContext) {
+    return (
+      <Card>
+        <Card.Content className="text-center py-8">
+          <Typography variant="h3" className="mb-4">
+            No Active Group or Campaign
+          </Typography>
+          <Typography color="secondary" className="mb-4">
+            Please select a group and campaign to create a location.
+          </Typography>
+          <Button
+            variant="ghost"
+            onClick={onCancel}
+          >
+            Go Back
+          </Button>
+        </Card.Content>
+      </Card>
+    );
+  }
 
   return (
     <Card>

@@ -3,14 +3,16 @@ import React, { createContext, useContext, useCallback } from 'react';
 import { Location, LocationStatus, LocationContextValue, LocationNote } from '../types/location';
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useAuth, useUser } from './firebase';
+import { useAuth, useUser, useGroups, useCampaigns } from './firebase';
 
 const LocationContext = createContext<LocationContextValue | undefined>(undefined);
 
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { locations, loading, error } = useLocationData();
+  const { locations, loading, error, hasRequiredContext } = useLocationData();
   const { user } = useAuth();
   const { userProfile } = useUser();
+  const { activeGroupId } = useGroups();
+  const { activeCampaignId } = useCampaigns();
   const { updateData } = useFirebaseData<Location>({ collection: 'locations' });
 
   // Get location by ID
@@ -41,8 +43,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Update location note
   const updateLocationNote = useCallback(async (locationId: string, note: LocationNote) => {
-    if (!user || !userProfile) {
-      throw new Error('User must be authenticated to add location notes');
+    if (!user || !userProfile || !activeGroupId || !activeCampaignId) {
+      throw new Error('User must be authenticated and group/campaign context must be set to add location notes');
     }
 
     const location = getLocationById(locationId);
@@ -62,12 +64,12 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     await updateData(locationId, updatedLocation);
-  }, [user, userProfile, getLocationById, updateData]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, getLocationById, updateData]);
 
   // Update location status
   const updateLocationStatus = useCallback(async (locationId: string, status: LocationStatus) => {
-    if (!user) {
-      throw new Error('User must be authenticated to update location status');
+    if (!user || !activeGroupId || !activeCampaignId) {
+      throw new Error('User must be authenticated and group/campaign context must be set to update location status');
     }
 
     const location = getLocationById(locationId);
@@ -81,7 +83,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     await updateData(locationId, updatedLocation);
-  }, [user, getLocationById, updateData]);
+  }, [user, activeGroupId, activeCampaignId, getLocationById, updateData]);
 
   const value: LocationContextValue = {
     locations,
@@ -93,7 +95,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     getChildLocations,
     getParentLocation,
     updateLocationNote,
-    updateLocationStatus
+    updateLocationStatus,
+    hasRequiredContext
   };
 
   return (

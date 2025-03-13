@@ -6,7 +6,7 @@ import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import LocationEditForm from '../../components/features/locations/LocationEditForm';
 import { useLocations } from '../../context/LocationContext';
-import { useAuth } from '../../context/firebase';
+import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
 import { useNavigation } from '../../context/NavigationContext';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
@@ -14,7 +14,12 @@ import clsx from 'clsx';
 
 const LocationEditPage: React.FC = () => {
   const { locationId } = useParams<{ locationId: string }>();
-  const { locations, isLoading, error } = useLocations();
+  const { 
+    locations, 
+    isLoading, 
+    error, 
+    hasRequiredContext 
+  } = useLocations();
   const { user } = useAuth();
   const { navigateToPage } = useNavigation();
   const { theme } = useTheme();
@@ -49,6 +54,30 @@ const LocationEditPage: React.FC = () => {
           <Typography color="error">
             Error Loading Location Data. Please try again later.
           </Typography>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!hasRequiredContext) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <Card>
+          <Card.Content className="text-center py-8">
+            <Typography variant="h3" className="mb-4">
+              No Active Group or Campaign
+            </Typography>
+            <Typography color="secondary" className="mb-4">
+              Please select a group and campaign to edit a location.
+            </Typography>
+            <Button
+              variant="ghost"
+              onClick={() => navigateToPage('/locations')}
+              startIcon={<ArrowLeft />}
+            >
+              Back to Locations
+            </Button>
+          </Card.Content>
         </Card>
       </div>
     );

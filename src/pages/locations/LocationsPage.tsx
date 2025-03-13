@@ -4,8 +4,7 @@ import Typography from '../../components/core/Typography';
 import Card from '../../components/core/Card';
 import LocationDirectory from '../../components/features/locations/LocationDirectory';
 import { useAuth } from '../../context/firebase';
-import { useFirebaseData } from '../../hooks/useFirebaseData';
-import { Location } from '../../types/location'; 
+import { useLocations } from '../../context/LocationContext';
 import { Map, MapPin, Eye, EyeOff, Plus } from 'lucide-react';
 import Button from '../../components/core/Button';
 import { useNavigation } from '../../context/NavigationContext';
@@ -15,9 +14,12 @@ import clsx from 'clsx';
 const LocationsPage: React.FC = () => {
   // Auth state
   const { user } = useAuth();
-  const { data: locations, loading, error } = useFirebaseData<Location>({
-    collection: 'locations'
-  });
+  const { 
+    locations, 
+    isLoading, 
+    error, 
+    hasRequiredContext 
+  } = useLocations();
   const { theme } = useTheme();
   const themePrefix = theme.name;
 
@@ -36,7 +38,7 @@ const LocationsPage: React.FC = () => {
     navigateToPage('/locations/create');
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
         <Card>
@@ -64,6 +66,30 @@ const LocationsPage: React.FC = () => {
     );
   }
 
+  if (!hasRequiredContext) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <Card>
+          <Card.Content className="text-center py-8">
+            <Typography variant="h3" className="mb-4">
+              No Active Group or Campaign
+            </Typography>
+            <Typography color="secondary" className="mb-4">
+              Please select a group and campaign to view locations.
+            </Typography>
+            {user && (
+              <Button
+                onClick={() => { /* Open group/campaign selector */ }}
+              >
+                Select Group & Campaign
+              </Button>
+            )}
+          </Card.Content>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Page Header */}
@@ -79,7 +105,7 @@ const LocationsPage: React.FC = () => {
 
         {/* Auth actions */}
         <div className="flex gap-2">
-          {user && (
+          {user && hasRequiredContext && (
             <Button
               onClick={handleCreateLocation}
               startIcon={<Plus className="w-5 h-5" />}
@@ -152,7 +178,7 @@ const LocationsPage: React.FC = () => {
       {/* Location Directory */}
       <LocationDirectory 
         locations={locations || []} // Provide empty array as fallback
-        isLoading={loading}
+        isLoading={isLoading}
       />
     </div>
   );

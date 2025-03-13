@@ -84,4 +84,5 @@ export interface LocationContextValue extends LocationContextState {
   getParentLocation: (locationId: string) => Location | undefined;
   updateLocationNote: (locationId: string, note: LocationNote) => void;
   updateLocationStatus: (locationId: string, status: LocationStatus) => void;
+  hasRequiredContext: boolean;
 }

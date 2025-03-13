@@ -119,8 +119,7 @@ DnDCampaignCompanion
 │   │   │   ├── QuestContext.tsx
 │   │   │   ├── NPCContext.tsx
 │   │   │   ├── NavigationContext.tsx
-│   │   │   ├── LocationContext.tsx
-│   │   │   └── GroupContext.tsx
+│   │   │   └── LocationContext.tsx
 │   │   ├── constants
 │   │   │   └── time.ts
 │   │   ├── config
@@ -191,6 +190,7 @@ DnDCampaignCompanion
 │   │   │   │   │   ├── LocationCombobox.tsx
 │   │   │   │   │   └── LocationCard.tsx
 │   │   │   │   ├── groups
+│   │   │   │   │   ├── JoinGroupDialog.tsx
 │   │   │   │   │   ├── GroupSelectorModal.tsx
 │   │   │   │   │   ├── GroupSelector.tsx
 │   │   │   │   │   └── GroupDropdown.tsx
@@ -237,9 +237,20 @@ DnDCampaignCompanion
 │   │   └── 404.html
 │   ├── functions
 │   │   ├── src
+│   │   │   ├── userManagement
+│   │   │   │   ├── removeUserFromGroup.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   └── deleteUser.ts
 │   │   │   ├── index.ts
 │   │   │   └── contact.ts
 │   │   ├── lib
+│   │   │   ├── userManagement
+│   │   │   │   ├── removeUserFromGroup.js.map
+│   │   │   │   ├── removeUserFromGroup.js
+│   │   │   │   ├── index.js.map
+│   │   │   │   ├── index.js
+│   │   │   │   ├── deleteUser.js.map
+│   │   │   │   └── deleteUser.js
 │   │   │   ├── index.js.map
 │   │   │   ├── index.js
 │   │   │   ├── contact.js.map
