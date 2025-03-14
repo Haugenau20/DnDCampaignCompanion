@@ -14,3 +14,5 @@ Fix/Implement proper searching
 The ContextSwitcher doesnt properly update the UI when switching between campaigns.
 
 rework of how the header is displayed. maybe a sidebar? maybe like dnd beyon? 
+
+Have registration tokens expire after X days
