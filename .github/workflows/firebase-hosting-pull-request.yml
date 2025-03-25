@@ -20,8 +20,14 @@ jobs:
       # Build app in Docker container and extract build artifacts
       - name: Build app in container
         run: |
-          # Copy production env
-          cp .env.production .env
+          # Create production env file from GitHub Secrets
+          echo "REACT_APP_USE_EMULATORS=false" > .env
+          echo "REACT_APP_API_KEY=${{ secrets.REACT_APP_API_KEY }}" >> .env
+          echo "REACT_APP_AUTH_DOMAIN=${{ secrets.REACT_APP_AUTH_DOMAIN }}" >> .env
+          echo "REACT_APP_PROJECT_ID=${{ secrets.REACT_APP_PROJECT_ID }}" >> .env
+          echo "REACT_APP_STORAGE_BUCKET=${{ secrets.REACT_APP_STORAGE_BUCKET }}" >> .env
+          echo "REACT_APP_MESSAGING_SENDER_ID=${{ secrets.REACT_APP_MESSAGING_SENDER_ID }}" >> .env
+          echo "REACT_APP_APP_ID=${{ secrets.REACT_APP_APP_ID }}" >> .env
           
           # Build using Docker
           docker build -t app-builder -f docker/Dockerfile.frontend.prod .
