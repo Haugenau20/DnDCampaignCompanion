@@ -1,0 +1,44 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isMemberOfGroup(groupId) {
+      return isAuthenticated() && 
+        exists(/databases/(default)/documents/groups/$(groupId)/members/$(request.auth.uid));
+    }
+
+    // Allow all operations for development with emulators
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+    
+    /* Production rules - uncomment these and remove the rule above when deploying to production
+    
+    // User-specific files
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+    }
+    
+    // Group-specific files
+    match /groups/{groupId}/{allPaths=**} {
+      allow read: if isMemberOfGroup(groupId);
+      allow write: if isMemberOfGroup(groupId);
+    }
+    
+    // Public files
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    */
+  }
+}

@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+build
+.git
+.github
+.firebase
+.dockerignore
+.gitignore
+README.md
+*.md
+*.ps1
+docs
+**/Thumbs.db
+**/.DS_Store

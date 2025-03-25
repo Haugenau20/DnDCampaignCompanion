@@ -1,11 +1,22 @@
 // src/services/firebase/core/BaseFirebaseService.ts
-import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getAnalytics, Analytics } from 'firebase/analytics';
-import { getFunctions, Functions } from 'firebase/functions';
-import { firebaseConfig } from '../config/firebaseConfig';
-import ServiceRegistry from './ServiceRegistry';
+import { initializeApp, FirebaseApp } from "firebase/app";
+import { 
+  getAuth, Auth, connectAuthEmulator 
+} from "firebase/auth";
+import { 
+  getFirestore, Firestore, connectFirestoreEmulator 
+} from "firebase/firestore";
+import { getAnalytics, Analytics } from "firebase/analytics";
+import { 
+  getFunctions, Functions, connectFunctionsEmulator 
+} from "firebase/functions";
+import { 
+  firebaseConfig, 
+  useEmulators, 
+  emulatorHost, 
+  emulatorPorts 
+} from "../config/firebaseConfig";
+import ServiceRegistry from "./ServiceRegistry";
 
 /**
  * BaseFirebaseService provides core Firebase functionality and shared resources
@@ -27,9 +38,9 @@ abstract class BaseFirebaseService {
     this.registry = ServiceRegistry.getInstance();
     
     // Initialize Firebase app if not already done
-    if (!this.registry.has('app')) {
+    if (!this.registry.has("app")) {
       const app = initializeApp(firebaseConfig);
-      this.registry.register('app', app);
+      this.registry.register("app", app);
       
       // Initialize other Firebase services
       const auth = getAuth(app);
@@ -37,18 +48,44 @@ abstract class BaseFirebaseService {
       const analytics = getAnalytics(app);
       const functions = getFunctions(app);
       
-      this.registry.register('auth', auth);
-      this.registry.register('db', db);
-      this.registry.register('analytics', analytics);
-      this.registry.register('functions', functions);
+      // Connect to emulators in development environment
+      if (useEmulators) {
+        console.log("Using Firebase Emulators");
+        
+        // Connect Auth to emulator
+        connectAuthEmulator(
+          auth, 
+          `http://${emulatorHost}:${emulatorPorts.auth}`,
+          { disableWarnings: true }
+        );
+        
+        // Connect Firestore to emulator
+        connectFirestoreEmulator(
+          db, 
+          emulatorHost, 
+          parseInt(emulatorPorts.firestore)
+        );
+        
+        // Connect Functions to emulator
+        connectFunctionsEmulator(
+          functions, 
+          emulatorHost, 
+          parseInt(emulatorPorts.functions)
+        );
+      }
+      
+      this.registry.register("auth", auth);
+      this.registry.register("db", db);
+      this.registry.register("analytics", analytics);
+      this.registry.register("functions", functions);
     }
     
     // Get Firebase services from registry
-    this.app = this.registry.get('app');
-    this.auth = this.registry.get('auth');
-    this.db = this.registry.get('db');
-    this.analytics = this.registry.get('analytics');
-    this.functions = this.registry.get('functions');
+    this.app = this.registry.get("app");
+    this.auth = this.registry.get("auth");
+    this.db = this.registry.get("db");
+    this.analytics = this.registry.get("analytics");
+    this.functions = this.registry.get("functions");
   }
   
   /**
@@ -96,8 +133,8 @@ abstract class BaseFirebaseService {
     const bytes = new Uint8Array(16);
     crypto.getRandomValues(bytes);
     return Array.from(bytes)
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
   }
 }
 
