@@ -32,6 +32,10 @@ jobs:
           docker create --name temp-container app-builder
           docker cp temp-container:/usr/share/nginx/html ./build
           docker rm temp-container
+          
+          # Copy the build directory to where Firebase expects it relative to the entryPoint
+          mkdir -p firebase/build
+          cp -r build/* firebase/build/
       
       # Deploy to Firebase Hosting
       - uses: FirebaseExtended/action-hosting-deploy@v0
