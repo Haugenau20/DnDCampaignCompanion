@@ -4,6 +4,7 @@ import Typography from '../../core/Typography';
 import Card from '../../core/Card';
 import Button from '../../core/Button';
 import Input from '../../core/Input';
+import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import { useQuests } from '../../../context/QuestContext';
 import { useAuth } from '../../../context/firebase';
 import { useFirebaseData } from '../../../hooks/useFirebaseData';
@@ -20,25 +21,30 @@ import {
   Edit,
   PlusCircle,
   Save,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 
 interface NPCCardProps {
   npc: NPC;
   onEdit?: (npc: NPC) => void;
+  onDelete?: (npcId: string) => void;
 }
 
 const NPCCard: React.FC<NPCCardProps> = ({ 
   npc: initialNpc,
-  onEdit 
+  onEdit,
+  onDelete
 }) => {
   const [npc, setNpc] = useState<NPC>(initialNpc);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [noteInput, setNoteInput] = useState('');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  
   const { getQuestById } = useQuests();
-  const { user } = useAuth(); // Get authentication state
-  const { updateData } = useFirebaseData<NPC>({ collection: 'npcs' });
+  const { user } = useAuth();
+  const { updateData, deleteData } = useFirebaseData<NPC>({ collection: 'npcs' });
   const { navigateToPage, createPath } = useNavigation();
   const { theme } = useTheme();
   const themePrefix = theme.name;
@@ -82,9 +88,20 @@ const NPCCard: React.FC<NPCCardProps> = ({
 
   // Handle editing the NPC
   const handleEdit = () => {
-    if (user) { // Only allow edit if user is authenticated
+    if (user) {
       navigateToPage(`/npcs/edit/${npc.id}`);
     }
+  };
+
+  // Handle NPC deletion
+  const handleDeleteConfirm = async () => {
+    await deleteData(npc.id);
+    
+    if (onDelete) {
+      onDelete(npc.id);
+    }
+    
+    setIsDeleteDialogOpen(false);
   };
 
   // Handle quest click
@@ -293,11 +310,11 @@ const NPCCard: React.FC<NPCCardProps> = ({
               </div>
             )}
 
-            {/* Quick Note Adding - Only visible when authenticated */}
+            {/* Action Buttons - Only visible when authenticated */}
             {user && (
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-wrap gap-3 pt-2">
                 {isAddingNote ? (
-                  <div className="space-y-2">
+                  <div className="space-y-2 w-full">
                     <Input
                       value={noteInput}
                       onChange={(e) => setNoteInput(e.target.value)}
@@ -337,21 +354,40 @@ const NPCCard: React.FC<NPCCardProps> = ({
                   </Button>
                 )}
 
-                {/* Edit Button - Only shown when user is authenticated */}
+                {/* Edit Button */}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleEdit}
                   startIcon={<Edit size={16} />}
                 >
-                  Edit NPC
+                  Edit
+                </Button>
+
+                {/* Delete Button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  startIcon={<Trash2 size={16} />}
+                  className={clsx(`${themePrefix}-button-ghost-danger`)}
+                >
+                  Delete
                 </Button>
               </div>
             )}
-          
           </div>
         )}
       </Card.Content>
+
+      {/* Delete Confirmation Dialog - Using shared component */}
+      <DeleteConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        itemName={npc.name}
+        itemType="NPC"
+      />
     </Card>
   );
 };

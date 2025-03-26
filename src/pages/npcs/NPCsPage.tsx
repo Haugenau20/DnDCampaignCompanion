@@ -1,4 +1,3 @@
-// src/pages/npcs/NPCsPage.tsx
 import React, { useMemo } from 'react';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
@@ -36,6 +35,16 @@ const NPCsPage: React.FC = () => {
     deceased: npcs.filter(npc => npc.status === 'deceased').length,
     missing: npcs.filter(npc => npc.status === 'missing').length
   }), [npcs]);
+
+  // Handle NPC update
+  const handleNPCUpdate = async (updatedNPC: NPC) => {
+    await refreshNPCs();
+  };
+
+  // Handle NPC deletion
+  const handleNPCDelete = async (npcId: string) => {
+    await refreshNPCs();
+  };
 
   // Show loading state
   if (loading) {
@@ -169,9 +178,8 @@ const NPCsPage: React.FC = () => {
       {/* NPC Directory */}
       <NPCDirectory 
         npcs={npcs}
-        onNPCUpdate={async (updatedNPC: NPC) => {
-          await refreshNPCs(); // Refresh the NPC list after update
-        }}
+        onNPCUpdate={handleNPCUpdate}
+        onNPCDelete={handleNPCDelete}
       />
     </div>
   );

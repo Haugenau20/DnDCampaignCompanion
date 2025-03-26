@@ -5,7 +5,7 @@ import Card from '../../core/Card';
 import Button from '../../core/Button';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';
-import { Search, Users, MapPin, Heart } from 'lucide-react';
+import { Search, Users, MapPin, Heart, AlertCircle } from 'lucide-react';
 import { useNavigation } from '../../../context/NavigationContext';
 import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
@@ -14,12 +14,14 @@ interface NPCDirectoryProps {
   npcs: NPC[];
   isLoading?: boolean;
   onNPCUpdate?: (updatedNPC: NPC) => void;
+  onNPCDelete?: (npcId: string) => void;
 }
 
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({ 
   npcs: initialNpcs,
   isLoading = false,
-  onNPCUpdate
+  onNPCUpdate,
+  onNPCDelete
 }) => {
   // Track npcs locally
   const [npcs, setNpcs] = useState<NPC[]>(initialNpcs);
@@ -53,6 +55,17 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
     // Call the parent handler if provided
     if (onNPCUpdate) {
       onNPCUpdate(updatedNPC);
+    }
+  };
+
+  // Handle NPC deletion
+  const handleNPCDelete = (npcId: string) => {
+    // Update local state
+    setNpcs(prev => prev.filter(npc => npc.id !== npcId));
+    
+    // Call the parent handler if provided
+    if (onNPCDelete) {
+      onNPCDelete(npcId);
     }
   };
 
@@ -127,7 +140,12 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
     return (
       <Card>
         <Card.Content>
-          <Typography>Loading NPCs...</Typography>
+          <div className="flex items-center justify-center p-8">
+            <div className="animate-spin mr-2">
+              <Users className={clsx(`${themePrefix}-primary`)} />
+            </div>
+            <Typography>Loading NPCs...</Typography>
+          </div>
         </Card.Content>
       </Card>
     );
@@ -202,52 +220,55 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
         </Card.Content>
       </Card>
 
-      {/* NPC List */}
-      {Object.entries(groupedNPCs).map(([location, locationNPCs]) => (
-        <div key={location}>
-          <div className="flex items-center gap-2 mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleLocationClick(location!)}
-              startIcon={<MapPin className={clsx(`${themePrefix}-typography-secondary`)} />}
-              className="flex items-center gap-2 justify-start"
-            >
-              <Typography variant="h3">
-                {location}
-              </Typography>
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {locationNPCs.map(npc => (
-              <div
-                key={npc.id}
-                id={`npc-${npc.id}`}
-                className={clsx(
-                  "transition-all duration-300",
-                  highlightedNpcId === npc.id ? `${themePrefix}-highlighted-item` : ''
-                )}
+      {/* NPC List by Location */}
+      {Object.entries(groupedNPCs).length > 0 ? (
+        Object.entries(groupedNPCs).map(([location, locationNPCs]) => (
+          <div key={location}>
+            <div className="flex items-center gap-2 mb-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleLocationClick(location!)}
+                startIcon={<MapPin className={clsx(`${themePrefix}-typography-secondary`)} />}
+                className="flex items-center gap-2 justify-start"
               >
-                <NPCCard 
-                  npc={npc} 
-                  onEdit={handleNPCUpdate} />
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
+                <Typography variant="h3">
+                  {location}
+                </Typography>
+              </Button>
+            </div>
 
-      {/* Empty State */}
-      {filteredNPCs.length === 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {locationNPCs.map(npc => (
+                <div
+                  key={npc.id}
+                  id={`npc-${npc.id}`}
+                  className={clsx(
+                    "transition-all duration-300",
+                    highlightedNpcId === npc.id ? `${themePrefix}-highlighted-item` : ''
+                  )}
+                >
+                  <NPCCard 
+                    npc={npc} 
+                    onEdit={handleNPCUpdate}
+                    onDelete={handleNPCDelete}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      ) : (
         <Card>
           <Card.Content className="text-center py-8">
-            <Users className={clsx("w-12 h-12 mx-auto mb-4", `${themePrefix}-typography-secondary`)} />
+            <AlertCircle className={clsx("w-12 h-12 mx-auto mb-4", `${themePrefix}-typography-secondary`)} />
             <Typography variant="h3" className="mb-2">
               No NPCs Found
             </Typography>
             <Typography color="secondary">
-              Try adjusting your search criteria
+              {npcs.length > 0 
+                ? "Try adjusting your search criteria" 
+                : "Start by adding some NPCs to your campaign"}
             </Typography>
           </Card.Content>
         </Card>
