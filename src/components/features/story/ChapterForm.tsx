@@ -115,7 +115,7 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
   };
 
   const handleCancel = () => {
-    navigateToPage('/story/chapters');
+    navigateToPage(`/story/chapters/${chapter?.id}`);
   };
 
   return (

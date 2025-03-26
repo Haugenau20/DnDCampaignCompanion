@@ -157,7 +157,7 @@ const StoryPage: React.FC = () => {
         <div className="mb-8 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => setChaptersOpen(true)}
               startIcon={<Menu />}
@@ -178,55 +178,19 @@ const StoryPage: React.FC = () => {
             {user && (
               <div className="relative">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  onClick={() => setEditMenuOpen(!isEditMenuOpen)}
+                  onClick={handleEditChapter}
                   startIcon={<Edit />}
                 >
                   Edit
                 </Button>
-                
-                {/* Edit Dropdown Menu */}
-                {isEditMenuOpen && (
-                  <div 
-                    className={clsx(
-                      "absolute right-0 mt-2 w-48 rounded-md shadow-lg z-10 border",
-                      `${themePrefix}-dropdown`
-                    )}
-                  >
-                    <div className="py-1">
-                      <button
-                        className={clsx(
-                          "flex items-center gap-2 px-4 py-2 text-sm w-full text-left",
-                          `${themePrefix}-dropdown-item`
-                        )}
-                        onClick={handleCreateChapter}
-                      >
-                        <Plus className="w-4 h-4" />
-                        Create New Chapter
-                      </button>
-                      
-                      {currentChapter && (
-                        <button
-                          className={clsx(
-                            "flex items-center gap-2 px-4 py-2 text-sm w-full text-left",
-                            `${themePrefix}-dropdown-item`
-                          )}
-                          onClick={handleEditChapter}
-                        >
-                          <Edit className="w-4 h-4" />
-                          Edit Current Chapter
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
             
             <Button
               variant="ghost"
-              onClick={() => navigateToPage('/story')}
+              onClick={() => navigateToPage('/story/chapters')}
               startIcon={<Book />}
             >
               Back to Selection
