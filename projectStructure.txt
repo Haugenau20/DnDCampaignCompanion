@@ -3,10 +3,13 @@ DnDCampaignCompanion
 │   ├── src
 │   │   ├── utils
 │   │   │   ├── __dev__
-│   │   │   │   └── sessionTester.ts
+│   │   │   │   ├── sessionTester.ts
+│   │   │   │   ├── generateSampleData.ts
+│   │   │   │   └── dndSampleDataGenerator.ts
 │   │   │   ├── user-utils.ts
 │   │   │   ├── theme-utils.ts
 │   │   │   ├── search.ts
+│   │   │   ├── password-validation.ts
 │   │   │   ├── navigation.ts
 │   │   │   ├── export-utils.ts
 │   │   │   └── attribution-utils.ts
@@ -56,8 +59,6 @@ DnDCampaignCompanion
 │   │   │   │   └── index.ts
 │   │   │   └── index.ts
 │   │   ├── scripts
-│   │   │   ├── migrateToFirebase.ts
-│   │   │   └── migrateNewChapter.ts
 │   │   ├── pages
 │   │   │   ├── story
 │   │   │   │   ├── StorySelectionPage.tsx
@@ -94,6 +95,7 @@ DnDCampaignCompanion
 │   │   ├── hooks
 │   │   │   ├── useSessionManager.ts
 │   │   │   ├── useSearch.ts
+│   │   │   ├── useSagaData.ts
 │   │   │   ├── useRumorData.ts
 │   │   │   ├── useQuestData.ts
 │   │   │   ├── useNPCData.ts
@@ -271,6 +273,7 @@ DnDCampaignCompanion
 │   │   │   ├── rumor-management.md
 │   │   │   ├── public-sample-data.md
 │   │   │   ├── group-scaling.md
+│   │   │   ├── databaseStructure.md
 │   │   │   └── chapter-management.md
 │   │   ├── futureThoughts
 │   │   ├── design
@@ -279,6 +282,33 @@ DnDCampaignCompanion
 │   │   │   │       └── rumors.md
 │   │   │   └── architecture
 │   │   └── README.md
+│   ├── docker
+│   │   ├── emulators
+│   │   │   ├── logs
+│   │   │   └── data
+│   │   │       ├── storage_export
+│   │   │       │   ├── metadata
+│   │   │       │   ├── blobs
+│   │   │       │   └── buckets.json
+│   │   │       ├── firestore_export
+│   │   │       │   ├── all_namespaces
+│   │   │       │   │   └── all_kinds
+│   │   │       │   │       ├── output-0
+│   │   │       │   │       └── all_namespaces_all_kinds.export_metadata
+│   │   │       │   └── firestore_export.overall_export_metadata
+│   │   │       ├── auth_export
+│   │   │       │   ├── config.json
+│   │   │       │   └── accounts.json
+│   │   │       └── firebase-export-metadata.json
+│   │   ├── config
+│   │   │   ├── nginx.conf
+│   │   │   └── firebase-emulator.json
+│   │   ├── emulator-entrypoint.sh
+│   │   ├── Dockerfile.functions
+│   │   ├── Dockerfile.frontend.prod
+│   │   ├── Dockerfile.frontend.dev
+│   │   ├── Dockerfile.emulators.backup
+│   │   └── Dockerfile.emulators
 │   ├── .github
 │   │   └── workflows
 │   │       ├── firebase-hosting-pull-request.yml
@@ -288,17 +318,28 @@ DnDCampaignCompanion
 │   ├── tsconfig.json
 │   ├── todo.txt
 │   ├── tailwind.config.js
+│   ├── storage.rules
 │   ├── README.md
 │   ├── projectStructure.txt
 │   ├── postcss.config.js
 │   ├── package-lock.json
 │   ├── package.json
+│   ├── manage-environment.ps1
+│   ├── manage-dev-data.ps1
 │   ├── LICENSE
 │   ├── jest.config.ts
+│   ├── firestore.rules
+│   ├── firestore.indexes.json
 │   ├── firebase.json
+│   ├── docker-compose.prod.yml
+│   ├── docker-compose.dev.yml
 │   ├── dirTree.ps1
 │   ├── copyfiles.ps1
 │   ├── copyFeatureFiles.ps1
 │   ├── chapter.json
 │   ├── .gitignore
-│   └── .firebaserc
+│   ├── .firebaserc
+│   ├── .env.production
+│   ├── .env.development
+│   ├── .env
+│   └── .dockerignore

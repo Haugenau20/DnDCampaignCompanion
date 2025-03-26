@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  # Frontend React application (production build)
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend.prod
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    restart: always
+    networks:
+      - dnd-network
+
+networks:
+  dnd-network:
+    driver: bridge

@@ -1,0 +1,23 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install dependencies
+RUN npm install --legacy-peer-deps
+
+# Copy the rest of the code (or mount as volume in docker-compose)
+COPY . .
+
+# Expose development port
+EXPOSE 3000
+
+# Set environment variables for better file watching in Docker
+ENV CHOKIDAR_USEPOLLING=true
+ENV WATCHPACK_POLLING=true
+ENV FAST_REFRESH=true
+
+# Start development server with hot reloading
+CMD ["npm", "start"]
