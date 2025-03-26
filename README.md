@@ -2,9 +2,9 @@
 
 ## 📖 Overview
 
-D&D Campaign Companion is a comprehensive web application designed to help players track and organize their Dungeons & Dragons campaigns. This fully-featured React application provides intuitive tools for managing campaign stories, quests, NPCs, and locations - all with a themed interface that enhances the D&D experience.
+D&D Campaign Companion is a comprehensive web application designed to help players track and organize their Dungeons & Dragons campaigns. This fully-featured React application provides intuitive tools for managing campaign stories, quests, rumors, NPCs, and locations - all with a themed interface that enhances the D&D experience.
 
-### 🔗 [Live Demo](https://haugenau20.github.io/DnDRecap/) | [Repository](https://github.com/haugenau20/DnDRecap)
+### 🔗 [Live Demo](https://dnd-campaign-companion.web.app/) | [Repository](https://github.com/haugenau20/DnDCampaignCompanion)
 
 ## ✨ Features
 
@@ -32,15 +32,20 @@ D&D Campaign Companion is a comprehensive web application designed to help playe
 - **Connected Information**: Link locations to related NPCs and quests
 - **Discovery Status**: Track location discovery status (known, explored, visited)
 
+### Rumor Tracking
+- **Rumor Management**: Create, edit, and organize campaign rumors
+- **Status Tracking**: Track the state of the rumor to see if it is confirmed, unconfirmed or false
+- **Combine and Convert**: Combine several rumors or convert them into a quest
+
 ### 🔍 Global Search (🚧 Under construction)
 - **Cross-section Search**: Find content across stories, quests, NPCs, and locations
 - **Real-time Results**: Get instant search results with highlighted matching terms
 - **Contextual Navigation**: Jump directly to search results with proper context
 
 ### 🎨 Themed Interface
-- **Dungeons & Dragons Theme**: Immersive interface with thematic elements
-- **Responsive Design**: Fully responsive layout that works on devices of all sizes
-- **(🚧 Coming soon) Dark/Light Mode**: Choose between different visual themes
+- **Medieval Theme**: Immersive interface with thematic elements
+- **Responsive Design**: Fully responsive layout that works on devices of all sizes (🚧 Under construction)
+- **Dark/Light Mode**: Choose between different visual themes
 
 ## 🛠️ Technical Implementation
 
@@ -88,21 +93,7 @@ The D&D Campaign Companion is built with a component-based architecture followin
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/haugenau20/DnDRecap.git
-   cd DnDRecap
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-   ```bash
-   npm start
-   ```
+(🚧 Coming soon)
 
 ### Firebase Configuration
 
@@ -113,7 +104,7 @@ The D&D Campaign Companion is built with a component-based architecture followin
 ## 📁 Project Structure
 
 ```
-DnDRecap/
+DnDCampaignCompanion/
 ├── src/
 │   ├── components/     # UI components
 │   │   ├── core/       # Core UI components (Button, Card, etc.)
@@ -133,11 +124,11 @@ DnDRecap/
 
 ## 📦 Deployment
 
-The application is configured for automatic deployment to GitHub Pages using GitHub Actions:
+The application is configured for automatic deployment to Firebase Hosting using GitHub Actions:
 
 1. Push changes to the main branch
 2. GitHub Actions automatically builds and deploys the application
-3. Visit the deployed application at https://haugenau20.github.io/DnDRecap/
+3. Visit the deployed application at https://dnd-campaign-companion.web.app/
 
 ## 🚧 Project Status
 This project is currently under active development and updates are being made regularly. The search functionality and several other features are still being built and refined.

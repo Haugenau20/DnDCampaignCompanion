@@ -161,7 +161,6 @@ DnDCampaignCompanion
 │   │   │   │   │   ├── TableView.tsx
 │   │   │   │   │   ├── SlidingChapters.tsx
 │   │   │   │   │   ├── LatestChapter.tsx
-│   │   │   │   │   ├── DeleteConfirmationDialog.tsx
 │   │   │   │   │   ├── ChapterForm.tsx
 │   │   │   │   │   ├── BookViewer.tsx
 │   │   │   │   │   └── BookshelfView.tsx
