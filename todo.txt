@@ -1,4 +1,6 @@
 Implement the full CRUD for all feature pages. (currently working on)
+- Update: implemented on Quest, Rumors, NPCs, Locations and Story.
+    - Update: Still need to change Story to use the shared deletion dialog.
 
 Make completed quests be default hidden with option to expand?
 Make active quests be on the top of the list?
