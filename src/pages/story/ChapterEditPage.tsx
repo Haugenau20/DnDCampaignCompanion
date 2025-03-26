@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import Typography from '../../components/core/Typography';
 import ChapterForm from '../../components/features/story/ChapterForm';
-import DeleteConfirmationDialog from '../../components/features/story/DeleteConfirmationDialog';
+import DeleteConfirmationDialog from '../../components/shared/DeleteConfirmationDialog';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useStory } from '../../context/StoryContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -116,10 +116,10 @@ const ChapterEditPage: React.FC = () => {
         {/* Delete Confirmation Dialog */}
         <DeleteConfirmationDialog
           isOpen={isDeleteDialogOpen}
-          itemTitle={`Chapter ${chapter.order}: ${chapter.title}`}
-          itemType="chapter"
+          itemName={`Chapter ${chapter.order}: ${chapter.title}`}
+          itemType="Chapter"
           onConfirm={handleDeleteConfirm}
-          onCancel={() => setIsDeleteDialogOpen(false)}
+          onClose={() => setIsDeleteDialogOpen(false)}
         />
       </div>
     </div>

@@ -10,11 +10,11 @@ import Button from '../../components/core/Button';
 import BookshelfView from '../../components/features/story/BookshelfView';
 import TableView from '../../components/features/story/TableView';
 import { 
-  Book, 
   Plus, 
   Bookmark, 
   List, 
-  Grid
+  Grid,
+  Book
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -137,6 +137,13 @@ const ChaptersPage: React.FC = () => {
                 New Chapter
               </Button>
             )}
+            <Button
+              variant="ghost"
+              onClick={() => navigateToPage('/story')}
+              startIcon={<Book />}
+            >
+              Back to Selection
+            </Button>
           </div>
         </div>
         

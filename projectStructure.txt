@@ -58,7 +58,6 @@ DnDCampaignCompanion
 │   │   │   │   │   └── AuthService.ts
 │   │   │   │   └── index.ts
 │   │   │   └── index.ts
-│   │   ├── scripts
 │   │   ├── pages
 │   │   │   ├── story
 │   │   │   │   ├── StorySelectionPage.tsx
@@ -131,6 +130,7 @@ DnDCampaignCompanion
 │   │   │   │   ├── ThemeSelector.tsx
 │   │   │   │   ├── SearchBar.tsx
 │   │   │   │   ├── ErrorBoundary.tsx
+│   │   │   │   ├── DeleteConfirmationDialog.tsx
 │   │   │   │   ├── ContextSwitcher.tsx
 │   │   │   │   └── AttributionInfo.tsx
 │   │   │   ├── layout
@@ -161,7 +161,6 @@ DnDCampaignCompanion
 │   │   │   │   │   ├── TableView.tsx
 │   │   │   │   │   ├── SlidingChapters.tsx
 │   │   │   │   │   ├── LatestChapter.tsx
-│   │   │   │   │   ├── DeleteConfirmationDialog.tsx
 │   │   │   │   │   ├── ChapterForm.tsx
 │   │   │   │   │   ├── BookViewer.tsx
 │   │   │   │   │   └── BookshelfView.tsx
@@ -173,7 +172,6 @@ DnDCampaignCompanion
 │   │   │   │   │   ├── ConvertToQuestDialog.tsx
 │   │   │   │   │   └── CombineRumorsDialog.tsx
 │   │   │   │   ├── quests
-│   │   │   │   │   ├── QuestTracker.tsx
 │   │   │   │   │   ├── QuestFormSections.tsx
 │   │   │   │   │   ├── QuestEditForm.tsx
 │   │   │   │   │   ├── QuestCreateForm.tsx
@@ -229,6 +227,11 @@ DnDCampaignCompanion
 │   │   ├── setupTests.ts
 │   │   ├── index.tsx
 │   │   └── App.tsx
+│   ├── scripts
+│   │   ├── manage-environment.ps1
+│   │   ├── manage-dev-data.ps1
+│   │   ├── dirTree.ps1
+│   │   └── copyFeatureFiles.ps1
 │   ├── public
 │   │   ├── decorative
 │   │   │   ├── scroll-end.svg
@@ -263,6 +266,12 @@ DnDCampaignCompanion
 │   │   ├── package.json
 │   │   ├── .gitignore
 │   │   └── .eslintrc.js
+│   ├── firebase
+│   │   ├── storage.rules
+│   │   ├── firestore.rules
+│   │   ├── firestore.indexes.json
+│   │   ├── firebase.json
+│   │   └── .firebaserc
 │   ├── docs
 │   │   ├── technical
 │   │   │   ├── implementation-guides
@@ -307,8 +316,9 @@ DnDCampaignCompanion
 │   │   ├── Dockerfile.functions
 │   │   ├── Dockerfile.frontend.prod
 │   │   ├── Dockerfile.frontend.dev
-│   │   ├── Dockerfile.emulators.backup
-│   │   └── Dockerfile.emulators
+│   │   ├── Dockerfile.emulators
+│   │   ├── docker-compose.prod.yml
+│   │   └── docker-compose.dev.yml
 │   ├── .github
 │   │   └── workflows
 │   │       ├── firebase-hosting-pull-request.yml
@@ -318,27 +328,14 @@ DnDCampaignCompanion
 │   ├── tsconfig.json
 │   ├── todo.txt
 │   ├── tailwind.config.js
-│   ├── storage.rules
 │   ├── README.md
 │   ├── projectStructure.txt
 │   ├── postcss.config.js
 │   ├── package-lock.json
 │   ├── package.json
-│   ├── manage-environment.ps1
-│   ├── manage-dev-data.ps1
 │   ├── LICENSE
 │   ├── jest.config.ts
-│   ├── firestore.rules
-│   ├── firestore.indexes.json
-│   ├── firebase.json
-│   ├── docker-compose.prod.yml
-│   ├── docker-compose.dev.yml
-│   ├── dirTree.ps1
-│   ├── copyfiles.ps1
-│   ├── copyFeatureFiles.ps1
-│   ├── chapter.json
 │   ├── .gitignore
-│   ├── .firebaserc
 │   ├── .env.production
 │   ├── .env.development
 │   ├── .env
