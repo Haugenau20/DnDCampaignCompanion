@@ -1,4 +1,4 @@
-Implement the full CRUD for all feature pages.
+Implement the full CRUD for all feature pages. (currently working on)
 
 Make completed quests be default hidden with option to expand?
 Make active quests be on the top of the list?
