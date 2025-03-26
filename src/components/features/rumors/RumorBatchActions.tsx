@@ -5,6 +5,7 @@ import Typography from '../../core/Typography';
 import { RumorStatus } from '../../../types/rumor';
 import { useRumors } from '../../../context/RumorContext';
 import { useTheme } from '../../../context/ThemeContext';
+import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import clsx from 'clsx';
 import { 
   CheckCircle, 
@@ -156,35 +157,14 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             onConvert={handleConvertSubmit}
           />
           
-          <Dialog
-            open={showDeleteConfirmation}
+          <DeleteConfirmationDialog
+            isOpen={showDeleteConfirmation}
             onClose={() => setShowDeleteConfirmation(false)}
-            title="Confirm Deletion"
-            maxWidth="max-w-md"
-          >
-            <div className="space-y-4">
-              <Typography>
-                Are you sure you want to delete {selectedRumors.size} rumors? This cannot be undone.
-              </Typography>
-              
-              <div className="flex justify-end gap-2 mt-4">
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowDeleteConfirmation(false)}
-                  disabled={isProcessing}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={confirmDelete}
-                  startIcon={<Trash />}
-                  isLoading={isProcessing}
-                >
-                  Delete
-                </Button>
-              </div>
-            </div>
-          </Dialog>
+            onConfirm={confirmDelete}
+            itemName={`${selectedRumors.size} rumors`}
+            itemType="Rumor"
+            message={`Are you sure you want to delete ${selectedRumors.size} rumors? This cannot be undone.`}
+          />
         </>,
         document.body
       )}

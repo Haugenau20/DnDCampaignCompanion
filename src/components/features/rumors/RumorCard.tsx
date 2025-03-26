@@ -12,6 +12,7 @@ import { useNPCs } from '../../../context/NPCContext';
 import { useLocations } from '../../../context/LocationContext';
 import { useTheme } from '../../../context/ThemeContext';
 import AttributionInfo from '../../shared/AttributionInfo';
+import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import clsx from 'clsx';
 import { 
   ChevronDown, 
@@ -27,10 +28,7 @@ import {
   Trash,
   PlusCircle,
   Save,
-  X,
-  User,
-  // New import for character attribution
-  Scroll 
+  X
 } from 'lucide-react';
 
 interface RumorCardProps {
@@ -48,27 +46,15 @@ const RumorCard: React.FC<RumorCardProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAddingNote, setIsAddingNote] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [noteInput, setNoteInput] = useState('');
   const { user } = useAuth();
-  const { updateRumorNote, updateRumorStatus, convertToQuest } = useRumors();
+  const { updateRumorNote, updateRumorStatus, deleteRumor } = useRumors();
   const { navigateToPage, createPath } = useNavigation();
   const { getNPCById } = useNPCs();
   const { getLocationById } = useLocations();
   const { theme } = useTheme();
   const themePrefix = theme.name;
-
-  // Get status icon based on verification status
-  const getStatusIcon = () => {
-    switch (rumor.status) {
-      case 'confirmed':
-        return <CheckCircle className={`${themePrefix}-rumor-status-confirmed`} />;
-      case 'false':
-        return <XCircle className={`${themePrefix}-rumor-status-false`} />;
-      case 'unconfirmed':
-      default:
-        return <HelpCircle className={`${themePrefix}-rumor-status-unconfirmed`} />;
-    }
-  };
 
   // Format source type for display
   const formatSourceType = (type: string) => {
@@ -123,6 +109,10 @@ const RumorCard: React.FC<RumorCardProps> = ({
   // Handle edit rumor
   const handleEdit = () => {
     navigateToPage(`/rumors/edit/${rumor.id}`);
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteConfirmation(true);
   };
 
   // Handle selection
@@ -367,6 +357,15 @@ const RumorCard: React.FC<RumorCardProps> = ({
                 >
                   Convert to Quest
                 </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDeleteClick}
+                  startIcon={<Trash size={16} />}
+                >
+                  Delete
+                </Button>
 
                 {/* Status Update Buttons */}
                 <div className="flex-1 flex justify-end gap-2">
@@ -403,6 +402,13 @@ const RumorCard: React.FC<RumorCardProps> = ({
           </div>
         )}
       </Card.Content>
+      <DeleteConfirmationDialog
+        isOpen={showDeleteConfirmation}
+        onClose={() => setShowDeleteConfirmation(false)}
+        onConfirm={() => deleteRumor(rumor.id)}
+        itemName={rumor.title}
+        itemType="Rumor"
+      />
     </Card>
   );
 };

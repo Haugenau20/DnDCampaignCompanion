@@ -16,3 +16,5 @@ The ContextSwitcher doesnt properly update the UI when switching between campaig
 rework of how the header is displayed. maybe a sidebar? maybe like dnd beyon? 
 
 Have registration tokens expire after X days
+
+Add batch options (Delete, change status, etc.) for Story, Quest, NPC, and Location features
