@@ -1,7 +1,6 @@
 // components/features/locations/LocationCreateForm.tsx
 import React, { useState } from 'react';
 import { Location } from '../../../types/location';
-import { useFirebaseData } from '../../../hooks/useFirebaseData';
 import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import Card from '../../core/Card';
@@ -15,9 +14,9 @@ import {
 } from './LocationFormSections';
 import { AlertCircle, Save, X } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
-import { useAuth, useUser, useGroups, useCampaigns } from '../../../context/firebase';
 import clsx from 'clsx';
-import { getUserDisplayName } from '../../../utils/user-utils';
+import { useAuth, useUser, useGroups, useCampaigns } from '../../../context/firebase';
+import { useLocations } from '../../../context/LocationContext';
 
 interface LocationCreateFormProps {
   onSuccess?: () => void;
@@ -38,6 +37,9 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
     tags: []
   });
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   // Dialog and selection state - moved to local state
   const [isQuestDialogOpen, setIsQuestDialogOpen] = useState(false);
   const [selectedQuests, setSelectedQuests] = useState<Set<string>>(new Set());
@@ -55,13 +57,11 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
   const { theme } = useTheme();
   const themePrefix = theme.name;
 
+  // Use LocationContext for creating
+  const { createLocation } = useLocations();
+
   // Check if we have required context
   const hasRequiredContext = !!activeGroupId && !!activeCampaignId;
-
-  // Firebase hook - only used during final submission
-  const { addData, loading, error } = useFirebaseData<Location>({
-    collection: 'locations'
-  });
 
   // Handle basic input changes
   const handleInputChange = <K extends keyof Location>(
@@ -72,15 +72,6 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
       ...prev,
       [field]: value
     }));
-  };
-
-  // Generate location ID from name
-  const generateLocationId = (name: string): string => {
-    return name
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
   };
 
   // Handle form submission - now includes all selected NPCs and Quests
@@ -96,32 +87,27 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
       throw new Error('User must be authenticated and group/campaign context must be set to create a location');
     }
 
-    try {
-      const displayName = getUserDisplayName(userProfile);
-      const currentDate = new Date().toISOString();
-      const locationId = generateLocationId(formData.name);
-      const locationData: Location = {
-        id: locationId,
-        name: formData.name,
-        type: formData.type,
-        status: formData.status,
-        description: formData.description,
-        parentId: formData.parentId || '',
-        features: formData.features || [],
-        connectedNPCs: Array.from(selectedNPCs), // Use local state
-        relatedQuests: Array.from(selectedQuests), // Use local state
-        notes: [],
-        tags: formData.tags || [],
-        lastVisited: formData.lastVisited || new Date().toISOString().split('T')[0],
-        createdBy: user?.uid || '',
-        createdByUsername: displayName,
-        dateAdded: currentDate
-      };
+    setLoading(true);
+    setError(null);
 
-      await addData(locationData, locationId);
-      onSuccess?.();
+    try {
+      const locationData = {
+        ...formData,
+        connectedNPCs: Array.from(selectedNPCs),
+        relatedQuests: Array.from(selectedQuests),
+        lastVisited: formData.lastVisited || new Date().toISOString().split('T')[0],
+      } as Omit<Location, 'id'>;
+
+      await createLocation(locationData);
+      
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (err) {
       console.error('Failed to create location:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create location');
+    } finally {
+      setLoading(false);
     }
   };
 

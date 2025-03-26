@@ -64,7 +64,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
     
     try {
       await onConfirm();
-      // Successful deletion will be handled by the parent component
+      onClose();
     } catch (err) {
       console.error(`Error deleting ${itemType}:`, err);
       setError(err instanceof Error ? err.message : `An error occurred while deleting the ${itemType}`);

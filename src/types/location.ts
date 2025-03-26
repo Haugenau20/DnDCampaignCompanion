@@ -82,7 +82,11 @@ export interface LocationContextValue extends LocationContextState {
   getLocationsByStatus: (status: LocationStatus) => Location[];
   getChildLocations: (parentId: string) => Location[];
   getParentLocation: (locationId: string) => Location | undefined;
-  updateLocationNote: (locationId: string, note: LocationNote) => void;
-  updateLocationStatus: (locationId: string, status: LocationStatus) => void;
+  updateLocation: (locationId: string, updatedLocation: Partial<Location>) => Promise<void>;
+  updateLocationNote: (locationId: string, note: LocationNote) => Promise<void>;
+  updateLocationStatus: (locationId: string, status: LocationStatus) => Promise<void>;
+  deleteLocation: (locationId: string) => Promise<void>;
+  createLocation: (locationData: Omit<Location, 'id'>) => Promise<string>;
+  refreshLocations: () => Promise<Location[]>;
   hasRequiredContext: boolean;
 }

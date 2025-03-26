@@ -1,5 +1,6 @@
-// src/components/features/rumors/RumorCard.tsx - Updated attribution display
+// src/components/features/rumors/RumorCard.tsx
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Rumor, RumorStatus } from '../../../types/rumor';
 import Card from '../../core/Card';
 import Typography from '../../core/Typography';
@@ -141,275 +142,281 @@ const RumorCard: React.FC<RumorCardProps> = ({
   });
 
   return (
-    <Card className={clsx(
-      `${themePrefix}-rumor-card`,
-      `${themePrefix}-rumor-card-${rumor.status}`,
-      selectionMode && 'border-l-0'
-    )}>
-      <Card.Content className="space-y-4">
-        {/* Rumor Header */}
-        <div className="flex items-start gap-4">
-          {/* Selection checkbox (only in selection mode) */}
-          {selectionMode && (
-            <input 
-              type="checkbox" 
-              checked={selected}
-              onChange={handleSelectChange}
-              className="mt-1.5"
-            />
-          )}
-          
-          {/* Status indicator and title */}
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Typography variant="h3">
-                  {rumor.title}
-                </Typography>
-              </div>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="ml-2"
-                startIcon={isExpanded ? <ChevronUp /> : <ChevronDown />}
-              >
-                {isExpanded ? 'Collapse' : 'Expand'}
-              </Button>
-            </div>
+    <>
+      <Card className={clsx(
+        `${themePrefix}-rumor-card`,
+        `${themePrefix}-rumor-card-${rumor.status}`,
+        selectionMode && 'border-l-0'
+      )}>
+        <Card.Content className="space-y-4">
+          {/* Rumor Header */}
+          <div className="flex items-start gap-4">
+            {/* Selection checkbox (only in selection mode) */}
+            {selectionMode && (
+              <input 
+                type="checkbox" 
+                checked={selected}
+                onChange={handleSelectChange}
+                className="mt-1.5"
+              />
+            )}
             
-            {/* Source information */}
-            <div className="flex items-center gap-2 mt-1">
-              <Typography color="secondary">
-                From: {rumor.sourceName} ({formatSourceType(rumor.sourceType)})
-              </Typography>
-            </div>
-
-            {/* Location display (if present) */}
-            {rumor.location && (
-              <div className="flex items-center gap-2 mt-1">
-                <MapPin size={14} className={`${themePrefix}-typography-secondary`} />
-                <Typography variant="body-sm" color="secondary">
-                  Location: {rumor.location}
-                </Typography>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Expanded Content */}
-        {isExpanded && (
-          <div className="pt-4 space-y-4">
-
-            {/* Creator and modifier attribution */}
-            <AttributionInfo
-              createdByUsername={rumor.createdByUsername}
-              dateAdded={rumor.dateAdded}
-              modifiedByUsername={rumor.modifiedByUsername}
-              dateModified={rumor.dateModified}
-            />
-            
-            {/* Rumor Content */}
-            <Typography color="secondary">
-              {rumor.content}
-            </Typography>
-
-            {/* Related NPCs */}
-            {relatedNPCsWithNames.length > 0 && (
-              <div>
-                <Typography variant="h4" className="mb-2">
-                  Related NPCs
-                </Typography>
-                <div className="flex flex-wrap gap-2">
-                  {relatedNPCsWithNames.map(({id, name}) => (
-                    <Button
-                      key={id}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleNPCClick(id)}
-                      startIcon={<Users size={16} />}
-                    >
-                      {name}
-                    </Button>
-                  ))}
+            {/* Status indicator and title */}
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Typography variant="h3">
+                    {rumor.title}
+                  </Typography>
                 </div>
-              </div>
-            )}
-
-            {/* Related Locations */}
-            {relatedLocationsWithNames.length > 0 && (
-              <div>
-                <Typography variant="h4" className="mb-2">
-                  Related Locations
-                </Typography>
-                <div className="flex flex-wrap gap-2">
-                  {relatedLocationsWithNames.map(({id, name}) => (
-                    <Button
-                      key={id}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleLocationClick(id)}
-                      startIcon={<MapPin size={16} />}
-                    >
-                      {name}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Notes */}
-            {rumor.notes && rumor.notes.length > 0 && (
-              <div>
-                <Typography variant="h4" className="mb-2">
-                  Notes
-                </Typography>
-                <div className="space-y-2">
-                  {rumor.notes.map((note) => (
-                    <div
-                      key={note.id}
-                      className={clsx(
-                        "p-3 rounded-lg space-y-1",
-                        `${themePrefix}-note`
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} className={`${themePrefix}-typography-secondary`} />
-                        <Typography variant="body-sm" color="secondary">
-                          {new Date(note.dateAdded).toLocaleDateString()} by {note.addedByUsername}
-                        </Typography>
-                      </div>
-                      <Typography variant="body-sm">
-                        {note.content}
-                      </Typography>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Quick Note Adding Form - Only visible when authenticated */}
-            {user && (
-              <div>
-                {isAddingNote ? (
-                  <div className="space-y-2">
-                    <Input
-                      value={noteInput}
-                      onChange={(e) => setNoteInput(e.target.value)}
-                      placeholder="Enter note..."
-                      isTextArea={true}
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={handleAddNote}
-                        disabled={!noteInput.trim()}
-                        startIcon={<Save size={16} />}
-                      >
-                        Save
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setIsAddingNote(false);
-                          setNoteInput('');
-                        }}
-                        startIcon={<X size={16} />}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsAddingNote(true)}
-                    startIcon={<PlusCircle size={16} />}
-                  >
-                    Add Note
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            {user && (
-              <div className="flex gap-3 pt-2">
-                {/* Edit Button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleEdit}
-                  startIcon={<Edit size={16} />}
-                >
-                  Edit
-                </Button>
-
-                {/* Convert to Quest Button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleConvertToQuest}
-                  startIcon={<MessageSquare size={16} />}
-                >
-                  Convert to Quest
-                </Button>
                 
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleDeleteClick}
-                  startIcon={<Trash size={16} />}
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="ml-2"
+                  startIcon={isExpanded ? <ChevronUp /> : <ChevronDown />}
                 >
-                  Delete
+                  {isExpanded ? 'Collapse' : 'Expand'}
                 </Button>
-
-                {/* Status Update Buttons */}
-                <div className="flex-1 flex justify-end gap-2">
-                  <Button 
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleStatusChange('confirmed')}
-                    startIcon={<CheckCircle size={16} className={`${themePrefix}-rumor-status-confirmed`} />}
-                    disabled={rumor.status === 'confirmed'}
-                  >
-                    Confirm
-                  </Button>
-                  <Button 
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleStatusChange('unconfirmed')}
-                    startIcon={<HelpCircle size={16} className={`${themePrefix}-rumor-status-unconfirmed`} />}
-                    disabled={rumor.status === 'unconfirmed'}
-                  >
-                    Unconfirm
-                  </Button>
-                  <Button 
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleStatusChange('false')}
-                    startIcon={<XCircle size={16} className={`${themePrefix}-rumor-status-false`} />}
-                    disabled={rumor.status === 'false'}
-                  >
-                    Mark False
-                  </Button>
-                </div>
               </div>
-            )}
+              
+              {/* Source information */}
+              <div className="flex items-center gap-2 mt-1">
+                <Typography color="secondary">
+                  From: {rumor.sourceName} ({formatSourceType(rumor.sourceType)})
+                </Typography>
+              </div>
+
+              {/* Location display (if present) */}
+              {rumor.location && (
+                <div className="flex items-center gap-2 mt-1">
+                  <MapPin size={14} className={`${themePrefix}-typography-secondary`} />
+                  <Typography variant="body-sm" color="secondary">
+                    Location: {rumor.location}
+                  </Typography>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </Card.Content>
-      <DeleteConfirmationDialog
-        isOpen={showDeleteConfirmation}
-        onClose={() => setShowDeleteConfirmation(false)}
-        onConfirm={() => deleteRumor(rumor.id)}
-        itemName={rumor.title}
-        itemType="Rumor"
-      />
-    </Card>
+
+          {/* Expanded Content */}
+          {isExpanded && (
+            <div className="pt-4 space-y-4">
+
+              {/* Creator and modifier attribution */}
+              <AttributionInfo
+                createdByUsername={rumor.createdByUsername}
+                dateAdded={rumor.dateAdded}
+                modifiedByUsername={rumor.modifiedByUsername}
+                dateModified={rumor.dateModified}
+              />
+              
+              {/* Rumor Content */}
+              <Typography color="secondary">
+                {rumor.content}
+              </Typography>
+
+              {/* Related NPCs */}
+              {relatedNPCsWithNames.length > 0 && (
+                <div>
+                  <Typography variant="h4" className="mb-2">
+                    Related NPCs
+                  </Typography>
+                  <div className="flex flex-wrap gap-2">
+                    {relatedNPCsWithNames.map(({id, name}) => (
+                      <Button
+                        key={id}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleNPCClick(id)}
+                        startIcon={<Users size={16} />}
+                      >
+                        {name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Related Locations */}
+              {relatedLocationsWithNames.length > 0 && (
+                <div>
+                  <Typography variant="h4" className="mb-2">
+                    Related Locations
+                  </Typography>
+                  <div className="flex flex-wrap gap-2">
+                    {relatedLocationsWithNames.map(({id, name}) => (
+                      <Button
+                        key={id}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleLocationClick(id)}
+                        startIcon={<MapPin size={16} />}
+                      >
+                        {name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {rumor.notes && rumor.notes.length > 0 && (
+                <div>
+                  <Typography variant="h4" className="mb-2">
+                    Notes
+                  </Typography>
+                  <div className="space-y-2">
+                    {rumor.notes.map((note) => (
+                      <div
+                        key={note.id}
+                        className={clsx(
+                          "p-3 rounded-lg space-y-1",
+                          `${themePrefix}-note`
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Calendar size={14} className={`${themePrefix}-typography-secondary`} />
+                          <Typography variant="body-sm" color="secondary">
+                            {new Date(note.dateAdded).toLocaleDateString()} by {note.addedByUsername}
+                          </Typography>
+                        </div>
+                        <Typography variant="body-sm">
+                          {note.content}
+                        </Typography>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Note Adding Form - Only visible when authenticated */}
+              {user && (
+                <div>
+                  {isAddingNote ? (
+                    <div className="space-y-2">
+                      <Input
+                        value={noteInput}
+                        onChange={(e) => setNoteInput(e.target.value)}
+                        placeholder="Enter note..."
+                        isTextArea={true}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={handleAddNote}
+                          disabled={!noteInput.trim()}
+                          startIcon={<Save size={16} />}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setIsAddingNote(false);
+                            setNoteInput('');
+                          }}
+                          startIcon={<X size={16} />}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsAddingNote(true)}
+                      startIcon={<PlusCircle size={16} />}
+                    >
+                      Add Note
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {user && (
+                <div className="flex gap-3 pt-2">
+                  {/* Edit Button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleEdit}
+                    startIcon={<Edit size={16} />}
+                  >
+                    Edit
+                  </Button>
+
+                  {/* Convert to Quest Button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleConvertToQuest}
+                    startIcon={<MessageSquare size={16} />}
+                  >
+                    Convert to Quest
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDeleteClick}
+                    startIcon={<Trash size={16} />}
+                  >
+                    Delete
+                  </Button>
+
+                  {/* Status Update Buttons */}
+                  <div className="flex-1 flex justify-end gap-2">
+                    <Button 
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleStatusChange('confirmed')}
+                      startIcon={<CheckCircle size={16} className={`${themePrefix}-rumor-status-confirmed`} />}
+                      disabled={rumor.status === 'confirmed'}
+                    >
+                      Confirm
+                    </Button>
+                    <Button 
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleStatusChange('unconfirmed')}
+                      startIcon={<HelpCircle size={16} className={`${themePrefix}-rumor-status-unconfirmed`} />}
+                      disabled={rumor.status === 'unconfirmed'}
+                    >
+                      Unconfirm
+                    </Button>
+                    <Button 
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleStatusChange('false')}
+                      startIcon={<XCircle size={16} className={`${themePrefix}-rumor-status-false`} />}
+                      disabled={rumor.status === 'false'}
+                    >
+                      Mark False
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Card.Content>
+      </Card>
+
+      {showDeleteConfirmation && createPortal (
+        <DeleteConfirmationDialog
+          isOpen={showDeleteConfirmation}
+          onClose={() => setShowDeleteConfirmation(false)}
+          onConfirm={() => deleteRumor(rumor.id)}
+          itemName={rumor.title}
+          itemType="Rumor"
+        />,
+        document.body
+      )}
+    </>
   );
 };
 
