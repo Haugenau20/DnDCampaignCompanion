@@ -8,6 +8,8 @@ import Button from '../../core/Button';
 import { useLocations } from '../../../context/LocationContext';
 import { useNavigation } from '../../../context/NavigationContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { useQuests } from '../../../context/QuestContext';
+import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import clsx from 'clsx';
 import { 
   ChevronDown, 
@@ -17,7 +19,8 @@ import {
   Calendar,
   Target,
   Edit,
-  Scroll
+  Scroll,
+  Trash2
 } from 'lucide-react';
 
 interface QuestCardProps {
@@ -26,10 +29,12 @@ interface QuestCardProps {
 
 const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { getNPCById } = useNPCs();
   const { locations } = useLocations();
   const { user } = useAuth();
   const { navigateToPage, createPath } = useNavigation();
+  const { deleteQuest } = useQuests();
   const { theme } = useTheme();
   const themePrefix = theme.name;
 
@@ -44,6 +49,12 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
     return locations.some(loc => 
       loc.name.toLowerCase() === locationName.toLowerCase()
     );
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    await deleteQuest(quest.id);
+    // Dialog will close automatically when delete is complete
   };
 
   return (
@@ -358,18 +369,39 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
             )}
 
             {user && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigateToPage(`/quests/edit/${quest.id}`)}
-                startIcon={<Edit size={16} />}
-              >
-                Edit Quest
-              </Button>
+              <div className="flex space-x-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigateToPage(`/quests/edit/${quest.id}`)}
+                  startIcon={<Edit size={16} />}
+                >
+                  Edit Quest
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                  startIcon={<Trash2 size={16} />}
+                  className={`${themePrefix}-button-danger`}
+                >
+                  Delete Quest
+                </Button>
+              </div>
             )}
           </div>
         )}
       </Card.Content>
+      
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDeleteConfirm}
+        itemName={quest.title}
+        itemType="Quest"
+      />
     </Card>
   );
 };
