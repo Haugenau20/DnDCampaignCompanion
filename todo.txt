@@ -3,7 +3,7 @@ REWORK of HomePage
     - Add pagination or limit max number of items in recent activity.
     - Integrate content tracking on each page.
     - Implement/review proper highlighting logic to pages.
-    - Rework of how the header is displayed. maybe a sidebar? maybe like dnd beyon? 
+    - Rework of how the header is displayed. maybe a sidebar? maybe like dnd beyond? 
 
 
 Make completed quests be default hidden with option to expand?
@@ -26,3 +26,6 @@ Add batch options (Delete, change status, etc.) for Story, Quest, NPC, and Locat
 Right now some dialogs are on top of the local container. Instead they should be on top of the underlying document body. 
 
 Filter tabs look different on the location page than the other pages.
+
+When adding a new chapter it says that the chapter summary is optional, but it won't create the chapter if there is no summary.
+- Either make it truly optional or make it mandatory and show an error if not typed in. 

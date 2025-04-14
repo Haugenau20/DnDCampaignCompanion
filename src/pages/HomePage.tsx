@@ -212,9 +212,11 @@ const HomePage: React.FC = () => {
   };
   
   return (
-    <div className={clsx("container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden", `${themePrefix}-content`)}>
-      {/* Currently only rendering the dashboard layout */}
-      <DashboardLayout {...layoutProps} />
+    <div className="max-w-7xl mx-auto">
+      <div className={clsx("container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden", `${themePrefix}-content`)}>
+        {/* Currently only rendering the dashboard layout */}
+        <DashboardLayout {...layoutProps} />
+      </div>
     </div>
   );
 };

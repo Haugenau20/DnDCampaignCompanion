@@ -63,7 +63,7 @@ const DashboardLayout: React.FC<LayoutProps> = ({
       </div>
       
       {/* Continue Reading Section - Full width */}
-      <div className="mt-6">
+      <div className="mt-20">
         <ContinueReading 
           chapters={chapters}
           npcs={npcs}

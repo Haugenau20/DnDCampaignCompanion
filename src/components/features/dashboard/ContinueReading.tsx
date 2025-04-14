@@ -233,29 +233,26 @@ const ContinueReading: React.FC<ContinueReadingProps> = ({
             <Card 
               key={`${content.type}-${content.id}`}
               hoverable
-              className="min-w-[250px] w-[250px]"
+              className="min-w-[200px] w-[200px]"
               onClick={() => navigateToPage(content.link)}
             >
               <Card.Content>
-                <div className="flex items-center mb-2">
+                <div className="flex">
                   <div className={clsx(
-                    "p-1.5 rounded-full mr-2 flex items-center justify-center",
+                    "p-2 rounded-full mr-2 h-8 w-8 flex items-center justify-center",
                     `${themePrefix}-icon-bg`
                   )}>
                     {getIcon(content.type)}
                   </div>
-                  <Typography variant="body-sm" color="secondary">
-                    {getTypeLabel(content.type)}
-                  </Typography>
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Typography variant="body-sm" color="secondary">
+                      {getTypeLabel(content.type)}
+                    </Typography>
+                    <Typography variant="h4" className="truncate text-sm">
+                      {content.title}
+                    </Typography>
+                  </div>
                 </div>
-                
-                <Typography variant="h4" className="mb-3 line-clamp-2 min-h-[3rem]">
-                  {content.title}
-                </Typography>
-                
-                <Typography variant="body-sm" color="secondary">
-                  Last viewed: {content.lastViewed.toLocaleDateString()}
-                </Typography>
               </Card.Content>
             </Card>
           ))}
