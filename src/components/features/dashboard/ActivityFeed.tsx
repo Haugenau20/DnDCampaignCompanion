@@ -1,5 +1,5 @@
 // components/features/dashboard/ActivityFeed.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Typography from '../../core/Typography';
 import Card from '../../core/Card';
 import { useTheme } from '../../../context/ThemeContext';
@@ -26,10 +26,43 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
   // State for filtering activities
   const [filter, setFilter] = useState<string | null>(null);
   
-  // Get filtered activities
-  const filteredActivities = filter 
-    ? activities.filter(a => a.type === filter)
-    : activities;
+  // Create a map of activities grouped by type (pre-sort each group by date)
+  const activityMap = useMemo(() => {
+    const result: Record<string, Activity[]> = {
+      'chapter': [],
+      'npc': [],
+      'quest': [],
+      'rumor': [],
+      'location': []
+    };
+    
+    // Group by type
+    activities.forEach(activity => {
+      if (result[activity.type]) {
+        result[activity.type].push(activity);
+      }
+    });
+    
+    // Sort each group by timestamp (newest first)
+    Object.keys(result).forEach(key => {
+      result[key].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    });
+    
+    return result;
+  }, [activities]);
+  
+  // Get filtered activities based on selection
+  const filteredActivities = useMemo(() => {
+    if (!filter) {
+      // For "All", take the 4 most recent activities overall
+      return [...activities]
+        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+        .slice(0, 4);
+    } else {
+      // For specific filter, take the 4 most recent of that type
+      return activityMap[filter]?.slice(0, 4) || [];
+    }
+  }, [filter, activities, activityMap]);
     
   // Get icon based on activity type
   const getIcon = (type: string) => {
@@ -99,84 +132,32 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
   
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
-        <Typography variant="h3">Recent Activity</Typography>
+      <div className="flex justify-between items-center gap-1 sm:gap-2 mb-3 sm:mb-4">
+        <Typography variant="h3" className="text-lg sm:text-xl md:text-2xl">Recent Activity</Typography>
         
-        {/* Activity type filters */}
-        <div className="flex flex-wrap gap-2">
-          <button 
-            onClick={() => setFilter(null)}
-            className={clsx(
-              "px-3 py-1 rounded-full text-sm",
-              filter === null 
-                ? `${themePrefix}-button-primary` 
-                : `${themePrefix}-bg-secondary`
-            )}
-          >
-            All
-          </button>
-          <button 
-            onClick={() => setFilter('chapter')}
-            className={clsx(
-              "px-3 py-1 rounded-full text-sm",
-              filter === 'chapter' 
-                ? `${themePrefix}-button-primary` 
-                : `${themePrefix}-bg-secondary`
-            )}
-          >
-            Story
-          </button>
-          <button 
-            onClick={() => setFilter('npc')}
-            className={clsx(
-              "px-3 py-1 rounded-full text-sm",
-              filter === 'npc' 
-                ? `${themePrefix}-button-primary` 
-                : `${themePrefix}-bg-secondary`
-            )}
-          >
-            NPCs
-          </button>
-          <button 
-            onClick={() => setFilter('quest')}
-            className={clsx(
-              "px-3 py-1 rounded-full text-sm",
-              filter === 'quest' 
-                ? `${themePrefix}-button-primary` 
-                : `${themePrefix}-bg-secondary`
-            )}
-          >
-            Quests
-          </button>
-          <button 
-            onClick={() => setFilter('location')}
-            className={clsx(
-              "px-3 py-1 rounded-full text-sm",
-              filter === 'location' 
-                ? `${themePrefix}-button-primary` 
-                : `${themePrefix}-bg-secondary`
-            )}
-          >
-            Locations
-          </button>
-          <button 
-            onClick={() => setFilter('rumor')}
-            className={clsx(
-              "px-3 py-1 rounded-full text-sm",
-              filter === 'rumor' 
-                ? `${themePrefix}-button-primary` 
-                : `${themePrefix}-bg-secondary`
-            )}
-          >
-            Rumors
-          </button>
-        </div>
+        {/* More compact filter dropdown */}
+        <select 
+          className={clsx(
+            "text-sm rounded-md px-2 py-1 border",
+            `${themePrefix}-input`,
+            `border-${themePrefix}-card-border`
+          )}
+          value={filter || 'all'}
+          onChange={(e) => setFilter(e.target.value === 'all' ? null : e.target.value)}
+        >
+          <option value="all">All</option>
+          <option value="chapter">Story</option>
+          <option value="npc">NPCs</option>
+          <option value="quest">Quests</option>
+          <option value="location">Locations</option>
+          <option value="rumor">Rumors</option>
+        </select>
       </div>
       
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
           {[1, 2, 3, 4].map(i => (
-            <Card key={i} className="h-32 animate-pulse">
+            <Card key={i} className="h-16 animate-pulse">
               <Card.Content className="h-full">
                 <div className={clsx(
                   "w-full h-full rounded-lg",
@@ -213,7 +194,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
           </Card.Content>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
           {filteredActivities.map(activity => (
             <Card 
               key={`${activity.type}-${activity.id}`}
@@ -221,38 +202,31 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
               onClick={() => handleCardClick(activity)}
               className="transition-all hover:shadow-md"
             >
-              <Card.Content className="h-full">
-                <div className="flex h-full">
+              <Card.Content className="p-3">
+                <div className="flex">
                   <div className={clsx(
-                    "p-2 rounded-full mr-3 h-10 w-10 flex items-center justify-center",
+                    "p-2 rounded-full mr-2 h-8 w-8 flex items-center justify-center",
                     `${themePrefix}-icon-bg`
                   )}>
                     {getIcon(activity.type)}
                   </div>
                   <div className="flex-1 flex flex-col overflow-hidden">
-                    <div>
-                      <div className="flex items-center">
-                        <Typography variant="body-sm" color="secondary" className="mb-1">
-                          {getTypeLabel(activity.type)}
-                        </Typography>
-                      </div>
-                      <Typography variant="h4" className="truncate mb-1">
-                        {activity.title}
+                    <div className="flex items-center justify-between">
+                      <Typography variant="body-sm" color="secondary" className="text-xs">
+                        {getTypeLabel(activity.type)}
                       </Typography>
-                    </div>
-                    {activity.description && (
-                      <Typography color="secondary" className="line-clamp-2 text-sm mb-2 flex-grow">
-                        {activity.description}
-                      </Typography>
-                    )}
-                    <div className="flex justify-between items-center mt-auto text-sm">
-                      <Typography variant="body-sm" color="secondary">
-                        {activity.actor || 'Unknown'}
-                      </Typography>
-                      <Typography variant="body-sm" color="secondary">
+                      <Typography variant="body-sm" color="secondary" className="text-xs">
                         {getRelativeTime(activity.timestamp)}
                       </Typography>
                     </div>
+                    <Typography variant="h4" className="truncate text-sm">
+                      {activity.title}
+                    </Typography>
+                    {activity.actor && (
+                      <Typography variant="body-sm" color="secondary" className="text-xs mt-1">
+                        By: {activity.actor}
+                      </Typography>
+                    )}
                   </div>
                 </div>
               </Card.Content>

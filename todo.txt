@@ -1,3 +1,11 @@
+REWORK of HomePage
+- Dashboard layout being implemented
+    - Add pagination or limit max number of items in recent activity.
+    - Integrate content tracking on each page.
+    - Implement/review proper highlighting logic to pages.
+    - Rework of how the header is displayed. maybe a sidebar? maybe like dnd beyon? 
+
+
 Make completed quests be default hidden with option to expand?
 Make active quests be on the top of the list?
 
@@ -11,10 +19,10 @@ Fix/Implement proper searching
 
 The ContextSwitcher doesnt properly update the UI when switching between campaigns.
 
-rework of how the header is displayed. maybe a sidebar? maybe like dnd beyon? 
-
 Have registration tokens expire after X days
 
 Add batch options (Delete, change status, etc.) for Story, Quest, NPC, and Location features
 
 Right now some dialogs are on top of the local container. Instead they should be on top of the underlying document body. 
+
+Filter tabs look different on the location page than the other pages.

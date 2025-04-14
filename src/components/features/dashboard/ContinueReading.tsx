@@ -172,12 +172,12 @@ const ContinueReading: React.FC<ContinueReadingProps> = ({
   };
   
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <Typography variant="h3">Continue Reading</Typography>
+    <div className="w-full">
+      <div className="flex justify-between items-center mb-3 sm:mb-4">
+        <Typography variant="h3" className="text-lg sm:text-xl md:text-2xl">Continue Reading</Typography>
         
         {/* Scroll controls */}
-        <div className="flex gap-2">
+        <div className="flex gap-1 sm:gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -198,9 +198,9 @@ const ContinueReading: React.FC<ContinueReadingProps> = ({
       </div>
       
       {loading ? (
-        <div className="flex gap-4 overflow-x-hidden">
+        <div className="flex gap-2 sm:gap-4 overflow-x-hidden">
           {[1, 2, 3, 4].map(i => (
-            <Card key={i} className="min-w-[250px] w-[250px] animate-pulse">
+            <Card key={i} className="min-w-[180px] w-[180px] sm:min-w-[220px] sm:w-[220px] md:min-w-[250px] md:w-[250px] animate-pulse">
               <Card.Content className="h-32">
                 <div className={clsx(
                   "w-full h-full rounded-lg",
@@ -226,7 +226,7 @@ const ContinueReading: React.FC<ContinueReadingProps> = ({
       ) : (
         <div 
           ref={scrollContainerRef}
-          className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar"
+          className="flex gap-2 sm:gap-4 overflow-x-auto pb-4 hide-scrollbar"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {recentContent.map(content => (

@@ -21,8 +21,8 @@ const CampaignBanner: React.FC = () => {
   if (!activeGroup || !activeCampaign) {
     return (
       <div className={clsx(
-        "rounded-lg p-6 mb-4",
-        `${themePrefix}-card`
+        "p-6 mb-4 text-center",
+        `${themePrefix}-text`
       )}>
         <Typography variant="h2" className="mb-2">
           Welcome to D&D Campaign Companion
@@ -39,20 +39,20 @@ const CampaignBanner: React.FC = () => {
   
   return (
     <div className={clsx(
-      "rounded-lg p-6 mb-4 relative overflow-hidden",
-      `${themePrefix}-card`
+      "p-6 mb-4 relative overflow-hidden text-center",
+      `${themePrefix}-text`
     )}>
       <div className="relative z-10">
         <Typography variant="h2" className="mb-1">
           Welcome to {activeCampaign.name}
         </Typography>
         {activeCampaign.description && (
-          <Typography color="secondary" className="max-w-2xl">
+          <Typography color="secondary" className="max-w-2xl mx-auto">
             {activeCampaign.description}
           </Typography>
         )}
         
-        <div className="mt-4 text-sm flex flex-wrap gap-x-6 gap-y-2">
+        <div className="mt-4 text-sm flex flex-wrap justify-center gap-x-6 gap-y-2">
           <div className={clsx("flex items-center gap-1", `${themePrefix}-typography-secondary`)}>
             <span>Group:</span>
             <span className="font-medium">{activeGroup.name}</span>

@@ -1,4 +1,72 @@
-// pages/HomePage.tsx
+/**
+ * HomePage.tsx
+ * 
+ * This file serves as the container component for different layout views.
+ * 
+ * ===== LAYOUT EXTENSION GUIDE =====
+ * 
+ * To add a new layout type to the application:
+ * 
+ * 1. CREATE THE LAYOUT COMPONENT
+ *    - Create a new file in src/components/features/layouts/ (e.g., NewLayout.tsx)
+ *    - Import the LayoutProps interface from DashboardLayout
+ *    - Implement your component using the same props interface:
+ * 
+ *      ```
+ *      import React from 'react';
+ *      import { LayoutProps } from './DashboardLayout';
+ *      
+ *      const NewLayout: React.FC<LayoutProps> = ({
+ *        npcs, locations, quests, chapters, rumors, activities, loading
+ *      }) => {
+ *        // Your layout implementation
+ *        return (
+ *          // JSX for your layout
+ *        );
+ *      };
+ *      
+ *      export default NewLayout;
+ *      ```
+ * 
+ * 2. ADD LAYOUT SELECTION LOGIC
+ *    - Import your new layout in HomePage.tsx
+ *    - Add a state variable to track the selected layout:
+ * 
+ *      ```
+ *      // Add this with your other state variables
+ *      const [layoutType, setLayoutType] = useState<'dashboard' | 'newLayout'>('dashboard');
+ *      ```
+ * 
+ *    - Update the return statement to conditionally render the appropriate layout:
+ * 
+ *      ```
+ *      return (
+ *        <div className={...}>
+ *          {layoutType === 'dashboard' && <DashboardLayout {...layoutProps} />}
+ *          {layoutType === 'newLayout' && <NewLayout {...layoutProps} />}
+ *        </div>
+ *      );
+ *      ```
+ * 
+ * 3. (OPTIONAL) ADD LAYOUT SWITCHING UI
+ *    - Create a component to let users select their preferred layout
+ *    - Call setLayoutType when a user makes a selection
+ * 
+ * 4. (OPTIONAL) PERSIST USER PREFERENCE
+ *    - Store the user's layout preference in their profile
+ *    - Initialize the layoutType state from the user's saved preference:
+ * 
+ *      ```
+ *      useEffect(() => {
+ *        if (activeGroupUserProfile?.preferences?.homeLayout) {
+ *          setLayoutType(activeGroupUserProfile.preferences.homeLayout);
+ *        }
+ *      }, [activeGroupUserProfile]);
+ *      ```
+ * 
+ * This architecture follows the Open-Closed Principle: open for extension 
+ * (adding new layouts) but closed for modification (existing code doesn't change).
+ */
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth, useGroups, useCampaigns } from '../context/firebase';
 import { useStory } from '../context/StoryContext';
@@ -8,11 +76,9 @@ import { useNPCs } from '../context/NPCContext';
 import { useLocations } from '../context/LocationContext';
 import { useTheme } from '../context/ThemeContext';
 import clsx from 'clsx';
-import CampaignBanner from '../components/features/dashboard/CampaignBanner';
-import ActivityFeed from '../components/features/dashboard/ActivityFeed';
-import CampaignStats from '../components/features/dashboard/CampaignStats';
-import ContinueReading from '../components/features/dashboard/ContinueReading';
-import GlobalActionButton from '../components/features/dashboard/GlobalActionButton';
+
+// Import current layout
+import DashboardLayout, { LayoutProps } from '../components/features/layouts/DashboardLayout';
 
 // Combined activity type from all content types
 export interface Activity {
@@ -26,7 +92,7 @@ export interface Activity {
 }
 
 /**
- * HomePage component serving as the main dashboard for the application
+ * HomePage component serving as the container for the selected layout
  */
 const HomePage: React.FC = () => {
   const { theme } = useTheme();
@@ -51,12 +117,11 @@ const HomePage: React.FC = () => {
     setLoading(isLoading);
   }, [chaptersLoading, questsLoading, rumorsLoading, npcsLoading, locationsLoading]);
 
-  // Inside the useMemo for creating activities in HomePage.tsx
   // Create combined recent activity from all content types
   const activities = useMemo(() => {
     const allActivities: Activity[] = [];
     
-    // Add chapters - these already go to view pages
+    // Add chapters
     chapters.forEach(chapter => {
       if (chapter.lastModified) {
         allActivities.push({
@@ -66,12 +131,12 @@ const HomePage: React.FC = () => {
           description: chapter.summary || chapter.content.substring(0, 100) + '...',
           actor: '',
           timestamp: new Date(chapter.lastModified),
-          link: `/story/chapters/${chapter.id}` // Correctly goes to view page
+          link: `/story/chapters/${chapter.id}`
         });
       }
     });
     
-    // Add quests - now going to the quests list page
+    // Add quests
     quests.forEach(quest => {
       if (quest.dateModified) {
         allActivities.push({
@@ -81,12 +146,12 @@ const HomePage: React.FC = () => {
           description: quest.description,
           actor: quest.modifiedByUsername || '',
           timestamp: new Date(quest.dateModified),
-          link: `/quests?highlight=${quest.id}` // Go to quests list page with highlight param
+          link: `/quests?highlight=${quest.id}`
         });
       }
     });
     
-    // Add rumors - now going to the rumors list page
+    // Add rumors
     rumors.forEach(rumor => {
       if (rumor.dateModified) {
         allActivities.push({
@@ -96,12 +161,12 @@ const HomePage: React.FC = () => {
           description: rumor.content.substring(0, 100) + '...',
           actor: rumor.modifiedByUsername || '',
           timestamp: new Date(rumor.dateModified),
-          link: `/rumors?highlight=${rumor.id}` // Go to rumors list page with highlight param
+          link: `/rumors?highlight=${rumor.id}`
         });
       }
     });
     
-    // Add NPCs - now going to the NPCs list page
+    // Add NPCs
     npcs.forEach(npc => {
       if (npc.dateModified) {
         allActivities.push({
@@ -111,12 +176,12 @@ const HomePage: React.FC = () => {
           description: npc.description.substring(0, 100) + '...',
           actor: npc.modifiedByUsername || '',
           timestamp: new Date(npc.dateModified),
-          link: `/npcs?highlight=${npc.id}` // Go to NPCs list page with highlight param
+          link: `/npcs?highlight=${npc.id}`
         });
       }
     });
     
-    // Add locations - now going to the locations list page
+    // Add locations
     locations.forEach(location => {
       if (location.dateModified) {
         allActivities.push({
@@ -126,7 +191,7 @@ const HomePage: React.FC = () => {
           description: location.description.substring(0, 100) + '...',
           actor: location.modifiedByUsername || '',
           timestamp: new Date(location.dateModified),
-          link: `/locations?highlight=${location.id}` // Go to locations list page with highlight param
+          link: `/locations?highlight=${location.id}`
         });
       }
     });
@@ -135,47 +200,21 @@ const HomePage: React.FC = () => {
     return allActivities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }, [chapters, quests, rumors, npcs, locations]);
   
+  // Create props for layout components
+  const layoutProps: LayoutProps = {
+    npcs,
+    locations,
+    quests,
+    chapters,
+    rumors,
+    activities,
+    loading
+  };
+  
   return (
-    <div className={clsx("max-w-7xl mx-auto px-4 py-8", `${themePrefix}-content`)}>
-      {/* Campaign Banner */}
-      <CampaignBanner />
-      
-      {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        {/* Activity Feed - 2/3 width on desktop */}
-        <div className="md:col-span-2">
-          <ActivityFeed 
-            activities={activities} 
-            loading={loading} 
-          />
-        </div>
-        
-        {/* Campaign Stats - 1/3 width on desktop */}
-        <div className="md:col-span-1">
-          <CampaignStats 
-            npcs={npcs}
-            locations={locations}
-            quests={quests}
-            chapters={chapters}
-            rumors={rumors}
-            loading={loading}
-          />
-        </div>
-      </div>
-      
-      {/* Continue Reading Section - Full width */}
-      <div className="mt-8">
-        <ContinueReading 
-          chapters={chapters}
-          npcs={npcs}
-          quests={quests}
-          rumors={rumors}
-          locations={locations}
-        />
-      </div>
-      
-      {/* Global Action Button */}
-      <GlobalActionButton />
+    <div className={clsx("container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden", `${themePrefix}-content`)}>
+      {/* Currently only rendering the dashboard layout */}
+      <DashboardLayout {...layoutProps} />
     </div>
   );
 };

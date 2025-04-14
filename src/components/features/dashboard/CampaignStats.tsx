@@ -49,11 +49,11 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
   if (loading) {
     return (
       <div>
-        <Typography variant="h3" className="mb-4">Campaign Stats</Typography>
-        <div className="space-y-3">
+        <Typography variant="h3" className="text-lg sm:text-xl md:text-2xl mb-3 sm:mb-4">Campaign Stats</Typography>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
           {[1, 2, 3, 4, 5].map(i => (
             <Card key={i} className="animate-pulse">
-              <Card.Content className="h-16">
+              <Card.Content className="h-24">
                 <div className={clsx(
                   "w-full h-full rounded-lg",
                   `${themePrefix}-bg-secondary opacity-30`
@@ -68,24 +68,24 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
   
   return (
     <div>
-      <Typography variant="h3" className="mb-4">Campaign Stats</Typography>
+      <Typography variant="h3" className="text-lg sm:text-xl md:text-2xl mb-3 sm:mb-4">Campaign Stats</Typography>
       
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
         {/* NPCs Stat */}
         <Card 
           hoverable
           onClick={() => navigateToPage('/npcs')}
         >
-          <Card.Content className="flex items-center p-4">
+          <Card.Content className="flex items-center p-3 sm:p-4 md:p-6">
             <div className={clsx(
-              "p-2 rounded-full mr-3 flex items-center justify-center",
+              "p-2 sm:p-3 rounded-full mr-2 sm:mr-3 md:mr-4 flex items-center justify-center",
               `${themePrefix}-icon-bg`
             )}>
-              <Users className="w-5 h-5" />
+              <Users className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="flex-1">
-              <Typography variant="h4">{npcs.length}</Typography>
-              <Typography variant="body-sm" color="secondary">NPCs</Typography>
+              <Typography variant="h4" className="sm:text-xl md:text-2xl">{npcs.length}</Typography>
+              <Typography variant="body-sm" className="sm:text-base" color="secondary">NPCs</Typography>
             </div>
           </Card.Content>
         </Card>
@@ -95,16 +95,16 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           hoverable
           onClick={() => navigateToPage('/locations')}
         >
-          <Card.Content className="flex items-center p-4">
+          <Card.Content className="flex items-center p-3 sm:p-4 md:p-6">
             <div className={clsx(
-              "p-2 rounded-full mr-3 flex items-center justify-center",
+              "p-2 sm:p-3 rounded-full mr-2 sm:mr-3 md:mr-4 flex items-center justify-center",
               `${themePrefix}-icon-bg`
             )}>
-              <Map className="w-5 h-5" />
+              <Map className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="flex-1">
-              <Typography variant="h4">{locations.length}</Typography>
-              <Typography variant="body-sm" color="secondary">Locations</Typography>
+              <Typography variant="h4" className="sm:text-xl md:text-2xl">{locations.length}</Typography>
+              <Typography variant="body-sm" className="sm:text-base" color="secondary">Locations</Typography>
             </div>
           </Card.Content>
         </Card>
@@ -114,22 +114,22 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           hoverable
           onClick={() => navigateToPage('/quests')}
         >
-          <Card.Content className="flex items-center p-4">
+          <Card.Content className="flex items-center p-3 sm:p-4 md:p-6">
             <div className={clsx(
-              "p-2 rounded-full mr-3 flex items-center justify-center",
+              "p-2 sm:p-3 rounded-full mr-2 sm:mr-3 md:mr-4 flex items-center justify-center",
               `${themePrefix}-icon-bg`
             )}>
-              <Scroll className="w-5 h-5" />
+              <Scroll className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="flex-1">
-              <Typography variant="h4">
+              <Typography variant="h4" className="sm:text-xl md:text-2xl">
                 {activeQuests} / {totalQuests}
               </Typography>
-              <Typography variant="body-sm" color="secondary">Active Quests</Typography>
+              <Typography variant="body-sm" className="sm:text-base" color="secondary">Active Quests</Typography>
               
               {/* Progress bar */}
               <div className={clsx(
-                "mt-2 h-1 w-full rounded-full overflow-hidden",
+                "mt-3 h-2 w-full rounded-full overflow-hidden",
                 `${themePrefix}-progress-container`
               )}>
                 <div 
@@ -149,16 +149,16 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           hoverable
           onClick={() => navigateToPage('/story/chapters')}
         >
-          <Card.Content className="flex items-center p-4">
+          <Card.Content className="flex items-center p-3 sm:p-4 md:p-6">
             <div className={clsx(
-              "p-2 rounded-full mr-3 flex items-center justify-center",
+              "p-2 sm:p-3 rounded-full mr-2 sm:mr-3 md:mr-4 flex items-center justify-center",
               `${themePrefix}-icon-bg`
             )}>
-              <BookOpen className="w-5 h-5" />
+              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="flex-1">
-              <Typography variant="h4">{chapters.length}</Typography>
-              <Typography variant="body-sm" color="secondary">Story Chapters</Typography>
+              <Typography variant="h4" className="sm:text-xl md:text-2xl">{chapters.length}</Typography>
+              <Typography variant="body-sm" className="sm:text-base" color="secondary">Story Chapters</Typography>
             </div>
           </Card.Content>
         </Card>
@@ -168,16 +168,16 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           hoverable
           onClick={() => navigateToPage('/rumors')}
         >
-          <Card.Content className="flex items-center p-4">
+          <Card.Content className="flex items-center p-3 sm:p-4 md:p-6">
             <div className={clsx(
-              "p-2 rounded-full mr-3 flex items-center justify-center",
+              "p-2 sm:p-3 rounded-full mr-2 sm:mr-3 md:mr-4 flex items-center justify-center",
               `${themePrefix}-icon-bg`
             )}>
-              <MessageSquare className="w-5 h-5" />
+              <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="flex-1">
-              <Typography variant="h4">{rumors.length}</Typography>
-              <Typography variant="body-sm" color="secondary">Rumors</Typography>
+              <Typography variant="h4" className="sm:text-xl md:text-2xl">{rumors.length}</Typography>
+              <Typography variant="body-sm" className="sm:text-base" color="secondary">Rumors</Typography>
             </div>
           </Card.Content>
         </Card>

@@ -1,7 +1,7 @@
 // components/features/dashboard/GlobalActionButton.tsx
 import React, { useState } from 'react';
-import { useTheme } from '../../../context/ThemeContext';
-import { useNavigation } from '../../../context/NavigationContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useNavigation } from '../../context/NavigationContext';
 import { Plus, BookOpen, User, Scroll, MessageSquare, MapPin, X } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -19,9 +19,9 @@ const GlobalActionButton: React.FC = () => {
   // Navigation actions
   const actions = [
     {
-      label: 'New Chapter',
-      icon: <BookOpen className="w-5 h-5" />,
-      onClick: () => navigateToPage('/story/chapters/create')
+      label: 'New Location',
+      icon: <MapPin className="w-5 h-5" />,
+      onClick: () => navigateToPage('/locations/create')
     },
     {
       label: 'New NPC',
@@ -29,19 +29,19 @@ const GlobalActionButton: React.FC = () => {
       onClick: () => navigateToPage('/npcs/create')
     },
     {
-      label: 'New Quest',
-      icon: <Scroll className="w-5 h-5" />,
-      onClick: () => navigateToPage('/quests/create')
-    },
-    {
       label: 'New Rumor',
       icon: <MessageSquare className="w-5 h-5" />,
       onClick: () => navigateToPage('/rumors/create')
     },
     {
-      label: 'New Location',
-      icon: <MapPin className="w-5 h-5" />,
-      onClick: () => navigateToPage('/locations/create')
+      label: 'New Quest',
+      icon: <Scroll className="w-5 h-5" />,
+      onClick: () => navigateToPage('/quests/create')
+    },
+    {
+      label: 'New Chapter',
+      icon: <BookOpen className="w-5 h-5" />,
+      onClick: () => navigateToPage('/story/chapters/create')
     }
   ];
   
@@ -83,9 +83,9 @@ const GlobalActionButton: React.FC = () => {
       <button
         onClick={toggleOpen}
         className={clsx(
-          "w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform duration-200",
+          "w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform duration-500",
           `${themePrefix}-button-primary`,
-          isOpen && "transform rotate-45"
+          isOpen && "transform rotate-90 duration-500"
         )}
         aria-label={isOpen ? "Close action menu" : "Open action menu"}
       >
