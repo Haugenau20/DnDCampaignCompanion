@@ -1,16 +1,16 @@
 // components/features/dashboard/CampaignStats.tsx
 import React from 'react';
-import Typography from '../../core/Typography';
-import Card from '../../core/Card';
-import { useTheme } from '../../../context/ThemeContext';
-import { useNavigation } from '../../../context/NavigationContext';
+import Typography from '../../../../core/Typography';
+import Card from '../../../../core/Card';
+import { useTheme } from '../../../../../context/ThemeContext';
+import { useNavigation } from '../../../../../context/NavigationContext';
 import { Users, Map, Scroll, BookOpen, MessageSquare } from 'lucide-react';
 import clsx from 'clsx';
-import { NPC } from '../../../types/npc';
-import { Location } from '../../../types/location';
-import { Quest } from '../../../types/quest';
-import { Chapter } from '../../../types/story';
-import { Rumor } from '../../../types/rumor';
+import { NPC } from '../../../../../types/npc';
+import { Location } from '../../../../../types/location';
+import { Quest } from '../../../../../types/quest';
+import { Chapter } from '../../../../../types/story';
+import { Rumor } from '../../../../../types/rumor';
 
 interface CampaignStatsProps {
   npcs?: NPC[];

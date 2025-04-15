@@ -1,5 +1,5 @@
 // src/utils/content-tracker.ts
-import { RecentContent } from '../components/features/dashboard/ContinueReading';
+import { RecentContent } from '../components/features/layouts/dashboard/sections/ContinueReading';
 
 // Local storage key for recently viewed content
 const RECENT_CONTENT_KEY = 'dnd-companion-recent-content';

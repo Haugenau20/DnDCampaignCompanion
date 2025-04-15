@@ -1,17 +1,17 @@
 // components/features/dashboard/ContinueReading.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import Typography from '../../core/Typography';
-import Card from '../../core/Card';
-import { useTheme } from '../../../context/ThemeContext';
-import { useNavigation } from '../../../context/NavigationContext';
+import Typography from '../../../../core/Typography';
+import Card from '../../../../core/Card';
+import { useTheme } from '../../../../../context/ThemeContext';
+import { useNavigation } from '../../../../../context/NavigationContext';
 import { BookOpen, User, Scroll, MessageSquare, MapPin, Clock, ChevronRight, ChevronLeft } from 'lucide-react';
 import clsx from 'clsx';
-import Button from '../../core/Button';
-import { NPC } from '../../../types/npc';
-import { Location } from '../../../types/location';
-import { Quest } from '../../../types/quest';
-import { Chapter } from '../../../types/story';
-import { Rumor } from '../../../types/rumor';
+import Button from '../../../../core/Button';
+import { NPC } from '../../../../../types/npc';
+import { Location } from '../../../../../types/location';
+import { Quest } from '../../../../../types/quest';
+import { Chapter } from '../../../../../types/story';
+import { Rumor } from '../../../../../types/rumor';
 
 // Local storage key for recently viewed content
 const RECENT_CONTENT_KEY = 'dnd-companion-recent-content';

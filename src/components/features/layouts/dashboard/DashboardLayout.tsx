@@ -1,12 +1,12 @@
 // components/features/layouts/DashboardLayout.tsx
 import React from 'react';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../../context/ThemeContext';
 import clsx from 'clsx';
-import CampaignBanner from '../dashboard/CampaignBanner';
-import ActivityFeed from '../dashboard/ActivityFeed';
-import CampaignStats from '../dashboard/CampaignStats';
-import ContinueReading from '../dashboard/ContinueReading';
-import GlobalActionButton from '../../shared/GlobalActionButton';
+import CampaignBanner from './sections/CampaignBanner';
+import ActivityFeed from './sections/ActivityFeed';
+import CampaignStats from './sections/CampaignStats';
+import ContinueReading from './sections/ContinueReading';
+import GlobalActionButton from '../../../shared/GlobalActionButton';
 
 // Props interface for layout components
 export interface LayoutProps {

@@ -103,6 +103,19 @@ export interface ThemeColors {
     deleteButtonBackground: string; 
     deleteButtonText: string;
     deleteButtonHover: string;
+
+    // Journal specific colors
+    journalLeather: string;
+    journalBinding: string;
+    journalStitch: string;
+    journalPageShadow: string;
+    journalSectionDivider: string;
+    journalCharacterCardBg: string;
+    journalCharacterCardHover: string;
+    journalQuestItemBg: string;
+    journalQuestItemHover: string;
+    journalActivityHover: string;
+    journalNotesArea: string;
   };
 }
 

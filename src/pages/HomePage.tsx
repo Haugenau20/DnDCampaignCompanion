@@ -1,73 +1,5 @@
-/**
- * HomePage.tsx
- * 
- * This file serves as the container component for different layout views.
- * 
- * ===== LAYOUT EXTENSION GUIDE =====
- * 
- * To add a new layout type to the application:
- * 
- * 1. CREATE THE LAYOUT COMPONENT
- *    - Create a new file in src/components/features/layouts/ (e.g., NewLayout.tsx)
- *    - Import the LayoutProps interface from DashboardLayout
- *    - Implement your component using the same props interface:
- * 
- *      ```
- *      import React from 'react';
- *      import { LayoutProps } from './DashboardLayout';
- *      
- *      const NewLayout: React.FC<LayoutProps> = ({
- *        npcs, locations, quests, chapters, rumors, activities, loading
- *      }) => {
- *        // Your layout implementation
- *        return (
- *          // JSX for your layout
- *        );
- *      };
- *      
- *      export default NewLayout;
- *      ```
- * 
- * 2. ADD LAYOUT SELECTION LOGIC
- *    - Import your new layout in HomePage.tsx
- *    - Add a state variable to track the selected layout:
- * 
- *      ```
- *      // Add this with your other state variables
- *      const [layoutType, setLayoutType] = useState<'dashboard' | 'newLayout'>('dashboard');
- *      ```
- * 
- *    - Update the return statement to conditionally render the appropriate layout:
- * 
- *      ```
- *      return (
- *        <div className={...}>
- *          {layoutType === 'dashboard' && <DashboardLayout {...layoutProps} />}
- *          {layoutType === 'newLayout' && <NewLayout {...layoutProps} />}
- *        </div>
- *      );
- *      ```
- * 
- * 3. (OPTIONAL) ADD LAYOUT SWITCHING UI
- *    - Create a component to let users select their preferred layout
- *    - Call setLayoutType when a user makes a selection
- * 
- * 4. (OPTIONAL) PERSIST USER PREFERENCE
- *    - Store the user's layout preference in their profile
- *    - Initialize the layoutType state from the user's saved preference:
- * 
- *      ```
- *      useEffect(() => {
- *        if (activeGroupUserProfile?.preferences?.homeLayout) {
- *          setLayoutType(activeGroupUserProfile.preferences.homeLayout);
- *        }
- *      }, [activeGroupUserProfile]);
- *      ```
- * 
- * This architecture follows the Open-Closed Principle: open for extension 
- * (adding new layouts) but closed for modification (existing code doesn't change).
- */
-import React, { useState, useEffect, useMemo } from 'react';
+// pages/HomePage.tsx
+import React, { useState } from 'react';
 import { useAuth, useGroups, useCampaigns } from '../context/firebase';
 import { useStory } from '../context/StoryContext';
 import { useQuests } from '../context/QuestContext';
@@ -77,8 +9,12 @@ import { useLocations } from '../context/LocationContext';
 import { useTheme } from '../context/ThemeContext';
 import clsx from 'clsx';
 
-// Import current layout
-import DashboardLayout, { LayoutProps } from '../components/features/layouts/DashboardLayout';
+// Import layouts
+import DashboardLayout from '../components/features/layouts/dashboard/DashboardLayout';
+import JournalLayout from '../components/features/layouts/journal/JournalLayout';
+import Button from '../components/core/Button';
+import { Book, LayoutDashboard } from 'lucide-react';
+import useLayoutData from '../components/features/layouts/common/hooks/useLayoutData';
 
 // Combined activity type from all content types
 export interface Activity {
@@ -90,6 +26,9 @@ export interface Activity {
   timestamp: Date;
   link: string;
 }
+
+// Layout type options
+type LayoutType = 'dashboard' | 'journal';
 
 /**
  * HomePage component serving as the container for the selected layout
@@ -108,17 +47,11 @@ const HomePage: React.FC = () => {
   const { npcs, isLoading: npcsLoading } = useNPCs();
   const { locations, isLoading: locationsLoading } = useLocations();
   
-  // Recent activity state
-  const [loading, setLoading] = useState(true);
+  // Layout selection state
+  const [layoutType, setLayoutType] = useState<LayoutType>('dashboard');
   
-  // Update loading state based on all data sources
-  useEffect(() => {
-    const isLoading = chaptersLoading || questsLoading || rumorsLoading || npcsLoading || locationsLoading;
-    setLoading(isLoading);
-  }, [chaptersLoading, questsLoading, rumorsLoading, npcsLoading, locationsLoading]);
-
   // Create combined recent activity from all content types
-  const activities = useMemo(() => {
+  const activities = React.useMemo(() => {
     const allActivities: Activity[] = [];
     
     // Add chapters
@@ -200,23 +133,65 @@ const HomePage: React.FC = () => {
     return allActivities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }, [chapters, quests, rumors, npcs, locations]);
   
-  // Create props for layout components
-  const layoutProps: LayoutProps = {
+  // Use common layout data hook to process and prepare data
+  const layoutData = useLayoutData({
+    chapters,
+    quests,
+    rumors,
     npcs,
     locations,
-    quests,
-    chapters,
-    rumors,
     activities,
-    loading
+    chaptersLoading,
+    questsLoading,
+    rumorsLoading,
+    npcsLoading,
+    locationsLoading
+  });
+  
+  // Handle layout toggle
+  const toggleLayout = () => {
+    setLayoutType(layoutType === 'dashboard' ? 'journal' : 'dashboard');
   };
   
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className={clsx("container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden", `${themePrefix}-content`)}>
-        {/* Currently only rendering the dashboard layout */}
-        <DashboardLayout {...layoutProps} />
+    <div className={clsx(
+      "container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden", 
+      `${themePrefix}-content`
+    )}>
+      {/* Layout Toggle Button */}
+      <div className="flex justify-end mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleLayout}
+          startIcon={layoutType === 'dashboard' ? <Book size={16} /> : <LayoutDashboard size={16} />}
+        >
+          {layoutType === 'dashboard' ? 'Switch to Journal View' : 'Switch to Dashboard View'}
+        </Button>
       </div>
+      
+      {/* Render selected layout with common processed data */}
+      {layoutType === 'dashboard' ? (
+        <DashboardLayout 
+          npcs={npcs}
+          locations={locations}
+          quests={quests}
+          chapters={chapters}
+          rumors={rumors}
+          activities={activities}
+          loading={layoutData.loading}
+        />
+      ) : (
+        <JournalLayout 
+          npcs={npcs}
+          locations={locations}
+          quests={quests}
+          chapters={chapters}
+          rumors={rumors}
+          activities={activities}
+          loading={layoutData.loading}
+        />
+      )}
     </div>
   );
 };

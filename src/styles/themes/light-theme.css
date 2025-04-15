@@ -52,6 +52,19 @@
   --light-hover-medium: var(--color-ui-hoverMedium);
   --light-icon-bg: var(--color-ui-iconBackground);
   --light-icon-border: var(--color-ui-iconBorder);
+
+  /* Journal-specific variables */
+  --light-journal-leather: var(--color-ui-journalLeather);
+  --light-journal-binding: var(--color-ui-journalBinding);
+  --light-journal-stitch: var(--color-ui-journalStitch);
+  --light-journal-page-shadow: var(--color-ui-journalPageShadow);
+  --light-journal-section-divider: var(--color-ui-journalSectionDivider);
+  --light-journal-character-card-bg: var(--color-ui-journalCharacterCardBg);
+  --light-journal-character-card-hover: var(--color-ui-journalCharacterCardHover);
+  --light-journal-quest-item-bg: var(--color-ui-journalQuestItemBg);
+  --light-journal-quest-item-hover: var(--color-ui-journalQuestItemHover);
+  --light-journal-activity-hover: var(--color-ui-journalActivityHover);
+  --light-journal-notes-area: var(--color-ui-journalNotesArea);
 }
 
 /* Base theme styles */
@@ -725,4 +738,164 @@
 
 .light-delete-button:hover {
   background-color: var(--color-ui-deleteButtonHover);
+}
+
+/* Journal container and binding */
+.light-journal-container {
+  background-color: var(--light-journal-leather);
+  box-shadow: 0 4px 6px var(--light-journal-page-shadow);
+}
+
+.light-journal-binding {
+  background-color: var(--light-journal-binding);
+  background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23624935' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 5v1H5z'/%3E%3Cpath d='M6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
+  box-shadow: inset 0 0 10px var(--light-journal-page-shadow);
+}
+
+.light-journal-stitch {
+  background-color: var(--light-journal-stitch);
+}
+
+/* Journal pages */
+.light-journal-page {
+  background-color: var(--light-card-bg);
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e6e6e6' fill-opacity='0.2'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  color: var(--light-text);
+}
+
+.light-journal-page-left {
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+  box-shadow: inset 5px 0 10px var(--light-journal-page-shadow);
+}
+
+.light-journal-page-right {
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  box-shadow: inset -5px 0 10px var(--light-journal-page-shadow);
+}
+
+/* Journal content styling */
+.light-journal-heading {
+  color: var(--light-text);
+  border-bottom: 1px solid var(--light-card-border);
+  padding-bottom: 0.25rem;
+}
+
+.light-journal-section {
+  position: relative;
+}
+
+.light-journal-section::after {
+  content: "";
+  position: absolute;
+  bottom: -1rem;
+  left: 25%;
+  right: 25%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--light-card-border), transparent);
+  opacity: 0.5;
+}
+
+/* Character gallery styling */
+.light-journal-character-card {
+  background-color: var(--light-journal-character-card-bg);
+  transition: all 0.2s;
+}
+
+.light-journal-character-card:hover {
+  background-color: var(--light-journal-character-card-hover);
+}
+
+.light-journal-character-sketch {
+  background-color: var(--light-bg-secondary);
+  border: 1px solid var(--light-card-border);
+}
+
+.light-journal-character-name {
+  color: var(--light-text);
+}
+
+/* Quest list styling */
+.light-journal-quest-item {
+  background-color: var(--light-journal-quest-item-bg);
+  transition: all 0.2s;
+}
+
+.light-journal-quest-item:hover {
+  background-color: var(--light-journal-quest-item-hover);
+}
+
+.light-journal-quest-bullet {
+  background-color: var(--light-primary);
+}
+
+.light-journal-quest-title {
+  color: var(--light-text);
+}
+
+.light-journal-quest-note {
+  color: var(--light-text-secondary);
+}
+
+/* Activity feed styling */
+.light-journal-activity-item {
+  border-left: 2px solid transparent;
+  padding-left: 0.5rem;
+}
+
+.light-journal-activity-item:hover {
+  border-left-color: var(--light-primary);
+  background-color: var(--light-journal-activity-hover);
+}
+
+.light-journal-activity-icon-bg {
+  background-color: var(--light-bg-secondary);
+  color: var(--light-primary);
+}
+
+.light-journal-activity-title {
+  color: var(--light-text);
+}
+
+.light-journal-activity-date {
+  color: var(--light-text-secondary);
+}
+
+.light-journal-activity-type {
+  color: var(--light-primary);
+}
+
+.light-journal-activity-description {
+  color: var(--light-text-secondary);
+}
+
+.light-journal-activity-separator {
+  color: var(--light-text-secondary);
+}
+
+/* Utility styles */
+.light-journal-loading {
+  background-color: var(--light-bg-secondary);
+  opacity: 0.3;
+}
+
+.light-journal-empty {
+  color: var(--light-text-secondary);
+}
+
+.light-journal-notes-area {
+  background-color: var(--light-journal-notes-area);
+  min-height: 200px;
+}
+
+.light-journal-pagination {
+  background-color: var(--light-card-bg);
+  color: var(--light-text);
+}
+
+/* Notes paper effect */
+.light-journal-paper {
+  background-color: var(--light-bg-secondary);
+  border: 1px solid var(--light-card-border);
 }
