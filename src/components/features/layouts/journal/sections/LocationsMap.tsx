@@ -23,10 +23,10 @@ const LocationsMap: React.FC<LocationsMapProps> = ({ locations, loading }) => {
   const sortedLocations = [...locations].sort((a, b) => {
     // First, sort by exploration status
     if (a.status !== b.status) {
-      if (a.status === 'explored') return -1;
-      if (b.status === 'explored') return 1;
-      if (a.status === 'visited') return -1;
-      if (b.status === 'visited') return 1;
+      if (a.status === 'explored') return 1;
+      if (b.status === 'explored') return -1;
+      if (a.status === 'visited') return 1;
+      if (b.status === 'visited') return -1;
     }
     
     // Then by name

@@ -46,8 +46,6 @@ const JournalLayout: React.FC<LayoutProps> = ({
 
   return (
     <div className="relative w-full">
-      {/* Campaign Banner stays out of the journal */}
-      <CampaignBanner />
 
       {/* View toggle */}
       <div className="mb-4 flex justify-end">
@@ -145,33 +143,14 @@ const JournalLayout: React.FC<LayoutProps> = ({
             <JournalPage side="right">
               {pageView === 'overview' ? (
                 <>
-                  <RecentActivityChronicle activities={activities} loading={loading} />
                   <LocationsMap locations={locations} loading={loading} />
                   <RumorsSection rumors={rumors} loading={loading} />
                 </>
               ) : (
-                /* Story notes and potentially character relationship diagrams */
-                <div className="space-y-6">
-                  <div className={clsx(
-                    "p-4 rounded",
-                    `${themePrefix}-journal-paper`
-                  )}>
-                    <h3 className={clsx(
-                      "text-lg font-medium mb-2",
-                      `${themePrefix}-journal-heading`
-                    )}>
-                      My Notes
-                    </h3>
-                    <div className={clsx(
-                      "min-h-32 p-3 rounded leading-relaxed",
-                      `${themePrefix}-journal-notes-area`
-                    )}>
-                      <p className="italic text-gray-500">
-                        (Your character's notes about the story will appear here...)
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                /* Recent Activity */
+                <>
+                  <RecentActivityChronicle activities={activities} loading={loading} />
+                </>
               )}
             </JournalPage>
           </JournalPages>
