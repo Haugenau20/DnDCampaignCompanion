@@ -154,44 +154,46 @@ const HomePage: React.FC = () => {
   };
   
   return (
-    <div className={clsx(
-      "container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden", 
-      `${themePrefix}-content`
-    )}>
-      {/* Layout Toggle Button */}
-      <div className="flex justify-end mb-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleLayout}
-          startIcon={layoutType === 'dashboard' ? <Book size={16} /> : <LayoutDashboard size={16} />}
-        >
-          {layoutType === 'dashboard' ? 'Switch to Journal View' : 'Switch to Dashboard View'}
-        </Button>
+    <div className='max-w-7xl mx-auto'>
+      <div className={clsx(
+        "container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden", 
+        `${themePrefix}-content`
+      )}>
+        {/* Layout Toggle Button */}
+        <div className="flex justify-end mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleLayout}
+            startIcon={layoutType === 'dashboard' ? <Book size={16} /> : <LayoutDashboard size={16} />}
+          >
+            {layoutType === 'dashboard' ? 'Switch to Journal View' : 'Switch to Dashboard View'}
+          </Button>
+        </div>
+        
+        {/* Render selected layout with common processed data */}
+        {layoutType === 'dashboard' ? (
+          <DashboardLayout 
+            npcs={npcs}
+            locations={locations}
+            quests={quests}
+            chapters={chapters}
+            rumors={rumors}
+            activities={activities}
+            loading={layoutData.loading}
+          />
+        ) : (
+          <JournalLayout 
+            npcs={npcs}
+            locations={locations}
+            quests={quests}
+            chapters={chapters}
+            rumors={rumors}
+            activities={activities}
+            loading={layoutData.loading}
+          />
+        )}
       </div>
-      
-      {/* Render selected layout with common processed data */}
-      {layoutType === 'dashboard' ? (
-        <DashboardLayout 
-          npcs={npcs}
-          locations={locations}
-          quests={quests}
-          chapters={chapters}
-          rumors={rumors}
-          activities={activities}
-          loading={layoutData.loading}
-        />
-      ) : (
-        <JournalLayout 
-          npcs={npcs}
-          locations={locations}
-          quests={quests}
-          chapters={chapters}
-          rumors={rumors}
-          activities={activities}
-          loading={layoutData.loading}
-        />
-      )}
     </div>
   );
 };
