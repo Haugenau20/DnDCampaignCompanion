@@ -5,7 +5,6 @@ import clsx from 'clsx';
 import CampaignBanner from './sections/CampaignBanner';
 import ActivityFeed from './sections/ActivityFeed';
 import CampaignStats from './sections/CampaignStats';
-import ContinueReading from './sections/ContinueReading';
 import GlobalActionButton from '../../../shared/GlobalActionButton';
 
 // Props interface for layout components
@@ -60,17 +59,6 @@ const DashboardLayout: React.FC<LayoutProps> = ({
             loading={loading} 
           />
         </div>
-      </div>
-      
-      {/* Continue Reading Section - Full width */}
-      <div className="mt-20">
-        <ContinueReading 
-          chapters={chapters}
-          npcs={npcs}
-          quests={quests}
-          rumors={rumors}
-          locations={locations}
-        />
       </div>
       
       {/* Global Action Button */}

@@ -1,154 +1,389 @@
 // components/layout/Header.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { SearchBar } from '../shared/SearchBar';
 import ThemeSelector from '../shared/ThemeSelector';
-import UserProfileButton from '../features/auth/UserProfileButton';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/firebase';
-import { Menu, X, LogOut, Settings } from 'lucide-react';
+import { useGroups, useCampaigns } from '../../context/firebase';
+import { Menu, X, LogOut, ShieldAlert, UserPlus, User, Book, ChevronDown, Users } from 'lucide-react';
 import ContextSwitcher from '../shared/ContextSwitcher';
 import Button from '../core/Button';
+import Typography from '../core/Typography';
+import Dialog from '../core/Dialog';
 import { clsx } from 'clsx';
+import JoinGroupDialog from '../features/groups/JoinGroupDialog';
+import AdminPanel from '../features/auth/adminPanel/AdminPanel';
+import UserProfile from '../features/auth/UserProfile';
 
 /**
- * Main application header with clean, minimal design
+ * Main application header with simplified layout
  */
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const { user, signOut } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { activeGroupUserProfile, refreshGroups, activeGroup } = useGroups();
+  const { activeCampaignId, campaigns } = useCampaigns();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuContainerRef = useRef<HTMLDivElement>(null);
   const themePrefix = theme.name;
+
+  // Check if user is admin
+  const isAdmin = activeGroupUserProfile?.role === 'admin' || false;
+  
+  // Dialog states
+  const [showProfile, setShowProfile] = useState(false);
+  const [showJoinGroup, setShowJoinGroup] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [showContextSwitcher, setShowContextSwitcher] = useState(false);
+
+  // Get the active campaign name
+  const activeCampaign = campaigns.find(c => c.id === activeCampaignId);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        menuOpen &&
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        menuButtonRef.current &&
+        !menuButtonRef.current.contains(event.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
+
+  // Position the menu under the hamburger button
+  useEffect(() => {
+    if (menuOpen && menuButtonRef.current && menuContainerRef.current) {
+      const buttonRect = menuButtonRef.current.getBoundingClientRect();
+      // Position the menu below the button
+      menuContainerRef.current.style.top = `${buttonRect.bottom}px`;
+      menuContainerRef.current.style.right = `${window.innerWidth - buttonRect.right}px`;
+    }
+  }, [menuOpen]);
 
   // Handle sign out
   const handleSignOut = async () => {
     try {
       await signOut();
+      setMenuOpen(false); // Close menu after signing out
     } catch (err) {
       console.error('Error signing out:', err);
     }
   };
 
-  // Toggle mobile menu
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
+  // Toggle menu
+  const toggleMenu = () => {
+    setMenuOpen(!menuOpen);
+  };
+  
+  // Handle profile click
+  const handleProfileClick = () => {
+    setShowProfile(true);
+    setMenuOpen(false);
+  };
+  
+  // Handle join group click
+  const handleJoinGroupClick = () => {
+    setShowJoinGroup(true);
+    setMenuOpen(false);
+  };
+  
+  // Handle admin click
+  const handleAdminClick = () => {
+    setShowAdmin(true);
+    setMenuOpen(false);
+  };
+
+  // Handle context switcher click
+  const handleContextSwitcherClick = () => {
+    setShowContextSwitcher(true);
+    setMenuOpen(false);
   };
 
   return (
     <header className={clsx(
-      'p-4',
+      'p-4 relative',
       `${themePrefix}-header`
     )}>
-      <div className="container mx-auto">
-        {/* Desktop Header */}
-        <div className="hidden md:flex items-center justify-between gap-4">
-          {/* Left side - Logo */}
-          <Link 
-            to="/" 
-            onClick={(e) => {
-              e.preventDefault();
-              navigate('/');
-            }}
-            className={clsx(
-              'text-xl font-bold',
-              `${themePrefix}-header-title`
-            )}
-          >
-            D&D Campaign Companion
-          </Link>
-          
-          {/* Middle - Search */}
-          <div className="flex-1 max-w-2xl px-4">
-            <SearchBar />
-          </div>
-          
-          {/* Right side - User Controls */}
-          <div className="flex items-center gap-3">
-            {/* Context Switcher - Only show if user is logged in */}
-            {user && <ContextSwitcher />}
-            
-            <ThemeSelector />
-            <UserProfileButton />
-            
-            {user && (
-              <Button
-                variant="ghost"
-                onClick={handleSignOut}
-                startIcon={<LogOut className="w-5 h-5" />}
-              >
-                Sign Out
-              </Button>
-            )}
-          </div>
-        </div>
-        
-        {/* Mobile Header */}
-        <div className="flex md:hidden items-center justify-between">
-          {/* Mobile Logo */}
-          <Link 
-            to="/" 
-            onClick={(e) => {
-              e.preventDefault();
-              navigate('/');
-            }}
-            className={clsx(
-              'text-lg font-bold',
-              `${themePrefix}-header-title`
-            )}
-          >
-            D&D Campaign
-          </Link>
-          
-          {/* Mobile Controls */}
-          <div className="flex items-center gap-2">
-            <UserProfileButton />
-            <button
-              onClick={toggleMobileMenu}
+      <div className='max-w-7xl mx-auto'>
+        <div className="container mx-auto">
+          {/* Main Header - Both Desktop and Mobile */}
+          <div className="flex items-center justify-between gap-2">
+            {/* Left side - Logo */}
+            <Link 
+              to="/" 
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/');
+              }}
               className={clsx(
-                'p-2 rounded-md',
-                `${themePrefix}-button-ghost`
+                'text-xl font-bold whitespace-nowrap',
+                `${themePrefix}-header-title`
               )}
-              aria-label="Menu"
             >
-              {mobileMenuOpen ? <X /> : <Menu />}
-            </button>
-          </div>
-        </div>
-        
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className={clsx(
-            'md:hidden mt-4 p-4 rounded-lg',
-            `${themePrefix}-card`
-          )}>
-            <div className="flex flex-col space-y-4">
-              {/* Mobile Search */}
+              <span className="md:inline hidden">D&D Campaign Companion</span>
+              <span className="md:hidden">D&D Campaign</span>
+            </Link>
+            
+            {/* Middle - Search */}
+            <div className="flex-1 max-w-xl px-2 md:px-4">
               <SearchBar />
+            </div>
+            
+            {/* Right side - Menu Button + Sign Out */}
+            <div className="flex items-center gap-2">
+              {/* Menu Button */}
+              <button
+                ref={menuButtonRef}
+                onClick={toggleMenu}
+                className={clsx(
+                  'p-2 rounded-md',
+                  `${themePrefix}-button-ghost`
+                )}
+                aria-label="Menu"
+                aria-expanded={menuOpen}
+                aria-controls="header-menu"
+              >
+                {menuOpen ? <X size={24} /> : <Menu size={24} />}
+              </button>
               
-              {/* Mobile Context Switcher */}
-              {user && <ContextSwitcher />}
-              
-              {/* Mobile Theme */}
-              <div className="flex items-center justify-between">
-                <span className={clsx(`${themePrefix}-typography-secondary`)}>Theme</span>
-                <ThemeSelector />
-              </div>
-              
-              {/* Sign Out Button */}
+              {/* Sign Out Button - Always visible on desktop */}
               {user && (
                 <Button
+                  variant="ghost"
                   onClick={handleSignOut}
                   startIcon={<LogOut className="w-5 h-5" />}
+                  className="hidden md:flex"
                 >
-                  Sign Out
+                  <span className="hidden lg:inline">Sign Out</span>
                 </Button>
               )}
             </div>
           </div>
-        )}
+          
+          {/* Menu Dropdown */}
+          {menuOpen && (
+            <div 
+              ref={menuContainerRef}
+              className="fixed" 
+              style={{ zIndex: 50 }}
+            >
+              <div 
+                id="header-menu"
+                ref={menuRef}
+                className={clsx(
+                  'mt-2 p-4 rounded-lg shadow-lg w-72',
+                  `${themePrefix}-card`,
+                  `border ${themePrefix}-card-border`
+                )}
+              >
+                <div className="flex flex-col space-y-4">
+                  {/* User Account Buttons Section */}
+                  {user && (
+                    <div>
+                      <h3 className={clsx(
+                        "mb-3 font-medium",
+                        `${themePrefix}-typography`
+                      )}>
+                        Account
+                      </h3>
+                      
+                      {/* Icon Buttons Row */}
+                      <div className="flex justify-center gap-10 mb-4">
+                        {/* Profile Button */}
+                        <button
+                          onClick={handleProfileClick}
+                          className={clsx(
+                            "flex flex-col items-center gap-1",
+                            `${themePrefix}-button-ghost text-${themePrefix}-primary`
+                          )}
+                          aria-label="Profile"
+                        >
+                          <User size={24} />
+                          <span className={clsx("text-xs font-medium", `${themePrefix}-typography`)}>Profile</span>
+                        </button>
+                        
+                        {/* Join Group Button */}
+                        <button
+                          onClick={handleJoinGroupClick}
+                          className={clsx(
+                            "flex flex-col items-center gap-1",
+                            `${themePrefix}-button-ghost text-${themePrefix}-primary`
+                          )}
+                          aria-label="Join Group"
+                        >
+                          <UserPlus size={24} />
+                          <span className={clsx("text-xs font-medium", `${themePrefix}-typography`)}>Groups</span>
+                        </button>
+                        
+                        {/* Admin Button - only if admin */}
+                        {isAdmin && (
+                          <button
+                            onClick={handleAdminClick}
+                            className={clsx(
+                              "flex flex-col items-center gap-1",
+                              `${themePrefix}-button-ghost text-${themePrefix}-primary`
+                            )}
+                            aria-label="Admin"
+                          >
+                            <ShieldAlert size={24} />
+                            <span className={clsx("text-xs font-medium", `${themePrefix}-typography`)}>Admin</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Campaign Section */}
+                  {user && (
+                    <div className={clsx(
+                      "pt-4", 
+                      `border-t ${themePrefix}-card-border`
+                    )}>
+                      <h3 className={clsx(
+                        "mb-3 font-medium",
+                        `${themePrefix}-typography`
+                      )}>
+                        Campaign
+                      </h3>
+                      
+                      {/* Group Display */}
+                      <div className="mb-2">
+                        <Typography variant="body-sm" color="secondary">Group:</Typography>
+                          <div className="flex items-center mt-1 pl-1">
+                          <Users size={18} className={clsx("mr-2 flex-shrink-0", `${themePrefix}-primary`)} />
+                          <Typography className="flex-1 truncate">
+                            {activeGroup ? activeGroup.name : 'No Group Selected'}
+                          </Typography>
+                          </div>
+                      </div>
+                      
+                      {/* Campaign Display */}
+                      <div className="mb-3">
+                        <Typography variant="body-sm" color="secondary">Campaign:</Typography>
+                        <div className="flex items-center mt-1 pl-1">
+                          <Book size={18} className={clsx("mr-2 flex-shrink-0", `${themePrefix}-primary`)} />
+                          <Typography className="flex-1 truncate">
+                            {activeCampaign ? activeCampaign.name : 'No Campaign Selected'}
+                          </Typography>
+                        </div>
+                      </div>
+                      
+                      {/* Change Button */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={handleContextSwitcherClick}
+                        endIcon={<ChevronDown size={16} />}
+                      >
+                        Change
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* Appearance Section */}
+                  <div className={clsx(
+                    "pt-4", 
+                    `border-t ${themePrefix}-card-border`
+                  )}>
+                    <h3 className={clsx(
+                      "mb-3 font-medium",
+                      `${themePrefix}-typography`
+                    )}>
+                      Appearance
+                    </h3>
+                    <div className="flex items-center justify-between">
+                      <span className={clsx(`${themePrefix}-typography`)}>Theme</span>
+                      <ThemeSelector />
+                    </div>
+                  </div>
+                  
+                  {/* Sign Out button - Mobile only */}
+                  {user && (
+                    <div className={clsx(
+                      "pt-3", 
+                      `border-t ${themePrefix}-card-border`
+                    )}>
+                      <Button
+                        onClick={handleSignOut}
+                        startIcon={<LogOut className="w-5 h-5" />}
+                        className="w-full md:hidden"
+                      >
+                        Sign Out
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+      
+      {/* Profile Dialog */}
+      <Dialog
+        open={showProfile}
+        onClose={() => setShowProfile(false)}
+        title={`${activeGroupUserProfile?.username}'s profile` || 'Your Profile'}
+        maxWidth="max-w-md"
+      >
+        <UserProfile 
+          onSaved={() => setShowProfile(false)}
+          onCancel={() => setShowProfile(false)}
+        />
+      </Dialog>
+      
+      {/* Join Group Dialog */}
+      <JoinGroupDialog
+        open={showJoinGroup}
+        onClose={() => setShowJoinGroup(false)}
+        onSuccess={() => {
+          if (refreshGroups) {
+            refreshGroups();
+          }
+        }}
+      />
+      
+      {/* Admin Panel Dialog */}
+      <Dialog
+        open={showAdmin}
+        onClose={() => setShowAdmin(false)}
+        title="Admin Panel"
+        maxWidth="max-w-4xl"
+      >
+        <AdminPanel 
+          onClose={() => setShowAdmin(false)}
+        />
+      </Dialog>
+      
+      {/* Context Switcher Dialog */}
+      <Dialog
+        open={showContextSwitcher}
+        onClose={() => setShowContextSwitcher(false)}
+        title="Select Group and Campaign"
+        maxWidth="max-w-md"
+      >
+        <div className="p-4">
+          <ContextSwitcher 
+            inDialog={true} 
+            onClose={() => setShowContextSwitcher(false)} 
+          />
+        </div>
+      </Dialog>
     </header>
   );
 };

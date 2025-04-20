@@ -107,12 +107,12 @@ const JournalLayout: React.FC<LayoutProps> = ({
           >
             Prev
           </Button>
-          <span className={clsx(
-            "px-2 py-1 rounded-full text-xs",
+            <span className={clsx(
+            "px-2 py-1 rounded-full text-xs flex items-center justify-center relative -top-1",
             `${themePrefix}-journal-pagination`
-          )}>
+            )}>
             {mobilePage + 1}/{totalMobilePages}
-          </span>
+            </span>
           <Button 
             variant="ghost" 
             size="sm" 

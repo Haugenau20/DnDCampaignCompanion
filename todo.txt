@@ -29,3 +29,5 @@ Filter tabs look different on the location page than the other pages.
 
 When adding a new chapter it says that the chapter summary is optional, but it won't create the chapter if there is no summary.
 - Either make it truly optional or make it mandatory and show an error if not typed in. 
+
+Right now it is possible to type in parent location that dont exist when creating a location. This should not be possible.

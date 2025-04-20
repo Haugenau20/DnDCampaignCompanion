@@ -3,10 +3,8 @@ import React, { useState } from 'react';
 import Typography from '../../../../core/Typography';
 import Card from '../../../../core/Card';
 import { useTheme } from '../../../../../context/ThemeContext';
-import { RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
 import { Activity } from '../../../../../pages/HomePage';
-import Button from '../../../../core/Button';
 import { useActivityDisplay } from '../../../layouts/common/hooks/useActivityDisplay';
 import { getContentIcon } from '../../../layouts/common/utils/contentTypeUtils';
 import LoadingState from '../../../layouts/common/components/LoadingState';
@@ -19,6 +17,7 @@ interface ActivityFeedProps {
 
 /**
  * ActivityFeed component that displays recent activity across content types
+ * Combines larger content size with fixed one-line header
  */
 const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
   const { theme } = useTheme();
@@ -43,21 +42,22 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
   if (loading) {
     return (
       <div>
-        <Typography variant="h3" className="text-lg sm:text-xl md:text-2xl mb-3 sm:mb-4">Recent Activity</Typography>
-        <LoadingState type="card" count={4} />
+        <div className="flex justify-between items-center mb-3 sm:mb-4 flex-nowrap">
+          <Typography variant="h3" className="text-lg sm:text-xl md:text-2xl whitespace-nowrap">Recent Activity</Typography>
+        </div>
+        <LoadingState type="card" count={4} height="h-20" />
       </div>
     );
   }
   
   return (
     <div>
-      <div className="flex justify-between items-center gap-1 sm:gap-2 mb-3 sm:mb-4">
-        <Typography variant="h3" className="text-lg sm:text-xl md:text-2xl">Recent Activity</Typography>
+      <div className="flex justify-between items-center gap-2 mb-3 sm:mb-4 flex-nowrap">
+        <Typography variant="h3" className="text-lg sm:text-xl md:text-2xl whitespace-nowrap">Recent Activity</Typography>
         
-        {/* More compact filter dropdown */}
         <select 
           className={clsx(
-            "text-sm rounded-md px-2 py-1 border",
+            "text-sm rounded-md px-2 py-1 border min-w-fit",
             `${themePrefix}-input`,
             `border-${themePrefix}-card-border`
           )}
@@ -77,7 +77,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
         <Card>
           <Card.Content className="text-center py-12">
             <EmptyState 
-              icon={getContentIcon('chapter', 24)}
+              icon={getContentIcon('chapter', 28)}
               title="No Recent Activity"
               message={filter 
                 ? `No ${getTypeLabel(filter)} activity found. Try a different filter.`
@@ -89,36 +89,36 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
           </Card.Content>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+        <div className="space-y-4">
           {filteredActivities.map(activity => (
             <Card 
               key={`${activity.type}-${activity.id}`}
               hoverable
               onClick={() => handleActivityClick(activity)}
-              className="transition-all hover:shadow-md"
+              className="transition-all hover:shadow-md transform hover:scale-102"
             >
-              <Card.Content className="p-3">
-                <div className="flex">
+              <Card.Content className="p-4">
+                <div className="flex items-center">
                   <div className={clsx(
-                    "p-2 rounded-full mr-2 h-8 w-8 flex items-center justify-center",
+                    "p-3 rounded-full mr-4 h-12 w-12 flex items-center justify-center",
                     `${themePrefix}-icon-bg`
                   )}>
-                    {getContentIcon(activity.type, 20)}
+                    {getContentIcon(activity.type, 24)}
                   </div>
                   <div className="flex-1 flex flex-col overflow-hidden">
                     <div className="flex items-center justify-between">
-                      <Typography variant="body-sm" color="secondary" className="text-xs">
+                      <Typography variant="body-sm" color="secondary" className="text-sm">
                         {getTypeLabel(activity.type)}
                       </Typography>
-                      <Typography variant="body-sm" color="secondary" className="text-xs">
+                      <Typography variant="body-sm" color="secondary" className="text-sm whitespace-nowrap ml-2">
                         {formatDate(activity.timestamp)}
                       </Typography>
                     </div>
-                    <Typography variant="h4" className="truncate text-sm">
+                    <Typography variant="h4" className="truncate text-base sm:text-lg font-medium">
                       {activity.title}
                     </Typography>
                     {activity.actor && (
-                      <Typography variant="body-sm" color="secondary" className="text-xs mt-1">
+                      <Typography variant="body-sm" color="secondary" className="text-sm mt-0.5">
                         By: {activity.actor}
                       </Typography>
                     )}

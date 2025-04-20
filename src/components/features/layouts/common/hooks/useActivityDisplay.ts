@@ -4,7 +4,6 @@ import { Activity } from '../../../../../pages/HomePage';
 import { getRelativeTime } from '../utils/dateFormatter';
 import { formatJournalDate } from '../utils/dateFormatter';
 import { getContentTypeLabel } from '../utils/contentTypeUtils';
-import { trackContentView } from '../../dashboard/sections/ContinueReading';
 import { useNavigation } from '../../../../../context/NavigationContext';
 
 interface UseActivityDisplayProps {
@@ -48,8 +47,6 @@ export const useActivityDisplay = ({
 
   // Handle item click
   const handleActivityClick = (activity: Activity) => {
-    // Track view
-    trackContentView(activity.id, activity.type, activity.title, activity.link);
     // Navigate
     navigateToPage(activity.link);
   };
