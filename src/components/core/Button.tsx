@@ -83,7 +83,7 @@ export const Button: React.FC<ButtonProps> = ({
     clsx(
       // Base styles
       'relative rounded-lg font-medium transition-colors duration-200',
-      'focus:outline-none focus:ring-2 focus:ring-offset-2',
+      'focus:outline-none ', //focus:ring-2 focus:ring-offset-2',
       'disabled:opacity-50 disabled:cursor-not-allowed',
       
       // Size specific styles

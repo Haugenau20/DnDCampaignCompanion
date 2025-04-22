@@ -1,12 +1,11 @@
 Prioritized Todo List
 
-1. The ContextSwitcher doesnt properly update the UI when switching between campaigns.
-
 2. REWORK of HomePage
 - Dashboard layout being implemented
-- Implement/review proper highlighting logic to pages.
-- The medieval theme does not work with the dashboard layout.
-- The medieval theme does not work with the hamburger menu and theme selector dropdown.
+    - Implement/review proper highlighting logic to pages.
+    - The medieval theme does not work with the dashboard layout.
+    - The medieval theme does not work with the hamburger menu and theme selector dropdown.
+    - Delete medieval theme??
 
 3. When adding a new chapter it says that the chapter summary is optional, but it won't create the chapter if there is no summary.
 - Either make it truly optional or make it mandatory and show an error if not typed in.
@@ -32,3 +31,13 @@ Prioritized Todo List
 13. Fix/Implement proper searching
 
 14. Add batch options (Delete, change status, etc.) for Story, Quest, NPC, and Location features
+
+
+Waiting for prio:
+
+- F12 console Error in StoryContext when it is trying to update "current-progress"
+    - I think this is a remnant of purposefully unused functionality and it should just be deleted. 
+
+Admin Panel:
+- Test if the creation of new groups and campaigns work
+- Right now the "groups" view only shows the current group. 

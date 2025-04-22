@@ -54,7 +54,7 @@ const JournalLayout: React.FC<LayoutProps> = ({
           `${themePrefix}-card-border`
         )}>
           <Button
-            variant={pageView === 'overview' ? 'primary' : 'outline'}
+            variant={pageView === 'overview' ? 'primary' : 'ghost'}
             size="sm"
             onClick={() => setPageView('overview')}
             startIcon={<Book size={16} />}
@@ -62,7 +62,7 @@ const JournalLayout: React.FC<LayoutProps> = ({
             Overview
           </Button>
           <Button
-            variant={pageView === 'story' ? 'primary' : 'outline'}
+            variant={pageView === 'story' ? 'primary' : 'ghost'}
             size="sm"
             onClick={() => setPageView('story')}
             startIcon={<Bookmark size={16} />}

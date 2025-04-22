@@ -161,8 +161,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           <Card.Content className="flex flex-col items-center text-center p-4 h-28">
             <div className={clsx(
               "p-2 rounded-full mb-1 flex items-center justify-center",
-              `${themePrefix}-icon-bg`,
-              `${themePrefix}-status-active`
+              `${themePrefix}-icon-bg`
             )}>
               <Scroll className="w-5 h-5" />
             </div>

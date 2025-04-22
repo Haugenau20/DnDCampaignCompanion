@@ -14,7 +14,6 @@ import Layout from './components/layout/Layout';
 import SessionTimeoutWarning from './components/features/auth/SessionTimeoutWarning';
 import SessionManager from './components/features/auth/SessionManager';
 import PrivacyNotice from './components/features/auth/PrivacyNotice';
-import GroupSelectorModal from './components/features/groups/GroupSelectorModal';
 
 // Import pages
 import HomePage from './pages/HomePage';
@@ -49,7 +48,6 @@ const App: React.FC = () => {
                         <Layout>
                           <SessionTimeoutWarning />
                           <PrivacyNotice />
-                          <GroupSelectorModal />
                           <Routes>
                             <Route path="/" element={<HomePage />} />
                             <Route path="/story" element={<StorySelectionPage />} />

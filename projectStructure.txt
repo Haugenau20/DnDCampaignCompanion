@@ -3,6 +3,19 @@ DnDCampaignCompanion
 │   ├── src
 │   │   ├── utils
 │   │   │   ├── __dev__
+│   │   │   │   ├── generators
+│   │   │   │   │   ├── contentGenerators
+│   │   │   │   │   │   ├── sagaGenerator.ts
+│   │   │   │   │   │   ├── rumorGenerator.ts
+│   │   │   │   │   │   ├── questGenerator.ts
+│   │   │   │   │   │   ├── npcGenerator.ts
+│   │   │   │   │   │   ├── locationGenerator.ts
+│   │   │   │   │   │   └── chapterGenerator.ts
+│   │   │   │   │   ├── userGenerator.ts
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── groupGenerator.ts
+│   │   │   │   │   ├── contentGenerator.ts
+│   │   │   │   │   └── campaignGenerator.ts
 │   │   │   │   ├── sessionTester.ts
 │   │   │   │   ├── generateSampleData.ts
 │   │   │   │   └── dndSampleDataGenerator.ts
@@ -225,14 +238,10 @@ DnDCampaignCompanion
 │   │   │   │   │           ├── ItemCard.tsx
 │   │   │   │   │           └── EmptyState.tsx
 │   │   │   │   ├── groups
-│   │   │   │   │   ├── JoinGroupDialog.tsx
-│   │   │   │   │   ├── GroupSelectorModal.tsx
-│   │   │   │   │   ├── GroupSelector.tsx
-│   │   │   │   │   └── GroupDropdown.tsx
+│   │   │   │   │   └── JoinGroupDialog.tsx
 │   │   │   │   ├── contact
 │   │   │   │   │   └── ContactForm.tsx
 │   │   │   │   ├── campaigns
-│   │   │   │   │   └── CampaignSelector.tsx
 │   │   │   │   └── auth
 │   │   │   │       ├── adminPanel
 │   │   │   │       │   ├── UserManagementView.tsx

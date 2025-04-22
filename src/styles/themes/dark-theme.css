@@ -350,10 +350,8 @@
 
 /* Dropdown component - ensure solid background */
 .dark-dropdown {
-  background-color: var(--dark-input-bg) !important;
-  border: 1px solid var(--dark-card-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  opacity: 1 !important;
+  background-color: var(--dark-input-bg);
+  border-color: 1px solid var(--dark-card-border);
 }
 
 .dark-dropdown-item {
@@ -367,7 +365,7 @@
 
 .dark-dropdown-item-active {
   background-color: var(--dark-hover-medium);
-  color: var(--dark-heading);
+  color: var(--dark-primary);
 }
 
 /* Dialog styles - ensure solid background */

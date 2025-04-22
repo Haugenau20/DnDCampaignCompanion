@@ -5,6 +5,7 @@ import { useNavigation } from '../../../../../context/NavigationContext';
 import { Chapter } from '../../../../../types/story';
 import { BookOpen, Bookmark } from 'lucide-react';
 import clsx from 'clsx';
+import Button from '../../../../core/Button';
 
 interface StorySectionProps {
   chapters: Chapter[];
@@ -146,38 +147,41 @@ const StorySection: React.FC<StorySectionProps> = ({ chapters, loading }) => {
                 No previous chapters
               </p>
             ) : (
-              <ul className={clsx(
-                "space-y-1 list-none pl-0",
-                `${themePrefix}-journal-chapter-list`
-              )}>
-                {sortedChapters.slice(0, -1).map(chapter => (
+                <ul className="space-y-1 list-none pl-0">
+                {sortedChapters.slice(0, -1).reverse().slice(0, 10).map(chapter => (
                   <li 
-                    key={chapter.id}
-                    onClick={() => handleChapterClick(chapter.id)}
+                  key={chapter.id}
+                  onClick={() => handleChapterClick(chapter.id)}
+                  className="pl-6 py-1 relative cursor-pointer hover:bg-opacity-10 hover:bg-primary rounded">
+                  <span 
                     className={clsx(
-                      "pl-6 py-1 relative cursor-pointer hover:bg-opacity-10 hover:bg-primary rounded",
-                      `${themePrefix}-journal-chapter-item`
+                      "absolute left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 rounded-full",
+                      `${themePrefix}-journal-binding`
                     )}
-                  >
-                    {/* Chapter bullet */}
-                    <span className={clsx(
-                      "absolute left-2 top-1.5 w-2 h-2 rounded-full",
-                      `${themePrefix}-journal-chapter-bullet`
-                    )}></span>
-                    
-                    <span className={clsx(
-                      "text-sm",
-                      `${themePrefix}-journal-chapter-link`
-                    )}>
-                      {chapter.order !== undefined && (
-                        <span className="font-medium mr-1">Chapter {chapter.order}:</span>
-                      )}
-                      {chapter.title}
-                    </span>
+                  ></span>
+                  
+                  <span className={clsx(
+                  "text-sm",
+                  `${themePrefix}-journal-title`
+                  )}>
+                  {chapter.order !== undefined && (
+                  <span className="font-medium mr-1">Chapter {chapter.order}:</span>
+                  )}
+                  {chapter.title}
+                  </span>
                   </li>
                 ))}
-              </ul>
+                </ul>
             )}
+            <div className="flex justify-end mt-2">
+              <Button
+                variant="ghost"
+                size='sm'
+                onClick={() => navigateToPage('/story/chapters')}
+              >
+                View All Chapters
+              </Button>
+            </div>
           </div>
         </div>
       )}
