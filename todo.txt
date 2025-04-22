@@ -41,3 +41,14 @@ Waiting for prio:
 Admin Panel:
 - Test if the creation of new groups and campaigns work
 - Right now the "groups" view only shows the current group. 
+- Campaigns can be created. 
+- groups cannot be created
+- neither campaigns or groups can be edited.
+- campaigns cannot be deleted.
+
+Rework the them system to collect as much functionality as possible.
+- Simplify the amount of different colors.
+
+New feature idea (partly implemented already): sub-chapters.
+
+Major do-over of the project structure (CLAUDE Code?)
