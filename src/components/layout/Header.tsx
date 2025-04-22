@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/firebase';
 import { useGroups, useCampaigns } from '../../context/firebase';
-import { Menu, X, LogOut, ShieldAlert, UserPlus, User, Book, ChevronDown, Users } from 'lucide-react';
+import { Menu, X, LogOut, ShieldAlert, UserPlus, User, Book, ChevronDown, Users, LogIn } from 'lucide-react';
 import ContextSwitcher from '../shared/ContextSwitcher';
 import Button from '../core/Button';
 import Typography from '../core/Typography';
@@ -16,6 +16,7 @@ import { clsx } from 'clsx';
 import JoinGroupDialog from '../features/groups/JoinGroupDialog';
 import AdminPanel from '../features/auth/adminPanel/AdminPanel';
 import UserProfile from '../features/auth/UserProfile';
+import SignInForm from '../features/auth/SignInForm';
 
 /**
  * Main application header with simplified layout
@@ -40,6 +41,7 @@ const Header: React.FC = () => {
   const [showJoinGroup, setShowJoinGroup] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showContextSwitcher, setShowContextSwitcher] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
 
   // Get the active campaign name
   const activeCampaign = campaigns.find(c => c.id === activeCampaignId);
@@ -112,6 +114,12 @@ const Header: React.FC = () => {
     setShowContextSwitcher(true);
     setMenuOpen(false);
   };
+  
+  // Handle sign in click
+  const handleSignInClick = () => {
+    setShowSignIn(true);
+    setMenuOpen(false);
+  };
 
   return (
     <header className={clsx(
@@ -121,17 +129,17 @@ const Header: React.FC = () => {
       <div className='max-w-7xl mx-auto'>
         <div className="container mx-auto">
           {/* Main Header - Both Desktop and Mobile */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-center gap-2">
             {/* Left side - Logo */}
             <Link 
               to="/" 
               onClick={(e) => {
-                e.preventDefault();
-                navigate('/');
+              e.preventDefault();
+              navigate('/');
               }}
               className={clsx(
-                'text-xl font-bold whitespace-nowrap',
-                `${themePrefix}-header-title`
+              'text-xl font-bold whitespace-nowrap',
+              `${themePrefix}-header-title`
               )}
             >
               <span className="md:inline hidden">D&D Campaign Companion</span>
@@ -143,33 +151,43 @@ const Header: React.FC = () => {
               <SearchBar />
             </div>
             
-            {/* Right side - Menu Button + Sign Out */}
-            <div className="flex items-center gap-2">
+            {/* Right side - Menu Button + Sign In/Out */}
+            <div className="flex items-center justify-center gap-2">
               {/* Menu Button */}
               <button
-                ref={menuButtonRef}
-                onClick={toggleMenu}
-                className={clsx(
-                  'p-2 rounded-md',
-                  `${themePrefix}-button-ghost`
-                )}
-                aria-label="Menu"
-                aria-expanded={menuOpen}
-                aria-controls="header-menu"
+              ref={menuButtonRef}
+              onClick={toggleMenu}
+              className={clsx(
+                'p-2 rounded-md',
+                `${themePrefix}-button-ghost`
+              )}
+              aria-label="Menu"
+              aria-expanded={menuOpen}
+              aria-controls="header-menu"
               >
-                {menuOpen ? <X size={24} /> : <Menu size={24} />}
+              {menuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
               
-              {/* Sign Out Button - Always visible on desktop */}
-              {user && (
-                <Button
-                  variant="ghost"
-                  onClick={handleSignOut}
-                  startIcon={<LogOut className="w-5 h-5" />}
-                  className="hidden md:flex"
-                >
-                  <span className="hidden lg:inline">Sign Out</span>
-                </Button>
+              {/* Sign Out Button - Always visible on desktop when logged in */}
+              {user ? (
+              <Button
+                variant="ghost"
+                onClick={handleSignOut}
+                startIcon={<LogOut className="w-5 h-5" />}
+                className="hidden md:flex"
+              >
+                <span className="hidden lg:inline">Sign Out</span>
+              </Button>
+              ) : (
+              /* Sign In Button - Always visible on desktop when not logged in */
+              <Button
+                variant="ghost"
+                onClick={handleSignInClick}
+                startIcon={<LogIn className="w-5 h-5" />}
+                className="hidden md:flex"
+              >
+                <span className="hidden lg:inline">Sign In</span>
+              </Button>
               )}
             </div>
           </div>
@@ -191,8 +209,8 @@ const Header: React.FC = () => {
                 )}
               >
                 <div className="flex flex-col space-y-4">
-                  {/* User Account Buttons Section */}
-                  {user && (
+                  {user ? (
+                    /* Account section - only when logged in */
                     <div>
                       <h3 className={clsx(
                         "mb-3 font-medium",
@@ -202,9 +220,12 @@ const Header: React.FC = () => {
                       </h3>
                       
                       {/* Icon Buttons Row */}
-                      <div className="flex justify-center gap-10 mb-4">
+                      <div className="flex gap-4 justify-center">
                         {/* Profile Button */}
-                        <button
+                        <Button
+                          variant="ghost"
+                          startIcon={<User size={24} className={clsx("", `${themePrefix}-primary`)} />}
+                          iconPosition="top"
                           onClick={handleProfileClick}
                           className={clsx(
                             "flex flex-col items-center gap-1",
@@ -212,12 +233,14 @@ const Header: React.FC = () => {
                           )}
                           aria-label="Profile"
                         >
-                          <User size={24} />
                           <span className={clsx("text-xs font-medium", `${themePrefix}-typography`)}>Profile</span>
-                        </button>
+                        </Button>
                         
                         {/* Join Group Button */}
-                        <button
+                        <Button
+                          variant="ghost"
+                          startIcon={<UserPlus size={24} className={clsx("", `${themePrefix}-primary`)} />}
+                          iconPosition="top"
                           onClick={handleJoinGroupClick}
                           className={clsx(
                             "flex flex-col items-center gap-1",
@@ -225,13 +248,15 @@ const Header: React.FC = () => {
                           )}
                           aria-label="Join Group"
                         >
-                          <UserPlus size={24} />
                           <span className={clsx("text-xs font-medium", `${themePrefix}-typography`)}>Groups</span>
-                        </button>
+                        </Button>
                         
                         {/* Admin Button - only if admin */}
                         {isAdmin && (
-                          <button
+                          <Button
+                            variant="ghost"
+                            startIcon={<ShieldAlert size={24} className={clsx("", `${themePrefix}-primary`)} />}
+                            iconPosition="top"
                             onClick={handleAdminClick}
                             className={clsx(
                               "flex flex-col items-center gap-1",
@@ -239,15 +264,31 @@ const Header: React.FC = () => {
                             )}
                             aria-label="Admin"
                           >
-                            <ShieldAlert size={24} />
                             <span className={clsx("text-xs font-medium", `${themePrefix}-typography`)}>Admin</span>
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </div>
+                  ) : (
+                    /* Sign In Section - Only when not logged in */
+                    <div>
+                      <h3 className={clsx(
+                        "mb-3 font-medium lg:hidden md:hidden",
+                        `${themePrefix}-typography`,
+                      )}>
+                        Account
+                      </h3>
+                      <Button
+                        onClick={handleSignInClick}
+                        startIcon={<LogIn className="w-5 h-5" />}
+                        className="w-full lg:hidden md:hidden"
+                      >
+                        Sign In
+                      </Button>
+                    </div>
                   )}
                   
-                  {/* Campaign Section */}
+                  {/* Campaign Section - Only when logged in */}
                   {user && (
                     <div className={clsx(
                       "pt-4", 
@@ -263,12 +304,12 @@ const Header: React.FC = () => {
                       {/* Group Display */}
                       <div className="mb-2">
                         <Typography variant="body-sm" color="secondary">Group:</Typography>
-                          <div className="flex items-center mt-1 pl-1">
+                        <div className="flex items-center mt-1 pl-1">
                           <Users size={18} className={clsx("mr-2 flex-shrink-0", `${themePrefix}-primary`)} />
                           <Typography className="flex-1 truncate">
                             {activeGroup ? activeGroup.name : 'No Group Selected'}
                           </Typography>
-                          </div>
+                        </div>
                       </div>
                       
                       {/* Campaign Display */}
@@ -295,7 +336,7 @@ const Header: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Appearance Section */}
+                  {/* Appearance Section - Always visible */}
                   <div className={clsx(
                     "pt-4", 
                     `border-t ${themePrefix}-card-border`
@@ -383,6 +424,18 @@ const Header: React.FC = () => {
             onClose={() => setShowContextSwitcher(false)} 
           />
         </div>
+      </Dialog>
+      
+      {/* Sign In Dialog */}
+      <Dialog
+        open={showSignIn}
+        onClose={() => setShowSignIn(false)}
+        title="Sign In"
+        maxWidth="max-w-md"
+      >
+        <SignInForm 
+          onSuccess={() => setShowSignIn(false)} 
+        />
       </Dialog>
     </header>
   );

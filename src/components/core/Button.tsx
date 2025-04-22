@@ -15,6 +15,11 @@ type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 /**
+ * Icon position options
+ */
+type IconPosition = 'start' | 'end' | 'top';
+
+/**
  * Props for the Button component
  */
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -26,6 +31,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   startIcon?: React.ReactNode;
   /** Icon to display after the button text */
   endIcon?: React.ReactNode;
+  /** Position of the icon relative to text (start, end, or top) */
+  iconPosition?: IconPosition;
   /** If true, the button will take up the full width of its container */
   fullWidth?: boolean;
   /** Loading state of the button */
@@ -45,13 +52,15 @@ const sizeStyles: Record<ButtonSize, string> = {
 
 /**
  * A versatile button component with multiple variants and sizes.
- * Follows accessibility best practices and supports icons, loading states, and full width.
+ * Supports icons in different positions including above text.
+ * Follows accessibility best practices and supports loading states and full width.
  */
 export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
   startIcon,
   endIcon,
+  iconPosition = 'start',
   fullWidth = false,
   isLoading = false,
   centered = true,
@@ -62,6 +71,12 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
   const { theme } = useTheme();
   const themePrefix = theme.name;
+  
+  // Determine if we're using the vertical layout
+  const isVertical = iconPosition === 'top';
+  
+  // Get the icon based on position
+  const icon = iconPosition === 'end' ? endIcon : startIcon;
   
   // Combine styles using clsx and tailwind-merge
   const buttonStyles = twMerge(
@@ -79,6 +94,7 @@ export const Button: React.FC<ButtonProps> = ({
       
       // Content alignment
       'inline-flex items-center',
+      isVertical ? 'flex-col' : 'flex-row',
       centered && 'justify-center',
       
       // Loading state styles
@@ -126,10 +142,19 @@ export const Button: React.FC<ButtonProps> = ({
         </span>
       )}
       
-      <span className={clsx('inline-flex items-center', isLoading && 'invisible')}>
-        {startIcon && <span className="mr-2">{startIcon}</span>}
-        {children}
-        {endIcon && <span className="ml-2">{endIcon}</span>}
+      <span className={clsx('inline-flex items-center', isVertical ? 'flex-col' : 'flex-row', isLoading && 'invisible')}>
+        {isVertical ? (
+          <>
+            {icon && <div className="mb-1">{icon}</div>}
+            <div className={clsx(isVertical && "text-xs font-medium")}>{children}</div>
+          </>
+        ) : (
+          <>
+            {startIcon && <span className="mr-2">{startIcon}</span>}
+            {children}
+            {endIcon && <span className="ml-2">{endIcon}</span>}
+          </>
+        )}
       </span>
     </button>
   );
