@@ -1,10 +1,5 @@
 Prioritized Todo List
 
-2. REWORK of HomePage
-- Dashboard layout being implemented
-    - Implement/review proper highlighting logic to pages.
-    - The medieval theme does not work with the hamburger menu and theme selector dropdown.
-
 3. When adding a new chapter it says that the chapter summary is optional, but it won't create the chapter if there is no summary.
 - Either make it truly optional or make it mandatory and show an error if not typed in.
 
@@ -18,7 +13,7 @@ Prioritized Todo List
 
 8. Filter tabs look different on the location page than the other pages.
 
-9. "Add note" and "Edit" button clashes rn
+9. "Add note" and "Edit" button clashes on the location page-
 
 10. Right now some dialogs are on top of the local container. Instead they should be on top of the underlying document body.
 
@@ -32,6 +27,9 @@ Prioritized Todo List
 
 
 Waiting for prio:
+
+- Implement/review proper highlighting logic to pages.
+- The medieval theme does not work with the hamburger menu and theme selector dropdown.
 
 - F12 console Error in StoryContext when it is trying to update "current-progress"
     - I think this is a remnant of purposefully unused functionality and it should just be deleted. 
