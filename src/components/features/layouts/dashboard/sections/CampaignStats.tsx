@@ -86,16 +86,16 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           onClick={() => navigateToPage('/npcs')}
           className="transform transition-transform hover:scale-102"
         >
-          <Card.Content className="flex flex-col items-center text-center p-4 h-28">
-            <div className={clsx(
-              "p-2 rounded-full mb-1 flex items-center justify-center",
-              `${themePrefix}-icon-bg`
-            )}>
-              <Users className="w-5 h-5" />
-            </div>
-            <Typography variant="h4" className="text-xl sm:text-2xl">{npcs.length}</Typography>
-            <Typography variant="body-sm" className="text-sm" color="secondary">NPCs</Typography>
-          </Card.Content>
+            <Card.Content className="flex flex-col items-center text-center p-4">
+              <div className={clsx(
+                "p-2 rounded-full mb-1 flex items-center justify-center",
+                `${themePrefix}-icon-bg`
+              )}>
+                <Users className="w-5 h-5" />
+              </div>
+              <Typography variant="h4" className="text-xl sm:text-2xl">{npcs.length}</Typography>
+              <Typography variant="body-sm" className="text-sm" color="secondary">NPCs</Typography>
+            </Card.Content>
         </Card>
         
         {/* Locations Stat */}
@@ -104,7 +104,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           onClick={() => navigateToPage('/locations')}
           className="transform transition-transform hover:scale-102"
         >
-          <Card.Content className="flex flex-col items-center text-center p-4 h-28">
+          <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
               "p-2 rounded-full mb-1 flex items-center justify-center",
               `${themePrefix}-icon-bg`
@@ -122,7 +122,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           onClick={() => navigateToPage('/story/chapters')}
           className="transform transition-transform hover:scale-102"
         >
-          <Card.Content className="flex flex-col items-center text-center p-4 h-28">
+          <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
               "p-2 rounded-full mb-1 flex items-center justify-center",
               `${themePrefix}-icon-bg`
@@ -140,7 +140,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           onClick={() => navigateToPage('/rumors')}
           className="transform transition-transform hover:scale-102"
         >
-          <Card.Content className="flex flex-col items-center text-center p-4 h-28">
+          <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
               "p-2 rounded-full mb-1 flex items-center justify-center",
               `${themePrefix}-icon-bg`
@@ -158,7 +158,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           onClick={() => navigateToPage('/quests')}
           className="transform transition-transform hover:scale-102"
         >
-          <Card.Content className="flex flex-col items-center text-center p-4 h-28">
+          <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
               "p-2 rounded-full mb-1 flex items-center justify-center",
               `${themePrefix}-icon-bg`
@@ -176,7 +176,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           onClick={() => navigateToPage('/quests')}
           className="transform transition-transform hover:scale-102"
         >
-          <Card.Content className="flex flex-col items-center text-center p-4 h-28">
+          <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
               "p-2 rounded-full mb-1 flex items-center justify-center",
               `${themePrefix}-icon-bg`
@@ -194,7 +194,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           onClick={() => navigateToPage('/quests')}
           className="sm:col-span-2 transform transition-transform hover:scale-102"
         >
-          <Card.Content className="p-4 h-28 flex items-center justify-center">
+          <Card.Content className="p-4 flex items-center justify-center">
             <div className="flex flex-col items-center text-center w-full max-w-md">
               <Typography variant="h4" className="mb-3">
                 Quest Completion

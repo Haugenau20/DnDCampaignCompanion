@@ -335,7 +335,7 @@ const Header: React.FC = () => {
                       </Button>
                     </div>
                   )}
-                  
+
                   {/* Appearance Section - Always visible */}
                   <div className={clsx(
                     "pt-4", 
@@ -349,7 +349,7 @@ const Header: React.FC = () => {
                     </h3>
                     <div className="flex items-center justify-between">
                       <span className={clsx(`${themePrefix}-typography`)}>Theme</span>
-                      <ThemeSelector />
+                        <ThemeSelector />
                     </div>
                   </div>
                   

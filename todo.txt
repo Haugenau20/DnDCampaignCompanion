@@ -3,9 +3,7 @@ Prioritized Todo List
 2. REWORK of HomePage
 - Dashboard layout being implemented
     - Implement/review proper highlighting logic to pages.
-    - The medieval theme does not work with the dashboard layout.
     - The medieval theme does not work with the hamburger menu and theme selector dropdown.
-    - Delete medieval theme??
 
 3. When adding a new chapter it says that the chapter summary is optional, but it won't create the chapter if there is no summary.
 - Either make it truly optional or make it mandatory and show an error if not typed in.
@@ -46,9 +44,13 @@ Admin Panel:
 - neither campaigns or groups can be edited.
 - campaigns cannot be deleted.
 
-Rework the them system to collect as much functionality as possible.
+Rework the theme system to collect as much functionality as possible.
 - Simplify the amount of different colors.
 
 New feature idea (partly implemented already): sub-chapters.
 
-Major do-over of the project structure (CLAUDE Code?)
+CLAUDE Code:
+
+Major do-over of the project structure
+
+Update README

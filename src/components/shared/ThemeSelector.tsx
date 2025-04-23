@@ -20,10 +20,12 @@ const ThemeSelector = () => {
       >
       </Button>
       
-      <div className={clsx(
-        "absolute right-0 mt-2 w-48 py-2 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 border z-50",
-        `${themePrefix}-dropdown`
-      )}>
+      <div 
+        className={clsx(
+          "absolute right-0 mt-2 py-2 rounded-lg invisible group-hover:visible transition-all duration-200 border",
+          `${themePrefix}-dropdown`
+        )}
+      >
         {Object.values(themes).map((t) => (
           <Button
             variant="ghost"
