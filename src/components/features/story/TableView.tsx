@@ -36,10 +36,10 @@ const TableView: React.FC<TableViewProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className={clsx(`${themePrefix}-bg-secondary border-b border-${themePrefix}-card-border`)}>
+            <tr className={clsx(`${themePrefix}-bg-secondary border-b ${themePrefix}-card-border`)}>
               <th 
                 className={clsx("px-6 py-3 text-left cursor-pointer", 
-                  sortField === 'order' ? `text-${themePrefix}-primary` : ''
+                  sortField === 'order' ? `${themePrefix}-typography` : ''
                 )}
                 onClick={() => onSort('order')}
               >
@@ -52,7 +52,7 @@ const TableView: React.FC<TableViewProps> = ({
               </th>
               <th 
                 className={clsx("px-6 py-3 text-left cursor-pointer",
-                  sortField === 'title' ? `text-${themePrefix}-primary` : ''
+                  sortField === 'title' ? `${themePrefix}-typography` : ''
                 )}
                 onClick={() => onSort('title')}
               >
@@ -65,7 +65,7 @@ const TableView: React.FC<TableViewProps> = ({
               </th>
               <th 
                 className={clsx("px-6 py-3 text-left cursor-pointer hidden md:table-cell",
-                  sortField === 'lastModified' ? `text-${themePrefix}-primary` : ''
+                  sortField === 'lastModified' ? `${themePrefix}-typography` : ''
                 )}
                 onClick={() => onSort('lastModified')}
               >
@@ -88,9 +88,9 @@ const TableView: React.FC<TableViewProps> = ({
                   key={chapter.id}
                   className={clsx(
                     "border-b last:border-b-0 hover:bg-opacity-50 transition-colors",
-                    `border-${themePrefix}-card-border`,
-                    isCurrentChapter ? `bg-${themePrefix}-bg-accent` : 
-                      index % 2 ? `bg-${themePrefix}-card-bg` : ''
+                    `${themePrefix}-card-border`,
+                    isCurrentChapter ? `${themePrefix}-bg-secondary` : 
+                      index % 2 ? `${themePrefix}-card-bg` : ''
                   )}
                 >
                   <td className="px-6 py-4">
@@ -105,7 +105,7 @@ const TableView: React.FC<TableViewProps> = ({
                       variant="body" 
                       className={clsx(
                         isCurrentChapter ? 'font-semibold' : '',
-                        `hover:text-${themePrefix}-primary`
+                        `hover:${themePrefix}-typography`
                       )}
                     >
                       {chapter.title}
@@ -118,7 +118,7 @@ const TableView: React.FC<TableViewProps> = ({
                   </td>
                   <td className="px-6 py-4 hidden md:table-cell">
                     <div className="flex items-center gap-1">
-                      <Clock className={clsx("w-4 h-4", `text-${themePrefix}-text-secondary`)} />
+                      <Clock className={clsx("w-4 h-4", `${themePrefix}-primary`)} />
                       <Typography variant="body-sm" color="secondary">
                         {new Date(chapter.lastModified || Date.now()).toLocaleDateString()}
                       </Typography>

@@ -48,6 +48,19 @@
   --dark-hover-medium: var(--color-ui-hoverMedium);
   --dark-icon-bg: var(--color-ui-iconBackground);
   --dark-icon-border: var(--color-ui-iconBorder);
+
+  /* Journal-specific variables */
+  --dark-journal-leather: var(--color-ui-journalLeather);
+  --dark-journal-binding: var(--color-ui-journalBinding);
+  --dark-journal-stitch: var(--color-ui-journalStitch);
+  --dark-journal-page-shadow: var(--color-ui-journalPageShadow);
+  --dark-journal-section-divider: var(--color-ui-journalSectionDivider);
+  --dark-journal-character-card-bg: var(--color-ui-journalCharacterCardBg);
+  --dark-journal-character-card-hover: var(--color-ui-journalCharacterCardHover);
+  --dark-journal-quest-item-bg: var(--color-ui-journalQuestItemBg);
+  --dark-journal-quest-item-hover: var(--color-ui-journalQuestItemHover);
+  --dark-journal-activity-hover: var(--color-ui-journalActivityHover);
+  --dark-journal-notes-area: var(--color-ui-journalNotesArea);
 }
 
 /* Base theme styles */
@@ -76,6 +89,14 @@
   background-color: var(--dark-card-bg);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   transition: all 0.2s ease;
+}
+
+.dark-card-border {
+  border: 1px solid var(--dark-card-border);
+}
+
+.dark-card-bg {
+  background-color: var(--dark-bg);
 }
 
 /* Card hover effect */
@@ -337,10 +358,8 @@
 
 /* Dropdown component - ensure solid background */
 .dark-dropdown {
-  background-color: var(--dark-input-bg) !important;
-  border: 1px solid var(--dark-card-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  opacity: 1 !important;
+  background-color: var(--dark-input-bg);
+  border-color: 1px solid var(--dark-card-border);
 }
 
 .dark-dropdown-item {
@@ -354,7 +373,7 @@
 
 .dark-dropdown-item-active {
   background-color: var(--dark-hover-medium);
-  color: var(--dark-heading);
+  color: var(--dark-primary);
 }
 
 /* Dialog styles - ensure solid background */
@@ -746,4 +765,165 @@
 
 .dark-delete-button:hover {
   background-color: var(--color-ui-deleteButtonHover);
+}
+
+/* Journal container and binding */
+.dark-journal-container {
+  background-color: var(--dark-journal-leather);
+  box-shadow: 0 4px 6px var(--dark-journal-page-shadow);
+}
+
+.dark-journal-binding {
+  background-color: var(--dark-journal-binding);
+  background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23222222' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 5v1H5z'/%3E%3Cpath d='M6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
+  box-shadow: inset 0 0 10px var(--dark-journal-page-shadow);
+}
+
+.dark-journal-stitch {
+  background-color: var(--dark-journal-stitch);
+}
+
+/* Journal pages */
+.dark-journal-page {
+  background-color: var(--dark-card-bg);
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23333333' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  color: var(--dark-text);
+}
+
+.dark-journal-page-left {
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+  box-shadow: inset 5px 0 10px var(--dark-journal-page-shadow);
+}
+
+.dark-journal-page-right {
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  box-shadow: inset -5px 0 10px var(--dark-journal-page-shadow);
+}
+
+/* Journal content styling */
+.dark-journal-heading {
+  color: var(--dark-text);
+  border-bottom: 1px solid var(--dark-card-border);
+  padding-bottom: 0.25rem;
+}
+
+.dark-journal-section {
+  position: relative;
+}
+
+.dark-journal-section::after {
+  content: "";
+  position: absolute;
+  bottom: -1rem;
+  left: 25%;
+  right: 25%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--dark-card-border), transparent);
+  opacity: 0.2;
+}
+
+/* Character gallery styling */
+.dark-journal-character-card {
+  background-color: var(--dark-journal-character-card-bg);
+  transition: all 0.2s;
+}
+
+.dark-journal-character-card:hover {
+  background-color: var(--dark-journal-character-card-hover);
+}
+
+.dark-journal-character-sketch {
+  background-color: var(--dark-bg-secondary);
+  border: 1px solid var(--dark-card-border);
+}
+
+.dark-journal-character-name {
+  color: var(--dark-text);
+}
+
+/* Quest list styling */
+.dark-journal-quest-item {
+  background-color: var(--dark-journal-quest-item-bg);
+  transition: all 0.2s;
+}
+
+.dark-journal-quest-item:hover {
+  background-color: var(--dark-journal-quest-item-hover);
+}
+
+.dark-journal-quest-bullet {
+  background-color: var(--dark-primary);
+}
+
+.dark-journal-quest-title {
+  color: var(--dark-text);
+}
+
+.dark-journal-quest-note {
+  color: var(--dark-text-secondary);
+}
+
+/* Activity feed styling */
+.dark-journal-activity-item {
+  border-left: 2px solid transparent;
+  padding-left: 0.5rem;
+}
+
+.dark-journal-activity-item:hover {
+  border-left-color: var(--dark-primary);
+  background-color: var(--dark-journal-activity-hover);
+}
+
+.dark-journal-activity-icon-bg {
+  background-color: var(--dark-bg-secondary);
+  color: var(--dark-primary);
+}
+
+.dark-journal-activity-title {
+  color: var(--dark-text);
+}
+
+.dark-journal-activity-date {
+  color: var(--dark-text-secondary);
+}
+
+.dark-journal-activity-type {
+  color: var(--dark-primary);
+}
+
+.dark-journal-activity-description {
+  color: var(--dark-text-secondary);
+}
+
+.dark-journal-activity-separator {
+  color: var(--dark-text-secondary);
+  opacity: 0.5;
+}
+
+/* Utility styles */
+.dark-journal-loading {
+  background-color: var(--dark-bg-secondary);
+  opacity: 0.1;
+}
+
+.dark-journal-empty {
+  color: var(--dark-text-secondary);
+}
+
+.dark-journal-notes-area {
+  background-color: var(--dark-journal-notes-area);
+  min-height: 200px;
+}
+
+.dark-journal-pagination {
+  background-color: var(--dark-card-bg);
+  color: var(--dark-text);
+}
+
+/* Notes paper effect */
+.dark-journal-paper {
+  background-color: var(--dark-bg-secondary);
+  border: 1px solid var(--dark-card-border);
 }

@@ -89,7 +89,7 @@ const GroupManagementView: React.FC = () => {
         )}>
           <Users className={clsx(
             "w-12 h-12 mx-auto mb-4",
-            `text-${themePrefix}-secondary`
+            `${themePrefix}-primary`
           )} />
           <Typography color="secondary">
             No group selected
@@ -121,7 +121,7 @@ const GroupManagementView: React.FC = () => {
               <div className="space-y-1">
                 <Typography variant="body-sm" color="secondary">Created By</Typography>
                 <div className="flex items-center gap-2">
-                  <User size={18} className={clsx(`${themePrefix}-typography-secondary`)} />
+                  <User size={18} className={clsx(`${themePrefix}-primary`)} />
                   <Typography>
                     {currentGroup.createdBy === user?.uid 
                       ? activeGroupUserProfile?.username || 'You'
@@ -133,7 +133,7 @@ const GroupManagementView: React.FC = () => {
               <div className="space-y-1">
                 <Typography variant="body-sm" color="secondary">Creation Date</Typography>
                 <div className="flex items-center gap-2">
-                  <Calendar size={18} className={clsx(`${themePrefix}-typography-secondary`)} />
+                  <Calendar size={18} className={clsx(`${themePrefix}-primary`)} />
                   <Typography>
                     {currentGroup.createdAt instanceof Date 
                       ? currentGroup.createdAt.toLocaleDateString('en-uk', { 

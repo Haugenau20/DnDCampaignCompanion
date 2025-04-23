@@ -1,18 +1,54 @@
-Make completed quests be default hidden with option to expand?
-Make active quests be on the top of the list?
+Prioritized Todo List
 
-User should be able to change their password.
+3. When adding a new chapter it says that the chapter summary is optional, but it won't create the chapter if there is no summary.
+- Either make it truly optional or make it mandatory and show an error if not typed in.
 
-Fix mobile layout issues on certain pages. (Big update) 
+4. Right now it is possible to type in parent location that dont exist when creating a location. This should not be possible.
 
-Fix/Implement proper searching
+5. Fix mobile layout issues on certain pages. (Big update)
 
-"Add note" and "Edit" button clashes rn
+6. User should be able to change their password.
 
-The ContextSwitcher doesnt properly update the UI when switching between campaigns.
+7. Have registration tokens expire after X days
 
-rework of how the header is displayed. maybe a sidebar? maybe like dnd beyon? 
+8. Filter tabs look different on the location page than the other pages.
 
-Have registration tokens expire after X days
+9. "Add note" and "Edit" button clashes on the location page-
 
-Add batch options (Delete, change status, etc.) for Story, Quest, NPC, and Location features
+10. Right now some dialogs are on top of the local container. Instead they should be on top of the underlying document body.
+
+11. Make completed quests be default hidden with option to expand?
+
+12. Make active quests be on the top of the list?
+
+13. Fix/Implement proper searching
+
+14. Add batch options (Delete, change status, etc.) for Story, Quest, NPC, and Location features
+
+
+Waiting for prio:
+
+- Implement/review proper highlighting logic to pages.
+- The medieval theme does not work with the hamburger menu and theme selector dropdown.
+
+- F12 console Error in StoryContext when it is trying to update "current-progress"
+    - I think this is a remnant of purposefully unused functionality and it should just be deleted. 
+
+Admin Panel:
+- Test if the creation of new groups and campaigns work
+- Right now the "groups" view only shows the current group. 
+- Campaigns can be created. 
+- groups cannot be created
+- neither campaigns or groups can be edited.
+- campaigns cannot be deleted.
+
+Rework the theme system to collect as much functionality as possible.
+- Simplify the amount of different colors.
+
+New feature idea (partly implemented already): sub-chapters.
+
+CLAUDE Code:
+
+Major do-over of the project structure
+
+Update README

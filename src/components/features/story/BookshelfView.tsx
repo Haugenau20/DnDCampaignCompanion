@@ -78,7 +78,7 @@ const BookshelfView: React.FC<BookshelfViewProps> = ({
     <div className={clsx("rounded-lg overflow-hidden", `${themePrefix}-card`)}>
       {groupedChapters.map((group, groupIndex) => (
         <div key={groupIndex} className="mb-8">
-          <div className={clsx("p-3 border-b", `border-${themePrefix}-card-border`)}>
+          <div className={clsx("p-3 border-b", `${themePrefix}-card-border`)}>
             <Typography variant="h4" className={`${themePrefix}-typography-heading`}>
               Chapters {groupIndex * 10 + 1}-{groupIndex * 10 + group.length}
             </Typography>
@@ -90,7 +90,7 @@ const BookshelfView: React.FC<BookshelfViewProps> = ({
             `${themePrefix}-card-bg`
           )}>
             {/* Bookshelf itself */}
-            <div className={clsx("w-full h-8 rounded-t-md", `bg-${themePrefix}-primary bg-opacity-20`)}></div>
+            <div className={clsx("w-full h-8 rounded-t-md", `${themePrefix}-bg bg-opacity-20`)}></div>
           </div>
           
           {/* Books row with fixed width */}
@@ -132,7 +132,7 @@ const BookshelfView: React.FC<BookshelfViewProps> = ({
                   <div 
                     className={clsx(
                       "w-full rounded-t-sm shadow-md hover:shadow-lg transition-shadow", 
-                      isCurrentChapter ? `ring-2 ring-${themePrefix}-primary ring-offset-2` : ""
+                      isCurrentChapter ? `ring-2 ${themePrefix}-primary ring-offset-2` : ""
                     )}
                   >
                     {/* Render the book component */}
@@ -145,7 +145,7 @@ const BookshelfView: React.FC<BookshelfViewProps> = ({
                       variant="body-sm" 
                       className={clsx(
                         "text-xs", 
-                        isCurrentChapter ? `text-${themePrefix}-primary font-bold` : ""
+                        isCurrentChapter ? `${themePrefix}-typography font-bold` : ""
                       )}
                       title={`Chapter ${chapter.order}: ${chapter.title}`}
                     >
@@ -160,7 +160,7 @@ const BookshelfView: React.FC<BookshelfViewProps> = ({
             {group.some(ch => ch.id === currentChapterId) && (
               <div className={clsx(
                 "absolute top-0 left-1/4 transform -translate-y-full p-4 rounded-lg shadow-lg",
-                `${themePrefix}-card-bg border border-${themePrefix}-primary`,
+                `${themePrefix}-card-bg border ${themePrefix}-primary`,
                 "max-w-xs z-20"
               )}>
                 {(() => {

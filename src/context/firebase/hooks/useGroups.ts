@@ -2,7 +2,6 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useFirebaseContext } from '../FirebaseContext';
 import firebaseServices from '../../../services/firebase';
-import { Group } from '../../../types/user';
 
 export function useGroups() {
   const { 
@@ -18,8 +17,6 @@ export function useGroups() {
   // Track a more accurate loading state
   const [fullyLoaded, setFullyLoaded] = useState(false);
 
-  // Local state for group selector UI
-  const [showGroupSelector, setShowGroupSelector] = useState<boolean>(false);
 
   // Derive activeGroup directly from groups and activeGroupId
   const activeGroup = useMemo(() => {
@@ -178,8 +175,6 @@ export function useGroups() {
     removeUser,
     deleteUser,
     isAdmin,
-    loading,          
-    showGroupSelector,    
-    setShowGroupSelector  
+    loading
   };
 }

@@ -93,6 +93,19 @@ export const lightTheme: Theme = {
         deleteButtonBackground: 'transparent',
         deleteButtonText: '#DC2626', // Bold red text
         deleteButtonHover: 'rgba(239, 68, 68, 0.1)', // Very light red for hover
+        
+        // Journal specific colors
+        journalLeather: '#A67C52',
+        journalBinding: '#7D5A3C',
+        journalStitch: '#D9C5A9',
+        journalPageShadow: 'rgba(0, 0, 0, 0.05)',
+        journalSectionDivider: 'rgba(0, 0, 0, 0.1)',
+        journalCharacterCardBg: 'rgba(0, 0, 0, 0.02)',
+        journalCharacterCardHover: 'rgba(0, 0, 0, 0.04)',
+        journalQuestItemBg: 'rgba(0, 0, 0, 0.01)',
+        journalQuestItemHover: 'rgba(0, 0, 0, 0.03)',
+        journalActivityHover: 'rgba(0, 0, 0, 0.02)',
+        journalNotesArea: 'rgba(0, 0, 0, 0.03)',      
       }
     },
     fonts: {

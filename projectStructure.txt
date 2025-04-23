@@ -3,6 +3,19 @@ DnDCampaignCompanion
 │   ├── src
 │   │   ├── utils
 │   │   │   ├── __dev__
+│   │   │   │   ├── generators
+│   │   │   │   │   ├── contentGenerators
+│   │   │   │   │   │   ├── sagaGenerator.ts
+│   │   │   │   │   │   ├── rumorGenerator.ts
+│   │   │   │   │   │   ├── questGenerator.ts
+│   │   │   │   │   │   ├── npcGenerator.ts
+│   │   │   │   │   │   ├── locationGenerator.ts
+│   │   │   │   │   │   └── chapterGenerator.ts
+│   │   │   │   │   ├── userGenerator.ts
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── groupGenerator.ts
+│   │   │   │   │   ├── contentGenerator.ts
+│   │   │   │   │   └── campaignGenerator.ts
 │   │   │   │   ├── sessionTester.ts
 │   │   │   │   ├── generateSampleData.ts
 │   │   │   │   └── dndSampleDataGenerator.ts
@@ -129,6 +142,7 @@ DnDCampaignCompanion
 │   │   │   ├── shared
 │   │   │   │   ├── ThemeSelector.tsx
 │   │   │   │   ├── SearchBar.tsx
+│   │   │   │   ├── GlobalActionButton.tsx
 │   │   │   │   ├── ErrorBoundary.tsx
 │   │   │   │   ├── DeleteConfirmationDialog.tsx
 │   │   │   │   ├── ContextSwitcher.tsx
@@ -189,15 +203,45 @@ DnDCampaignCompanion
 │   │   │   │   │   ├── LocationCreateForm.tsx
 │   │   │   │   │   ├── LocationCombobox.tsx
 │   │   │   │   │   └── LocationCard.tsx
+│   │   │   │   ├── layouts
+│   │   │   │   │   ├── journal
+│   │   │   │   │   │   ├── sections
+│   │   │   │   │   │   │   ├── StorySection.tsx
+│   │   │   │   │   │   │   ├── RumorsSection.tsx
+│   │   │   │   │   │   │   ├── RecentActivityChronicle.tsx
+│   │   │   │   │   │   │   ├── LocationsMap.tsx
+│   │   │   │   │   │   │   ├── CharacterGallery.tsx
+│   │   │   │   │   │   │   ├── CampaignOverview.tsx
+│   │   │   │   │   │   │   └── ActiveQuestsList.tsx
+│   │   │   │   │   │   ├── JournalPages.tsx
+│   │   │   │   │   │   ├── JournalPage.tsx
+│   │   │   │   │   │   └── JournalLayout.tsx
+│   │   │   │   │   ├── dashboard
+│   │   │   │   │   │   ├── sections
+│   │   │   │   │   │   │   ├── CampaignStats.tsx
+│   │   │   │   │   │   │   ├── CampaignBanner.tsx
+│   │   │   │   │   │   │   └── ActivityFeed.tsx
+│   │   │   │   │   │   └── DashboardLayout.tsx
+│   │   │   │   │   └── common
+│   │   │   │   │       ├── utils
+│   │   │   │   │       │   ├── statusHelpers.ts
+│   │   │   │   │       │   ├── layoutUtils.ts
+│   │   │   │   │       │   ├── dateFormatter.ts
+│   │   │   │   │       │   └── contentTypeUtils.tsx
+│   │   │   │   │       ├── hooks
+│   │   │   │   │       │   ├── useLayoutData.ts
+│   │   │   │   │       │   ├── useCampaignInfo.ts
+│   │   │   │   │       │   └── useActivityDisplay.ts
+│   │   │   │   │       └── components
+│   │   │   │   │           ├── SectionHeading.tsx
+│   │   │   │   │           ├── LoadingState.tsx
+│   │   │   │   │           ├── ItemCard.tsx
+│   │   │   │   │           └── EmptyState.tsx
 │   │   │   │   ├── groups
-│   │   │   │   │   ├── JoinGroupDialog.tsx
-│   │   │   │   │   ├── GroupSelectorModal.tsx
-│   │   │   │   │   ├── GroupSelector.tsx
-│   │   │   │   │   └── GroupDropdown.tsx
+│   │   │   │   │   └── JoinGroupDialog.tsx
 │   │   │   │   ├── contact
 │   │   │   │   │   └── ContactForm.tsx
 │   │   │   │   ├── campaigns
-│   │   │   │   │   └── CampaignSelector.tsx
 │   │   │   │   └── auth
 │   │   │   │       ├── adminPanel
 │   │   │   │       │   ├── UserManagementView.tsx
@@ -248,18 +292,6 @@ DnDCampaignCompanion
 │   │   │   │   └── deleteUser.ts
 │   │   │   ├── index.ts
 │   │   │   └── contact.ts
-│   │   ├── lib
-│   │   │   ├── userManagement
-│   │   │   │   ├── removeUserFromGroup.js.map
-│   │   │   │   ├── removeUserFromGroup.js
-│   │   │   │   ├── index.js.map
-│   │   │   │   ├── index.js
-│   │   │   │   ├── deleteUser.js.map
-│   │   │   │   └── deleteUser.js
-│   │   │   ├── index.js.map
-│   │   │   ├── index.js
-│   │   │   ├── contact.js.map
-│   │   │   └── contact.js
 │   │   ├── tsconfig.json
 │   │   ├── tsconfig.dev.json
 │   │   ├── package-lock.json
@@ -274,9 +306,8 @@ DnDCampaignCompanion
 │   │   └── .firebaserc
 │   ├── docs
 │   │   ├── technical
-│   │   │   ├── implementation-guides
-│   │   │   │   └── authentication-flow.md
-│   │   │   └── api
+│   │   │   └── implementation-guides
+│   │   │       └── authentication-flow.md
 │   │   ├── requirements
 │   │   │   ├── user-management.md
 │   │   │   ├── rumor-management.md
@@ -285,11 +316,12 @@ DnDCampaignCompanion
 │   │   │   ├── databaseStructure.md
 │   │   │   └── chapter-management.md
 │   │   ├── futureThoughts
+│   │   │   ├── homepageUpdate.md
+│   │   │   └── AdventureJournal.md
 │   │   ├── design
-│   │   │   ├── ui
-│   │   │   │   └── page-layouts
-│   │   │   │       └── rumors.md
-│   │   │   └── architecture
+│   │   │   └── ui
+│   │   │       └── page-layouts
+│   │   │           └── rumors.md
 │   │   └── README.md
 │   ├── docker
 │   │   ├── emulators
@@ -323,8 +355,6 @@ DnDCampaignCompanion
 │   │   └── workflows
 │   │       ├── firebase-hosting-pull-request.yml
 │   │       └── firebase-hosting-merge.yml
-│   ├── .firebase
-│   │   └── hosting.YnVpbGQ.cache
 │   ├── tsconfig.json
 │   ├── todo.txt
 │   ├── tailwind.config.js
@@ -335,6 +365,7 @@ DnDCampaignCompanion
 │   ├── package.json
 │   ├── LICENSE
 │   ├── jest.config.ts
+│   ├── CLAUDE.md
 │   ├── .gitignore
 │   ├── .env.production
 │   ├── .env.development

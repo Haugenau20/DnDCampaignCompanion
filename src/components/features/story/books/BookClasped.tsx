@@ -64,7 +64,7 @@ const BookClasped: React.FC<BookProps> = ({ height, className }) => {
         {/* Embossed center design */}
         <rect x="20" y="45" width="20" height="60" rx="2" ry="2" fill="#5C4937" />
         <rect x="25" y="50" width="10" height="50" rx="1" ry="1" fill="#4B3B2C" />
-        <line x1="30" y1="50" x2="30" y2="100" stroke="#A19483" stroke-width="0.5" />
+        <line x1="30" y1="50" x2="30" y2="100" stroke="#A19483" strokeWidth="0.5" />
         
         {/* Metal edges */}
         <rect x="0" y="0" width="60" height="5" fill="#A19483" />
@@ -74,7 +74,7 @@ const BookClasped: React.FC<BookProps> = ({ height, className }) => {
         <defs>
             <pattern id="leatherTexture" patternUnits="userSpaceOnUse" width="20" height="20">
             <rect width="20" height="20" fill="#4B3B2C" />
-            <path d="M0 0 L20 20 M20 0 L0 20" stroke="#3A2E20" stroke-width="0.3" />
+            <path d="M0 0 L20 20 M20 0 L0 20" stroke="#3A2E20" strokeWidth="0.3" />
             <circle cx="10" cy="10" r="3" fill="#3A2E20" opacity="0.2" />
             </pattern>
         </defs>

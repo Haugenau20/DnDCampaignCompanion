@@ -36,8 +36,8 @@ const BookBlue: React.FC<BookProps> = ({ height, className }) => {
         
         {/* Embossed symbol */}
         <circle cx="30" cy="75" r="15" fill="#3D6B99" />
-        <path d="M20 75 L40 75 M30 65 L30 85" stroke="#D4AF37" stroke-width="1.5" />
-        <circle cx="30" cy="75" r="7" fill="#1A3457" stroke="#D4AF37" stroke-width="0.5" />
+        <path d="M20 75 L40 75 M30 65 L30 85" stroke="#D4AF37" strokeWidth="1.5" />
+        <circle cx="30" cy="75" r="7" fill="#1A3457" stroke="#D4AF37" strokeWidth="0.5" />
         
         {/* Silver corner protectors */}
         <path d="M0 0 L10 0 L10 10 L0 10 Z" fill="#C0C0C0" opacity="0.7" />
@@ -49,7 +49,7 @@ const BookBlue: React.FC<BookProps> = ({ height, className }) => {
         <defs>
             <pattern id="blueLeather" patternUnits="userSpaceOnUse" width="20" height="20">
             <rect width="20" height="20" fill="#2B547E" />
-            <path d="M0 0 L20 20 M20 0 L0 20" stroke="#1A3457" stroke-width="0.5" />
+            <path d="M0 0 L20 20 M20 0 L0 20" stroke="#1A3457" strokeWidth="0.5" />
             <circle cx="10" cy="10" r="3" fill="#1A3457" opacity="0.3" />
             </pattern>
         </defs>

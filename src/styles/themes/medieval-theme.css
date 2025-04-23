@@ -53,6 +53,19 @@
   --medieval-hover-medium: var(--color-ui-hoverMedium);
   --medieval-icon-bg: var(--color-ui-iconBackground);
   --medieval-icon-border: var(--color-ui-iconBorder);
+
+  /* Journal-specific variables */
+  --medieval-journal-leather: var(--color-ui-journalLeather);
+  --medieval-journal-binding: var(--color-ui-journalBinding);
+  --medieval-journal-stitch: var(--color-ui-journalStitch);
+  --medieval-journal-page-shadow: var(--color-ui-journalPageShadow);
+  --medieval-journal-section-divider: var(--color-ui-journalSectionDivider);
+  --medieval-journal-character-card-bg: var(--color-ui-journalCharacterCardBg);
+  --medieval-journal-character-card-hover: var(--color-ui-journalCharacterCardHover);
+  --medieval-journal-quest-item-bg: var(--color-ui-journalQuestItemBg);
+  --medieval-journal-quest-item-hover: var(--color-ui-journalQuestItemHover);
+  --medieval-journal-activity-hover: var(--color-ui-journalActivityHover);
+  --medieval-journal-notes-area: var(--color-ui-journalNotesArea);
 }
 
 /* Base theme styles */
@@ -86,6 +99,14 @@
   box-shadow: 0 4px 6px rgba(139, 69, 19, 0.1);
   transition: all 0.3s ease;
   overflow: hidden;
+}
+
+.medieval-card-border {
+  border: 2px solid var(--border-color);
+}
+
+.medieval-card-bg {
+  background-color: var(--card-bg);
 }
 
 /* Card hover effect */
@@ -494,7 +515,7 @@
 }
 
 .medieval-progress-bar {
-  background-color: var(--primary-color);
+  background-color: var(--medieval-status-failed);
 }
 
 .medieval-progress-bar-active {
@@ -710,14 +731,6 @@
   background-color: var(--parchment-accent);
 }
 
-.medieval-progress-container {
-  background-color: var(--parchment-dark);
-}
-
-.medieval-progress-bar {
-  background-color: var(--medieval-status-active);
-}
-
 .medieval-hint {
   background-color: var(--parchment-accent);
   color: var(--ink-color);
@@ -814,4 +827,174 @@
 
 .medieval-delete-button:hover {
   background-color: var(--color-ui-deleteButtonHover);
+}
+
+/* Journal container and binding */
+.medieval-journal-container {
+  background-color: var(--medieval-journal-leather);
+  box-shadow: 0 4px 8px var(--medieval-journal-page-shadow);
+}
+
+.medieval-journal-binding {
+  background-color: var(--medieval-journal-binding);
+  background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23422106' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 5v1H5z'/%3E%3Cpath d='M6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
+  box-shadow: inset 0 0 10px var(--medieval-journal-page-shadow);
+}
+
+.medieval-journal-stitch {
+  background-color: var(--medieval-journal-stitch);
+}
+
+/* Journal pages */
+.medieval-journal-page {
+  background-color: var(--parchment-bg);
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e0d8c0' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  color: var(--medieval-text);
+}
+
+.medieval-journal-page-left {
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+  box-shadow: inset 5px 0 10px var(--medieval-journal-page-shadow);
+}
+
+.medieval-journal-page-right {
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  box-shadow: inset -5px 0 10px var(--medieval-journal-page-shadow);
+}
+
+/* Journal content styling */
+.medieval-journal-heading {
+  font-family: 'MedievalSharp', cursive, var(--font-heading);
+  color: var(--medieval-text);
+  border-bottom: 2px solid var(--medieval-journal-binding);
+  padding-bottom: 0.25rem;
+  transform: rotate(-0.5deg);
+}
+
+.medieval-journal-section {
+  position: relative;
+}
+
+.medieval-journal-section::after {
+  content: "";
+  position: absolute;
+  bottom: -1rem;
+  left: 25%;
+  right: 25%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--medieval-card-border), transparent);
+  opacity: 0.3;
+}
+
+/* Character gallery styling */
+.medieval-journal-character-card {
+  background-color: var(--medieval-journal-character-card-bg);
+  transition: all 0.2s;
+}
+
+.medieval-journal-character-card:hover {
+  background-color: var(--medieval-journal-character-card-hover);
+}
+
+.medieval-journal-character-sketch {
+  background-color: var(--medieval-bg-secondary);
+  border: 1px solid var(--medieval-card-border);
+}
+
+.medieval-journal-character-name {
+  font-family: 'MedievalSharp', cursive, var(--font-primary);
+}
+
+/* Quest list styling */
+.medieval-journal-quest-item {
+  background-color: var(--medieval-journal-quest-item-bg);
+  transition: all 0.2s;
+}
+
+.medieval-journal-quest-item:hover {
+  background-color: var(--medieval-journal-quest-item-hover);
+}
+
+.medieval-journal-quest-bullet {
+  background-color: var(--medieval-text);
+}
+
+.medieval-journal-quest-title {
+  font-family: 'MedievalSharp', cursive, var(--font-primary);
+}
+
+.medieval-journal-quest-note {
+  color: var(--medieval-text-secondary);
+  font-style: italic;
+}
+
+/* Activity feed styling */
+.medieval-journal-activity-item {
+  border-left: 2px solid transparent;
+  padding-left: 0.5rem;
+}
+
+.medieval-journal-activity-item:hover {
+  border-left-color: var(--medieval-accent);
+  background-color: var(--medieval-journal-activity-hover);
+}
+
+.medieval-journal-activity-icon-bg {
+  background-color: var(--medieval-bg-secondary);
+  color: var(--medieval-accent);
+}
+
+.medieval-journal-activity-title {
+  color: var(--medieval-text);
+  font-family: 'MedievalSharp', cursive, var(--font-primary);
+}
+
+.medieval-journal-activity-date {
+  color: var(--medieval-text-secondary);
+  font-style: italic;
+}
+
+.medieval-journal-activity-type {
+  color: var(--medieval-accent);
+}
+
+.medieval-journal-activity-description {
+  color: var(--medieval-text-secondary);
+  font-style: italic;
+}
+
+.medieval-journal-activity-separator {
+  color: var(--medieval-text-secondary);
+  font-family: 'MedievalSharp', cursive;
+}
+
+/* Utility styles */
+.medieval-journal-loading {
+  background-color: var(--medieval-bg-secondary);
+  opacity: 0.3;
+}
+
+.medieval-journal-empty {
+  color: var(--medieval-text-secondary);
+  font-style: italic;
+}
+
+.medieval-journal-notes-area {
+  background-color: var(--medieval-journal-notes-area);
+  min-height: 200px;
+}
+
+.medieval-journal-pagination {
+  background-color: var(--medieval-card-bg);
+  color: var(--medieval-text);
+  font-family: 'MedievalSharp', cursive;
+}
+
+/* Notes paper effect */
+.medieval-journal-paper {
+  background-color: var(--medieval-bg-secondary);
+  border: 1px solid var(--medieval-card-border);
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%238B4513' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
 }

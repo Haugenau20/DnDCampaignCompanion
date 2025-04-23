@@ -27,25 +27,25 @@ const BookManuscript: React.FC<BookProps> = ({ height, className }) => {
         <ellipse cx="15" cy="120" rx="8" ry="5" fill="#5D4C3C" opacity="0.2" />
         
         {/* Binding stitches */}
-        <line x1="10" y1="10" x2="10" y2="140" stroke="#8B5A2B" stroke-width="0.8" stroke-dasharray="10,5" />
-        <line x1="50" y1="10" x2="50" y2="140" stroke="#8B5A2B" stroke-width="0.8" stroke-dasharray="10,5" />
+        <line x1="10" y1="10" x2="10" y2="140" stroke="#8B5A2B" strokeWidth="0.8" strokeDasharray="10,5" />
+        <line x1="50" y1="10" x2="50" y2="140" stroke="#8B5A2B" strokeWidth="0.8" strokeDasharray="10,5" />
         
         {/* Handwritten text lines */}
-        <line x1="15" y1="20" x2="45" y2="20" stroke="#5D4C3C" stroke-width="0.5" />
-        <line x1="15" y1="30" x2="45" y2="30" stroke="#5D4C3C" stroke-width="0.5" />
-        <line x1="15" y1="40" x2="45" y2="40" stroke="#5D4C3C" stroke-width="0.5" />
-        <line x1="15" y1="50" x2="45" y2="50" stroke="#5D4C3C" stroke-width="0.5" />
-        <line x1="15" y1="60" x2="45" y2="60" stroke="#5D4C3C" stroke-width="0.5" />
+        <line x1="15" y1="20" x2="45" y2="20" stroke="#5D4C3C" strokeWidth="0.5" />
+        <line x1="15" y1="30" x2="45" y2="30" stroke="#5D4C3C" strokeWidth="0.5" />
+        <line x1="15" y1="40" x2="45" y2="40" stroke="#5D4C3C" strokeWidth="0.5" />
+        <line x1="15" y1="50" x2="45" y2="50" stroke="#5D4C3C" strokeWidth="0.5" />
+        <line x1="15" y1="60" x2="45" y2="60" stroke="#5D4C3C" strokeWidth="0.5" />
         
-        <line x1="15" y1="80" x2="45" y2="80" stroke="#5D4C3C" stroke-width="0.5" />
-        <line x1="15" y1="90" x2="45" y2="90" stroke="#5D4C3C" stroke-width="0.5" />
-        <line x1="15" y1="100" x2="45" y2="100" stroke="#5D4C3C" stroke-width="0.5" />
-        <line x1="15" y1="110" x2="45" y2="110" stroke="#5D4C3C" stroke-width="0.5" />
-        <line x1="15" y1="120" x2="45" y2="120" stroke="#5D4C3C" stroke-width="0.5" />
+        <line x1="15" y1="80" x2="45" y2="80" stroke="#5D4C3C" strokeWidth="0.5" />
+        <line x1="15" y1="90" x2="45" y2="90" stroke="#5D4C3C" strokeWidth="0.5" />
+        <line x1="15" y1="100" x2="45" y2="100" stroke="#5D4C3C" strokeWidth="0.5" />
+        <line x1="15" y1="110" x2="45" y2="110" stroke="#5D4C3C" strokeWidth="0.5" />
+        <line x1="15" y1="120" x2="45" y2="120" stroke="#5D4C3C" strokeWidth="0.5" />
         
         {/* Illuminated initial area */}
-        <rect x="15" y="65" width="30" height="10" fill="#F5E5BC" stroke="#8B5A2B" stroke-width="0.5" />
-        <path d="M20 65 L20 75 M20 70 L25 65 L25 75" stroke="#8B0000" stroke-width="1" />
+        <rect x="15" y="65" width="30" height="10" fill="#F5E5BC" stroke="#8B5A2B" strokeWidth="0.5" />
+        <path d="M20 65 L20 75 M20 70 L25 65 L25 75" stroke="#8B0000" strokeWidth="1" />
         <circle cx="30" cy="70" r="3" fill="#DAA520" opacity="0.7" />
         
         {/* Slight wear on edges */}
@@ -62,7 +62,7 @@ const BookManuscript: React.FC<BookProps> = ({ height, className }) => {
         <defs>
         <pattern id="parchmentTexture" patternUnits="userSpaceOnUse" width="20" height="20">
             <rect width="20" height="20" fill="#F2E8C9" />
-            <path d="M0 0 L20 20 M20 0 L0 20" stroke="#E6D6A8" stroke-width="0.3" />
+            <path d="M0 0 L20 20 M20 0 L0 20" stroke="#E6D6A8" strokeWidth="0.3" />
             <ellipse cx="10" cy="10" rx="5" ry="3" fill="#E6D6A8" opacity="0.2" transform="rotate(45 10 10)" />
         </pattern>
         </defs>

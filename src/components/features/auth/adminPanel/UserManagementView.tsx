@@ -115,7 +115,7 @@ const UserManagementView: React.FC = () => {
             placeholder="Search users..."
             value={userSearchQuery}
             onChange={(e) => setUserSearchQuery(e.target.value)}
-            startIcon={<Search className={clsx("w-4 h-4", `${themePrefix}-typography-secondary`)} />}
+            startIcon={<Search className={clsx("w-4 h-4", `${themePrefix}-primary`)} />}
           />
         </div>
       </div>
@@ -147,7 +147,7 @@ const UserManagementView: React.FC = () => {
         )}>
           <Users className={clsx(
             "w-12 h-12 mx-auto mb-4",
-            `text-${themePrefix}-secondary`
+            `${themePrefix}-primary`
           )} />
           <Typography color="secondary">
             {userSearchQuery ? 'No users match your search' : 'No users found'}
@@ -163,25 +163,25 @@ const UserManagementView: React.FC = () => {
               <tr>
                 <th className={clsx(
                   "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                  `${themePrefix}-typography-secondary`
+                  `${themePrefix}-typography`
                 )}>
                   Username
                 </th>
                 <th className={clsx(
                   "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                  `${themePrefix}-typography-secondary`
+                  `${themePrefix}-typography`
                 )}>
                   Role
                 </th>
                 <th className={clsx(
                   "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                  `${themePrefix}-typography-secondary`
+                  `${themePrefix}-typography`
                 )}>
                   Joined
                 </th>
                 <th className={clsx(
                   "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                  `${themePrefix}-typography-secondary`
+                  `${themePrefix}-typography`
                 )}>
                   Actions
                 </th>
@@ -194,13 +194,15 @@ const UserManagementView: React.FC = () => {
               {sortedUsers.map((userData) => (
                 <tr key={userData.userId || userData.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
+                    <div className="flex items-center" title={userData.username || 'Unknown'}>
                       <User className={clsx(
-                        "w-5 h-5 mr-2",
-                        `text-${themePrefix}-secondary`
+                      "w-5 h-5 mr-2",
+                      `${themePrefix}-primary`
                       )} />
                       <Typography variant="body-sm" className="font-medium">
-                        {userData.username || 'Unknown'}
+                      {userData.username && userData.username.length > 20 
+                        ? `${userData.username.slice(0, 20)}...` 
+                        : userData.username || 'Unknown'}
                       </Typography>
                     </div>
                   </td>
@@ -212,7 +214,7 @@ const UserManagementView: React.FC = () => {
                           `${themePrefix}-primary`
                         )} />
                       )}
-                      <Typography variant="body-sm" color={userData.role === 'admin' ? "primary" : "secondary"}>
+                      <Typography variant="body-sm" color="secondary">
                         {userData.role === 'admin' ? 'Admin' : 'Member'}
                       </Typography>
                     </div>
@@ -221,7 +223,7 @@ const UserManagementView: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <Calendar className={clsx(
                         "w-4 h-4",
-                        `${themePrefix}-typography-secondary`
+                        `${themePrefix}-primary`
                       )} />
                       <Typography variant="body-sm" color="secondary">
                         {userData.joinedAt instanceof Date 

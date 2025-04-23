@@ -33,7 +33,7 @@ const BookBrown: React.FC<BookProps> = ({ height, className }) => {
         {/* Gilded details */}
         <rect x="0" y="0" width="60" height="5" fill="#D4AF37" />
         <rect x="0" y="145" width="60" height="5" fill="#D4AF37" />
-        <path d="M15 45 H45 M15 75 H45 M15 105 H45" stroke="#D4AF37" stroke-width="1" />
+        <path d="M15 45 H45 M15 75 H45 M15 105 H45" stroke="#D4AF37" strokeWidth="1" />
         
         {/* Embossed coat of arms */}
         <path d="M25 60 L35 60 L35 85 L30 90 L25 85 Z" fill="#A0522D" />
@@ -49,7 +49,7 @@ const BookBrown: React.FC<BookProps> = ({ height, className }) => {
         <defs>
             <pattern id="brownLeather" patternUnits="userSpaceOnUse" width="20" height="20">
             <rect width="20" height="20" fill="#8B4513" />
-            <path d="M0 0 L20 20 M20 0 L0 20" stroke="#5C2E0D" stroke-width="0.5" />
+            <path d="M0 0 L20 20 M20 0 L0 20" stroke="#5C2E0D" strokeWidth="0.5" />
             <circle cx="10" cy="10" r="3" fill="#5C2E0D" opacity="0.3" />
             </pattern>
         </defs>

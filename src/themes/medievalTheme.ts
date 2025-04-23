@@ -95,6 +95,19 @@ export const medievalTheme: Theme = {
       deleteButtonBackground: 'transparent',
       deleteButtonText: '#9B2C2C', // Deep red for medieval theme
       deleteButtonHover: 'rgba(155, 44, 44, 0.1)', // Very light deep red for hover
+
+       // Journal specific colors
+      journalLeather: '#8B4513',
+      journalBinding: '#5D3212',
+      journalStitch: '#E6C9A8',
+      journalPageShadow: 'rgba(0, 0, 0, 0.1)',
+      journalSectionDivider: 'rgba(139, 69, 19, 0.2)',
+      journalCharacterCardBg: 'rgba(231, 222, 204, 0.3)',
+      journalCharacterCardHover: 'rgba(231, 222, 204, 0.5)',
+      journalQuestItemBg: 'rgba(231, 222, 204, 0.1)',
+      journalQuestItemHover: 'rgba(231, 222, 204, 0.3)',
+      journalActivityHover: 'rgba(231, 222, 204, 0.2)',
+      journalNotesArea: 'rgba(231, 222, 204, 0.3)',
     }
   },
   fonts: {

@@ -132,7 +132,7 @@ const SessionTimeoutWarning: React.FC = () => {
               className={clsx(
                 "h-4 w-4 rounded focus:ring-offset-1",
                 `${themePrefix}-input`,
-                `focus:ring-${themePrefix}-primary border-${themePrefix}-card-border`
+                `focus:${themePrefix}-primary ${themePrefix}-card-border`
               )}
             />
             <label 

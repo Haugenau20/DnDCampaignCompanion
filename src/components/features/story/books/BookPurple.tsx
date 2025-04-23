@@ -37,7 +37,7 @@ const BookPurple: React.FC<BookProps> = ({ height, className }) => {
         {/* Embossed ornament */}
         <polygon points="30,60 40,75 30,90 20,75" fill="#8A6383" />
         <circle cx="30" cy="75" r="8" fill="#412A38" />
-        <path d="M27 72 L33 78 M33 72 L27 78" stroke="#8A6383" stroke-width="1.5" />
+        <path d="M27 72 L33 78 M33 72 L27 78" stroke="#8A6383" strokeWidth="1.5" />
         
         {/* Gold corner protectors with amethyst gems */}
         <path d="M0 0 L10 0 L10 10 L0 10 Z" fill="#D4AF37" opacity="0.7" />
@@ -53,7 +53,7 @@ const BookPurple: React.FC<BookProps> = ({ height, className }) => {
         <defs>
             <pattern id="purpleLeather" patternUnits="userSpaceOnUse" width="20" height="20">
             <rect width="20" height="20" fill="#614051" />
-            <path d="M0 0 L20 20 M20 0 L0 20" stroke="#412A38" stroke-width="0.5" />
+            <path d="M0 0 L20 20 M20 0 L0 20" stroke="#412A38" strokeWidth="0.5" />
             <circle cx="10" cy="10" r="3" fill="#412A38" opacity="0.3" />
             </pattern>
         </defs>

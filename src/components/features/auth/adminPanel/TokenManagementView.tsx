@@ -220,7 +220,7 @@ const TokenManagementView: React.FC = () => {
               placeholder="Search tokens..."
               value={tokenSearchQuery}
               onChange={(e) => setTokenSearchQuery(e.target.value)}
-              startIcon={<Search className={clsx("w-4 h-4", `${themePrefix}-typography-secondary`)} />}
+              startIcon={<Search className={clsx("w-4 h-4", `${themePrefix}-primary`)} />}
             />
           </div>
         </div>
@@ -240,7 +240,7 @@ const TokenManagementView: React.FC = () => {
           )}>
             <Ticket className={clsx(
               "w-12 h-12 mx-auto mb-4",
-              `text-${themePrefix}-secondary`
+              `${themePrefix}-primary`
             )} />
             <Typography color="secondary">
               {tokenSearchQuery ? 'No tokens match your search' : 'No registration tokens found'}
@@ -256,31 +256,31 @@ const TokenManagementView: React.FC = () => {
                 <tr>
                   <th className={clsx(
                     "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                    `${themePrefix}-typography-secondary`
+                    `${themePrefix}-typography`
                   )}>
                     Token
                   </th>
                   <th className={clsx(
                     "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                    `${themePrefix}-typography-secondary`
+                    `${themePrefix}-typography`
                   )}>
                     Status
                   </th>
                   <th className={clsx(
                     "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                    `${themePrefix}-typography-secondary`
+                    `${themePrefix}-typography`
                   )}>
                     Created
                   </th>
                   <th className={clsx(
                     "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                    `${themePrefix}-typography-secondary`
+                    `${themePrefix}-typography`
                   )}>
                     Notes
                   </th>
                   <th className={clsx(
                     "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                    `${themePrefix}-typography-secondary`
+                    `${themePrefix}-typography`
                   )}>
                     Actions
                   </th>
@@ -294,11 +294,10 @@ const TokenManagementView: React.FC = () => {
                   <tr key={tokenData.token}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <Ticket className={clsx(
-                          "w-5 h-5 mr-2",
-                          `text-${themePrefix}-secondary`
-                        )} />
-                        <Typography variant="body-sm" className="font-mono">
+                        <Typography 
+                          variant="body-sm" 
+                          title={tokenData.token}
+                        >
                           {tokenData.token.substring(0, 8)}...
                         </Typography>
                       </div>
@@ -307,24 +306,15 @@ const TokenManagementView: React.FC = () => {
                       {tokenData.used ? (
                       <div className={clsx("flex items-center", `${themePrefix}-form-success`)}>
                         <Check className="w-4 h-4 mr-1" />
-                        <Typography variant="body-sm">
+                        <Typography 
+                          variant="body-sm" 
+                          title={tokenData.usedAt ? `Used on ${new Date(tokenData.usedAt).toLocaleDateString()}` : ''}
+                        >
                           Used
-                          {tokenData.usedAt && (
-                            <span className={clsx(
-                              "ml-1",
-                              `${themePrefix}-typography-secondary`
-                            )}>
-                              ({new Date(tokenData.usedAt).toLocaleDateString()})
-                            </span>
-                          )}
                         </Typography>
                       </div>
                       ) : (
                         <div className="flex items-center space-x-2">
-                          <div className="flex items-center text-yellow-600">
-                            <Clock className="w-4 h-4 mr-1" />
-                            <Typography variant="body-sm">Available</Typography>
-                          </div>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -348,11 +338,18 @@ const TokenManagementView: React.FC = () => {
                       </Typography>
                     </td>
                     <td className="px-6 py-4">
-                      <Typography variant="body-sm" color="secondary" className="truncate max-w-xs">
-                        {tokenData.notes || '-'}
+                      <Typography 
+                      variant="body-sm" 
+                      color="secondary" 
+                      className="truncate max-w-xs" 
+                      title={tokenData.notes || '-'}
+                      >
+                        {tokenData.notes && tokenData.notes.length > 24 
+                          ? `${tokenData.notes.substring(0, 24)}...` 
+                          : tokenData.notes || '-'}
                       </Typography>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-2 py-4 whitespace-nowrap">
                       {!tokenData.used && (
                         <Button
                           variant="ghost"

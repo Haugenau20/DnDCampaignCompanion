@@ -1,204 +1,199 @@
 // pages/HomePage.tsx
-import React, { useMemo } from 'react';
-import Typography from '../components/core/Typography';
-import Card from '../components/core/Card';
-import LatestChapter from '../components/features/story/LatestChapter';
-import { useChapterData } from '../hooks/useChapterData';
-import { useNavigation } from '../context/NavigationContext';
+import React, { useState } from 'react';
+import { useAuth, useGroups, useCampaigns } from '../context/firebase';
+import { useStory } from '../context/StoryContext';
+import { useQuests } from '../context/QuestContext';
+import { useRumors } from '../context/RumorContext';
+import { useNPCs } from '../context/NPCContext';
+import { useLocations } from '../context/LocationContext';
 import { useTheme } from '../context/ThemeContext';
-import { Book, Scroll, Users, MapPin, MessageSquare } from 'lucide-react';
 import clsx from 'clsx';
 
-/**
- * Interface for quick access section items
- */
-interface QuickAccessItem {
+// Import layouts
+import DashboardLayout from '../components/features/layouts/dashboard/DashboardLayout';
+import JournalLayout from '../components/features/layouts/journal/JournalLayout';
+import Button from '../components/core/Button';
+import { Book, LayoutDashboard } from 'lucide-react';
+import useLayoutData from '../components/features/layouts/common/hooks/useLayoutData';
+
+// Combined activity type from all content types
+export interface Activity {
+  id: string;
+  type: 'chapter' | 'npc' | 'quest' | 'rumor' | 'location';
   title: string;
-  description: string;
-  icon: React.ReactNode;
-  path: string;
+  description?: string;
+  actor: string;
+  timestamp: Date;
+  link: string;
 }
 
+// Layout type options
+type LayoutType = 'dashboard' | 'journal';
+
 /**
- * HomePage component serving as the main landing page of the application
+ * HomePage component serving as the container for the selected layout
  */
 const HomePage: React.FC = () => {
-  const { chapters, loading, error } = useChapterData();
-  const { navigateToPage } = useNavigation();
   const { theme } = useTheme();
+  const { user } = useAuth();
+  const { activeGroup } = useGroups();
+  const { activeCampaignId } = useCampaigns();
   const themePrefix = theme.name;
-
-  // Get the latest chapter from the fetched data
-  const latestChapter = useMemo(() => {
-    if (!chapters || chapters.length === 0) return null;
+  
+  // Load data from all contexts
+  const { chapters, isLoading: chaptersLoading } = useStory();
+  const { quests, isLoading: questsLoading } = useQuests();
+  const { rumors, isLoading: rumorsLoading } = useRumors();
+  const { npcs, isLoading: npcsLoading } = useNPCs();
+  const { locations, isLoading: locationsLoading } = useLocations();
+  
+  // Layout selection state
+  const [layoutType, setLayoutType] = useState<LayoutType>('dashboard');
+  
+  // Create combined recent activity from all content types
+  const activities = React.useMemo(() => {
+    const allActivities: Activity[] = [];
     
-    // Sort chapters by order and get the latest one
-    const sortedChapters = [...chapters].sort((a, b) => b.order - a.order);
-    const latest = sortedChapters[0];
-    
-    if (!latest) return null;
-
-    // Fix for date parsing issue
-    let lastModifiedIso;
-    try {
-      if (latest.lastModified) {
-        // Try to parse the date properly
-        const date = new Date(latest.lastModified);
-        // Check if date is valid before calling toISOString()
-        if (!isNaN(date.getTime())) {
-          lastModifiedIso = date.toISOString();
-        } else {
-          // Use current date if invalid
-          lastModifiedIso = new Date().toISOString();
-        }
-      } else {
-        // If lastModified is missing, use current date
-        lastModifiedIso = new Date().toISOString();
+    // Add chapters
+    chapters.forEach(chapter => {
+      if (chapter.lastModified) {
+        allActivities.push({
+          id: chapter.id,
+          type: 'chapter',
+          title: chapter.title,
+          description: chapter.summary || chapter.content.substring(0, 100) + '...',
+          actor: '',
+          timestamp: new Date(chapter.lastModified),
+          link: `/story/chapters/${chapter.id}`
+        });
       }
-    } catch (e) {
-      // Fallback to current date for any parsing errors
-      console.error('Error parsing lastModified date:', e);
-      lastModifiedIso = new Date().toISOString();
-    }
-
-    // Return with the safely formatted date
-    return {
-      ...latest,
-      lastModified: lastModifiedIso
-    };
-  }, [chapters]);
-
-  // Quick access section items
-  const quickAccessItems: QuickAccessItem[] = [
-    {
-      title: 'Story',
-      description: 'Follow your epic journey chapter by chapter',
-      icon: <Book className="w-6 h-6" />,
-      path: '/story'
-    },
-    {
-      title: 'Quests',
-      description: 'Track your ongoing adventures and rewards',
-      icon: <Scroll className="w-6 h-6" />,
-      path: '/quests'
-    },
-    {
-      title: 'Rumors',
-      description: 'Track and investigate rumors from across the realm',
-      icon: <MessageSquare className="w-6 h-6" />,
-      path: '/rumors'
-    },
-    {
-      title: 'NPCs',
-      description: 'Keep track of friends, foes, and everyone in between',
-      icon: <Users className="w-6 h-6" />,
-      path: '/npcs'
-    },
-    {
-      title: 'Locations',
-      description: 'Explore the world and its many destinations',
-      icon: <MapPin className="w-6 h-6" />,
-      path: '/locations'
-    }
-  ];
-
+    });
+    
+    // Add quests
+    quests.forEach(quest => {
+      if (quest.dateModified) {
+        allActivities.push({
+          id: quest.id,
+          type: 'quest',
+          title: quest.title,
+          description: quest.description,
+          actor: quest.modifiedByUsername || '',
+          timestamp: new Date(quest.dateModified),
+          link: `/quests?highlight=${quest.id}`
+        });
+      }
+    });
+    
+    // Add rumors
+    rumors.forEach(rumor => {
+      if (rumor.dateModified) {
+        allActivities.push({
+          id: rumor.id,
+          type: 'rumor',
+          title: rumor.title,
+          description: rumor.content.substring(0, 100) + '...',
+          actor: rumor.modifiedByUsername || '',
+          timestamp: new Date(rumor.dateModified),
+          link: `/rumors?highlight=${rumor.id}`
+        });
+      }
+    });
+    
+    // Add NPCs
+    npcs.forEach(npc => {
+      if (npc.dateModified) {
+        allActivities.push({
+          id: npc.id,
+          type: 'npc',
+          title: npc.name,
+          description: npc.description.substring(0, 100) + '...',
+          actor: npc.modifiedByUsername || '',
+          timestamp: new Date(npc.dateModified),
+          link: `/npcs?highlight=${npc.id}`
+        });
+      }
+    });
+    
+    // Add locations
+    locations.forEach(location => {
+      if (location.dateModified) {
+        allActivities.push({
+          id: location.id,
+          type: 'location',
+          title: location.name,
+          description: location.description.substring(0, 100) + '...',
+          actor: location.modifiedByUsername || '',
+          timestamp: new Date(location.dateModified),
+          link: `/locations?highlight=${location.id}`
+        });
+      }
+    });
+    
+    // Sort by timestamp (newest first)
+    return allActivities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }, [chapters, quests, rumors, npcs, locations]);
+  
+  // Use common layout data hook to process and prepare data
+  const layoutData = useLayoutData({
+    chapters,
+    quests,
+    rumors,
+    npcs,
+    locations,
+    activities,
+    chaptersLoading,
+    questsLoading,
+    rumorsLoading,
+    npcsLoading,
+    locationsLoading
+  });
+  
+  // Handle layout toggle
+  const toggleLayout = () => {
+    setLayoutType(layoutType === 'dashboard' ? 'journal' : 'dashboard');
+  };
+  
   return (
-    <div className={clsx("max-w-7xl mx-auto px-4 py-8", `${themePrefix}-content`)}>
-      {/* Hero Section */}
-      <section className="text-center mb-12">
-        <Typography variant="h1" className={`mb-4 ${themePrefix}-typography-heading`}>
-          D&D Campaign Companion
-        </Typography>
-        <Typography variant="body-lg" color="secondary" className="mb-8">
-          Your digital guide through epic adventures
-        </Typography>
-      </section>
-
-      {/* Quick Access Section */}
-      <section className="mb-12">
-        <Typography variant="h2" className={`mb-6 ${themePrefix}-typography-heading`}>
-          Quick Access
-        </Typography>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {quickAccessItems.map((item) => (
-            <Card
-              key={item.path}
-              hoverable
-              onClick={() => navigateToPage(item.path)}
-              className="h-full"
-            >
-              <Card.Content className="flex flex-col items-center text-center p-6">
-                {/* Theme-specific icon container */}
-                <div className={clsx(
-                  "p-3 rounded-full mb-4",
-                  `${themePrefix}-icon-bg`
-                )}>
-                  {/* Theme-specific icon color */}
-                  <span className={clsx(`${themePrefix}-primary`)}>
-                    {item.icon}
-                  </span>
-                </div>
-                <Typography variant="h4" className={`mb-2 ${themePrefix}-typography-heading`}>
-                  {item.title}
-                </Typography>
-                <Typography color="secondary">
-                  {item.description}
-                </Typography>
-              </Card.Content>
-            </Card>
-          ))}
+    <div className='max-w-7xl mx-auto'>
+      <div className={clsx(
+        "container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden", 
+        `${themePrefix}-content`
+      )}>
+        {/* Layout Toggle Button */}
+        <div className="flex justify-end mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleLayout}
+            startIcon={layoutType === 'dashboard' ? <Book size={16} /> : <LayoutDashboard size={16} />}
+          >
+            {layoutType === 'dashboard' ? 'Switch to Journal View' : 'Switch to Dashboard View'}
+          </Button>
         </div>
-      </section>
-
-      {/* Recent Activity Section */}
-      <section>
-        <div className="flex justify-between items-center mb-6">
-          <Typography variant="h2" className={`${themePrefix}-typography-heading`}>
-            Recent Activity
-          </Typography>
-        </div>
-
-        <div className="space-y-4">
-          {loading ? (
-            <Card>
-              <Card.Content className="text-center py-8">
-                <div className={clsx(
-                  "animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto mb-4",
-                  `border-${themePrefix}-primary`
-                )} />
-                <Typography variant="h3" className={`mb-2 ${themePrefix}-typography-heading`}>
-                  Loading Recent Activity
-                </Typography>
-              </Card.Content>
-            </Card>
-          ) : error ? (
-            <Card>
-              <Card.Content className="text-center py-8">
-                <Typography color="error" className="mb-2">
-                  {"Error Loading Recent Activity. Sign in to view content."}
-                </Typography>
-              </Card.Content>
-            </Card>
-          ) : latestChapter ? (
-            <LatestChapter chapter={latestChapter} />
-          ) : (
-            <Card>
-              <Card.Content className="text-center py-8">
-                <Book className={clsx(
-                  "w-12 h-12 mx-auto mb-4",
-                  `text-${themePrefix}-secondary`
-                )} />
-                <Typography variant="h3" className={`mb-2 ${themePrefix}-typography-heading`}>
-                  No Chapters Available
-                </Typography>
-                <Typography color="secondary">
-                  Start your adventure by adding your first chapter.
-                </Typography>
-              </Card.Content>
-            </Card>
-          )}
-        </div>
-      </section>
+        
+        {/* Render selected layout with common processed data */}
+        {layoutType === 'dashboard' ? (
+          <DashboardLayout 
+            npcs={npcs}
+            locations={locations}
+            quests={quests}
+            chapters={chapters}
+            rumors={rumors}
+            activities={activities}
+            loading={layoutData.loading}
+          />
+        ) : (
+          <JournalLayout 
+            npcs={npcs}
+            locations={locations}
+            quests={quests}
+            chapters={chapters}
+            rumors={rumors}
+            activities={activities}
+            loading={layoutData.loading}
+          />
+        )}
+      </div>
     </div>
   );
 };

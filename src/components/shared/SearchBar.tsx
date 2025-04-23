@@ -155,7 +155,7 @@ export const SearchBar: React.FC = () => {
         aria-selected={isSelected}
       >
         <div className="flex items-center gap-2 mb-1">
-          <span className={clsx(`${themePrefix}-typography-secondary`)}>{icon}</span>
+          <span className={clsx(`${themePrefix}-primary`)}>{icon}</span>
           <Typography variant="body" className="font-medium">
             {result.title}
           </Typography>
@@ -220,7 +220,7 @@ export const SearchBar: React.FC = () => {
             onClick={handleClear}
             className={clsx(
               "absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-80",
-              `${themePrefix}-typography-secondary`
+              `${themePrefix}-primary`
             )}
             aria-label="Clear search"
           >
@@ -246,7 +246,7 @@ export const SearchBar: React.FC = () => {
           {results.length > 0 ? (
             <div className={clsx(
               "py-2 divide-y", 
-              `divide-${themePrefix}-card-border`
+              `${themePrefix}-card-border`
             )}>
               {results.map((result, index) => renderSearchResult(result, index))}
             </div>
