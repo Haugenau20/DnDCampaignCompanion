@@ -201,7 +201,7 @@ const CampaignManagementView: React.FC = () => {
         )}>
           <BookOpen className={clsx(
             "w-12 h-12 mx-auto mb-4",
-            `text-${themePrefix}-secondary`
+            `${themePrefix}-primary`
           )} />
           <Typography color="secondary">
             {campaignSearchQuery ? 'No campaigns match your search' : 'No campaigns found'}
@@ -248,7 +248,7 @@ const CampaignManagementView: React.FC = () => {
                 
                 <div className="flex flex-wrap gap-y-2 gap-x-4 pt-2">
                   <div className="flex items-center gap-1">
-                    <Calendar size={16} className={clsx(`${themePrefix}-typography-secondary`)} />
+                    <Calendar size={16} className={clsx(`${themePrefix}-primary`)} />
                     <Typography variant="body-sm" color="secondary">
                       Created: {campaign.createdAt instanceof Date
                         ? campaign.createdAt.toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})
@@ -258,7 +258,7 @@ const CampaignManagementView: React.FC = () => {
                   </div>
                   
                   <div className="flex items-center gap-1">
-                    <User size={16} className={clsx(`${themePrefix}-typography-secondary`)} />
+                    <User size={16} className={clsx(`${themePrefix}-primary`)} />
                     <Typography variant="body-sm" color="secondary">
                       By: {campaign.createdBy === user?.uid ? 'You' : 'Another User'}
                     </Typography>

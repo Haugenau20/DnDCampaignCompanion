@@ -159,7 +159,7 @@ const ChaptersPage: React.FC = () => {
                 "flex items-center gap-1 px-3 py-1 rounded-md transition-colors",
                 viewMode === 'bookshelf' 
                   ? `${themePrefix}-card` 
-                  : `text-${themePrefix}-text-secondary`
+                  : `${themePrefix}-typography-secondary`
               )}
               onClick={() => setViewMode('bookshelf')}
             >
@@ -172,7 +172,7 @@ const ChaptersPage: React.FC = () => {
                 "flex items-center gap-1 px-3 py-1 rounded-md transition-colors",
                 viewMode === 'table' 
                   ? `${themePrefix}-card` 
-                  : `text-${themePrefix}-text-secondary`
+                  : `${themePrefix}-typography-secondary`
               )}
               onClick={() => setViewMode('table')}
             >

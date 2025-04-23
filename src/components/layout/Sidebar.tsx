@@ -35,7 +35,7 @@ const Sidebar: React.FC = () => {
     <aside className={clsx(
       "w-64 h-screen sticky top-0 overflow-y-auto hidden md:block",
       `${themePrefix}-card border-r`,
-      `border-${themePrefix}-card-border`
+      `${themePrefix}-card-border`
     )}>
       {renderSidebarContent()}
     </aside>

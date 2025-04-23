@@ -115,7 +115,7 @@ const UserManagementView: React.FC = () => {
             placeholder="Search users..."
             value={userSearchQuery}
             onChange={(e) => setUserSearchQuery(e.target.value)}
-            startIcon={<Search className={clsx("w-4 h-4", `${themePrefix}-typography-secondary`)} />}
+            startIcon={<Search className={clsx("w-4 h-4", `${themePrefix}-primary`)} />}
           />
         </div>
       </div>
@@ -147,7 +147,7 @@ const UserManagementView: React.FC = () => {
         )}>
           <Users className={clsx(
             "w-12 h-12 mx-auto mb-4",
-            `text-${themePrefix}-secondary`
+            `${themePrefix}-primary`
           )} />
           <Typography color="secondary">
             {userSearchQuery ? 'No users match your search' : 'No users found'}
@@ -197,7 +197,7 @@ const UserManagementView: React.FC = () => {
                     <div className="flex items-center" title={userData.username || 'Unknown'}>
                       <User className={clsx(
                       "w-5 h-5 mr-2",
-                      `text-${themePrefix}-secondary`
+                      `${themePrefix}-primary`
                       )} />
                       <Typography variant="body-sm" className="font-medium">
                       {userData.username && userData.username.length > 20 
@@ -223,7 +223,7 @@ const UserManagementView: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <Calendar className={clsx(
                         "w-4 h-4",
-                        `${themePrefix}-typography-secondary`
+                        `${themePrefix}-primary`
                       )} />
                       <Typography variant="body-sm" color="secondary">
                         {userData.joinedAt instanceof Date 

@@ -95,6 +95,14 @@
   transition: all 0.3s ease;
 }
 
+.light-card-border {
+  border: 1px solid var(--light-card-border);
+}
+
+.light-card-bg {
+  background-color: var(--light-bg);
+}
+
 /* Card hover effect */
 .light-card:hover {
   transform: translateY(-1px);

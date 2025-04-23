@@ -204,8 +204,7 @@ const Header: React.FC = () => {
                 ref={menuRef}
                 className={clsx(
                   'mt-2 p-4 rounded-lg shadow-lg w-72',
-                  `${themePrefix}-card`,
-                  `border ${themePrefix}-card-border`
+                  `${themePrefix}-card`
                 )}
               >
                 <div className="flex flex-col space-y-4">
@@ -229,7 +228,7 @@ const Header: React.FC = () => {
                           onClick={handleProfileClick}
                           className={clsx(
                             "flex flex-col items-center gap-1",
-                            `${themePrefix}-button-ghost text-${themePrefix}-primary`
+                            `${themePrefix}-button-ghost ${themePrefix}-typography`
                           )}
                           aria-label="Profile"
                         >
@@ -244,7 +243,7 @@ const Header: React.FC = () => {
                           onClick={handleJoinGroupClick}
                           className={clsx(
                             "flex flex-col items-center gap-1",
-                            `${themePrefix}-button-ghost text-${themePrefix}-primary`
+                            `${themePrefix}-button-ghost ${themePrefix}-typography`
                           )}
                           aria-label="Join Group"
                         >
@@ -260,7 +259,7 @@ const Header: React.FC = () => {
                             onClick={handleAdminClick}
                             className={clsx(
                               "flex flex-col items-center gap-1",
-                              `${themePrefix}-button-ghost text-${themePrefix}-primary`
+                              `${themePrefix}-button-ghost ${themePrefix}-typography`
                             )}
                             aria-label="Admin"
                           >
@@ -290,10 +289,7 @@ const Header: React.FC = () => {
                   
                   {/* Campaign Section - Only when logged in */}
                   {user && (
-                    <div className={clsx(
-                      "pt-4", 
-                      `border-t ${themePrefix}-card-border`
-                    )}>
+                    <div className="pt-4">
                       <h3 className={clsx(
                         "mb-3 font-medium",
                         `${themePrefix}-typography`
@@ -337,10 +333,7 @@ const Header: React.FC = () => {
                   )}
 
                   {/* Appearance Section - Always visible */}
-                  <div className={clsx(
-                    "pt-4", 
-                    `border-t ${themePrefix}-card-border`
-                  )}>
+                  <div className="pt-4">
                     <h3 className={clsx(
                       "mb-3 font-medium",
                       `${themePrefix}-typography`
@@ -355,10 +348,7 @@ const Header: React.FC = () => {
                   
                   {/* Sign Out button - Mobile only */}
                   {user && (
-                    <div className={clsx(
-                      "pt-3", 
-                      `border-t ${themePrefix}-card-border`
-                    )}>
+                    <div className="pt-3">
                       <Button
                         onClick={handleSignOut}
                         startIcon={<LogOut className="w-5 h-5" />}

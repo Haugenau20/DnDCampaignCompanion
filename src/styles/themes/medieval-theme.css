@@ -101,6 +101,14 @@
   overflow: hidden;
 }
 
+.medieval-card-border {
+  border: 2px solid var(--border-color);
+}
+
+.medieval-card-bg {
+  background-color: var(--card-bg);
+}
+
 /* Card hover effect */
 .medieval-card:hover {
   transform: translateY(-2px);

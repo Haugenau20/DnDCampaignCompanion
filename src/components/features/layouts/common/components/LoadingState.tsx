@@ -28,7 +28,7 @@ const LoadingState: React.FC<LoadingStateProps> = ({
   if (iconOnly) {
     return (
       <div className="flex justify-center items-center py-4">
-        <Loader2 className={clsx("w-6 h-6 animate-spin", `text-${themePrefix}-primary`)} />
+        <Loader2 className={clsx("w-6 h-6 animate-spin", `${themePrefix}-primary`)} />
       </div>
     );
   }
@@ -55,9 +55,9 @@ const LoadingState: React.FC<LoadingStateProps> = ({
     <div className="text-center py-4">
       <Loader2 className={clsx(
         "w-8 h-8 mx-auto mb-2 animate-spin", 
-        `text-${themePrefix}-primary`
+        `${themePrefix}-primary`
       )} />
-      <p className={clsx(`${themePrefix}-typography-secondary`)}>Loading...</p>
+      <p className={clsx(`${themePrefix}-primary`)}>Loading...</p>
     </div>
   );
 };

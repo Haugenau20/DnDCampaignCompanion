@@ -64,7 +64,7 @@ const CampaignBanner: React.FC = () => {
       <div className="absolute -right-20 top-0 bottom-0 transform opacity-10">
         <div className={clsx(
           "w-80 h-80 rounded-full",
-          `bg-${themePrefix}-primary`
+          `${themePrefix}-bg`
         )}></div>
       </div>
     </div>

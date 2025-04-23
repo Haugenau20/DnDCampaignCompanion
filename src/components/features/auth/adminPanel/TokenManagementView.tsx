@@ -220,7 +220,7 @@ const TokenManagementView: React.FC = () => {
               placeholder="Search tokens..."
               value={tokenSearchQuery}
               onChange={(e) => setTokenSearchQuery(e.target.value)}
-              startIcon={<Search className={clsx("w-4 h-4", `${themePrefix}-typography-secondary`)} />}
+              startIcon={<Search className={clsx("w-4 h-4", `${themePrefix}-primary`)} />}
             />
           </div>
         </div>
@@ -240,7 +240,7 @@ const TokenManagementView: React.FC = () => {
           )}>
             <Ticket className={clsx(
               "w-12 h-12 mx-auto mb-4",
-              `text-${themePrefix}-secondary`
+              `${themePrefix}-primary`
             )} />
             <Typography color="secondary">
               {tokenSearchQuery ? 'No tokens match your search' : 'No registration tokens found'}

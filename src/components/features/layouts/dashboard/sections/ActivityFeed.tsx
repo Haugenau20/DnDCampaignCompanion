@@ -59,7 +59,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
           className={clsx(
             "text-sm rounded-md px-2 py-1 border min-w-fit",
             `${themePrefix}-input`,
-            `border-${themePrefix}-card-border`
+            `${themePrefix}-card`
           )}
           value={filter || 'all'}
           onChange={(e) => setFilter(e.target.value === 'all' ? null : e.target.value)}

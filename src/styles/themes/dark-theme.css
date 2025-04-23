@@ -91,6 +91,14 @@
   transition: all 0.2s ease;
 }
 
+.dark-card-border {
+  border: 1px solid var(--dark-card-border);
+}
+
+.dark-card-bg {
+  background-color: var(--dark-bg);
+}
+
 /* Card hover effect */
 .dark-card:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);

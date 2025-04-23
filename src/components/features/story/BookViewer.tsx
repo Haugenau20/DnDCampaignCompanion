@@ -148,7 +148,7 @@ const BookViewer: React.FC<BookViewerProps> = ({
   if (!content) {
     return (
       <Card className={clsx("w-full max-w-4xl mx-auto p-8 text-center", `${themePrefix}-card`)}>
-        <BookOpen className={clsx("w-16 h-16 mx-auto mb-4", `text-${themePrefix}-secondary`)} />
+        <BookOpen className={clsx("w-16 h-16 mx-auto mb-4", `${themePrefix}-primary`)} />
         <Typography variant="h3" className="mb-2">
           No Content Available
         </Typography>

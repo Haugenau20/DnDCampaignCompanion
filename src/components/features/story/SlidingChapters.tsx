@@ -54,7 +54,7 @@ const SlidingChapters: React.FC<SlidingChaptersProps> = ({
           {/* Panel Header */}
           <div className={clsx(
             "p-4 border-b flex items-center justify-between",
-            `border-${themePrefix}-card-border`,
+            `${themePrefix}-card-border`,
             `${themePrefix}-book-header`
           )}>
             <div className="flex items-center gap-2">
