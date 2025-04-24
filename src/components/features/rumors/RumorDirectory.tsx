@@ -9,7 +9,7 @@ import Card from '../../core/Card';
 import RumorBatchActions from './RumorBatchActions';
 import { useRumors } from '../../../context/RumorContext';
 import { useNavigation } from '../../../hooks/useNavigation';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 import { 
   Search, 

@@ -10,7 +10,7 @@ import { useQuests } from '../../../context/QuestContext';
 import { useAuth } from '../../../context/firebase';
 import { useFirebaseData } from '../../../hooks/useFirebaseData';
 import { useNavigation } from '../../../context/NavigationContext';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import AttributionInfo from '../../shared/AttributionInfo';
 import clsx from 'clsx';
 import { 

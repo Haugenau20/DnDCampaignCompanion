@@ -5,7 +5,7 @@ import Dialog from '../../core/Dialog';
 import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import Input from '../../core/Input';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 import { X, Layers, AlertCircle } from 'lucide-react';
 

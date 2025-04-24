@@ -6,7 +6,7 @@ import { useQuests } from '../context/QuestContext';
 import { useRumors } from '../context/RumorContext';
 import { useNPCs } from '../context/NPCContext';
 import { useLocations } from '../context/LocationContext';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../themes/ThemeContext';
 import clsx from 'clsx';
 
 // Import layouts

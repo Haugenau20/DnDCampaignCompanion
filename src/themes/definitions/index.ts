@@ -1,5 +1,5 @@
-// src/themes/index.ts
-import { Theme } from '../types/theme';
+// src/themes/definitions/index.ts
+import { Theme } from '../types';
 import { darkTheme } from './darkTheme';
 import { medievalTheme } from './medievalTheme';
 import { lightTheme } from './lightTheme';

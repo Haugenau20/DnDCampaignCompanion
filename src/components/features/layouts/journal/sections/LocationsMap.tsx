@@ -1,6 +1,5 @@
 // components/features/layouts/journal/sections/LocationsMap.tsx
 import React from 'react';
-import { useTheme } from '../../../../../context/ThemeContext';
 import { useNavigation } from '../../../../../context/NavigationContext';
 import { Location } from '../../../../../types/location';
 import { Map, MapPin } from 'lucide-react';
@@ -15,9 +14,7 @@ interface LocationsMapProps {
  * Displays a styled list of important locations in journal format
  */
 const LocationsMap: React.FC<LocationsMapProps> = ({ locations, loading }) => {
-  const { theme } = useTheme();
   const { navigateToPage } = useNavigation();
-  const themePrefix = theme.name;
 
   // Sort locations by status (explored first) then by name
   const sortedLocations = [...locations].sort((a, b) => {
@@ -66,14 +63,8 @@ const LocationsMap: React.FC<LocationsMapProps> = ({ locations, loading }) => {
   };
 
   return (
-    <div className={clsx(
-      "relative",
-      `${themePrefix}-journal-section`
-    )}>
-      <h3 className={clsx(
-        "text-lg font-medium mb-3",
-        `${themePrefix}-journal-heading`
-      )}>
+    <div className="relative journal-section">
+      <h3 className="text-lg font-medium mb-3 journal-heading">
         Key Locations ({loading ? '...' : locations.length})
       </h3>
 
@@ -82,18 +73,12 @@ const LocationsMap: React.FC<LocationsMapProps> = ({ locations, loading }) => {
           {[1, 2, 3].map(i => (
             <div 
               key={i}
-              className={clsx(
-                "h-10 rounded",
-                `${themePrefix}-journal-loading`
-              )}
+              className="h-10 rounded journal-loading"
             ></div>
           ))}
         </div>
       ) : sortedLocations.length === 0 ? (
-        <div className={clsx(
-          "text-center py-4",
-          `${themePrefix}-journal-empty`
-        )}>
+        <div className="text-center py-4 journal-empty">
           <Map className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm italic">No locations discovered yet</p>
         </div>
@@ -103,13 +88,7 @@ const LocationsMap: React.FC<LocationsMapProps> = ({ locations, loading }) => {
             <div
               key={location.id}
               onClick={() => handleLocationClick(location.id)}
-              className={clsx(
-                "p-2 rounded cursor-pointer transition-transform hover:scale-[1.01]",
-                `${themePrefix}-journal-location-item`,
-                location.status === 'explored' && `${themePrefix}-journal-location-explored`,
-                location.status === 'visited' && `${themePrefix}-journal-location-visited`,
-                location.status === 'known' && `${themePrefix}-journal-location-known`
-              )}
+              className="p-2 rounded cursor-pointer transition-transform hover:scale-[1.01]"
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2">
@@ -118,32 +97,26 @@ const LocationsMap: React.FC<LocationsMapProps> = ({ locations, loading }) => {
                   </div>
                   
                   <div>
-                    <span className={clsx(
-                      "text-sm font-medium",
-                      `${themePrefix}-journal-location-name`
-                    )}>
+                    <span className="text-sm font-medium">
                       {location.name}
                     </span>
                     
                     <div className="flex items-center gap-2 text-xs">
                       <span className={clsx(
-                        `${themePrefix}-location-type-${location.type || 'poi'}`
+                        `location-type-${location.type || 'poi'}`
                       )}>
                         {getLocationType(location.type || 'poi')}
                       </span>
                       
                       <span className={clsx(
-                        `${themePrefix}-location-status-${location.status || 'known'}`
+                        `location-status-${location.status || 'known'}`
                       )}>
                         • {getStatusDisplay(location.status || 'known')}
                       </span>
                     </div>
                     
                     {location.description && (
-                      <p className={clsx(
-                        "text-xs mt-1 line-clamp-1",
-                        `${themePrefix}-typography-secondary`
-                      )}>
+                      <p className="text-xs mt-1 line-clamp-1 typography-secondary">
                         {location.description}
                       </p>
                     )}
@@ -154,10 +127,7 @@ const LocationsMap: React.FC<LocationsMapProps> = ({ locations, loading }) => {
           ))}
           
           {sortedLocations.length > 5 && (
-            <div className={clsx(
-              "text-right text-xs italic",
-              `${themePrefix}-journal-more-note`
-            )}>
+            <div className="text-right text-xs italic journal-more-note">
               ...and {sortedLocations.length - 5} more locations
             </div>
           )}

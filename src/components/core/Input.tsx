@@ -2,7 +2,6 @@
 import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { useTheme } from '../../context/ThemeContext';
 
 /**
  * Base props shared between input and textarea
@@ -80,8 +79,6 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
     },
     ref
   ) => {
-    const { theme } = useTheme();
-    const themePrefix = theme.name;
 
     const inputStyles = twMerge(
       clsx(
@@ -93,9 +90,9 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
         endIcon && 'pr-10',
         
         // Theme-specific classes
-        `${themePrefix}-input`,
-        error && `${themePrefix}-input-error`,
-        successMessage && `${themePrefix}-input-success`,
+        `input`,
+        error && `input-error`,
+        successMessage && `input-success`,
         className
       )
     );
@@ -113,7 +110,7 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
         {label && (
           <label className={clsx(
             'mb-1.5 text-sm font-medium',
-            `${themePrefix}-form-label`
+            `form-label`
           )}>
             {label}
           </label>
@@ -122,7 +119,7 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
           {startIcon && (
             <div className={clsx(
               "absolute left-3 top-1/2 -translate-y-1/2",
-              `${themePrefix}-typography-secondary`
+              `typography-secondary`
             )}>
               {startIcon}
             </div>
@@ -144,7 +141,7 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
           {endIcon && (
             <div className={clsx(
               "absolute right-3 top-1/2 -translate-y-1/2",
-              `${themePrefix}-typography-secondary`
+              `typography-secondary`
             )}>
               {endIcon}
             </div>
@@ -153,9 +150,9 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
         {(helperText || error || successMessage) && (
           <p className={clsx(
             'mt-1.5 text-sm',
-            error && `${themePrefix}-form-error`,
-            successMessage && `${themePrefix}-form-success`,
-            !error && !successMessage && `${themePrefix}-form-helper`
+            error && `form-error`,
+            successMessage && `form-success`,
+            !error && !successMessage && `form-helper`
           )}>
             {error || successMessage || helperText}
           </p>

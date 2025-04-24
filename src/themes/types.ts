@@ -1,4 +1,5 @@
-// src/types/theme.ts
+// src/themes/types.ts
+// Moved from src/types/theme.ts
 
 /**
  * Available theme names
@@ -98,7 +99,7 @@ export interface ThemeColors {
     formErrorText: string;
     formSuccessText: string;
 
-    // New UI properties for error handling and danger zones
+    // Error handling and danger zones
     errorBackground: string;
     deleteButtonBackground: string; 
     deleteButtonText: string;

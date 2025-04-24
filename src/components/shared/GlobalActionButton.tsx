@@ -1,6 +1,6 @@
 // components/features/dashboard/GlobalActionButton.tsx
 import React, { useState } from 'react';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { Plus, BookOpen, User, Scroll, MessageSquare, MapPin, X } from 'lucide-react';
 import clsx from 'clsx';

@@ -3,7 +3,7 @@ import React from 'react';
 import Typography from '../components/core/Typography';
 import ContactForm from '../components/features/contact/ContactForm';
 import { Mail, MessageSquare, Clock, Bug, PlusCircle } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../themes/ThemeContext';
 import clsx from 'clsx';
 
 const ContactPage: React.FC = () => {

@@ -3,7 +3,7 @@ import { Book, ScrollText, Clock, ListRestart } from 'lucide-react';
 import { useNavigation } from '../../../hooks/useNavigation';
 import Typography from '../../core/Typography';
 import { useStory } from '../../../context/StoryContext';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 
 const StorySidebar = () => {

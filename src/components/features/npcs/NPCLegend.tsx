@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Typography from '../../core/Typography';
 import Card from '../../core/Card';
 import Button from '../../core/Button';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 import {
   Shield,

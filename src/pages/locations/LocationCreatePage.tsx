@@ -7,7 +7,7 @@ import LocationCreateForm from '../../components/features/locations/LocationCrea
 import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 
 const LocationCreatePage: React.FC = () => {
   const { user } = useAuth();

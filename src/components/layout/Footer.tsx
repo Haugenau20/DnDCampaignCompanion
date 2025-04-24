@@ -1,22 +1,15 @@
 // components/layout/Footer.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useTheme } from '../../context/ThemeContext';
 import { useNavigation } from '../../hooks/useNavigation';
-import { clsx } from 'clsx';
 
 const Footer: React.FC = () => {
-  const { theme } = useTheme();
   const { navigateToPage } = useNavigation();
-  const themePrefix = theme.name;
   
   return (
-    <footer className={clsx(
-      'p-4',
-      `${themePrefix}-footer`
-    )}>
+    <footer className="p-4 footer">
       <div className="container mx-auto flex justify-center items-center gap-4">
-        <p className={clsx(`${themePrefix}-typography`)}>
+        <p className="typography">
           &copy; {new Date().getFullYear()} D&D Campaign Companion
         </p>
         
@@ -26,10 +19,7 @@ const Footer: React.FC = () => {
             e.preventDefault();
             navigateToPage('/privacy');
           }}
-          className={clsx(
-            'text-sm hover:underline',
-            `${themePrefix}-typography`
-          )}
+          className="text-sm hover:underline typography"
         >
           Privacy Policy
         </Link>
@@ -40,10 +30,7 @@ const Footer: React.FC = () => {
             e.preventDefault();
             navigateToPage('/contact');
           }}
-          className={clsx(
-            'text-sm hover:underline',
-            `${themePrefix}-typography`
-          )}
+          className="text-sm hover:underline typography"
         >
           Contact Us
         </Link>

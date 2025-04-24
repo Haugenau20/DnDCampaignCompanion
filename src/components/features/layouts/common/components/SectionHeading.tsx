@@ -1,6 +1,5 @@
 // components/features/layouts/common/components/SectionHeading.tsx
 import React, { ReactNode } from 'react';
-import { useTheme } from '../../../../../context/ThemeContext';
 import clsx from 'clsx';
 
 interface SectionHeadingProps {
@@ -23,19 +22,13 @@ const SectionHeading: React.FC<SectionHeadingProps> = ({
   actions,
   className
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   return (
     <div className={clsx(
       "flex justify-between items-center mb-3",
       className
     )}>
-      <h3 className={clsx(
-        "text-lg font-medium flex items-center gap-2",
-        `${themePrefix}-journal-heading`,
-        `${themePrefix}-heading`
-      )}>
+      <h3 className="text-lg font-medium flex items-center gap-2 journal-heading">
         {icon && <span className="flex-shrink-0">{icon}</span>}
         <span>
           {title} {(count !== undefined || loading) && (

@@ -5,7 +5,7 @@ import Card from '../../core/Card';
 import Button from '../../core/Button';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigation } from '../../../context/NavigationContext';
 import { useStory } from '../../../context/StoryContext';

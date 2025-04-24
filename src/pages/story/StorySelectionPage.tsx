@@ -3,7 +3,7 @@ import React from 'react';
 import Typography from '../../components/core/Typography';
 import Card from '../../components/core/Card';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import { ScrollText, BookOpen } from 'lucide-react';
 import clsx from 'clsx';
 

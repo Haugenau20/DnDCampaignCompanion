@@ -8,7 +8,7 @@ import Card from '../../core/Card';
 import Button from '../../core/Button';
 import { useLocations } from '../../../context/LocationContext';
 import { useNavigation } from '../../../context/NavigationContext';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import { useQuests } from '../../../context/QuestContext';
 import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import clsx from 'clsx';

@@ -9,8 +9,8 @@ import { Edit, Check, X, Loader2, AlertCircle, PlusCircle, Trash2, ChevronDown, 
 import { CharacterNameEntry } from '../../../types/user';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import Dialog from '../../core/Dialog';
-import { useTheme } from '../../../context/ThemeContext';
-import { themes } from '../../../themes';
+import { useTheme } from '../../../themes/ThemeContext';
+import { themes } from '../../../themes/definitions';
 import clsx from 'clsx';
 
 interface UserProfileProps {
@@ -29,7 +29,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
   const { validateUsername, updateGroupUserProfile } = useUser();
   
   const { theme, setTheme } = useTheme();
-  const themePrefix = theme.name;
   
   const [newUsername, setNewUsername] = useState('');
   const [isEditingUsername, setIsEditingUsername] = useState(false);
@@ -463,9 +462,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
                     checking ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : newUsername && usernameValid && usernameAvailable ? (
-                      <Check className={clsx("w-4 h-4", `${themePrefix}-success-icon`)} />
+                      <Check className={clsx("w-4 h-4", `success-icon`)} />
                     ) : newUsername && (usernameValid === false || usernameAvailable === false) ? (
-                      <X className={clsx("w-4 h-4", `${themePrefix}-form-error`)} />
+                      <X className={clsx("w-4 h-4", `form-error`)} />
                     ) : null
                   }
                 />
@@ -487,7 +486,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
         {/* User Role */}
         <div className="space-y-1">
           <Typography variant="body-sm" color="secondary">Role in this Group</Typography>
-          <Typography color={activeGroupUserProfile.role === 'admin' ? 'primary' : 'default'}>
+          <Typography color='default'>
             {activeGroupUserProfile.role === 'admin' ? 'Administrator' : 'Member'}
           </Typography>
         </div>
@@ -495,13 +494,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
         {/* Active Character Display */}
         <div className="space-y-2">
           <Typography variant="body-sm" color="secondary">Active Character</Typography>
-          <div className={clsx(
-            "p-3 rounded-lg",
-            `${themePrefix}-bg-secondary`
-          )}>
+          <div className="p-3 rounded-lg bg-secondary">
             {activeDisplayName ? (
               <div className="flex items-center">
-                <Star size={16} className={clsx("mr-2", `${themePrefix}-accent`)} />
+                <Star size={16} className={clsx("mr-2", `accent`)} />
                 <Typography>{activeDisplayName}</Typography>
               </div>
             ) : (
@@ -521,7 +517,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
               disabled={saving}
               className={clsx(
                 "w-full flex items-center justify-between p-3 rounded-md transition-colors border",
-                `${themePrefix}-bg-secondary`
+                `bg-secondary`
               )}
               type="button"
             >
@@ -539,7 +535,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
             {themeDropdownOpen && (
               <div className={clsx(
                 "absolute z-10 mt-1 w-full rounded-md shadow-lg max-h-60 overflow-auto",
-                `${themePrefix}-dropdown`
+                `dropdown`
               )}>
                 <div className="py-1">
                   {Object.values(themes).map((t) => (
@@ -550,8 +546,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
                       className={clsx(
                         "w-full flex items-center gap-2 px-4 py-2 text-left",
                         theme.name === t.name 
-                          ? `${themePrefix}-dropdown-item-active` 
-                          : `${themePrefix}-dropdown-item`
+                          ? `dropdown-item-active` 
+                          : `dropdown-item`
                       )}
                     >
                       <div 
@@ -560,7 +556,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
                       />
                       <span className="capitalize">{t.name}</span>
                       {theme.name === t.name && (
-                        <Check className={clsx("w-4 h-4 ml-auto", `${themePrefix}-success-icon`)} />
+                        <Check className={clsx("w-4 h-4 ml-auto", `success-icon`)} />
                       )}
                     </button>
                   ))}
@@ -628,13 +624,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
                   className={clsx(
                     "flex items-center justify-between p-3 rounded-md",
                     character.id === activeCharacterId 
-                      ? `${themePrefix}-selected-item` 
-                      : `${themePrefix}-selectable-item`
+                      ? `selected-item` 
+                      : `selectable-item`
                   )}
                 >
                   <div className="flex items-center">
                     {character.id === activeCharacterId && (
-                      <Star size={16} className={clsx("mr-2", `${themePrefix}-accent`)} />
+                      <Star size={16} className={clsx("mr-2", `accent`)} />
                     )}
                     <Typography>{character.name}</Typography>
                   </div>
@@ -663,7 +659,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteCharacterName(character.id)}
-                      startIcon={<Trash2 size={16} className={`${themePrefix}-form-error`} />}
+                      startIcon={<Trash2 size={16} className={`form-error`} />}
                       disabled={saving}
                     />
                   </div>
@@ -673,7 +669,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
           ) : (
             <div className={clsx(
               "py-2 px-3 rounded-md text-center",
-              `${themePrefix}-bg-secondary`
+              `bg-secondary`
             )}>
               <Typography color="secondary">No character names added yet</Typography>
             </div>
@@ -755,7 +751,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
             <Typography color="error">
               This will:
             </Typography>
-            <ul className={clsx("list-disc pl-5 space-y-1", `${themePrefix}-typography`)}>
+            <ul className={clsx("list-disc pl-5 space-y-1", `typography`)}>
               <li>Remove your access to all groups</li>
               <li>Delete all your user profiles and settings</li>
               <li>This action is permanent and cannot be undone</li>
@@ -783,7 +779,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
 
         {/* Error message */}
         {error && (
-          <div className={clsx("flex items-center gap-2", `${themePrefix}-form-error`)}>
+          <div className={clsx("flex items-center gap-2", `form-error`)}>
             <AlertCircle size={16} />
             <Typography color="error">{error}</Typography>
           </div>

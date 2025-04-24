@@ -1,7 +1,7 @@
 import React from 'react';
 import Typography from '../core/Typography';
 import { Scroll, Edit } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import clsx from 'clsx';
 
 interface AttributionInfoProps {

@@ -4,7 +4,7 @@ import Button from '../../core/Button';
 import Typography from '../../core/Typography';
 import { RumorStatus } from '../../../types/rumor';
 import { useRumors } from '../../../context/RumorContext';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import clsx from 'clsx';
 import { 

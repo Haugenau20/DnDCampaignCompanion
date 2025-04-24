@@ -5,7 +5,7 @@ import Card from '../../core/Card';
 import Button from '../../core/Button';
 import { MapPin, ChevronRight, AlertCircle } from 'lucide-react';
 import { useNavigation } from '../../../context/NavigationContext';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 
 const QuestSidebar = () => {

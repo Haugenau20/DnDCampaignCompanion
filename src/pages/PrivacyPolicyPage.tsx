@@ -9,7 +9,7 @@ import {
 } from '../constants/time';
 import { useNavigation } from '../hooks/useNavigation';
 import clsx from 'clsx';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../themes/ThemeContext';
 
 /**
  * Privacy Policy page component

@@ -1,11 +1,8 @@
 // components/features/layouts/journal/JournalLayout.tsx
 import React, { useState } from 'react';
-import { useTheme } from '../../../../context/ThemeContext';
 import { LayoutProps } from '../dashboard/DashboardLayout';
 import { Book, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react';
-import clsx from 'clsx';
 import Button from '../../../core/Button';
-import CampaignBanner from '../dashboard/sections/CampaignBanner';
 import JournalPages from './JournalPages';
 import JournalPage from './JournalPage';
 import CharacterGallery from './sections/CharacterGallery';
@@ -28,8 +25,6 @@ const JournalLayout: React.FC<LayoutProps> = ({
   activities,
   loading,
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   const [pageView, setPageView] = useState<'overview' | 'story'>('overview');
 
   // For mobile view, we'll paginate through sections
@@ -49,10 +44,7 @@ const JournalLayout: React.FC<LayoutProps> = ({
 
       {/* View toggle */}
       <div className="mb-4 flex justify-end">
-        <div className={clsx(
-          "inline-flex rounded-md shadow-sm",
-          `${themePrefix}-card-border`
-        )}>
+        <div className="inline-flex rounded-md shadow-sm card-border">
           <Button
             variant={pageView === 'overview' ? 'primary' : 'ghost'}
             size="sm"
@@ -73,25 +65,15 @@ const JournalLayout: React.FC<LayoutProps> = ({
       </div>
 
       {/* Journal container with binding effect */}
-      <div className={clsx(
-        "relative w-full rounded-lg overflow-hidden shadow-lg",
-        `${themePrefix}-journal-container`
-      )}>
+      <div className="relative w-full rounded-lg overflow-hidden shadow-lg journal-container">
         {/* Central binding */}
-        <div className={clsx(
-          "absolute top-0 bottom-0 left-1/2 transform -translate-x-1/2 w-8",
-          "hidden md:block", // Only show binding on larger screens
-          `${themePrefix}-journal-binding`
-        )}>
+        <div className="absolute top-0 bottom-0 left-1/2 transform -translate-x-1/2 w-8 hidden md:block journal-binding">
           {/* Binding stitches */}
           <div className="absolute inset-0 flex flex-col justify-evenly items-center">
             {[...Array(8)].map((_, i) => (
               <div 
                 key={i} 
-                className={clsx(
-                  "w-1 h-4 rounded-full",
-                  `${themePrefix}-journal-stitch`
-                )}
+                className="w-1 h-4 rounded-full journal-stitch"
               ></div>
             ))}
           </div>
@@ -107,10 +89,7 @@ const JournalLayout: React.FC<LayoutProps> = ({
           >
             Prev
           </Button>
-            <span className={clsx(
-            "px-2 py-1 rounded-full text-xs flex items-center justify-center relative -top-1",
-            `${themePrefix}-journal-pagination`
-            )}>
+            <span className="px-2 py-1 rounded-full text-xs flex items-center justify-center relative -top-1 journal-pagination">
             {mobilePage + 1}/{totalMobilePages}
             </span>
           <Button 

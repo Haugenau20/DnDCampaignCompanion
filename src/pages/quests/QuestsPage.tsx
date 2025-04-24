@@ -9,7 +9,7 @@ import QuestCard from '../../components/features/quests/QuestCard';
 import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
 import { useQuests } from '../../context/QuestContext';
 import { useNavigation } from '../../hooks/useNavigation';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import clsx from 'clsx';
 import { 
   Scroll, 

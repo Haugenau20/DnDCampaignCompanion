@@ -1,5 +1,5 @@
 // src/themes/medievalTheme.ts
-import { Theme } from '../types/theme';
+import { Theme } from '../types';
 
 export const medievalTheme: Theme = {
   name: 'medieval',

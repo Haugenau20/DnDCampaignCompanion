@@ -1,5 +1,5 @@
 // src/themes/lightTheme.ts
-import { Theme } from '../types/theme';
+import { Theme } from '../types';
 
 export const lightTheme: Theme = {
     name: 'light',
@@ -50,7 +50,7 @@ export const lightTheme: Theme = {
         },
       },
       ui: {
-        heading: '#FFFFFF', // Deep navy for strong headings
+        heading: '#0F172A', // Deep navy for strong headings
         statusGeneral: '#2563EB',
         statusActive: '#3B82F6', // Bright blue for active state
         statusCompleted: '#16A34A', // Strong green for success

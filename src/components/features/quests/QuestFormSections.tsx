@@ -7,7 +7,7 @@ import Input from '../../core/Input';
 import Button from '../../core/Button';
 import LocationCombobox from '../locations/LocationCombobox';
 import Dialog from '../../core/Dialog';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 import { PlusCircle, X, Target } from 'lucide-react';
 

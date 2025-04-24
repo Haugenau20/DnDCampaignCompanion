@@ -3,7 +3,7 @@ import { Chapter } from '../../../types/story';
 import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import { Book, X } from 'lucide-react';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 
 interface SlidingChaptersProps {

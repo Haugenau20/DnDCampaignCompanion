@@ -4,7 +4,7 @@ import Typography from '../../components/core/Typography';
 import ChapterForm from '../../components/features/story/ChapterForm';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useStory } from '../../context/StoryContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/firebase';
 import { BookPlus } from 'lucide-react';

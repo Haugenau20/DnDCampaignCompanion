@@ -2,7 +2,6 @@
 import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { useTheme } from '../../context/ThemeContext';
 
 /**
  * Button variant types for different visual styles
@@ -69,8 +68,6 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   // Determine if we're using the vertical layout
   const isVertical = iconPosition === 'top';
@@ -82,6 +79,8 @@ export const Button: React.FC<ButtonProps> = ({
   const buttonStyles = twMerge(
     clsx(
       // Base styles
+      `button`,
+      `button-${variant}`,
       'relative rounded-lg font-medium transition-colors duration-200',
       'focus:outline-none ', //focus:ring-2 focus:ring-offset-2',
       'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -99,10 +98,6 @@ export const Button: React.FC<ButtonProps> = ({
       
       // Loading state styles
       isLoading && 'cursor-wait',
-      
-      // Theme-specific classes
-      `${themePrefix}-button`,
-      `${themePrefix}-button-${variant}`,
       
       // Custom classes
       className

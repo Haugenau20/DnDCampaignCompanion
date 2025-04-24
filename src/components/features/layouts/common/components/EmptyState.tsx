@@ -1,8 +1,7 @@
 // components/features/layouts/common/components/EmptyState.tsx
 import React, { ReactNode } from 'react';
-import { useTheme } from '../../../../../context/ThemeContext';
-import clsx from 'clsx';
 import Button from '../../../../core/Button';
+import clsx from 'clsx';
 
 interface EmptyStateProps {
   icon: ReactNode;
@@ -24,14 +23,10 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   onAction,
   className
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   return (
     <div className={clsx(
-      "text-center py-4",
-      `${themePrefix}-journal-empty`,
-      `${themePrefix}-empty-state`,
+      "text-center py-4 journal-empty",
       className
     )}>
       <div className="w-8 h-8 mx-auto mb-2 opacity-50 flex items-center justify-center">
@@ -39,18 +34,12 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       </div>
       
       {title && (
-        <p className={clsx(
-          "text-base font-medium mb-1", 
-          `${themePrefix}-typography`
-        )}>
+        <p className="text-base font-medium mb-1 typography">
           {title}
         </p>
       )}
       
-      <p className={clsx(
-        "text-sm italic",
-        `${themePrefix}-typography-secondary`
-      )}>
+      <p className="text-sm italic typography-secondary">
         {message}
       </p>
       

@@ -4,9 +4,7 @@ import { useInvitations } from '../../../../context/firebase';
 import Typography from '../../../core/Typography';
 import Input from '../../../core/Input';
 import Button from '../../../core/Button';
-import Card from '../../../core/Card';
 import Dialog from '../../../core/Dialog';
-import { useTheme } from '../../../../context/ThemeContext';
 import { useGroups } from '../../../../context/firebase';
 import { 
   Search, 
@@ -19,7 +17,6 @@ import {
   X, 
   AlertCircle 
 } from 'lucide-react';
-import clsx from 'clsx';
 
 const TokenManagementView: React.FC = () => {
   const { 
@@ -29,8 +26,6 @@ const TokenManagementView: React.FC = () => {
   } = useInvitations();
   
   const { activeGroup, activeGroupId } = useGroups();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   // State
   const [tokens, setTokens] = useState<any[]>([]);
@@ -173,10 +168,7 @@ const TokenManagementView: React.FC = () => {
   return (
     <>
       {/* Generate token form */}
-      <div className={clsx(
-        "p-4 rounded-lg mb-6",
-        `${themePrefix}-card`
-      )}>
+      <div className="p-4 rounded-lg mb-6 card">
         <Typography variant="h4" className="mb-4">
           Generate Registration Token
         </Typography>
@@ -200,10 +192,7 @@ const TokenManagementView: React.FC = () => {
 
       {/* Error message */}
       {error && (
-        <div className={clsx(
-          "flex items-center gap-2 p-3 rounded-lg mb-4",
-          `${themePrefix}-typography-error`
-        )}>
+        <div className="flex items-center gap-2 p-3 rounded-lg mb-4 typography-error">
           <AlertCircle size={16} />
           <Typography color="error">{error}</Typography>
         </div>
@@ -220,76 +209,46 @@ const TokenManagementView: React.FC = () => {
               placeholder="Search tokens..."
               value={tokenSearchQuery}
               onChange={(e) => setTokenSearchQuery(e.target.value)}
-              startIcon={<Search className={clsx("w-4 h-4", `${themePrefix}-primary`)} />}
+              startIcon={<Search className="w-4 h-4 primary" />}
             />
           </div>
         </div>
 
         {loadingTokens ? (
           <div className="text-center py-8">
-            <div className={clsx(
-              "animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto mb-4",
-              `${themePrefix}-primary`
-            )} />
+            <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto mb-4 primary" />
             <Typography>Loading tokens...</Typography>
           </div>
         ) : sortedTokens.length === 0 ? (
-          <div className={clsx(
-            "text-center py-8 rounded-lg",
-            `${themePrefix}-card`
-          )}>
-            <Ticket className={clsx(
-              "w-12 h-12 mx-auto mb-4",
-              `${themePrefix}-primary`
-            )} />
+          <div className="text-center py-8 rounded-lg card">
+            <Ticket className="w-12 h-12 mx-auto mb-4 primary" />
             <Typography color="secondary">
               {tokenSearchQuery ? 'No tokens match your search' : 'No registration tokens found'}
             </Typography>
           </div>
         ) : (
-          <div className={clsx(
-            "border rounded-lg overflow-hidden",
-            `${themePrefix}-card`
-          )}>
+          <div className="border rounded-lg overflow-hidden card">
             <table className="min-w-full divide-y">
-              <thead className={`${themePrefix}-navigation`}>
+              <thead className={`navigation`}>
                 <tr>
-                  <th className={clsx(
-                    "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                    `${themePrefix}-typography`
-                  )}>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider typography">
                     Token
                   </th>
-                  <th className={clsx(
-                    "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                    `${themePrefix}-typography`
-                  )}>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider typography">
                     Status
                   </th>
-                  <th className={clsx(
-                    "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                    `${themePrefix}-typography`
-                  )}>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider typography">
                     Created
                   </th>
-                  <th className={clsx(
-                    "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                    `${themePrefix}-typography`
-                  )}>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider typography">
                     Notes
                   </th>
-                  <th className={clsx(
-                    "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                    `${themePrefix}-typography`
-                  )}>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider typography">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className={clsx(
-                "divide-y",
-                `${themePrefix}-theme`
-              )}>
+              <tbody className="divide-y theme">
                 {sortedTokens.map((tokenData) => (
                   <tr key={tokenData.token}>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -304,7 +263,7 @@ const TokenManagementView: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {tokenData.used ? (
-                      <div className={clsx("flex items-center", `${themePrefix}-form-success`)}>
+                      <div className="flex items-center form-success">
                         <Check className="w-4 h-4 mr-1" />
                         <Typography 
                           variant="body-sm" 
@@ -355,7 +314,7 @@ const TokenManagementView: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteToken(tokenData.token)}
-                          startIcon={<Trash className={clsx("w-4 h-4", `${themePrefix}-delete-button`)} />}
+                          startIcon={<Trash className="w-4 h-4 delete-button" />}
                         >
                           Delete
                         </Button>
@@ -413,10 +372,7 @@ const TokenManagementView: React.FC = () => {
             Share this registration link:
           </Typography>
           
-          <div className={clsx(
-            "p-3 rounded border flex items-center space-x-2 overflow-hidden",
-            `${themePrefix}-card`
-          )}>
+          <div className="p-3 rounded border flex items-center space-x-2 overflow-hidden card">
             <div className="truncate flex-1">
               <Typography variant="body-sm" className="font-mono">
                 {generateRegistrationLink(inviteDialog.token)}
@@ -427,7 +383,7 @@ const TokenManagementView: React.FC = () => {
               size="sm"
               onClick={copyInviteLink}
               startIcon={copySuccess ? 
-                <Check size={16} className={clsx(`${themePrefix}-form-success`)} /> : 
+                <Check size={16} className="form-success" /> : 
                 <Copy size={16} />
               }
             >

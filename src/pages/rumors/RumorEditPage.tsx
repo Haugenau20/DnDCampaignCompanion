@@ -8,7 +8,7 @@ import RumorForm from '../../components/features/rumors/RumorForm';
 import { useRumors } from '../../context/RumorContext';
 import { useAuth } from '../../context/firebase';
 import { useNavigation } from '../../hooks/useNavigation';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import clsx from 'clsx';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 

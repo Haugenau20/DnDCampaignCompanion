@@ -1,8 +1,6 @@
 // components/features/layouts/journal/sections/RecentActivityChronicle.tsx
 import React from 'react';
-import { useTheme } from '../../../../../context/ThemeContext';
 import { Loader2, MessageSquare } from 'lucide-react';
-import clsx from 'clsx';
 import { Activity } from '../../../../../pages/HomePage';
 import { useActivityDisplay } from '../../common/hooks/useActivityDisplay';
 import { getContentIcon } from '../../common/utils/contentTypeUtils';
@@ -18,8 +16,6 @@ interface RecentActivityChronicleProps {
  * Displays recent activity in a journal-style chronicle
  */
 const RecentActivityChronicle: React.FC<RecentActivityChronicleProps> = ({ activities, loading }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Use the activity display hook with journal styling
   const { 
@@ -34,7 +30,7 @@ const RecentActivityChronicle: React.FC<RecentActivityChronicleProps> = ({ activ
   });
 
   return (
-    <div className={clsx("relative", `${themePrefix}-journal-section`)}>
+    <div className="relative journal-section">
       <SectionHeading 
         title="Recent Events" 
         loading={loading}
@@ -55,48 +51,30 @@ const RecentActivityChronicle: React.FC<RecentActivityChronicleProps> = ({ activ
             <div 
               key={`${activity.type}-${activity.id}`}
               onClick={() => handleActivityClick(activity)}
-              className={clsx(
-                "cursor-pointer transition-transform hover:scale-[1.01]",
-                `${themePrefix}-journal-activity-item`
-              )}
+              className="cursor-pointer transition-transform hover:scale-[1.01] journal-activity-item"
             >
               <div className="flex items-start gap-2">
-                <div className={clsx(
-                  "p-1.5 rounded-full mt-0.5",
-                  `${themePrefix}-journal-activity-icon-bg`
-                )}>
+                <div className="p-1.5 rounded-full mt-0.5 journal-activity-icon-bg">
                   {getContentIcon(activity.type, 16)}
                 </div>
                 
                 <div className="flex-1">
                   <div className="flex items-start justify-between">
-                    <span className={clsx(
-                      "text-sm font-medium",
-                      `${themePrefix}-journal-activity-title`
-                    )}>
+                    <span className="text-sm font-medium journal-activity-title">
                       {activity.title}
                     </span>
                     
-                    <span className={clsx(
-                      "text-xs italic",
-                      `${themePrefix}-journal-activity-date`
-                    )}>
+                    <span className="text-xs italic journal-activity-date">
                       {formatDate(activity.timestamp)}
                     </span>
                   </div>
                   
-                  <div className={clsx(
-                    "text-xs",
-                    `${themePrefix}-journal-activity-type`
-                  )}>
+                  <div className="text-xs journal-activity-type">
                     {getTypeLabel(activity.type)}
                   </div>
                   
                   {activity.description && (
-                    <p className={clsx(
-                      "text-xs mt-1 italic line-clamp-2",
-                      `${themePrefix}-journal-activity-description`
-                    )}>
+                    <p className="text-xs mt-1 italic line-clamp-2 journal-activity-description">
                       "{activity.description}"
                     </p>
                   )}
@@ -105,10 +83,7 @@ const RecentActivityChronicle: React.FC<RecentActivityChronicleProps> = ({ activ
               
               {/* Add a handwritten-style separator except for last item */}
               {index < recentActivities.length - 1 && (
-                <div className={clsx(
-                  "mt-3 text-center text-xs",
-                  `${themePrefix}-journal-activity-separator`
-                )}>
+                <div className="mt-3 text-center text-xs journal-activity-separator">
                   ✧ ✦ ✧
                 </div>
               )}

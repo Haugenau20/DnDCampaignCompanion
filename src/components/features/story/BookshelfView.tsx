@@ -1,7 +1,7 @@
 // components/features/story/BookshelfView.tsx
 import React, { useMemo } from 'react';
 import Typography from '../../core/Typography';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import { Chapter } from '../../../types/story';
 import clsx from 'clsx';
 import { ChevronRight } from 'lucide-react';

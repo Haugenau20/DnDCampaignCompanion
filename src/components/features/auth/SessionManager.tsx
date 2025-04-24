@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import useSessionManager from '../../../hooks/useSessionManager';
 import { useGroups } from '../../../context/firebase';
-import { useTheme } from '../../../context/ThemeContext';
-import { ThemeName } from '../../../types/theme';
+import { useTheme } from '../../../themes/ThemeContext';
+import { ThemeName } from '../../../themes/types';
 
 /**
  * Component that manages user session activity tracking and theme preference synchronization

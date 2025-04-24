@@ -13,7 +13,7 @@ import {
   RelatedQuestsSection
 } from './LocationFormSections';
 import { AlertCircle, Save, X } from 'lucide-react';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 import { useAuth, useUser, useGroups, useCampaigns } from '../../../context/firebase';
 import { useLocations } from '../../../context/LocationContext';

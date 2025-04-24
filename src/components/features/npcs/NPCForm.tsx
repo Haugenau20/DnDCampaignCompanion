@@ -8,7 +8,7 @@ import Typography from '../../core/Typography';
 import Card from '../../core/Card';
 import Dialog from '../../core/Dialog';
 import { useQuests } from '../../../context/QuestContext';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import { useAuth, useUser } from '../../../context/firebase';
 import clsx from 'clsx';
 import { getUserDisplayName } from '../../../utils/user-utils';

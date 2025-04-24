@@ -8,7 +8,7 @@ import Card from '../../components/core/Card';
 import { Book, Edit, Loader2 } from 'lucide-react';
 import { useSagaData } from '../../hooks/useSagaData';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import { useAuth } from '../../context/firebase';
 import clsx from 'clsx';
 

@@ -1,6 +1,6 @@
 // components/features/layouts/DashboardLayout.tsx
 import React from 'react';
-import { useTheme } from '../../../../context/ThemeContext';
+import { useTheme } from '../../../../themes/ThemeContext';
 import clsx from 'clsx';
 import CampaignBanner from './sections/CampaignBanner';
 import ActivityFeed from './sections/ActivityFeed';

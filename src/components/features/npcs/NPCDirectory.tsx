@@ -7,7 +7,7 @@ import Typography from '../../core/Typography';
 import Input from '../../core/Input';
 import { Search, Users, MapPin, Heart, AlertCircle } from 'lucide-react';
 import { useNavigation } from '../../../context/NavigationContext';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 
 interface NPCDirectoryProps {

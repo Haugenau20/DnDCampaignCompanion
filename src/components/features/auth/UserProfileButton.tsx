@@ -1,7 +1,7 @@
 // src/components/features/auth/UserProfileButton.tsx
 import React, { useState } from 'react';
 import { useAuth, useGroups } from '../../../context/firebase';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import Button from '../../core/Button';
 import Dialog from '../../core/Dialog';
 import { LogIn, User, ShieldAlert, UserPlus } from 'lucide-react';

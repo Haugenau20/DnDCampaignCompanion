@@ -2,7 +2,7 @@
 import React, { FC, ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider } from '../context/ThemeContext';
+import { ThemeProvider } from '../themes/ThemeContext';
 import { FirebaseProvider } from '../context/firebase/FirebaseContext';
 import { NavigationProvider } from '../context/NavigationContext';
 import { SearchProvider } from '../context/SearchContext';

@@ -4,7 +4,7 @@ import Dialog from '../core/Dialog';
 import Typography from '../core/Typography';
 import Button from '../core/Button';
 import { AlertTriangle, Trash2 } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import clsx from 'clsx';
 
 interface DeleteConfirmationDialogProps {

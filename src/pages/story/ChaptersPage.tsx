@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useStory } from '../../context/StoryContext';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import { useAuth } from '../../context/firebase';
 import Typography from '../../components/core/Typography';
 import Breadcrumb from '../../components/layout/Breadcrumb';

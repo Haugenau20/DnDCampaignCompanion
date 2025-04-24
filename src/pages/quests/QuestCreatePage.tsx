@@ -9,7 +9,7 @@ import { useNavigation } from '../../context/NavigationContext';
 import { useRumors } from '../../context/RumorContext';
 import { useQuests } from '../../context/QuestContext';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import clsx from 'clsx';
 
 const QuestCreatePage: React.FC = () => {

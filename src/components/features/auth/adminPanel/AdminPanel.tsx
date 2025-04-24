@@ -4,7 +4,6 @@ import { useGroups } from '../../../../context/firebase';
 import Typography from '../../../core/Typography';
 import Button from '../../../core/Button';
 import Card from '../../../core/Card';
-import { useTheme } from '../../../../context/ThemeContext';
 import { ShieldAlert, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -35,9 +34,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     activeGroupId,
     loading 
   } = useGroups();
-  
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   // Local loading state with timeout to avoid infinite loading
   const [localLoading, setLocalLoading] = useState(true);
@@ -75,7 +71,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     return (
       <Card>
         <Card.Content className="text-center py-8">
-          <Loader2 className={clsx("w-16 h-16 mx-auto mb-4 animate-spin", `${themePrefix}-primary`)} />
+          <Loader2 className={clsx("w-16 h-16 mx-auto mb-4 animate-spin", `primary`)} />
           <Typography variant="h3" className="mb-2">
             Loading Admin Panel
           </Typography>
@@ -92,7 +88,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     return (
       <Card>
         <Card.Content className="text-center py-8">
-          <ShieldAlert className={clsx("w-16 h-16 mx-auto mb-4", `${themePrefix}-delete-button`)} />
+          <ShieldAlert className={clsx("w-16 h-16 mx-auto mb-4", `delete-button`)} />
           <Typography variant="h3" className="mb-2">
             Access Denied
           </Typography>
@@ -124,13 +120,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
         </Typography>
         
         {/* Tab Navigation */}
-        <div className={clsx("flex flex-wrap border-b", `${themePrefix}-navigation`)}>
+        <div className={clsx("flex flex-wrap border-b", `navigation`)}>
           <button
             className={clsx(
               "py-2 px-4 font-medium flex items-center gap-2",
               activeTab === AdminTab.Tokens 
-                ? `${themePrefix}-navigation-item-active` 
-                : `${themePrefix}-navigation-item`
+                ? `navigation-item-active` 
+                : `navigation-item`
             )}
             onClick={() => setActiveTab(AdminTab.Tokens)}
           >
@@ -140,8 +136,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             className={clsx(
               "py-2 px-4 font-medium flex items-center gap-2",
               activeTab === AdminTab.Users 
-                ? `${themePrefix}-navigation-item-active` 
-                : `${themePrefix}-navigation-item`
+                ? `navigation-item-active` 
+                : `navigation-item`
             )}
             onClick={() => setActiveTab(AdminTab.Users)}
           >
@@ -151,8 +147,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             className={clsx(
               "py-2 px-4 font-medium flex items-center gap-2",
               activeTab === AdminTab.Campaigns 
-                ? `${themePrefix}-navigation-item-active` 
-                : `${themePrefix}-navigation-item`
+                ? `navigation-item-active` 
+                : `navigation-item`
             )}
             onClick={() => setActiveTab(AdminTab.Campaigns)}
           >
@@ -162,8 +158,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             className={clsx(
               "py-2 px-4 font-medium flex items-center gap-2",
               activeTab === AdminTab.Groups 
-                ? `${themePrefix}-navigation-item-active` 
-                : `${themePrefix}-navigation-item`
+                ? `navigation-item-active` 
+                : `navigation-item`
             )}
             onClick={() => setActiveTab(AdminTab.Groups)}
           >

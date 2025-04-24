@@ -8,7 +8,7 @@ import Input from '../../core/Input';
 import { Search, MapPin, Building } from 'lucide-react';
 import { useFirebaseData } from '../../../hooks/useFirebaseData';
 import { useNavigation } from '../../../context/NavigationContext';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 
 interface LocationDirectoryProps {

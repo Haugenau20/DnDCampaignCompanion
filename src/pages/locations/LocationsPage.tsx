@@ -8,7 +8,7 @@ import { useLocations } from '../../context/LocationContext';
 import { Map, MapPin, Eye, EyeOff, Plus } from 'lucide-react';
 import Button from '../../components/core/Button';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import clsx from 'clsx';
 
 const LocationsPage: React.FC = () => {

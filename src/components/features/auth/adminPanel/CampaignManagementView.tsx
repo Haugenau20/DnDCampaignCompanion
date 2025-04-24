@@ -7,7 +7,6 @@ import Input from '../../../core/Input';
 import Button from '../../../core/Button';
 import Card from '../../../core/Card';
 import Dialog from '../../../core/Dialog';
-import { useTheme } from '../../../../context/ThemeContext';
 import { Campaign } from '../../../../types/user';
 import { 
   Search, 
@@ -29,9 +28,7 @@ const CampaignManagementView: React.FC = () => {
     getCampaigns
   } = useCampaigns();
   const { user } = useAuth();
-  const { activeGroup, activeGroupId } = useGroups();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
+  const { activeGroupId } = useGroups();
   
   // State
   const [localCampaigns, setLocalCampaigns] = useState<Campaign[]>([]);
@@ -161,7 +158,7 @@ const CampaignManagementView: React.FC = () => {
               placeholder="Search campaigns..."
               value={campaignSearchQuery}
               onChange={(e) => setCampaignSearchQuery(e.target.value)}
-              startIcon={<Search className={clsx("w-4 h-4", `${themePrefix}-typography-secondary`)} />}
+              startIcon={<Search className={clsx("w-4 h-4", `typography-secondary`)} />}
             />
           </div>
           
@@ -178,7 +175,7 @@ const CampaignManagementView: React.FC = () => {
       {error && (
         <div className={clsx(
           "flex items-center gap-2 p-3 rounded-lg mb-4",
-          `${themePrefix}-typography-error`
+          `typography-error`
         )}>
           <AlertCircle size={16} />
           <Typography color="error">{error}</Typography>
@@ -190,18 +187,18 @@ const CampaignManagementView: React.FC = () => {
         <div className="text-center py-8">
           <div className={clsx(
             "animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto mb-4",
-            `${themePrefix}-primary`
+            `primary`
           )} />
           <Typography>Loading campaigns...</Typography>
         </div>
       ) : sortedCampaigns.length === 0 ? (
         <div className={clsx(
           "text-center py-8 rounded-lg",
-          `${themePrefix}-card`
+          `card`
         )}>
           <BookOpen className={clsx(
             "w-12 h-12 mx-auto mb-4",
-            `${themePrefix}-primary`
+            `primary`
           )} />
           <Typography color="secondary">
             {campaignSearchQuery ? 'No campaigns match your search' : 'No campaigns found'}
@@ -232,7 +229,7 @@ const CampaignManagementView: React.FC = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      startIcon={<Trash size={16} className={clsx(`${themePrefix}-delete-button`)} />}
+                      startIcon={<Trash size={16} className={clsx(`delete-button`)} />}
                       onClick={() => handleDeleteCampaign(campaign.id, campaign.name)}
                     >
                       Delete
@@ -248,7 +245,7 @@ const CampaignManagementView: React.FC = () => {
                 
                 <div className="flex flex-wrap gap-y-2 gap-x-4 pt-2">
                   <div className="flex items-center gap-1">
-                    <Calendar size={16} className={clsx(`${themePrefix}-primary`)} />
+                    <Calendar size={16} className={clsx(`primary`)} />
                     <Typography variant="body-sm" color="secondary">
                       Created: {campaign.createdAt instanceof Date
                         ? campaign.createdAt.toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})
@@ -258,7 +255,7 @@ const CampaignManagementView: React.FC = () => {
                   </div>
                   
                   <div className="flex items-center gap-1">
-                    <User size={16} className={clsx(`${themePrefix}-primary`)} />
+                    <User size={16} className={clsx(`primary`)} />
                     <Typography variant="body-sm" color="secondary">
                       By: {campaign.createdBy === user?.uid ? 'You' : 'Another User'}
                     </Typography>

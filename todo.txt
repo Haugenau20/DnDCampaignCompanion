@@ -28,6 +28,10 @@ Prioritized Todo List
 
 Waiting for prio:
 
+- Lots of dates are invalid.
+
+- Bookshelf view has some odd color differences.
+
 - Implement/review proper highlighting logic to pages.
 - The medieval theme does not work with the hamburger menu and theme selector dropdown.
 

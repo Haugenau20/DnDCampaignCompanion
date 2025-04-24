@@ -11,7 +11,7 @@ import { useRumors } from '../../../context/RumorContext';
 import { useNavigation } from '../../../hooks/useNavigation';
 import { useNPCs } from '../../../context/NPCContext';
 import { useLocations } from '../../../context/LocationContext';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import AttributionInfo from '../../shared/AttributionInfo';
 import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import clsx from 'clsx';

@@ -14,7 +14,7 @@ import {
   Users, 
   Scroll,
 } from 'lucide-react';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 
 interface SectionProps {

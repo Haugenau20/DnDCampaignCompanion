@@ -6,7 +6,7 @@ import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import Card from '../../core/Card';
 import { useNPCs } from '../../../context/NPCContext';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 import {
   BasicInfoSection,

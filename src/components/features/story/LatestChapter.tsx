@@ -4,7 +4,7 @@ import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import { Book, Clock, ChevronRight } from 'lucide-react';
 import { useNavigation } from '../../../context/NavigationContext';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 
 interface LatestChapterProps {

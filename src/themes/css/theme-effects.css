@@ -1,0 +1,217 @@
+/* src/themes/css/theme-effects.css */
+/*
+  Theme-specific styling that overrides or enhances the base components.
+  Uses data-theme attribute to target specific themes.
+*/
+
+/* ====== MEDIEVAL THEME SPECIFIC EFFECTS ====== */
+
+/* Medieval theme body */
+[data-theme="medieval"] body {
+  /* Apply parchment texture to background */
+  background-image: url('../../../public/decorative/parchment-texture.svg');
+  background-repeat: repeat;
+}
+
+/* Medieval theme button special effect */
+[data-theme="medieval"] .button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 100%
+  );
+  transition: left 0.5s ease;
+}
+
+[data-theme="medieval"] .button:hover::before {
+  left: 100%;
+}
+
+/* Medieval theme card decoration */
+[data-theme="medieval"] .card {
+  position: relative;
+  border-width: var(--border-width-md);
+}
+
+[data-theme="medieval"] .card::before,
+[data-theme="medieval"] .card::after {
+  content: '';
+  position: absolute;
+  width: 2rem;
+  height: 2rem;
+  background-image: url('../../../public/decorative/corner-dragon.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+[data-theme="medieval"] .card::before {
+  top: -0.5rem;
+  left: -0.5rem;
+  transform: rotate(0deg);
+}
+
+[data-theme="medieval"] .card::after {
+  bottom: -0.5rem;
+  right: -0.5rem;
+  transform: rotate(180deg);
+}
+
+/* Medieval theme heading decoration */
+[data-theme="medieval"] .typography-heading::after {
+  content: '';
+  display: block;
+  margin-top: 0.5rem;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--card-border) 50%,
+    transparent 100%
+  );
+}
+
+/* Medieval theme journal fonts */
+[data-theme="medieval"] .journal-heading {
+  font-family: 'MedievalSharp', cursive, var(--font-heading);
+  transform: rotate(-0.5deg);
+}
+
+[data-theme="medieval"] .journal-character-name,
+[data-theme="medieval"] .journal-quest-title,
+[data-theme="medieval"] .journal-activity-title {
+  font-family: 'MedievalSharp', cursive, var(--font-primary);
+}
+
+[data-theme="medieval"] .journal-quest-note {
+  font-style: italic;
+}
+
+[data-theme="medieval"] .journal-activity-date {
+  font-style: italic;
+}
+
+[data-theme="medieval"] .journal-activity-description {
+  font-style: italic;
+}
+
+[data-theme="medieval"] .journal-activity-separator {
+  font-family: 'MedievalSharp', cursive;
+}
+
+/* Medieval scroll decoration */
+[data-theme="medieval"] .decoration-scroll {
+  position: relative;
+}
+
+[data-theme="medieval"] .decoration-scroll::before,
+[data-theme="medieval"] .decoration-scroll::after {
+  content: '';
+  position: absolute;
+  height: 24px;
+  width: 24px;
+  background-image: url('../../../public/decorative/scroll-end.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+[data-theme="medieval"] .decoration-scroll::before {
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg);
+}
+
+[data-theme="medieval"] .decoration-scroll::after {
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Journal page pattern */
+[data-theme="medieval"] .journal-page {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e0d8c0' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Journal binding pattern */
+[data-theme="medieval"] .journal-binding {
+  background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23422106' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 5v1H5z'/%3E%3Cpath d='M6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ====== DARK THEME SPECIFIC EFFECTS ====== */
+
+/* Dark theme scrollbar */
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 0;
+  border: 2px solid var(--bg-primary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Dark theme dialog */
+[data-theme="dark"] .dialog {
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Dark theme typography */
+[data-theme="dark"] .typography-heading {
+  color: var(--heading-color);
+}
+
+/* Journal page patterns */
+[data-theme="dark"] .journal-page {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23333333' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Journal binding patterns */
+[data-theme="dark"] .journal-binding {
+  background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23222222' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 5v1H5z'/%3E%3Cpath d='M6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ====== LIGHT THEME SPECIFIC EFFECTS ====== */
+
+/* Light theme card hover */
+[data-theme="light"] .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Light theme book content area */
+[data-theme="light"] .book-content-area {
+  background-color: #FFF9ED; /* Special parchment color for book content */
+}
+
+[data-theme="light"] .book-content,
+[data-theme="light"] .book-text {
+  font-family: 'Crimson Text', serif;
+}
+
+/* Light theme scrollbar */
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 10px;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Journal page patterns */
+[data-theme="light"] .journal-page {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e6e6e6' fill-opacity='0.2'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Journal binding patterns */
+[data-theme="light"] .journal-binding {
+  background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23624935' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 5v1H5z'/%3E%3Cpath d='M6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
+}

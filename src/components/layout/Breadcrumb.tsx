@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
 import Typography from '../core/Typography';
-import { useTheme } from '../../context/ThemeContext';
 import clsx from 'clsx';
 
 interface BreadcrumbItem {
@@ -16,8 +15,6 @@ interface BreadcrumbProps {
 }
 
 const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   return (
     <nav 
@@ -28,10 +25,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' }) => {
         <li>
           <Link
             to="/"
-            className={clsx(
-              "hover:opacity-80 transition-colors",
-              `${themePrefix}-typography-secondary`
-            )}
+            className="hover:opacity-80 transition-colors typography-secondary"
             aria-label="Home"
           >
             <Home className="w-4 h-4" />
@@ -43,7 +37,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' }) => {
 
           return (
             <li key={item.label} className="flex items-center">
-              <ChevronRight className={clsx("w-4 h-4 mx-2", `${themePrefix}-typography-secondary`)} />
+              <ChevronRight className="w-4 h-4 mx-2 typography-secondary" />
               {isLast ? (
                 <Typography
                   variant="body-sm"
@@ -56,10 +50,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' }) => {
               ) : (
                 <Link
                   to={item.href || '#'}
-                  className={clsx(
-                    "transition-colors hover:opacity-80",
-                    `${themePrefix}-typography-secondary`
-                  )}
+                  className="transition-colors hover:opacity-80 typography-secondary"
                 >
                   {item.label}
                 </Link>

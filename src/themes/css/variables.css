@@ -1,0 +1,133 @@
+/* src/themes/css/variables.css */
+/* 
+  CSS variable declarations (without values).
+  ThemeContext.tsx will dynamically set these values based on the active theme.
+  This file serves as documentation of available variables.
+*/
+
+:root {
+  /* Core Colors */
+  --color-primary: ;
+  --color-secondary: ;
+  --color-accent: ;
+  
+  /* Background Colors */
+  --bg-primary: ;
+  --bg-secondary: ;
+  --bg-accent: ;
+  
+  /* Text Colors */
+  --text-primary: ;
+  --text-secondary: ;
+  --text-accent: ;
+  
+  /* Card Colors */
+  --card-bg: ;
+  --card-border: ;
+  
+  /* Status Colors */
+  --status-general: ;
+  --status-active: ;
+  --status-completed: ;
+  --status-failed: ;
+  --status-unknown: ;
+  --status-text: ;
+  
+  /* UI Element Colors */
+  --header-bg: ;
+  --footer-bg: ;
+  --heading-color: ;
+  --hover-light: ;
+  --hover-medium: ;
+  --icon-bg: ;
+  --icon-border: ;
+  
+  /* Form Element Colors */
+  --input-bg: ;
+  --input-placeholder: ;
+  --input-border: ;
+  --input-border-focus: ;
+  --input-ring-focus: ;
+  --input-error-border: ;
+  --input-error-focus: ;
+  --input-error-ring: ;
+  --input-success-border: ;
+  --input-success-focus: ;
+  --input-success-ring: ;
+  --form-disabled-bg: ;
+  --form-label-text: ;
+  --form-helper-text: ;
+  --form-error-text: ;
+  --form-success-text: ;
+  
+  /* Button Colors */
+  --button-primary-bg: ;
+  --button-primary-text: ;
+  --button-primary-hover: ;
+  --button-secondary-bg: ;
+  --button-secondary-text: ;
+  --button-secondary-hover: ;
+  --button-link-bg: ;
+  --button-link-text: ;
+  --button-link-hover: ;
+  --button-outline-bg: ;
+  --button-outline-text: ;
+  --button-outline-hover: ;
+  --button-outline-border: ;
+  --button-ghost-bg: ;
+  --button-ghost-text: ;
+  --button-ghost-hover: ;
+  
+  /* Error and Danger Colors */
+  --error-bg: ;
+  --delete-button-bg: ;
+  --delete-button-text: ;
+  --delete-button-hover: ;
+  
+  /* Location Type Colors */
+  --location-type-region: ;
+  --location-type-city: ;
+  --location-type-town: ;
+  --location-type-village: ;
+  --location-type-dungeon: ;
+  --location-type-landmark: ;
+  --location-type-building: ;
+  --location-type-poi: ;
+  
+  /* Spinner Colors */
+  --spinner-border: ;
+  --spinner-active: ;
+  
+  /* Journal Specific Colors */
+  --journal-leather: ;
+  --journal-binding: ;
+  --journal-stitch: ;
+  --journal-page-shadow: ;
+  --journal-section-divider: ;
+  --journal-character-card-bg: ;
+  --journal-character-card-hover: ;
+  --journal-quest-item-bg: ;
+  --journal-quest-item-hover: ;
+  --journal-activity-hover: ;
+  --journal-notes-area: ;
+  
+  /* Book Viewer Colors */
+  --book-bg: ;
+  --book-header-bg: ;
+  --book-nav-bg: ;
+  --book-content-bg: ;
+  --book-pagination-bg: ;
+  
+  /* Fonts */
+  --font-primary: ;
+  --font-secondary: ;
+  --font-heading: ;
+  
+  /* Border Styles */
+  --border-radius-sm: ;
+  --border-radius-md: ;
+  --border-radius-lg: ;
+  --border-width-sm: ;
+  --border-width-md: ;
+  --border-width-lg: ;
+}

@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import StorySidebar from './sidebars/StorySidebar';
 import QuestSidebar from './sidebars/QuestSidebar';
 import buildConfig from '../../config/buildConfig';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import clsx from 'clsx';
 
 const Sidebar: React.FC = () => {

@@ -4,7 +4,7 @@ import { useSearch } from '../../hooks/useSearch';
 import { SearchResult, SearchResultType } from '../../types/search';
 import Typography from '../core/Typography';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import { clsx } from 'clsx';
 import { 
   Search as SearchIcon, 

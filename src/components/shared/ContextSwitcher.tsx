@@ -1,7 +1,7 @@
 // components/shared/ContextSwitcher.tsx
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useGroups, useCampaigns } from '../../context/firebase';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import Button from '../core/Button';
 import Typography from '../core/Typography';
 import { 

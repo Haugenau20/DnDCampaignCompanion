@@ -7,7 +7,7 @@ import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
 import { useNPCData } from '../../hooks/useNPCData';
 import { NPC } from '../../types/npc';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../themes/ThemeContext';
 import clsx from 'clsx';
 import { Plus, Users, Loader2, AlertCircle } from 'lucide-react';
 

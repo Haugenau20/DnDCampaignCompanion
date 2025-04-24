@@ -3,7 +3,7 @@ import React from 'react';
 import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import { Chapter } from '../../../types/story';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme } from '../../../themes/ThemeContext';
 import { Clock, ArrowUpDown } from 'lucide-react';
 import clsx from 'clsx';
 
