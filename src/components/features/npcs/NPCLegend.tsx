@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import Typography from '../../core/Typography';
 import Card from '../../core/Card';
 import Button from '../../core/Button';
-import { useTheme } from '../../../themes/ThemeContext';
-import clsx from 'clsx';
 import {
   Shield,
   Skull,
@@ -18,27 +16,25 @@ import {
 
 const NPCLegend: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   const statusTypes = [
     { 
-      icon: <Shield className={clsx(`${themePrefix}-npc-status-alive`)} />, 
+      icon: <Shield className="npc-status-alive" />, 
       label: 'Alive', 
       description: 'NPC is alive' 
     },
     { 
-      icon: <Skull className={clsx(`${themePrefix}-npc-status-deceased`)} />, 
+      icon: <Skull className="npc-status-deceased" />, 
       label: 'Deceased', 
       description: 'NPC is no longer living' 
     },
     { 
-      icon: <AlertCircle className={clsx(`${themePrefix}-npc-status-missing`)} />, 
+      icon: <AlertCircle className="npc-status-missing" />, 
       label: 'Missing', 
       description: 'NPC\'s whereabouts are unknown' 
     },
     { 
-      icon: <HelpCircle className={clsx(`${themePrefix}-npc-status-unknown`)} />, 
+      icon: <HelpCircle className="npc-status-unknown" />, 
       label: 'Unknown', 
       description: 'NPC\'s status is uncertain' 
     }
@@ -46,22 +42,22 @@ const NPCLegend: React.FC = () => {
 
   const relationshipTypes = [
     { 
-      icon: <Heart className={clsx(`${themePrefix}-npc-relationship-friendly`)} />, 
+      icon: <Heart className="npc-relationship-friendly" />, 
       label: 'Friendly', 
       description: 'Ally or friend to the party' 
     },
     { 
-      icon: <Shield className={clsx(`${themePrefix}-npc-relationship-neutral`)} />, 
+      icon: <Shield className="npc-relationship-neutral" />, 
       label: 'Neutral', 
       description: 'Neither friend nor foe' 
     },
     { 
-      icon: <SwordIcon className={clsx(`${themePrefix}-npc-relationship-hostile`)} />, 
+      icon: <SwordIcon className="npc-relationship-hostile" />, 
       label: 'Hostile', 
       description: 'Enemy or opponent of the party' 
     },
     { 
-      icon: <HelpCircle className={clsx(`${themePrefix}-npc-relationship-unknown`)} />, 
+      icon: <HelpCircle className="npc-relationship-unknown" />, 
       label: 'Unknown', 
       description: 'Relationship not yet determined' 
     }
@@ -76,7 +72,7 @@ const NPCLegend: React.FC = () => {
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div className="flex items-center gap-2">
-            <Info size={20} className={clsx(`${themePrefix}-status-general`)} />
+            <Info size={20} className="status-general" />
             <Typography variant="h4">Legend</Typography>
           </div>
           {isExpanded ? <ChevronUp /> : <ChevronDown />}

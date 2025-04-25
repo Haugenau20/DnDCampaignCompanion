@@ -61,8 +61,8 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
   return (
     <>
       <Card className={clsx(
-        `${themePrefix}-quest-card`,
-        `${themePrefix}-quest-card-${quest.status}`
+        `quest-card`,
+        `quest-card-${quest.status}`
         
         )}>
         <Card.Content className="space-y-4">
@@ -96,7 +96,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
           <div className="flex gap-6">
             {quest.location && (
               <div className="flex items-center gap-2">
-                <MapPin size={16} className={`${themePrefix}-typography-secondary`} />
+                <MapPin size={16} className={`typography-secondary`} />
                 {locationExists(quest.location) ? (
                   <Button
                     variant="ghost"
@@ -121,18 +121,18 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
             )}
             {quest.levelRange && (
               <div className="flex items-center gap-2">
-                <Target size={16} className={`${themePrefix}-typography-secondary`} />
+                <Target size={16} className={`typography-secondary`} />
                 <Typography color="secondary">Level: {quest.levelRange}</Typography>
               </div>
             )}
           </div>
 
           {/* Progress Bar */}
-          <div className={clsx("w-full rounded-full h-2", `${themePrefix}-progress-container`)}>
+          <div className="w-full rounded-full h-2 progress-container">
             <div 
               className={clsx(
                 "rounded-full h-2 transition-all duration-300",
-                `${themePrefix}-progress-bar-${quest.status}`
+                `progress-bar-${quest.status}`
               )}
               style={{ width: `${completionPercentage}%` }}
             />
@@ -144,7 +144,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
               {/* Creator attribution */}
               {quest.createdByUsername && (
                 <div className="flex items-center gap-2 mt-1">
-                  <Scroll size={14} className={`${themePrefix}-typography-secondary`} />
+                  <Scroll size={14} className={`typography-secondary`} />
                   <Typography variant="body-sm" color="secondary">
                     Added by {quest.createdByUsername} on {new Date(quest.dateAdded || '').toLocaleDateString('en-uk')}
                   </Typography>
@@ -156,7 +156,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
                 (quest.modifiedByUsername !== quest.createdByUsername || 
                 new Date(quest.dateModified).getTime() > new Date(quest.dateAdded || '').getTime() + 1000) && (
                 <div className="flex items-center gap-2 mt-1">
-                  <Edit size={14} className={`${themePrefix}-typography-secondary`} />
+                  <Edit size={14} className={`typography-secondary`} />
                   <Typography variant="body-sm" color="secondary">
                     Modified by {quest.modifiedByUsername} on {new Date(quest.dateModified).toLocaleDateString('en-uk')}
                   </Typography>
@@ -189,8 +189,8 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
                       <div className={clsx(
                         `w-4 h-4 rounded border`,
                         objective.completed 
-                          ? `${themePrefix}-objective-completed` 
-                          : `${themePrefix}-objective-pending`
+                          ? `objective-completed` 
+                          : `objective-pending`
                       )} />
                       <Typography
                         color={objective.completed ? 'secondary' : 'default'}
@@ -247,7 +247,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
                             <div className="flex items-start gap-2 text-left">
                               <MapPin 
                                 size={16} 
-                                className={`mt-1 ${themePrefix}-location-status-explored`}
+                                className={`mt-1 location-status-explored`}
                               />
                               <div className="flex-1">
                                 <Typography variant="body-sm" className="font-medium">
@@ -267,7 +267,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
                         <div key={index} className="flex items-start gap-2 p-2">
                           <MapPin 
                             size={16} 
-                            className={`mt-1 ${themePrefix}-typography-secondary`}
+                            className={`mt-1 typography-secondary`}
                           />
                           <div className="flex-1">
                             <Typography variant="body-sm" className="font-medium">
@@ -311,14 +311,14 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
                                 size={16} 
                                 className={clsx(
                                   "mt-1",
-                                  `${themePrefix}-npc-relationship-${npc.relationship}`
+                                  `npc-relationship-${npc.relationship}`
                                 )}
                               />
                               <div className="flex-1">
                                 <Typography variant="body-sm" className="font-medium">
                                   {npc.name}
                                   {npc.title && (
-                                    <span className={`${themePrefix}-typography-secondary ml-1`}>
+                                    <span className={`typography-secondary ml-1`}>
                                       - {npc.title}
                                     </span>
                                   )}
@@ -386,7 +386,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
                     size="sm"
                     onClick={() => setShowDeleteDialog(true)}
                     startIcon={<Trash2 size={16} />}
-                    className={`${themePrefix}-button-danger`}
+                    className={`delete-button`}
                   >
                     Delete Quest
                   </Button>

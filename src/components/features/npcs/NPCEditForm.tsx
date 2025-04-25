@@ -8,7 +8,6 @@ import Card from '../../core/Card';
 import Dialog from '../../core/Dialog';
 import { Save, X, Users, Scroll } from 'lucide-react';
 import { useQuests } from '../../../context/QuestContext';
-import { useTheme } from '../../../themes/ThemeContext';
 import { useAuth, useUser } from '../../../context/firebase';
 import clsx from 'clsx';
 import { getUserDisplayName } from '../../../utils/user-utils';
@@ -30,9 +29,6 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
   onCancel,
   existingNPCs
 }) => {
-  // Theme context
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Firebase user for attribution
   const { user } = useAuth();
@@ -120,9 +116,9 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={clsx("block text-sm font-medium mb-1", `${themePrefix}-form-label`)}>Status *</label>
+                  <label className="block text-sm font-medium mb-1 form-label">Status *</label>
                   <select
-                    className={clsx("w-full rounded-lg border p-2", `${themePrefix}-input`)}
+                    className="w-full rounded-lg border p-2 input"
                     value={formData.status}
                     onChange={(e) => handleInputChange('status', e.target.value)}
                     required
@@ -135,9 +131,9 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                 </div>
 
                 <div>
-                  <label className={clsx("block text-sm font-medium mb-1", `${themePrefix}-form-label`)}>Relationship *</label>
+                  <label className="block text-sm font-medium mb-1 form-label">Relationship *</label>
                   <select
-                    className={clsx("w-full rounded-lg border p-2", `${themePrefix}-input`)}
+                    className="w-full rounded-lg border p-2 input"
                     value={formData.relationship}
                     onChange={(e) => handleInputChange('relationship', e.target.value)}
                     required
@@ -225,10 +221,7 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                     return relatedNPC ? (
                       <div
                         key={npcId}
-                        className={clsx(
-                          "flex items-center gap-1 px-3 py-1 rounded-full",
-                          `${themePrefix}-tag`
-                        )}
+                        className="flex items-center gap-1 px-3 py-1 rounded-full tag"
                       >
                         <span>{relatedNPC.name}</span>
                         <button
@@ -238,8 +231,7 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                             newSet.delete(npcId);
                             setSelectedNPCs(newSet);
                           }}
-                          className={clsx(`${themePrefix}-typography-secondary`, "hover:opacity-75")}
-                        >
+                          className="typography-secondary hover:opacity-75">
                           <X size={14} />
                         </button>
                       </div>
@@ -268,10 +260,7 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                     return quest ? (
                       <div
                         key={questId}
-                        className={clsx(
-                          "flex items-center gap-1 px-3 py-1 rounded-full",
-                          `${themePrefix}-tag`
-                        )}
+                        className="flex items-center gap-1 px-3 py-1 rounded-full tag"
                       >
                         <span>{quest.title}</span>
                         <button
@@ -281,8 +270,7 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                             newSet.delete(questId);
                             setSelectedQuests(newSet);
                           }}
-                          className={clsx(`${themePrefix}-typography-secondary`, "hover:opacity-75")}
-                        >
+                          className="typography-secondary hover:opacity-75">
                           <X size={14} />
                         </button>
                       </div>
@@ -326,10 +314,7 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                   {formData.connections?.affiliations.map((affiliation, index) => (
                     <div
                       key={index}
-                      className={clsx(
-                        "flex items-center gap-1 px-3 py-1 rounded-full",
-                        `${themePrefix}-tag`
-                      )}
+                      className="flex items-center gap-1 px-3 py-1 rounded-full tag"
                     >
                       <span>{affiliation}</span>
                       <button
@@ -343,8 +328,7 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                             }
                           }));
                         }}
-                        className={clsx(`${themePrefix}-typography-secondary`, "hover:opacity-75")}
-                      >
+                        className="typography-secondary hover:opacity-75">
                         <X size={14} />
                       </button>
                     </div>
@@ -408,8 +392,8 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                   className={clsx(
                     "p-2 rounded text-center transition-colors",
                     selectedNPCs.has(otherNPC.id)
-                      ? `${themePrefix}-selected-item`
-                      : `${themePrefix}-selectable-item`
+                      ? `selected-item`
+                      : `selectable-item`
                   )}
                 >
                   <Typography variant="body-sm" className={selectedNPCs.has(otherNPC.id) ? 'font-medium' : ''}>
@@ -448,8 +432,8 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                 className={clsx(
                   "w-full p-2 rounded text-left transition-colors",
                   selectedQuests.has(quest.id)
-                    ? `${themePrefix}-selected-item`
-                    : `${themePrefix}-selectable-item`
+                    ? `selected-item`
+                    : `selectable-item`
                 )}
               >
                 <Typography variant="body-sm" className={selectedQuests.has(quest.id) ? 'font-medium' : ''}>

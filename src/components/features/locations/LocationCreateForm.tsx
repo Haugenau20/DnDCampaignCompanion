@@ -13,8 +13,6 @@ import {
   RelatedQuestsSection
 } from './LocationFormSections';
 import { AlertCircle, Save, X } from 'lucide-react';
-import { useTheme } from '../../../themes/ThemeContext';
-import clsx from 'clsx';
 import { useAuth, useUser, useGroups, useCampaigns } from '../../../context/firebase';
 import { useLocations } from '../../../context/LocationContext';
 
@@ -48,14 +46,11 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
   
   // Firebase user for attribution
   const { user } = useAuth();
-  const { userProfile } = useUser();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
   
   // Get NPCs data
   const { npcs } = useNPCs();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Use LocationContext for creating
   const { createLocation } = useLocations();
@@ -174,7 +169,7 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
           {/* Error Message */}
           {error && (
             <div className="flex items-center gap-2">
-              <AlertCircle size={16} className={clsx(`${themePrefix}-form-error`)} />
+              <AlertCircle size={16} className="form-error" />
               <Typography color="error">
                 {error}
               </Typography>
