@@ -5,11 +5,9 @@ import Card from '../../core/Card';
 import Button from '../../core/Button';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';
-import { useTheme } from '../../../context/ThemeContext';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigation } from '../../../context/NavigationContext';
 import { useStory } from '../../../context/StoryContext';
-import clsx from 'clsx';
 
 interface ChapterFormProps {
   /** The chapter to edit, or undefined for create mode */
@@ -28,8 +26,6 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
   mode, 
   onDeleteClick 
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   const { navigateToPage } = useNavigation();
   const { createChapter, updateChapter, chapters } = useStory();
   
@@ -130,13 +126,13 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
           <Card.Content>
             {/* Error/Success Messages */}
             {error && (
-              <div className={clsx("p-4 mb-6 rounded-md", `${themePrefix}-note`)}>
+              <div className="p-4 mb-6 rounded-md note">
                 <Typography color="error">{error}</Typography>
               </div>
             )}
             
             {success && (
-              <div className={clsx("p-4 mb-6 rounded-md", `${themePrefix}-success-icon-bg`)}>
+              <div className="p-4 mb-6 rounded-md success-icon-bg">
                 <Typography color="success">{success}</Typography>
               </div>
             )}
@@ -207,7 +203,7 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
                   onClick={onDeleteClick}
                   startIcon={<Trash2 />}
                   type="button"
-                  className={clsx(`${themePrefix}-delete-button`)}
+                  className="delete-button"
                 >
                   Delete
                 </Button>

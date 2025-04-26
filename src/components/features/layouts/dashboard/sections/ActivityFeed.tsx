@@ -2,8 +2,6 @@
 import React, { useState } from 'react';
 import Typography from '../../../../core/Typography';
 import Card from '../../../../core/Card';
-import { useTheme } from '../../../../../context/ThemeContext';
-import clsx from 'clsx';
 import { Activity } from '../../../../../pages/HomePage';
 import { useActivityDisplay } from '../../../layouts/common/hooks/useActivityDisplay';
 import { getContentIcon } from '../../../layouts/common/utils/contentTypeUtils';
@@ -20,8 +18,6 @@ interface ActivityFeedProps {
  * Combines larger content size with fixed one-line header
  */
 const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   // State for filtering activities
   const [filter, setFilter] = useState<string | null>(null);
@@ -56,11 +52,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
         <Typography variant="h3" className="text-lg sm:text-xl md:text-2xl whitespace-nowrap">Recent Activity</Typography>
         
         <select 
-          className={clsx(
-            "text-sm rounded-md px-2 py-1 border min-w-fit",
-            `${themePrefix}-input`,
-            `${themePrefix}-card`
-          )}
+          className="text-sm rounded-md px-2 py-1 border min-w-fit input card"
           value={filter || 'all'}
           onChange={(e) => setFilter(e.target.value === 'all' ? null : e.target.value)}
         >
@@ -99,10 +91,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
             >
               <Card.Content className="p-4">
                 <div className="flex items-center">
-                  <div className={clsx(
-                    "p-3 rounded-full mr-4 h-12 w-12 flex items-center justify-center",
-                    `${themePrefix}-icon-bg`
-                  )}>
+                  <div className="p-3 rounded-full mr-4 h-12 w-12 flex items-center justify-center icon-bg">
                     {getContentIcon(activity.type, 24)}
                   </div>
                   <div className="flex-1 flex flex-col overflow-hidden">

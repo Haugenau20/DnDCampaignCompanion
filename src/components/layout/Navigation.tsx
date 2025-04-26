@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { useNavigation } from '../../hooks/useNavigation';
 import Typography from '../core/Typography';
 import { Book, Scroll, Users, MapPin, MessageSquare } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
 import { clsx } from 'clsx';
 
 interface NavItem {
@@ -19,8 +18,6 @@ interface NavItem {
  */
 const Navigation: React.FC = () => {
   const { shouldHighlightPath } = useNavigation();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   const navItems: NavItem[] = [
     { 
@@ -51,9 +48,7 @@ const Navigation: React.FC = () => {
   ];
 
   return (
-    <nav className={clsx(
-      `${themePrefix}-navigation`
-    )}>
+    <nav className="navigation">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Desktop Navigation */}
@@ -68,8 +63,8 @@ const Navigation: React.FC = () => {
                   className={clsx(
                     'flex items-center space-x-2 px-3 py-2 rounded-md transition-colors',
                     isActive
-                      ? `${themePrefix}-navigation-item-active`
-                      : `${themePrefix}-navigation-item`
+                      ? `navigation-item-active`
+                      : `navigation-item`
                   )}
                 >
                   {item.icon}
@@ -96,8 +91,8 @@ const Navigation: React.FC = () => {
                   className={clsx(
                     'flex flex-col items-center justify-center flex-1 min-w-0 text-sm',
                     isActive
-                      ? `${themePrefix}-navigation-item-active`
-                      : `${themePrefix}-navigation-item`
+                      ? `navigation-item-active`
+                      : `navigation-item`
                   )}
                 >
                   {item.icon}

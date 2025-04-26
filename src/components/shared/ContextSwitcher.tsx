@@ -1,7 +1,6 @@
 // components/shared/ContextSwitcher.tsx
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useGroups, useCampaigns } from '../../context/firebase';
-import { useTheme } from '../../context/ThemeContext';
 import Button from '../core/Button';
 import Typography from '../core/Typography';
 import { 
@@ -30,8 +29,6 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
   inDialog = false,
   onClose 
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   const { activeGroupId, setActiveGroup } = useGroups();
   const { activeCampaignId, setActiveCampaign } = useCampaigns();
   
@@ -114,7 +111,7 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
         {isOpen && (
           <div className={clsx(
             inDialog ? "" : "absolute left-0 top-full mt-1 w-full rounded-md shadow-lg z-20",
-            !inDialog && `${themePrefix}-dropdown`
+            !inDialog && `dropdown`
           )}>
             {/* Groups Section */}
             <GroupSelector 
@@ -174,9 +171,7 @@ const ContextButton: React.FC<{
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   hasChanges: boolean;
-}> = ({ isOpen, setIsOpen, hasChanges }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
+}> = ({ isOpen, setIsOpen }) => {
   const { activeGroup } = useGroups();
   const { activeCampaign } = useCampaigns();
   const { loading } = useGroups();
@@ -220,8 +215,6 @@ const GroupSelector: React.FC<{
   onSelectGroup, 
   showJoinGroupDialog 
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   const { groups, loading: groupsLoading } = useGroups();
   
   return (
@@ -247,8 +240,8 @@ const GroupSelector: React.FC<{
                 onClick={() => onSelectGroup(group.id)}
                 className={clsx(
                   "flex items-center justify-between px-3 py-2 w-full text-left rounded-md",
-                  isSelected ? `${themePrefix}-dropdown-item-active` : 
-                  `${themePrefix}-dropdown-item`
+                  isSelected ? `dropdown-item-active` : 
+                  `dropdown-item`
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -275,10 +268,7 @@ const GroupSelector: React.FC<{
         {/* Join Group Option */}
         <button
           onClick={showJoinGroupDialog}
-          className={clsx(
-            "flex items-center gap-2 px-3 py-2 w-full text-left rounded-md",
-            `${themePrefix}-dropdown-item`
-          )}
+          className="flex items-center gap-2 px-3 py-2 w-full text-left rounded-md dropdown-item"
         >
           <PlusCircle className="w-4 h-4 flex-shrink-0" />
           <Typography>Join Group</Typography>
@@ -302,8 +292,6 @@ const CampaignSelector: React.FC<{
   selectedCampaignId, 
   onSelectCampaign 
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   const { campaigns } = useCampaigns();
   
   // Only show if a group is selected
@@ -329,8 +317,8 @@ const CampaignSelector: React.FC<{
                 onClick={() => onSelectCampaign(campaign.id)}
                 className={clsx(
                   "flex items-center justify-between px-3 py-2 w-full text-left rounded-md",
-                  isSelected ? `${themePrefix}-dropdown-item-active` : 
-                  `${themePrefix}-dropdown-item`
+                  isSelected ? `dropdown-item-active` : 
+                  `dropdown-item`
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -362,15 +350,10 @@ const CampaignSelector: React.FC<{
  * Loading state component
  */
 const LoadingState: React.FC<{ text: string }> = ({ text }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   return (
     <div className="px-3 py-2 flex items-center justify-center">
-      <div className={clsx(
-        "animate-spin w-4 h-4 border-2 border-t-transparent rounded-full mr-2",
-        `${themePrefix}-primary`
-      )} />
+      <div className="animate-spin w-4 h-4 border-2 border-t-transparent rounded-full mr-2 primary" />
       <Typography variant="body-sm" color="secondary">
         {text}
       </Typography>

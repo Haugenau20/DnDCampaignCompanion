@@ -2,7 +2,6 @@
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import Typography from './Typography';
-import { useTheme } from '../../context/ThemeContext';
 import clsx from 'clsx';
 
 interface DialogProps {
@@ -30,8 +29,6 @@ const Dialog: React.FC<DialogProps> = ({
   maxWidth = 'max-w-md'
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Handle click outside
   useEffect(() => {
@@ -77,7 +74,7 @@ const Dialog: React.FC<DialogProps> = ({
       {/* Backdrop */}
       <div className={clsx(
         "fixed inset-0 transition-opacity",
-        `${themePrefix}-dialog-backdrop`
+        `dialog-backdrop`
       )} />
 
       {/* Dialog positioning */}
@@ -89,7 +86,7 @@ const Dialog: React.FC<DialogProps> = ({
             "relative rounded-lg shadow-xl p-6",
             maxWidth,
             "w-full",
-            `${themePrefix}-dialog`
+            `dialog`
           )}
         >
           {/* Close button */}
@@ -97,7 +94,7 @@ const Dialog: React.FC<DialogProps> = ({
             onClick={onClose}
             className={clsx(
               "absolute right-4 top-4",
-              `${themePrefix}-button-ghost`
+              `button-ghost`
             )}
             aria-label="Close dialog"
           >

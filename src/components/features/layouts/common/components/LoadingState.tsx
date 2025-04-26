@@ -1,6 +1,5 @@
 // components/features/layouts/common/components/LoadingState.tsx
 import React from 'react';
-import { useTheme } from '../../../../../context/ThemeContext';
 import { Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -22,13 +21,11 @@ const LoadingState: React.FC<LoadingStateProps> = ({
   iconOnly = false,
   className
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   if (iconOnly) {
     return (
       <div className="flex justify-center items-center py-4">
-        <Loader2 className={clsx("w-6 h-6 animate-spin", `${themePrefix}-primary`)} />
+        <Loader2 className="w-6 h-6 animate-spin primary" />
       </div>
     );
   }
@@ -42,8 +39,7 @@ const LoadingState: React.FC<LoadingStateProps> = ({
             className={clsx(
               height,
               "rounded",
-              `${themePrefix}-journal-loading`,
-              `${themePrefix}-loading`
+              `journal-loading`
             )}
           ></div>
         ))}
@@ -53,11 +49,8 @@ const LoadingState: React.FC<LoadingStateProps> = ({
 
   return (
     <div className="text-center py-4">
-      <Loader2 className={clsx(
-        "w-8 h-8 mx-auto mb-2 animate-spin", 
-        `${themePrefix}-primary`
-      )} />
-      <p className={clsx(`${themePrefix}-primary`)}>Loading...</p>
+      <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin primary" />
+      <p className={clsx(`primary`)}>Loading...</p>
     </div>
   );
 };

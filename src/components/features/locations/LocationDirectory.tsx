@@ -8,7 +8,6 @@ import Input from '../../core/Input';
 import { Search, MapPin, Building } from 'lucide-react';
 import { useFirebaseData } from '../../../hooks/useFirebaseData';
 import { useNavigation } from '../../../context/NavigationContext';
-import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 
 interface LocationDirectoryProps {
@@ -30,11 +29,6 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
   const { data: updatedLocations } = useFirebaseData<Location>({
     collection: 'locations'
   });
-
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
-
-  const routerLocation = useRouterLocation();
 
   // Get URL search params for highlighted location
   // Use the most up-to-date data
@@ -199,7 +193,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
               {level > 0 && (
                 <>
                   <div 
-                    className={clsx("absolute border-l-2", `${themePrefix}-divider`)} 
+                    className="absolute border-l-2 divider" 
                     style={{ 
                       left: `${level}rem`,
                       top: '0',
@@ -208,7 +202,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
                     }}
                   />
                   <div 
-                    className={clsx("absolute border-t-2", `${themePrefix}-divider`)}
+                    className="absolute border-t-2 divider"
                     style={{ 
                       left: `${level}rem`,
                       width: '1rem',
@@ -223,7 +217,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
                   id={`location-${location.id}`}
                   className={clsx(
                     "transition-all duration-300",
-                    highlightedLocationId === location.id && `${themePrefix}-highlighted-item`
+                    highlightedLocationId === location.id && `highlighted-item`
                   )}
                 >
                   <LocationCard 
@@ -269,16 +263,16 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
                 placeholder="Search locations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                startIcon={<Search className={clsx(`${themePrefix}-typography-secondary`)} />}
+                startIcon={<Search className="typography-secondary" />}
                 fullWidth
               />
             </div>
 
             {/* Type Filter */}
             <div className="flex items-center gap-2">
-              <Building size={20} className={clsx(`${themePrefix}-typography-secondary`)} />
+              <Building size={20} className="typography-secondary" />
               <select
-                className={clsx("rounded p-2", `${themePrefix}-input`)}
+                className="rounded p-2 input"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
               >
@@ -296,9 +290,9 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
 
             {/* Status Filter */}
             <div className="flex items-center gap-2">
-              <MapPin size={20} className={clsx(`${themePrefix}-typography-secondary`)} />
+              <MapPin size={20} className="typography-secondary" />
               <select
-                className={clsx("rounded p-2", `${themePrefix}-input`)}
+                className="rounded p-2 input"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -319,7 +313,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
       {!renderLocationHierarchy() && (
         <Card>
           <Card.Content className="text-center py-8">
-            <MapPin className={clsx("w-12 h-12 mx-auto mb-4", `${themePrefix}-typography-secondary`)} />
+            <MapPin className="w-12 h-12 mx-auto mb-4 typography-secondary" />
             <Typography variant="h3" className="mb-2">
               No Locations Found
             </Typography>

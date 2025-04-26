@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from '../../../context/ThemeContext';
+import { ThemeProvider } from '../../../themes/ThemeContext';
 import Card from '../Card';
 
 // Helper function to render Card with ThemeProvider

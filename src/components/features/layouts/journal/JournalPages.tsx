@@ -1,7 +1,5 @@
 // components/features/layouts/journal/JournalPages.tsx
 import React from 'react';
-import { useTheme } from '../../../../context/ThemeContext';
-import clsx from 'clsx';
 
 interface JournalPagesProps {
   children: React.ReactNode;
@@ -11,14 +9,9 @@ interface JournalPagesProps {
  * Container for journal pages that handles the layout of the open book
  */
 const JournalPages: React.FC<JournalPagesProps> = ({ children }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   return (
-    <div className={clsx(
-      "w-full flex",
-      `${themePrefix}-journal-pages`
-    )}>
+    <div className="w-full flex journal-pages">
       {children}
     </div>
   );

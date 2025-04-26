@@ -6,7 +6,6 @@ import Typography from '../../../core/Typography';
 import Input from '../../../core/Input';
 import Button from '../../../core/Button';
 import Dialog from '../../../core/Dialog';
-import { useTheme } from '../../../../context/ThemeContext';
 import { 
   Search, 
   Users, 
@@ -17,14 +16,10 @@ import {
   User,
   Calendar
 } from 'lucide-react';
-import clsx from 'clsx';
 
 const UserManagementView: React.FC = () => {
   const { user } = useAuth();
   const { activeGroup, getAllUsers, deleteUser } = useGroups();
-  
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   // State
   const [users, setUsers] = useState<any[]>([]);
@@ -115,17 +110,14 @@ const UserManagementView: React.FC = () => {
             placeholder="Search users..."
             value={userSearchQuery}
             onChange={(e) => setUserSearchQuery(e.target.value)}
-            startIcon={<Search className={clsx("w-4 h-4", `${themePrefix}-primary`)} />}
+            startIcon={<Search className="w-4 h-4 primary" />}
           />
         </div>
       </div>
 
       {/* Error message */}
       {error && (
-        <div className={clsx(
-          "flex items-center gap-2 p-3 rounded-lg mb-4",
-          `${themePrefix}-typography-error`
-        )}>
+        <div className="flex items-center gap-2 p-3 rounded-lg mb-4 typography-error">
           <AlertCircle size={16} />
           <Typography color="error">{error}</Typography>
         </div>
@@ -134,71 +126,41 @@ const UserManagementView: React.FC = () => {
       {/* User List */}
       {loadingUsers ? (
         <div className="text-center py-8">
-          <div className={clsx(
-            "animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto mb-4",
-            `${themePrefix}-primary`
-          )} />
+          <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto mb-4 primary" />
           <Typography>Loading users...</Typography>
         </div>
       ) : sortedUsers.length === 0 ? (
-        <div className={clsx(
-          "text-center py-8 rounded-lg",
-          `${themePrefix}-card`
-        )}>
-          <Users className={clsx(
-            "w-12 h-12 mx-auto mb-4",
-            `${themePrefix}-primary`
-          )} />
+        <div className="text-center py-8 rounded-lg card">
+          <Users className="w-12 h-12 mx-auto mb-4 primary" />
           <Typography color="secondary">
             {userSearchQuery ? 'No users match your search' : 'No users found'}
           </Typography>
         </div>
       ) : (
-        <div className={clsx(
-          "border rounded-lg overflow-hidden",
-          `${themePrefix}-card`
-        )}>
+        <div className="border rounded-lg overflow-hidden card">
           <table className="min-w-full divide-y">
-            <thead className={`${themePrefix}-navigation`}>
+            <thead className={`navigation`}>
               <tr>
-                <th className={clsx(
-                  "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                  `${themePrefix}-typography`
-                )}>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider typography">
                   Username
                 </th>
-                <th className={clsx(
-                  "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                  `${themePrefix}-typography`
-                )}>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider typography">
                   Role
                 </th>
-                <th className={clsx(
-                  "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                  `${themePrefix}-typography`
-                )}>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider typography">
                   Joined
                 </th>
-                <th className={clsx(
-                  "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
-                  `${themePrefix}-typography`
-                )}>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider typography">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className={clsx(
-              "divide-y",
-              `${themePrefix}-theme`
-            )}>
+            <tbody className="divide-y theme">
               {sortedUsers.map((userData) => (
                 <tr key={userData.userId || userData.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center" title={userData.username || 'Unknown'}>
-                      <User className={clsx(
-                      "w-5 h-5 mr-2",
-                      `${themePrefix}-primary`
-                      )} />
+                      <User className="w-5 h-5 mr-2 primary" />
                       <Typography variant="body-sm" className="font-medium">
                       {userData.username && userData.username.length > 20 
                         ? `${userData.username.slice(0, 20)}...` 
@@ -209,10 +171,7 @@ const UserManagementView: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       {userData.role === 'admin' && (
-                        <ShieldCheck className={clsx(
-                          "w-4 h-4 mr-1", 
-                          `${themePrefix}-primary`
-                        )} />
+                        <ShieldCheck className="w-4 h-4 mr-1 primary" />
                       )}
                       <Typography variant="body-sm" color="secondary">
                         {userData.role === 'admin' ? 'Admin' : 'Member'}
@@ -221,10 +180,7 @@ const UserManagementView: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-1">
-                      <Calendar className={clsx(
-                        "w-4 h-4",
-                        `${themePrefix}-primary`
-                      )} />
+                      <Calendar className="w-4 h-4 primary" />
                       <Typography variant="body-sm" color="secondary">
                         {userData.joinedAt instanceof Date 
                           ? userData.joinedAt.toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})
@@ -240,7 +196,7 @@ const UserManagementView: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteUser(userData.userId, userData.username)}
-                        startIcon={<Trash className={clsx("w-4 h-4", `${themePrefix}-delete-button`)} />}
+                        startIcon={<Trash className="w-4 h-4 delete-button" />}
                       >
                         Remove
                       </Button>

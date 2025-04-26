@@ -13,9 +13,7 @@ import {
   RelatedQuestsSection
 } from './LocationFormSections';
 import { AlertCircle, Save, X } from 'lucide-react';
-import { useTheme } from '../../../context/ThemeContext';
-import clsx from 'clsx';
-import { useAuth, useUser, useGroups, useCampaigns } from '../../../context/firebase';
+import { useAuth, useGroups, useCampaigns } from '../../../context/firebase';
 import { useLocations } from '../../../context/LocationContext';
 
 interface LocationEditFormProps {
@@ -39,7 +37,6 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
     
     // Firebase user for attribution
     const { user } = useAuth();
-    const { userProfile } = useUser();
     const { activeGroupId } = useGroups();
     const { activeCampaignId } = useCampaigns();
     
@@ -58,8 +55,6 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
   
     // Get NPCs data
     const { npcs } = useNPCs();
-    const { theme } = useTheme();
-    const themePrefix = theme.name;
 
     // Use LocationContext for updating
     const { updateLocation } = useLocations();
@@ -174,7 +169,7 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
             {/* Error Message */}
             {error && (
               <div className="flex items-center gap-2">
-                <AlertCircle size={16} className={clsx(`${themePrefix}-form-error`)} />
+                <AlertCircle size={16} className="form-error" />
                 <Typography color="error">
                   {error}
                 </Typography>

@@ -6,8 +6,6 @@ import { useQuests } from '../context/QuestContext';
 import { useRumors } from '../context/RumorContext';
 import { useNPCs } from '../context/NPCContext';
 import { useLocations } from '../context/LocationContext';
-import { useTheme } from '../context/ThemeContext';
-import clsx from 'clsx';
 
 // Import layouts
 import DashboardLayout from '../components/features/layouts/dashboard/DashboardLayout';
@@ -34,11 +32,6 @@ type LayoutType = 'dashboard' | 'journal';
  * HomePage component serving as the container for the selected layout
  */
 const HomePage: React.FC = () => {
-  const { theme } = useTheme();
-  const { user } = useAuth();
-  const { activeGroup } = useGroups();
-  const { activeCampaignId } = useCampaigns();
-  const themePrefix = theme.name;
   
   // Load data from all contexts
   const { chapters, isLoading: chaptersLoading } = useStory();
@@ -155,10 +148,7 @@ const HomePage: React.FC = () => {
   
   return (
     <div className='max-w-7xl mx-auto'>
-      <div className={clsx(
-        "container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden", 
-        `${themePrefix}-content`
-      )}>
+      <div className="container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden content">
         {/* Layout Toggle Button */}
         <div className="flex justify-end mb-4">
           <Button

@@ -6,7 +6,6 @@ import Typography from '../../core/Typography';
 import Input from '../../core/Input';
 import Button from '../../core/Button';
 import Dialog from '../../core/Dialog';
-import { useTheme } from '../../../context/ThemeContext';
 import { 
   LogIn, 
   AlertCircle, 
@@ -14,7 +13,6 @@ import {
   X, 
   Loader2 
 } from 'lucide-react';
-import clsx from 'clsx';
 
 interface JoinGroupDialogProps {
   open: boolean;
@@ -27,8 +25,6 @@ const JoinGroupDialog: React.FC<JoinGroupDialogProps> = ({
   onClose,
   onSuccess 
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   const [inviteToken, setInviteToken] = useState('');
   const [username, setUsername] = useState('');
@@ -183,9 +179,9 @@ const JoinGroupDialog: React.FC<JoinGroupDialogProps> = ({
               checkingToken ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : inviteToken && tokenVerified === true ? (
-                <Check className={clsx("w-4 h-4", `${themePrefix}-form-success`)} />
+                <Check className="w-4 h-4 form-success" />
               ) : inviteToken && tokenVerified === false ? (
-                <X className={clsx("w-4 h-4", `${themePrefix}-form-error`)} />
+                <X className="w-4 h-4 form-error" />
               ) : null
             }
           />
@@ -205,19 +201,16 @@ const JoinGroupDialog: React.FC<JoinGroupDialogProps> = ({
               checkingUsername ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : username && usernameValid && usernameAvailable ? (
-                <Check className={clsx("w-4 h-4", `${themePrefix}-form-success`)} />
+                <Check className="w-4 h-4 form-success" />
               ) : username && (usernameValid === false || usernameAvailable === false) ? (
-                <X className={clsx("w-4 h-4", `${themePrefix}-form-error`)} />
+                <X className="w-4 h-4 form-error" />
               ) : null
             }
           />
         </div>
 
         {error && (
-          <div className={clsx(
-            "flex items-center gap-2",
-            `${themePrefix}-form-error`
-          )}>
+          <div className="flex items-center gap-2 form-error">
             <AlertCircle size={16} />
             <Typography color="error">{error}</Typography>
           </div>

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
-import { ThemeProvider } from './context/ThemeContext';
+import { ThemeProvider } from './themes/ThemeContext';
 import App from './App';
 import './styles/globals.css';
 

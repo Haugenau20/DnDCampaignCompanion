@@ -6,7 +6,6 @@ import Input from '../../../core/Input';
 import Button from '../../../core/Button';
 import Card from '../../../core/Card';
 import Dialog from '../../../core/Dialog';
-import { useTheme } from '../../../../context/ThemeContext';
 import { 
   AlertCircle, 
   Users, 
@@ -21,9 +20,6 @@ import clsx from 'clsx';
 const GroupManagementView: React.FC = () => {
   const { groups, activeGroup, activeGroupId, activeGroupUserProfile, createGroup } = useGroups();
   const { user } = useAuth();
-  
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   // State
   const [error, setError] = useState<string | null>(null);
@@ -73,24 +69,15 @@ const GroupManagementView: React.FC = () => {
 
       {/* Error message */}
       {error && (
-        <div className={clsx(
-          "flex items-center gap-2 p-3 rounded-lg mb-4",
-          `${themePrefix}-typography-error`
-        )}>
+        <div className="flex items-center gap-2 p-3 rounded-lg mb-4 typography-error">
           <AlertCircle size={16} />
           <Typography color="error">{error}</Typography>
         </div>
       )}
 
       {!currentGroup ? (
-        <div className={clsx(
-          "text-center py-8 rounded-lg",
-          `${themePrefix}-card`
-        )}>
-          <Users className={clsx(
-            "w-12 h-12 mx-auto mb-4",
-            `${themePrefix}-primary`
-          )} />
+        <div className="text-center py-8 rounded-lg card">
+          <Users className="w-12 h-12 mx-auto mb-4 primary" />
           <Typography color="secondary">
             No group selected
           </Typography>
@@ -121,7 +108,7 @@ const GroupManagementView: React.FC = () => {
               <div className="space-y-1">
                 <Typography variant="body-sm" color="secondary">Created By</Typography>
                 <div className="flex items-center gap-2">
-                  <User size={18} className={clsx(`${themePrefix}-primary`)} />
+                  <User size={18} className={clsx(`primary`)} />
                   <Typography>
                     {currentGroup.createdBy === user?.uid 
                       ? activeGroupUserProfile?.username || 'You'
@@ -133,7 +120,7 @@ const GroupManagementView: React.FC = () => {
               <div className="space-y-1">
                 <Typography variant="body-sm" color="secondary">Creation Date</Typography>
                 <div className="flex items-center gap-2">
-                  <Calendar size={18} className={clsx(`${themePrefix}-primary`)} />
+                  <Calendar size={18} className={clsx(`primary`)} />
                   <Typography>
                     {currentGroup.createdAt instanceof Date 
                       ? currentGroup.createdAt.toLocaleDateString('en-uk', { 
@@ -153,21 +140,15 @@ const GroupManagementView: React.FC = () => {
             </div>
             
             {/* Group ID for reference */}
-            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-6 pt-4">
               <Typography variant="body-sm" color="secondary">Group ID (for reference)</Typography>
-              <div className={clsx(
-                "p-2 rounded mt-1 font-mono text-sm overflow-x-auto",
-                `${themePrefix}-bg-secondary`
-              )}>
+              <div className="p-2 rounded mt-1 font-mono text-sm overflow-x-auto bg-secondary">
                 {currentGroup.id}
               </div>
             </div>
             
             {/* Admin notes */}
-            <div className={clsx(
-              "mt-6 p-3 rounded-lg border",
-              `${themePrefix}-card`
-            )}>
+            <div className="mt-6 p-3 rounded-lg border card">
               <Typography variant="body-sm" color="secondary">
                 <strong>Note:</strong> To manage users in this group, please use the "Users" tab.
                 To manage registration tokens, use the "Registration Tokens" tab.

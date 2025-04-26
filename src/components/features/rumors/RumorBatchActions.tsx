@@ -4,9 +4,7 @@ import Button from '../../core/Button';
 import Typography from '../../core/Typography';
 import { RumorStatus } from '../../../types/rumor';
 import { useRumors } from '../../../context/RumorContext';
-import { useTheme } from '../../../context/ThemeContext';
 import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
-import clsx from 'clsx';
 import { 
   CheckCircle, 
   HelpCircle, 
@@ -18,7 +16,6 @@ import {
 } from 'lucide-react';
 import CombineRumorsDialog from './CombineRumorsDialog';
 import ConvertToQuestDialog from './ConvertToQuestDialog';
-import Dialog from '../../core/Dialog';
 import ReactDOM from 'react-dom';
 
 interface RumorBatchActionsProps {
@@ -35,8 +32,6 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
   onComplete
 }) => {
   const { rumors, updateRumorStatus, deleteRumor, combineRumors, convertToQuest } = useRumors();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   // Dialog state
   const [showCombineDialog, setShowCombineDialog] = useState(false);
@@ -173,7 +168,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
 
   return (
     <>
-      <div className={clsx("flex flex-wrap items-center gap-3 p-3 rounded-lg", `${themePrefix}-bg-secondary`)}>
+      <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-secondary">
         <Typography variant="body-sm" className="font-medium">
           {selectedRumors.size} rumors selected
         </Typography>
@@ -183,7 +178,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => handleBatchStatusUpdate('confirmed')}
-            startIcon={<CheckCircle size={16} className={`${themePrefix}-rumor-status-confirmed`} />}
+            startIcon={<CheckCircle size={16} className="rumor-status-confirmed" />}
             disabled={isProcessing}
           >
             Mark Confirmed
@@ -193,7 +188,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => handleBatchStatusUpdate('unconfirmed')}
-            startIcon={<HelpCircle size={16} className={`${themePrefix}-rumor-status-unconfirmed`} />}
+            startIcon={<HelpCircle size={16} className="rumor-status-unconfirmed" />}
             disabled={isProcessing}
           >
             Mark Unconfirmed
@@ -203,7 +198,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => handleBatchStatusUpdate('false')}
-            startIcon={<XCircle size={16} className={`${themePrefix}-rumor-status-false`} />}
+            startIcon={<XCircle size={16} className="rumor-status-false" />}
             disabled={isProcessing}
           >
             Mark False
@@ -233,7 +228,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             variant="ghost"
             size="sm"
             onClick={handleBatchDelete}
-            startIcon={<Trash size={16} className={`${themePrefix}-rumor-status-false`} />}
+            startIcon={<Trash size={16} className="rumor-status-false" />}
             disabled={isProcessing}
           >
             Delete
@@ -243,8 +238,8 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
       
       {/* Error notification */}
       {actionError && (
-        <div className={clsx("mt-2 p-2 rounded flex items-center gap-2", `${themePrefix}-status-failed bg-opacity-20`)}>
-          <AlertCircle size={18} className={`${themePrefix}-status-failed`} />
+        <div className="mt-2 p-2 rounded flex items-center gap-2 status-failed bg-opacity-20">
+          <AlertCircle size={18} className="status-failed" />
           <Typography color="error">{actionError}</Typography>
         </div>
       )}

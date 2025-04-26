@@ -8,7 +8,6 @@ import {
   INACTIVITY_TIMEOUT, 
   SESSION_WARNING_THRESHOLD 
 } from '../../../constants/time';
-import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 
 // Types of session timeout warnings
@@ -26,8 +25,6 @@ const SessionTimeoutWarning: React.FC = () => {
   const [timeRemaining, setTimeRemaining] = useState(5); // in minutes
   const [rememberMe, setRememberMe] = useState(false);
   const { user, refreshSession, signOut, renewSession } = useAuth();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   // Check for session expiration time
   useEffect(() => {
@@ -101,7 +98,7 @@ const SessionTimeoutWarning: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center gap-3">
         <AlertCircle 
-          className={`${themePrefix}-status-unknown`} 
+          className={`status-unknown`} 
           size={24} 
         />
           <Typography>
@@ -131,15 +128,15 @@ const SessionTimeoutWarning: React.FC = () => {
               onChange={(e) => setRememberMe(e.target.checked)}
               className={clsx(
                 "h-4 w-4 rounded focus:ring-offset-1",
-                `${themePrefix}-input`,
-                `focus:${themePrefix}-primary ${themePrefix}-card-border`
+                `input`,
+                `focus:primary card-border`
               )}
             />
             <label 
               htmlFor="rememberMe" 
               className={clsx(
                 "ml-2 block text-sm",
-                `${themePrefix}-typography`
+                `typography`
               )}
             >
               Remember me for 30 days

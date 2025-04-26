@@ -10,7 +10,6 @@ import { useQuests } from '../../../context/QuestContext';
 import { useAuth } from '../../../context/firebase';
 import { useFirebaseData } from '../../../hooks/useFirebaseData';
 import { useNavigation } from '../../../context/NavigationContext';
-import { useTheme } from '../../../context/ThemeContext';
 import AttributionInfo from '../../shared/AttributionInfo';
 import clsx from 'clsx';
 import { 
@@ -47,8 +46,6 @@ const NPCCard: React.FC<NPCCardProps> = ({
   const { user } = useAuth();
   const { updateData, deleteData } = useFirebaseData<NPC>({ collection: 'npcs' });
   const { navigateToPage, createPath } = useNavigation();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Handle quick note adding
   const handleAddNote = async () => {
@@ -113,8 +110,8 @@ const NPCCard: React.FC<NPCCardProps> = ({
   return (
     <>
       <Card className={clsx(
-        `${themePrefix}-npc-card`,
-        `${themePrefix}-npc-card-${npc.relationship}`
+        `npc-card`,
+        `npc-card-${npc.relationship}`
       )}>
         <Card.Content className="space-y-4">
           {/* NPC Header */}
@@ -154,10 +151,7 @@ const NPCCard: React.FC<NPCCardProps> = ({
                 </Typography>
                 <Typography 
                   variant="body-sm" 
-                  className={clsx(
-                    "font-medium",
-                    `${themePrefix}-npc-status-${npc.status}`
-                  )}
+                  className="font-medium npc-status-${npc.status}"
                 >
                   {npc.status.charAt(0).toUpperCase() + npc.status.slice(1)}
                 </Typography>
@@ -169,7 +163,7 @@ const NPCCard: React.FC<NPCCardProps> = ({
               <div className="space-y-2">
                 {npc.occupation && (
                   <div className="flex items-center gap-2">
-                    <Heart size={16} className={clsx(`${themePrefix}-typography-secondary`)} />
+                    <Heart size={16} className="typography-secondary" />
                     <Typography variant="body-sm">
                       {npc.occupation}
                     </Typography>
@@ -257,10 +251,7 @@ const NPCCard: React.FC<NPCCardProps> = ({
                           <div className="flex items-start gap-2 text-left">
                             <Users 
                               size={16} 
-                              className={clsx(
-                                "mt-1",
-                                `${themePrefix}-quest-status-${quest.status}`
-                              )}
+                              className="mt-1 quest-status-${quest.status}"
                             />
                             <div className="flex-1">
                               <Typography variant="body-sm" className="font-medium">
@@ -290,14 +281,11 @@ const NPCCard: React.FC<NPCCardProps> = ({
                     {npc.notes.map((note, index) => (
                       <div
                         key={index}
-                        className={clsx(
-                          "p-3 rounded-lg space-y-1",
-                          `${themePrefix}-note`
-                        )}
+                        className="p-3 rounded-lg space-y-1 note"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Calendar size={14} className={clsx(`${themePrefix}-typography-secondary`)} />
+                            <Calendar size={14} className="typography-secondary" />
                             <Typography variant="body-sm" color="secondary">
                               {new Date(note.date).toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})}
                             </Typography>
@@ -371,8 +359,8 @@ const NPCCard: React.FC<NPCCardProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsDeleteDialogOpen(true)}
-                    startIcon={<Trash2 size={16} />}
-                    className={clsx(`${themePrefix}-button-ghost-danger`)}
+                    startIcon={<Trash2 size={16} className="delete-button"/>}
+                    className="button-ghost"
                   >
                     Delete
                   </Button>

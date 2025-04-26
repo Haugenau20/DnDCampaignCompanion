@@ -2,7 +2,6 @@
 import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { useTheme } from '../../context/ThemeContext';
 
 /**
  * Available variant styles for the Typography component
@@ -92,8 +91,6 @@ export const Typography = <C extends React.ElementType = 'p'>({
   ...props
 }: TypographyProps<C>) => {
   const Component = as || defaultElements[variant];
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Is this variant a heading?
   const isHeading = variant === 'h1' || variant === 'h2' || variant === 'h3' || variant === 'h4';
@@ -114,19 +111,17 @@ export const Typography = <C extends React.ElementType = 'p'>({
       truncate && 'truncate',
       
       // Theme-specific classes
-      `${themePrefix}-typography`,
+      `typography`,
       
-      // Apply both heading class formats for compatibility
-      isHeading && `${themePrefix}-heading`,
-      isHeading && `${themePrefix}-typography-heading`,
+      isHeading && `typography-heading`,
       
       // Color-specific classes
-      color === 'primary' && `${themePrefix}-typography-primary`,
-      color === 'secondary' && `${themePrefix}-typography-secondary`,
-      color === 'muted' && `${themePrefix}-typography-muted`,
-      color === 'white' && `${themePrefix}-typography-white`,
-      color === 'error' && `${themePrefix}-typography-error`,
-      color === 'success' && `${themePrefix}-typography-success`,
+      color === 'primary' && `typography-primary`,
+      color === 'secondary' && `typography-secondary`,
+      color === 'muted' && `typography-muted`,
+      color === 'white' && `typography-white`,
+      color === 'error' && `typography-error`,
+      color === 'success' && `typography-success`,
       
       // Custom classes
       className

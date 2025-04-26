@@ -6,7 +6,6 @@ import Button from '../../core/Button';
 import Card from '../../core/Card';
 import { useLocation } from 'react-router-dom';
 import { LogIn, AlertCircle, UserPlus, Check, X, Loader2, Shield } from 'lucide-react';
-import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 import { validatePassword } from '../../../utils/password-validation';
 
@@ -21,8 +20,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
   onCancel,
   onSignInClick 
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -216,9 +213,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 checkingToken ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : inviteToken && tokenVerified === true ? (
-                  <Check className={clsx("w-4 h-4", `${themePrefix}-form-success`)} />
+                  <Check className={clsx("w-4 h-4", `form-success`)} />
                 ) : inviteToken && tokenVerified === false ? (
-                  <X className={clsx("w-4 h-4", `${themePrefix}-form-error`)} />
+                  <X className={clsx("w-4 h-4", `form-error`)} />
                 ) : null
               }
             />
@@ -250,9 +247,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 checkingUsername ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : username && usernameValid && usernameAvailable ? (
-                  <Check className={clsx("w-4 h-4", `${themePrefix}-form-success`)} />
+                  <Check className={clsx("w-4 h-4", `form-success`)} />
                 ) : username && (usernameValid === false || usernameAvailable === false) ? (
-                  <X className={clsx("w-4 h-4", `${themePrefix}-form-error`)} />
+                  <X className={clsx("w-4 h-4", `form-error`)} />
                 ) : null
               }
             />
@@ -272,9 +269,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
               endIcon={
                 password ? (
                   passwordValidation.isValid ? (
-                    <Check className={clsx("w-4 h-4", `${themePrefix}-form-success`)} />
+                    <Check className={clsx("w-4 h-4", `form-success`)} />
                   ) : (
-                    <X className={clsx("w-4 h-4", `${themePrefix}-form-error`)} />
+                    <X className={clsx("w-4 h-4", `form-error`)} />
                   )
                 ) : null
               }
@@ -294,34 +291,34 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
             {showPasswordRequirements && (
               <div className={clsx(
                 "mt-2 p-3 text-sm rounded-md",
-                `${themePrefix}-bg-secondary`
+                `bg-secondary`
               )}>
                 <Typography variant="body-sm" className="mb-1 font-medium">
                   Password must:
                 </Typography>
                 <ul className="space-y-1 list-disc pl-5">
                   <li className={clsx(
-                    password.length >= 8 ? `${themePrefix}-form-success` : `${themePrefix}-typography-secondary`
+                    password.length >= 8 ? `form-success` : `typography-secondary`
                   )}>
                     Be at least 8 characters long
                   </li>
                   <li className={clsx(
-                    /[A-Z]/.test(password) ? `${themePrefix}-form-success` : `${themePrefix}-typography-secondary`
+                    /[A-Z]/.test(password) ? `form-success` : `typography-secondary`
                   )}>
                     Include at least one uppercase letter (A-Z)
                   </li>
                   <li className={clsx(
-                    /[a-z]/.test(password) ? `${themePrefix}-form-success` : `${themePrefix}-typography-secondary`
+                    /[a-z]/.test(password) ? `form-success` : `typography-secondary`
                   )}>
                     Include at least one lowercase letter (a-z)
                   </li>
                   <li className={clsx(
-                    /[0-9]/.test(password) ? `${themePrefix}-form-success` : `${themePrefix}-typography-secondary`
+                    /[0-9]/.test(password) ? `form-success` : `typography-secondary`
                   )}>
                     Include at least one number (0-9)
                   </li>
                   <li className={clsx(
-                    /[^A-Za-z0-9]/.test(password) ? `${themePrefix}-form-success` : `${themePrefix}-typography-secondary`
+                    /[^A-Za-z0-9]/.test(password) ? `form-success` : `typography-secondary`
                   )}>
                     Include at least one special character (e.g., !@#$%^&*)
                   </li>
@@ -343,7 +340,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({
           {error && (
             <div className={clsx(
               "flex items-center gap-2",
-              `${themePrefix}-form-error`
+              `form-error`
             )}>
               <AlertCircle size={16} />
               <Typography color="error">{error}</Typography>

@@ -1,10 +1,8 @@
 // components/features/layouts/journal/sections/StorySection.tsx
 import React from 'react';
-import { useTheme } from '../../../../../context/ThemeContext';
 import { useNavigation } from '../../../../../context/NavigationContext';
 import { Chapter } from '../../../../../types/story';
 import { BookOpen, Bookmark } from 'lucide-react';
-import clsx from 'clsx';
 import Button from '../../../../core/Button';
 
 interface StorySectionProps {
@@ -16,9 +14,7 @@ interface StorySectionProps {
  * Displays story chapters in journal format
  */
 const StorySection: React.FC<StorySectionProps> = ({ chapters, loading }) => {
-  const { theme } = useTheme();
   const { navigateToPage } = useNavigation();
-  const themePrefix = theme.name;
 
   // Sort chapters by order number or date
   const sortedChapters = [...chapters].sort((firstChapter, secondChapter) => {
@@ -45,33 +41,18 @@ const StorySection: React.FC<StorySectionProps> = ({ chapters, loading }) => {
   };
 
   return (
-    <div className={clsx(
-      "relative",
-      `${themePrefix}-journal-section`
-    )}>
-      <h3 className={clsx(
-        "text-xl font-medium mb-4",
-        `${themePrefix}-journal-heading`
-      )}>
+    <div className="relative journal-section">
+      <h3 className="text-xl font-medium mb-4 journal-heading">
         The Story So Far
       </h3>
 
       {loading ? (
         <div className="space-y-4 animate-pulse">
-          <div className={clsx(
-            "h-8 w-2/3 rounded mb-2",
-            `${themePrefix}-journal-loading`
-          )}></div>
-          <div className={clsx(
-            "h-40 rounded",
-            `${themePrefix}-journal-loading`
-          )}></div>
+          <div className="h-8 w-2/3 rounded mb-2 journal-loading"></div>
+          <div className="h-40 rounded journal-loading"></div>
         </div>
       ) : sortedChapters.length === 0 ? (
-        <div className={clsx(
-          "text-center py-8",
-          `${themePrefix}-journal-empty`
-        )}>
+        <div className="text-center py-8 journal-empty">
           <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-50" />
           <p className="italic">Your story has yet to begin...</p>
           <p className="text-sm mt-2">
@@ -82,19 +63,13 @@ const StorySection: React.FC<StorySectionProps> = ({ chapters, loading }) => {
         <div className="space-y-6">
           {/* Latest chapter preview */}
           {latestChapter && (
-            <div className={clsx(
-              "relative p-4 rounded",
-              `${themePrefix}-journal-latest-chapter`
-            )}>
+            <div className="relative p-4 rounded">
               <div className="absolute top-0 right-0 translate-x-2 -translate-y-3">
-                <Bookmark size={24} className={clsx(`${themePrefix}-primary`)} />
+                <Bookmark size={24} className="primary" />
               </div>
               
               <h4 
-                className={clsx(
-                  "text-lg font-medium mb-2 cursor-pointer hover:underline",
-                  `${themePrefix}-journal-chapter-title`
-                )}
+                className="text-lg font-medium mb-2 cursor-pointer hover:underline journal-title"
                 onClick={() => handleChapterClick(latestChapter.id)}
               >
                 {latestChapter.order !== undefined && (
@@ -104,25 +79,16 @@ const StorySection: React.FC<StorySectionProps> = ({ chapters, loading }) => {
               </h4>
               
               {latestChapter.summary ? (
-                <p className={clsx(
-                  "text-sm mb-2 italic",
-                  `${themePrefix}-journal-chapter-summary`
-                )}>
+                <p className="text-sm mb-2 italic">
                   {latestChapter.summary}
                 </p>
               ) : latestChapter.content ? (
-                <p className={clsx(
-                  "text-sm mb-2 italic line-clamp-3",
-                  `${themePrefix}-journal-chapter-excerpt`
-                )}>
+                <p className="text-sm mb-2 italic line-clamp-3">
                   {latestChapter.content.substring(0, 200)}...
                 </p>
               ) : null}
               
-              <div className={clsx(
-                "text-right text-xs",
-                `${themePrefix}-typography-secondary`
-              )}>
+              <div className="text-right text-xs typography-secondary">
                 {latestChapter.lastModified && (
                   new Date(latestChapter.lastModified).toLocaleDateString()
                 )}
@@ -132,18 +98,12 @@ const StorySection: React.FC<StorySectionProps> = ({ chapters, loading }) => {
           
           {/* Chapter list */}
           <div className="space-y-1">
-            <h5 className={clsx(
-              "text-base font-medium mb-2",
-              `${themePrefix}-journal-subheading`
-            )}>
+            <h5 className="text-base font-medium mb-2 ">
               Previous Chapters
             </h5>
             
             {sortedChapters.length <= 1 ? (
-              <p className={clsx(
-                "text-sm italic text-center",
-                `${themePrefix}-journal-empty`
-              )}>
+              <p className="text-sm italic text-center journal-empty">
                 No previous chapters
               </p>
             ) : (
@@ -152,18 +112,12 @@ const StorySection: React.FC<StorySectionProps> = ({ chapters, loading }) => {
                   <li 
                   key={chapter.id}
                   onClick={() => handleChapterClick(chapter.id)}
-                  className="pl-6 py-1 relative cursor-pointer hover:bg-opacity-10 hover:bg-primary rounded">
+                  className="pl-6 py-1 relative cursor-pointer hover:bg-opacity-10 hover:bg-accent rounded">
                   <span 
-                    className={clsx(
-                      "absolute left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 rounded-full",
-                      `${themePrefix}-journal-binding`
-                    )}
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 rounded-full journal-binding"
                   ></span>
                   
-                  <span className={clsx(
-                  "text-sm",
-                  `${themePrefix}-journal-title`
-                  )}>
+                  <span className="text-sm journal-title">
                   {chapter.order !== undefined && (
                   <span className="font-medium mr-1">Chapter {chapter.order}:</span>
                   )}

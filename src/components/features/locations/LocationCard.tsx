@@ -11,7 +11,6 @@ import Button from '../../core/Button';
 import Input from '../../core/Input';
 import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import { useNavigation } from '../../../context/NavigationContext';
-import { useTheme } from '../../../context/ThemeContext';
 import AttributionInfo from '../../shared/AttributionInfo';
 import clsx from 'clsx';
 import { 
@@ -60,8 +59,6 @@ const LocationCard: React.FC<LocationCardProps> = ({
   const [location, setLocation] = useState(initialLocation);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { navigateToPage, createPath } = useNavigation();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Use the LocationContext instead of direct Firebase access
   const { locations, updateLocationNote, deleteLocation } = useLocations();
@@ -118,23 +115,23 @@ const LocationCard: React.FC<LocationCardProps> = ({
   const getTypeIcon = (type: LocationType) => {
     switch(type) {
       case 'region':
-        return <Mountain className={clsx(`${themePrefix}-location-type-region`)} />;
+        return <Mountain className="location-type-region" />;
       case 'city':
-        return <Building className={clsx(`${themePrefix}-location-type-city`)} />;
+        return <Building className="location-type-city" />;
       case 'town':
-        return <Home className={clsx(`${themePrefix}-location-type-town`)} />;
+        return <Home className="location-type-town" />;
       case 'village':
-        return <Home className={clsx(`${themePrefix}-location-type-village`)} />;
+        return <Home className="location-type-village" />;
       case 'dungeon':
-        return <Building className={clsx(`${themePrefix}-location-type-dungeon`)} />;
+        return <Building className="location-type-dungeon" />;
       case 'landmark':
-        return <Landmark className={clsx(`${themePrefix}-location-type-landmark`)} />;
+        return <Landmark className="location-type-landmark" />;
       case 'building':
-        return <Building className={clsx(`${themePrefix}-location-type-building`)} />;
+        return <Building className="location-type-building" />;
       case 'poi':
-        return <MapPin className={clsx(`${themePrefix}-location-type-poi`)} />;
+        return <MapPin className="location-type-poi" />;
       default:
-        return <MapPin className={clsx(`${themePrefix}-typography-secondary`)} />;
+        return <MapPin className="typography-secondary" />;
     }
   };
 
@@ -153,13 +150,10 @@ const LocationCard: React.FC<LocationCardProps> = ({
           {location.notes.map((note, index) => (
             <div
               key={`${note.date}-${index}`}
-              className={clsx(
-                "p-3 rounded-lg space-y-1",
-                `${themePrefix}-note`
-              )}
+              className="p-3 rounded-lg space-y-1 note"
             >
               <div className="flex items-center gap-2">
-                <Calendar size={14} className={clsx(`${themePrefix}-typography-secondary`)} />
+                <Calendar size={14} className="typography-secondary" />
                 <Typography variant="body-sm" color="secondary">
                   {new Date(note.date).toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})}
                 </Typography>
@@ -252,8 +246,8 @@ const LocationCard: React.FC<LocationCardProps> = ({
   return (
     <>
       <Card className={clsx(
-        `${themePrefix}-location-card`,
-        `${themePrefix}-location-card-${location.status}`
+        `location-card`,
+        `location-card-${location.status}`
         )}>
         <Card.Content className="space-y-4">
           <div>
@@ -297,7 +291,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
             <div className="flex flex-wrap gap-4">
               {connectedNPCs.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <Users size={16} className={clsx(`${themePrefix}-typography-secondary`)} />
+                  <Users size={16} className="typography-secondary" />
                   <Typography variant="body-sm" color="secondary">
                     {connectedNPCs.length} NPCs
                   </Typography>
@@ -305,7 +299,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
               )}
               {location.relatedQuests && location.relatedQuests.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <Scroll size={16} className={clsx(`${themePrefix}-typography-secondary`)} />
+                  <Scroll size={16} className="typography-secondary" />
                   <Typography variant="body-sm" color="secondary">
                     {location.relatedQuests.length} Quests
                   </Typography>
@@ -315,7 +309,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
 
             {/* Expanded Content */}
             {isContentExpanded && (
-              <div className={clsx("pt-4 space-y-4 border-t", `${themePrefix}-divider`)}>
+              <div className="pt-4 space-y-4 border-t divider">
                 {/* Creator and modifier attribution */}
                 <AttributionInfo
                   createdByUsername={location.createdByUsername}
@@ -333,7 +327,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
                     <ul className="space-y-1">
                       {location.features.map((feature, index) => (
                         <li key={index} className="flex items-start gap-2">
-                          <Landmark size={16} className={clsx(`${themePrefix}-typography-secondary`, "mt-1")} />
+                          <Landmark size={16} className="typography-secondary mt-1" />
                           <Typography variant="body-sm" color="secondary">
                             {feature}
                           </Typography>
@@ -364,10 +358,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
                             <div className="flex items-start gap-2 text-left">
                               <Scroll 
                                 size={16} 
-                                className={clsx(
-                                  "mt-1",
-                                  `${themePrefix}-quest-status-${quest.status}`
-                                )}
+                                className={clsx("mt-1", `quest-status-${quest.status}`)}
                               />
                               <div className="flex-1">
                                 <Typography variant="body-sm" className="font-medium">
@@ -404,16 +395,13 @@ const LocationCard: React.FC<LocationCardProps> = ({
                           <div className="flex items-start gap-2 text-left">
                             <Users 
                               size={16} 
-                              className={clsx(
-                                "mt-1",
-                                `${themePrefix}-npc-relationship-${npc.relationship}`
-                              )}
+                              className={clsx("mt-1", `npc-relationship-${npc.relationship}`)}
                             />
                             <div className="flex-1">
                               <Typography variant="body-sm" className="font-medium">
                                 {npc.name}
                                 {npc.title && (
-                                  <span className={clsx(`${themePrefix}-typography-secondary`, "ml-1")}>
+                                  <span className="typography-secondary ml-1">
                                     - {npc.title}
                                   </span>
                                 )}
@@ -441,12 +429,9 @@ const LocationCard: React.FC<LocationCardProps> = ({
                       {location.tags.map((tag, index) => (
                         <div
                           key={index}
-                          className={clsx(
-                            "flex items-center gap-1 px-2 py-1 rounded-full",
-                            `${themePrefix}-tag`
-                          )}
+                          className="flex items-center gap-1 px-2 py-1 rounded-full tag"
                         >
-                          <Tag size={12} className={clsx(`${themePrefix}-typography-secondary`)} />
+                          <Tag size={12} className="typography-secondary" />
                           <Typography variant="body-sm" color="secondary">
                             {tag}
                           </Typography>
@@ -477,7 +462,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
                         variant="ghost"
                         size="sm"
                         onClick={() => setIsDeleteDialogOpen(true)}
-                        startIcon={<Trash size={16} className={clsx(`${themePrefix}-status-error`)} />}
+                        startIcon={<Trash size={16} className="status-error" />}
                       >
                         Delete
                       </Button>

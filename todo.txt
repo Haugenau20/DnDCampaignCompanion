@@ -28,11 +28,16 @@ Prioritized Todo List
 
 Waiting for prio:
 
+- Lots of dates are invalid.
+
+- Bookshelf view has some odd color differences.
+
 - Implement/review proper highlighting logic to pages.
 - The medieval theme does not work with the hamburger menu and theme selector dropdown.
 
 - F12 console Error in StoryContext when it is trying to update "current-progress"
     - I think this is a remnant of purposefully unused functionality and it should just be deleted. 
+    - It seems to be deeply embedded in the codebase. Remove it entirely all around.
 
 Admin Panel:
 - Test if the creation of new groups and campaigns work

@@ -1,5 +1,5 @@
 // src/utils/theme-utils.ts
-import { ThemeName } from '../types/theme';
+import { ThemeName } from './types';
 
 /**
  * Determines if the current theme is the D&D theme

@@ -8,8 +8,6 @@ import RumorForm from '../../components/features/rumors/RumorForm';
 import { useRumors } from '../../context/RumorContext';
 import { useAuth } from '../../context/firebase';
 import { useNavigation } from '../../hooks/useNavigation';
-import { useTheme } from '../../context/ThemeContext';
-import clsx from 'clsx';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
 const RumorEditPage: React.FC = () => {
@@ -17,8 +15,6 @@ const RumorEditPage: React.FC = () => {
   const { rumorId } = useParams<{ rumorId: string }>();
   const { rumors, isLoading, error } = useRumors();
   const { user } = useAuth();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   const editingRumor = rumors.find(rumor => rumor.id === rumorId);
 
@@ -34,7 +30,7 @@ const RumorEditPage: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <Card className="p-8">
           <div className="flex items-center gap-4">
-            <Loader2 className={clsx("w-6 h-6 animate-spin", `${themePrefix}-primary`)} />
+            <Loader2 className="w-6 h-6 animate-spin primary" />
             <Typography>Loading rumor data...</Typography>
           </div>
         </Card>

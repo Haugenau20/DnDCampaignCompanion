@@ -1,0 +1,864 @@
+/* src/themes/css/components.css */
+/*
+  Component-specific styles using CSS variables.
+  These styles apply to all themes, with theme-specific values coming from CSS variables.
+*/
+
+/* Base theme styles */
+.theme {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+}
+
+.primary {
+  color: var(--color-primary)
+}
+
+.secondary {
+  color: var(--color-secondary);
+}
+
+.accent {
+  color: var(--color-accent);
+}
+
+.bg-primary {
+  background-color: var(--bg-primary);
+}
+
+.bg-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.bg-accent {
+  background-color: var(--bg-accent);
+}
+
+/* ====== BUTTON COMPONENT ====== */
+.button {
+  position: relative;
+  font-family: var(--font-primary);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.button-primary {
+  background-color: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.button-primary:hover:not(:disabled) {
+  background-color: var(--button-primary-hover);
+}
+
+.button-secondary {
+  background-color: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+}
+
+.button-secondary:hover:not(:disabled) {
+  background-color: var(--button-secondary-hover);
+}
+
+.button-outline {
+  background-color: var(--button-outline-bg);
+  color: var(--button-outline-text);
+  border: var(--border-width-sm) solid var(--button-outline-border);
+}
+
+.button-outline:hover:not(:disabled) {
+  background-color: var(--button-outline-hover);
+}
+
+.button-ghost {
+  background-color: var(--button-ghost-bg);
+  color: var(--button-ghost-text);
+}
+
+.button-ghost:hover:not(:disabled) {
+  background-color: var(--button-ghost-hover);
+}
+
+.button-link {
+  background-color: var(--button-link-bg);
+  color: var(--button-link-text);
+  text-decoration: none;
+}
+
+.button-link:hover:not(:disabled) {
+  color: var(--button-link-hover);
+  text-decoration: underline;
+}
+
+/* ====== CARD COMPONENT ====== */
+.card {
+  border: var(--border-width-sm) solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  background-color: var(--card-bg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.card-border {
+  border: var(--border-width-sm) solid var(--card-border);
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  padding: 1.5rem 1.5rem 0.75rem;
+}
+
+.card-content {
+  padding: 1rem 1.5rem;
+}
+
+.card-footer {
+  padding: 0.75rem 1.5rem 1.5rem;
+  border-top: var(--border-width-sm) solid var(--card-border);
+  margin-top: 1rem;
+}
+
+.card-subtle {
+  background-color: var(--bg-secondary);
+}
+
+/* ====== DIALOG COMPONENT ====== */
+.dialog {
+  background-color: var(--card-bg);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border: var(--border-width-sm) solid var(--card-border);
+}
+
+.dialog-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* ====== TYPOGRAPHY COMPONENT ====== */
+.typography {
+  font-family: var(--font-primary);
+  color: var(--text-primary);
+}
+
+.typography-heading {
+  font-family: var(--font-heading);
+  color: var(--heading-color);
+}
+
+.typography-secondary {
+  color: var(--text-secondary);
+}
+
+.typography-primary {
+  color: var(--color-primary);
+}
+
+.typography-muted {
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.typography-white {
+  color: white;
+}
+
+.typography-error {
+  color: var(--form-error-text);
+}
+
+.typography-success {
+  color: var(--form-success-text);
+}
+
+.typography-label {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ====== INPUT COMPONENT ====== */
+.input {
+  background-color: var(--input-bg);
+  border: var(--border-width-sm) solid var(--input-border);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  border-radius: var(--border-radius-md);
+}
+
+.input:focus {
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 2px var(--input-ring-focus);
+}
+
+.input-error {
+  border-color: var(--input-error-border);
+}
+
+.input-error:focus {
+  border-color: var(--input-error-focus);
+  box-shadow: 0 0 0 2px var(--input-error-ring);
+}
+
+.input-success {
+  border-color: var(--input-success-border);
+}
+
+.input-success:focus {
+  border-color: var(--input-success-focus);
+  box-shadow: 0 0 0 2px var(--input-success-ring);
+}
+
+.input::placeholder {
+  color: var(--input-placeholder);
+}
+
+.form-label {
+  color: var(--form-label-text);
+}
+
+.form-helper {
+  color: var(--form-helper-text);
+}
+
+.form-error {
+  color: var(--form-error-text);
+}
+
+.form-success {
+  color: var(--form-success-text);
+}
+
+.input:disabled {
+  background-color: var(--form-disabled-bg);
+  opacity: 0.7;
+}
+
+/* ====== LAYOUT COMPONENTS ====== */
+.header {
+  background-color: var(--header-bg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header-title {
+  color: var(--heading-color);
+  font-family: var(--font-heading);
+}
+
+.footer {
+  background-color: var(--footer-bg);
+}
+
+.content {
+  background-color: var(--bg-primary);
+}
+
+/* ====== NAVIGATION ====== */
+.navigation {
+  background-color: var(--card-bg);
+  border-bottom: var(--border-width-sm) solid var(--card-border);
+}
+
+.navigation-item {
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.navigation-item:hover {
+  color: var(--color-primary);
+  background-color: var(--hover-light);
+}
+
+.navigation-item-active {
+  color: var(--color-primary);
+  background-color: var(--hover-medium);
+  font-weight: 500;
+}
+
+/* ====== SIDEBAR ====== */
+.sidebar {
+  background-color: var(--card-bg);
+  border-right: var(--border-width-sm) solid var(--card-border);
+}
+
+/* ====== SEARCH ====== */
+.search {
+  background-color: var(--input-bg);
+  border: var(--border-width-sm) solid var(--input-border);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  border-radius: var(--border-radius-md);
+}
+
+.search:focus {
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 2px var(--input-ring-focus);
+}
+
+.search-results {
+  background-color: var(--card-bg);
+  border: var(--border-width-sm) solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.search-result {
+  transition: background-color 0.1s ease;
+}
+
+.search-result:hover {
+  background-color: var(--hover-light);
+}
+
+.search-result-selected {
+  background-color: var(--hover-medium);
+}
+
+/* ====== DROPDOWN ====== */
+.dropdown {
+  background-color: var(--card-bg);
+  border: var(--border-width-sm) solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-item {
+  color: var(--text-primary);
+  transition: background-color 0.1s ease;
+}
+
+.dropdown-item:hover {
+  background-color: var(--hover-light);
+}
+
+.dropdown-item-active {
+  background-color: var(--hover-medium);
+  color: var(--color-primary);
+}
+
+/* ====== STATUS INDICATORS ====== */
+.status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-general {
+  color: var(--status-general);
+}
+
+.status-active {
+  color: var(--status-active);
+}
+
+.status-completed {
+  color: var(--status-completed);
+}
+
+.status-failed {
+  color: var(--status-failed);
+}
+
+.status-unknown {
+  color: var(--status-unknown);
+}
+
+/* ====== ICON STYLING ====== */
+.icon-bg {
+  background-color: var(--icon-bg);
+  border: 1px solid var(--icon-border);
+}
+
+/* ====== QUEST CARD ====== */
+.quest-card {
+  border-left: 4px solid var(--status-active);
+}
+
+.quest-card-active {
+  border-left: 4px solid var(--status-active);
+}
+
+.quest-card-completed {
+  border-left: 4px solid var(--status-completed);
+}
+
+.quest-card-failed {
+  border-left: 4px solid var(--status-failed);
+}
+
+.progress-container {
+  background-color: var(--bg-secondary);
+}
+
+.progress-bar {
+  background-color: var(--status-active);
+}
+
+.progress-bar-active {
+  background-color: var(--status-active);
+}
+
+.progress-bar-completed {
+  background-color: var(--status-completed);
+}
+
+.progress-bar-failed {
+  background-color: var(--status-failed);
+}
+
+.objective-completed {
+  background-color: var(--status-completed);
+  border-color: var(--status-completed);
+}
+
+.objective-pending {
+  border-color: var(--bg-secondary);
+}
+
+/* ====== NPC CARD ====== */
+.npc-card {
+  border-left: 4px solid var(--color-primary);
+}
+
+.npc-card-alive {
+  border-left: 4px solid var(--status-completed);
+}
+
+.npc-card-missing {
+  border-left: 4px solid var(--status-unknown);
+}
+
+.npc-card-deceased {
+  border-left: 4px solid var(--status-failed);
+}
+
+.npc-card-friendly {
+  border-left: 4px solid var(--status-completed);
+}
+
+.npc-card-hostile {
+  border-left: 4px solid var(--status-failed);
+}
+
+.npc-card-neutral {
+  border-left: 4px solid var(--color-primary);
+}
+
+.npc-card-unknown {
+  border-left: 4px solid var(--status-unknown);
+}
+
+.npc-status-alive {
+  color: var(--status-completed);
+}
+
+.npc-status-deceased {
+  color: var(--status-failed);
+}
+
+.npc-status-missing {
+  color: var(--status-unknown);
+}
+
+.npc-status-unknown {
+  color: var(--status-unknown);
+}
+
+.npc-relationship-friendly {
+  color: var(--status-completed);
+}
+
+.npc-relationship-hostile {
+  color: var(--status-failed);
+}
+
+.npc-relationship-neutral {
+  color: var(--text-secondary);
+}
+
+.npc-relationship-unknown {
+  color: var(--text-secondary);
+}
+
+.note {
+  background-color: var(--bg-secondary);
+}
+
+/* ====== LOCATION CARD ====== */
+.location-card {
+  border-left: 4px solid var(--status-active);
+}
+
+.location-card-explored {
+  border-left: 4px solid var(--status-completed);
+}
+
+.location-card-visited {
+  border-left: 4px solid var(--status-unknown);
+}
+
+.location-card-known {
+  border-left: 4px solid var(--text-secondary);
+}
+
+.location-status-explored {
+  color: var(--status-completed);
+}
+
+.location-status-known {
+  color: var(--text-secondary);
+}
+
+.location-status-visited {
+  color: var(--status-unknown);
+}
+
+/* Location type colors */
+.location-type-region {
+  color: var(--location-type-region);
+}
+
+.location-type-city {
+  color: var(--location-type-city);
+}
+
+.location-type-town {
+  color: var(--location-type-town);
+}
+
+.location-type-village {
+  color: var(--location-type-village);
+}
+
+.location-type-dungeon {
+  color: var(--location-type-dungeon);
+}
+
+.location-type-landmark {
+  color: var(--location-type-landmark);
+}
+
+.location-type-building {
+  color: var(--location-type-building);
+}
+
+.location-type-poi {
+  color: var(--location-type-poi);
+}
+
+/* ====== RUMOR CARD ====== */
+.rumor-card {
+  border-left: 4px solid var(--color-primary);
+}
+
+.rumor-card-confirmed {
+  border-left: 4px solid var(--status-completed);
+}
+
+.rumor-card-unconfirmed {
+  border-left: 4px solid var(--status-unknown);
+}
+
+.rumor-card-false {
+  border-left: 4px solid var(--status-failed);
+}
+
+.rumor-status-confirmed {
+  color: var(--status-completed);
+}
+
+.rumor-status-unconfirmed {
+  color: var(--status-unknown);
+}
+
+.rumor-status-false {
+  color: var(--status-failed);
+}
+
+.rumor-status-border-confirmed {
+  border-color: var(--status-completed);
+}
+
+.rumor-status-border-unconfirmed {
+  border-color: var(--status-unknown);
+}
+
+.rumor-status-border-false {
+  border-color: var(--status-failed);
+}
+
+/* ====== SELECTABLE ITEM ====== */
+.selectable-item {
+  border: 2px solid transparent;
+  background-color: var(--bg-primary);
+  transition: all 0.2s ease;
+}
+
+.selectable-item:hover {
+  background-color: var(--bg-accent);
+}
+
+.selected-item {
+  background-color: var(--bg-accent);
+  border: 2px solid var(--color-primary);
+}
+
+.highlighted-item {
+  outline: 2px solid var(--color-primary);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 0 0 2px var(--bg-primary);
+}
+
+/* ====== SUCCESS/ERROR STATES ====== */
+.success-icon-bg {
+  background-color: var(--input-success-ring);
+  opacity: 0.2;
+}
+
+.success-icon {
+  color: var(--form-success-text);
+}
+
+.error-bg {
+  background-color: var(--error-bg);
+  color: var(--status-failed);
+}
+
+.delete-button {
+  background-color: var(--delete-button-bg);
+  color: var(--delete-button-text);
+}
+
+.delete-button:hover {
+  background-color: var(--delete-button-hover);
+}
+
+/* ====== DIVIDER ====== */
+.divider {
+  border-color: var(--card-border);
+}
+
+/* ====== TAG ====== */
+.tag {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--card-border);
+}
+
+/* ====== HINT ====== */
+.hint {
+  background-color: var(--bg-accent);
+  color: var(--color-primary);
+}
+
+/* ====== SPINNER ====== */
+.spinner-border {
+  border-color: var(--spinner-border);
+  border-top-color: var(--spinner-active);
+}
+
+/* ====== BOOK VIEWER ====== */
+.book {
+  background-color: var(--book-bg);
+}
+
+.book-header {
+  background-color: var(--book-header-bg);
+}
+
+.book-nav {
+  background-color: var(--book-nav-bg);
+}
+
+.book-content-area {
+  background-color: var(--book-content-bg);
+}
+
+.book-content {
+  font-family: var(--font-primary);
+}
+
+.book-text {
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+}
+
+.book-pagination {
+  background-color: var(--book-pagination-bg);
+}
+
+.page-nav-button {
+  background-color: transparent;
+}
+
+.page-nav-button:hover {
+  background-color: var(--hover-light);
+}
+
+/* ====== JOURNAL STYLING ====== */
+.journal-container {
+  background-color: var(--journal-leather);
+  box-shadow: 0 4px 6px var(--journal-page-shadow);
+}
+
+.journal-binding {
+  background-color: var(--journal-binding);
+  box-shadow: inset 0 0 10px var(--journal-page-shadow);
+}
+
+.journal-stitch {
+  background-color: var(--journal-stitch);
+}
+
+.journal-page {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.journal-page-left {
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+  box-shadow: inset 5px 0 10px var(--journal-page-shadow);
+}
+
+.journal-page-right {
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  box-shadow: inset -5px 0 10px var(--journal-page-shadow);
+}
+
+.journal-pages {
+  gap: 0.5rem;
+  box-shadow: inset 0 0 10px var(--journal-page-shadow);
+}
+
+.journal-heading {
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--card-border);
+  padding-bottom: 0.25rem;
+}
+
+.journal-section {
+  position: relative;
+}
+
+.journal-section::after {
+  content: "";
+  position: absolute;
+  bottom: -1rem;
+  left: 25%;
+  right: 25%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--card-border), transparent);
+  opacity: 0.5;
+}
+
+.journal-title {
+  color: var(--text-primary);
+}
+
+.journal-character-card {
+  background-color: var(--journal-character-card-bg);
+  transition: all 0.2s;
+}
+
+.journal-character-card:hover {
+  background-color: var(--journal-character-card-hover);
+}
+
+.journal-character-sketch {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--card-border);
+}
+
+.journal-character-name {
+  color: var(--text-primary);
+}
+
+.journal-quest-item {
+  background-color: var(--journal-quest-item-bg);
+  transition: all 0.2s;
+}
+
+.journal-quest-item:hover {
+  background-color: var(--journal-quest-item-hover);
+}
+
+.journal-quest-bullet {
+  background-color: var(--color-primary);
+}
+
+.journal-quest-title {
+  color: var(--text-primary);
+}
+
+.journal-quest-note {
+  color: var(--text-secondary);
+}
+
+.journal-activity-item {
+  border-left: 2px solid transparent;
+  padding-left: 0.5rem;
+}
+
+.journal-activity-item:hover {
+  border-left-color: var(--color-primary);
+  background-color: var(--journal-activity-hover);
+}
+
+.journal-activity-icon-bg {
+  background-color: var(--bg-secondary);
+  color: var(--color-primary);
+}
+
+.journal-activity-title {
+  color: var(--text-primary);
+}
+
+.journal-activity-date {
+  color: var(--text-secondary);
+}
+
+.journal-activity-type {
+  color: var(--color-primary);
+}
+
+.journal-activity-description {
+  color: var(--text-secondary);
+}
+
+.journal-activity-separator {
+  color: var(--text-secondary);
+}
+
+.journal-loading {
+  background-color: var(--bg-secondary);
+  opacity: 0.3;
+}
+
+.journal-empty {
+  color: var(--text-secondary);
+}
+
+.journal-notes-area {
+  background-color: var(--journal-notes-area);
+  min-height: 200px;
+}
+
+.journal-pagination {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+}
+
+.journal-paper {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--card-border);
+}
+
+.journal-more-note {
+  font-size: small;
+  font-style: italic;
+}

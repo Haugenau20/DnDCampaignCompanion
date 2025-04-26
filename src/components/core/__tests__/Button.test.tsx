@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from '../../../context/ThemeContext';
+import { ThemeProvider } from '../../../themes/ThemeContext';
 import Button from '../Button';
 
 // Helper function to render Button with ThemeProvider

@@ -5,7 +5,6 @@ import Input from '../../components/core/Input';
 import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import Breadcrumb from '../../components/layout/Breadcrumb';
-import { useTheme } from '../../context/ThemeContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/firebase';
 import { useSagaData } from '../../hooks/useSagaData';
@@ -13,19 +12,16 @@ import { Book, Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
 import { SagaData } from '../../types/saga';
 import { exportChaptersAsText } from '../../utils/export-utils';
 import { useStory } from '../../context/StoryContext';
-import clsx from 'clsx';
 import Dialog from '../../components/core/Dialog';
 
 // Constants for default content if none exists
 const SAGA_DEFAULT_OPENING = "In a realm where magic weaves through the fabric of reality and ancient powers stir from long slumber, a group of unlikely heroes finds their fates intertwined by destiny's unseen hand.";
 
 const SagaEditPage: React.FC = () => {
-  const { theme } = useTheme();
   const { navigateToPage } = useNavigation();
   const { user } = useAuth();
   const { chapters } = useStory();
   const { saga, loading, error, hasRequiredContext, saveSaga } = useSagaData();
-  const themePrefix = theme.name;
   
   const [title, setTitle] = useState('The Campaign Saga');
   const [content, setContent] = useState('');
@@ -130,8 +126,8 @@ const SagaEditPage: React.FC = () => {
   if (!hasRequiredContext) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Card className={clsx("p-8", `${themePrefix}-card`)}>
-          <Typography className={`${themePrefix}-typography`}>
+        <Card className="p-8 card">
+          <Typography className={`typography`}>
             Please select a group and campaign to edit the saga.
           </Typography>
         </Card>
@@ -150,7 +146,7 @@ const SagaEditPage: React.FC = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Card className={clsx("p-8", `${themePrefix}-card`)}>
+        <Card className="p-8 card">
           <Typography color="error">
             {error}
           </Typography>
@@ -164,7 +160,7 @@ const SagaEditPage: React.FC = () => {
   }
 
   return (
-    <div className={clsx("min-h-screen p-4", `${themePrefix}-content`)}>
+    <div className="min-h-screen p-4 content">
       <div className="max-w-7xl mx-auto">
         {/* Breadcrumb Navigation */}
         <Breadcrumb items={breadcrumbItems} className="mb-4" />
@@ -172,8 +168,8 @@ const SagaEditPage: React.FC = () => {
         {/* Page Header */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Book className={clsx("w-6 h-6", `${themePrefix}-primary`)} />
-            <Typography variant="h2" className={clsx(`${themePrefix}-typography-heading`)}>
+            <Book className="w-6 h-6 primary" />
+            <Typography variant="h2" className="typography-heading">
               Edit Campaign Saga
             </Typography>
           </div>
@@ -190,7 +186,7 @@ const SagaEditPage: React.FC = () => {
               Export Chapter Content
             </Button>
             <button 
-              className={clsx("hover:opacity-80", `${themePrefix}-typography-secondary`)}
+              className="hover:opacity-80 typography-secondary"
               onClick={() => setShowExportInfo(true)}
             >
               <HelpCircle className="w-4 h-4" />
@@ -204,13 +200,13 @@ const SagaEditPage: React.FC = () => {
             <Card.Content className="space-y-6">
               {/* Error/Success Messages */}
               {localError && (
-                <div className={clsx("p-4 mb-4 rounded-md", `${themePrefix}-note`)}>
+                <div className="p-4 mb-4 rounded-md note">
                   <Typography color="error">{localError}</Typography>
                 </div>
               )}
               
               {success && (
-                <div className={clsx("p-4 mb-4 rounded-md", `${themePrefix}-success-icon-bg`)}>
+                <div className="p-4 mb-4 rounded-md success-icon-bg">
                   <Typography color="success">{success}</Typography>
                 </div>
               )}

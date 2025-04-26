@@ -4,7 +4,6 @@ import { BookOpen, ChevronLeft, ChevronRight, ArrowLeftCircle, ArrowRightCircle 
 import Typography from '../../core/Typography';
 import Card from '../../core/Card';
 import Button from '../../core/Button';
-import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 
 interface BookViewerProps {
@@ -35,8 +34,6 @@ const BookViewer: React.FC<BookViewerProps> = ({
   const [totalPages, setTotalPages] = useState(1);
   const [pages, setPages] = useState<string[]>([]);
   const [showShortcutHint, setShowShortcutHint] = useState(true);
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Format content for display, preserving paragraphs
   const formatContent = useCallback((contentText: string): string => {
@@ -147,8 +144,8 @@ const BookViewer: React.FC<BookViewerProps> = ({
 
   if (!content) {
     return (
-      <Card className={clsx("w-full max-w-4xl mx-auto p-8 text-center", `${themePrefix}-card`)}>
-        <BookOpen className={clsx("w-16 h-16 mx-auto mb-4", `${themePrefix}-primary`)} />
+      <Card className="w-full max-w-4xl mx-auto p-8 text-center card">
+        <BookOpen className="w-16 h-16 mx-auto mb-4 primary" />
         <Typography variant="h3" className="mb-2">
           No Content Available
         </Typography>
@@ -163,10 +160,7 @@ const BookViewer: React.FC<BookViewerProps> = ({
     <div className={clsx('flex flex-col items-center', className)}>
       {/* Keyboard Shortcuts Hint */}
       {showShortcutHint && (
-        <div className={clsx(
-          "px-4 py-2 rounded-lg mb-4 transition-opacity duration-500",
-          `${themePrefix}-hint`
-        )}>
+        <div className="px-4 py-2 rounded-lg mb-4 transition-opacity duration-500 hint">
           <Typography variant="body-sm">
             Tip: Use arrow keys or spacebar to navigate pages
           </Typography>
@@ -174,28 +168,19 @@ const BookViewer: React.FC<BookViewerProps> = ({
       )}
 
       {/* Book Container */}
-      <div className={clsx(
-        "w-full max-w-4xl overflow-hidden rounded-lg shadow-xl",
-        `${themePrefix}-book`
-      )}>
+      <div className="w-full max-w-4xl overflow-hidden rounded-lg shadow-xl book">
         {/* Book Header */}
-        <div className={clsx(
-          "border-b p-4",
-          `${themePrefix}-book-header`
-        )}>
+        <div className="border-b p-4 book-header">
           {/* Use the Typography component with proper theme class */}
-          <div className={clsx("text-center", `${themePrefix}-typography-heading`)}>
-            <Typography variant="h3" className={`${themePrefix}-typography-heading`}>
+          <div className="text-center typography-heading">
+            <Typography variant="h3" className={`typography-heading`}>
               {title}
             </Typography>
           </div>
         </div>
 
         {/* Chapter Navigation */}
-        <div className={clsx(
-          "flex justify-between px-4 py-2 border-b", 
-          `${themePrefix}-book-nav`
-        )}>
+        <div className="flex justify-between px-4 py-2 border-b book-nav">
           <Button
             variant="ghost"
             onClick={onPreviousChapter}
@@ -217,33 +202,21 @@ const BookViewer: React.FC<BookViewerProps> = ({
         </div>
 
         {/* Book Content Area */}
-        <div className={clsx("relative", `${themePrefix}-book-content-area`)}>
+        <div className="relative book-content-area">
           {/* Content Container */}
-          <div className={clsx(
-            "max-w-2xl mx-auto p-8 pb-20",
-            `${themePrefix}-book-content`
-          )}>
-            <div className={clsx(
-              "leading-relaxed",
-              `${themePrefix}-book-text`
-            )}>
+          <div className="max-w-2xl mx-auto p-8 pb-20 book-content">
+            <div className="leading-relaxed book-text">
               {renderContent(pages[currentPage - 1] || '')}
             </div>
           </div>
 
           {/* Navigation Bar */}
-          <div className={clsx(
-            "absolute bottom-0 left-0 right-0 border-t",
-            `${themePrefix}-book-pagination`
-          )}>
+          <div className="absolute bottom-0 left-0 right-0 border-t book-pagination">
             <div className="flex justify-center items-center gap-4 p-4">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1 && !hasPreviousChapter}
-                className={clsx(
-                  "p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed",
-                  `${themePrefix}-page-nav-button`
-                )}
+                className="p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed page-nav-button"
                 aria-label="Previous page"
               >
                 <ChevronLeft className="w-6 h-6" />
@@ -256,10 +229,7 @@ const BookViewer: React.FC<BookViewerProps> = ({
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages && !hasNextChapter}
-                className={clsx(
-                  "p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed",
-                  `${themePrefix}-page-nav-button`
-                )}
+                className="p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed page-nav-button"
                 aria-label="Next page"
               >
                 <ChevronRight className="w-6 h-6" />
@@ -269,9 +239,9 @@ const BookViewer: React.FC<BookViewerProps> = ({
         </div>
 
         {/* Progress Bar */}
-        <div className={clsx("h-2", `${themePrefix}-progress-container`)}>
+        <div className="h-2 progress-container">
           <div 
-            className={clsx("h-full transition-all duration-300", `${themePrefix}-progress-bar`)}
+            className="h-full transition-all duration-300 progress-bar"
             style={{ width: `${(currentPage / totalPages) * 100}%` }}
           />
         </div>

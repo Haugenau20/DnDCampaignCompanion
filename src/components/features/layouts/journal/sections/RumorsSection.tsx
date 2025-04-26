@@ -1,10 +1,8 @@
 // components/features/layouts/journal/sections/RumorsSection.tsx
 import React from 'react';
-import { useTheme } from '../../../../../context/ThemeContext';
 import { useNavigation } from '../../../../../context/NavigationContext';
 import { Rumor } from '../../../../../types/rumor';
 import { MessageSquare, Check, X, HelpCircle } from 'lucide-react';
-import clsx from 'clsx';
 
 interface RumorsSectionProps {
   rumors: Rumor[];
@@ -15,9 +13,7 @@ interface RumorsSectionProps {
  * Displays a list of rumors in journal style
  */
 const RumorsSection: React.FC<RumorsSectionProps> = ({ rumors, loading }) => {
-  const { theme } = useTheme();
   const { navigateToPage } = useNavigation();
-  const themePrefix = theme.name;
 
   // Sort rumors by verification status, then by date (newest first)
   const sortedRumors = [...rumors].sort((firstRumor, secondRumor) => {
@@ -46,12 +42,12 @@ const RumorsSection: React.FC<RumorsSectionProps> = ({ rumors, loading }) => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return <Check size={14} className={clsx(`${themePrefix}-rumor-status-confirmed`)} />;
+        return <Check size={14} className="rumor-status-confirmed" />;
       case 'false':
-        return <X size={14} className={clsx(`${themePrefix}-rumor-status-false`)} />;
+        return <X size={14} className="rumor-status-false" />;
       case 'unconfirmed':
       default:
-        return <HelpCircle size={14} className={clsx(`${themePrefix}-rumor-status-unconfirmed`)} />;
+        return <HelpCircle size={14} className="rumor-status-unconfirmed" />;
     }
   };
   
@@ -61,14 +57,8 @@ const RumorsSection: React.FC<RumorsSectionProps> = ({ rumors, loading }) => {
   };
 
   return (
-    <div className={clsx(
-      "relative",
-      `${themePrefix}-journal-section`
-    )}>
-      <h3 className={clsx(
-        "text-lg font-medium mb-3",
-        `${themePrefix}-journal-heading`
-      )}>
+    <div className="relative journal-section">
+      <h3 className="text-lg font-medium mb-3 journal-heading">
         Recent Rumors ({loading ? '...' : rumors.length})
       </h3>
 
@@ -77,18 +67,12 @@ const RumorsSection: React.FC<RumorsSectionProps> = ({ rumors, loading }) => {
           {[1, 2].map(index => (
             <div 
               key={index}
-              className={clsx(
-                "h-16 rounded",
-                `${themePrefix}-journal-loading`
-              )}
+              className="h-16 rounded journal-loading"
             ></div>
           ))}
         </div>
       ) : sortedRumors.length === 0 ? (
-        <div className={clsx(
-          "text-center py-4",
-          `${themePrefix}-journal-empty`
-        )}>
+        <div className="text-center py-4 journal-empty">
           <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm italic">No rumors gathered yet</p>
         </div>
@@ -98,37 +82,23 @@ const RumorsSection: React.FC<RumorsSectionProps> = ({ rumors, loading }) => {
             <div
               key={rumor.id}
               onClick={() => handleRumorClick(rumor.id)}
-              className={clsx(
-                "p-2 rounded cursor-pointer transition-transform hover:scale-[1.01]",
-                `${themePrefix}-journal-rumor-item`,
-                rumor.status === 'confirmed' && `${themePrefix}-journal-rumor-confirmed`,
-                rumor.status === 'false' && `${themePrefix}-journal-rumor-false`
-              )}
+              className="p-2 rounded cursor-pointer transition-transform hover:scale-[1.01]"
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-1">
                     {getStatusIcon(rumor.status)}
-                    <span className={clsx(
-                      "text-sm font-medium",
-                      `${themePrefix}-journal-rumor-title`
-                    )}>
+                    <span className="text-sm font-medium journal-title">
                       {rumor.title}
                     </span>
                   </div>
                   
-                  <p className={clsx(
-                    "text-xs mt-1 line-clamp-2 italic",
-                    `${themePrefix}-journal-rumor-content`
-                  )}>
+                  <p className="text-xs mt-1 line-clamp-2 italic">
                     "{rumor.content}"
                   </p>
                   
                   {rumor.sourceName && (
-                    <p className={clsx(
-                      "text-xs mt-1 text-right",
-                      `${themePrefix}-typography-secondary`
-                    )}>
+                    <p className="text-xs mt-1 text-right typography-secondary">
                       — {rumor.sourceName}
                     </p>
                   )}
@@ -138,10 +108,7 @@ const RumorsSection: React.FC<RumorsSectionProps> = ({ rumors, loading }) => {
           ))}
           
           {sortedRumors.length > 3 && (
-            <div className={clsx(
-              "text-right text-xs italic",
-              `${themePrefix}-journal-more-note`
-            )}>
+            <div className="text-right text-xs italic journal-more-note">
               ...and {sortedRumors.length - 3} more rumors
             </div>
           )}

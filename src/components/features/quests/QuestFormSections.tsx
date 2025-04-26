@@ -7,7 +7,6 @@ import Input from '../../core/Input';
 import Button from '../../core/Button';
 import LocationCombobox from '../locations/LocationCombobox';
 import Dialog from '../../core/Dialog';
-import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 import { PlusCircle, X, Target } from 'lucide-react';
 
@@ -25,16 +24,12 @@ interface RelatedNPCsSectionProps extends SectionProps {
   }
   
   export const RelatedNPCsSection: React.FC<RelatedNPCsSectionProps> = ({ 
-    formData, 
-    handleInputChange,
     npcs,
     selectedNPCs,
     setSelectedNPCs,
     isNPCDialogOpen,
     setIsNPCDialogOpen
   }) => {
-    const { theme } = useTheme();
-    const themePrefix = theme.name;
 
     const handleRemoveNPC = (npcId: string) => {
       setSelectedNPCs((prev: Set<string>) => {
@@ -73,17 +68,14 @@ interface RelatedNPCsSectionProps extends SectionProps {
             return npc ? (
               <div
                 key={npcId}
-                className={clsx(
-                  "flex items-center gap-1 rounded-full px-3 py-1",
-                  `${themePrefix}-tag`
-                )}
+                className="flex items-center gap-1 rounded-full px-3 py-1 tag"
               >
                 <span>{npc.name}</span>
                 <button
                   type="button"
                   onClick={() => handleRemoveNPC(npcId)}
                   className={clsx(
-                    `${themePrefix}-typography-secondary hover:opacity-80`
+                    `typography-secondary hover:opacity-80`
                   )}
                 >
                   <X size={14} />
@@ -113,8 +105,8 @@ interface RelatedNPCsSectionProps extends SectionProps {
                   className={clsx(
                     "p-2 rounded text-center transition-colors",
                     selectedNPCs.has(npc.id)
-                      ? `${themePrefix}-selected-item`
-                      : `${themePrefix}-selectable-item`
+                      ? `selected-item`
+                      : `selectable-item`
                   )}
                 >
                   <Typography 
@@ -145,8 +137,6 @@ interface RelatedNPCsSectionProps extends SectionProps {
   };
 
 export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInputChange }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   return (
     <div className="space-y-4">
@@ -168,9 +158,9 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={clsx("block text-sm font-medium mb-1", `${themePrefix}-form-label`)}>Status *</label>
+          <label className="block text-sm font-medium mb-1 form-label">Status *</label>
           <select
-            className={clsx("w-full rounded-lg border p-2", `${themePrefix}-input`)}
+            className="w-full rounded-lg border p-2 input"
             value={formData.status}
             onChange={(e) => handleInputChange('status', e.target.value as QuestStatus)}
             required
@@ -193,7 +183,7 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
         value={formData.levelRange || ''}
         onChange={(e) => handleInputChange('levelRange', e.target.value)}
         placeholder="e.g., 1-5"
-        startIcon={<Target className={`w-4 h-4 ${themePrefix}-typography-secondary`} />}
+        startIcon={<Target className={`w-4 h-4 typography-secondary`} />}
       />
 
       <Input
@@ -207,8 +197,6 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
 };
 
 export const ObjectivesSection: React.FC<SectionProps> = ({ formData, handleInputChange }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   const handleAddObjective = () => {
     handleInputChange('objectives', [
@@ -249,7 +237,7 @@ export const ObjectivesSection: React.FC<SectionProps> = ({ formData, handleInpu
                 );
                 handleInputChange('objectives', newObjectives || []);
               }}
-              className={`mt-2 flex-shrink-0 ${themePrefix}-input`}
+              className={`mt-2 flex-shrink-0 input`}
             />
             <div className="flex-1">
               <Input

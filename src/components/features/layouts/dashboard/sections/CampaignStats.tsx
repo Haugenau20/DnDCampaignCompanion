@@ -2,7 +2,6 @@
 import React from 'react';
 import Typography from '../../../../core/Typography';
 import Card from '../../../../core/Card';
-import { useTheme } from '../../../../../context/ThemeContext';
 import { useNavigation } from '../../../../../context/NavigationContext';
 import { Users, Map, Scroll, BookOpen, MessageSquare, List } from 'lucide-react';
 import clsx from 'clsx';
@@ -33,9 +32,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
   rumors = [],
   loading = false
 }) => {
-  const { theme } = useTheme();
   const { navigateToPage } = useNavigation();
-  const themePrefix = theme.name;
   
   // Calculate quest stats - safely with default values
   const activeQuests = quests.filter(quest => quest.status === 'active').length;
@@ -57,7 +54,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
               <Card.Content className="h-28">
                 <div className={clsx(
                   "w-full h-full rounded-lg",
-                  `${themePrefix}-journal-loading`
+                  `journal-loading`
                 )}></div>
               </Card.Content>
             </Card>
@@ -66,7 +63,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
             <Card.Content className="h-20">
               <div className={clsx(
                 "w-full h-full rounded-lg",
-                `${themePrefix}-journal-loading`
+                `journal-loading`
               )}></div>
             </Card.Content>
           </Card>
@@ -89,7 +86,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
             <Card.Content className="flex flex-col items-center text-center p-4">
               <div className={clsx(
                 "p-2 rounded-full mb-1 flex items-center justify-center",
-                `${themePrefix}-icon-bg`
+                `icon-bg`
               )}>
                 <Users className="w-5 h-5" />
               </div>
@@ -107,7 +104,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
               "p-2 rounded-full mb-1 flex items-center justify-center",
-              `${themePrefix}-icon-bg`
+              `icon-bg`
             )}>
               <Map className="w-5 h-5" />
             </div>
@@ -125,7 +122,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
               "p-2 rounded-full mb-1 flex items-center justify-center",
-              `${themePrefix}-icon-bg`
+              `icon-bg`
             )}>
               <BookOpen className="w-5 h-5" />
             </div>
@@ -143,7 +140,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
               "p-2 rounded-full mb-1 flex items-center justify-center",
-              `${themePrefix}-icon-bg`
+              `icon-bg`
             )}>
               <MessageSquare className="w-5 h-5" />
             </div>
@@ -161,7 +158,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
               "p-2 rounded-full mb-1 flex items-center justify-center",
-              `${themePrefix}-icon-bg`
+              `icon-bg`
             )}>
               <Scroll className="w-5 h-5" />
             </div>
@@ -179,7 +176,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
           <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
               "p-2 rounded-full mb-1 flex items-center justify-center",
-              `${themePrefix}-icon-bg`
+              `icon-bg`
             )}>
               <List className="w-5 h-5" />
             </div>
@@ -204,12 +201,12 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
               <div className="w-full">
                 <div className={clsx(
                   "h-5 w-full rounded-full overflow-hidden",
-                  `${themePrefix}-progress-container`
+                  `progress-container`
                 )}>
                   <div 
                     className={clsx(
                       "h-full rounded-full",
-                      `${themePrefix}-progress-bar`
+                      `progress-bar`
                     )}
                     style={{ width: `${questCompletionPercentage}%` }}
                   ></div>

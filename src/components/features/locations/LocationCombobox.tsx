@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocations } from '../../../context/LocationContext';
 import { MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 import Typography from '../../core/Typography';
-import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 
 interface LocationComboboxProps {
@@ -25,8 +24,6 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
   const [inputValue, setInputValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Get unique location names from the locations context
   const uniqueLocations = Array.from(
@@ -70,7 +67,7 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
   return (
     <div className={`relative ${className}`}>
       {label && (
-        <label className={clsx("block text-sm font-medium mb-1", `${themePrefix}-form-label`)}>
+        <label className="block text-sm font-medium mb-1 form-label">
           {label}
         </label>
       )}
@@ -82,19 +79,16 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
           onChange={handleInputChange}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className={clsx(
-            "w-full rounded-lg border p-2 pl-10 pr-8 focus:outline-none",
-            `${themePrefix}-input`
-          )}
+          className="w-full rounded-lg border p-2 pl-10 pr-8 focus:outline-none input"
         />
         <MapPin 
-          className={clsx("absolute left-3 top-1/2 transform -translate-y-1/2", `${themePrefix}-typography-secondary`)} 
+          className="absolute left-3 top-1/2 transform -translate-y-1/2 typography-secondary" 
           size={16}
         />
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={clsx("absolute right-2 top-1/2 transform -translate-y-1/2", `${themePrefix}-typography-secondary`)}
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 typography-secondary"
         >
           {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
@@ -104,10 +98,7 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
       {isOpen && (
         <div
           ref={dropdownRef}
-          className={clsx(
-            "absolute z-10 w-full mt-1 rounded-lg shadow-lg border max-h-60 overflow-y-auto",
-            `${themePrefix}-dropdown`
-          )}
+          className="absolute z-10 w-full mt-1 rounded-lg shadow-lg border max-h-60 overflow-y-auto dropdown"
         >
           {filteredLocations.length > 0 ? (
             <div className="py-1">
@@ -118,8 +109,8 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
                   className={clsx(
                     "w-full text-left px-4 py-2",
                     location === inputValue 
-                      ? `${themePrefix}-dropdown-item-active`
-                      : `${themePrefix}-dropdown-item`
+                      ? `dropdown-item-active`
+                      : `dropdown-item`
                   )}
                 >
                   <Typography variant="body-sm">

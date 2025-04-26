@@ -4,7 +4,6 @@ import Typography from '../../core/Typography';
 import { X, ExternalLink } from 'lucide-react';
 import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from '../../../constants/time';
 import { useNavigation } from '../../../hooks/useNavigation';
-import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 
 /**
@@ -14,8 +13,6 @@ import clsx from 'clsx';
 const PrivacyNotice: React.FC = () => {
   const [showNotice, setShowNotice] = useState(false);
   const { navigateToPage } = useNavigation();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   useEffect(() => {
     // Check if user has already seen the notice
@@ -40,7 +37,7 @@ const PrivacyNotice: React.FC = () => {
   return (
     <div className={clsx(
       "fixed bottom-4 right-4 max-w-sm p-4 z-50",
-      `${themePrefix}-card`
+      `card`
     )}>
       <div className="flex justify-between items-start mb-2">
         <Typography variant="h4">Privacy Notice</Typography>
@@ -48,7 +45,7 @@ const PrivacyNotice: React.FC = () => {
           onClick={handleDismiss} 
           className={clsx(
             "p-1 rounded-full transition-colors",
-            `${themePrefix}-button-ghost`
+            `button-ghost`
           )}
           aria-label="Dismiss privacy notice"
         >

@@ -3,7 +3,6 @@ import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import Typography from './Typography';
-import { useTheme } from '../../context/ThemeContext';
 
 /**
  * Available padding sizes for the card
@@ -76,13 +75,11 @@ export const CardHeader: React.FC<CardHeaderProps> = ({
   action,
   className
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   const styles = twMerge(
     clsx(
       'flex items-start justify-between px-6 pt-6',
-      `${themePrefix}-card-header`,
+      `card-header`,
       className
     )
   );
@@ -116,13 +113,11 @@ export const CardContent: React.FC<CardContentProps> = ({
   className,
   padding = 'md'
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   const styles = twMerge(
     clsx(
       paddingStyles[padding],
-      `${themePrefix}-card-content`,
+      `card-content`,
       className
     )
   );
@@ -137,13 +132,11 @@ export const CardFooter: React.FC<CardFooterProps> = ({
   children,
   className
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   const styles = twMerge(
     clsx(
       'px-6 py-4 rounded-b-lg',
-      `${themePrefix}-card-footer`,
+      `card-footer`,
       className
     )
   );
@@ -166,8 +159,6 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     },
     ref
   ) => {
-    const { theme } = useTheme();
-    const themePrefix = theme.name;
 
     const styles = twMerge(
       clsx(
@@ -177,8 +168,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
           'hover:shadow-md',
           onClick && 'cursor-pointer'
         ],
-        `${themePrefix}-card`, // Theme-specific class
-        variant === 'subtle' && `${themePrefix}-card-subtle`,
+        `card`,
         className
       )
     );

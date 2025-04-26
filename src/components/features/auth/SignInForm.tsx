@@ -6,7 +6,6 @@ import Button from '../../core/Button';
 import Card from '../../core/Card';
 import { LogIn, AlertCircle, UserPlus, Save } from 'lucide-react';
 import RegistrationForm from './RegistrationForm';
-import { useTheme } from '../../../context/ThemeContext';
 import clsx from 'clsx';
 
 interface SignInFormProps {
@@ -20,8 +19,6 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   const { signIn } = useAuth();
 
@@ -84,8 +81,8 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess }) => {
               onChange={(e) => setRememberMe(e.target.checked)}
               className={clsx(
                 "h-4 w-4 rounded focus:ring-offset-1",
-                `${themePrefix}-input`,
-                `focus:${themePrefix}-primary ${themePrefix}-card-border`
+                `input`,
+                `focus:primary card-border`
               )}
               disabled={loading}
             />
@@ -93,7 +90,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess }) => {
               htmlFor="rememberMe" 
               className={clsx(
                 "ml-2 block text-sm",
-                `${themePrefix}-typography`
+                `typography`
               )}
             >
               Remember me for 30 days
@@ -103,7 +100,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess }) => {
           {error && (
             <div className={clsx(
               "flex items-center gap-2",
-              `${themePrefix}-form-error`
+              `form-error`
             )}>
               <AlertCircle size={16} />
               <Typography color="error">{error}</Typography>

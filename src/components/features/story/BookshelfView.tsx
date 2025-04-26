@@ -1,11 +1,8 @@
 // components/features/story/BookshelfView.tsx
 import React, { useMemo } from 'react';
 import Typography from '../../core/Typography';
-import { useTheme } from '../../../context/ThemeContext';
 import { Chapter } from '../../../types/story';
 import clsx from 'clsx';
-import { ChevronRight } from 'lucide-react';
-import Button from '../../core/Button';
 
 // Import book SVG components
 import {
@@ -48,8 +45,6 @@ const BookshelfView: React.FC<BookshelfViewProps> = ({
   currentChapterId,
   onChapterSelect
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Group chapters by 10s for the bookshelf
   const groupedChapters = useMemo(() => {
@@ -75,30 +70,18 @@ const BookshelfView: React.FC<BookshelfViewProps> = ({
   };
 
   return (
-    <div className={clsx("rounded-lg overflow-hidden", `${themePrefix}-card`)}>
+    <div className="rounded-lg overflow-hidden card">
       {groupedChapters.map((group, groupIndex) => (
         <div key={groupIndex} className="mb-8">
-          <div className={clsx("p-3 border-b", `${themePrefix}-card-border`)}>
-            <Typography variant="h4" className={`${themePrefix}-typography-heading`}>
+          <div className="p-3 border-b card-border">
+            <Typography variant="h4" className="typography-heading">
               Chapters {groupIndex * 10 + 1}-{groupIndex * 10 + group.length}
             </Typography>
           </div>
           
-          {/* Bookshelf container */}
-          <div className={clsx(
-            "p-6 flex items-end",
-            `${themePrefix}-card-bg`
-          )}>
-            {/* Bookshelf itself */}
-            <div className={clsx("w-full h-8 rounded-t-md", `${themePrefix}-bg bg-opacity-20`)}></div>
-          </div>
-          
           {/* Books row with fixed width */}
-          <div className={clsx(
-            "relative px-6 pt-4 pb-8 flex items-end gap-2 mx-auto",
-            `${themePrefix}-card-bg`,
-          )}
-          style={{ width: 'min-content', maxWidth: '100%', overflowX: 'auto' }}>
+            <div className="relative px-6 pt-8 flex items-end gap-2 mx-auto mt-4"
+            style={{ width: 'min-content', maxWidth: '100%', overflowX: 'auto' }}>
             {group.map((chapter) => {
               const isCurrentChapter = chapter.id === currentChapterId;
               
@@ -132,7 +115,7 @@ const BookshelfView: React.FC<BookshelfViewProps> = ({
                   <div 
                     className={clsx(
                       "w-full rounded-t-sm shadow-md hover:shadow-lg transition-shadow", 
-                      isCurrentChapter ? `ring-2 ${themePrefix}-primary ring-offset-2` : ""
+                      isCurrentChapter ? `ring-2 primary ring-offset-2` : ""
                     )}
                   >
                     {/* Render the book component */}
@@ -145,7 +128,7 @@ const BookshelfView: React.FC<BookshelfViewProps> = ({
                       variant="body-sm" 
                       className={clsx(
                         "text-xs", 
-                        isCurrentChapter ? `${themePrefix}-typography font-bold` : ""
+                        isCurrentChapter ? `typography font-bold` : ""
                       )}
                       title={`Chapter ${chapter.order}: ${chapter.title}`}
                     >
@@ -155,46 +138,6 @@ const BookshelfView: React.FC<BookshelfViewProps> = ({
                 </div>
               );
             })}
-
-            {/* Book details popup for current chapter */}
-            {group.some(ch => ch.id === currentChapterId) && (
-              <div className={clsx(
-                "absolute top-0 left-1/4 transform -translate-y-full p-4 rounded-lg shadow-lg",
-                `${themePrefix}-card-bg border ${themePrefix}-primary`,
-                "max-w-xs z-20"
-              )}>
-                {(() => {
-                  const currentChapter = group.find(ch => ch.id === currentChapterId);
-                  if (!currentChapter) return null;
-                  
-                  return (
-                    <>
-                      <Typography variant="h4" className="mb-2">
-                        Chapter {currentChapter.order}: {currentChapter.title}
-                      </Typography>
-                      {currentChapter.summary && (
-                        <Typography variant="body" color="secondary" className="mb-2">
-                          {currentChapter.summary}
-                        </Typography>
-                      )}
-                      <div className="flex justify-between items-center mt-2">
-                        <Typography variant="body-sm" color="secondary">
-                          {new Date(currentChapter.lastModified || Date.now()).toLocaleDateString()}
-                        </Typography>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          endIcon={<ChevronRight />}
-                          onClick={() => onChapterSelect(currentChapter.id)}
-                        >
-                          Read
-                        </Button>
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
           </div>
         </div>
       ))}

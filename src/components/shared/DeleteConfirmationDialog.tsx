@@ -4,8 +4,6 @@ import Dialog from '../core/Dialog';
 import Typography from '../core/Typography';
 import Button from '../core/Button';
 import { AlertTriangle, Trash2 } from 'lucide-react';
-import { useTheme } from '../../context/ThemeContext';
-import clsx from 'clsx';
 
 interface DeleteConfirmationDialogProps {
   /**
@@ -53,8 +51,6 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
   itemType = "item",
   message
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,8 +80,8 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
     >
       <div className="space-y-6">
         <div className="flex items-start gap-3">
-          <div className={clsx("p-2 rounded-full mt-1", `${themePrefix}-error-bg`)}>
-            <AlertTriangle className={clsx("w-5 h-5", `${themePrefix}-status-warning`)} />
+          <div className="p-2 rounded-full mt-1 error-bg">
+            <AlertTriangle className="w-5 h-5 status-warning" />
           </div>
           <div>
             <Typography variant="h4" className="mb-2">
@@ -98,7 +94,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
         </div>
         
         {error && (
-          <div className={clsx("p-4 rounded-md", `${themePrefix}-note`)}>
+          <div className="p-4 rounded-md note">
             <Typography color="error">{error}</Typography>
           </div>
         )}
@@ -113,9 +109,10 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
           </Button>
           
           <Button
+            variant="ghost"
             onClick={handleConfirm}
             isLoading={isDeleting}
-            className={clsx(`${themePrefix}-button-danger`)}
+            className="delete-button"
             startIcon={<Trash2 size={16} />}
           >
             Delete
