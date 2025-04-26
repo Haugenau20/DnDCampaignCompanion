@@ -1,8 +1,6 @@
 import React from 'react';
 import Typography from '../core/Typography';
 import { Scroll, Edit } from 'lucide-react';
-import { useTheme } from '../../themes/ThemeContext';
-import clsx from 'clsx';
 
 interface AttributionInfoProps {
   /** Username of the person who created the item */
@@ -25,8 +23,6 @@ const AttributionInfo: React.FC<AttributionInfoProps> = ({
   modifiedByUsername,
   dateModified
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // If no attribution information is available, don't render anything
   if (!createdByUsername && !modifiedByUsername) return null;
@@ -42,7 +38,7 @@ const AttributionInfo: React.FC<AttributionInfoProps> = ({
       {/* Creator attribution */}
       {createdByUsername && (
         <div className="flex items-center gap-2 mt-1">
-          <Scroll size={14} className={clsx(`${themePrefix}-typography-secondary`)} />
+          <Scroll size={14} className="typography-secondary" />
           <Typography variant="body-sm" color="secondary">
             Added by {createdByUsername} on {new Date(dateAdded || '').toLocaleDateString('en-uk')}
           </Typography>
@@ -52,7 +48,7 @@ const AttributionInfo: React.FC<AttributionInfoProps> = ({
       {/* Modifier attribution */}
       {showModifiedInfo && (
         <div className="flex items-center gap-2 mt-1">
-          <Edit size={14} className={clsx(`${themePrefix}-typography-secondary`)} />
+          <Edit size={14} className="typography-secondary" />
           <Typography variant="body-sm" color="secondary">
             Modified by {modifiedByUsername} on {new Date(dateModified || '').toLocaleDateString('en-uk')}
           </Typography>

@@ -1,7 +1,5 @@
 // components/features/layouts/DashboardLayout.tsx
 import React from 'react';
-import { useTheme } from '../../../../themes/ThemeContext';
-import clsx from 'clsx';
 import CampaignBanner from './sections/CampaignBanner';
 import ActivityFeed from './sections/ActivityFeed';
 import CampaignStats from './sections/CampaignStats';
@@ -30,8 +28,6 @@ const DashboardLayout: React.FC<LayoutProps> = ({
   activities,
   loading,
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   return (
     <>

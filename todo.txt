@@ -37,6 +37,7 @@ Waiting for prio:
 
 - F12 console Error in StoryContext when it is trying to update "current-progress"
     - I think this is a remnant of purposefully unused functionality and it should just be deleted. 
+    - It seems to be deeply embedded in the codebase. Remove it entirely all around.
 
 Admin Panel:
 - Test if the creation of new groups and campaigns work

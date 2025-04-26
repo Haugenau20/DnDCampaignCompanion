@@ -3,7 +3,6 @@ import React from 'react';
 import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import { Chapter } from '../../../types/story';
-import { useTheme } from '../../../themes/ThemeContext';
 import { Clock, ArrowUpDown } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -23,23 +22,20 @@ const TableView: React.FC<TableViewProps> = ({
   currentChapterId,
   onChapterSelect,
   sortField,
-  sortDirection,
   onSort,
   onEditChapter,
   isAdmin = false
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   return (
-    <div className={clsx("rounded-lg overflow-hidden", `${themePrefix}-card`)}>
+    <div className="rounded-lg overflow-hidden card">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className={clsx(`${themePrefix}-bg-secondary border-b ${themePrefix}-card-border`)}>
+            <tr className="bg-secondary border-b card-border">
               <th 
                 className={clsx("px-6 py-3 text-left cursor-pointer", 
-                  sortField === 'order' ? `${themePrefix}-typography` : ''
+                  sortField === 'order' ? `typography` : ''
                 )}
                 onClick={() => onSort('order')}
               >
@@ -52,7 +48,7 @@ const TableView: React.FC<TableViewProps> = ({
               </th>
               <th 
                 className={clsx("px-6 py-3 text-left cursor-pointer",
-                  sortField === 'title' ? `${themePrefix}-typography` : ''
+                  sortField === 'title' ? `typography` : ''
                 )}
                 onClick={() => onSort('title')}
               >
@@ -65,7 +61,7 @@ const TableView: React.FC<TableViewProps> = ({
               </th>
               <th 
                 className={clsx("px-6 py-3 text-left cursor-pointer hidden md:table-cell",
-                  sortField === 'lastModified' ? `${themePrefix}-typography` : ''
+                  sortField === 'lastModified' ? `typography` : ''
                 )}
                 onClick={() => onSort('lastModified')}
               >
@@ -88,9 +84,8 @@ const TableView: React.FC<TableViewProps> = ({
                   key={chapter.id}
                   className={clsx(
                     "border-b last:border-b-0 hover:bg-opacity-50 transition-colors",
-                    `${themePrefix}-card-border`,
-                    isCurrentChapter ? `${themePrefix}-bg-secondary` : 
-                      index % 2 ? `${themePrefix}-card-bg` : ''
+                    `card-border`, 
+                    index % 2 ? `bg-secondary` : ''
                   )}
                 >
                   <td className="px-6 py-4">
@@ -105,7 +100,7 @@ const TableView: React.FC<TableViewProps> = ({
                       variant="body" 
                       className={clsx(
                         isCurrentChapter ? 'font-semibold' : '',
-                        `hover:${themePrefix}-typography`
+                        `hover:typography`
                       )}
                     >
                       {chapter.title}
@@ -118,7 +113,7 @@ const TableView: React.FC<TableViewProps> = ({
                   </td>
                   <td className="px-6 py-4 hidden md:table-cell">
                     <div className="flex items-center gap-1">
-                      <Clock className={clsx("w-4 h-4", `${themePrefix}-primary`)} />
+                      <Clock className="w-4 h-4 primary" />
                       <Typography variant="body-sm" color="secondary">
                         {new Date(chapter.lastModified || Date.now()).toLocaleDateString()}
                       </Typography>

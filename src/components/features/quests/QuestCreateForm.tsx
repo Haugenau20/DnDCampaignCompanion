@@ -6,8 +6,6 @@ import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import Card from '../../core/Card';
 import { useNPCs } from '../../../context/NPCContext';
-import { useTheme } from '../../../themes/ThemeContext';
-import clsx from 'clsx';
 import {
   BasicInfoSection,
   ObjectivesSection,
@@ -37,8 +35,6 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
   onSuccess,
   onCancel,
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   // Import addQuest from the context
   const { addQuest, isLoading, error: questError } = useQuests();
@@ -174,7 +170,7 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
 
           {/* Error Message */}
           {(error || questError) && (
-            <div className={clsx("flex items-center gap-2", `${themePrefix}-form-error`)}>
+            <div className="flex items-center gap-2 form-error">
               <AlertCircle size={16} />
               <Typography color="error">
                 {error || questError}

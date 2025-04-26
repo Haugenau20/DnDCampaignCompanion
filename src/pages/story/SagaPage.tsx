@@ -8,9 +8,7 @@ import Card from '../../components/core/Card';
 import { Book, Edit, Loader2 } from 'lucide-react';
 import { useSagaData } from '../../hooks/useSagaData';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../themes/ThemeContext';
 import { useAuth } from '../../context/firebase';
-import clsx from 'clsx';
 
 // Constants for saga default content and tips
 const SAGA_DEFAULT_OPENING = "In a realm where magic weaves through the fabric of reality and ancient powers stir from long slumber, a group of unlikely heroes finds their fates intertwined by destiny's unseen hand.";
@@ -24,10 +22,8 @@ const SAGA_WRITING_TIPS = [
 
 const SagaPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
-  const { theme } = useTheme();
   const { user } = useAuth();
   const { saga, loading, error, hasRequiredContext } = useSagaData();
-  const themePrefix = theme.name;
 
   // Breadcrumb items
   const breadcrumbItems = [
@@ -79,8 +75,8 @@ const SagaPage: React.FC = () => {
   if (!hasRequiredContext) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Card className={clsx("p-8", `${themePrefix}-card`)}>
-          <Typography className={`${themePrefix}-typography`}>
+        <Card className="p-8 card">
+          <Typography className={`typography`}>
             Please select a group and campaign to view the saga.
           </Typography>
         </Card>
@@ -92,10 +88,10 @@ const SagaPage: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Card className={clsx("p-8", `${themePrefix}-card`)}>
+        <Card className="p-8 card">
           <div className="flex items-center gap-4">
-            <Loader2 className={clsx("w-6 h-6 animate-spin", `${themePrefix}-primary`)} />
-            <Typography className={`${themePrefix}-typography`}>Loading saga...</Typography>
+            <Loader2 className="w-6 h-6 animate-spin primary" />
+            <Typography className="typography">Loading saga...</Typography>
           </div>
         </Card>
       </div>
@@ -106,7 +102,7 @@ const SagaPage: React.FC = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Card className={clsx("p-8", `${themePrefix}-card`)}>
+        <Card className="p-8 card">
           <Typography color="error">
             {error}
           </Typography>
@@ -116,7 +112,7 @@ const SagaPage: React.FC = () => {
   }
 
   return (
-    <div className={clsx("min-h-screen p-4", `${themePrefix}-content`)}>
+    <div className="min-h-screen p-4 content">
       <div className="max-w-7xl mx-auto">
         {/* Breadcrumb Navigation */}
         <Breadcrumb items={breadcrumbItems} className="mb-4" />

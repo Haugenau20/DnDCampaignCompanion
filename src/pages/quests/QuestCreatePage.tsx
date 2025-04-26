@@ -4,13 +4,11 @@ import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import QuestCreateForm from '../../components/features/quests/QuestCreateForm';
-import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
+import { useAuth, useGroups } from '../../context/firebase';
 import { useNavigation } from '../../context/NavigationContext';
 import { useRumors } from '../../context/RumorContext';
 import { useQuests } from '../../context/QuestContext';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
-import { useTheme } from '../../themes/ThemeContext';
-import clsx from 'clsx';
 
 const QuestCreatePage: React.FC = () => {
   const { navigateToPage, getCurrentQueryParams } = useNavigation();
@@ -18,9 +16,6 @@ const QuestCreatePage: React.FC = () => {
   const { getRumorById } = useRumors();
   const { hasRequiredContext } = useQuests();
   const { activeGroupId } = useGroups();
-  const { activeCampaignId } = useCampaigns();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   const [initialData, setInitialData] = useState<any>(null);
   const { fromRumor } = getCurrentQueryParams();
@@ -81,7 +76,7 @@ const QuestCreatePage: React.FC = () => {
 
         <Card>
           <Card.Content className="text-center py-12">
-            <AlertCircle className={clsx("w-12 h-12 mx-auto mb-4", `${themePrefix}-typography-secondary`)} />
+            <AlertCircle className="w-12 h-12 mx-auto mb-4 typography-secondary" />
             <Typography variant="h3" className="mb-2">
               {!activeGroupId 
                 ? "No Group Selected" 

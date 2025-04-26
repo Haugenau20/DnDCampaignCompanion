@@ -3,7 +3,6 @@ import { Chapter } from '../../../types/story';
 import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import { Book, X } from 'lucide-react';
-import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 
 interface SlidingChaptersProps {
@@ -21,8 +20,6 @@ const SlidingChapters: React.FC<SlidingChaptersProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   const handleChapterClick = (chapterId: string) => {
     onChapterSelect(chapterId);
@@ -34,10 +31,7 @@ const SlidingChapters: React.FC<SlidingChaptersProps> = ({
       {/* Overlay */}
       {isOpen && (
         <div
-          className={clsx(
-            "fixed inset-0 z-40 transition-opacity", 
-            `${themePrefix}-dialog-backdrop`
-          )}
+          className="fixed inset-0 z-40 transition-opacity dialog-backdrop"
           onClick={onClose}
         />
       )}
@@ -46,20 +40,16 @@ const SlidingChapters: React.FC<SlidingChaptersProps> = ({
       <div
         className={clsx(
           "fixed top-0 left-0 h-full w-80 shadow-lg z-50 transition-transform duration-300 ease-in-out transform",
-          `${themePrefix}-card`,
+          `card`,
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         <div className="h-full flex flex-col">
           {/* Panel Header */}
-          <div className={clsx(
-            "p-4 border-b flex items-center justify-between",
-            `${themePrefix}-card-border`,
-            `${themePrefix}-book-header`
-          )}>
+          <div className="p-4 border-b flex items-center justify-between card-border book-header">
             <div className="flex items-center gap-2">
-              <Book className={clsx("w-5 h-5", `${themePrefix}-primary`)} />
-              <Typography variant="h3" className={`${themePrefix}-typography-heading`}>
+              <Book className="w-5 h-5 primary" />
+              <Typography variant="h3" className={`typography-heading`}>
                 Chapters
               </Typography>
             </div>
@@ -74,7 +64,7 @@ const SlidingChapters: React.FC<SlidingChaptersProps> = ({
           </div>
 
           {/* Chapter List */}
-          <div className={clsx("flex-1 overflow-y-auto p-4", `${themePrefix}-content`)}>
+          <div className="flex-1 overflow-y-auto p-4 content">
             <div className="space-y-2">
               {chapters.map((chapter) => (
                 <button
@@ -83,8 +73,8 @@ const SlidingChapters: React.FC<SlidingChaptersProps> = ({
                   className={clsx(
                     "w-full text-left p-3 rounded-lg transition-colors",
                     chapter.id === currentChapterId
-                      ? `${themePrefix}-navigation-item-active`
-                      : `${themePrefix}-navigation-item`
+                      ? `navigation-item-active`
+                      : `navigation-item`
                   )}
                 >
                   <Typography 

@@ -1,17 +1,13 @@
 // components/features/dashboard/CampaignBanner.tsx
 import React from 'react';
 import Typography from '../../../../core/Typography';
-import { useTheme } from '../../../../../themes/ThemeContext';
-import clsx from 'clsx';
 import { useCampaignInfo } from '../../../layouts/common/hooks/useCampaignInfo';
 
 /**
  * Campaign banner component that displays information about the current campaign
  */
 const CampaignBanner: React.FC = () => {
-  const { theme } = useTheme();
   const { activeGroup, activeCampaign, formattedCreationDate, hasCampaign, hasGroup } = useCampaignInfo();
-  const themePrefix = theme.name;
   
   // If no active campaign or group, show a default message
   if (!hasGroup || !hasCampaign) {

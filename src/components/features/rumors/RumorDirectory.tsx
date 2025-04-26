@@ -7,15 +7,11 @@ import Input from '../../core/Input';
 import Button from '../../core/Button';
 import Card from '../../core/Card';
 import RumorBatchActions from './RumorBatchActions';
-import { useRumors } from '../../../context/RumorContext';
 import { useNavigation } from '../../../hooks/useNavigation';
-import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 import { 
   Search, 
   Filter, 
-  CheckCircle, 
-  XCircle, 
   HelpCircle, 
   MapPin,
   Users,
@@ -44,8 +40,6 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
 
   const { getCurrentQueryParams } = useNavigation();
   const { highlight: highlightId } = getCurrentQueryParams();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Check for highlighted rumor from URL
   useEffect(() => {
@@ -138,7 +132,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
       <Card>
         <Card.Content>
           <div className="flex justify-center items-center py-8">
-            <RotateCw className={`w-6 h-6 animate-spin ${themePrefix}-primary mr-3`} />
+            <RotateCw className="w-6 h-6 animate-spin primary mr-3" />
             <Typography>Loading rumors...</Typography>
           </div>
         </Card.Content>
@@ -155,7 +149,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
             {/* Search */}
             <div className="flex-1 w-full md:w-auto">
               <Input
-                startIcon={<Search className={`${themePrefix}-typography-secondary`} />}
+                startIcon={<Search className="typography-secondary" />}
                 placeholder="Search rumors..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -166,10 +160,10 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
             <div className="flex flex-wrap items-center gap-4">
               {/* Status Filter */}
               <div className="flex items-center gap-2">
-                <Filter size={20} className={`${themePrefix}-typography-secondary`} />
+                <Filter size={20} className="typography-secondary" />
                 <Typography variant="body-sm">Status:</Typography>
                 <select
-                  className={`rounded border p-1 ${themePrefix}-input`}
+                  className="rounded border p-1 input"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as RumorStatus | 'all')}
                 >
@@ -182,10 +176,10 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
 
               {/* Source Filter */}
               <div className="flex items-center gap-2">
-                <Users size={20} className={`${themePrefix}-typography-secondary`} />
+                <Users size={20} className="typography-secondary" />
                 <Typography variant="body-sm">Source:</Typography>
                 <select
-                  className={`rounded border p-1 ${themePrefix}-input`}
+                  className="rounded border p-1 input"
                   value={sourceFilter}
                   onChange={(e) => setSourceFilter(e.target.value as SourceType | 'all')}
                 >
@@ -201,10 +195,10 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
               {/* Location Filter - only show if there are locations */}
               {locations.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <MapPin size={20} className={`${themePrefix}-typography-secondary`} />
+                  <MapPin size={20} className="typography-secondary" />
                   <Typography variant="body-sm">Location:</Typography>
                   <select
-                    className={`rounded border p-1 ${themePrefix}-input`}
+                    className="rounded border p-1 input"
                     value={locationFilter}
                     onChange={(e) => setLocationFilter(e.target.value)}
                   >
@@ -240,14 +234,14 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
       </Card>
 
       {/* Rumors List */}
-      <div className={`grid gap-4`}>
+      <div className="grid gap-4">
         {filteredRumors.map(rumor => (
           <div
             key={rumor.id}
             id={`rumor-${rumor.id}`}
             className={clsx(
               `transition-all duration-300`,
-              highlightedRumorId === rumor.id ? `ring-2 ring-offset-2 rounded-lg ${themePrefix}-primary ring-opacity-100` : ''
+              highlightedRumorId === rumor.id ? `ring-2 ring-offset-2 rounded-lg primary ring-opacity-100` : ''
             )}
           >
             <RumorCard 
@@ -264,7 +258,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
       {filteredRumors.length === 0 && (
         <Card>
           <Card.Content className="text-center py-8">
-            <HelpCircle className={`w-12 h-12 mx-auto ${themePrefix}-typography-secondary mb-4`} />
+            <HelpCircle className="w-12 h-12 mx-auto typography-secondary mb-4" />
             <Typography variant="h3" className="mb-2">
               No Rumors Found
             </Typography>

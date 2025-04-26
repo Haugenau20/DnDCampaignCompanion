@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useStory } from '../../context/StoryContext';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../themes/ThemeContext';
 import { useAuth } from '../../context/firebase';
 import Typography from '../../components/core/Typography';
 import Breadcrumb from '../../components/layout/Breadcrumb';
@@ -34,9 +33,7 @@ const ChaptersPage: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { chapters, storyProgress, isLoading } = useStory();
   const { navigateToPage } = useNavigation();
-  const { theme } = useTheme();
   const { user } = useAuth();
-  const themePrefix = theme.name;
 
   // Save view preference when it changes
   useEffect(() => {
@@ -108,12 +105,12 @@ const ChaptersPage: React.FC = () => {
   }
 
   return (
-    <div className={clsx("min-h-screen p-4", `${themePrefix}-content`)}>
+    <div className="min-h-screen p-4 content">
       <div className="max-w-7xl mx-auto">
         <Breadcrumb items={breadcrumbItems} className="mb-4" />
         
         <div className="flex justify-between items-center mb-6">
-          <Typography variant="h2" className={`${themePrefix}-typography-heading`}>
+          <Typography variant="h2" className="typography-heading">
             Session Chronicles
           </Typography>
           
@@ -153,13 +150,13 @@ const ChaptersPage: React.FC = () => {
             {chapters.length} {chapters.length === 1 ? 'chapter' : 'chapters'} total
           </Typography>
           
-          <div className={clsx("flex rounded-lg p-1", `${themePrefix}-bg-secondary`)}>
+          <div className="flex rounded-lg p-1 bg-secondary">
             <button
               className={clsx(
                 "flex items-center gap-1 px-3 py-1 rounded-md transition-colors",
                 viewMode === 'bookshelf' 
-                  ? `${themePrefix}-card` 
-                  : `${themePrefix}-typography-secondary`
+                  ? `card` 
+                  : `typography-secondary`
               )}
               onClick={() => setViewMode('bookshelf')}
             >
@@ -171,8 +168,8 @@ const ChaptersPage: React.FC = () => {
               className={clsx(
                 "flex items-center gap-1 px-3 py-1 rounded-md transition-colors",
                 viewMode === 'table' 
-                  ? `${themePrefix}-card` 
-                  : `${themePrefix}-typography-secondary`
+                  ? `card` 
+                  : `typography-secondary`
               )}
               onClick={() => setViewMode('table')}
             >
@@ -183,7 +180,7 @@ const ChaptersPage: React.FC = () => {
         </div>
         
         {chapters.length === 0 ? (
-          <div className={clsx("p-8 text-center rounded-lg", `${themePrefix}-card`)}>
+          <div className="p-8 text-center rounded-lg card">
             <Typography>No chapters available yet.</Typography>
           </div>
         ) : viewMode === 'bookshelf' ? (

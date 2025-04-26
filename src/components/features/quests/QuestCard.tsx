@@ -8,7 +8,6 @@ import Card from '../../core/Card';
 import Button from '../../core/Button';
 import { useLocations } from '../../../context/LocationContext';
 import { useNavigation } from '../../../context/NavigationContext';
-import { useTheme } from '../../../themes/ThemeContext';
 import { useQuests } from '../../../context/QuestContext';
 import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import clsx from 'clsx';
@@ -36,8 +35,6 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
   const { user } = useAuth();
   const { navigateToPage, createPath } = useNavigation();
   const { deleteQuest } = useQuests();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Calculate completion percentage
   const completedObjectives = quest.objectives.filter(obj => obj.completed).length;

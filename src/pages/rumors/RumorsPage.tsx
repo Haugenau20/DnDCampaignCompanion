@@ -9,8 +9,6 @@ import ConvertToQuestDialog from '../../components/features/rumors/ConvertToQues
 import { useRumors } from '../../context/RumorContext';
 import { useAuth } from '../../context/firebase';
 import { useNavigation } from '../../hooks/useNavigation';
-import { useTheme } from '../../themes/ThemeContext';
-import clsx from 'clsx';
 import { 
   MessageSquare, 
   XCircle, 
@@ -25,8 +23,6 @@ const RumorsPage: React.FC = () => {
   const { user } = useAuth();
   const { rumors, isLoading, error, combineRumors, convertToQuest } = useRumors();
   const { navigateToPage } = useNavigation();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   // Dialog state
   const [showCombineDialog, setShowCombineDialog] = useState(false);
@@ -40,18 +36,6 @@ const RumorsPage: React.FC = () => {
     unconfirmed: rumors.filter(rumor => rumor.status === 'unconfirmed').length,
     false: rumors.filter(rumor => rumor.status === 'false').length
   }), [rumors]);
-
-  // Handle opening combine dialog with selected rumors
-  const handleCombineRumors = (rumorIds: string[]) => {
-    setSelectedRumorIds(rumorIds);
-    setShowCombineDialog(true);
-  };
-
-  // Handle opening convert dialog with selected rumors
-  const handleConvertToQuest = (rumorIds: string[]) => {
-    setSelectedRumorIds(rumorIds);
-    setShowConvertDialog(true);
-  };
 
   // Handle create new rumor
   const handleCreateRumor = () => {
@@ -73,7 +57,7 @@ const RumorsPage: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <Card className="p-8">
           <div className="flex items-center gap-4">
-            <Loader2 className={clsx("w-6 h-6 animate-spin", `${themePrefix}-primary`)} />
+            <Loader2 className="w-6 h-6 animate-spin primary" />
             <Typography>Loading rumors...</Typography>
           </div>
         </Card>
@@ -123,7 +107,7 @@ const RumorsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <Card>
           <Card.Content className="flex items-center justify-center p-6">
-            <MessageSquare className={clsx("w-8 h-8 mr-4", `${themePrefix}-status-general`)} />
+            <MessageSquare className="w-8 h-8 mr-4 status-general" />
             <div>
               <Typography variant="h2" className="mb-1">
                 {stats.total}
@@ -137,7 +121,7 @@ const RumorsPage: React.FC = () => {
 
         <Card>
           <Card.Content className="flex items-center justify-center p-6">
-            <CheckCircle2 className={clsx("w-8 h-8 mr-4", `${themePrefix}-rumor-status-confirmed`)} />
+            <CheckCircle2 className="w-8 h-8 mr-4 rumor-status-confirmed" />
             <div>
               <Typography variant="h2" className="mb-1">
                 {stats.confirmed}
@@ -151,7 +135,7 @@ const RumorsPage: React.FC = () => {
 
         <Card>
           <Card.Content className="flex items-center justify-center p-6">
-            <HelpCircle className={clsx("w-8 h-8 mr-4", `${themePrefix}-rumor-status-unconfirmed`)} />
+            <HelpCircle className="w-8 h-8 mr-4 rumor-status-unconfirmed" />
             <div>
               <Typography variant="h2" className="mb-1">
                 {stats.unconfirmed}
@@ -165,7 +149,7 @@ const RumorsPage: React.FC = () => {
 
         <Card>
           <Card.Content className="flex items-center justify-center p-6">
-            <XCircle className={clsx("w-8 h-8 mr-4", `${themePrefix}-rumor-status-false`)} />
+            <XCircle className="w-8 h-8 mr-4 rumor-status-false" />
             <div>
               <Typography variant="h2" className="mb-1">
                 {stats.false}

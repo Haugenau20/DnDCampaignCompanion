@@ -6,8 +6,6 @@ import Dialog from '../../core/Dialog';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';
 import Button from '../../core/Button';
-import { useTheme } from '../../../themes/ThemeContext';
-import clsx from 'clsx';
 import { X, MessageSquare, PlusCircle, AlertCircle } from 'lucide-react';
 
 interface ConvertToQuestDialogProps {
@@ -28,8 +26,6 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
   rumors,
   onConvert
 }) => {
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Form state for the new quest
   const [title, setTitle] = useState('');
@@ -185,17 +181,11 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
             Source Rumors
           </Typography>
           {selectedRumors.length > 0 ? (
-            <div className={clsx(
-              "space-y-2 max-h-40 overflow-y-auto p-2 border rounded-lg",
-              `${themePrefix}-card-content`
-            )}>
+            <div className="space-y-2 max-h-40 overflow-y-auto p-2 border rounded-lg card-content">
               {selectedRumors.map(rumor => (
                 <div
                   key={rumor.id}
-                  className={clsx(
-                    "p-2 rounded-lg hover:bg-opacity-50",
-                    `${themePrefix}-selectable-item`
-                  )}
+                  className="p-2 rounded-lg hover:bg-opacity-50 selectable-item"
                 >
                   <Typography variant="body-sm" className="font-medium">
                     {rumor.title}
@@ -301,7 +291,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
 
         {/* Error Message */}
         {error && (
-          <div className={clsx("flex items-center gap-2", `${themePrefix}-form-error`)}>
+          <div className="flex items-center gap-2 form-error">
             <AlertCircle size={16} />
             <Typography color="error">{error}</Typography>
           </div>

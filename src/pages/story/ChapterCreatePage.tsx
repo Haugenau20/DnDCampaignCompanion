@@ -4,19 +4,15 @@ import Typography from '../../components/core/Typography';
 import ChapterForm from '../../components/features/story/ChapterForm';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useStory } from '../../context/StoryContext';
-import { useTheme } from '../../themes/ThemeContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/firebase';
 import { BookPlus } from 'lucide-react';
-import clsx from 'clsx';
 
 /**
  * Page for creating a new chapter
  */
 const ChapterCreatePage: React.FC = () => {
   const { isLoading } = useStory();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   const { navigateToPage } = useNavigation();
   const { user } = useAuth();
 
@@ -48,15 +44,15 @@ const ChapterCreatePage: React.FC = () => {
   }
 
   return (
-    <div className={clsx("min-h-screen p-4", `${themePrefix}-content`)}>
+    <div className="min-h-screen p-4 content">
       <div className="max-w-7xl mx-auto">
         {/* Breadcrumb Navigation */}
         <Breadcrumb items={breadcrumbItems} className="mb-4" />
         
         {/* Page Header */}
         <div className="mb-6 flex items-center gap-2">
-          <BookPlus className={clsx("w-6 h-6", `${themePrefix}-primary`)} />
-          <Typography variant="h2" className={clsx(`${themePrefix}-typography-heading`)}>
+          <BookPlus className="w-6 h-6 primary" />
+          <Typography variant="h2" className="typography-heading">
             Create New Chapter
           </Typography>
         </div>

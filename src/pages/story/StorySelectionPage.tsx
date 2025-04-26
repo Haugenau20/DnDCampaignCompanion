@@ -3,9 +3,7 @@ import React from 'react';
 import Typography from '../../components/core/Typography';
 import Card from '../../components/core/Card';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../themes/ThemeContext';
 import { ScrollText, BookOpen } from 'lucide-react';
-import clsx from 'clsx';
 
 /**
  * Story selection page displaying options for viewing the campaign narrative
@@ -13,13 +11,11 @@ import clsx from 'clsx';
  */
 const StorySelectionPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   return (
-    <div className={clsx("max-w-4xl mx-auto px-4 py-8", `${themePrefix}-content`)}>
+    <div className="max-w-4xl mx-auto px-4 py-8 content">
       <div className="text-center mb-12">
-        <Typography variant="h1" className={`mb-4 ${themePrefix}-typography-heading`}>
+        <Typography variant="h1" className="mb-4 typography-heading">
           Campaign Chronicles
         </Typography>
         <Typography variant="body-lg" color="secondary" className="mb-8">
@@ -36,8 +32,8 @@ const StorySelectionPage: React.FC = () => {
         >
           <Card.Content>
             <div className="flex flex-col items-center">
-              <ScrollText className={clsx("w-24 h-24 mb-6", `${themePrefix}-primary`)} />
-              <Typography variant="h2" className={`mb-4 ${themePrefix}-typography-heading`}>
+              <ScrollText className="w-24 h-24 mb-6 secondary" />
+              <Typography variant="h2" className="mb-4 typography-heading">
                 Session Chapters
               </Typography>
               <Typography color="secondary">
@@ -57,8 +53,8 @@ const StorySelectionPage: React.FC = () => {
         >
           <Card.Content>
             <div className="flex flex-col items-center">
-              <BookOpen className={clsx("w-24 h-24 mb-6", `${themePrefix}-accent`)} />
-              <Typography variant="h2" className={`mb-4 ${themePrefix}-typography-heading`}>
+              <BookOpen className="w-24 h-24 mb-6 accent" />
+              <Typography variant="h2" className="mb-4 typography-heading">
                 Campaign Saga
               </Typography>
               <Typography color="secondary">

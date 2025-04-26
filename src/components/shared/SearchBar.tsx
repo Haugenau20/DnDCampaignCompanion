@@ -4,7 +4,6 @@ import { useSearch } from '../../hooks/useSearch';
 import { SearchResult, SearchResultType } from '../../types/search';
 import Typography from '../core/Typography';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../themes/ThemeContext';
 import { clsx } from 'clsx';
 import { 
   Search as SearchIcon, 
@@ -51,8 +50,6 @@ export const SearchBar: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const { navigateToPage, createPath } = useNavigation();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   /**
    * Navigate to appropriate page based on result type
@@ -146,8 +143,8 @@ export const SearchBar: React.FC = () => {
         className={clsx(
           'p-3 cursor-pointer',
           isSelected 
-            ? `${themePrefix}-search-result-selected` 
-            : `${themePrefix}-search-result`
+            ? `search-result-selected` 
+            : `search-result`
         )}
         onClick={() => handleResultClick(result)}
         onMouseEnter={() => setSelectedIndex(index)}
@@ -155,7 +152,7 @@ export const SearchBar: React.FC = () => {
         aria-selected={isSelected}
       >
         <div className="flex items-center gap-2 mb-1">
-          <span className={clsx(`${themePrefix}-primary`)}>{icon}</span>
+          <span className="primary">{icon}</span>
           <Typography variant="body" className="font-medium">
             {result.title}
           </Typography>
@@ -175,7 +172,7 @@ export const SearchBar: React.FC = () => {
         ))}
       </div>
     );
-  }, [selectedIndex, handleResultClick, themePrefix]);
+  }, [selectedIndex, handleResultClick]);
 
   return (
     <div className="relative w-full max-w-2xl">
@@ -193,10 +190,7 @@ export const SearchBar: React.FC = () => {
           ref={inputRef}
           type="search"
           placeholder="Search stories, quests, NPCs..."
-          className={clsx(
-            "w-full pl-10 pr-4 py-2 rounded-lg border [&::-webkit-search-cancel-button]:hidden",
-            `${themePrefix}-search`
-          )}
+          className="w-full pl-10 pr-4 py-2 rounded-lg border [&::-webkit-search-cancel-button]:hidden search"
           value={query}
           onChange={handleInputChange}
           onFocus={() => setIsFocused(true)}
@@ -207,10 +201,7 @@ export const SearchBar: React.FC = () => {
         
         {/* Search Icon */}
         <SearchIcon 
-          className={clsx(
-            "absolute left-3 top-1/2 transform -translate-y-1/2",
-            `${themePrefix}-primary`
-          )}
+          className="absolute left-3 top-1/2 transform -translate-y-1/2 primary"
           size={18}
         />
 
@@ -218,10 +209,7 @@ export const SearchBar: React.FC = () => {
         {(query || isSearching) && (
           <button
             onClick={handleClear}
-            className={clsx(
-              "absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-80",
-              `${themePrefix}-primary`
-            )}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-80 primary"
             aria-label="Clear search"
           >
             {isSearching ? (
@@ -237,17 +225,11 @@ export const SearchBar: React.FC = () => {
       {isFocused && (query || isSearching) && (
       <div
         id="search-results"
-        className={clsx(
-          "absolute z-50 w-full mt-1 rounded-lg shadow-lg border max-h-96 overflow-y-auto",
-          `${themePrefix}-search-results`
-        )}
+        className="absolute z-50 w-full mt-1 rounded-lg shadow-lg border max-h-96 overflow-y-auto search-results"
         role="listbox"
       >
           {results.length > 0 ? (
-            <div className={clsx(
-              "py-2 divide-y", 
-              `${themePrefix}-card-border`
-            )}>
+            <div className="py-2 divide-y card-border">
               {results.map((result, index) => renderSearchResult(result, index))}
             </div>
           ) : (

@@ -1,5 +1,4 @@
 // components/shared/ThemeSelector.tsx
-import React from 'react';
 import { useTheme } from '../../themes/ThemeContext';
 import { themes } from '../../themes/definitions';
 import { Palette } from 'lucide-react';
@@ -8,7 +7,6 @@ import clsx from 'clsx';
 
 const ThemeSelector = () => {
   const { theme, setTheme } = useTheme();
-  const themePrefix = theme.name;
 
   return (
     <div className="relative group">
@@ -21,10 +19,7 @@ const ThemeSelector = () => {
       </Button>
       
       <div 
-        className={clsx(
-          "absolute right-0 mt-2 py-2 rounded-lg invisible group-hover:visible transition-all duration-200 border",
-          `${themePrefix}-dropdown`
-        )}
+        className="absolute right-0 mt-2 py-2 rounded-lg invisible group-hover:visible transition-all duration-200 border dropdown"
       >
         {Object.values(themes).map((t) => (
           <Button
@@ -34,7 +29,7 @@ const ThemeSelector = () => {
             onClick={() => setTheme(t.name)}
             className={clsx(
               "w-full px-4 py-2 text-left transition-colors",
-              theme.name === t.name ? `${themePrefix}-dropdown-item-active` : `${themePrefix}-dropdown-item`
+              theme.name === t.name ? `dropdown-item-active` : `dropdown-item`
             )}
           >
             <div className="flex items-center gap-2">

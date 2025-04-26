@@ -11,7 +11,6 @@ import { useRumors } from '../../../context/RumorContext';
 import { useNavigation } from '../../../hooks/useNavigation';
 import { useNPCs } from '../../../context/NPCContext';
 import { useLocations } from '../../../context/LocationContext';
-import { useTheme } from '../../../themes/ThemeContext';
 import AttributionInfo from '../../shared/AttributionInfo';
 import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import clsx from 'clsx';
@@ -54,8 +53,6 @@ const RumorCard: React.FC<RumorCardProps> = ({
   const { navigateToPage, createPath } = useNavigation();
   const { getNPCById } = useNPCs();
   const { getLocationById } = useLocations();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Format source type for display
   const formatSourceType = (type: string) => {
@@ -144,8 +141,8 @@ const RumorCard: React.FC<RumorCardProps> = ({
   return (
     <>
       <Card className={clsx(
-        `${themePrefix}-rumor-card`,
-        `${themePrefix}-rumor-card-${rumor.status}`,
+        `rumor-card`,
+        `rumor-card-${rumor.status}`,
         selectionMode && 'border-l-0'
       )}>
         <Card.Content className="space-y-4">
@@ -191,7 +188,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
               {/* Location display (if present) */}
               {rumor.location && (
                 <div className="flex items-center gap-2 mt-1">
-                  <MapPin size={14} className={`${themePrefix}-typography-secondary`} />
+                  <MapPin size={14} className="typography-secondary" />
                   <Typography variant="body-sm" color="secondary">
                     Location: {rumor.location}
                   </Typography>
@@ -271,13 +268,10 @@ const RumorCard: React.FC<RumorCardProps> = ({
                     {rumor.notes.map((note) => (
                       <div
                         key={note.id}
-                        className={clsx(
-                          "p-3 rounded-lg space-y-1",
-                          `${themePrefix}-note`
-                        )}
+                        className="p-3 rounded-lg space-y-1 note"
                       >
                         <div className="flex items-center gap-2">
-                          <Calendar size={14} className={`${themePrefix}-typography-secondary`} />
+                          <Calendar size={14} className="typography-secondary" />
                           <Typography variant="body-sm" color="secondary">
                             {new Date(note.dateAdded).toLocaleDateString()} by {note.addedByUsername}
                           </Typography>
@@ -375,7 +369,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleStatusChange('confirmed')}
-                      startIcon={<CheckCircle size={16} className={`${themePrefix}-rumor-status-confirmed`} />}
+                      startIcon={<CheckCircle size={16} className="rumor-status-confirmed" />}
                       disabled={rumor.status === 'confirmed'}
                     >
                       Confirm
@@ -384,7 +378,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleStatusChange('unconfirmed')}
-                      startIcon={<HelpCircle size={16} className={`${themePrefix}-rumor-status-unconfirmed`} />}
+                      startIcon={<HelpCircle size={16} className="rumor-status-unconfirmed" />}
                       disabled={rumor.status === 'unconfirmed'}
                     >
                       Unconfirm
@@ -393,7 +387,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => handleStatusChange('false')}
-                      startIcon={<XCircle size={16} className={`${themePrefix}-rumor-status-false`} />}
+                      startIcon={<XCircle size={16} className="rumor-status-false" />}
                       disabled={rumor.status === 'false'}
                     >
                       Mark False

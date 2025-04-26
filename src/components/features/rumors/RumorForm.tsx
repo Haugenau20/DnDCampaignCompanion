@@ -10,7 +10,6 @@ import Button from '../../core/Button';
 import Card from '../../core/Card';
 import Dialog from '../../core/Dialog';
 import { useAuth, useUser } from '../../../context/firebase';
-import { useTheme } from '../../../themes/ThemeContext';
 import clsx from 'clsx';
 import { AlertCircle, Save, X, Users, MapPin } from 'lucide-react';
 
@@ -55,10 +54,6 @@ const RumorForm: React.FC<RumorFormProps> = ({
   // Form validation and submission state
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Get theme context
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
 
   // Get NPCs and Locations for selection
   const { npcs } = useNPCs();
@@ -225,9 +220,9 @@ const RumorForm: React.FC<RumorFormProps> = ({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={clsx("block text-sm font-medium mb-1", `${themePrefix}-form-label`)}>Status *</label>
+                <label className="block text-sm font-medium mb-1 form-label">Status *</label>
                 <select
-                  className={clsx("w-full rounded-lg border p-2", `${themePrefix}-input`)}
+                  className="w-full rounded-lg border p-2 input"
                   value={formData.status}
                   onChange={(e) => handleInputChange('status', e.target.value as RumorStatus)}
                   required
@@ -240,9 +235,9 @@ const RumorForm: React.FC<RumorFormProps> = ({
               </div>
 
               <div>
-                <label className={clsx("block text-sm font-medium mb-1", `${themePrefix}-form-label`)}>Source Type *</label>
+                <label className="block text-sm font-medium mb-1 form-label">Source Type *</label>
                 <select
-                  className={clsx("w-full rounded-lg border p-2", `${themePrefix}-input`)}
+                  className="w-full rounded-lg border p-2 input"
                   value={formData.sourceType}
                   onChange={(e) => handleSourceTypeChange(e.target.value as SourceType)}
                   required
@@ -260,9 +255,9 @@ const RumorForm: React.FC<RumorFormProps> = ({
             {/* Source information - changes based on source type */}
             {formData.sourceType === 'npc' ? (
               <div>
-                <label className={clsx("block text-sm font-medium mb-1", `${themePrefix}-form-label`)}>Source NPC *</label>
+                <label className="block text-sm font-medium mb-1 form-label">Source NPC *</label>
                 <select
-                  className={clsx("w-full rounded-lg border p-2", `${themePrefix}-input`)}
+                  className="w-full rounded-lg border p-2 input"
                   value={formData.sourceNpcId || ''}
                   onChange={(e) => handleSourceNPCSelect(e.target.value)}
                   required
@@ -292,9 +287,9 @@ const RumorForm: React.FC<RumorFormProps> = ({
 
             {/* Location */}
             <div>
-              <label className={clsx("block text-sm font-medium mb-1", `${themePrefix}-form-label`)}>Location</label>
+              <label className="block text-sm font-medium mb-1 form-label">Location</label>
               <select
-                className={clsx("w-full rounded-lg border p-2", `${themePrefix}-input`)}
+                className="w-full rounded-lg border p-2 input"
                 value={formData.locationId || ''}
                 onChange={(e) => handleLocationSelect(e.target.value)}
                 disabled={isSubmitting}
@@ -330,23 +325,17 @@ const RumorForm: React.FC<RumorFormProps> = ({
                 return npc ? (
                   <div
                     key={npcId}
-                    className={clsx(
-                      "flex items-center gap-1 rounded-full px-3 py-1",
-                      `${themePrefix}-tag`
-                    )}
+                    className="flex items-center gap-1 rounded-full px-3 py-1 tag"
                   >
                     <span>{npc.name}</span>
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size='sm'
                       onClick={() => handleNPCToggle(npcId)}
-                      className={clsx(
-                        `${themePrefix}-typography-secondary`,
-                        `hover:${themePrefix}-button-ghost-hover`,
-                      )}
                       disabled={isSubmitting}
                     >
                       <X size={14} />
-                    </button>
+                    </Button>
                   </div>
                 ) : null;
               })}
@@ -381,23 +370,17 @@ const RumorForm: React.FC<RumorFormProps> = ({
                 return location ? (
                   <div
                     key={locationId}
-                    className={clsx(
-                      "flex items-center gap-1 rounded-full px-3 py-1",
-                      `${themePrefix}-tag`
-                    )}
+                    className="flex items-center gap-1 rounded-full px-3 py-1 tag"
                   >
                     <span>{location.name}</span>
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size='sm'
                       onClick={() => handleLocationToggle(locationId)}
-                      className={clsx(
-                        `${themePrefix}-typography-secondary`,
-                        `hover:${themePrefix}-button-ghost-hover`,
-                      )}
                       disabled={isSubmitting}
                     >
-                      <X size={14} />
-                    </button>
+                      <X size={14}/>
+                    </Button>
                   </div>
                 ) : null;
               })}
@@ -412,7 +395,7 @@ const RumorForm: React.FC<RumorFormProps> = ({
           {/* Error Message */}
           {error && (
             <div className="flex items-center gap-2">
-              <AlertCircle size={16} className={`${themePrefix}-rumor-status-false`} />
+              <AlertCircle size={16} className={`rumor-status-false`} />
               <Typography color="error">{error}</Typography>
             </div>
           )}
@@ -456,8 +439,8 @@ const RumorForm: React.FC<RumorFormProps> = ({
                   className={clsx(
                     `p-2 rounded text-center transition-colors`,
                     selectedNPCs.has(npc.id)
-                      ? `${themePrefix}-selected-item`
-                      : `${themePrefix}-selectable-item`
+                      ? `selected-item`
+                      : `selectable-item`
                   )}
                 >
                   <Typography 
@@ -497,8 +480,8 @@ const RumorForm: React.FC<RumorFormProps> = ({
                   className={clsx(
                     `p-2 rounded text-center transition-colors`,
                     selectedLocations.has(location.id)
-                      ? `${themePrefix}-selected-item`
-                      : `${themePrefix}-selectable-item`
+                      ? `selected-item`
+                      : `selectable-item`
                   )}
                 >
                   <Typography 

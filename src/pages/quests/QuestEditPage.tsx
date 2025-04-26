@@ -6,10 +6,8 @@ import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import QuestEditForm from '../../components/features/quests/QuestEditForm';
 import { useQuests } from '../../context/QuestContext';
-import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
+import { useAuth, useGroups } from '../../context/firebase';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../themes/ThemeContext';
-import clsx from 'clsx';
 import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 
 const QuestEditPage: React.FC = () => {
@@ -18,9 +16,6 @@ const QuestEditPage: React.FC = () => {
   const { quests, loading, error, refreshQuests, hasRequiredContext } = useQuests();
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
-  const { activeCampaignId } = useCampaigns();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   const editingQuest = quests.find(quest => quest.id === questId);
 
@@ -50,7 +45,7 @@ const QuestEditPage: React.FC = () => {
 
         <Card>
           <Card.Content className="text-center py-12">
-            <AlertCircle className={clsx("w-12 h-12 mx-auto mb-4", `${themePrefix}-typography-secondary`)} />
+            <AlertCircle className="w-12 h-12 mx-auto mb-4 typography-secondary" />
             <Typography variant="h3" className="mb-2">
               {!activeGroupId 
                 ? "No Group Selected" 
@@ -72,7 +67,7 @@ const QuestEditPage: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <Card className="p-8">
           <div className="flex items-center gap-4">
-            <Loader2 className={clsx("w-6 h-6 animate-spin", `${themePrefix}-primary`)} />
+            <Loader2 className="w-6 h-6 animate-spin primary" />
             <Typography>Loading quest data...</Typography>
           </div>
         </Card>

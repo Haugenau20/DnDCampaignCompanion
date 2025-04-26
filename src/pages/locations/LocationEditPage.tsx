@@ -6,11 +6,9 @@ import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import LocationEditForm from '../../components/features/locations/LocationEditForm';
 import { useLocations } from '../../context/LocationContext';
-import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
+import { useAuth } from '../../context/firebase';
 import { useNavigation } from '../../context/NavigationContext';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { useTheme } from '../../themes/ThemeContext';
-import clsx from 'clsx';
 
 const LocationEditPage: React.FC = () => {
   const { locationId } = useParams<{ locationId: string }>();
@@ -22,8 +20,6 @@ const LocationEditPage: React.FC = () => {
   } = useLocations();
   const { user } = useAuth();
   const { navigateToPage } = useNavigation();
-  const { theme } = useTheme();
-  const themePrefix = theme.name;
   
   const editingLocation = locations.find(location => location.id === locationId);
 
@@ -39,7 +35,7 @@ const LocationEditPage: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <Card className="p-8">
           <div className="flex items-center gap-4">
-            <Loader2 className={clsx("w-6 h-6 animate-spin", `${themePrefix}-primary`)} />
+            <Loader2 className="w-6 h-6 animate-spin primary" />
             <Typography>Loading location data...</Typography>
           </div>
         </Card>
