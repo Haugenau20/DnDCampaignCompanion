@@ -178,10 +178,7 @@ const NPCCard: React.FC<NPCCardProps> = ({
             <div className="pt-4 space-y-6">
               {/* Creator and modifier attribution */}
               <AttributionInfo
-                createdByUsername={npc.createdByUsername}
-                dateAdded={npc.dateAdded}
-                modifiedByUsername={npc.modifiedByUsername}
-                dateModified={npc.dateModified}
+                item={npc}
               />
 
               {/* Additional Details */}

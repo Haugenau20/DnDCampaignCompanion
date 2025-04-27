@@ -312,10 +312,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
               <div className="pt-4 space-y-4 border-t divider">
                 {/* Creator and modifier attribution */}
                 <AttributionInfo
-                  createdByUsername={location.createdByUsername}
-                  dateAdded={location.dateAdded}
-                  modifiedByUsername={location.modifiedByUsername}
-                  dateModified={location.dateModified}
+                  item={location}
                 />
 
                 {/* Notable Features */}

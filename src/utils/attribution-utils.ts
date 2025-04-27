@@ -82,3 +82,29 @@ export const getModificationAttributionText = (data: AttributionData): string =>
   const dateText = formatAttributionDate(data.dateModified);
   return dateText ? `Modified by ${data.modifiedByUsername} on ${dateText}` : `Modified by ${data.modifiedByUsername}`;
 };
+
+/**
+ * Determines the actor/attribution name with priority order
+ * @param item Object containing potential attribution fields
+ * @param usernameMap Optional map of UIDs to usernames for lookup
+ * @returns The actor name based on priority order
+ */
+export const determineAttributionActor = (
+  item: any, 
+  usernameMap: Record<string, string> = {}
+): string => {
+  // Priority order: modifiedByUsername > modifiedBy > createdByUsername > createdBy
+  if ('modifiedByUsername' in item && item.modifiedByUsername) {
+    return item.modifiedByUsername;
+  }
+  if ('modifiedBy' in item && item.modifiedBy && usernameMap[item.modifiedBy]) {
+    return usernameMap[item.modifiedBy];
+  }
+  if ('createdByUsername' in item && item.createdByUsername) {
+    return item.createdByUsername;
+  }
+  if ('createdBy' in item && item.createdBy && usernameMap[item.createdBy]) {
+    return usernameMap[item.createdBy];
+  }
+  return '';
+};

@@ -203,10 +203,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
 
               {/* Creator and modifier attribution */}
               <AttributionInfo
-                createdByUsername={rumor.createdByUsername}
-                dateAdded={rumor.dateAdded}
-                modifiedByUsername={rumor.modifiedByUsername}
-                dateModified={rumor.dateModified}
+                item={rumor}
               />
               
               {/* Rumor Content */}

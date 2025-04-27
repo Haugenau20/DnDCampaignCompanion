@@ -41,3 +41,22 @@
 15.1. Major do-over of the project structure
 
 15.2. Update README
+
+
+Not prioritized yet:
+
+Upon chapter creation set:
+- createdBy
+- modifiedBy
+
+on location creation/edit set/update:
+- dateModified (same as dateAdded if not yet modified)
+- modifiedBy (same as createdBy if not yet modified)
+- modifiedByUsername (same as ... )
+
+on NPC creation/edit set/update:
+- dateModified (same as ... )
+- modifiedBy (same as ... )
+- modifiedByUsername (same as ... )
+
+if user has no username, their username should be the same as their profile name. 
