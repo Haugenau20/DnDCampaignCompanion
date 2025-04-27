@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocations } from '../../../context/LocationContext';
-import { MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import Typography from '../../core/Typography';
 import clsx from 'clsx';
 
@@ -10,18 +10,25 @@ interface LocationComboboxProps {
   label?: string;
   placeholder?: string;
   className?: string;
+  /**
+   * If true, only allows selection from existing locations
+   * If false, allows custom location names to be entered
+   */
+  strictMode?: boolean;
 }
 
 const LocationCombobox: React.FC<LocationComboboxProps> = ({
   value,
   onChange,
   label,
-  placeholder = "Select or enter location...",
-  className = ""
+  placeholder = "Select location...",
+  className = "",
+  strictMode = false
 }) => {
   const { locations } = useLocations();
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -35,10 +42,26 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
     loc.toLowerCase().includes(inputValue.toLowerCase())
   );
 
+  // Check if input value is a valid location
+  const isValidLocation = inputValue === '' || uniqueLocations.some(
+    loc => loc.toLowerCase() === inputValue.toLowerCase()
+  );
+
+  // Update input value when value prop changes
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
-    onChange(e.target.value);
+    
+    // If not in strict mode, update value as user types
+    if (!strictMode) {
+      onChange(e.target.value);
+    }
+    
+    setError(null);
   };
 
   // Handle location selection
@@ -46,6 +69,41 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
     setInputValue(location);
     onChange(location);
     setIsOpen(false);
+    setError(null);
+  };
+
+  // Handle input blur - validate location in strict mode
+  const handleBlur = () => {
+    // If not in strict mode, any input is valid
+    if (!strictMode) {
+      return;
+    }
+    
+    // Allow empty value (no parent location)
+    if (inputValue === '') {
+      onChange('');
+      setError(null);
+      return;
+    }
+
+    // If input doesn't match any location, show error
+    if (!isValidLocation) {
+      setError('Please select a valid location');
+      // Reset to previous valid value
+      setInputValue(value);
+      return;
+    }
+
+    // Find exact match (case insensitive)
+    const matchedLocation = uniqueLocations.find(
+      loc => loc.toLowerCase() === inputValue.toLowerCase()
+    );
+    
+    if (matchedLocation) {
+      // Update with correctly cased value
+      setInputValue(matchedLocation);
+      onChange(matchedLocation);
+    }
   };
 
   // Handle click outside to close dropdown
@@ -57,12 +115,13 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
         !inputRef.current?.contains(event.target as Node)
       ) {
         setIsOpen(false);
+        handleBlur();
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [inputValue, value]);
 
   return (
     <div className={`relative ${className}`}>
@@ -78,8 +137,12 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
           value={inputValue}
           onChange={handleInputChange}
           onFocus={() => setIsOpen(true)}
+          onBlur={handleBlur}
           placeholder={placeholder}
-          className="w-full rounded-lg border p-2 pl-10 pr-8 focus:outline-none input"
+          className={clsx(
+            "w-full rounded-lg border p-2 pl-10 pr-8 focus:outline-none input",
+            error && "input-error"
+          )}
         />
         <MapPin 
           className="absolute left-3 top-1/2 transform -translate-y-1/2 typography-secondary" 
@@ -94,6 +157,25 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
         </button>
       </div>
 
+      {/* Error message */}
+      {error && (
+        <div className="flex items-center mt-1 gap-1">
+          <AlertCircle size={14} className="form-error" />
+          <Typography variant="body-sm" color="error">
+            {error}
+          </Typography>
+        </div>
+      )}
+
+      {/* Helper message */}
+      {!strictMode && !error && filteredLocations.length === 0 && inputValue && (
+        <div className="mt-1">
+          <Typography variant="body-sm" color="secondary">
+            Type to create a new location
+          </Typography>
+        </div>
+      )}
+
       {/* Dropdown */}
       {isOpen && (
         <div
@@ -102,13 +184,28 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
         >
           {filteredLocations.length > 0 ? (
             <div className="py-1">
+              {/* Empty option */}
+              <button
+                onClick={() => handleLocationSelect('')}
+                className={clsx(
+                  "w-full text-left px-4 py-2",
+                  inputValue === '' 
+                    ? `dropdown-item-active`
+                    : `dropdown-item`
+                )}
+              >
+                <Typography variant="body-sm">
+                  No parent location
+                </Typography>
+              </button>
+              
               {filteredLocations.map((location) => (
                 <button
                   key={location}
                   onClick={() => handleLocationSelect(location)}
                   className={clsx(
                     "w-full text-left px-4 py-2",
-                    location === inputValue 
+                    location.toLowerCase() === inputValue.toLowerCase()
                       ? `dropdown-item-active`
                       : `dropdown-item`
                   )}
@@ -122,7 +219,9 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
           ) : (
             <div className="px-4 py-2">
               <Typography variant="body-sm" color="secondary">
-                No matching locations. Type to add new.
+                {strictMode 
+                  ? "No matching locations" 
+                  : "No matching locations, type to create new"}
               </Typography>
             </div>
           )}

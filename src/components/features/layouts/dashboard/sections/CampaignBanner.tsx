@@ -54,8 +54,8 @@ const CampaignBanner: React.FC = () => {
       </div>
       
       {/* Background decorative element */}
-      <div className="absolute -right-20 top-0 bottom-0 transform opacity-10">
-        <div className="w-80 h-80 rounded-full bg-primary"></div>
+      <div className="absolute -right-20 top-0 bottom-0 transform">
+        <div className="w-80 h-80 rounded-full bg-secondary"></div>
       </div>
     </div>
   );

@@ -1,19 +1,10 @@
 Prioritized Todo List
 
-3. When adding a new chapter it says that the chapter summary is optional, but it won't create the chapter if there is no summary.
-- Either make it truly optional or make it mandatory and show an error if not typed in.
-
-4. Right now it is possible to type in parent location that dont exist when creating a location. This should not be possible.
-
 5. Fix mobile layout issues on certain pages. (Big update)
 
 6. User should be able to change their password.
 
 7. Have registration tokens expire after X days
-
-8. Filter tabs look different on the location page than the other pages.
-
-9. "Add note" and "Edit" button clashes on the location page-
 
 10. Right now some dialogs are on top of the local container. Instead they should be on top of the underlying document body.
 
@@ -33,7 +24,6 @@ Waiting for prio:
 - Bookshelf view has some odd color differences.
 
 - Implement/review proper highlighting logic to pages.
-- The medieval theme does not work with the hamburger menu and theme selector dropdown.
 
 - F12 console Error in StoryContext when it is trying to update "current-progress"
     - I think this is a remnant of purposefully unused functionality and it should just be deleted. 

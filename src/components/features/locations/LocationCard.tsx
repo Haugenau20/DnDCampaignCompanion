@@ -444,31 +444,75 @@ const LocationCard: React.FC<LocationCardProps> = ({
                 {/* Notes */}
                 {renderNotes()}
 
-                <div className="flex gap-4">
-                  {/* Note Adding Form */}
-                  {renderNoteForm()}
+                {/* Actions Section with vertical layout matching rumor card */}
+                <div className="flex flex-col gap-4 mt-4">
+                  {/* Note Adding Form/Button at the top */}
+                  <div>
+                    {isAddingNote ? (
+                      <div className="space-y-2">
+                        <Input
+                          value={noteInput}
+                          onChange={(e) => setNoteInput(e.target.value)}
+                          placeholder="Enter note..."
+                          isTextArea={true}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={handleAddNote}
+                            disabled={!noteInput.trim()}
+                            startIcon={<Save size={16} />}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setIsAddingNote(false);
+                              setNoteInput('');
+                            }}
+                            startIcon={<X size={16} />}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsAddingNote(true)}
+                        startIcon={<PlusCircle size={16} />}
+                        className="text-primary-600"
+                      >
+                        Add Note
+                      </Button>
+                    )}
+                  </div>
 
+                  {/* Other actions below in a horizontal layout */}
                   {user && (
-                    <>
+                    <div className="flex flex-wrap gap-4">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={handleEdit}
                         startIcon={<Edit size={16} />}
                       >
-                        Edit Location
+                        Edit
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setIsDeleteDialogOpen(true)}
-                        startIcon={<Trash size={16} className="status-error" />}
+                        startIcon={<Trash size={16} />}
                       >
                         Delete
                       </Button>
-                    </>
+                    </div>
                   )}
-                </div>      
+                </div>
               </div>
             )}
             <div className="flex justify-end">
