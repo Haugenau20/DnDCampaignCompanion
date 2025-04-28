@@ -134,7 +134,7 @@ const Header: React.FC = () => {
               className="text-xl font-bold whitespace-nowrap header-title"
             >
               <span className="md:inline hidden">D&D Campaign Companion</span>
-              <span className="md:hidden">D&D Campaign</span>
+              <span className="md:hidden">D&D Companion</span>
             </Link>
             
             {/* Middle - Search */}

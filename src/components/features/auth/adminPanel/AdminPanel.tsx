@@ -163,7 +163,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             )}
             onClick={() => setActiveTab(AdminTab.Groups)}
           >
-            Groups
+            Group
           </button>
         </div>
 
