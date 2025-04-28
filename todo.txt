@@ -4,8 +4,6 @@
 
 2. Have registration tokens expire after X days
 
-3. Lots of dates are invalid.
-
 4. F12 console Error in StoryContext when it is trying to update "current-progress"
     - I think this is a remnant of purposefully unused functionality and it should just be deleted. 
     - It seems to be deeply embedded in the codebase. Remove it entirely all around.
@@ -13,8 +11,6 @@
 5. Fix/Implement proper searching
 
 6. Fix mobile layout issues on certain pages. (Big update)
-
-7. Right now some dialogs are on top of the local container. Instead they should be on top of the underlying document body.
 
 8. Make active quests be on the top of the list?
 
