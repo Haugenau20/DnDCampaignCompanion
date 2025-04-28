@@ -1,18 +1,25 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Typography from '../core/Typography';
 import { Scroll, Edit } from 'lucide-react';
-import { determineAttributionActor } from '../../utils/attribution-utils';
-import { useUsernameLookup } from '../../context/firebase';
+import { determineAttributionActor, fetchAttributionUsernames } from '../../utils/attribution-utils';
+import { useFirebase } from '../../context/firebase';
+import firebaseServices from '../../services/firebase';
 
 interface AttributionInfoProps {
   /** Complete item object containing attribution data */
   item: {
+    // Basic attribution fields
     createdByUsername?: string;
     createdBy?: string;
     dateAdded?: string;
     modifiedByUsername?: string;
     modifiedBy?: string;
     dateModified?: string;
+    // Character-specific attribution fields
+    createdByCharacterId?: string | null;
+    createdByCharacterName?: string | null;
+    modifiedByCharacterId?: string | null;
+    modifiedByCharacterName?: string | null;
   };
 }
 
@@ -23,35 +30,61 @@ interface AttributionInfoProps {
 const AttributionInfo: React.FC<AttributionInfoProps> = ({
   item
 }) => {
-  // Get username lookup functionality
-  const { lookupUsernames, usernameMap } = useUsernameLookup();
+  // Access Firebase context for current group
+  const { activeGroupId } = useFirebase();
   
-  // Fetch any missing usernames when the component mounts
+  // State to store username/character mapping
+  const [usernameMap, setUsernameMap] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  
+  // Fetch usernames when component mounts - only as fallback
   useEffect(() => {
-    const uidsToLookup: string[] = [];
+    const loadUsernames = async () => {
+      if (!activeGroupId) return;
+      
+      // Only fetch usernames if we don't already have character names
+      const uidsToLookup: string[] = [];
+      
+      if (item.createdBy && !item.createdByUsername && !item.createdByCharacterName) {
+        uidsToLookup.push(item.createdBy);
+      }
+      
+      if (item.modifiedBy && !item.modifiedByUsername && !item.modifiedByCharacterName) {
+        uidsToLookup.push(item.modifiedBy);
+      }
+      
+      if (uidsToLookup.length > 0) {
+        setLoading(true);
+        try {
+          const userMapping = await fetchAttributionUsernames(
+            activeGroupId, 
+            uidsToLookup, 
+            firebaseServices
+          );
+          
+          setUsernameMap(userMapping);
+        } catch (err) {
+          console.error('Error fetching attribution usernames:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
     
-    if (item.createdBy && !item.createdByUsername) {
-      uidsToLookup.push(item.createdBy);
-    }
-    
-    if (item.modifiedBy && !item.modifiedByUsername) {
-      uidsToLookup.push(item.modifiedBy);
-    }
-    
-    if (uidsToLookup.length > 0) {
-      lookupUsernames(uidsToLookup);
-    }
-  }, [item.createdBy, item.modifiedBy, lookupUsernames]);
+    loadUsernames();
+  }, [item.createdBy, item.modifiedBy, activeGroupId, item.createdByUsername, item.createdByCharacterName, item.modifiedByUsername, item.modifiedByCharacterName]);
   
-  // Get effective usernames using prioritization logic
+  // Get attribution actors using priority logic
   const effectiveCreator = determineAttributionActor({
     createdByUsername: item.createdByUsername,
-    createdBy: item.createdBy
+    createdBy: item.createdBy,
+    createdByCharacterName: item.createdByCharacterName
   }, usernameMap);
   
   const effectiveModifier = determineAttributionActor({
     modifiedByUsername: item.modifiedByUsername,
-    modifiedBy: item.modifiedBy
+    modifiedBy: item.modifiedBy,
+    modifiedByCharacterName: item.modifiedByCharacterName
   }, usernameMap);
 
   // If no attribution information is available, don't render anything

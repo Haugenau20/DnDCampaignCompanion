@@ -1,17 +1,22 @@
-// types/rumor.ts
+// src/types/rumor.ts
+import { ContentAttribution } from './common';
 
 export type RumorStatus = 'confirmed' | 'unconfirmed' | 'false';
 export type SourceType = 'npc' | 'tavern' | 'notice' | 'traveler' | 'other';
 
-export interface RumorNote {
+/**
+ * Represents a note added to a rumor
+ * Extends ContentAttribution for consistency with other content types
+ */
+export interface RumorNote extends ContentAttribution {
   id: string;
   content: string;
-  dateAdded: string;
-  addedBy: string;
-  addedByUsername: string;
 }
 
-export interface Rumor {
+/**
+ * Represents a rumor in the game world
+ */
+export interface Rumor extends ContentAttribution {
   id: string;
   title: string;
   content: string;
@@ -21,12 +26,6 @@ export interface Rumor {
   sourceNpcId?: string; // Optional reference to NPC if source is an NPC
   location?: string;
   locationId?: string; // Optional reference to location in system
-  dateAdded: string;
-  dateModified: string;
-  createdBy: string; // User UID
-  createdByUsername: string; // Username for display
-  modifiedBy: string; // User UID of last modifier
-  modifiedByUsername: string; // Username for display
   relatedNPCs: string[]; // Array of NPC IDs
   relatedLocations: string[]; // Array of location IDs
   notes: RumorNote[];

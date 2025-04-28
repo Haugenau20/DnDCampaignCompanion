@@ -1,4 +1,5 @@
-// types/npc.ts
+// src/types/npc.ts
+import { ContentAttribution } from './common';
 
 export type NPCStatus = 'alive' | 'deceased' | 'missing' | 'unknown';
 export type NPCRelationship = 'friendly' | 'neutral' | 'hostile' | 'unknown';
@@ -14,7 +15,10 @@ export interface NPCNote {
   text: string;
 }
 
-export interface NPC {
+/**
+ * Represents an NPC in the game world
+ */
+export interface NPC extends ContentAttribution {
   id: string;
   name: string;
   title?: string;
@@ -29,13 +33,6 @@ export interface NPC {
   background?: string;
   connections: NPCConnections;
   notes: NPCNote[];
-  // Attribution fields
-  createdBy?: string; // User UID
-  createdByUsername?: string; // Character name or username
-  modifiedBy?: string; // User UID of last modifier
-  modifiedByUsername?: string; // Character name or username of modifier
-  dateAdded?: string; // Date of creation
-  dateModified?: string; // Date of last modification
 }
 
 // Context types

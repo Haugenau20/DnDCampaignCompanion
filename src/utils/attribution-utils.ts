@@ -84,27 +84,92 @@ export const getModificationAttributionText = (data: AttributionData): string =>
 };
 
 /**
- * Determines the actor/attribution name with priority order
- * @param item Object containing potential attribution fields
- * @param usernameMap Optional map of UIDs to usernames for lookup
- * @returns The actor name based on priority order
+ * Determines the attribution actor name based on the prioritization order:
+ * 1. modifiedByCharacterName (character active during modification)
+ * 2. modifiedByUsername
+ * 3. modifiedBy -> profile name (looked up)
+ * 4. createdByCharacterName (character active during creation)
+ * 5. createdByUsername
+ * 6. createdBy -> profile name (looked up)
+ * 
+ * @param item Content item with attribution fields
+ * @param usernameMap Optional mapping of user IDs to usernames (for lookup)
+ * @returns The determined actor name based on priority or empty string
  */
 export const determineAttributionActor = (
   item: any, 
   usernameMap: Record<string, string> = {}
 ): string => {
-  // Priority order: modifiedByUsername > modifiedBy > createdByUsername > createdBy
-  if ('modifiedByUsername' in item && item.modifiedByUsername) {
+  // First priority: modifiedByCharacterName (character active during modification)
+  if (item.modifiedByCharacterName) {
+    return item.modifiedByCharacterName;
+  }
+  
+  // Second priority: modifiedByUsername
+  if (item.modifiedByUsername) {
     return item.modifiedByUsername;
   }
-  if ('modifiedBy' in item && item.modifiedBy && usernameMap[item.modifiedBy]) {
+  
+  // Third priority: modifiedBy -> profile name (fallback)
+  if (item.modifiedBy && usernameMap[item.modifiedBy]) {
     return usernameMap[item.modifiedBy];
   }
-  if ('createdByUsername' in item && item.createdByUsername) {
+  
+  // Fourth priority: createdByCharacterName (character active during creation)
+  if (item.createdByCharacterName) {
+    return item.createdByCharacterName;
+  }
+  
+  // Fifth priority: createdByUsername
+  if (item.createdByUsername) {
     return item.createdByUsername;
   }
-  if ('createdBy' in item && item.createdBy && usernameMap[item.createdBy]) {
+  
+  // Sixth priority: createdBy -> profile name (fallback)
+  if (item.createdBy && usernameMap[item.createdBy]) {
     return usernameMap[item.createdBy];
   }
+  
   return '';
+};
+
+/**
+ * Fetches basic usernames for users as a fallback
+ * Only used if the character names stored with content are not available
+ * 
+ * @param groupId Current group ID
+ * @param userIds Array of user IDs to fetch information for
+ * @param firebaseServices Firebase services object
+ * @returns A mapping of user IDs to usernames
+ */
+export const fetchAttributionUsernames = async (
+  groupId: string,
+  userIds: string[],
+  firebaseServices: any
+): Promise<Record<string, string>> => {
+  if (!groupId || !userIds.length) return {};
+  
+  const usernameMap: Record<string, string> = {};
+  
+  // Deduplicate user IDs
+  const uniqueUserIds = [...new Set(userIds)];
+  
+  // Fetch user profiles in parallel - only basic usernames as fallback
+  await Promise.all(
+    uniqueUserIds.map(async (uid) => {
+      try {
+        // Get the user's group profile
+        const userProfile = await firebaseServices.user.getGroupUserProfile(groupId, uid);
+        
+        if (userProfile?.username) {
+          // Store basic username
+          usernameMap[uid] = userProfile.username;
+        }
+      } catch (error) {
+        console.error(`Error loading attribution info for ${uid}:`, error);
+      }
+    })
+  );
+  
+  return usernameMap;
 };

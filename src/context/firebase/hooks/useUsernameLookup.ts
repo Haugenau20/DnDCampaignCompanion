@@ -1,88 +1,54 @@
 // src/context/firebase/hooks/useUsernameLookup.ts
-import { useState, useEffect, useCallback } from 'react';
-import { useGroups } from './useGroups';
+
+import { useState, useCallback } from 'react';
+import { useFirebaseContext } from '../FirebaseContext';
 import firebaseServices from '../../../services/firebase';
+import { fetchAttributionUsernames } from '../../../utils/attribution-utils';
 
 /**
- * Cache for storing username lookups to minimize Firebase calls
- * This object persists across component re-renders
+ * Hook for looking up usernames and active character names for user IDs
+ * Used primarily for attribution displays
  */
-const usernameCache: Record<string, Record<string, string>> = {};
-
-/**
- * Custom hook for looking up usernames from UIDs
- * @returns Methods and state for username lookup
- */
-export const useUsernameLookup = () => {
-  const { activeGroupId } = useGroups();
+export function useUsernameLookup() {
   const [usernameMap, setUsernameMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const { activeGroupId, error, setError } = useFirebaseContext();
 
   /**
-   * Lookup usernames for a set of UIDs
-   * @param uids Array of user IDs to look up
+   * Look up usernames and character names for an array of user IDs
+   * @param userIds Array of user IDs to look up
+   * @returns Promise that resolves when lookups are complete
    */
-  const lookupUsernames = useCallback(async (uids: string[]) => {
-    if (!activeGroupId || uids.length === 0) return;
+  const lookupUsernames = useCallback(async (userIds: string[]): Promise<void> => {
+    if (!activeGroupId || !userIds.length) return;
     
-    // Initialize cache for this group if needed
-    if (!usernameCache[activeGroupId]) {
-      usernameCache[activeGroupId] = {};
-    }
-    
-    // Filter to only uncached UIDs
-    const uncachedUids = uids.filter(uid => !usernameCache[activeGroupId][uid]);
-    
-    if (uncachedUids.length === 0) {
-      // All UIDs are cached, use the cache
-      setUsernameMap({ ...usernameCache[activeGroupId] });
-      return;
-    }
-    
-    // Need to fetch some usernames
     setLoading(true);
-    
     try {
-      const newUsernames: Record<string, string> = {};
+      setError(null);
       
-      await Promise.all(
-        uncachedUids.map(async (uid) => {
-          try {
-            const userProfile = await firebaseServices.user.getGroupUserProfile(activeGroupId, uid);
-            if (userProfile?.username) {
-              newUsernames[uid] = userProfile.username;
-              // Update the cache
-              usernameCache[activeGroupId][uid] = userProfile.username;
-            }
-          } catch (error) {
-            console.error(`Error loading username for ${uid}:`, error);
-          }
-        })
+      // Use the centralized attribution username fetcher
+      const results = await fetchAttributionUsernames(
+        activeGroupId,
+        userIds,
+        firebaseServices
       );
       
-      // Combine new usernames with cached ones for this group
-      setUsernameMap({ 
-        ...usernameCache[activeGroupId], 
-        ...newUsernames 
-      });
-    } catch (error) {
-      console.error('Error fetching usernames:', error);
+      setUsernameMap(prevMap => ({
+        ...prevMap,
+        ...results
+      }));
+    } catch (err) {
+      console.error('Error looking up usernames:', err);
+      setError(err instanceof Error ? err.message : 'Error looking up usernames');
     } finally {
       setLoading(false);
     }
-  }, [activeGroupId]);
+  }, [activeGroupId, setError]);
 
   return {
     usernameMap,
     lookupUsernames,
     loading,
-    
-    /**
-     * Get a username for a specific UID (returns from cache or empty string)
-     */
-    getUsernameForUid: useCallback((uid: string): string => {
-      if (!activeGroupId || !uid) return '';
-      return usernameCache[activeGroupId]?.[uid] || '';
-    }, [activeGroupId])
+    error
   };
-};
+}

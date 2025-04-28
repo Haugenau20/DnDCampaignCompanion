@@ -45,16 +45,14 @@ Upon chapter creation set:
 - createdBy
 - modifiedBy
 
-on location creation/edit set/update:
-- dateModified (same as dateAdded if not yet modified)
-- modifiedBy (same as createdBy if not yet modified)
-- modifiedByUsername (same as ... )
-
-on NPC creation/edit set/update:
-- dateModified (same as ... )
-- modifiedBy (same as ... )
-- modifiedByUsername (same as ... )
-
-if user has no username, their username should be the same as their profile name. 
-
 Make a dedicated page for profile options
+
+In the attribution info, it should prioritise in the following order:
+    1. modifiedBy -> active character name
+    2. modifiedByUsername
+    3. modifiedBy -> profile name
+    4. createdBy -> active character name
+    5. createdByUsername
+    6. createdBy -> profile name
+
+Acitve character name must be found through the users activeCharacterId.
