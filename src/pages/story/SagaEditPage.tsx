@@ -80,7 +80,10 @@ const SagaEditPage: React.FC = () => {
         title: title.trim(),
         content: content.trim(),
         lastUpdated: new Date().toISOString(),
-        version: '1.0' // Simple versioning for now
+        version: '1.0', // Simple versioning for now,
+        createdBy: user?.uid || '',
+        createdByUsername: user?.displayName || '',
+        dateAdded: new Date().toISOString()
       };
       
       const success = await saveSaga(sagaData);

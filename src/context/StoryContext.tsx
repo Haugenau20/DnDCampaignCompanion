@@ -209,7 +209,9 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (updates.order === undefined || updates.order === chapter.order) {
         await updateData(chapterId, {
           ...updates,
-          lastModified: new Date()
+          dateModified: new Date().toISOString(),
+          modifiedBy: user.uid,
+          modifiedByUsername: user.displayName || ''
         });
         await refreshChapters();
         return;
@@ -268,7 +270,9 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ...c,
         id: generateChapterId(newOrderMap.get(c.id)),
         order: newOrderMap.get(c.id),
-        lastModified: c.id === chapterId ? new Date() : c.lastModified,
+        dateModified: c.id === chapterId ? new Date() : c.dateModified,
+        modifiedBy: c.id === chapterId ? user.uid : c.modifiedBy,
+        modifiedByUsername: c.id === chapterId ? user.displayName || '' : c.modifiedByUsername,
         // Add any other updates for the target chapter
         ...(c.id === chapterId ? updates : {})
       }));
@@ -360,7 +364,12 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ...chapterData,
         id: chapterId,
         order: newOrder,
-        lastModified: new Date()
+        dateAdded: new Date().toISOString(),
+        createdBy: user.uid,
+        createdByUsername: user.displayName || '',
+        dateModified: new Date().toISOString(),
+        modifiedBy: user.uid,
+        modifiedByUsername: user.displayName || '',
       };
       
       // Add chapter to Firebase

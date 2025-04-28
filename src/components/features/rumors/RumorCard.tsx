@@ -86,8 +86,8 @@ const RumorCard: React.FC<RumorCardProps> = ({
         id: crypto.randomUUID(),
         content: noteInput.trim(),
         dateAdded: '',  // Will be set in context
-        addedBy: '',    // Will be set in context
-        addedByUsername: '' // Will be set in context
+        createdBy: '',    // Will be set in context
+        createdByUsername: '' // Will be set in context
       });
       
       // Reset form
@@ -268,7 +268,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
                         <div className="flex items-center gap-2">
                           <Calendar size={14} className="typography-secondary" />
                           <Typography variant="body-sm" color="secondary">
-                            {new Date(note.dateAdded).toLocaleDateString()} by {note.addedByUsername}
+                            {new Date(note.dateAdded).toLocaleDateString()} by {note.createdByUsername}
                           </Typography>
                         </div>
                         <Typography variant="body-sm">

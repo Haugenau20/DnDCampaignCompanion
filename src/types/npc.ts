@@ -1,5 +1,5 @@
 // src/types/npc.ts
-import { ContentAttribution } from './common';
+import { ContentAttribution, BaseContent } from './common';
 
 export type NPCStatus = 'alive' | 'deceased' | 'missing' | 'unknown';
 export type NPCRelationship = 'friendly' | 'neutral' | 'hostile' | 'unknown';
@@ -18,8 +18,7 @@ export interface NPCNote {
 /**
  * Represents an NPC in the game world
  */
-export interface NPC extends ContentAttribution {
-  id: string;
+export interface NPC extends BaseContent {
   name: string;
   title?: string;
   status: NPCStatus;

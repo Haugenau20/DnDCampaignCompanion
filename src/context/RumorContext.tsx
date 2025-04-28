@@ -213,8 +213,8 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: crypto.randomUUID(),
       content: `Combined from rumors: ${rumorIds.join(', ')}`,
       dateAdded: now,
-      addedBy: user.uid,
-      addedByUsername: displayName
+      createdBy: user.uid,
+      createdByUsername: displayName
     }];
   
     const newRumor: Rumor = {
@@ -258,8 +258,8 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               id: crypto.randomUUID(),
               content: `Combined into rumor: ${id}`,
               dateAdded: now,
-              addedBy: user.uid,
-              addedByUsername: displayName
+              createdBy: user.uid,
+              createdByUsername: displayName
             }
           ]
         };
@@ -317,8 +317,8 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               id: crypto.randomUUID(),
               content: `Converted to quest: ${questId}`,
               dateAdded: now,
-              addedBy: user.uid,
-              addedByUsername: displayName
+              createdBy: user.uid,
+              createdByUsername: displayName
             }
           ]
         });

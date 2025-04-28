@@ -23,9 +23,13 @@ const StorySection: React.FC<StorySectionProps> = ({ chapters, loading }) => {
       return firstChapter.order - secondChapter.order;
     }
     
-    // Otherwise sort by date (oldest first to maintain chronology)
-    const firstDate = firstChapter.lastModified ? new Date(firstChapter.lastModified).getTime() : 0;
-    const secondDate = secondChapter.lastModified ? new Date(secondChapter.lastModified).getTime() : 0;
+    // Use dateModified if available, otherwise fall back to dateAdded
+    const firstDateString = firstChapter.dateModified || firstChapter.dateAdded;
+    const secondDateString = secondChapter.dateModified || secondChapter.dateAdded;
+    
+    // Convert string dates to numeric timestamps for comparison
+    const firstDate = firstDateString ? new Date(firstDateString).getTime() : 0;
+    const secondDate = secondDateString ? new Date(secondDateString).getTime() : 0;
     
     return firstDate - secondDate;
   });
@@ -89,8 +93,8 @@ const StorySection: React.FC<StorySectionProps> = ({ chapters, loading }) => {
               ) : null}
               
               <div className="text-right text-xs typography-secondary">
-                {latestChapter.lastModified && (
-                  new Date(latestChapter.lastModified).toLocaleDateString()
+                {latestChapter.dateModified && (
+                  new Date(latestChapter.dateModified).toLocaleDateString()
                 )}
               </div>
             </div>

@@ -91,8 +91,8 @@ const ChaptersPage: React.FC = () => {
       } else if (sortField === 'title') {
         comparison = a.title.localeCompare(b.title);
       } else if (sortField === 'lastModified') {
-        const dateA = new Date(a.lastModified || 0).getTime();
-        const dateB = new Date(b.lastModified || 0).getTime();
+        const dateA = new Date(a.dateModified || 0).getTime();
+        const dateB = new Date(b.dateModified || 0).getTime();
         comparison = dateA - dateB;
       }
       

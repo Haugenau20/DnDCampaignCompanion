@@ -83,8 +83,8 @@ const getLOTRRumors = (aragornUid: string, gandalfUid: string, gimliUid: string,
           id: 'note1-1',
           content: 'These are likely the Nazgûl hunting for the Ring.',
           dateAdded: formattedDate,
-          addedBy: aragornUid,
-          addedByUsername: 'Aragorn'
+          createdBy: aragornUid,
+          createdByUsername: 'Aragorn'
         }
       ]
     },
@@ -111,8 +111,8 @@ const getLOTRRumors = (aragornUid: string, gandalfUid: string, gimliUid: string,
           id: 'note2-1',
           content: 'This aligns with Gandalf\'s intelligence from his journeys.',
           dateAdded: formattedDate,
-          addedBy: gandalfUid,
-          addedByUsername: 'Gandalf'
+          createdBy: gandalfUid,
+          createdByUsername: 'Gandalf'
         }
       ]
     },
@@ -139,8 +139,8 @@ const getLOTRRumors = (aragornUid: string, gandalfUid: string, gimliUid: string,
           id: 'note3-1',
           content: 'Gimli is particularly interested in discovering their fate.',
           dateAdded: formattedDate,
-          addedBy: gimliUid,
-          addedByUsername: 'Gimli'
+          createdBy: gimliUid,
+          createdByUsername: 'Gimli'
         }
       ]
     },
@@ -167,8 +167,8 @@ const getLOTRRumors = (aragornUid: string, gandalfUid: string, gimliUid: string,
           id: 'note4-1',
           content: 'Gandalf was imprisoned at Orthanc but escaped with the help of an eagle.',
           dateAdded: formattedDate,
-          addedBy: gandalfUid,
-          addedByUsername: 'Gandalf'
+          createdBy: gandalfUid,
+          createdByUsername: 'Gandalf'
         }
       ],
       convertedToQuestId: 'defeat-saruman'
@@ -196,8 +196,8 @@ const getLOTRRumors = (aragornUid: string, gandalfUid: string, gimliUid: string,
           id: 'note5-1',
           content: 'Gollum might have knowledge of this path, as he escaped from Mordor.',
           dateAdded: formattedDate,
-          addedBy: aragornUid,
-          addedByUsername: 'Aragorn'
+          createdBy: aragornUid,
+          createdByUsername: 'Aragorn'
         }
       ]
     }
@@ -230,8 +230,8 @@ const getHobbitRumors = (aragornUid: string, gandalfUid: string, gimliUid: strin
           id: 'note1-1',
           content: 'This may explain the obsessive behavior of Thorin\'s grandfather before the dragon came.',
           dateAdded: formattedDate,
-          addedBy: gandalfUid,
-          addedByUsername: 'Gandalf'
+          createdBy: gandalfUid,
+          createdByUsername: 'Gandalf'
         }
       ]
     },
@@ -258,8 +258,8 @@ const getHobbitRumors = (aragornUid: string, gandalfUid: string, gimliUid: strin
           id: 'note2-1',
           content: 'The forest seems more dangerous than it once was. Some evil influence may be at work.',
           dateAdded: formattedDate,
-          addedBy: aragornUid,
-          addedByUsername: 'Aragorn'
+          createdBy: aragornUid,
+          createdByUsername: 'Aragorn'
         }
       ]
     },
@@ -286,8 +286,8 @@ const getHobbitRumors = (aragornUid: string, gandalfUid: string, gimliUid: strin
           id: 'note3-1',
           content: 'The dragon has not been seen flying in decades, but these signs suggest he still lives.',
           dateAdded: formattedDate,
-          addedBy: gimliUid,
-          addedByUsername: 'Gimli'
+          createdBy: gimliUid,
+          createdByUsername: 'Gimli'
         }
       ]
     },
@@ -314,8 +314,8 @@ const getHobbitRumors = (aragornUid: string, gandalfUid: string, gimliUid: strin
           id: 'note4-1',
           content: 'Travelers passing through Mirkwood are sometimes detained by the Wood Elves.',
           dateAdded: formattedDate,
-          addedBy: legolasUid,
-          addedByUsername: 'Legolas'
+          createdBy: legolasUid,
+          createdByUsername: 'Legolas'
         }
       ]
     },
@@ -342,8 +342,8 @@ const getHobbitRumors = (aragornUid: string, gandalfUid: string, gimliUid: strin
           id: 'note5-1',
           content: 'The map contains moon-letters that may reveal more about this door when read under the proper light.',
           dateAdded: formattedDate,
-          addedBy: gandalfUid,
-          addedByUsername: 'Gandalf'
+          createdBy: gandalfUid,
+          createdByUsername: 'Gandalf'
         }
       ],
       convertedToQuestId: 'reclaim-erebor'
@@ -377,8 +377,8 @@ const getSilmarillionRumors = (aragornUid: string, frodoUid: string, samwiseUid:
           id: 'note1-1',
           content: 'This discord is the seed of all the strife that would later enter the world.',
           dateAdded: formattedDate,
-          addedBy: frodoUid,
-          addedByUsername: 'Frodo'
+          createdBy: frodoUid,
+          createdByUsername: 'Frodo'
         }
       ]
     },
@@ -405,8 +405,8 @@ const getSilmarillionRumors = (aragornUid: string, frodoUid: string, samwiseUid:
           id: 'note2-1',
           content: 'The rift between Fëanor and his half-brothers grows wider as Melkor\'s whispers take root.',
           dateAdded: formattedDate,
-          addedBy: samwiseUid,
-          addedByUsername: 'Samwise'
+          createdBy: samwiseUid,
+          createdByUsername: 'Samwise'
         }
       ]
     },
@@ -433,8 +433,8 @@ const getSilmarillionRumors = (aragornUid: string, frodoUid: string, samwiseUid:
           id: 'note3-1',
           content: 'Ungoliant dwells in Avathar, a land of shadows that the Valar have neglected.',
           dateAdded: formattedDate,
-          addedBy: pipinUid,
-          addedByUsername: 'Pippin'
+          createdBy: pipinUid,
+          createdByUsername: 'Pippin'
         }
       ]
     },
@@ -461,8 +461,8 @@ const getSilmarillionRumors = (aragornUid: string, frodoUid: string, samwiseUid:
           id: 'note4-1',
           content: 'Ulmo, Lord of Waters, is said to be guiding Turgon in this endeavor.',
           dateAdded: formattedDate,
-          addedBy: aragornUid,
-          addedByUsername: 'Aragorn'
+          createdBy: aragornUid,
+          createdByUsername: 'Aragorn'
         }
       ]
     },
@@ -489,8 +489,8 @@ const getSilmarillionRumors = (aragornUid: string, frodoUid: string, samwiseUid:
           id: 'note5-1',
           content: 'This oath will drive them to commit terrible deeds in their quest for the jewels.',
           dateAdded: formattedDate,
-          addedBy: frodoUid,
-          addedByUsername: 'Frodo'
+          createdBy: frodoUid,
+          createdByUsername: 'Frodo'
         }
       ],
       convertedToQuestId: 'oath-of-feanor'
@@ -524,8 +524,8 @@ const getDunedainRumors = (aragornUid: string, frodoUid: string, samwiseUid: str
           id: 'note1-1',
           content: 'This may indicate that the Enemy is gathering forces again.',
           dateAdded: formattedDate,
-          addedBy: aragornUid,
-          addedByUsername: 'Aragorn'
+          createdBy: aragornUid,
+          createdByUsername: 'Aragorn'
         }
       ]
     },
@@ -552,8 +552,8 @@ const getDunedainRumors = (aragornUid: string, frodoUid: string, samwiseUid: str
           id: 'note2-1',
           content: 'These may be hill-trolls, which are more cunning than stone-trolls.',
           dateAdded: formattedDate,
-          addedBy: frodoUid,
-          addedByUsername: 'Frodo'
+          createdBy: frodoUid,
+          createdByUsername: 'Frodo'
         }
       ],
       convertedToQuestId: 'protect-the-north'
@@ -581,8 +581,8 @@ const getDunedainRumors = (aragornUid: string, frodoUid: string, samwiseUid: str
           id: 'note3-1',
           content: 'There may be a connection to the growing darkness in the East.',
           dateAdded: formattedDate,
-          addedBy: samwiseUid,
-          addedByUsername: 'Samwise'
+          createdBy: samwiseUid,
+          createdByUsername: 'Samwise'
         }
       ],
       convertedToQuestId: 'barrow-downs-haunting'
@@ -610,8 +610,8 @@ const getDunedainRumors = (aragornUid: string, frodoUid: string, samwiseUid: str
           id: 'note4-1',
           content: 'This description matches what Gandalf has told us of Gollum.',
           dateAdded: formattedDate,
-          addedBy: pipinUid,
-          addedByUsername: 'Pippin'
+          createdBy: pipinUid,
+          createdByUsername: 'Pippin'
         }
       ],
       convertedToQuestId: 'hunt-for-gollum'
@@ -639,8 +639,8 @@ const getDunedainRumors = (aragornUid: string, frodoUid: string, samwiseUid: str
           id: 'note5-1',
           content: 'These artifacts could help restore the legacy of the Dúnedain for future generations.',
           dateAdded: formattedDate,
-          addedBy: aragornUid,
-          addedByUsername: 'Aragorn'
+          createdBy: aragornUid,
+          createdByUsername: 'Aragorn'
         }
       ],
       convertedToQuestId: 'lost-heritage'

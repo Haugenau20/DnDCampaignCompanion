@@ -8,6 +8,7 @@ import Input from '../../core/Input';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigation } from '../../../context/NavigationContext';
 import { useStory } from '../../../context/StoryContext';
+import { useAuth } from '../../../context/firebase';
 
 interface ChapterFormProps {
   /** The chapter to edit, or undefined for create mode */
@@ -28,6 +29,7 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
 }) => {
   const { navigateToPage } = useNavigation();
   const { createChapter, updateChapter, chapters } = useStory();
+  const { user } = useAuth();
   
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -112,7 +114,10 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
           content,
           summary: finalSummary, // Use generated summary if empty
           order,
-          lastModified: new Date()
+          dateModified: new Date().toISOString(),
+          createdBy: user?.uid || '',
+          createdByUsername: user?.displayName || '',
+          dateAdded: new Date().toISOString(),
         };
         
         await createChapter(newChapter);
@@ -130,7 +135,10 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
           title,
           content,
           summary: finalSummary, // Use generated summary if empty
-          order
+          order,
+          dateModified: new Date().toISOString(),
+          modifiedBy: user?.uid || '',
+          modifiedByUsername: user?.displayName || '',
         };
         
         await updateChapter(chapter.id, updates);

@@ -83,7 +83,11 @@ useEffect(() => {
       if (location.createdBy) uniqueUids.add(location.createdBy);
     });
     
-    // Skip chapters as they don't have these fields
+    // Story Chapters
+    chapters.forEach(chapter => {
+      if (chapter.modifiedBy) uniqueUids.add(chapter.modifiedBy);
+      if (chapter.createdBy) uniqueUids.add(chapter.createdBy);
+    });
     
     // Load usernames and character names for collected UIDs
     if (uniqueUids.size === 0) return;
@@ -102,7 +106,7 @@ useEffect(() => {
   };
   
   loadUsernames();
-}, [activeGroupId, quests, rumors, npcs, locations]);
+}, [activeGroupId, quests, rumors, npcs, locations, chapters]);
   
   /**
    * Helper function to determine the actor name with priority order
@@ -119,14 +123,14 @@ useEffect(() => {
     
     // Add chapters
     chapters.forEach(chapter => {
-      if (chapter.lastModified) {
+      if (chapter.dateModified || chapter.dateAdded) {
         allActivities.push({
           id: chapter.id,
           type: 'chapter',
           title: chapter.title,
           description: chapter.summary || chapter.content.substring(0, 100) + '...',
-          actor: '', // Chapters don't have actor attribution
-          timestamp: new Date(chapter.lastModified),
+          actor: determineActor(chapter),
+          timestamp: new Date(chapter.dateModified || chapter.dateAdded),
           link: `/story/chapters/${chapter.id}`
         });
       }
@@ -141,7 +145,7 @@ useEffect(() => {
           title: quest.title,
           description: quest.description,
           actor: determineActor(quest),
-          timestamp: new Date(quest.dateModified),
+          timestamp: new Date(quest.dateModified || quest.dateAdded),
           link: `/quests?highlight=${quest.id}`
         });
       }
@@ -156,7 +160,7 @@ useEffect(() => {
           title: rumor.title,
           description: rumor.content.substring(0, 100) + '...',
           actor: determineActor(rumor),
-          timestamp: new Date(rumor.dateModified),
+          timestamp: new Date(rumor.dateModified || rumor.dateAdded),
           link: `/rumors?highlight=${rumor.id}`
         });
       }
@@ -171,7 +175,7 @@ useEffect(() => {
           title: npc.name,
           description: npc.description.substring(0, 100) + '...',
           actor: determineActor(npc),
-          timestamp: new Date(npc.dateModified),
+          timestamp: new Date(npc.dateModified || npc.dateAdded),
           link: `/npcs?highlight=${npc.id}`
         });
       }
@@ -186,7 +190,7 @@ useEffect(() => {
           title: location.name,
           description: location.description.substring(0, 100) + '...',
           actor: determineActor(location),
-          timestamp: new Date(location.dateModified),
+          timestamp: new Date(location.dateModified || location.dateAdded),
           link: `/locations?highlight=${location.id}`
         });
       }
