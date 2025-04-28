@@ -60,3 +60,5 @@ on NPC creation/edit set/update:
 - modifiedByUsername (same as ... )
 
 if user has no username, their username should be the same as their profile name. 
+
+Make a dedicated page for profile options

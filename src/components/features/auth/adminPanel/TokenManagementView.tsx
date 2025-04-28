@@ -6,10 +6,10 @@ import Input from '../../../core/Input';
 import Button from '../../../core/Button';
 import Dialog from '../../../core/Dialog';
 import { useGroups } from '../../../../context/firebase';
+import { formatDisplayDate } from '../../../../utils/dateFormatter';
 import { 
   Search, 
   Ticket, 
-  Clock, 
   Link, 
   Copy, 
   Check, 
@@ -290,10 +290,11 @@ const TokenManagementView: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Typography variant="body-sm" color="secondary">
-                        {tokenData.createdAt instanceof Date 
-                          ? tokenData.createdAt.toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})
-                          : new Date(tokenData.createdAt).toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})
-                        }
+                        {formatDisplayDate(tokenData.createdAt, { 
+                          year: 'numeric', 
+                          day: '2-digit', 
+                          month: '2-digit'
+                        })}
                       </Typography>
                     </td>
                     <td className="px-6 py-4">
