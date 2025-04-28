@@ -335,6 +335,7 @@ const TokenManagementView: React.FC = () => {
         onClose={() => setConfirmTokenDialog({ isOpen: false, token: '' })}
         title="Confirm Token Deletion"
         maxWidth="max-w-md"
+        isNested={true}
       >
         <div className="space-y-4">
           <Typography>
@@ -367,6 +368,7 @@ const TokenManagementView: React.FC = () => {
         onClose={() => setInviteDialog({ isOpen: false, token: '' })}
         title="Share Registration Link"
         maxWidth="max-w-md"
+        isNested={true}
       >
         <div className="space-y-4">
           <Typography>

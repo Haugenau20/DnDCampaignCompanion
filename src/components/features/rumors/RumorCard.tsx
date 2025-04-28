@@ -1,6 +1,5 @@
 // src/components/features/rumors/RumorCard.tsx
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Rumor, RumorStatus } from '../../../types/rumor';
 import Card from '../../core/Card';
 import Typography from '../../core/Typography';
@@ -142,8 +141,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
     <>
       <Card className={clsx(
         `rumor-card`,
-        `rumor-card-${rumor.status}`,
-        selectionMode && 'border-l-0'
+        `rumor-card-${rumor.status}`
       )}>
         <Card.Content className="space-y-4">
           {/* Rumor Header */}
@@ -397,16 +395,13 @@ const RumorCard: React.FC<RumorCardProps> = ({
         </Card.Content>
       </Card>
 
-      {showDeleteConfirmation && createPortal (
         <DeleteConfirmationDialog
           isOpen={showDeleteConfirmation}
           onClose={() => setShowDeleteConfirmation(false)}
           onConfirm={() => deleteRumor(rumor.id)}
           itemName={rumor.title}
           itemType="Rumor"
-        />,
-        document.body
-      )}
+        />
     </>
   );
 };

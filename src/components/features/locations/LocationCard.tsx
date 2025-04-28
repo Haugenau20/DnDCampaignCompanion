@@ -1,5 +1,4 @@
 import React, { useState, useEffect} from 'react';
-import { createPortal } from 'react-dom';
 import { Location, LocationNote, LocationType } from '../../../types/location';
 import { useNPCs } from '../../../context/NPCContext';
 import { useQuests } from '../../../context/QuestContext';
@@ -529,8 +528,6 @@ const LocationCard: React.FC<LocationCardProps> = ({
           </div>
         </Card.Content>
       </Card>
-      
-      {isDeleteDialogOpen && createPortal(
         <DeleteConfirmationDialog
           isOpen={isDeleteDialogOpen}
           onClose={() => setIsDeleteDialogOpen(false)}
@@ -538,9 +535,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
           itemName={location.name}
           itemType="Location"
           message={deleteMessage}
-        />,
-        document.body
-      )}
+        />
     </>
   );
 };

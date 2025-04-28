@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { NPC, NPCNote } from '../../../types/npc';
 import Typography from '../../core/Typography';
 import Card from '../../core/Card';
@@ -369,16 +368,13 @@ const NPCCard: React.FC<NPCCardProps> = ({
       </Card>
 
       {/* Delete Confirmation Dialog - Using shared component */}
-      {isDeleteDialogOpen && createPortal (
         <DeleteConfirmationDialog
           isOpen={isDeleteDialogOpen}
           onClose={() => setIsDeleteDialogOpen(false)}
           onConfirm={handleDeleteConfirm}
           itemName={npc.name}
           itemType="NPC"
-        />,
-        document.body
-      )}
+        />
     </>
   );
 };

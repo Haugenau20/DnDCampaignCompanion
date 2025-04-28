@@ -275,6 +275,7 @@ const CampaignManagementView: React.FC = () => {
         onClose={() => setShowNewCampaignForm(false)}
         title="Create New Campaign"
         maxWidth="max-w-md"
+        isNested={true}
       >
         <form onSubmit={handleCreateCampaign}>
           <div className="space-y-4">
@@ -324,6 +325,7 @@ const CampaignManagementView: React.FC = () => {
         onClose={() => setConfirmDeleteDialog({ isOpen: false, campaignId: '', campaignName: '' })}
         title="Confirm Campaign Deletion"
         maxWidth="max-w-md"
+        isNested={true}
       >
         <div className="space-y-4">
           <Typography>

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Quest } from '../../../types/quest';
 import { useNPCs } from '../../../context/NPCContext';
 import { useAuth } from '../../../context/firebase';
@@ -377,16 +376,13 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
       </Card>
 
       {/* Delete Confirmation Dialog */}
-      {showDeleteDialog && createPortal(
         <DeleteConfirmationDialog
           isOpen={showDeleteDialog}
           onClose={() => setShowDeleteDialog(false)}
           onConfirm={handleDeleteConfirm}
           itemName={quest.title}
           itemType="Quest"
-        />,
-        document.body
-      )}
+        />
     </>
   );
 };

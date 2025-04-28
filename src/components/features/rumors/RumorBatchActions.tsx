@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import CombineRumorsDialog from './CombineRumorsDialog';
 import ConvertToQuestDialog from './ConvertToQuestDialog';
-import ReactDOM from 'react-dom';
 
 interface RumorBatchActionsProps {
   selectedRumors: Set<string>;
@@ -134,7 +133,6 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
   const portalElements = (
     <>
       {/* Render dialogs in portal to make them appear above everything */}
-      {ReactDOM.createPortal(
         <>
           <CombineRumorsDialog
             open={showCombineDialog}
@@ -160,9 +158,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             itemType="Rumor"
             message={`Are you sure you want to delete ${selectedRumors.size} rumors? This cannot be undone.`}
           />
-        </>,
-        document.body
-      )}
+        </>
     </>
   );
 

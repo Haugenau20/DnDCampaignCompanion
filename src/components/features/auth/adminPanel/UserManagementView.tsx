@@ -227,6 +227,7 @@ const UserManagementView: React.FC = () => {
         onClose={() => setConfirmUserDialog({ isOpen: false, userId: '', username: '' })}
         title="Confirm User Removal"
         maxWidth="max-w-md"
+        isNested={true}
       >
         <div className="space-y-4">
           <Typography>

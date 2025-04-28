@@ -158,6 +158,7 @@ const GroupManagementView: React.FC = () => {
         onClose={() => setShowCreateDialog(false)}
         title="Create New Group"
         maxWidth="max-w-md"
+        isNested={true}
       >
         <form onSubmit={handleCreateGroup}>
           <div className="space-y-4">
