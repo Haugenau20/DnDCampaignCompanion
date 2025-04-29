@@ -44,3 +44,5 @@ Not prioritized yet:
 Make a dedicated page for profile options
 
 Form/Context Responsibility Pattern Standardization (look at docs/backlog/FormContextStandard)
+
+NPCs Page seems to take longer to load than the rest of the pages.

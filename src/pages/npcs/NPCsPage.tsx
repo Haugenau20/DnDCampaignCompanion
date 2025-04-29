@@ -33,12 +33,12 @@ const NPCsPage: React.FC = () => {
   }), [npcs]);
 
   // Handle NPC update
-  const handleNPCUpdate = async (updatedNPC: NPC) => {
+  const handleNPCUpdate = async () => {
     await refreshNPCs();
   };
 
   // Handle NPC deletion
-  const handleNPCDelete = async (npcId: string) => {
+  const handleNPCDelete = async () => {
     await refreshNPCs();
   };
 
