@@ -1,10 +1,10 @@
 // src/types/npc.ts
-import { ContentAttribution, BaseContent } from './common';
+import { BaseContent } from './common';
 
 export type NPCStatus = 'alive' | 'deceased' | 'missing' | 'unknown';
 export type NPCRelationship = 'friendly' | 'neutral' | 'hostile' | 'unknown';
 
-interface NPCConnections {
+export interface NPCConnections {
   relatedNPCs: string[];
   affiliations: string[];
   relatedQuests: string[];
@@ -48,4 +48,7 @@ export interface NPCContextValue extends NPCContextState {
   getNPCsByRelationship: (relationship: NPCRelationship) => NPC[];
   updateNPCNote: (npcId: string, note: NPCNote) => void;
   updateNPCRelationship: (npcId: string, relationship: NPCRelationship) => void;
+  addNPC: (npc: Omit<NPC, 'id'>) => Promise<string>;
+  updateNPC: (npc: NPC) => Promise<void>;
+  deleteNPC: (npcId: string) => Promise<void>;
 }

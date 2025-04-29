@@ -1,5 +1,5 @@
 // src/types/quest.ts
-import { ContentAttribution } from './common';
+import { BaseContent } from './common';
 
 export type QuestStatus = 'active' | 'completed' | 'failed';
 
@@ -22,8 +22,7 @@ export interface QuestNPC {
 /**
  * Represents a quest in the game world
  */
-export interface Quest extends ContentAttribution {
-  id: string;
+export interface Quest extends BaseContent {
   title: string;
   description: string;
   status: QuestStatus;

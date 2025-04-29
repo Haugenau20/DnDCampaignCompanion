@@ -1,23 +1,21 @@
 // src/types/rumor.ts
-import { ContentAttribution } from './common';
+import { BaseContent } from './common';
 
 export type RumorStatus = 'confirmed' | 'unconfirmed' | 'false';
 export type SourceType = 'npc' | 'tavern' | 'notice' | 'traveler' | 'other';
 
 /**
  * Represents a note added to a rumor
- * Extends ContentAttribution for consistency with other content types
+ * Extends BaseContent for consistency with other content types
  */
-export interface RumorNote extends ContentAttribution {
-  id: string;
+export interface RumorNote extends BaseContent {
   content: string;
 }
 
 /**
  * Represents a rumor in the game world
  */
-export interface Rumor extends ContentAttribution {
-  id: string;
+export interface Rumor extends BaseContent {
   title: string;
   content: string;
   status: RumorStatus;

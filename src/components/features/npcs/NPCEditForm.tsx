@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { NPC } from '../../../types/npc';
-import { useFirebaseData } from '../../../hooks/useFirebaseData';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';
 import Button from '../../core/Button';
@@ -8,9 +7,10 @@ import Card from '../../core/Card';
 import Dialog from '../../core/Dialog';
 import { Save, X, Users, Scroll } from 'lucide-react';
 import { useQuests } from '../../../context/QuestContext';
+import { useNPCs } from '../../../context/NPCContext';
 import { useAuth, useUser } from '../../../context/firebase';
 import clsx from 'clsx';
-import { getUserDisplayName } from '../../../utils/user-utils';
+import { getUserName, getActiveCharacterName } from '../../../utils/user-utils';
 
 interface NPCEditFormProps {
   /** The NPC being edited */
@@ -29,10 +29,12 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
   onCancel,
   existingNPCs
 }) => {
-
-  // Firebase user for attribution
+  // Use the NPCs context
+  const { updateNPC, isLoading, error } = useNPCs();
+  
+  // Authentication and user data
   const { user } = useAuth();
-  const { userProfile } = useUser();
+  const { userProfile, activeGroupUserProfile } = useUser();
 
   // Form state initialized with existing NPC data
   const [formData, setFormData] = useState<NPC>(npc);
@@ -46,11 +48,6 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
 
   // Get quests data
   const { quests } = useQuests();
-
-  // Firebase hook
-  const { updateData, loading, error } = useFirebaseData<NPC>({
-    collection: 'npcs'
-  });
 
   // Handle basic input changes
   const handleInputChange = (field: keyof NPC, value: string) => {
@@ -69,9 +66,8 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
     }
 
     try {
-      // Get user info for attribution
-      const displayName = getUserDisplayName(userProfile);
-      const currentDate = new Date().toISOString();
+      // Include attribution metadata
+      const now = new Date().toISOString();
       
       const updatedNPC: NPC = {
         ...formData,
@@ -80,13 +76,15 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
           relatedNPCs: Array.from(selectedNPCs),
           relatedQuests: Array.from(selectedQuests)
         },
-        // Update modification attribution
         modifiedBy: user?.uid || '',
-        modifiedByUsername: displayName,
-        dateModified: currentDate
+        modifiedByUsername: getUserName(activeGroupUserProfile),
+        modifiedByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
+        modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+        dateModified: now
       };
 
-      await updateData(npc.id, updatedNPC);
+      // Use context method to update the NPC
+      await updateNPC(updatedNPC);
       onSuccess?.();
     } catch (err) {
       console.error('Failed to update NPC:', err);
@@ -356,10 +354,10 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
               </Button>
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={isLoading}
                 startIcon={<Save />}
               >
-                {loading ? 'Saving...' : 'Save Changes'}
+                {isLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </form>

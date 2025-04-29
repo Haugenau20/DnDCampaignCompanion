@@ -41,18 +41,6 @@
 
 Not prioritized yet:
 
-Upon chapter creation set:
-- createdBy
-- modifiedBy
-
 Make a dedicated page for profile options
 
-In the attribution info, it should prioritise in the following order:
-    1. modifiedBy -> active character name
-    2. modifiedByUsername
-    3. modifiedBy -> profile name
-    4. createdBy -> active character name
-    5. createdByUsername
-    6. createdBy -> profile name
-
-Acitve character name must be found through the users activeCharacterId.
+Form/Context Responsibility Pattern Standardization (look at docs/backlog/FormContextStandard)

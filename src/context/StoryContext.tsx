@@ -3,8 +3,9 @@ import React, { createContext, useContext, useCallback, useState } from 'react';
 import { Chapter, ChapterProgress, StoryProgress } from '../types/story';
 import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useAuth, useGroups, useCampaigns } from './firebase';
+import { useAuth, useUser } from './firebase';
 import firebaseServices from '../services/firebase';
+import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 
 interface StoryContextState {
   chapters: Chapter[];
@@ -63,7 +64,6 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   
   const { 
     updateData, 
-    addData, 
     deleteData
   } = useFirebaseData<Chapter>({ collection: 'chapters' });
   
@@ -71,18 +71,12 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { updateData: updateProgressData } = useFirebaseData<StoryProgress>({ collection: 'story-progress' });
   
   const { user } = useAuth();
-  const { activeGroupId } = useGroups();
-  const { activeCampaignId } = useCampaigns();
+  const { activeGroupUserProfile } = useUser();
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Generate a consistent ID for a chapter based on its order
   const generateChapterId = (order: number) => {
     return `chapter-${order.toString().padStart(2, '0')}`;
-  };
-
-  // Create a temporary "parking" ID far outside normal range
-  const generateTempId = () => {
-    return `chapter-temp-${Date.now()}`;
   };
 
   // Get chapter by ID
@@ -211,7 +205,8 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           ...updates,
           dateModified: new Date().toISOString(),
           modifiedBy: user.uid,
-          modifiedByUsername: user.displayName || ''
+          modifiedByUsername: getUserName(activeGroupUserProfile),
+          modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile)
         });
         await refreshChapters();
         return;
@@ -272,7 +267,8 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         order: newOrderMap.get(c.id),
         dateModified: c.id === chapterId ? new Date() : c.dateModified,
         modifiedBy: c.id === chapterId ? user.uid : c.modifiedBy,
-        modifiedByUsername: c.id === chapterId ? user.displayName || '' : c.modifiedByUsername,
+        modifiedByUsername: c.id === chapterId ? getUserName(activeGroupUserProfile) || '' : c.modifiedByUsername,
+        modifiedByCharacterName: c.id === chapterId ? getActiveCharacterName(activeGroupUserProfile) || '' : c.modifiedByCharacterName,
         // Add any other updates for the target chapter
         ...(c.id === chapterId ? updates : {})
       }));
@@ -366,10 +362,12 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         order: newOrder,
         dateAdded: new Date().toISOString(),
         createdBy: user.uid,
-        createdByUsername: user.displayName || '',
+        createdByUsername: getUserName(activeGroupUserProfile) || '',
+        createdByCharacterName: getActiveCharacterName(activeGroupUserProfile) || '',
         dateModified: new Date().toISOString(),
         modifiedBy: user.uid,
-        modifiedByUsername: user.displayName || '',
+        modifiedByUsername: getUserName(activeGroupUserProfile) || '',
+        modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile) || ''
       };
       
       // Add chapter to Firebase

@@ -1,12 +1,10 @@
 // src/types/story.ts
-import { ContentAttribution } from './common';
+import { BaseContent } from './common';
 
 /**
  * Represents a single chapter in the story
  */
-export interface Chapter extends ContentAttribution {
-  /** Unique identifier for the chapter */
-  id: string;
+export interface Chapter extends BaseContent {
   /** Chapter title */
   title: string;
   /** Main content of the chapter */
@@ -43,46 +41,6 @@ export interface StoryProgress {
   lastRead: Date;
   /** Collection of progress for each chapter */
   chapterProgress: Record<string, ChapterProgress>;
-}
-
-/**
- * Table of contents structure
- */
-export interface TableOfContents {
-  /** List of all chapters */
-  chapters: Chapter[];
-  /** Currently selected chapter */
-  currentChapter?: string;
-  /** Total number of chapters */
-  totalChapters: number;
-}
-
-/**
- * Story navigation state
- */
-export interface StoryNavigation {
-  /** Current chapter ID */
-  currentChapterId: string;
-  /** Previous chapter ID */
-  previousChapterId?: string;
-  /** Next chapter ID */
-  nextChapterId?: string;
-  /** Current position in the chapter */
-  position: number;
-}
-
-/**
- * Story settings and preferences
- */
-export interface StorySettings {
-  /** Font size for reading */
-  fontSize: number;
-  /** Reading theme (light/dark) */
-  theme: 'light' | 'dark';
-  /** Show/hide progress indicators */
-  showProgress: boolean;
-  /** Auto-save reading progress */
-  autoSave: boolean;
 }
 
 // Context types

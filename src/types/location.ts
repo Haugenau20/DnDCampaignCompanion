@@ -1,5 +1,5 @@
 // src/types/location.ts
-import { ContentAttribution } from './common';
+import { BaseContent } from './common';
 
 /**
  * Types of locations that can exist in the game world
@@ -25,9 +25,7 @@ export type LocationStatus =
 /**
  * Represents a location in the game world
  */
-export interface Location extends ContentAttribution {
-  /** Unique identifier for the location */
-  id: string;
+export interface Location extends BaseContent {
   /** Name of the location */
   name: string;
   /** Type of location */
