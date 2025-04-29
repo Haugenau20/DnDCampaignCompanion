@@ -117,15 +117,28 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           
           if (groupCampaigns.length > 0) {
             // Determine which campaign should be active
-            const activeCampaignId = 
-              (groupProfile.activeCampaignId && 
-               groupCampaigns.some(c => c.id === groupProfile.activeCampaignId)) 
-                ? groupProfile.activeCampaignId 
-                : groupCampaigns[0].id;
+            // Only use the activeCampaignId if it's actually a campaign ID
+            let campaignIdToSet = '';
             
-            console.log(`Setting active campaign to ${activeCampaignId}`);
-            firebaseServices.auth.setActiveCampaign(activeCampaignId);
-            setActiveCampaignId(activeCampaignId);
+            if (groupProfile.activeCampaignId) {
+              // Check if this ID corresponds to a campaign
+              const campaignExists = groupCampaigns.some(c => c.id === groupProfile.activeCampaignId);
+              
+              if (campaignExists) {
+                campaignIdToSet = groupProfile.activeCampaignId;
+              } else {
+                // If activeCampaignId doesn't point to a real campaign, use first available
+                campaignIdToSet = groupCampaigns[0].id;
+              }
+            } else {
+              // No activeCampaignId set yet, use first campaign
+              campaignIdToSet = groupCampaigns[0].id;
+            }
+            
+            // Set the active campaign
+            console.log(`Setting active campaign to ${campaignIdToSet}`);
+            firebaseServices.auth.setActiveCampaign(campaignIdToSet);
+            setActiveCampaignId(campaignIdToSet);
           }
         } catch (err) {
           console.error(`Error loading campaigns for group ${groupId}:`, err);

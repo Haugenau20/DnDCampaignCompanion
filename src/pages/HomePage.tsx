@@ -1,11 +1,13 @@
 // pages/HomePage.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth, useGroups, useCampaigns } from '../context/firebase';
 import { useStory } from '../context/StoryContext';
 import { useQuests } from '../context/QuestContext';
 import { useRumors } from '../context/RumorContext';
 import { useNPCs } from '../context/NPCContext';
 import { useLocations } from '../context/LocationContext';
+import firebaseServices from '../services/firebase';
+import { determineAttributionActor, fetchAttributionUsernames } from '../utils/attribution-utils';
 
 // Import layouts
 import DashboardLayout from '../components/features/layouts/dashboard/DashboardLayout';
@@ -28,20 +30,92 @@ export interface Activity {
 // Layout type options
 type LayoutType = 'dashboard' | 'journal';
 
+// Helper type to check if a property exists
+type WithOptionalProperty<T, K extends string> = T & { [P in K]?: string };
+
 /**
  * HomePage component serving as the container for the selected layout
  */
 const HomePage: React.FC = () => {
-  
   // Load data from all contexts
   const { chapters, isLoading: chaptersLoading } = useStory();
   const { quests, isLoading: questsLoading } = useQuests();
   const { rumors, isLoading: rumorsLoading } = useRumors();
   const { npcs, isLoading: npcsLoading } = useNPCs();
   const { locations, isLoading: locationsLoading } = useLocations();
+  const { activeGroupId } = useGroups();
   
   // Layout selection state
   const [layoutType, setLayoutType] = useState<LayoutType>('dashboard');
+  
+  // State to store the mapping of UIDs to usernames
+  const [usernameMap, setUsernameMap] = useState<Record<string, string>>({});
+  
+  // Load usernames for all UIDs that need username lookup
+useEffect(() => {
+  const loadUsernames = async () => {
+    if (!activeGroupId) return;
+    
+    const uniqueUids = new Set<string>();
+    
+    // Process items by type to collect all UIDs
+    // Quests
+    quests.forEach(quest => {
+      if (quest.modifiedBy) uniqueUids.add(quest.modifiedBy);
+      if (quest.createdBy) uniqueUids.add(quest.createdBy);
+    });
+    
+    // NPCs
+    npcs.forEach(npc => {
+      if (npc.modifiedBy) uniqueUids.add(npc.modifiedBy);
+      if (npc.createdBy) uniqueUids.add(npc.createdBy);
+    });
+    
+    // Rumors
+    rumors.forEach(rumor => {
+      if (rumor.modifiedBy) uniqueUids.add(rumor.modifiedBy);
+      if (rumor.createdBy) uniqueUids.add(rumor.createdBy);
+    });
+    
+    // Locations
+    locations.forEach(location => {
+      if (location.modifiedBy) uniqueUids.add(location.modifiedBy);
+      if (location.createdBy) uniqueUids.add(location.createdBy);
+    });
+    
+    // Story Chapters
+    chapters.forEach(chapter => {
+      if (chapter.modifiedBy) uniqueUids.add(chapter.modifiedBy);
+      if (chapter.createdBy) uniqueUids.add(chapter.createdBy);
+    });
+    
+    // Load usernames and character names for collected UIDs
+    if (uniqueUids.size === 0) return;
+    
+    try {
+      const userMapping = await fetchAttributionUsernames(
+        activeGroupId,
+        Array.from(uniqueUids),
+        firebaseServices
+      );
+      
+      setUsernameMap(userMapping);
+    } catch (error) {
+      console.error('Error loading attribution usernames:', error);
+    }
+  };
+  
+  loadUsernames();
+}, [activeGroupId, quests, rumors, npcs, locations, chapters]);
+  
+  /**
+   * Helper function to determine the actor name with priority order
+   * @param item Content item with potential actor fields
+   * @returns The actor name based on priority order
+   */
+  const determineActor = (item: any): string => {
+    return determineAttributionActor(item, usernameMap);
+  };
   
   // Create combined recent activity from all content types
   const activities = React.useMemo(() => {
@@ -49,14 +123,14 @@ const HomePage: React.FC = () => {
     
     // Add chapters
     chapters.forEach(chapter => {
-      if (chapter.lastModified) {
+      if (chapter.dateModified || chapter.dateAdded) {
         allActivities.push({
           id: chapter.id,
           type: 'chapter',
           title: chapter.title,
           description: chapter.summary || chapter.content.substring(0, 100) + '...',
-          actor: '',
-          timestamp: new Date(chapter.lastModified),
+          actor: determineActor(chapter),
+          timestamp: new Date(chapter.dateModified || chapter.dateAdded),
           link: `/story/chapters/${chapter.id}`
         });
       }
@@ -70,8 +144,8 @@ const HomePage: React.FC = () => {
           type: 'quest',
           title: quest.title,
           description: quest.description,
-          actor: quest.modifiedByUsername || '',
-          timestamp: new Date(quest.dateModified),
+          actor: determineActor(quest),
+          timestamp: new Date(quest.dateModified || quest.dateAdded),
           link: `/quests?highlight=${quest.id}`
         });
       }
@@ -85,8 +159,8 @@ const HomePage: React.FC = () => {
           type: 'rumor',
           title: rumor.title,
           description: rumor.content.substring(0, 100) + '...',
-          actor: rumor.modifiedByUsername || '',
-          timestamp: new Date(rumor.dateModified),
+          actor: determineActor(rumor),
+          timestamp: new Date(rumor.dateModified || rumor.dateAdded),
           link: `/rumors?highlight=${rumor.id}`
         });
       }
@@ -100,8 +174,8 @@ const HomePage: React.FC = () => {
           type: 'npc',
           title: npc.name,
           description: npc.description.substring(0, 100) + '...',
-          actor: npc.modifiedByUsername || '',
-          timestamp: new Date(npc.dateModified),
+          actor: determineActor(npc),
+          timestamp: new Date(npc.dateModified || npc.dateAdded),
           link: `/npcs?highlight=${npc.id}`
         });
       }
@@ -109,14 +183,14 @@ const HomePage: React.FC = () => {
     
     // Add locations
     locations.forEach(location => {
-      if (location.dateModified) {
+      if ('dateModified' in location && location.dateModified) {
         allActivities.push({
           id: location.id,
           type: 'location',
           title: location.name,
           description: location.description.substring(0, 100) + '...',
-          actor: location.modifiedByUsername || '',
-          timestamp: new Date(location.dateModified),
+          actor: determineActor(location),
+          timestamp: new Date(location.dateModified || location.dateAdded),
           link: `/locations?highlight=${location.id}`
         });
       }
@@ -124,7 +198,7 @@ const HomePage: React.FC = () => {
     
     // Sort by timestamp (newest first)
     return allActivities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [chapters, quests, rumors, npcs, locations]);
+  }, [chapters, quests, rumors, npcs, locations, usernameMap]); // Added usernameMap as dependency
   
   // Use common layout data hook to process and prepare data
   const layoutData = useLayoutData({

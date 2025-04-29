@@ -1,18 +1,21 @@
-// types/rumor.ts
+// src/types/rumor.ts
+import { BaseContent } from './common';
 
 export type RumorStatus = 'confirmed' | 'unconfirmed' | 'false';
 export type SourceType = 'npc' | 'tavern' | 'notice' | 'traveler' | 'other';
 
-export interface RumorNote {
-  id: string;
+/**
+ * Represents a note added to a rumor
+ * Extends BaseContent for consistency with other content types
+ */
+export interface RumorNote extends BaseContent {
   content: string;
-  dateAdded: string;
-  addedBy: string;
-  addedByUsername: string;
 }
 
-export interface Rumor {
-  id: string;
+/**
+ * Represents a rumor in the game world
+ */
+export interface Rumor extends BaseContent {
   title: string;
   content: string;
   status: RumorStatus;
@@ -21,12 +24,6 @@ export interface Rumor {
   sourceNpcId?: string; // Optional reference to NPC if source is an NPC
   location?: string;
   locationId?: string; // Optional reference to location in system
-  dateAdded: string;
-  dateModified: string;
-  createdBy: string; // User UID
-  createdByUsername: string; // Username for display
-  modifiedBy: string; // User UID of last modifier
-  modifiedByUsername: string; // Username for display
   relatedNPCs: string[]; // Array of NPC IDs
   relatedLocations: string[]; // Array of location IDs
   notes: RumorNote[];

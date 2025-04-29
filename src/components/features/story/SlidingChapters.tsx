@@ -40,7 +40,6 @@ const SlidingChapters: React.FC<SlidingChaptersProps> = ({
       <div
         className={clsx(
           "fixed top-0 left-0 h-full w-80 shadow-lg z-50 transition-transform duration-300 ease-in-out transform",
-          `card`,
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >

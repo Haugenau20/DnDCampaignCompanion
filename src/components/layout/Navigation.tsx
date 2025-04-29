@@ -1,10 +1,10 @@
 // components/layout/Navigation.tsx
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { useNavigation } from '../../hooks/useNavigation';
 import Typography from '../core/Typography';
 import { Book, Scroll, Users, MapPin, MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
+import Button from '../core/Button';
 
 interface NavItem {
   label: string;
@@ -17,7 +17,7 @@ interface NavItem {
  * Provides navigation links and highlights active routes
  */
 const Navigation: React.FC = () => {
-  const { shouldHighlightPath } = useNavigation();
+  const { shouldHighlightPath, navigateToPage } = useNavigation();
 
   const navItems: NavItem[] = [
     { 
@@ -57,24 +57,24 @@ const Navigation: React.FC = () => {
               const isActive = shouldHighlightPath(item.path);
               
               return (
-                <Link
-                  key={item.path}
-                  to={item.path}
+                <Button
+                  variant='ghost'
+                  onClick={() => navigateToPage(item.path)}
+                  startIcon={item.icon}
                   className={clsx(
-                    'flex items-center space-x-2 px-3 py-2 rounded-md transition-colors',
-                    isActive
+                  'flex items-center space-x-2 px-3 py-2 rounded-md transition-colors',
+                  isActive
                       ? `navigation-item-active`
                       : `navigation-item`
                   )}
                 >
-                  {item.icon}
                   <Typography
-                    variant="body"
-                    className={isActive ? 'font-medium' : ''}
+                    variant="body-sm"
+                    className={`mt-1 ${isActive ? 'font-medium' : ''}`}
                   >
                     {item.label}
                   </Typography>
-                </Link>
+                </Button>
               );
             })}
           </div>
@@ -85,24 +85,27 @@ const Navigation: React.FC = () => {
               const isActive = shouldHighlightPath(item.path);
               
               return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={clsx(
-                    'flex flex-col items-center justify-center flex-1 min-w-0 text-sm',
-                    isActive
-                      ? `navigation-item-active`
-                      : `navigation-item`
-                  )}
-                >
-                  {item.icon}
-                  <Typography
-                    variant="body-sm"
-                    className={`mt-1 ${isActive ? 'font-medium' : ''}`}
+                <div>
+                  <Button
+                    variant='ghost'
+                    onClick={() => navigateToPage(item.path)}
+                    startIcon={item.icon}
+                    iconPosition='top'
+                    className={clsx(
+                      'flex flex-col items-center justify-center flex-1 min-w-0 text-sm',
+                      isActive
+                        ? `navigation-item-active`
+                        : `navigation-item`
+                    )}
                   >
-                    {item.label}
-                  </Typography>
-                </Link>
+                    <Typography
+                      variant="body-sm"
+                      className={`mt-1 ${isActive ? 'font-medium' : ''}`}
+                    >
+                      {item.label}
+                    </Typography>
+                  </Button>
+                </div>
               );
             })}
           </div>

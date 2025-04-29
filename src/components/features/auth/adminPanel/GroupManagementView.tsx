@@ -6,6 +6,7 @@ import Input from '../../../core/Input';
 import Button from '../../../core/Button';
 import Card from '../../../core/Card';
 import Dialog from '../../../core/Dialog';
+import { formatDisplayDate } from '../../../../utils/dateFormatter';
 import { 
   AlertCircle, 
   Users, 
@@ -18,7 +19,7 @@ import {
 import clsx from 'clsx';
 
 const GroupManagementView: React.FC = () => {
-  const { groups, activeGroup, activeGroupId, activeGroupUserProfile, createGroup } = useGroups();
+  const { groups, activeGroupId, activeGroupUserProfile, createGroup } = useGroups();
   const { user } = useAuth();
   
   // State
@@ -122,18 +123,11 @@ const GroupManagementView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Calendar size={18} className={clsx(`primary`)} />
                   <Typography>
-                    {currentGroup.createdAt instanceof Date 
-                      ? currentGroup.createdAt.toLocaleDateString('en-uk', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })
-                      : new Date(currentGroup.createdAt).toLocaleDateString('en-uk', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })
-                    }
+                  {formatDisplayDate(currentGroup.createdAt, { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
                   </Typography>
                 </div>
               </div>
@@ -164,6 +158,7 @@ const GroupManagementView: React.FC = () => {
         onClose={() => setShowCreateDialog(false)}
         title="Create New Group"
         maxWidth="max-w-md"
+        isNested={true}
       >
         <form onSubmit={handleCreateGroup}>
           <div className="space-y-4">

@@ -111,7 +111,10 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
         complications: formData.complications || [],
         rewards: formData.rewards || [],
         location: formData.location || '',
-        levelRange: formData.levelRange || ''
+        levelRange: formData.levelRange || '',
+        createdBy: formData.createdBy || '',
+        createdByUsername: formData.createdByUsername || '',
+        dateAdded: new Date().toISOString(),
       };
 
       await addQuest(questData);

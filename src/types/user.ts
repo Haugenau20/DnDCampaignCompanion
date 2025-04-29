@@ -53,6 +53,8 @@ export interface GroupUserProfile {
   characters?: CharacterNameEntry[];
   /** ID of the active campaign in this group */
   activeCampaignId?: string | null;
+  /** ID of the active character in this group */
+  activeCharacterId?: string | null;
   /** User preferences for this group */
   preferences?: {
     /** UI theme preference */

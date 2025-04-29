@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Quest } from '../../../types/quest';
 import { useNPCs } from '../../../context/NPCContext';
 import { useAuth } from '../../../context/firebase';
@@ -10,16 +9,15 @@ import { useLocations } from '../../../context/LocationContext';
 import { useNavigation } from '../../../context/NavigationContext';
 import { useQuests } from '../../../context/QuestContext';
 import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
+import AttributionInfo from '../../shared/AttributionInfo'; // Import AttributionInfo
 import clsx from 'clsx';
 import { 
   ChevronDown, 
   ChevronUp, 
   MapPin,
   Users,
-  Calendar,
   Target,
   Edit,
-  Scroll,
   Trash2
 } from 'lucide-react';
 
@@ -138,27 +136,10 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
           {/* Expanded Content */}
           {isExpanded && (
             <div className="pt-4 space-y-6">
-              {/* Creator attribution */}
-              {quest.createdByUsername && (
-                <div className="flex items-center gap-2 mt-1">
-                  <Scroll size={14} className={`typography-secondary`} />
-                  <Typography variant="body-sm" color="secondary">
-                    Added by {quest.createdByUsername} on {new Date(quest.dateAdded || '').toLocaleDateString('en-uk')}
-                  </Typography>
-                </div>
-              )}
-
-              {/* Modifier attribution - only show if different from creator or if modified later */}
-              {quest.modifiedByUsername && quest.dateModified && 
-                (quest.modifiedByUsername !== quest.createdByUsername || 
-                new Date(quest.dateModified).getTime() > new Date(quest.dateAdded || '').getTime() + 1000) && (
-                <div className="flex items-center gap-2 mt-1">
-                  <Edit size={14} className={`typography-secondary`} />
-                  <Typography variant="body-sm" color="secondary">
-                    Modified by {quest.modifiedByUsername} on {new Date(quest.dateModified).toLocaleDateString('en-uk')}
-                  </Typography>
-                </div>
-              )}
+              {/* Attribution information using the shared component */}
+              <AttributionInfo
+                item={quest}
+              />
 
               {/* Background */}
               {quest.background && (
@@ -395,16 +376,13 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest }) => {
       </Card>
 
       {/* Delete Confirmation Dialog */}
-      {showDeleteDialog && createPortal(
         <DeleteConfirmationDialog
           isOpen={showDeleteDialog}
           onClose={() => setShowDeleteDialog(false)}
           onConfirm={handleDeleteConfirm}
           itemName={quest.title}
           itemType="Quest"
-        />,
-        document.body
-      )}
+        />
     </>
   );
 };

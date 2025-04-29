@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useFirebaseData } from '../../../hooks/useFirebaseData';
 import { NPC, NPCStatus, NPCRelationship } from '../../../types/npc';
 import { AlertCircle, Save, X, Users, Scroll } from 'lucide-react';
 import Input from '../../core/Input';
@@ -8,9 +7,10 @@ import Typography from '../../core/Typography';
 import Card from '../../core/Card';
 import Dialog from '../../core/Dialog';
 import { useQuests } from '../../../context/QuestContext';
+import { useNPCs } from '../../../context/NPCContext';
 import { useAuth, useUser } from '../../../context/firebase';
 import clsx from 'clsx';
-import { getUserDisplayName } from '../../../utils/user-utils';
+import { getUserName, getActiveCharacterName } from '../../../utils/user-utils';
 
 interface NPCFormProps {
   onSuccess?: () => void;
@@ -23,10 +23,12 @@ const NPCForm: React.FC<NPCFormProps> = ({
   onCancel,
   existingNPCs
 }) => {
-
-  // Firebase user for attribution
+  // Get NPCs context for CRUD operations
+  const { addNPC, isLoading, error } = useNPCs();
+  
+  // Authentication and user data
   const { user } = useAuth();
-  const { userProfile } = useUser();
+  const { userProfile, activeGroupUserProfile } = useUser();
 
   // Form state
   const [formData, setFormData] = useState<Partial<NPC>>({
@@ -48,14 +50,8 @@ const NPCForm: React.FC<NPCFormProps> = ({
 
   // Quest selection state
   const { quests } = useQuests();
-  const [questDropdownValue, setQuestDropdownValue] = useState('');
   const [isQuestDialogOpen, setIsQuestDialogOpen] = useState(false);
   const [selectedQuests, setSelectedQuests] = useState<Set<string>>(new Set(formData.connections?.relatedQuests || []));
-
-  // Firebase
-  const { addData, loading, error } = useFirebaseData<NPC>({
-    collection: 'npcs'
-  });
 
   // Sort NPCs alphabetically
   const sortedNPCs = useMemo(() => {
@@ -63,13 +59,6 @@ const NPCForm: React.FC<NPCFormProps> = ({
       a.name.localeCompare(b.name)
     );
   }, [existingNPCs]);
-
-  // Available quests (excluding already selected ones)
-  const availableQuests = useMemo(() => 
-    quests.filter(quest => 
-      !formData.connections?.relatedQuests.includes(quest.id)
-    ), [quests, formData.connections?.relatedQuests]
-  );
 
   /**
    * Handle basic input changes
@@ -127,7 +116,6 @@ const NPCForm: React.FC<NPCFormProps> = ({
       }
     }));
     setIsNPCDialogOpen(false);
-    setSelectedNPCs(new Set());
   };
 
   /**
@@ -141,18 +129,10 @@ const NPCForm: React.FC<NPCFormProps> = ({
     }
   
     try {
-      // Generate ID from name (slug)
-      const id = formData.name.toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with hyphens
-        .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+      const now = new Date().toISOString();
       
-      // Get user info for attribution
-      const displayName = getUserDisplayName(userProfile);
-      const currentDate = new Date().toISOString();
-
-      const npcData: NPC = {
-        id,
+      // Create NPC data with attribution metadata
+      const npcData: Omit<NPC, 'id'> = {
         name: formData.name,
         title: formData.title || '',
         status: formData.status as NPCStatus,
@@ -170,14 +150,19 @@ const NPCForm: React.FC<NPCFormProps> = ({
           relatedQuests: Array.from(selectedQuests)
         },
         notes: [],
-        // Attribution fields
+        // Add attribution data
         createdBy: user?.uid || '',
-        createdByUsername: displayName,
-        dateAdded: currentDate
+        createdByUsername: getUserName(activeGroupUserProfile),
+        createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+        dateAdded: now,
+        modifiedBy: user?.uid || '',
+        modifiedByUsername: getUserName(activeGroupUserProfile),
+        modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+        dateModified: now,
       };
   
-      // Use the generated ID when adding the document
-      await addData(npcData, id); // Pass the ID explicitly
+      // Use the context method to add NPC
+      await addNPC(npcData);
       onSuccess?.();
     } catch (err) {
       console.error('Failed to create NPC:', err);
@@ -438,10 +423,10 @@ const NPCForm: React.FC<NPCFormProps> = ({
               </Button>
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={isLoading}
                 startIcon={<Save />}
               >
-                {loading ? 'Creating...' : 'Create NPC'}
+                {isLoading ? 'Creating...' : 'Create NPC'}
               </Button>
             </div>
           </form>

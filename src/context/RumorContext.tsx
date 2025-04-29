@@ -4,7 +4,7 @@ import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types/rumor
 import { useRumorData } from '../hooks/useRumorData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
 import { useAuth, useUser, useFirestore } from './firebase';
-import { getUserDisplayName } from '../utils/user-utils';
+import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 
@@ -14,7 +14,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     collection: 'rumors'
   });
   const { user } = useAuth();
-  const { userProfile } = useUser();
+  const { userProfile, activeGroupUserProfile } = useUser();
   const { setDocument } = useFirestore();
 
   // Get rumor by ID
@@ -50,14 +50,13 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Rumor not found');
     }
 
-    const displayName = getUserDisplayName(userProfile); // Use the utility function
-
     const updatedRumor = {
       ...rumor,
       status,
       dateModified: new Date().toISOString(),
       modifiedBy: user.uid,
-      modifiedByUsername: displayName
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
     };
 
     await updateData(rumorId, updatedRumor);
@@ -75,12 +74,11 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Rumor not found');
     }
 
-    const displayName = getUserDisplayName(userProfile);
-
     const noteWithUser = {
       ...note,
-      addedBy: user.uid,
-      addedByUsername: displayName,
+      createdBy: user.uid,
+      createdByUsername: getUserName(activeGroupUserProfile),
+      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       dateAdded: new Date().toISOString()
     };
 
@@ -89,12 +87,13 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       notes: [...rumor.notes, noteWithUser],
       dateModified: new Date().toISOString(),
       modifiedBy: user.uid,
-      modifiedByUsername: displayName
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
     };
 
     await updateData(rumorId, updatedRumor);
     refreshRumors();
-  }, [user, userProfile, getRumorById, updateData, refreshRumors, getUserDisplayName]);
+  }, [user, userProfile, getRumorById, updateData, refreshRumors]);
 
   // Generate rumor ID from title
   const generateRumorId = useCallback((title: string): string => {
@@ -112,7 +111,6 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   
     const now = new Date().toISOString();
-    const displayName = getUserDisplayName(userProfile);
     
     // Generate ID from title
     const id = generateRumorId(rumorData.title);
@@ -124,9 +122,11 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       dateAdded: now,
       dateModified: now,
       createdBy: user.uid,
-      createdByUsername: displayName,
+      createdByUsername: getUserName(activeGroupUserProfile),
+      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       modifiedBy: user.uid,
-      modifiedByUsername: displayName,
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       // Ensure arrays are properly initialized
       relatedNPCs: rumorData.relatedNPCs || [],
       relatedLocations: rumorData.relatedLocations || [],
@@ -137,7 +137,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await addData(newRumor, id);
     refreshRumors();
     return id;
-  }, [user, userProfile, addData, refreshRumors, generateRumorId, getUserDisplayName]);
+  }, [user, userProfile, addData, refreshRumors, generateRumorId]);
 
   // Update existing rumor
   const updateRumor = useCallback(async (rumor: Rumor) => {
@@ -145,18 +145,17 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('User must be authenticated to update rumors');
     }
 
-    const displayName = getUserDisplayName(userProfile);
-
     const updatedRumor = {
       ...rumor,
       dateModified: new Date().toISOString(),
       modifiedBy: user.uid,
-      modifiedByUsername: displayName
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
     };
 
     await updateData(rumor.id, updatedRumor);
     refreshRumors();
-  }, [user, userProfile, updateData, refreshRumors, getUserDisplayName]);
+  }, [user, userProfile, updateData, refreshRumors]);
 
   // Delete rumor
   const deleteRumor = useCallback(async (rumorId: string) => {
@@ -200,7 +199,6 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   
     // Create the new combined rumor
     const now = new Date().toISOString();
-    const displayName = getUserDisplayName(userProfile);
     
     // Use the provided title or generate one
     const title = newRumorData.title || `Combined Rumor (${new Date().toLocaleDateString()})`;
@@ -213,8 +211,9 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: crypto.randomUUID(),
       content: `Combined from rumors: ${rumorIds.join(', ')}`,
       dateAdded: now,
-      addedBy: user.uid,
-      addedByUsername: displayName
+      createdBy: user.uid,
+      createdByUsername: getUserName(activeGroupUserProfile),
+      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
     }];
   
     const newRumor: Rumor = {
@@ -227,9 +226,11 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       dateAdded: now,
       dateModified: now,
       createdBy: user.uid,
-      createdByUsername: displayName,
+      createdByUsername: getUserName(activeGroupUserProfile),
+      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       modifiedBy: user.uid,
-      modifiedByUsername: displayName,
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       relatedNPCs,
       relatedLocations,
       notes: initialNotes  // Use our explicit notes array
@@ -251,15 +252,17 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           status: 'confirmed' as RumorStatus, // Explicitly cast to RumorStatus
           dateModified: now,
           modifiedBy: user.uid,
-          modifiedByUsername: displayName,
+          modifiedByUsername: getUserName(activeGroupUserProfile),
+          modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
           notes: [
             ...existingNotes,
             {
               id: crypto.randomUUID(),
               content: `Combined into rumor: ${id}`,
               dateAdded: now,
-              addedBy: user.uid,
-              addedByUsername: displayName
+              createdBy: user.uid,
+              createdByUsername: getUserName(activeGroupUserProfile),
+              createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
             }
           ]
         };
@@ -270,7 +273,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   
     refreshRumors();
     return id;
-  }, [user, userProfile, getRumorById, addData, updateData, refreshRumors, generateRumorId, getUserDisplayName]);
+  }, [user, userProfile, getRumorById, addData, updateData, refreshRumors, generateRumorId]);
 
   // Convert rumors to quest
   const convertToQuest = useCallback(async (rumorIds: string[], questData: any) => {
@@ -285,7 +288,6 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Create a new quest based on the rumors and provided quest data
     const now = new Date().toISOString();
-    const displayName = getUserDisplayName(userProfile);
     
     // Generate a proper quest ID from the title
     const questId = questData.title 
@@ -298,7 +300,8 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: questId,
       dateAdded: now,
       createdBy: user.uid,
-      createdByUsername: displayName
+      createdByUsername: getUserName(activeGroupUserProfile),
+      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
     });
 
     // Update all rumors to mark them as converted
@@ -310,15 +313,17 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           convertedToQuestId: questId,
           dateModified: now,
           modifiedBy: user.uid,
-          modifiedByUsername: displayName,
+          modifiedByUsername: getUserName(activeGroupUserProfile),
+          modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
           notes: [
             ...rumor.notes,
             {
               id: crypto.randomUUID(),
               content: `Converted to quest: ${questId}`,
               dateAdded: now,
-              addedBy: user.uid,
-              addedByUsername: displayName
+              createdBy: user.uid,
+              createdByUsername: getUserName(activeGroupUserProfile),
+              createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
             }
           ]
         });
@@ -327,7 +332,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     refreshRumors();
     return questId;
-  }, [user, userProfile, getRumorById, updateData, refreshRumors, getUserDisplayName]);
+  }, [user, userProfile, getRumorById, updateData, refreshRumors]);
 
   const value: RumorContextValue = {
     rumors,

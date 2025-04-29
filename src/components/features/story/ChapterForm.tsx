@@ -8,6 +8,7 @@ import Input from '../../core/Input';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigation } from '../../../context/NavigationContext';
 import { useStory } from '../../../context/StoryContext';
+import { useAuth } from '../../../context/firebase';
 
 interface ChapterFormProps {
   /** The chapter to edit, or undefined for create mode */
@@ -28,6 +29,7 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
 }) => {
   const { navigateToPage } = useNavigation();
   const { createChapter, updateChapter, chapters } = useStory();
+  const { user } = useAuth();
   
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -53,6 +55,40 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
     }
   }, [chapter, mode, chapters]);
 
+  /**
+   * Generate a summary from content if none is provided
+   * @param content Chapter content text
+   * @param maxLength Maximum length of summary
+   * @returns Summary string with ellipsis if truncated
+   */
+  const generateSummaryFromContent = (content: string, maxLength: number = 200): string => {
+    if (!content || content.length === 0) return '';
+    
+    // Clean up whitespace and get the first portion of content
+    const cleanContent = content.trim().replace(/\s+/g, ' ');
+    
+    if (cleanContent.length <= maxLength) {
+      return cleanContent;
+    }
+    
+    // Find a good breaking point (end of sentence or paragraph)
+    let breakPoint = cleanContent.substring(0, maxLength).lastIndexOf('.');
+    if (breakPoint === -1 || breakPoint < maxLength / 2) {
+      // No good sentence break found, try paragraph
+      breakPoint = cleanContent.substring(0, maxLength).lastIndexOf('\n');
+    }
+    if (breakPoint === -1 || breakPoint < maxLength / 2) {
+      // No good paragraph break found, try space
+      breakPoint = cleanContent.substring(0, maxLength).lastIndexOf(' ');
+    }
+    if (breakPoint === -1 || breakPoint < maxLength / 2) {
+      // No good space found, just cut at maxLength
+      breakPoint = maxLength;
+    }
+    
+    return cleanContent.substring(0, breakPoint) + '...';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -68,14 +104,20 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
         throw new Error('Content is required');
       }
 
+      // Generate summary from content if not provided
+      const finalSummary = summary.trim() || generateSummaryFromContent(content);
+
       // Create or update the chapter
       if (mode === 'create') {
         const newChapter: Omit<Chapter, 'id'> = {
           title,
           content,
-          summary: summary.trim() || undefined,
+          summary: finalSummary, // Use generated summary if empty
           order,
-          lastModified: new Date()
+          dateModified: new Date().toISOString(),
+          createdBy: user?.uid || '',
+          createdByUsername: user?.displayName || '',
+          dateAdded: new Date().toISOString(),
         };
         
         await createChapter(newChapter);
@@ -92,8 +134,11 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
         const updates: Partial<Chapter> = {
           title,
           content,
-          summary: summary.trim() || undefined,
-          order
+          summary: finalSummary, // Use generated summary if empty
+          order,
+          dateModified: new Date().toISOString(),
+          modifiedBy: user?.uid || '',
+          modifiedByUsername: user?.displayName || '',
         };
         
         await updateChapter(chapter.id, updates);
@@ -105,7 +150,7 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
     } finally {
       setIsSubmitting(false);
       
-      // Scroll to top to show success/error messages
+      // Navigate back to chapters page after successful submission
       navigateToPage('/story/chapters');
     }
   };
@@ -168,7 +213,7 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
                 fullWidth
-                helperText="A brief summary that will be shown in chapter listings"
+                helperText="A brief summary that will be shown in chapter listings. If left empty, it will be automatically generated from content."
                 isTextArea
                 rows={3}
               />

@@ -104,6 +104,8 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
         label="Parent Location ID"
         value={formData.parentId || ''}
         onChange={(value) => handleInputChange('parentId', generateLocationId(value))}
+        strictMode={true}
+        placeholder="Select parent location..."
       />
     </div>
   );

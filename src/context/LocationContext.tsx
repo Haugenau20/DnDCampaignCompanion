@@ -4,6 +4,7 @@ import { Location, LocationStatus, LocationContextValue, LocationNote } from '..
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from './firebase';
+import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 
 // Custom event for location changes (deletion, update, etc.)
 export const LOCATION_CHANGED_EVENT = 'location-data-changed';
@@ -41,19 +42,6 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const event = new CustomEvent(LOCATION_CHANGED_EVENT);
     window.dispatchEvent(event);
   }, []);
-
-  // Helper function to get the best username to display
-  const getUserDisplayName = useCallback(() => {
-    if (!user) return "Unknown User";
-    
-    // Try to get the username from the active group profile
-    if (activeGroupUserProfile?.username) {
-      return activeGroupUserProfile.username;
-    }
-    
-    // Fallbacks if no group username is available
-    return user.displayName || user.email || "Unknown User";
-  }, [user, activeGroupUserProfile]);
 
   // Get location by ID
   const getLocationById = useCallback((id: string) => {
@@ -97,7 +85,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const updatedData = {
       ...updatedLocation,
       modifiedBy: user.uid,
-      modifiedByUsername: getUserDisplayName(),
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       dateModified: new Date().toISOString()
     };
 
@@ -112,7 +101,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     // Trigger refresh of locations
     dispatchLocationChangedEvent();
-  }, [user, activeGroupId, activeCampaignId, getLocationById, updateData, dispatchLocationChangedEvent, getUserDisplayName]);
+  }, [user, activeGroupId, activeCampaignId, getLocationById, updateData, dispatchLocationChangedEvent]);
 
   // Update location note
   const updateLocationNote = useCallback(async (locationId: string, note: LocationNote): Promise<void> => {
@@ -236,8 +225,13 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       ...locationData,
       id: locationId,
       createdBy: user.uid,
-      createdByUsername: getUserDisplayName(),
-      dateAdded: new Date().toISOString()
+      createdByUsername: getUserName(activeGroupUserProfile),
+      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      dateAdded: new Date().toISOString(),
+      modifiedBy: user.uid,
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      dateModified: new Date().toISOString()
     } as Location;
 
     await addData(newLocation, locationId);
@@ -249,7 +243,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     dispatchLocationChangedEvent();
     
     return locationId;
-  }, [user, activeGroupId, activeCampaignId, addData, dispatchLocationChangedEvent, getUserDisplayName]);
+  }, [user, activeGroupId, activeCampaignId, addData, dispatchLocationChangedEvent]);
 
   const value: LocationContextValue = {
     locations,

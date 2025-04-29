@@ -58,8 +58,13 @@ export const useLayoutData = ({
         return firstChapter.order - secondChapter.order;
       }
       
-      const firstDate = firstChapter.lastModified ? new Date(firstChapter.lastModified).getTime() : 0;
-      const secondDate = secondChapter.lastModified ? new Date(secondChapter.lastModified).getTime() : 0;
+      // Use dateModified if available, otherwise fall back to dateAdded
+      const firstDateString = firstChapter.dateModified || firstChapter.dateAdded;
+      const secondDateString = secondChapter.dateModified || secondChapter.dateAdded;
+      
+      // Convert string dates to numeric timestamps for comparison
+      const firstDate = firstDateString ? new Date(firstDateString).getTime() : 0;
+      const secondDate = secondDateString ? new Date(secondDateString).getTime() : 0;
       
       return firstDate - secondDate;
     });

@@ -1,11 +1,12 @@
 // src/components/features/auth/adminPanel/UserManagementView.tsx - Fix key warning
 
 import React, { useState, useEffect } from 'react';
-import { useAuth, useGroups, useUser } from '../../../../context/firebase';
+import { useAuth, useGroups } from '../../../../context/firebase';
 import Typography from '../../../core/Typography';
 import Input from '../../../core/Input';
 import Button from '../../../core/Button';
 import Dialog from '../../../core/Dialog';
+import { formatDisplayDate } from '../../../../utils/dateFormatter';
 import { 
   Search, 
   Users, 
@@ -182,10 +183,11 @@ const UserManagementView: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <Calendar className="w-4 h-4 primary" />
                       <Typography variant="body-sm" color="secondary">
-                        {userData.joinedAt instanceof Date 
-                          ? userData.joinedAt.toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})
-                          : new Date(userData.joinedAt).toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})
-                        }
+                        {formatDisplayDate(userData.joinedAt, { 
+                          year: 'numeric', 
+                          day: '2-digit', 
+                          month: '2-digit'
+                        })}
                       </Typography>
                     </div>
                   </td>
@@ -225,6 +227,7 @@ const UserManagementView: React.FC = () => {
         onClose={() => setConfirmUserDialog({ isOpen: false, userId: '', username: '' })}
         title="Confirm User Removal"
         maxWidth="max-w-md"
+        isNested={true}
       >
         <div className="space-y-4">
           <Typography>

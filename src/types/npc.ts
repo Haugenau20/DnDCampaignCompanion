@@ -1,9 +1,10 @@
-// types/npc.ts
+// src/types/npc.ts
+import { BaseContent } from './common';
 
 export type NPCStatus = 'alive' | 'deceased' | 'missing' | 'unknown';
 export type NPCRelationship = 'friendly' | 'neutral' | 'hostile' | 'unknown';
 
-interface NPCConnections {
+export interface NPCConnections {
   relatedNPCs: string[];
   affiliations: string[];
   relatedQuests: string[];
@@ -14,8 +15,10 @@ export interface NPCNote {
   text: string;
 }
 
-export interface NPC {
-  id: string;
+/**
+ * Represents an NPC in the game world
+ */
+export interface NPC extends BaseContent {
   name: string;
   title?: string;
   status: NPCStatus;
@@ -29,13 +32,6 @@ export interface NPC {
   background?: string;
   connections: NPCConnections;
   notes: NPCNote[];
-  // Attribution fields
-  createdBy?: string; // User UID
-  createdByUsername?: string; // Character name or username
-  modifiedBy?: string; // User UID of last modifier
-  modifiedByUsername?: string; // Character name or username of modifier
-  dateAdded?: string; // Date of creation
-  dateModified?: string; // Date of last modification
 }
 
 // Context types
@@ -52,4 +48,7 @@ export interface NPCContextValue extends NPCContextState {
   getNPCsByRelationship: (relationship: NPCRelationship) => NPC[];
   updateNPCNote: (npcId: string, note: NPCNote) => void;
   updateNPCRelationship: (npcId: string, relationship: NPCRelationship) => void;
+  addNPC: (npc: Omit<NPC, 'id'>) => Promise<string>;
+  updateNPC: (npc: NPC) => Promise<void>;
+  deleteNPC: (npcId: string) => Promise<void>;
 }

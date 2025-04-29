@@ -4,7 +4,7 @@ import { Quest, QuestStatus } from '../types/quest';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from './firebase';
-import { getUserDisplayName } from '../utils/user-utils';
+import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 
 // Context interface
 interface QuestContextValue {
@@ -37,7 +37,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     collection: 'quests'
   });
   const { user } = useAuth();
-  const { userProfile } = useUser();
+  const { userProfile, activeGroupUserProfile } = useUser();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
 
@@ -91,7 +91,6 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Quest not found');
     }
 
-    const displayName = getUserDisplayName(userProfile);
     const now = new Date().toISOString();
 
     const updatedQuest = {
@@ -99,7 +98,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       status,
       dateModified: now,
       modifiedBy: user.uid,
-      modifiedByUsername: displayName,
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       // If completing, set the completion date
       ...(status === 'completed' && { dateCompleted: now })
     };
@@ -123,7 +123,6 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Quest not found');
     }
 
-    const displayName = getUserDisplayName(userProfile);
     const now = new Date().toISOString();
 
     // Update the specific objective
@@ -139,7 +138,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       objectives: updatedObjectives,
       dateModified: now,
       modifiedBy: user.uid,
-      modifiedByUsername: displayName,
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       // Auto-update status to completed if all objectives are done
       ...(allCompleted && quest.status === 'active' && { 
         status: 'completed' as QuestStatus,
@@ -162,7 +162,6 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   
     const now = new Date().toISOString();
-    const displayName = getUserDisplayName(userProfile);
     
     // Generate ID from title
     const id = generateQuestId(questData.title);
@@ -174,9 +173,11 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       dateAdded: now,
       dateModified: now,
       createdBy: user.uid,
-      createdByUsername: displayName,
+      createdByUsername: getUserName(activeGroupUserProfile),
+      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       modifiedBy: user.uid,
-      modifiedByUsername: displayName,
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       // Ensure arrays are properly initialized
       objectives: questData.objectives || [],
       relatedNPCIds: questData.relatedNPCIds || [],
@@ -203,14 +204,14 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Group and campaign context must be set to update quests');
     }
 
-    const displayName = getUserDisplayName(userProfile);
     const now = new Date().toISOString();
 
     const updatedQuest = {
       ...quest,
       dateModified: now,
       modifiedBy: user.uid,
-      modifiedByUsername: displayName
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
     };
 
     await updateData(quest.id, updatedQuest);
@@ -246,7 +247,6 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Quest not found');
     }
 
-    const displayName = getUserDisplayName(userProfile);
     const now = new Date().toISOString();
     const completionDate = dateCompleted || now;
 
@@ -262,7 +262,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       dateCompleted: completionDate,
       dateModified: now,
       modifiedBy: user.uid,
-      modifiedByUsername: displayName,
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       objectives: completedObjectives
     };
 
@@ -285,7 +286,6 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Quest not found');
     }
 
-    const displayName = getUserDisplayName(userProfile);
     const now = new Date().toISOString();
 
     const updatedQuest = {
@@ -293,7 +293,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       status: 'failed' as QuestStatus,
       dateModified: now,
       modifiedBy: user.uid,
-      modifiedByUsername: displayName
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
     };
 
     await updateData(questId, updatedQuest);

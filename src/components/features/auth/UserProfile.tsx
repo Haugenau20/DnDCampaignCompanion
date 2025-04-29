@@ -59,8 +59,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
     if (activeGroupUserProfile) {
       setNewUsername(activeGroupUserProfile.username || '');
       
-      // Set the active character ID from the user profile
-      setActiveCharacterId(activeGroupUserProfile.activeCampaignId || null);
+      // Set the active character ID from the user profile using only the new field
+      setActiveCharacterId(activeGroupUserProfile.activeCharacterId || null);
       
       // Initialize character names from profile
       if (activeGroupUserProfile.characters && activeGroupUserProfile.characters.length > 0) {
@@ -217,10 +217,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
         setActiveCharacterId(newActiveId);
       }
       
-      // Update in database
+      // Update in database with the new field name only
       await updateGroupUserProfile(user.uid, {
         characters: updatedCharacterNames,
-        activeCampaignId: newActiveId
+        activeCharacterId: newActiveId
       });
       
       // Clear input field
@@ -291,9 +291,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
       // Update local state
       setActiveCharacterId(id);
       
-      // Update in database
+      // Update in database using only the new field name
       await updateGroupUserProfile(user.uid, {
-        activeCampaignId: id
+        activeCharacterId: id
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to set active character');
@@ -322,10 +322,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
         setActiveCharacterId(newActiveId);
       }
       
-      // Update in database
+      // Update in database with only the new field name
       await updateGroupUserProfile(user.uid, {
         characters: updatedCharacterNames,
-        activeCampaignId: newActiveId
+        activeCharacterId: newActiveId
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete character name');
@@ -462,9 +462,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
                     checking ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : newUsername && usernameValid && usernameAvailable ? (
-                      <Check className={clsx("w-4 h-4", `success-icon`)} />
+                      <Check className="w-4 h-4 success-icon" />
                     ) : newUsername && (usernameValid === false || usernameAvailable === false) ? (
-                      <X className={clsx("w-4 h-4", `form-error`)} />
+                      <X className="w-4 h-4 form-error" />
                     ) : null
                   }
                 />
@@ -497,7 +497,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
           <div className="p-3 rounded-lg bg-secondary">
             {activeDisplayName ? (
               <div className="flex items-center">
-                <Star size={16} className={clsx("mr-2", `accent`)} />
+                <Star size={16} className="mr-2 accent" />
                 <Typography>{activeDisplayName}</Typography>
               </div>
             ) : (
@@ -515,10 +515,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
             <button
               onClick={() => setThemeDropdownOpen(!themeDropdownOpen)}
               disabled={saving}
-              className={clsx(
-                "w-full flex items-center justify-between p-3 rounded-md transition-colors border",
-                `bg-secondary`
-              )}
+              className="w-full flex items-center justify-between p-3 rounded-md transition-colors border bg-secondary"
               type="button"
             >
               <div className="flex items-center gap-2">
@@ -533,10 +530,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
             
             {/* Dropdown menu */}
             {themeDropdownOpen && (
-              <div className={clsx(
-                "absolute z-10 mt-1 w-full rounded-md shadow-lg max-h-60 overflow-auto",
-                `dropdown`
-              )}>
+              <div className="absolute z-10 mt-1 w-full rounded-md shadow-lg max-h-60 overflow-auto dropdown">
                 <div className="py-1">
                   {Object.values(themes).map((t) => (
                     <button
@@ -556,7 +550,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
                       />
                       <span className="capitalize">{t.name}</span>
                       {theme.name === t.name && (
-                        <Check className={clsx("w-4 h-4 ml-auto", `success-icon`)} />
+                        <Check className="w-4 h-4 ml-auto success-icon" />
                       )}
                     </button>
                   ))}
@@ -630,7 +624,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
                 >
                   <div className="flex items-center">
                     {character.id === activeCharacterId && (
-                      <Star size={16} className={clsx("mr-2", `accent`)} />
+                      <Star size={16} className="mr-2 accent" />
                     )}
                     <Typography>{character.name}</Typography>
                   </div>
@@ -667,10 +661,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
               ))}
             </div>
           ) : (
-            <div className={clsx(
-              "py-2 px-3 rounded-md text-center",
-              `bg-secondary`
-            )}>
+            <div className="py-2 px-3 rounded-md text-center bg-secondary">
               <Typography color="secondary">No character names added yet</Typography>
             </div>
           )}
@@ -751,7 +742,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
             <Typography color="error">
               This will:
             </Typography>
-            <ul className={clsx("list-disc pl-5 space-y-1", `typography`)}>
+            <ul className="list-disc pl-5 space-y-1 typography">
               <li>Remove your access to all groups</li>
               <li>Delete all your user profiles and settings</li>
               <li>This action is permanent and cannot be undone</li>
@@ -779,7 +770,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
 
         {/* Error message */}
         {error && (
-          <div className={clsx("flex items-center gap-2", `form-error`)}>
+          <div className="flex items-center gap-2 form-error">
             <AlertCircle size={16} />
             <Typography color="error">{error}</Typography>
           </div>

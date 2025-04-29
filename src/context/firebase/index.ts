@@ -6,6 +6,7 @@ export { useGroups } from './hooks/useGroups';
 export { useCampaigns } from './hooks/useCampaigns';
 export { useInvitations } from './hooks/useInvitations';
 export { useFirestore } from './hooks/useFirestore';
+export { useUsernameLookup } from './hooks/useUsernameLookup';
 
 // Export legacy hook for backward compatibility - can be removed later
 export { useFirebaseContext as useFirebase } from './FirebaseContext';

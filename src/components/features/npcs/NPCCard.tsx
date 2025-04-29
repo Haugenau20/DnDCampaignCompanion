@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { NPC, NPCNote } from '../../../types/npc';
 import Typography from '../../core/Typography';
 import Card from '../../core/Card';
@@ -8,8 +7,8 @@ import Input from '../../core/Input';
 import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import { useQuests } from '../../../context/QuestContext';
 import { useAuth } from '../../../context/firebase';
-import { useFirebaseData } from '../../../hooks/useFirebaseData';
 import { useNavigation } from '../../../context/NavigationContext';
+import { useNPCs } from '../../../context/NPCContext';
 import AttributionInfo from '../../shared/AttributionInfo';
 import clsx from 'clsx';
 import { 
@@ -44,8 +43,8 @@ const NPCCard: React.FC<NPCCardProps> = ({
   
   const { getQuestById } = useQuests();
   const { user } = useAuth();
-  const { updateData, deleteData } = useFirebaseData<NPC>({ collection: 'npcs' });
   const { navigateToPage, createPath } = useNavigation();
+  const { updateNPCNote, deleteNPC } = useNPCs();
 
   // Handle quick note adding
   const handleAddNote = async () => {
@@ -70,8 +69,8 @@ const NPCCard: React.FC<NPCCardProps> = ({
     setIsAddingNote(false);
 
     try {
-      // Update Firebase in the background
-      await updateData(npc.id, updatedNPC);
+      // Use context method to update NPC note
+      await updateNPCNote(npc.id, newNote);
       
       // Notify parent component if needed
       if (onEdit) {
@@ -93,13 +92,18 @@ const NPCCard: React.FC<NPCCardProps> = ({
 
   // Handle NPC deletion
   const handleDeleteConfirm = async () => {
-    await deleteData(npc.id);
-    
-    if (onDelete) {
-      onDelete(npc.id);
+    try {
+      // Use context method to delete NPC
+      await deleteNPC(npc.id);
+      
+      if (onDelete) {
+        onDelete(npc.id);
+      }
+    } catch (error) {
+      console.error('Failed to delete NPC:', error);
+    } finally {
+      setIsDeleteDialogOpen(false);
     }
-    
-    setIsDeleteDialogOpen(false);
   };
 
   // Handle quest click
@@ -178,10 +182,7 @@ const NPCCard: React.FC<NPCCardProps> = ({
             <div className="pt-4 space-y-6">
               {/* Creator and modifier attribution */}
               <AttributionInfo
-                createdByUsername={npc.createdByUsername}
-                dateAdded={npc.dateAdded}
-                modifiedByUsername={npc.modifiedByUsername}
-                dateModified={npc.dateModified}
+                item={npc}
               />
 
               {/* Additional Details */}
@@ -372,16 +373,13 @@ const NPCCard: React.FC<NPCCardProps> = ({
       </Card>
 
       {/* Delete Confirmation Dialog - Using shared component */}
-      {isDeleteDialogOpen && createPortal (
         <DeleteConfirmationDialog
           isOpen={isDeleteDialogOpen}
           onClose={() => setIsDeleteDialogOpen(false)}
           onConfirm={handleDeleteConfirm}
           itemName={npc.name}
           itemType="NPC"
-        />,
-        document.body
-      )}
+        />
     </>
   );
 };

@@ -1,0 +1,109 @@
+Backlog Item: Form/Context Responsibility Pattern Standardization
+Current State
+We've identified significant inconsistencies in how our form components and context providers handle attribution metadata across the application. Currently, we have a mix of approaches:
+
+Mixed Attribution Responsibility:
+
+Some forms (NPCForm, ChapterForm) handle full attribution metadata
+Some forms (QuestCreateForm) handle partial attribution metadata
+Some forms (LocationCreateForm, RumorForm) don't handle attribution metadata at all
+
+
+Entity Creation Flow Inconsistencies:
+
+Some contexts expect forms to provide attribution data
+Some contexts add attribution data themselves
+ID generation is generally handled by contexts, but some forms attempt to influence it
+
+
+
+Proposed Solution
+Standardize on a clear separation of concerns:
+
+Forms should ONLY:
+
+Collect user-provided domain data
+Manage UI state related to data collection
+Submit "clean" domain data without system metadata
+
+
+Contexts should handle ALL:
+
+Entity ID generation
+Attribution metadata (created by, modified by)
+Character context (active character association)
+Timestamps (dateAdded, dateModified)
+Validation
+Persistence logic
+
+
+
+Implementation Plan
+
+Update the type definitions to express this separation clearly
+
+Create something like NPCUserData types to represent form-collected data
+Use Omit<Entity, keyof BaseContent | 'id'> as the standard form submission type
+
+
+Refactor form components to:
+
+Remove attribution metadata handling
+Remove ID generation logic or hints
+Focus exclusively on domain data
+
+
+Update context providers to:
+
+Uniformly handle attribution metadata
+Consistently generate IDs
+Manage all system metadata
+
+
+
+Components Requiring Updates
+Forms to Refactor:
+
+NPCForm, NPCEditForm - Remove attribution data
+ChapterForm - Remove attribution data
+QuestCreateForm - Remove partial attribution
+Ensure all other forms follow the pattern
+
+Contexts to Refactor:
+
+NPCContext - Ensure it adds complete attribution
+StoryContext - Ensure it adds complete attribution
+QuestContext - Ensure it adds complete attribution
+
+Benefits
+
+Cleaner Architecture:
+
+Clear separation of concerns
+Components have single responsibilities
+Easier to understand code flow
+
+
+Better Maintainability:
+
+Attribution logic in one place
+Consistent pattern across all entities
+Easier onboarding for new developers
+
+
+Improved Scalability:
+
+Changes to attribution requirements only affect contexts
+Adding new attribution fields doesn't touch form components
+Forms can evolve independently of system metadata needs
+
+
+Reduced Bugs:
+
+Less chance of inconsistent attribution
+Standardized approach to metadata
+
+
+
+Adoption Strategy
+This should be implemented as a focused refactoring effort rather than piece by piece, to ensure consistency across the application. Testing should verify that attribution metadata is correctly maintained after the refactoring.

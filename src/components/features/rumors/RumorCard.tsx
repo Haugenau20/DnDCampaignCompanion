@@ -1,6 +1,5 @@
 // src/components/features/rumors/RumorCard.tsx
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Rumor, RumorStatus } from '../../../types/rumor';
 import Card from '../../core/Card';
 import Typography from '../../core/Typography';
@@ -87,8 +86,8 @@ const RumorCard: React.FC<RumorCardProps> = ({
         id: crypto.randomUUID(),
         content: noteInput.trim(),
         dateAdded: '',  // Will be set in context
-        addedBy: '',    // Will be set in context
-        addedByUsername: '' // Will be set in context
+        createdBy: '',    // Will be set in context
+        createdByUsername: '' // Will be set in context
       });
       
       // Reset form
@@ -142,8 +141,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
     <>
       <Card className={clsx(
         `rumor-card`,
-        `rumor-card-${rumor.status}`,
-        selectionMode && 'border-l-0'
+        `rumor-card-${rumor.status}`
       )}>
         <Card.Content className="space-y-4">
           {/* Rumor Header */}
@@ -203,10 +201,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
 
               {/* Creator and modifier attribution */}
               <AttributionInfo
-                createdByUsername={rumor.createdByUsername}
-                dateAdded={rumor.dateAdded}
-                modifiedByUsername={rumor.modifiedByUsername}
-                dateModified={rumor.dateModified}
+                item={rumor}
               />
               
               {/* Rumor Content */}
@@ -273,7 +268,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
                         <div className="flex items-center gap-2">
                           <Calendar size={14} className="typography-secondary" />
                           <Typography variant="body-sm" color="secondary">
-                            {new Date(note.dateAdded).toLocaleDateString()} by {note.addedByUsername}
+                            {new Date(note.dateAdded).toLocaleDateString()} by {note.createdByUsername}
                           </Typography>
                         </div>
                         <Typography variant="body-sm">
@@ -400,16 +395,13 @@ const RumorCard: React.FC<RumorCardProps> = ({
         </Card.Content>
       </Card>
 
-      {showDeleteConfirmation && createPortal (
         <DeleteConfirmationDialog
           isOpen={showDeleteConfirmation}
           onClose={() => setShowDeleteConfirmation(false)}
           onConfirm={() => deleteRumor(rumor.id)}
           itemName={rumor.title}
           itemType="Rumor"
-        />,
-        document.body
-      )}
+        />
     </>
   );
 };

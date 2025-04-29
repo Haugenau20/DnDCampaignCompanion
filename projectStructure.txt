@@ -20,7 +20,6 @@ DnDCampaignCompanion
 │   │   │   │   ├── generateSampleData.ts
 │   │   │   │   └── dndSampleDataGenerator.ts
 │   │   │   ├── user-utils.ts
-│   │   │   ├── theme-utils.ts
 │   │   │   ├── search.ts
 │   │   │   ├── password-validation.ts
 │   │   │   ├── navigation.ts
@@ -28,7 +27,6 @@ DnDCampaignCompanion
 │   │   │   └── attribution-utils.ts
 │   │   ├── types
 │   │   │   ├── user.ts
-│   │   │   ├── theme.ts
 │   │   │   ├── story.ts
 │   │   │   ├── search.ts
 │   │   │   ├── saga.ts
@@ -37,17 +35,21 @@ DnDCampaignCompanion
 │   │   │   ├── npc.ts
 │   │   │   └── location.ts
 │   │   ├── themes
-│   │   │   ├── medievalTheme.ts
-│   │   │   ├── lightTheme.ts
-│   │   │   ├── index.ts
-│   │   │   └── darkTheme.ts
+│   │   │   ├── definitions
+│   │   │   │   ├── medievalTheme.ts
+│   │   │   │   ├── lightTheme.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   └── darkTheme.ts
+│   │   │   ├── css
+│   │   │   │   ├── variables.css
+│   │   │   │   ├── theme-effects.css
+│   │   │   │   └── components.css
+│   │   │   ├── types.ts
+│   │   │   ├── theme-utils.ts
+│   │   │   └── ThemeContext.tsx
 │   │   ├── test-utils
 │   │   │   └── test-utils.tsx
 │   │   ├── styles
-│   │   │   ├── themes
-│   │   │   │   ├── medieval-theme.css
-│   │   │   │   ├── light-theme.css
-│   │   │   │   └── dark-theme.css
 │   │   │   └── globals.css
 │   │   ├── services
 │   │   │   ├── search
@@ -126,7 +128,6 @@ DnDCampaignCompanion
 │   │   │   │   │   └── useAuth.ts
 │   │   │   │   ├── index.ts
 │   │   │   │   └── FirebaseContext.tsx
-│   │   │   ├── ThemeContext.tsx
 │   │   │   ├── StoryContext.tsx
 │   │   │   ├── SearchContext.tsx
 │   │   │   ├── RumorContext.tsx
@@ -148,10 +149,6 @@ DnDCampaignCompanion
 │   │   │   │   ├── ContextSwitcher.tsx
 │   │   │   │   └── AttributionInfo.tsx
 │   │   │   ├── layout
-│   │   │   │   ├── sidebars
-│   │   │   │   │   ├── StorySidebar.tsx
-│   │   │   │   │   └── QuestSidebar.tsx
-│   │   │   │   ├── Sidebar.tsx
 │   │   │   │   ├── Navigation.tsx
 │   │   │   │   ├── Layout.tsx
 │   │   │   │   ├── Header.tsx

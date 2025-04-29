@@ -8,6 +8,7 @@ import Button from '../../../core/Button';
 import Card from '../../../core/Card';
 import Dialog from '../../../core/Dialog';
 import { Campaign } from '../../../../types/user';
+import { formatDisplayDate } from '../../../../utils/dateFormatter';
 import { 
   Search, 
   BookOpen, 
@@ -247,10 +248,11 @@ const CampaignManagementView: React.FC = () => {
                   <div className="flex items-center gap-1">
                     <Calendar size={16} className={clsx(`primary`)} />
                     <Typography variant="body-sm" color="secondary">
-                      Created: {campaign.createdAt instanceof Date
-                        ? campaign.createdAt.toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})
-                        : new Date(campaign.createdAt).toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})
-                      } 
+                      Created: {formatDisplayDate(campaign.createdAt, { 
+                        year: 'numeric', 
+                        day: '2-digit', 
+                        month: '2-digit'
+                      })}
                     </Typography>
                   </div>
                   
@@ -273,6 +275,7 @@ const CampaignManagementView: React.FC = () => {
         onClose={() => setShowNewCampaignForm(false)}
         title="Create New Campaign"
         maxWidth="max-w-md"
+        isNested={true}
       >
         <form onSubmit={handleCreateCampaign}>
           <div className="space-y-4">
@@ -322,6 +325,7 @@ const CampaignManagementView: React.FC = () => {
         onClose={() => setConfirmDeleteDialog({ isOpen: false, campaignId: '', campaignName: '' })}
         title="Confirm Campaign Deletion"
         maxWidth="max-w-md"
+        isNested={true}
       >
         <div className="space-y-4">
           <Typography>

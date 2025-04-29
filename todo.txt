@@ -1,59 +1,48 @@
-Prioritized Todo List
+# Prioritized Todo List
 
-3. When adding a new chapter it says that the chapter summary is optional, but it won't create the chapter if there is no summary.
-- Either make it truly optional or make it mandatory and show an error if not typed in.
+1. User should be able to change their password.
 
-4. Right now it is possible to type in parent location that dont exist when creating a location. This should not be possible.
+2. Have registration tokens expire after X days
 
-5. Fix mobile layout issues on certain pages. (Big update)
-
-6. User should be able to change their password.
-
-7. Have registration tokens expire after X days
-
-8. Filter tabs look different on the location page than the other pages.
-
-9. "Add note" and "Edit" button clashes on the location page-
-
-10. Right now some dialogs are on top of the local container. Instead they should be on top of the underlying document body.
-
-11. Make completed quests be default hidden with option to expand?
-
-12. Make active quests be on the top of the list?
-
-13. Fix/Implement proper searching
-
-14. Add batch options (Delete, change status, etc.) for Story, Quest, NPC, and Location features
-
-
-Waiting for prio:
-
-- Lots of dates are invalid.
-
-- Bookshelf view has some odd color differences.
-
-- Implement/review proper highlighting logic to pages.
-- The medieval theme does not work with the hamburger menu and theme selector dropdown.
-
-- F12 console Error in StoryContext when it is trying to update "current-progress"
+4. F12 console Error in StoryContext when it is trying to update "current-progress"
     - I think this is a remnant of purposefully unused functionality and it should just be deleted. 
     - It seems to be deeply embedded in the codebase. Remove it entirely all around.
 
-Admin Panel:
-- Test if the creation of new groups and campaigns work
-- Right now the "groups" view only shows the current group. 
-- Campaigns can be created. 
-- groups cannot be created
-- neither campaigns or groups can be edited.
-- campaigns cannot be deleted.
+5. Fix/Implement proper searching
 
-Rework the theme system to collect as much functionality as possible.
-- Simplify the amount of different colors.
+6. Fix mobile layout issues on certain pages. (Big update)
 
-New feature idea (partly implemented already): sub-chapters.
+8. Make active quests be on the top of the list?
 
-CLAUDE Code:
+9. Make completed quests be default hidden with option to expand?
 
-Major do-over of the project structure
+10. Add batch options (Delete, change status, etc.) for Story, Quest, NPC, and Location features
 
-Update README
+11. Implement/review proper highlighting logic to pages.
+
+12. Admin Panel:
+    - Test if the creation of new groups and campaigns work
+    - Right now the "groups" view only shows the current group. 
+    - Campaigns can be created. 
+    - groups cannot be created
+    - neither campaigns or groups can be edited.
+    - campaigns cannot be deleted.
+
+13. New feature idea (partly implemented already): sub-chapters.
+
+14. New feature idea: note taking in the app.
+
+15. CLAUDE Code: 
+
+15.1. Major do-over of the project structure
+
+15.2. Update README
+
+
+Not prioritized yet:
+
+Make a dedicated page for profile options
+
+Form/Context Responsibility Pattern Standardization (look at docs/backlog/FormContextStandard)
+
+NPCs Page seems to take longer to load than the rest of the pages.

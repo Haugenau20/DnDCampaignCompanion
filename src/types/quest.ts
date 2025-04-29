@@ -1,4 +1,6 @@
-// types/quest.ts
+// src/types/quest.ts
+import { BaseContent } from './common';
+
 export type QuestStatus = 'active' | 'completed' | 'failed';
 
 export interface QuestObjective {
@@ -17,8 +19,10 @@ export interface QuestNPC {
   description: string;
 }
 
-export interface Quest {
-  id: string;
+/**
+ * Represents a quest in the game world
+ */
+export interface Quest extends BaseContent {
   title: string;
   description: string;
   status: QuestStatus;
@@ -32,12 +36,23 @@ export interface Quest {
   rewards?: string[];
   location?: string;
   levelRange?: string;
-  dateAdded?: string;
   dateCompleted?: string;
-  // Attribution fields
-  createdBy?: string; // User UID
-  createdByUsername?: string; // Character name or username
-  modifiedBy?: string; // User UID of last modifier
-  modifiedByUsername?: string; // Character name or username of modifier
-  dateModified?: string; // Date of last modification
+}
+
+// Context types
+export interface QuestContextState {
+  quests: Quest[];
+  isLoading: boolean;
+  error: string | null;
+}
+
+export interface QuestContextValue extends QuestContextState {
+  getQuestById: (id: string) => Quest | undefined;
+  getQuestsByStatus: (status: QuestStatus) => Quest[];
+  getQuestsByLocation: (location: string) => Quest[];
+  updateQuestStatus: (questId: string, status: QuestStatus) => Promise<void>;
+  updateQuestObjective: (questId: string, objectiveId: string, completed: boolean) => Promise<void>;
+  addQuest: (quest: Omit<Quest, 'id'>) => Promise<string>;
+  updateQuest: (quest: Quest) => Promise<void>;
+  deleteQuest: (questId: string) => Promise<void>;
 }

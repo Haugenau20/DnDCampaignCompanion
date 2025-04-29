@@ -1,3 +1,6 @@
+// src/types/location.ts
+import { BaseContent } from './common';
+
 /**
  * Types of locations that can exist in the game world
  */
@@ -22,9 +25,7 @@ export type LocationStatus =
 /**
  * Represents a location in the game world
  */
-export interface Location {
-  /** Unique identifier for the location */
-  id: string;
+export interface Location extends BaseContent {
   /** Name of the location */
   name: string;
   /** Type of location */
@@ -47,13 +48,6 @@ export interface Location {
   tags?: string[];
   /** Last session visited */
   lastVisited?: string;
-  // Attribution fields
-  createdBy?: string; // User UID
-  createdByUsername?: string; // Character name or username
-  modifiedBy?: string; // User UID of last modifier
-  modifiedByUsername?: string; // Character name or username of modifier
-  dateAdded?: string; // Date of creation
-  dateModified?: string; // Date of last modification
 }
 
 /**
