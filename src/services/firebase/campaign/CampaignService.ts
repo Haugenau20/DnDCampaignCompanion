@@ -4,7 +4,8 @@ import {
     doc, 
     getDoc, 
     getDocs, 
-    setDoc 
+    setDoc,
+    updateDoc
   } from 'firebase/firestore';
   import BaseFirebaseService from '../core/BaseFirebaseService';
   import ServiceRegistry from '../core/ServiceRegistry';
@@ -128,6 +129,39 @@ import {
       } catch (error) {
         console.error(`CampaignService: Error fetching campaigns for group ${groupId}:`, error);
         return [];
+      }
+    }
+
+    /**
+     * Update an existing campaign
+     * @param groupId ID of the group containing the campaign
+     * @param campaignId ID of the campaign to update
+     * @param data Fields to update on the campaign
+     */
+    public async updateCampaign(groupId: string, campaignId: string, data: Partial<Campaign>): Promise<void> {
+      const userId = this.getCurrentUser()?.uid;
+      if (!userId) {
+        throw new Error('Not authenticated');
+      }
+      
+      // Check if user is a member of this group
+      const userProfileDoc = await this.userService.getGroupUserProfile(groupId, userId);
+      if (!userProfileDoc) {
+        throw new Error('You are not a member of this group');
+      }
+      
+      try {
+        const campaignRef = doc(this.db, 'groups', groupId, 'campaigns', campaignId);
+        await updateDoc(campaignRef, {
+          ...data,
+          modifiedBy: userId,
+          dateModified: new Date()
+        });
+        
+        console.log(`CampaignService: Updated campaign ${campaignId} in group ${groupId}`);
+      } catch (error) {
+        console.error(`CampaignService: Error updating campaign ${campaignId}:`, error);
+        throw error;
       }
     }
   }

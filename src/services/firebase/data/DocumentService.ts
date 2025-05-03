@@ -370,7 +370,7 @@ class DocumentService extends BaseFirebaseService {
   public async queryDocuments<T>(
     collectionName: string,
     field: string,
-    operator: '==' | '!=' | '>' | '<' | '>=' | '<=',
+    operator: '==' | '!=' | '>' | '<' | '>=' | '<=' | 'array-contains',
     value: any
   ): Promise<T[]> {
     try {

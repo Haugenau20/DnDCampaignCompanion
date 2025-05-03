@@ -22,8 +22,10 @@ DnDCampaignCompanion
 │   │   │   ├── user-utils.ts
 │   │   │   ├── search.ts
 │   │   │   ├── password-validation.ts
+│   │   │   ├── note-relationships.ts
 │   │   │   ├── navigation.ts
 │   │   │   ├── export-utils.ts
+│   │   │   ├── dateFormatter.ts
 │   │   │   └── attribution-utils.ts
 │   │   ├── types
 │   │   │   ├── user.ts
@@ -33,7 +35,9 @@ DnDCampaignCompanion
 │   │   │   ├── rumor.ts
 │   │   │   ├── quest.ts
 │   │   │   ├── npc.ts
-│   │   │   └── location.ts
+│   │   │   ├── note.ts
+│   │   │   ├── location.ts
+│   │   │   └── common.ts
 │   │   ├── themes
 │   │   │   ├── definitions
 │   │   │   │   ├── medievalTheme.ts
@@ -54,6 +58,10 @@ DnDCampaignCompanion
 │   │   ├── services
 │   │   │   ├── search
 │   │   │   │   └── SearchService.ts
+│   │   │   ├── openai
+│   │   │   │   ├── __tests__
+│   │   │   │   │   └── entityExtractor.test.ts
+│   │   │   │   └── entityExtractor.ts
 │   │   │   ├── firebase
 │   │   │   │   ├── user
 │   │   │   │   │   └── UserService.ts
@@ -98,6 +106,11 @@ DnDCampaignCompanion
 │   │   │   │   ├── NPCsEditPage.tsx
 │   │   │   │   ├── NPCsCreatePage.tsx
 │   │   │   │   └── index.ts
+│   │   │   ├── notes
+│   │   │   │   ├── TimelinePage.tsx
+│   │   │   │   ├── NotesPage.tsx
+│   │   │   │   ├── NotePage.tsx
+│   │   │   │   └── index.ts
 │   │   │   ├── locations
 │   │   │   │   ├── LocationsPage.tsx
 │   │   │   │   ├── LocationEditPage.tsx
@@ -107,19 +120,24 @@ DnDCampaignCompanion
 │   │   │   ├── HomePage.tsx
 │   │   │   └── ContactPage.tsx
 │   │   ├── hooks
+│   │   │   ├── useSessionNote.ts
 │   │   │   ├── useSessionManager.ts
 │   │   │   ├── useSearch.ts
 │   │   │   ├── useSagaData.ts
 │   │   │   ├── useRumorData.ts
 │   │   │   ├── useQuestData.ts
+│   │   │   ├── useOpenAIExtractor.ts
 │   │   │   ├── useNPCData.ts
+│   │   │   ├── useNoteData.ts
 │   │   │   ├── useNavigation.ts
 │   │   │   ├── useLocationData.ts
 │   │   │   ├── useFirebaseData.ts
+│   │   │   ├── useEntityExtractor.ts
 │   │   │   └── useChapterData.ts
 │   │   ├── context
 │   │   │   ├── firebase
 │   │   │   │   ├── hooks
+│   │   │   │   │   ├── useUsernameLookup.ts
 │   │   │   │   │   ├── useUser.ts
 │   │   │   │   │   ├── useInvitations.ts
 │   │   │   │   │   ├── useGroups.ts
@@ -128,16 +146,20 @@ DnDCampaignCompanion
 │   │   │   │   │   └── useAuth.ts
 │   │   │   │   ├── index.ts
 │   │   │   │   └── FirebaseContext.tsx
+│   │   │   ├── __tests__
+│   │   │   │   └── NoteContext.test.tsx
 │   │   │   ├── StoryContext.tsx
 │   │   │   ├── SearchContext.tsx
 │   │   │   ├── RumorContext.tsx
 │   │   │   ├── QuestContext.tsx
 │   │   │   ├── NPCContext.tsx
+│   │   │   ├── NoteContext.tsx
 │   │   │   ├── NavigationContext.tsx
 │   │   │   └── LocationContext.tsx
 │   │   ├── constants
 │   │   │   └── time.ts
 │   │   ├── config
+│   │   │   ├── openai.ts
 │   │   │   └── buildConfig.ts
 │   │   ├── components
 │   │   │   ├── shared
@@ -193,6 +215,20 @@ DnDCampaignCompanion
 │   │   │   │   │   ├── NPCEditForm.tsx
 │   │   │   │   │   ├── NPCDirectory.tsx
 │   │   │   │   │   └── NPCCard.tsx
+│   │   │   │   ├── notes
+│   │   │   │   │   ├── __tests__
+│   │   │   │   │   │   └── NoteEditor.test.tsx
+│   │   │   │   │   ├── StartSessionDialog.tsx
+│   │   │   │   │   ├── SessionTimeline.tsx
+│   │   │   │   │   ├── SessionInfo.tsx
+│   │   │   │   │   ├── SessionFlow.tsx
+│   │   │   │   │   ├── NotesList.tsx
+│   │   │   │   │   ├── NoteReferences.tsx
+│   │   │   │   │   ├── NoteEditor.tsx
+│   │   │   │   │   ├── NoteCard.tsx
+│   │   │   │   │   ├── EntityExtractor.tsx
+│   │   │   │   │   ├── EntityCard.tsx
+│   │   │   │   │   └── EndSessionDialog.tsx
 │   │   │   │   ├── locations
 │   │   │   │   │   ├── LocationFormSections.tsx
 │   │   │   │   │   ├── LocationEditForm.tsx
@@ -309,16 +345,24 @@ DnDCampaignCompanion
 │   │   │   ├── user-management.md
 │   │   │   ├── rumor-management.md
 │   │   │   ├── public-sample-data.md
-│   │   │   ├── group-scaling.md
 │   │   │   ├── databaseStructure.md
 │   │   │   └── chapter-management.md
-│   │   ├── futureThoughts
-│   │   │   ├── homepageUpdate.md
-│   │   │   └── AdventureJournal.md
 │   │   ├── design
 │   │   │   └── ui
 │   │   │       └── page-layouts
 │   │   │           └── rumors.md
+│   │   ├── backlog
+│   │   │   ├── noteTaking
+│   │   │   │   ├── phase9.md
+│   │   │   │   ├── phase8.md
+│   │   │   │   ├── phase7.md
+│   │   │   │   ├── phase6.md
+│   │   │   │   ├── phase5.md
+│   │   │   │   ├── phase4.md
+│   │   │   │   ├── phase3.md
+│   │   │   │   ├── phase2.md
+│   │   │   │   └── phase1.md
+│   │   │   └── FormContextStandard.txt
 │   │   └── README.md
 │   ├── docker
 │   │   ├── emulators

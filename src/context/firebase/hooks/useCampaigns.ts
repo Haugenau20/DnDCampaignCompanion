@@ -111,6 +111,23 @@ export function useCampaigns() {
     }
   }, []);
 
+  // Update an existing campaign
+  const updateCampaign = useCallback(async (campaignId: string, data: Partial<Campaign>): Promise<void> => {
+    try {
+      setError(null);
+      
+      if (!activeGroupId) {
+        throw new Error('No active group selected');
+      }
+      
+      await firebaseServices.campaign.updateCampaign(activeGroupId, campaignId, data);
+      await refreshCampaigns();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update campaign');
+      throw err;
+    }
+  }, [activeGroupId, setError, refreshCampaigns]);
+
   return {
     campaigns,
     activeCampaignId,
@@ -118,6 +135,7 @@ export function useCampaigns() {
     createCampaign,
     setActiveCampaign,
     refreshCampaigns,
-    getCampaigns
+    getCampaigns,
+    updateCampaign
   };
 }
