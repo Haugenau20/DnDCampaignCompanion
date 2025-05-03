@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigation } from '../../hooks/useNavigation';
 import Typography from '../core/Typography';
-import { Book, Scroll, Users, MapPin, MessageSquare } from 'lucide-react';
+import { Book, Scroll, Users, MapPin, MessageSquare, StickyNote } from 'lucide-react';
 import { clsx } from 'clsx';
 import Button from '../core/Button';
 
@@ -44,6 +44,11 @@ const Navigation: React.FC = () => {
       label: 'Locations', 
       path: '/locations',
       icon: <MapPin className="w-5 h-5" />
+    },
+    {
+      label: 'Notes',
+      path: '/notes',
+      icon: <StickyNote className="w-5 h-5" />
     }
   ];
 
