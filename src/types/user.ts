@@ -97,10 +97,6 @@ export interface Campaign {
   createdBy: string;
   /** Whether the campaign is active */
   isActive: boolean;
-  /** Number of sessions in this campaign */
-  sessionCount?: number;
-  /** Date of the last session */
-  lastSessionDate?: string;
 }
 
 /**

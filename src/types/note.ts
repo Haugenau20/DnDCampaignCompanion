@@ -4,7 +4,7 @@ import { BaseContent } from "./common";
 /**
  * Entity types that can be extracted from notes
  */
-export type EntityType = "npc" | "location" | "item" | "quest" | "rumor";
+export type EntityType = "npc" | "location" | "quest" | "rumor";
 
 /**
  * Status of a note
@@ -29,6 +29,10 @@ export interface ExtractedEntity {
   convertedToId?: string;
   /** Timestamp when the entity was extracted */
   createdAt: string;
+  /** Additional data specific to the entity type */
+  extraData?: {
+    [key: string]: any;
+  };
 }
 
 /**
@@ -88,12 +92,23 @@ export interface NoteContextValue {
   
   /**
    * Convert an extracted entity to a campaign element
+   * Now navigates to the create page instead of creating directly
    * @param noteId ID of the note containing the entity
    * @param entityId ID of the entity to convert
    * @param type Type of entity to convert to
-   * @returns Promise resolving to the ID of the created campaign element
+   * @returns Promise resolving to empty string (navigation instead of creation)
    */
   convertEntity: (noteId: string, entityId: string, type: EntityType) => Promise<string>;
+  
+  /**
+   * Mark an entity as converted in the note
+   * Called after successful creation of campaign element
+   * @param noteId ID of the note
+   * @param entityId ID of the entity to mark as converted
+   * @param createdId ID of the created campaign element
+   * @returns Promise resolving when update is complete
+   */
+  markEntityAsConverted: (noteId: string, entityId: string, createdId: string) => Promise<void>;
   
   /**
    * Update a note

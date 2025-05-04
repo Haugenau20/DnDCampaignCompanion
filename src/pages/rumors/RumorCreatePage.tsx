@@ -1,40 +1,71 @@
 // src/pages/rumors/RumorCreatePage.tsx
-import React, { useEffect } from 'react';
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
 import RumorForm from '../../components/features/rumors/RumorForm';
-import { useAuth } from '../../context/firebase';
-import { useNavigation } from '../../hooks/useNavigation';
+import Breadcrumb from '../../components/layout/Breadcrumb';
 import { ArrowLeft } from 'lucide-react';
 
 const RumorCreatePage: React.FC = () => {
-  const { navigateToPage } = useNavigation();
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Check for initial data from navigation state
+  const initialData = location.state?.initialData;
+  const noteId = location.state?.noteId;
+  const entityId = location.state?.entityId;
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!user) {
-      navigateToPage('/rumors');
+  const handleSuccess = () => {
+    navigate('/rumors');
+  };
+
+  const handleCancel = () => {
+    // Go back to the previous page (note if coming from note conversion)
+    if (noteId) {
+      navigate(`/notes/${noteId}`);
+    } else {
+      navigate('/rumors');
     }
-  }, [user, navigateToPage]);
+  };
+
+  // Convert initialData to proper format for RumorForm
+  const formInitialData = initialData ? {
+    title: initialData.title || '',
+    content: initialData.description || '', // Use description as content
+    noteId,
+    entityId
+  } : undefined;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-8 flex items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={() => navigateToPage('/rumors')}
-          startIcon={<ArrowLeft />}
-        >
-          Back to Rumors
-        </Button>
-        <Typography variant="h1">Create New Rumor</Typography>
+      <Breadcrumb
+        items={[
+          { label: 'Rumors', href: '/rumors' },
+          { label: 'Create' }
+        ]}
+        className="mb-4"
+      />
+
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <Button
+            variant="ghost"
+            className="mb-4"
+            onClick={handleCancel}
+            startIcon={<ArrowLeft className="w-4 h-4" />}
+          >
+            Back to {noteId ? 'Note' : 'Rumors'}
+          </Button>
+          <Typography variant="h2">Create New Rumor</Typography>
+        </div>
       </div>
 
       <RumorForm
-        title="Create New Rumor"
-        onSuccess={() => navigateToPage('/rumors')}
-        onCancel={() => navigateToPage('/rumors')}
+        initialData={formInitialData}
+        title="Create Rumor"
+        onSuccess={handleSuccess}
+        onCancel={handleCancel}
       />
     </div>
   );

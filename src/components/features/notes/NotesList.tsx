@@ -5,6 +5,7 @@ import NoteCard from "./NoteCard";
 import { useNotes } from "../../../context/NoteContext";
 import Button from "../../core/Button";
 import { useNavigation } from "../../../hooks/useNavigation";
+import { Loader2, AlertCircle, Book, Plus } from 'lucide-react';
 
 /**
  * Component for displaying a list of user notes
@@ -29,7 +30,7 @@ const NotesList: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="w-6 h-6 mr-3 icon-loading" />
+        <Loader2 className="w-6 h-6 mr-3 animate-spin primary" />
         <Typography color="secondary">Loading notes...</Typography>
       </div>
     );
@@ -39,7 +40,7 @@ const NotesList: React.FC = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center py-8 error-container">
-        <div className="w-6 h-6 mr-3 icon-error" />
+        <AlertCircle className="w-6 h-6 mr-3 status-failed" />
         <Typography color="error">{error}</Typography>
       </div>
     );
@@ -64,7 +65,7 @@ const NotesList: React.FC = () => {
       ) : (
         // Empty state
         <div className="text-center py-12 border-2 border-dashed empty-container rounded-lg">
-          <div className="w-12 h-12 mx-auto mb-4 icon-book" />
+          <Book className="w-12 h-12 mx-auto mb-4 primary" />
           <Typography variant="h4" className="mb-2">
             No notes yet
           </Typography>
@@ -76,7 +77,7 @@ const NotesList: React.FC = () => {
             onClick={handleCreateNote}
             className="create-note-button"
           >
-            <div className="w-5 h-5 mr-2 icon-plus" />
+            <Plus className="w-5 h-5 mr-2" />
             Create Note
           </Button>
         </div>

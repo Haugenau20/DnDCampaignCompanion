@@ -7,35 +7,151 @@ import Card from "../../core/Card";
 import EntityCard from "./EntityCard";
 import { useEntityExtractor } from "../../../hooks/useEntityExtractor";
 import { useNotes } from "../../../context/NoteContext";
+import { Loader2, AlertCircle, Info } from 'lucide-react';
+import DocumentService from "../../../services/firebase/data/DocumentService";
+import { PotentialReference, normalizeTextForComparison } from './NoteReferences';
 
 interface EntityExtractorProps {
   /** ID of the note to extract entities from */
   noteId: string;
+  /** References already found in the note */
+  existingReferences?: PotentialReference[];
   /** Callback when an entity is converted */
   onEntityConverted?: (entityId: string, createdId: string) => void;
 }
 
 /**
  * Component for extracting and displaying entities from notes
- * Integrates with OpenAI for entity extraction
+ * Integrates with OpenAI for entity extraction and checks for existing campaign elements
  */
 const EntityExtractor: React.FC<EntityExtractorProps> = ({ 
-  noteId, 
+  noteId,
+  existingReferences = [],
   onEntityConverted 
 }) => {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedEntities, setExtractedEntities] = useState<ExtractedEntity[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { extractWithOpenAI } = useEntityExtractor();
-  const { getNoteById } = useNotes();
+  const { getNoteById, updateNote } = useNotes();
+  const documentService = DocumentService.getInstance();
   
   // Load existing entities from the note
   useEffect(() => {
-    const note = getNoteById(noteId);
-    if (note && note.extractedEntities.length > 0) {
-      setExtractedEntities(note.extractedEntities);
+    const loadAndFilterEntities = async () => {
+      const note = getNoteById(noteId);
+      if (note && note.extractedEntities.length > 0) {
+        // Filter out entities that haven't been converted AND match existing references
+        const filteredEntities = note.extractedEntities.filter(entity => {
+          // Keep converted entities
+          if (entity.isConverted) return true;
+          
+          // Filter out entities that match existing references
+          return !isEntityMatchingExistingReference(entity);
+        });
+        
+        setExtractedEntities(filteredEntities);
+      }
+    };
+    
+    loadAndFilterEntities();
+  }, [noteId, getNoteById, existingReferences]);
+
+  /**
+   * Check if entity matches any existing reference
+   */
+  const isEntityMatchingExistingReference = (entity: ExtractedEntity): boolean => {
+    return existingReferences.some(reference => {
+      // First check if types match
+      if (reference.type !== entity.type) return false;
+      
+      // Then check if texts match using the same normalization
+      const normalizedEntityText = normalizeTextForComparison(entity.text);
+      
+      // Check if entity matches any of the reference's matching text
+      return reference.matchingText.some(matchText => {
+        const normalizedMatchText = normalizeTextForComparison(matchText);
+        
+        // Exact match after normalization
+        if (normalizedEntityText === normalizedMatchText) return true;
+        
+        // Entity text contains the reference text or vice versa
+        return normalizedEntityText.includes(normalizedMatchText) || 
+               normalizedMatchText.includes(normalizedEntityText);
+      });
+    });
+  };
+  
+  /**
+   * Deduplicate extracted entities based on text and type
+   */
+  const deduplicateEntities = (entities: ExtractedEntity[]): ExtractedEntity[] => {
+    const uniqueEntities: ExtractedEntity[] = [];
+    
+    entities.forEach(entity => {
+      const isDuplicate = uniqueEntities.some(existing => 
+        existing.type === entity.type && 
+        normalizeTextForComparison(existing.text) === normalizeTextForComparison(entity.text)
+      );
+      
+      if (!isDuplicate) {
+        uniqueEntities.push(entity);
+      } else {
+        // Find the existing entity and update confidence if higher
+        const existingIndex = uniqueEntities.findIndex(existing =>
+          existing.type === entity.type && 
+          normalizeTextForComparison(existing.text) === normalizeTextForComparison(entity.text)
+        );
+        if (existingIndex >= 0 && entity.confidence > uniqueEntities[existingIndex].confidence) {
+          uniqueEntities[existingIndex] = entity;
+        }
+      }
+    });
+    
+    return uniqueEntities;
+  };
+  
+  /**
+   * Filter out entities that already exist in the campaign
+   */
+  const filterNewEntities = async (entities: ExtractedEntity[]): Promise<ExtractedEntity[]> => {
+    try {
+      // First filter out entities that match existing references
+      const entitiesWithoutReferences = entities.filter(entity => 
+        !isEntityMatchingExistingReference(entity)
+      );
+      
+      // Get all campaign elements
+      const [npcs, locations, quests, rumors] = await Promise.all([
+        documentService.getCollection<any>('npcs'),
+        documentService.getCollection<any>('locations'),
+        documentService.getCollection<any>('quests'),
+        documentService.getCollection<any>('rumors')
+      ]);
+      
+      const allElements = [
+        ...npcs.map(e => ({ ...e, type: 'npc' })),
+        ...locations.map(e => ({ ...e, type: 'location' })),
+        ...quests.map(e => ({ ...e, type: 'quest' })),
+        ...rumors.map(e => ({ ...e, type: 'rumor' }))
+      ];
+      
+      // Filter out entities that already exist in campaign
+      return entitiesWithoutReferences.filter(entity => {
+        const normalizedEntityText = normalizeTextForComparison(entity.text);
+        
+        const exists = allElements.some(element => 
+          element.type === entity.type && 
+          (normalizeTextForComparison(element.name || '') === normalizedEntityText || 
+           normalizeTextForComparison(element.title || '') === normalizedEntityText)
+        );
+        return !exists;
+      });
+    } catch (error) {
+      console.error("Error filtering entities:", error);
+      return entities;
     }
-  }, [noteId, getNoteById]);
+  };
   
   /**
    * Perform entity extraction on the note
@@ -51,14 +167,39 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
         throw new Error("Note not found");
       }
       
+      // First clear any previously extracted entities that haven't been converted
+      const convertedEntities = note.extractedEntities.filter(entity => entity.isConverted);
+      
+      // Update the note to keep only converted entities
+      await updateNote(noteId, {
+        extractedEntities: convertedEntities,
+      });
+      
+      // Clear local state of extracted entities
+      setExtractedEntities([]);
+      
       // Don't extract if content is too short
       if (note.content.length < 50) {
         throw new Error("Note content is too short for extraction");
       }
       
       // Extract entities using OpenAI
-      const entities = await extractWithOpenAI(noteId);
-      setExtractedEntities(prev => [...prev, ...entities]);
+      const rawEntities = await extractWithOpenAI(noteId);
+      
+      // Deduplicate entities with smart matching
+      const uniqueEntities = deduplicateEntities(rawEntities);
+      
+      // Filter out entities that already exist in campaign
+      const newEntities = await filterNewEntities(uniqueEntities);
+      
+      // Update the note in the database with converted entities + newly extracted entities
+      await updateNote(noteId, {
+        extractedEntities: [...convertedEntities, ...uniqueEntities],
+      });
+      
+      // Update local state with only the new entities
+      setExtractedEntities(newEntities);
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to extract entities";
       setError(errorMessage);
@@ -90,7 +231,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
   return (
     <Card className="entity-extractor">
       <Card.Content>
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Header */}
           <div className="flex justify-between items-center">
             <Typography variant="h4">Entity Extraction</Typography>
@@ -106,27 +247,27 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
           {/* Error state */}
           {error && (
             <div className="flex items-center gap-2 p-3 rounded error-container">
-              <div className="w-4 h-4 icon-error" />
+              <AlertCircle className="w-4 h-4 status-failed" />
               <Typography variant="body-sm" color="error">
                 {error}
               </Typography>
             </div>
           )}
 
-          {/* Loading state */}
+          {/* Loading state with animated spinner */}
           {isExtracting && (
             <div className="text-center py-8">
-              <div className="w-8 h-8 mx-auto mb-4 icon-loading" />
+              <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin primary" />
               <Typography color="secondary">
                 Analyzing note content...
               </Typography>
             </div>
           )}
 
-          {/* Extracted entities */}
+          {/* New extracted entities that can be converted */}
           {!isExtracting && extractedEntities.length > 0 && (
             <div className="space-y-3">
-              <Typography variant="h4">Extracted Entities</Typography>
+              <Typography variant="h4">New Entities to Convert</Typography>
               <div className="grid gap-3">
                 {extractedEntities.map(entity => (
                   <EntityCard
@@ -143,7 +284,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
           {/* Empty state */}
           {!isExtracting && extractedEntities.length === 0 && !error && (
             <div className="text-center py-8">
-              <div className="w-8 h-8 mx-auto mb-4 icon-info" />
+              <Info className="w-8 h-8 mx-auto mb-4 primary" />
               <Typography color="secondary">
                 Click "Extract Entities" to analyze your note and identify NPCs, locations, quests, and more.
               </Typography>

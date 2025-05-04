@@ -5,6 +5,7 @@ import Typography from "../../core/Typography";
 import Button from "../../core/Button";
 import Card from "../../core/Card";
 import { useNotes } from "../../../context/NoteContext";
+import { Users, MapPin, Scroll, MessageSquare, FileQuestion, Check, Plus, Loader2 } from 'lucide-react';
 
 interface EntityCardProps {
   /** The extracted entity to display */
@@ -28,22 +29,20 @@ const EntityCard: React.FC<EntityCardProps> = ({
   const [isConverting, setIsConverting] = useState(false);
   
   /**
-   * Get the appropriate icon class for each entity type
+   * Get the appropriate icon component for each entity type
    */
-  const getEntityIconClass = (type: EntityType): string => {
+  const getEntityIcon = (type: EntityType): React.ReactNode => {
     switch (type) {
       case "npc":
-        return "icon-npc";
+        return <Users className="w-5 h-5" />;
       case "location":
-        return "icon-location";
+        return <MapPin className="w-5 h-5" />;
       case "quest":
-        return "icon-quest";
-      case "item":
-        return "icon-item";
+        return <Scroll className="w-5 h-5" />;
       case "rumor":
-        return "icon-rumor";
+        return <MessageSquare className="w-5 h-5" />;
       default:
-        return "icon-default";
+        return <FileQuestion className="w-5 h-5" />; 
     }
   };
   
@@ -58,8 +57,6 @@ const EntityCard: React.FC<EntityCardProps> = ({
         return "Location";
       case "quest":
         return "Quest";
-      case "item":
-        return "Item";
       case "rumor":
         return "Rumor";
       default:
@@ -71,10 +68,9 @@ const EntityCard: React.FC<EntityCardProps> = ({
    * Get a color class based on confidence level
    */
   const getConfidenceColorClass = (confidence: number): string => {
-    if (confidence >= 0.9) return "confidence-high";
-    if (confidence >= 0.7) return "confidence-medium";
-    if (confidence >= 0.5) return "confidence-low";
-    return "confidence-very-low";
+    if (confidence >= 0.8) return "typography-success";
+    if (confidence >= 0.5) return "status-unknown";
+    return "typography-error";
   };
 
   /**
@@ -96,20 +92,22 @@ const EntityCard: React.FC<EntityCardProps> = ({
 
   return (
     <Card 
-      className={`entity-card ${entity.isConverted ? "entity-converted" : ""}`}
+      className={`border-l-4 ${entity.isConverted ? "status-completed" : "status-active"}`}
     >
       <Card.Content className="p-4">
         <div className="flex items-center gap-4">
-          <div className={`w-5 h-5 ${getEntityIconClass(entity.type)}`} />
+          <div className="flex-shrink-0 primary">
+            {getEntityIcon(entity.type)}
+          </div>
           
           <div className="flex-1">
-            <Typography variant="body" className="font-medium">
+            <Typography variant="body" className="font-medium text-trasform capitalize">
               {entity.text}
             </Typography>
             
             <Typography variant="body-sm" color="secondary">
               {getEntityTypeName(entity.type)} • 
-              <span className={getConfidenceColorClass(entity.confidence)}>
+              <span className={`${getConfidenceColorClass(entity.confidence)} ml-1`}>
                 Confidence: {(entity.confidence * 100).toFixed(0)}%
               </span>
             </Typography>
@@ -117,19 +115,16 @@ const EntityCard: React.FC<EntityCardProps> = ({
           
           {entity.isConverted ? (
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 icon-success" />
-              <Typography variant="body-sm" color="success">
-                Converted
-              </Typography>
+              <Check className="success-icon" />
             </div>
           ) : (
             <Button
+              variant="primary"
               size="sm"
               onClick={handleConvert}
               disabled={isConverting}
-              className="convert-button"
             >
-              {isConverting ? "Converting..." : "Convert"}
+              {isConverting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             </Button>
           )}
         </div>

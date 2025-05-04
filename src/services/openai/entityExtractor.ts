@@ -1,146 +1,192 @@
 // src/services/openai/entityExtractor.ts
-import { ExtractedEntity, EntityType } from '../../types/note';
-import { OPENAI_CONFIG } from '../../config/openai';
 import OpenAI from 'openai';
-
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+import { OPENAI_CONFIG } from '../../config/openai';
+import { ExtractedEntity, EntityType } from '../../types/note';
+import { functions } from './openaiFunctions';
+import { 
+  OpenAIResponse, 
+  OpenAIEntityResponse, 
+  ExtractedEntityDetails,
+  ExtractedNPCDetails,
+  ExtractedLocationDetails,
+  ExtractedQuestDetails,
+  ExtractedRumorDetails,
+} from './types';
 
 /**
- * Response format from OpenAI extraction
- */
-type OpenAIResponse = Array<{
-  text: string;
-  type: EntityType;
-  confidence: number;
-  context?: string;
-}>;
-
-/**
- * Extracts entities from note content using OpenAI API
- * @param content The note text content to analyze
- * @param options Optional configuration options
- * @returns Promise resolving to array of extracted entities
+ * Extract entities from note content using OpenAI
+ * @param content The note content to extract entities from
+ * @returns Array of extracted entities
  */
 export const extractEntitiesFromNote = async (
   content: string,
-  options?: {
-    model?: 'gpt-3.5-turbo' | 'gpt-4o';
-    temperature?: number;
-  }
+  model: string = OPENAI_CONFIG.defaultModel
 ): Promise<ExtractedEntity[]> => {
-  const model = options?.model || OPENAI_CONFIG.defaultModel;
-  const temperature = options?.temperature || OPENAI_CONFIG.temperature;
-  
-  const prompt = `
-Extract D&D campaign entities from this session note. 
-Find:
-- NPCs (with titles, roles, etc.)
-- Locations (cities, dungeons, forests, etc.)
-- Quests (missions, objectives, etc.)
-- Rumors (unconfirmed information, gossip, etc.)
-
-For each entity, provide:
-- text: The entity name as it appears
-- type: npc/location/item/quest/rumor
-- confidence: 0-1 based on how certain you are
-- context: Brief context of where it appears
-
-Session note:
-${content}
-
-Return as JSON array:
-`;
 
   try {
-
     const client = new OpenAI({
       apiKey: OPENAI_CONFIG.apiKey,
       dangerouslyAllowBrowser: true,
     });
 
-    const response = await client.responses.create({
-      model: model,
-      instructions: 'You are a helpful assistant that extracts D&D campaign entities from session notes. Return only valid JSON.',
-      input: prompt,
-    });
+    const systemPrompt = `
+You are a Dungeons & Dragons session‐note parser.
+Your *only* job is to call the function "extract_entities" with valid arguments.
 
-    const content = response.output_text;
-    
-    // Parse JSON response
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+The function schema strictly defines the allowed 'type' field as one of:
+  - "npc"
+  - "location"
+  - "quest"
+  - "rumor"
 
-    if (!jsonMatch) {
-      console.error('Raw response:', content);
-      throw new Error('No valid JSON found in OpenAI response');
-    }
+**Never** use any other value (e.g. "character", "person", etc.).  
+Every named person or character is ALWAYS type "npc".
 
-    const jsonString = jsonMatch[1].trim();
+Do not output any text yourself—*only* invoke the function with correct JSON.*
+`;
 
-    let parsedResponse: OpenAIResponse;
-    try {
-      parsedResponse = JSON.parse(jsonString);
-    } catch (parseError) {
-      console.error('Failed to parse extracted JSON:', jsonString);
-      throw new Error('Invalid JSON in OpenAI response');
-    }
-
-    const entities: ExtractedEntity[] = parsedResponse.map(entity => ({
-      id: generateEntityId(),
-      text: entity.text,
-      type: entity.type,
-      confidence: entity.confidence,
-      isConverted: false,
-      createdAt: new Date().toISOString()
-    }));
-
-    return entities;
+  const response = await client.chat.completions.create({
+    model: model,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user",   content: content }
+    ],
+    functions,
+    function_call: { name: "extract_entities" },
+    temperature: 0
+  });
+  
+  const choice = response.choices?.[0];
+  if (!choice) {
+    throw new Error("No choice returned from OpenAI");
+  }
+  
+  // Pull the message object
+  const msg = choice.message;
+  
+  //  Make sure the model actually invoked our function
+  if (msg.function_call?.name !== "extract_entities") {
+    throw new Error(
+      `Expected function_call.extract_entities but got ${msg.function_call?.name}`
+    );
+  }
+  
+  //  Grab the raw JSON arguments
+  const rawArgs = msg.function_call.arguments;
+  if (!rawArgs) {
+    throw new Error("Function call had no arguments");
+  }
+  
+  //  Parse into your interface
+  let openaiResponse: OpenAIResponse;
+  try {
+    openaiResponse = JSON.parse(rawArgs);
+  } catch (err) {
+    console.error("Failed to JSON.parse function_call.arguments:", rawArgs);
+    throw new Error("Failed to parse OpenAI function arguments");
+  }
+  
+  //  Map to your app’s entities
+  return openaiResponse.entities.map(mapOpenAIEntityToExtractedEntity);
   } catch (error) {
-    console.error('OpenAI extraction error:', error);
+    console.error('Error extracting entities:', error);
     throw error;
   }
 };
 
 /**
- * Generates a unique ID for an extracted entity
- * @returns A unique ID string
+ * Map OpenAI entity response to ExtractedEntity format
+ * @param openaiEntity OpenAI entity response
+ * @returns ExtractedEntity with proper formatting including extraData
  */
-const generateEntityId = (): string => {
-  return `entity-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-};
-
-/**
- * Estimates token count in a text for OpenAI API pricing
- * @param text The text to estimate tokens for
- * @returns Approximate token count
- */
-export const estimateTokenCount = (text: string): number => {
-  // Rough estimate: 1 token ≈ 4 characters for English text
-  return Math.ceil(text.length / 4);
-};
-
-/**
- * Calculates approximate cost of an OpenAI API request
- * @param tokenCount The number of tokens in the request
- * @param model The OpenAI model being used
- * @returns Approximate cost in USD
- */
-export const calculateCost = (tokenCount: number, model: string): number => {
-  const pricing = {
-    'gpt-3.5-turbo': {
-      input: 0.0005,  // $0.0005 per 1K tokens
-      output: 0.0015  // $0.0015 per 1K tokens
-    },
-    'gpt-4o': {
-      input: 0.01,    // $0.01 per 1K tokens
-      output: 0.03    // $0.03 per 1K tokens
-    }
+const mapOpenAIEntityToExtractedEntity = (openaiEntity: OpenAIEntityResponse): ExtractedEntity => {
+  const baseEntity: ExtractedEntity = {
+    id: `${openaiEntity.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    text: openaiEntity.text,
+    type: openaiEntity.type as EntityType,
+    confidence: openaiEntity.confidence,
+    isConverted: false,
+    createdAt: new Date().toISOString(),
+    extraData: {} // Initialize extraData
   };
 
-  const modelPricing = pricing[model as keyof typeof pricing] || pricing['gpt-3.5-turbo'];
+  // Handle both formats: check if details exist, otherwise use root properties
+  let details: any;
+  if ('details' in openaiEntity && openaiEntity.details) {
+    details = extractDetailsByType(openaiEntity.details, openaiEntity.type);
+  } else {
+    // If no details property, use the OpenAI entity object itself as details
+    const { text, type, confidence, ...extraFields } = openaiEntity as any;
+    details = extraFields;
+  }
   
-  // Estimate total cost (input + output)
-  const inputCost = (tokenCount / 1000) * modelPricing.input;
-  const outputCost = (tokenCount / 4) / 1000 * modelPricing.output; // Output is roughly 1/4 of input
-  
-  return inputCost + outputCost;
+  // Store all detailed information in extraData
+  baseEntity.extraData = {
+    ...details,
+    // Also store the original text for reference
+    originalText: openaiEntity.text
+  };
+
+  return baseEntity;
+};
+
+/**
+ * Extract specific details from OpenAI response based on entity type
+ * @param details Entity details from OpenAI
+ * @param type Entity type
+ * @returns Formatted details object
+ */
+export const extractDetailsByType = (
+  details: ExtractedEntityDetails,
+  type: EntityType
+): ExtractedEntityDetails => {
+  switch (type) {
+    case 'npc':
+      const npcDetails = details as ExtractedNPCDetails;
+      return {
+        name: npcDetails.name,
+        title: npcDetails.title,
+        race: npcDetails.race,
+        occupation: npcDetails.occupation,
+        location: npcDetails.location,
+        relationship: npcDetails.relationship || 'unknown',
+        description: npcDetails.description,
+        context: npcDetails.context,
+      };
+
+    case 'location':
+      const locationDetails = details as ExtractedLocationDetails;
+      return {
+        name: locationDetails.name,
+        locationType: locationDetails.locationType,
+        description: locationDetails.description,
+        parentLocation: locationDetails.parentLocation,
+        context: locationDetails.context,
+      };
+
+    case 'quest':
+      const questDetails = details as ExtractedQuestDetails;
+      return {
+        title: questDetails.title,
+        description: questDetails.description,
+        objectives: questDetails.objectives || [],
+        NPCsInvolved: questDetails.NPCsInvolved || [],
+        locationName: questDetails.locationName,
+        context: questDetails.context,
+      };
+
+    case 'rumor':
+      const rumorDetails = details as ExtractedRumorDetails;
+      return {
+        title: rumorDetails.title,
+        content: rumorDetails.content,
+        status: rumorDetails.status,
+        sourceType: rumorDetails.sourceType,
+        sourceName: rumorDetails.sourceName,
+        context: rumorDetails.context,
+      };
+
+    default:
+      return details;
+  }
 };

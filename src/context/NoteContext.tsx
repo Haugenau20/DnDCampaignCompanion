@@ -1,9 +1,11 @@
 // src/context/NoteContext.tsx
 import React, { createContext, useContext, useCallback, useState, useEffect } from "react";
 import { Note, NoteContextValue, ExtractedEntity, EntityType } from "../types/note";
-import { useFirebaseData } from "../hooks/useFirebaseData";
-import { useAuth, useGroups, useCampaigns } from "./firebase";
+import DocumentService from "../services/firebase/data/DocumentService";
+import { useAuth, useGroups, useCampaigns, useUser } from "./firebase";
 import { extractEntitiesFromNote } from "../services/openai/entityExtractor";
+import { getUserName, getActiveCharacterName } from '../utils/user-utils';
+import { useNavigate } from 'react-router-dom';
 
 // Create the context with initial undefined value
 const NoteContext = createContext<NoteContextValue | undefined>(undefined);
@@ -15,33 +17,53 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   children 
 }) => {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
+  const { userProfile, activeGroupUserProfile } = useUser();
+  const documentService = DocumentService.getInstance();
+  const navigate = useNavigate();
 
-  // Only initialize data fetching if all dependencies are available
-  const path = activeGroupId && user?.uid ? 
-    `groups/${activeGroupId}/users/${user.uid}/notes` : 
-    null;
-  
-  const { 
-    data, 
-    loading, 
-    error, 
-    getData, 
-    addData, 
-    updateData, 
-    deleteData 
-  } = useFirebaseData<Note>({
-    collection: path || ""
-  });
-  
-  // Update notes when data changes
-  useEffect(() => {
-    if (data) {
-      setNotes(data);
+  /**
+   * Fetch notes from Firestore for the current user
+   */
+  const fetchNotes = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (!user?.uid || !activeGroupId) {
+        setNotes([]);
+        return [];
+      }
+      
+      // Use the correct path for user notes: groups/{groupId}/users/{userId}/notes
+      const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
+      const fetchedData = await documentService.getCollection<Note>(notesCollection);
+      
+      // Sort notes by updatedAt timestamp descending (most recent first)
+      const sortedNotes = fetchedData.sort((a, b) => 
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+      
+      setNotes(sortedNotes);
+      return sortedNotes;
+    } catch (err) {
+      console.error("Error fetching notes:", err);
+      setError("Failed to fetch notes");
+      setNotes([]);
+      return [];
+    } finally {
+      setLoading(false);
     }
-  }, [data]);
+  }, [user?.uid, activeGroupId, documentService]);
+
+  // Load notes when dependencies change
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
 
   /**
    * Get a note by its ID
@@ -67,7 +89,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     return `note-${nextNumber}`;
   }, [notes]);
 
-
   /**
    * Create a new note
    */
@@ -76,6 +97,8 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     
     const noteId = generateSequentialNoteId();
     const now = new Date().toISOString();
+    const username = getUserName(activeGroupUserProfile);
+    const characterName = getActiveCharacterName(activeGroupUserProfile);
     const newNote: Note = {
       id: noteId,
       title,
@@ -87,15 +110,23 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       dateAdded: now,
       dateModified: now,
       createdBy: user.uid,
-      createdByUsername: user.email || "",
+      createdByUsername: username || "",
+      createdByCharacterName: characterName || "",
       modifiedBy: user.uid,
-      modifiedByUsername: user.email || "",
+      modifiedByUsername: username || "",
+      modifiedByCharacterName: characterName || "",
       campaignId: activeCampaignId || "",
     };
     
-    await addData(newNote);
+    // Save to the correct path using DocumentService
+    const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
+    await documentService.createDocument(notesCollection, newNote, noteId);
+    
+    // Refresh notes list
+    await fetchNotes();
+    
     return noteId;
-  }, [user, activeGroupId, activeCampaignId, addData]);
+  }, [user, activeGroupId, activeCampaignId, generateSequentialNoteId, documentService, fetchNotes]);
   
   /**
    * Extract entities from a note using OpenAI
@@ -109,11 +140,8 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       const entities = await extractEntitiesFromNote(note.content);
       
       // Update note with extracted entities
-      await updateData(noteId, {
+      await updateNote(noteId, {
         extractedEntities: [...note.extractedEntities, ...entities],
-        dateModified: new Date().toISOString(),
-        modifiedBy: user?.uid || "",
-        modifiedByUsername: user?.email || ""
       });
       
       return entities;
@@ -121,10 +149,11 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       console.error("OpenAI extraction failed:", error);
       throw error;
     }
-  }, [getNoteById, updateData, user]);
+  }, [getNoteById]);
   
   /**
    * Convert an extracted entity to a campaign element
+   * Now navigates to the create page instead of directly creating
    */
   const convertEntity = useCallback(async (
     noteId: string,
@@ -137,76 +166,173 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     const entity = note.extractedEntities.find(e => e.id === entityId);
     if (!entity) throw new Error("Entity not found");
     
-    // Import dynamically to avoid circular dependencies
-    const { linkNoteToEntity } = await import("../utils/note-relationships");
+    // Parse extra data from entity if available
+    const extraData = entity.extraData || {};
     
-    // Create appropriate campaign element
-    let createdId: string = "";
+    // Prepare initial data for the create form based on entity type
+    let initialData: any = {};
+    let description = `Created from note: ${note.title || note.id}`; // Declare once
     
-    // In a real implementation, this would create the campaign element based on type
-    // For now, we'll just simulate the creation and return a mock ID
-    createdId = `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Create proper entity in the correct Firebase collection
     switch (type) {
       case "npc":
-        // This would call NPC creation service
-        console.log("Creating NPC:", entity.text);
+        initialData = {
+          // Use proper name field, fall back to text if not available
+          name: extraData.name || entity.text,
+          title: extraData.title || undefined,
+          race: extraData.race || undefined,
+          occupation: extraData.occupation || undefined,
+          location: extraData.location || undefined,
+          relationship: extraData.relationship || undefined,
+          description: extraData.description || 
+            (extraData.context ? `${description}\n\nContext: ${extraData.context}` : description),
+        };
+        break;
+        
+      case "location":
+        initialData = {
+          // Use proper name field, fall back to text if not available
+          name: extraData.name || entity.text,
+          type: extraData.locationType || undefined,
+          description: extraData.description || 
+            (extraData.context ? `${description}\n\nContext: ${extraData.context}` : description),
+          parentId: extraData.parentLocation || undefined,
+        };
+        break;
+        
+      case "quest":
+        // Get raw objectives from entity data 
+        const objectives = extraData.objectives || [];
+        
+        // Enhance description with NPC IDs if available
+        if (extraData.relatedNPCIds?.length > 0) {
+          description += `\n\nRelated NPCs: ${extraData.relatedNPCIds.join(', ')}`;
+        }
+        if (extraData.locationName) {
+          description += `\n\nLocation: ${extraData.locationName}`;
+        }
+        
+        initialData = {
+          // Use proper title field, fall back to text if not available
+          title: extraData.title || entity.text,
+          description: description,
+          objectives: objectives, // Pass raw objectives
+          relatedNPCIds: extraData.relatedNPCIds || [],
+          location: extraData.locationName || undefined,
+        };
+        break;
+        
+      case "rumor":
+        // Map sourceType to valid values
+        const validSourceTypes = ['npc', 'tavern', 'notice', 'traveler', 'other'];
+        let sourceType = 'other';
+        let sourceName = extraData.sourceType || '';
+        
+        if (extraData.sourceType && validSourceTypes.includes(extraData.sourceType)) {
+          sourceType = extraData.sourceType;
+        }
+        
+        initialData = {
+          // Use proper title field, fall back to text if not available
+          title: extraData.title || entity.text,
+          content: extraData.content || undefined,
+          status: extraData.status || 'unconfirmed',
+          sourceType: sourceType,
+          sourceName: sourceName,
+        };
+        break;
+    }
+
+    // Navigate to the appropriate create page with the initial data
+    switch (type) {
+      case "npc":
+        navigate('/npcs/create', { 
+          state: { 
+            initialData,
+            noteId, 
+            entityId 
+          } 
+        });
         break;
       case "location":
-        // This would call Location creation service
-        console.log("Creating Location:", entity.text);
+        navigate('/locations/create', { 
+          state: { 
+            initialData,
+            noteId, 
+            entityId 
+          } 
+        });
         break;
       case "quest":
-        // This would call Quest creation service
-        console.log("Creating Quest:", entity.text);
+        navigate('/quests/create', { 
+          state: { 
+            initialData,
+            noteId, 
+            entityId 
+          } 
+        });
         break;
       case "rumor":
-        // This would call Rumor creation service
-        console.log("Creating Rumor:", entity.text);
-        break;
-      case "item":
-        // This would call Item creation service
-        console.log("Creating Item:", entity.text);
+        navigate('/rumors/create', { 
+          state: { 
+            initialData,
+            noteId, 
+            entityId 
+          } 
+        });
         break;
     }
     
-    // Link note to created entity
-    await linkNoteToEntity(noteId, createdId, type);
+    // Return empty string since we're not creating immediately
+    return "";
+  }, [getNoteById, navigate]);
+  
+  /**
+   * Mark an entity as converted in the note
+   * This is called after the user successfully creates the campaign element
+   */
+  const markEntityAsConverted = useCallback(async (
+    noteId: string,
+    entityId: string,
+    createdId: string
+  ): Promise<void> => {
+    const note = getNoteById(noteId);
+    if (!note) throw new Error("Note not found");
     
-    // Update entity status
     const updatedEntities = note.extractedEntities.map(e =>
       e.id === entityId ? { ...e, isConverted: true, convertedToId: createdId } : e
     );
     
-    await updateData(noteId, {
+    await updateNote(noteId, {
       extractedEntities: updatedEntities,
-      dateModified: new Date().toISOString(),
-      modifiedBy: user?.uid || "",
-      modifiedByUsername: user?.email || "",
-      updatedAt: new Date().toISOString()
     });
-    
-    return createdId;
-  }, [getNoteById, updateData, user]);
+  }, [getNoteById]);
   
   /**
    * Update a note
    */
   const updateNote = useCallback(async (noteId: string, updates: Partial<Note>) => {
+    if (!user?.uid || !activeGroupId) {
+      throw new Error("User not authenticated or no active group");
+    }
+
     const note = getNoteById(noteId);
     if (!note) throw new Error("Note not found");
     
     const updatedFields = {
       ...updates,
       dateModified: new Date().toISOString(),
-      modifiedBy: user?.uid || "",
-      modifiedByUsername: user?.email || "",
+      modifiedBy: user.uid,
+      modifiedByUsername: getUserName(activeGroupUserProfile) || "",
       updatedAt: new Date().toISOString()
     };
     
-    await updateData(noteId, updatedFields);
-  }, [getNoteById, updateData, user]);
+    // Update document at the correct path
+    const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
+    await documentService.updateDocument(notesCollection, noteId, updatedFields);
+    
+    // Refresh notes list
+    await fetchNotes();
+  }, [getNoteById, user, activeGroupId, documentService, fetchNotes]);
   
   /**
    * Archive a note
@@ -219,8 +345,17 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
    * Delete a note
    */
   const deleteNote = useCallback(async (noteId: string) => {
-    await deleteData(noteId);
-  }, [deleteData]);
+    if (!user?.uid || !activeGroupId) {
+      throw new Error("User not authenticated or no active group");
+    }
+
+    // Delete document at the correct path
+    const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
+    await documentService.deleteDocument(notesCollection, noteId);
+    
+    // Refresh notes list
+    await fetchNotes();
+  }, [user?.uid, activeGroupId, documentService, fetchNotes]);
   
   // Create context value
   const value: NoteContextValue = {
@@ -233,7 +368,8 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     convertEntity,
     updateNote,
     archiveNote,
-    deleteNote
+    deleteNote,
+    markEntityAsConverted,
   };
   
   return (

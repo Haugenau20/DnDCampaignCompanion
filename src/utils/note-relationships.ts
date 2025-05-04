@@ -23,8 +23,7 @@ const entityCollectionMap: Record<EntityType, string> = {
   npc: "npcs",
   location: "locations",
   quest: "quests",
-  rumor: "rumors",
-  item: "items"
+  rumor: "rumors"
 };
 
 /**

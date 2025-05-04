@@ -9,7 +9,7 @@ export const OPENAI_CONFIG = {
   /** Default model to use */
   defaultModel: process.env.REACT_APP_OPENAI_MODEL || 'gpt-3.5-turbo',
   /** Maximum tokens to generate in responses */
-  maxTokens: 1024,
+  maxTokens: 2048,
   /** Temperature for generation (0-1, lower is more deterministic) */
   temperature: 0.3,
   /** Request timeout in milliseconds */

@@ -8,38 +8,68 @@ import Card from '../../core/Card';
 import Dialog from '../../core/Dialog';
 import { useQuests } from '../../../context/QuestContext';
 import { useNPCs } from '../../../context/NPCContext';
+import { useNotes } from '../../../context/NoteContext';
 import { useAuth, useUser } from '../../../context/firebase';
 import clsx from 'clsx';
 import { getUserName, getActiveCharacterName } from '../../../utils/user-utils';
 
 interface NPCFormProps {
+  /** Initial data for the form (e.g., from a converted entity) */
+  initialData?: {
+    name?: string;
+    title?: string;
+    description?: string;
+    noteId?: string;
+    entityId?: string;
+    status?: NPCStatus;
+    relationship?: NPCRelationship;
+    race?: string;
+    occupation?: string;
+    location?: string;
+    appearance?: string;
+    personality?: string;
+    background?: string;
+  };
   onSuccess?: () => void;
   onCancel?: () => void;
   existingNPCs: NPC[];
 }
 
 const NPCForm: React.FC<NPCFormProps> = ({ 
+  initialData,
   onSuccess, 
   onCancel,
   existingNPCs
 }) => {
   // Get NPCs context for CRUD operations
   const { addNPC, isLoading, error } = useNPCs();
+  const { markEntityAsConverted } = useNotes();
   
   // Authentication and user data
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();
 
-  // Form state
+  // Form state with initial data
   const [formData, setFormData] = useState<Partial<NPC>>({
-    status: 'alive',
-    relationship: 'neutral',
+    status: initialData?.status || 'alive',
+    relationship: initialData?.relationship || 'neutral',
     connections: {
       relatedNPCs: [],
       affiliations: [],
       relatedQuests: []
     },
-    notes: []
+    notes: [],
+    ...initialData ? {
+      name: initialData.name || '',
+      title: initialData.title || '',
+      description: initialData.description || '',
+      race: initialData.race || '',
+      occupation: initialData.occupation || '',
+      location: initialData.location || '',
+      appearance: initialData.appearance || '',
+      personality: initialData.personality || '',
+      background: initialData.background || '',
+    } : {}
   });
 
   const [affiliationInput, setAffiliationInput] = useState('');
@@ -162,7 +192,13 @@ const NPCForm: React.FC<NPCFormProps> = ({
       };
   
       // Use the context method to add NPC
-      await addNPC(npcData);
+      const npcId = await addNPC(npcData);
+      
+      // If this was created from a note entity, mark it as converted
+      if (initialData?.noteId && initialData?.entityId) {
+        await markEntityAsConverted(initialData.noteId, initialData.entityId, npcId);
+      }
+      
       onSuccess?.();
     } catch (err) {
       console.error('Failed to create NPC:', err);

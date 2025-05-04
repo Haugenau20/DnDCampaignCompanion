@@ -1,7 +1,9 @@
 // src/components/features/quests/QuestCreateForm.tsx
 import React, { useState, useEffect } from 'react';
 import { Quest, QuestStatus } from '../../../types/quest';
+import { QuestObjective } from '../../../types/quest';
 import { useQuests } from '../../../context/QuestContext'; // Import useQuests from context
+import { useNotes } from '../../../context/NoteContext';
 import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import Card from '../../core/Card';
@@ -22,8 +24,14 @@ import {
 } from 'lucide-react';
 
 interface QuestCreateFormProps {
-  /** Initial data for the form (e.g., from a converted rumor) */
-  initialData?: Partial<Quest>;
+  /** Initial data for the form (e.g., from a converted entity) */
+  initialData?: {
+    title?: string;
+    description?: string;
+    noteId?: string;
+    entityId?: string;
+    [key: string]: any;
+  };
   /** Callback when creation is successful */
   onSuccess?: () => void;
   /** Callback when creation is cancelled */
@@ -38,17 +46,23 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
   
   // Import addQuest from the context
   const { addQuest, isLoading, error: questError } = useQuests();
+  const { markEntityAsConverted } = useNotes();
 
-  // Initial quest state
+  // Initial quest state with initial data
   const [formData, setFormData] = useState<Partial<Quest>>({
-    status: 'active',
-    objectives: [],
+    status: initialData?.status || 'active',
+    objectives: initialData?.objectives || [],
     keyLocations: [],
     importantNPCs: [],
-    relatedNPCIds: [],
+    relatedNPCIds: initialData?.relatedNPCIds || [],
     leads: [],
     complications: [],
-    rewards: []
+    rewards: [],
+    ...initialData ? {
+      title: initialData.title || '',
+      description: initialData.description || '',
+      location: initialData.location || '',
+    } : {}
   });
 
   // Dialog and NPC selection state
@@ -65,7 +79,20 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
     if (initialData) {
       setFormData(prev => ({
         ...prev,
-        ...initialData
+        ...initialData,
+        // Convert raw objective strings to QuestObjective format
+        objectives: initialData.objectives?.map((obj: string | QuestObjective, index: number) => {
+          // Handle both string and object formats
+          if (typeof obj === 'string') {
+            return {
+              id: `objective-${index}`,
+              description: obj,
+              completed: false
+            };
+          } else {
+            return obj; // Already in QuestObjective format
+          }
+        }) || []
       }));
 
       // Set selected NPCs if provided
@@ -117,7 +144,13 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
         dateAdded: new Date().toISOString(),
       };
 
-      await addQuest(questData);
+      const questId = await addQuest(questData);
+      
+      // If this was created from a note entity, mark it as converted
+      if (initialData?.noteId && initialData?.entityId) {
+        await markEntityAsConverted(initialData.noteId, initialData.entityId, questId);
+      }
+      
       onSuccess?.();
     } catch (err) {
       console.error('Failed to create quest:', err);

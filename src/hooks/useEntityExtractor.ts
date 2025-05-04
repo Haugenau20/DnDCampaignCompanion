@@ -1,43 +1,84 @@
 // src/hooks/useEntityExtractor.ts
-import { useCallback } from "react";
-import { ExtractedEntity, EntityType } from "../types/note";
-import { useNotes } from "../context/NoteContext";
-import { useOpenAIExtractor } from "./useOpenAIExtractor";
+import { useCallback } from 'react';
+import { ExtractedEntity, EntityType } from '../types/note';
+import { extractEntitiesFromNote } from '../services/openai/entityExtractor';
+import { useNotes } from '../context/NoteContext';
 
 /**
- * Hook for extracting and managing entities in notes
- * Combines OpenAI extraction with note context updates
+ * Hook for extracting entities from notes using OpenAI
  */
 export const useEntityExtractor = () => {
-  const { getNoteById, extractEntities } = useNotes();
-  const { extractEntities: openAIExtract, isExtracting } = useOpenAIExtractor();
-  
+  const { getNoteById } = useNotes();
+
   /**
-   * Extract entities from a note using OpenAI
-   * @param noteId ID of the note to analyze
-   * @param options Optional configuration options
-   * @returns Promise resolving to extracted entities
+   * Deduplicate entities based on text and type, keeping highest confidence
    */
-  const extractWithOpenAI = useCallback(async (
-    noteId: string,
-    options?: {
-      model?: 'gpt-3.5-turbo' | 'gpt-4o';
-    }
-  ): Promise<ExtractedEntity[]> => {
+  const deduplicateEntities = (entities: ExtractedEntity[]): ExtractedEntity[] => {
+    const uniqueMap = new Map<string, ExtractedEntity>();
+    
+    entities.forEach(entity => {
+      const normalizedText = entity.text.toLowerCase().trim();
+      const key = `${entity.type}-${normalizedText}`;
+      
+      if (!uniqueMap.has(key) || entity.confidence > uniqueMap.get(key)!.confidence) {
+        uniqueMap.set(key, {
+          ...entity,
+          text: entity.text.trim() // Ensure consistent spacing
+        });
+      }
+    });
+    
+    return Array.from(uniqueMap.values());
+  };
+
+  /**
+   * Extract entities from a note with deduplication
+   */
+  const extractWithOpenAI = useCallback(async (noteId: string): Promise<ExtractedEntity[]> => {
     const note = getNoteById(noteId);
-    if (!note) throw new Error('Note not found');
+    if (!note) {
+      throw new Error('Note not found');
+    }
+
+    // Extract entities from the note content
+    const rawEntities = await extractEntitiesFromNote(note.content);
     
-    // Use OpenAI to extract entities
-    const entities = await openAIExtract(note.content, options);
+    // Deduplicate based on type and normalized text
+    const uniqueEntities = deduplicateEntities(rawEntities);
     
-    // Update note with extracted entities
-    await extractEntities(noteId);
+    return uniqueEntities;
+  }, [getNoteById]);
+
+  /**
+   * Generate unique entity IDs to avoid conflicts
+   */
+  const generateEntityId = useCallback((text: string, type: EntityType): string => {
+    const randomPart = Math.random().toString(36).substr(2, 9);
+    const timeStamp = Date.now().toString(36);
+    const sanitizedText = text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    return `${type}-${sanitizedText}-${timeStamp}-${randomPart}`;
+  }, []);
+
+  /**
+   * Format raw OpenAI response into ExtractedEntity format
+   */
+  const formatEntity = useCallback((raw: any, type: EntityType): ExtractedEntity => {
+    const id = generateEntityId(raw.text || '', type);
+    const now = new Date().toISOString();
     
-    return entities;
-  }, [getNoteById, openAIExtract, extractEntities]);
-  
+    return {
+      id,
+      text: raw.text?.trim() || '',
+      type,
+      confidence: raw.confidence || 0.8,
+      isConverted: false,
+      createdAt: now
+    };
+  }, [generateEntityId]);
+
   return {
     extractWithOpenAI,
-    isExtracting
+    deduplicateEntities,
+    formatEntity
   };
 };

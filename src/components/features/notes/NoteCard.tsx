@@ -5,6 +5,7 @@ import Typography from "../../core/Typography";
 import Card from "../../core/Card";
 import Button from "../../core/Button";
 import { useNavigation } from "../../../hooks/useNavigation";
+import { Calendar, Tag } from 'lucide-react';
 
 interface NoteCardProps {
   /** The note to display */
@@ -52,7 +53,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note }) => {
   };
 
   // Calculate entity counts
-  const entityCounts = ['npc', 'location', 'quest', 'rumor', 'item'].reduce((acc, type) => {
+  const entityCounts = ['npc', 'location', 'quest', 'rumor'].reduce((acc, type) => {
     acc[type] = note.extractedEntities.filter(e => e.type === type).length;
     return acc;
   }, {} as Record<string, number>);
@@ -82,14 +83,14 @@ const NoteCard: React.FC<NoteCardProps> = ({ note }) => {
             {/* Metadata */}
             <div className="flex items-center gap-4 mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 icon-calendar" />
+                <Calendar className="w-4 h-4 typography-secondary" />
                 <Typography variant="body-sm" color="secondary">
                   Updated: {formatDate(note.updatedAt)}
                 </Typography>
               </div>
               {note.tags.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 icon-tag" />
+                  <Tag className="w-4 h-4 typography-secondary" />
                   <Typography variant="body-sm" color="secondary">
                     {note.tags.join(", ")}
                   </Typography>
@@ -101,40 +102,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note }) => {
             <Typography variant="body-sm" color="secondary" className="line-clamp-2">
               {note.content ? note.content.substring(0, 150) + (note.content.length > 150 ? "..." : "") : "No content yet"}
             </Typography>
-            
-            {/* Entity indicators */}
-            {note.extractedEntities.length > 0 && (
-              <div className="flex items-center gap-3 mt-3">
-                <Typography variant="body-sm" color="secondary">
-                  Entities:
-                </Typography>
-                <div className="flex gap-2">
-                  {Object.entries(entityCounts).map(([type, count]) => {
-                    if (count === 0) return null;
-                    
-                    return (
-                      <div 
-                        key={type} 
-                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs entity-badge-${type}`}
-                      >
-                        <div className={`w-3 h-3 icon-${type}`} />
-                        <span>{count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
-
-          {/* View button */}
-          <Button 
-            variant="ghost"
-            onClick={handleViewNote}
-            className="view-button"
-          >
-            <div className="w-5 h-5 icon-chevron-right" />
-          </Button>
         </div>
       </Card.Content>
     </Card>

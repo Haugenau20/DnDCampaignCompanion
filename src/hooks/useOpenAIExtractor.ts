@@ -19,16 +19,13 @@ export const useOpenAIExtractor = () => {
    */
   const extractEntities = useCallback(async (
     content: string,
-    options?: {
-      model?: 'gpt-3.5-turbo' | 'gpt-4o';
-      temperature?: number;
-    }
+    model?: 'gpt-3.5-turbo'
   ): Promise<ExtractedEntity[]> => {
     setIsExtracting(true);
     setError(null);
     
     try {
-      const entities = await extractEntitiesFromNote(content, options);
+      const entities = await extractEntitiesFromNote(content, model);
       return entities;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to extract entities';
