@@ -7,6 +7,7 @@
 /node_modules/
 
 # Environment variables (consider which ones to ignore)
+*.local
 .env
 .env.local
 .env.*.local
@@ -30,6 +31,7 @@ Thumbs.db
 # Docker data
 /docker/emulators/data/
 /docker/emulators/logs/
+*.log
 
 # IDE specific files
 /.idea/

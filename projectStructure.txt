@@ -20,6 +20,7 @@ DnDCampaignCompanion
 │   │   │   │   ├── generateSampleData.ts
 │   │   │   │   └── dndSampleDataGenerator.ts
 │   │   │   ├── user-utils.ts
+│   │   │   ├── testCloudFunction.ts
 │   │   │   ├── search.ts
 │   │   │   ├── password-validation.ts
 │   │   │   ├── note-relationships.ts
@@ -61,6 +62,8 @@ DnDCampaignCompanion
 │   │   │   ├── openai
 │   │   │   │   ├── __tests__
 │   │   │   │   │   └── entityExtractor.test.ts
+│   │   │   │   ├── types.ts
+│   │   │   │   ├── openaiFunctions.ts
 │   │   │   │   └── entityExtractor.ts
 │   │   │   ├── firebase
 │   │   │   │   ├── user
@@ -107,7 +110,6 @@ DnDCampaignCompanion
 │   │   │   │   ├── NPCsCreatePage.tsx
 │   │   │   │   └── index.ts
 │   │   │   ├── notes
-│   │   │   │   ├── TimelinePage.tsx
 │   │   │   │   ├── NotesPage.tsx
 │   │   │   │   ├── NotePage.tsx
 │   │   │   │   └── index.ts
@@ -120,7 +122,6 @@ DnDCampaignCompanion
 │   │   │   ├── HomePage.tsx
 │   │   │   └── ContactPage.tsx
 │   │   ├── hooks
-│   │   │   ├── useSessionNote.ts
 │   │   │   ├── useSessionManager.ts
 │   │   │   ├── useSearch.ts
 │   │   │   ├── useSagaData.ts
@@ -218,17 +219,13 @@ DnDCampaignCompanion
 │   │   │   │   ├── notes
 │   │   │   │   │   ├── __tests__
 │   │   │   │   │   │   └── NoteEditor.test.tsx
-│   │   │   │   │   ├── StartSessionDialog.tsx
-│   │   │   │   │   ├── SessionTimeline.tsx
-│   │   │   │   │   ├── SessionInfo.tsx
-│   │   │   │   │   ├── SessionFlow.tsx
+│   │   │   │   │   ├── README.md
 │   │   │   │   │   ├── NotesList.tsx
 │   │   │   │   │   ├── NoteReferences.tsx
 │   │   │   │   │   ├── NoteEditor.tsx
 │   │   │   │   │   ├── NoteCard.tsx
 │   │   │   │   │   ├── EntityExtractor.tsx
-│   │   │   │   │   ├── EntityCard.tsx
-│   │   │   │   │   └── EndSessionDialog.tsx
+│   │   │   │   │   └── EntityCard.tsx
 │   │   │   │   ├── locations
 │   │   │   │   │   ├── LocationFormSections.tsx
 │   │   │   │   │   ├── LocationEditForm.tsx
@@ -314,8 +311,10 @@ DnDCampaignCompanion
 │   │   │   ├── scroll-end.svg
 │   │   │   ├── parchment-texture.svg
 │   │   │   └── corner-dragon.svg
+│   │   ├── test-functions.html
 │   │   ├── manifest.json
 │   │   ├── index.html
+│   │   ├── function-test.html
 │   │   └── 404.html
 │   ├── functions
 │   │   ├── src
@@ -323,10 +322,34 @@ DnDCampaignCompanion
 │   │   │   │   ├── removeUserFromGroup.ts
 │   │   │   │   ├── index.ts
 │   │   │   │   └── deleteUser.ts
+│   │   │   ├── openai
+│   │   │   │   └── extractEntities.ts
+│   │   │   ├── test.ts
 │   │   │   ├── index.ts
+│   │   │   ├── corsConfig.ts
 │   │   │   └── contact.ts
+│   │   ├── lib
+│   │   │   ├── userManagement
+│   │   │   │   ├── removeUserFromGroup.js.map
+│   │   │   │   ├── removeUserFromGroup.js
+│   │   │   │   ├── index.js.map
+│   │   │   │   ├── index.js
+│   │   │   │   ├── deleteUser.js.map
+│   │   │   │   └── deleteUser.js
+│   │   │   ├── openai
+│   │   │   │   ├── extractEntities.js.map
+│   │   │   │   └── extractEntities.js
+│   │   │   ├── test.js.map
+│   │   │   ├── test.js
+│   │   │   ├── index.js.map
+│   │   │   ├── index.js
+│   │   │   ├── corsConfig.js.map
+│   │   │   ├── corsConfig.js
+│   │   │   ├── contact.js.map
+│   │   │   └── contact.js
 │   │   ├── tsconfig.json
 │   │   ├── tsconfig.dev.json
+│   │   ├── README.md
 │   │   ├── package-lock.json
 │   │   ├── package.json
 │   │   ├── .gitignore
@@ -352,16 +375,6 @@ DnDCampaignCompanion
 │   │   │       └── page-layouts
 │   │   │           └── rumors.md
 │   │   ├── backlog
-│   │   │   ├── noteTaking
-│   │   │   │   ├── phase9.md
-│   │   │   │   ├── phase8.md
-│   │   │   │   ├── phase7.md
-│   │   │   │   ├── phase6.md
-│   │   │   │   ├── phase5.md
-│   │   │   │   ├── phase4.md
-│   │   │   │   ├── phase3.md
-│   │   │   │   ├── phase2.md
-│   │   │   │   └── phase1.md
 │   │   │   └── FormContextStandard.txt
 │   │   └── README.md
 │   ├── docker
@@ -399,6 +412,7 @@ DnDCampaignCompanion
 │   ├── tsconfig.json
 │   ├── todo.txt
 │   ├── tailwind.config.js
+│   ├── SECURITY.md
 │   ├── README.md
 │   ├── projectStructure.txt
 │   ├── postcss.config.js
@@ -406,6 +420,7 @@ DnDCampaignCompanion
 │   ├── package.json
 │   ├── LICENSE
 │   ├── jest.config.ts
+│   ├── emulator_container_build_output.txt
 │   ├── CLAUDE.md
 │   ├── .gitignore
 │   ├── .env.production
