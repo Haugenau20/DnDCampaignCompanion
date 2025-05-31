@@ -84,13 +84,6 @@ export interface NoteContextValue {
   createNote: (title: string, content: string) => Promise<string>;
   
   /**
-   * Extract entities from a note using OpenAI
-   * @param noteId ID of the note to extract entities from
-   * @returns Promise resolving to array of extracted entities
-   */
-  extractEntities: (noteId: string) => Promise<ExtractedEntity[]>;
-  
-  /**
    * Convert an extracted entity to a campaign element
    * Now navigates to the create page instead of creating directly
    * @param noteId ID of the note containing the entity

@@ -1,31 +1,32 @@
 // src/hooks/useOpenAIExtractor.ts
 import { useState, useCallback } from "react";
 import { ExtractedEntity } from "../types/note";
-import { extractEntitiesFromNote } from "../services/openai/entityExtractor";
+import EntityExtractionService from "../services/firebase/ai/EntityExtractionService";
 
 /**
- * Hook for extracting entities from text using OpenAI API
+ * Hook for extracting entities from text using Firebase Cloud Functions
  * Provides error handling and loading states
  */
 export const useOpenAIExtractor = () => {
   const [isExtracting, setIsExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const entityService = EntityExtractionService.getInstance();
   
   /**
    * Extract entities from text content
    * @param content The text to analyze
-   * @param options Optional configuration options
+   * @param model Optional model configuration
    * @returns Promise resolving to extracted entities
    */
   const extractEntities = useCallback(async (
     content: string,
-    model?: 'gpt-3.5-turbo'
+    model?: string
   ): Promise<ExtractedEntity[]> => {
     setIsExtracting(true);
     setError(null);
     
     try {
-      const entities = await extractEntitiesFromNote(content, model);
+      const entities = await entityService.extractEntities(content, model);
       return entities;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to extract entities';
@@ -35,7 +36,7 @@ export const useOpenAIExtractor = () => {
     } finally {
       setIsExtracting(false);
     }
-  }, []);
+  }, [entityService]);
   
   return {
     extractEntities,

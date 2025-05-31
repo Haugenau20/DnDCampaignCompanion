@@ -39,12 +39,18 @@ services:
       - ../firebase/firestore.rules:/app/firestore.rules
       - ../firebase/firestore.indexes.json:/app/firestore.indexes.json
       - ../firebase/storage.rules:/app/storage.rules
+      - ../firebase/functions:/app/functions # Functions directory mount
     ports:
       - "4000:4000" # Emulator UI
+      - "4400:4400" # Hub
+      - "4500:4500" # Reserved
       - "8080:8080" # Firestore
       - "9099:9099" # Auth
+      - "9150:9150" # Firestore UI websocket
       - "9199:9199" # Storage
       - "5001:5001" # Functions
+    environment:
+      - NODE_OPTIONS=--max_old_space_size=2048
     networks:
       - dnd-network
     stop_signal: SIGTERM

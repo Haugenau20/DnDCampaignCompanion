@@ -1,14 +1,16 @@
 // src/hooks/useEntityExtractor.ts
 import { useCallback } from 'react';
 import { ExtractedEntity, EntityType } from '../types/note';
-import { extractEntitiesFromNote } from '../services/openai/entityExtractor';
+import EntityExtractionService from '../services/firebase/ai/EntityExtractionService';
 import { useNotes } from '../context/NoteContext';
 
 /**
- * Hook for extracting entities from notes using OpenAI
+ * Hook for extracting entities from notes using Firebase Cloud Functions
+ * Maintains the same interface but now uses secure server-side processing
  */
 export const useEntityExtractor = () => {
   const { getNoteById } = useNotes();
+  const entityService = EntityExtractionService.getInstance();
 
   /**
    * Deduplicate entities based on text and type, keeping highest confidence
@@ -40,14 +42,14 @@ export const useEntityExtractor = () => {
       throw new Error('Note not found');
     }
 
-    // Extract entities from the note content
-    const rawEntities = await extractEntitiesFromNote(note.content);
+    // Extract entities using the secure Cloud Function
+    const rawEntities = await entityService.extractEntities(note.content);
     
     // Deduplicate based on type and normalized text
     const uniqueEntities = deduplicateEntities(rawEntities);
     
     return uniqueEntities;
-  }, [getNoteById]);
+  }, [getNoteById, entityService]);
 
   /**
    * Generate unique entity IDs to avoid conflicts

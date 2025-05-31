@@ -12,9 +12,9 @@ RUN java -version
 # Install firebase-tools globally
 RUN npm install -g firebase-tools@latest
 
-# Create directories for emulator data
-RUN mkdir -p ./config ./data ./import-temp
-RUN chmod 777 ./data ./import-temp
+# Create directories for emulator data and functions
+RUN mkdir -p ./config ./data ./import-temp ./functions
+RUN chmod 777 ./data ./import-temp ./functions
 
 # Copy Firebase configuration
 COPY firebase/firebase.json ./firebase.json

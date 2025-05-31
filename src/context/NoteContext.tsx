@@ -3,7 +3,6 @@ import React, { createContext, useContext, useCallback, useState, useEffect } fr
 import { Note, NoteContextValue, ExtractedEntity, EntityType } from "../types/note";
 import DocumentService from "../services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns, useUser } from "./firebase";
-import { extractEntitiesFromNote } from "../services/openai/entityExtractor";
 import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 import { useNavigate } from 'react-router-dom';
 
@@ -127,29 +126,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     
     return noteId;
   }, [user, activeGroupId, activeCampaignId, generateSequentialNoteId, documentService, fetchNotes]);
-  
-  /**
-   * Extract entities from a note using OpenAI
-   */
-  const extractEntities = useCallback(async (noteId: string): Promise<ExtractedEntity[]> => {
-    const note = getNoteById(noteId);
-    if (!note) throw new Error("Note not found");
-    
-    try {
-      // Use OpenAI to extract entities
-      const entities = await extractEntitiesFromNote(note.content);
-      
-      // Update note with extracted entities
-      await updateNote(noteId, {
-        extractedEntities: [...note.extractedEntities, ...entities],
-      });
-      
-      return entities;
-    } catch (error) {
-      console.error("OpenAI extraction failed:", error);
-      throw error;
-    }
-  }, [getNoteById]);
   
   /**
    * Convert an extracted entity to a campaign element
@@ -364,7 +340,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     error,
     getNoteById,
     createNote,
-    extractEntities,
     convertEntity,
     updateNote,
     archiveNote,
