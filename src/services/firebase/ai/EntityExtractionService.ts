@@ -1,30 +1,47 @@
 // src/services/firebase/ai/EntityExtractionService.ts
+import { httpsCallable } from 'firebase/functions';
 import BaseFirebaseService from '../core/BaseFirebaseService';
 import ServiceRegistry from '../core/ServiceRegistry';
 import { ExtractedEntity, EntityType } from '../../../types/note';
+import { UsageStatus, UsageLimitError } from '../../../types/usage';
 import { OpenAIEntityResponse, ExtractedEntityDetails } from '../../openai/types';
 
 interface ExtractEntitiesResponse {
   success: boolean;
   entities?: OpenAIEntityResponse[];
+  usage?: UsageStatus;
   error?: string;
 }
 
 /**
+ * Custom error class for usage limit exceeded
+ */
+export class UsageLimitExceededError extends Error {
+  public usage: UsageStatus;
+  public contactInfo: {
+    message: string;
+    contactUrl: string;
+    prefilledSubject: string;
+  };
+
+  constructor(errorData: UsageLimitError) {
+    super(errorData.error);
+    this.name = 'UsageLimitExceededError';
+    this.usage = errorData.usage;
+    this.contactInfo = errorData.contactInfo;
+  }
+}
+
+/**
  * Service for handling entity extraction through Firebase Functions
- * Replaces direct OpenAI API calls with secure server-side processing
+ * Uses Firebase SDK httpsCallable for proper environment handling
  */
 class EntityExtractionService extends BaseFirebaseService {
   private static instance: EntityExtractionService;
-  private readonly FUNCTION_URL: string;
+  private currentUsage: UsageStatus | null = null;
 
   private constructor() {
     super();
-    const projectId = 'dnd-campaign-companion';
-    const region = 'europe-west1';
-    const functionName = 'extractEntities';
-    
-    this.FUNCTION_URL = `https://${region}-${projectId}.cloudfunctions.net/${functionName}`;
     
     // Register with ServiceRegistry
     ServiceRegistry.getInstance().register('EntityExtractionService', this);
@@ -38,7 +55,15 @@ class EntityExtractionService extends BaseFirebaseService {
   }
 
   /**
-   * Extract entities from content using the secure Cloud Function
+   * Get current usage status
+   */
+  public getCurrentUsage(): UsageStatus | null {
+    return this.currentUsage;
+  }
+
+  /**
+   * Extract entities from content using Firebase Functions
+   * Firebase SDK automatically handles emulator vs production routing
    */
   public async extractEntities(
     content: string,
@@ -50,37 +75,118 @@ class EntityExtractionService extends BaseFirebaseService {
         throw new Error('User not authenticated');
       }
 
-      const idToken = await user.getIdToken();
-
-      const response = await fetch(this.FUNCTION_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          content,
-          model
-        })
+      // Use Firebase SDK httpsCallable - automatically handles CORS and routing
+      const extractEntitiesFunction = httpsCallable(this.functions, 'extractEntities');
+      
+      const result = await extractEntitiesFunction({
+        content,
+        model
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Entity extraction failed');
+      const extractionResult = result.data as ExtractEntitiesResponse;
+
+      // With onCall functions, errors are thrown as exceptions, so if we get here,
+      // the call was successful. Just check that we have entities.
+      if (!extractionResult.success || !extractionResult.entities) {
+        throw new Error('No entities returned');
       }
 
-      const result: ExtractEntitiesResponse = await response.json();
-      
-      if (!result.success || !result.entities) {
-        throw new Error(result.error || 'No entities returned');
+      // Store current usage for UI display
+      if (extractionResult.usage) {
+        this.currentUsage = extractionResult.usage;
       }
 
-      return result.entities.map(this.mapOpenAIEntityToExtractedEntity);
+      return extractionResult.entities.map(this.mapOpenAIEntityToExtractedEntity);
       
     } catch (error) {
       console.error('Entity extraction service error:', error);
+      
+      // Handle Firebase Functions errors (from HttpsError throws)
+      if (error && typeof error === 'object' && 'code' in error && 'details' in error) {
+        const firebaseError = error as any;
+        
+        // Check for usage limit exceeded error
+        if (firebaseError.code === 'functions/resource-exhausted' && 
+            firebaseError.message.includes('USAGE_LIMIT_EXCEEDED')) {
+          
+          // Extract usage data from error details if available
+          const errorDetails = firebaseError.details;
+          if (errorDetails && errorDetails.usage) {
+            this.currentUsage = errorDetails.usage;
+          }
+          
+          throw new UsageLimitExceededError({
+            error: firebaseError.message,
+            code: 'USAGE_LIMIT_EXCEEDED',
+            usage: errorDetails?.usage,
+            contactInfo: errorDetails?.contactInfo || {
+              message: "You've reached your extraction limit. Contact support for assistance.",
+              contactUrl: "/contact",
+              prefilledSubject: "Entity Extraction Limit Increase Request"
+            }
+          });
+        }
+        
+        // Handle other Firebase function errors
+        throw new Error(firebaseError.message || 'Entity extraction failed');
+      }
+      
+      // Handle other errors
       throw error;
     }
+  }
+
+  /**
+   * Fetch current usage status without performing extraction
+   * Useful for displaying usage info in the UI
+   */
+  public async fetchUsageStatus(): Promise<UsageStatus | null> {
+    try {
+      const user = this.getCurrentUser();
+      if (!user) {
+        return null;
+      }
+
+      // Use Firebase SDK for status check too
+      const extractEntitiesFunction = httpsCallable(this.functions, 'extractEntities');
+      
+      const result = await extractEntitiesFunction({
+        content: 'status_check', // Minimal content just to check usage
+        model: 'gpt-3.5-turbo'
+      });
+
+      const extractionResult = result.data as ExtractEntitiesResponse;
+
+      // If successful, extract usage from response
+      if (extractionResult.usage) {
+        this.currentUsage = extractionResult.usage;
+        return extractionResult.usage;
+      }
+
+      return null;
+    } catch (error) {
+      // Handle Firebase Functions errors to extract usage data even from limit exceeded errors
+      if (error && typeof error === 'object' && 'code' in error && 'details' in error) {
+        const firebaseError = error as any;
+        
+        // If it's a usage limit error, we can still extract the usage from it
+        if (firebaseError.code === 'functions/resource-exhausted' && 
+            firebaseError.details?.usage) {
+          this.currentUsage = firebaseError.details.usage;
+          return firebaseError.details.usage;
+        }
+      }
+      
+      console.error('Error fetching usage status:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Clear cached usage data (useful after manual limit increases)
+   */
+  public clearUsageCache(): void {
+    this.currentUsage = null;
   }
 
   /**
@@ -123,7 +229,6 @@ class EntityExtractionService extends BaseFirebaseService {
     details: ExtractedEntityDetails,
     type: EntityType
   ): any => {
-    // Implementation from your original extractDetailsByType function
     switch (type) {
       case 'npc':
         return {

@@ -46,7 +46,7 @@ abstract class BaseFirebaseService {
       const auth = getAuth(app);
       const db = getFirestore(app);
       const analytics = getAnalytics(app);
-      const functions = getFunctions(app);
+      const functions = getFunctions(app, 'europe-west1');
       
       // Connect to emulators in development environment
       if (useEmulators) {

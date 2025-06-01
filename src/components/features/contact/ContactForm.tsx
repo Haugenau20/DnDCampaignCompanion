@@ -1,155 +1,230 @@
 // src/components/features/contact/ContactForm.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';
 import Button from '../../core/Button';
-import Card from '../../core/Card';
-import { AlertCircle, Send, Check } from 'lucide-react';
+import { Send, CheckCircle, AlertCircle } from 'lucide-react';
 
-// Adjust this URL to match your deployed Firebase function
-const CONTACT_FUNCTION_URL = 'https://europe-west1-dnd-campaign-companion.cloudfunctions.net/sendContactEmail';
-
-interface ContactFormProps {
-  onSuccess?: () => void;
+interface ContactFormData {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
 }
 
-const ContactForm: React.FC<ContactFormProps> = ({ onSuccess }) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+interface ContactFormProps {
+  /** Optional initial data for the form */
+  initialData?: Partial<ContactFormData>;
+}
 
+/**
+ * Contact form component with support for URL parameter pre-filling
+ * Handles subject pre-filling for usage limit increase requests
+ */
+const ContactForm: React.FC<ContactFormProps> = ({ initialData = {} }) => {
+  const location = useLocation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState<ContactFormData>({
+    name: '',
+    email: '',
+    subject: '',
+    message: '',
+    ...initialData
+  });
+
+  // Handle URL parameters for pre-filling
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const prefilledSubject = urlParams.get('subject');
+    
+    if (prefilledSubject) {
+      setFormData(prev => ({
+        ...prev,
+        subject: prefilledSubject,
+        // Pre-fill message for limit increase requests
+        message: prefilledSubject.includes('Limit Increase') 
+          ? 'Hello,\n\nI would like to request an increase to my entity extraction usage limit. I am using the service for legitimate D&D campaign management and have reached the current limit.\n\nPlease let me know what information you need from me.\n\nThank you!'
+          : prev.message
+      }));
+    }
+  }, [location.search]);
+
+  /**
+   * Handle input changes
+   */
+  const handleInputChange = (field: keyof ContactFormData) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: e.target.value
+    }));
+    
+    // Clear any previous errors
+    if (submitError) {
+      setSubmitError(null);
+    }
+  };
+
+  /**
+   * Validate form data
+   */
+  const validateForm = (): string | null => {
+    if (!formData.name.trim()) {
+      return 'Name is required';
+    }
+    if (!formData.email.trim()) {
+      return 'Email is required';
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      return 'Please enter a valid email address';
+    }
+    if (!formData.message.trim()) {
+      return 'Message is required';
+    }
+    return null;
+  };
+
+  /**
+   * Submit the contact form
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(false);
-    setLoading(true);
+    
+    // Validate form
+    const validationError = validateForm();
+    if (validationError) {
+      setSubmitError(validationError);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
 
     try {
-      // Validate inputs
-      if (!name.trim() || !email.trim() || !message.trim()) {
-        throw new Error('Please fill in all required fields');
-      }
-
-      // Basic email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        throw new Error('Please enter a valid email address');
-      }
-
-      // Send to Firebase function
-      const response = await fetch(CONTACT_FUNCTION_URL, {
+      // Call your contact form submission endpoint
+      const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, subject, message }),
+        body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send message. Please try again later.');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send message');
       }
 
-      // Success!
-      setSuccess(true);
-      
-      // Reset form
-      setName('');
-      setEmail('');
-      setSubject('');
-      setMessage('');
-      
-      // Call success callback if provided
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
+      // Success
+      setSubmitSuccess(true);
+      setFormData({
+        name: '',
+        email: '',
+        subject: '',
+        message: ''
+      });
+
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Failed to send message');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
+  // Show success state
+  if (submitSuccess) {
+    return (
+      <div className="max-w-md mx-auto text-center py-8">
+        <CheckCircle className="w-12 h-12 mx-auto mb-4 status-success" />
+        <Typography variant="h3" className="mb-2">
+          Message Sent!
+        </Typography>
+        <Typography color="secondary" className="mb-4">
+          Thank you for contacting us. We'll get back to you as soon as possible.
+        </Typography>
+        <Button
+          variant="outline"
+          onClick={() => setSubmitSuccess(false)}
+        >
+          Send Another Message
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <Card.Header title="Contact Us" />
-      <Card.Content>
-        {success ? (
-          <div className="text-center py-6">
-            <div className="mb-4 mx-auto w-12 h-12 rounded-full flex items-center justify-center success-icon-bg">
-              <Check size={24} className="success-icon" />
-            </div>
-            <Typography variant="h3" className="mb-2">
-              Message Sent!
-            </Typography>
-            <Typography color="secondary" className="mb-4">
-              Thank you for your message. We'll get back to you as soon as possible.
-            </Typography>
-            <Button onClick={() => setSuccess(false)}>
-              Send Another Message
-            </Button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Your Name *"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={loading}
-              required
-            />
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-md mx-auto">
+      {/* Form fields */}
+      <Input
+        label="Name"
+        value={formData.name}
+        onChange={handleInputChange('name')}
+        required
+        disabled={isSubmitting}
+      />
 
-            <Input
-              label="Email Address *"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              required
-            />
+      <Input
+        label="Email"
+        type="email"
+        value={formData.email}
+        onChange={handleInputChange('email')}
+        required
+        disabled={isSubmitting}
+      />
 
-            <Input
-              label="Subject"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              disabled={loading}
-            />
+      <Input
+        label="Subject (optional)"
+        value={formData.subject}
+        onChange={handleInputChange('subject')}
+        disabled={isSubmitting}
+      />
 
-            <Input
-              label="Message *"
-              isTextArea
-              rows={5}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              disabled={loading}
-              required
-            />
+      <Input
+        label="Message"
+        isTextArea
+        rows={6}
+        value={formData.message}
+        onChange={handleInputChange('message')}
+        required
+        disabled={isSubmitting}
+      />
 
-            {error && (
-              <div className="flex items-center gap-2">
-                <AlertCircle size={16} className="form-error" />
-                <Typography color="error">{error}</Typography>
-              </div>
-            )}
+      {/* Error display */}
+      {submitError && (
+        <div className="flex items-center gap-2 p-3 rounded error-container">
+          <AlertCircle className="w-4 h-4 status-failed" />
+          <Typography variant="body-sm" color="error">
+            {submitError}
+          </Typography>
+        </div>
+      )}
 
-            <Button
-              type="submit"
-              disabled={loading}
-              isLoading={loading}
-              startIcon={<Send size={16} />}
-              className="w-full"
-            >
-              Send Message
-            </Button>
-          </form>
-        )}
-      </Card.Content>
-    </Card>
+      {/* Submit button */}
+      <Button
+        type="submit"
+        variant="primary"
+        fullWidth
+        disabled={isSubmitting}
+        startIcon={isSubmitting ? undefined : <Send className="w-4 h-4" />}
+        isLoading={isSubmitting}
+      >
+        {isSubmitting ? 'Sending...' : 'Send Message'}
+      </Button>
+
+      {/* Help text for limit increase requests */}
+      {formData.subject.includes('Limit Increase') && (
+        <div className="p-3 rounded info-container">
+          <Typography variant="body-sm" color="secondary">
+            <strong>Tip:</strong> Include details about your D&D campaign and how you use the entity extraction feature to help us process your request faster.
+          </Typography>
+        </div>
+      )}
+    </form>
   );
 };
 

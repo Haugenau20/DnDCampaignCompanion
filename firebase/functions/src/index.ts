@@ -1,12 +1,8 @@
-// functions/src/index.ts
-import { deleteUser, removeUserFromGroup } from './userManagement';
-import { sendContactEmail } from './contact';
-import { extractEntities } from './entityExtraction';
+import * as admin from "firebase-admin";
+
+admin.initializeApp();
 
 // Export all functions
-export { 
-  deleteUser, 
-  removeUserFromGroup,
-  sendContactEmail,
-  extractEntities
-};
+export { extractEntities } from "./entityExtraction";
+export { sendContactEmail } from "./contact";
+export { deleteUser, removeUserFromGroup } from "./userManagement";

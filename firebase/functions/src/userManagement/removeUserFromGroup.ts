@@ -3,6 +3,9 @@ import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 
 export const removeUserFromGroup = functions.onCall(
+  {
+    region: "europe-west1",
+  },
   async (request: functions.CallableRequest<{groupId: string; userId: string}>) => {
     const {groupId, userId} = request.data;
     

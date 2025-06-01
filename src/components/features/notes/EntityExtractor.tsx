@@ -5,9 +5,11 @@ import Typography from "../../core/Typography";
 import Button from "../../core/Button";
 import Card from "../../core/Card";
 import EntityCard from "./EntityCard";
+import UsageRing from "./UsageRing";
 import { useEntityExtractor } from "../../../hooks/useEntityExtractor";
 import { useNotes } from "../../../context/NoteContext";
-import { Loader2, AlertCircle, Info } from 'lucide-react';
+import { useNavigation } from "../../../hooks/useNavigation";
+import { Loader2, AlertCircle, Info, ExternalLink } from 'lucide-react';
 import DocumentService from "../../../services/firebase/data/DocumentService";
 import { PotentialReference, normalizeTextForComparison } from './NoteReferences';
 
@@ -25,6 +27,7 @@ interface EntityExtractorProps {
 /**
  * Component for extracting and displaying entities from notes
  * Integrates with OpenAI for entity extraction and checks for existing campaign elements
+ * Now includes usage tracking and limits with visual feedback
  */
 const EntityExtractor: React.FC<EntityExtractorProps> = ({ 
   noteId,
@@ -40,8 +43,10 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
     totalFound: number;
     filteredOut: number;
   } | null>(null);
-  const { extractWithOpenAI } = useEntityExtractor();
+  
+  const { extractWithOpenAI, isExtracting: hookIsExtracting, error: hookError, usageStatus, isUsageLimitExceeded, contactInfo, isExtractionAvailable } = useEntityExtractor();
   const { getNoteById, updateNote } = useNotes();
+  const { navigateToPage } = useNavigation();
   const documentService = DocumentService.getInstance();
 
   // Load existing entities from the note with proper filtering
@@ -204,8 +209,13 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
         throw new Error("Note content is too short for extraction");
       }
       
-      // Extract entities using OpenAI
-      const rawEntities = await extractWithOpenAI(noteId);
+      // Extract entities using the simplified method
+      const rawEntities = await extractWithOpenAI(note.content);
+      
+      // If extraction failed due to limits, the error will be handled by the hook
+      if (rawEntities.length === 0 && isUsageLimitExceeded) {
+        return; // Don't proceed with processing if limit exceeded
+      }
       
       // Deduplicate entities with smart matching
       const uniqueEntities = deduplicateEntities(rawEntities);
@@ -231,6 +241,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
       setExtractedEntities(newEntities);
       
     } catch (err) {
+      // Note: Usage limit errors are now handled by the hook
       const errorMessage = err instanceof Error ? err.message : "Failed to extract entities";
       setError(errorMessage);
       console.error(err);
@@ -255,6 +266,18 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
     // Call parent callback if provided
     if (onEntityConverted) {
       onEntityConverted(entityId, createdId);
+    }
+  };
+
+  /**
+   * Navigate to contact form with pre-filled subject for limit increase request
+   */
+  const handleContactForLimitIncrease = () => {
+    if (contactInfo) {
+      // Navigate to contact page with pre-filled subject
+      const params = new URLSearchParams();
+      params.set('subject', contactInfo.prefilledSubject);
+      navigateToPage(`${contactInfo.contactUrl}?${params.toString()}`);
     }
   };
 
@@ -286,30 +309,60 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
     <Card className="entity-extractor">
       <Card.Content>
         <div className="space-y-6">
-          {/* Header */}
+          {/* Header with Usage Ring */}
           <div className="flex justify-between items-center">
-            <Typography variant="h4">Entity Extraction</Typography>
+            <div className="flex items-center gap-3">
+              <Typography variant="h4">Entity Extraction</Typography>
+              {usageStatus && (
+                <UsageRing usage={usageStatus} />
+              )}
+            </div>
             <Button
               onClick={handleExtract}
-              disabled={isExtracting}
+              disabled={isExtracting || hookIsExtracting || !isExtractionAvailable}
               className="extract-button"
             >
-              {isExtracting ? "Extracting..." : "Extract Entities"}
+              {(isExtracting || hookIsExtracting) ? "Extracting..." : "Extract Entities"}
             </Button>
           </div>
 
+          {/* Usage limit exceeded state */}
+          {isUsageLimitExceeded && contactInfo && (
+            <div className="p-4 rounded-lg border-l-4 status-failed">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0 status-failed" />
+                <div className="flex-1">
+                  <Typography variant="body" className="font-medium mb-2">
+                    Usage Limit Reached
+                  </Typography>
+                  <Typography variant="body-sm" color="secondary" className="mb-3">
+                    {contactInfo.message}
+                  </Typography>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleContactForLimitIncrease}
+                    endIcon={<ExternalLink className="w-4 h-4" />}
+                  >
+                    Request Limit Increase
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Error state */}
-          {error && (
+          {(error || hookError) && !isUsageLimitExceeded && (
             <div className="flex items-center gap-2 p-3 rounded error-container">
               <AlertCircle className="w-4 h-4 status-failed" />
               <Typography variant="body-sm" color="error">
-                {error}
+                {error || hookError}
               </Typography>
             </div>
           )}
 
           {/* Loading state with animated spinner */}
-          {isExtracting && (
+          {(isExtracting || hookIsExtracting) && (
             <div className="text-center py-8">
               <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin primary" />
               <Typography color="secondary">
@@ -319,7 +372,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
           )}
 
           {/* New extracted entities that can be converted */}
-          {!isExtracting && extractedEntities.length > 0 && (
+          {!(isExtracting || hookIsExtracting) && extractedEntities.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Typography variant="h4">New Entities to Convert</Typography>
@@ -343,7 +396,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
           )}
           
           {/* Empty state - different messages based on extraction status */}
-          {!isExtracting && extractedEntities.length === 0 && !error && (
+          {!(isExtracting || hookIsExtracting) && extractedEntities.length === 0 && !(error || hookError) && !isUsageLimitExceeded && (
             <div className="text-center py-8">
               {!hasAttemptedExtraction ? (
                 // Never attempted extraction
