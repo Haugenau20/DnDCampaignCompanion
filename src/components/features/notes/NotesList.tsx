@@ -3,15 +3,17 @@ import React from "react";
 import Typography from "../../core/Typography";
 import NoteCard from "./NoteCard";
 import { useNotes } from "../../../context/NoteContext";
+import { useCampaigns } from "../../../context/firebase";
 import Button from "../../core/Button";
 import { useNavigation } from "../../../hooks/useNavigation";
-import { Loader2, AlertCircle, Book, Plus } from 'lucide-react';
+import { Loader2, AlertCircle, Book, Plus, Users } from 'lucide-react';
 
 /**
- * Component for displaying a list of user notes
+ * Component for displaying a list of user notes filtered by active campaign
  */
 const NotesList: React.FC = () => {
   const { notes, isLoading, error, createNote } = useNotes();
+  const { activeCampaignId, activeCampaign } = useCampaigns();
   const { navigateToPage } = useNavigation();
 
   /**
@@ -19,6 +21,11 @@ const NotesList: React.FC = () => {
    */
   const handleCreateNote = async () => {
     try {
+      if (!activeCampaignId) {
+        // This should not happen due to the UI checks, but handle it gracefully
+        throw new Error("No active campaign selected. Please select a campaign first.");
+      }
+      
       const noteId = await createNote("New Note", "");
       navigateToPage(`/notes/${noteId}`);
     } catch (error) {
@@ -46,10 +53,34 @@ const NotesList: React.FC = () => {
     );
   }
 
+  // No active campaign state
+  if (!activeCampaignId) {
+    return (
+      <div className="notes-list space-y-4">        
+        <div className="text-center py-12 border-2 border-dashed empty-container rounded-lg">
+          <Users className="w-12 h-12 mx-auto mb-4 primary" />
+          <Typography variant="h4" className="mb-2">
+            No Campaign Selected
+          </Typography>
+          <Typography color="secondary" className="mb-4">
+            Select a campaign to view and create notes. Notes are organized by campaign to keep your content organized.
+          </Typography>
+          <Button 
+            variant="outline"
+            className="select-campaign-button"
+            disabled
+          >
+            <Users className="w-5 h-5 mr-2" />
+            Select Campaign
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="notes-list space-y-4">
       <div className="flex items-center justify-between">
-        <Typography variant="h3">My Notes</Typography>
         <Typography variant="body-sm" color="secondary">
           {notes.length} {notes.length === 1 ? "note" : "notes"}
         </Typography>
@@ -63,14 +94,18 @@ const NotesList: React.FC = () => {
           ))}
         </div>
       ) : (
-        // Empty state
+        // Empty state for active campaign with no notes
         <div className="text-center py-12 border-2 border-dashed empty-container rounded-lg">
           <Book className="w-12 h-12 mx-auto mb-4 primary" />
           <Typography variant="h4" className="mb-2">
-            No notes yet
+            No notes for this campaign
           </Typography>
           <Typography color="secondary" className="mb-4">
-            Create your first note to start keeping track of important information
+            {activeCampaign ? (
+              <>Create your first note for <span className="font-medium">{activeCampaign.name}</span> to start keeping track of important information</>
+            ) : (
+              "Create your first note to start keeping track of important information"
+            )}
           </Typography>
           <Button 
             variant="primary"

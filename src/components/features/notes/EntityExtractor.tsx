@@ -16,6 +16,8 @@ interface EntityExtractorProps {
   noteId: string;
   /** References already found in the note */
   existingReferences?: PotentialReference[];
+  /** Whether the references search has completed */
+  referencesSearchComplete?: boolean;
   /** Callback when an entity is converted */
   onEntityConverted?: (entityId: string, createdId: string) => void;
 }
@@ -27,18 +29,27 @@ interface EntityExtractorProps {
 const EntityExtractor: React.FC<EntityExtractorProps> = ({ 
   noteId,
   existingReferences = [],
+  referencesSearchComplete = false,
   onEntityConverted 
 }) => {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedEntities, setExtractedEntities] = useState<ExtractedEntity[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [hasAttemptedExtraction, setHasAttemptedExtraction] = useState(false);
+  const [lastExtractionStats, setLastExtractionStats] = useState<{
+    totalFound: number;
+    filteredOut: number;
+  } | null>(null);
   const { extractWithOpenAI } = useEntityExtractor();
   const { getNoteById, updateNote } = useNotes();
   const documentService = DocumentService.getInstance();
-  
-  // Load existing entities from the note
+
+  // Load existing entities from the note with proper filtering
   useEffect(() => {
-    const loadAndFilterEntities = async () => {
+    // Only process entities after references search is complete
+    if (!referencesSearchComplete) return;
+
+    const loadAndFilterEntities = () => {
       const note = getNoteById(noteId);
       if (note && note.extractedEntities.length > 0) {
         // Filter out entities that haven't been converted AND match existing references
@@ -51,11 +62,20 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
         });
         
         setExtractedEntities(filteredEntities);
+        
+        // If we're loading existing entities, reset extraction attempt state
+        // This prevents showing "attempted extraction" state when just viewing existing entities
+        if (filteredEntities.length > 0) {
+          setHasAttemptedExtraction(false);
+          setLastExtractionStats(null);
+        }
+      } else {
+        setExtractedEntities([]);
       }
     };
     
     loadAndFilterEntities();
-  }, [noteId, getNoteById, existingReferences]);
+  }, [noteId, getNoteById, existingReferences, referencesSearchComplete]);
 
   /**
    * Check if entity matches any existing reference
@@ -159,6 +179,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
   const handleExtract = async () => {
     setIsExtracting(true);
     setError(null);
+    setHasAttemptedExtraction(true);
     
     try {
       // Get the note first to verify it exists
@@ -192,12 +213,21 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
       // Filter out entities that already exist in campaign
       const newEntities = await filterNewEntities(uniqueEntities);
       
+      // Calculate statistics for user feedback
+      const totalFoundBeforeFiltering = uniqueEntities.length;
+      const filteredOutCount = totalFoundBeforeFiltering - newEntities.length;
+      
+      setLastExtractionStats({
+        totalFound: totalFoundBeforeFiltering,
+        filteredOut: filteredOutCount
+      });
+      
       // Update the note in the database with converted entities + newly extracted entities
       await updateNote(noteId, {
         extractedEntities: [...convertedEntities, ...uniqueEntities],
       });
       
-      // Update local state with only the new entities
+      // Update local state with only the new entities (for display)
       setExtractedEntities(newEntities);
       
     } catch (err) {
@@ -227,6 +257,30 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
       onEntityConverted(entityId, createdId);
     }
   };
+
+  // Show loading state until references search is complete
+  if (!referencesSearchComplete) {
+    return (
+      <Card className="entity-extractor">
+        <Card.Content>
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <Typography variant="h4">Entity Extraction</Typography>
+              <Button disabled className="extract-button">
+                Extract Entities
+              </Button>
+            </div>
+            <div className="text-center py-8">
+              <Loader2 className="w-6 h-6 mx-auto mb-3 animate-spin primary" />
+              <Typography color="secondary" variant="body-sm">
+                Waiting for references to load...
+              </Typography>
+            </div>
+          </div>
+        </Card.Content>
+      </Card>
+    );
+  }
 
   return (
     <Card className="entity-extractor">
@@ -267,7 +321,14 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
           {/* New extracted entities that can be converted */}
           {!isExtracting && extractedEntities.length > 0 && (
             <div className="space-y-3">
-              <Typography variant="h4">New Entities to Convert</Typography>
+              <div className="flex items-center justify-between">
+                <Typography variant="h4">New Entities to Convert</Typography>
+                {lastExtractionStats && lastExtractionStats.filteredOut > 0 && (
+                  <Typography variant="body-sm" color="secondary">
+                    {lastExtractionStats.filteredOut} existing {lastExtractionStats.filteredOut === 1 ? 'entity' : 'entities'} filtered out
+                  </Typography>
+                )}
+              </div>
               <div className="grid gap-3">
                 {extractedEntities.map(entity => (
                   <EntityCard
@@ -281,13 +342,42 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
             </div>
           )}
           
-          {/* Empty state */}
+          {/* Empty state - different messages based on extraction status */}
           {!isExtracting && extractedEntities.length === 0 && !error && (
             <div className="text-center py-8">
-              <Info className="w-8 h-8 mx-auto mb-4 primary" />
-              <Typography color="secondary">
-                Click "Extract Entities" to analyze your note and identify NPCs, locations, quests, and more.
-              </Typography>
+              {!hasAttemptedExtraction ? (
+                // Never attempted extraction
+                <>
+                  <Info className="w-8 h-8 mx-auto mb-4 primary" />
+                  <Typography color="secondary">
+                    Click "Extract Entities" to analyze your note and identify NPCs, locations, quests, and more.
+                  </Typography>
+                </>
+              ) : (
+                // Attempted extraction but no new entities found
+                <>
+                  <Info className="w-8 h-8 mx-auto mb-4 primary" />
+                  <Typography className="mb-2 font-medium">
+                    No New Entities Found
+                  </Typography>
+                  <div className="space-y-2">
+                    {lastExtractionStats && lastExtractionStats.totalFound > 0 ? (
+                      <>
+                        <Typography color="secondary" variant="body-sm">
+                          Found {lastExtractionStats.totalFound} potential {lastExtractionStats.totalFound === 1 ? 'entity' : 'entities'}, but {lastExtractionStats.filteredOut === lastExtractionStats.totalFound ? 'all' : lastExtractionStats.filteredOut} {lastExtractionStats.filteredOut === 1 ? 'matches' : 'match'} existing campaign elements.
+                        </Typography>
+                        <Typography color="secondary" variant="body-sm">
+                          Check the "Campaign References Found" section below to see what was already identified.
+                        </Typography>
+                      </>
+                    ) : (
+                      <Typography color="secondary" variant="body-sm">
+                        No entities were detected in your note content. Try adding more specific names, locations, or quest details.
+                      </Typography>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

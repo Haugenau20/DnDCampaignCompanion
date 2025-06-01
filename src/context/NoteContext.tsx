@@ -26,7 +26,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   const navigate = useNavigate();
 
   /**
-   * Fetch notes from Firestore for the current user
+   * Fetch notes from Firestore for the current user filtered by active campaign
    */
   const fetchNotes = useCallback(async () => {
     try {
@@ -34,6 +34,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       setError(null);
       
       if (!user?.uid || !activeGroupId) {
+        console.log('NoteContext: No user or active group, clearing notes');
         setNotes([]);
         return [];
       }
@@ -42,8 +43,26 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
       const fetchedData = await documentService.getCollection<Note>(notesCollection);
       
+      // Filter notes by active campaign ID
+      let filteredNotes: Note[] = [];
+      
+      if (activeCampaignId) {
+        // Filter to show only notes for the active campaign
+        filteredNotes = fetchedData.filter(note => {
+          // Include notes that match the active campaign ID
+          return note.campaignId === activeCampaignId;
+        });
+        
+        console.log(`NoteContext: Filtered ${fetchedData.length} total notes to ${filteredNotes.length} notes for campaign ${activeCampaignId}`);
+      } else {
+        // If no active campaign, show no notes
+        // This prevents showing all notes when no campaign is selected
+        filteredNotes = [];
+        console.log('NoteContext: No active campaign, showing no notes');
+      }
+      
       // Sort notes by updatedAt timestamp descending (most recent first)
-      const sortedNotes = fetchedData.sort((a, b) => 
+      const sortedNotes = filteredNotes.sort((a, b) => 
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       );
       
@@ -57,7 +76,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, activeGroupId, documentService]);
+  }, [user?.uid, activeGroupId, activeCampaignId, documentService]);
 
   // Load notes when dependencies change
   useEffect(() => {
@@ -94,6 +113,10 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   const createNote = useCallback(async (title: string, content: string): Promise<string> => {
     if (!user || !activeGroupId) throw new Error("User not authenticated or no active group");
     
+    if (!activeCampaignId) {
+      throw new Error("No active campaign selected. Please select a campaign before creating notes.");
+    }
+    
     const noteId = generateSequentialNoteId();
     const now = new Date().toISOString();
     const username = getUserName(activeGroupUserProfile);
@@ -114,18 +137,20 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       modifiedBy: user.uid,
       modifiedByUsername: username || "",
       modifiedByCharacterName: characterName || "",
-      campaignId: activeCampaignId || "",
+      campaignId: activeCampaignId, // Always set to active campaign
     };
     
     // Save to the correct path using DocumentService
     const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
     await documentService.createDocument(notesCollection, newNote, noteId);
     
+    console.log(`NoteContext: Created note ${noteId} for campaign ${activeCampaignId}`);
+    
     // Refresh notes list
     await fetchNotes();
     
     return noteId;
-  }, [user, activeGroupId, activeCampaignId, generateSequentialNoteId, documentService, fetchNotes]);
+  }, [user, activeGroupId, activeCampaignId, generateSequentialNoteId, documentService, fetchNotes, activeGroupUserProfile]);
   
   /**
    * Convert an extracted entity to a campaign element
@@ -308,7 +333,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     
     // Refresh notes list
     await fetchNotes();
-  }, [getNoteById, user, activeGroupId, documentService, fetchNotes]);
+  }, [getNoteById, user, activeGroupId, documentService, fetchNotes, activeGroupUserProfile]);
   
   /**
    * Archive a note
@@ -328,6 +353,8 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     // Delete document at the correct path
     const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
     await documentService.deleteDocument(notesCollection, noteId);
+    
+    console.log(`NoteContext: Deleted note ${noteId}`);
     
     // Refresh notes list
     await fetchNotes();

@@ -1,8 +1,7 @@
 # Prioritized Todo List
 
 NOTE-TAKING:
-    - Seperate so that the user can see the notes that are for the current campaign, so they don't get mixed with other campaigns.
-    - Campaign References Found must be loaded on page load/reload and not only when the notes is saved.
+    - Implement usage throttling / limit / similar
 
 1. User should be able to change their password.
 

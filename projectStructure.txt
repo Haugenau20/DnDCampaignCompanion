@@ -61,9 +61,7 @@ DnDCampaignCompanion
 │   │   │   ├── openai
 │   │   │   │   ├── __tests__
 │   │   │   │   │   └── entityExtractor.test.ts
-│   │   │   │   ├── types.ts
-│   │   │   │   ├── openaiFunctions.ts
-│   │   │   │   └── entityExtractor.ts
+│   │   │   │   └── types.ts
 │   │   │   ├── firebase
 │   │   │   │   ├── user
 │   │   │   │   │   └── UserService.ts
@@ -81,6 +79,9 @@ DnDCampaignCompanion
 │   │   │   │   │   └── CampaignService.ts
 │   │   │   │   ├── auth
 │   │   │   │   │   └── AuthService.ts
+│   │   │   │   ├── ai
+│   │   │   │   │   ├── entityMapper.ts
+│   │   │   │   │   └── EntityExtractionService.ts
 │   │   │   │   └── index.ts
 │   │   │   └── index.ts
 │   │   ├── pages
@@ -313,7 +314,6 @@ DnDCampaignCompanion
 │   │   ├── manifest.json
 │   │   ├── index.html
 │   │   └── 404.html
-│   ├── functions
 │   ├── firebase
 │   │   ├── functions
 │   │   │   ├── src
@@ -321,7 +321,9 @@ DnDCampaignCompanion
 │   │   │   │   │   ├── removeUserFromGroup.ts
 │   │   │   │   │   ├── index.ts
 │   │   │   │   │   └── deleteUser.ts
+│   │   │   │   ├── simpleTest.ts
 │   │   │   │   ├── index.ts
+│   │   │   │   ├── entityExtraction.ts
 │   │   │   │   └── contact.ts
 │   │   │   ├── lib
 │   │   │   │   ├── userManagement
@@ -331,8 +333,12 @@ DnDCampaignCompanion
 │   │   │   │   │   ├── index.js
 │   │   │   │   │   ├── deleteUser.js.map
 │   │   │   │   │   └── deleteUser.js
+│   │   │   │   ├── simpleTest.js.map
+│   │   │   │   ├── simpleTest.js
 │   │   │   │   ├── index.js.map
 │   │   │   │   ├── index.js
+│   │   │   │   ├── entityExtraction.js.map
+│   │   │   │   ├── entityExtraction.js
 │   │   │   │   ├── contact.js.map
 │   │   │   │   └── contact.js
 │   │   │   ├── tsconfig.json

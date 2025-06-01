@@ -6,6 +6,7 @@ import Card from "../../core/Card";
 import Button from "../../core/Button";
 import { useNavigation } from "../../../hooks/useNavigation";
 import { useNotes } from "../../../context/NoteContext";
+import { useCampaigns } from "../../../context/firebase";
 import DocumentService from "../../../services/firebase/data/DocumentService";
 import { Loader2, Users, MapPin, Scroll, MessageSquare, ExternalLink } from 'lucide-react';
 
@@ -22,6 +23,8 @@ interface NoteReferencesProps {
   noteId: string;
   /** Callback to expose found references */
   onReferencesFound?: (references: PotentialReference[]) => void;
+  /** Callback when reference search is complete (regardless of results) */
+  onSearchComplete?: () => void;
 }
 
 /**
@@ -40,17 +43,23 @@ export const normalizeTextForComparison = (text: string): string => {
 /**
  * Component for finding and displaying potential campaign element references in notes
  */
-const NoteReferences: React.FC<NoteReferencesProps> = ({ noteId, onReferencesFound }) => {
+const NoteReferences: React.FC<NoteReferencesProps> = ({ noteId, onReferencesFound, onSearchComplete }) => {
   const [references, setReferences] = useState<PotentialReference[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { navigateToPage } = useNavigation();
   const { getNoteById } = useNotes();
+  const { activeCampaignId } = useCampaigns();
   const documentService = DocumentService.getInstance();
 
-  // Find references when component mounts or noteId changes
+  // Start search when campaign context is ready
   useEffect(() => {
-    findReferences();
-  }, [noteId]);
+    if (activeCampaignId) {
+      findReferences();
+    } else {
+      // No campaign context yet, keep loading
+      setIsLoading(true);
+    }
+  }, [noteId, activeCampaignId]);
 
   // Notify parent when references are found
   useEffect(() => {
@@ -68,6 +77,11 @@ const NoteReferences: React.FC<NoteReferencesProps> = ({ noteId, onReferencesFou
       setIsLoading(true);
       const note = getNoteById(noteId);
       if (!note || !note.content) {
+        setReferences([]);
+        return;
+      }
+
+      if (!activeCampaignId) {
         setReferences([]);
         return;
       }
@@ -208,6 +222,10 @@ const NoteReferences: React.FC<NoteReferencesProps> = ({ noteId, onReferencesFou
       setReferences([]);
     } finally {
       setIsLoading(false);
+      // Notify parent that search is complete
+      if (onSearchComplete) {
+        onSearchComplete();
+      }
     }
   };
 
@@ -263,6 +281,23 @@ const NoteReferences: React.FC<NoteReferencesProps> = ({ noteId, onReferencesFou
         return null;
     }
   };
+
+  // Show loading state until campaign context is ready
+  if (!activeCampaignId) {
+    return (
+      <Card className="note-references">
+        <Card.Content>
+          <Typography variant="h4" className="mb-4">
+            Campaign References Found
+          </Typography>
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 mr-3 animate-spin primary" />
+            <Typography color="secondary">Loading campaign context...</Typography>
+          </div>
+        </Card.Content>
+      </Card>
+    );
+  }
 
   return (
     <Card className="note-references">
