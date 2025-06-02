@@ -5,11 +5,10 @@ import Typography from "../../core/Typography";
 import Button from "../../core/Button";
 import Card from "../../core/Card";
 import EntityCard from "./EntityCard";
-import UsageRing from "./UsageRing";
 import { useEntityExtractor } from "../../../hooks/useEntityExtractor";
 import { useNotes } from "../../../context/NoteContext";
 import { useNavigation } from "../../../hooks/useNavigation";
-import { Loader2, AlertCircle, Info, ExternalLink } from 'lucide-react';
+import { Loader2, AlertCircle, Info, ExternalLink, Search } from 'lucide-react';
 import DocumentService from "../../../services/firebase/data/DocumentService";
 import { PotentialReference, normalizeTextForComparison } from './NoteReferences';
 
@@ -27,7 +26,7 @@ interface EntityExtractorProps {
 /**
  * Component for extracting and displaying entities from notes
  * Integrates with OpenAI for entity extraction and checks for existing campaign elements
- * Now includes usage tracking and limits with visual feedback
+ * Usage tracking now handled by FloatingUsageIndicator
  */
 const EntityExtractor: React.FC<EntityExtractorProps> = ({ 
   noteId,
@@ -44,7 +43,15 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
     filteredOut: number;
   } | null>(null);
   
-  const { extractWithOpenAI, isExtracting: hookIsExtracting, error: hookError, usageStatus, isUsageLimitExceeded, contactInfo, isExtractionAvailable } = useEntityExtractor();
+  const { 
+    extractWithOpenAI, 
+    isExtracting: hookIsExtracting, 
+    error: hookError, 
+    isUsageLimitExceeded, 
+    contactInfo, 
+    isExtractionAvailable,
+    refreshUsageStatus
+  } = useEntityExtractor();
   const { getNoteById, updateNote } = useNotes();
   const { navigateToPage } = useNavigation();
   const documentService = DocumentService.getInstance();
@@ -206,7 +213,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
       
       // Don't extract if content is too short
       if (note.content.length < 50) {
-        throw new Error("Note content is too short for extraction");
+        throw new Error("Note content is too short for analysis");
       }
       
       // Extract entities using the simplified method
@@ -242,7 +249,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
       
     } catch (err) {
       // Note: Usage limit errors are now handled by the hook
-      const errorMessage = err instanceof Error ? err.message : "Failed to extract entities";
+      const errorMessage = err instanceof Error ? err.message : "Failed to analyze note";
       setError(errorMessage);
       console.error(err);
     } finally {
@@ -288,9 +295,13 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
         <Card.Content>
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <Typography variant="h4">Entity Extraction</Typography>
-              <Button disabled className="extract-button">
-                Extract Entities
+              <Typography variant="h4">Smart Detection</Typography>
+              <Button 
+                disabled 
+                className="extract-button w-12 h-12 p-0"
+                title="Analyze note to find characters, locations, quests, and rumors"
+              >
+                <Search className="w-5 h-5" />
               </Button>
             </div>
             <div className="text-center py-8">
@@ -309,20 +320,19 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
     <Card className="entity-extractor">
       <Card.Content>
         <div className="space-y-6">
-          {/* Header with Usage Ring */}
+          {/* Header with icon-only button */}
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <Typography variant="h4">Entity Extraction</Typography>
-              {usageStatus && (
-                <UsageRing usage={usageStatus} />
-              )}
-            </div>
+            <Typography variant="h4">Smart Detection</Typography>
             <Button
               onClick={handleExtract}
               disabled={isExtracting || hookIsExtracting || !isExtractionAvailable}
-              className="extract-button"
+              className="extract-button w-12 h-12 p-0"
+              title="Analyze note to find characters, locations, quests, and rumors"
             >
-              {(isExtracting || hookIsExtracting) ? "Extracting..." : "Extract Entities"}
+              {(isExtracting || hookIsExtracting) ? 
+                <Loader2 className="w-5 h-5 animate-spin" /> : 
+                <Search className="w-5 h-5" />
+              }
             </Button>
           </div>
 
@@ -375,10 +385,10 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
           {!(isExtracting || hookIsExtracting) && extractedEntities.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Typography variant="h4">New Entities to Convert</Typography>
+                <Typography variant="h4">Found in Your Note</Typography>
                 {lastExtractionStats && lastExtractionStats.filteredOut > 0 && (
                   <Typography variant="body-sm" color="secondary">
-                    {lastExtractionStats.filteredOut} existing {lastExtractionStats.filteredOut === 1 ? 'entity' : 'entities'} filtered out
+                    {lastExtractionStats.filteredOut} existing {lastExtractionStats.filteredOut === 1 ? 'item' : 'items'} filtered out
                   </Typography>
                 )}
               </div>
@@ -403,7 +413,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
                 <>
                   <Info className="w-8 h-8 mx-auto mb-4 primary" />
                   <Typography color="secondary">
-                    Click "Extract Entities" to analyze your note and identify NPCs, locations, quests, and more.
+                    Click the search button to automatically find characters, locations, quests, and rumors in your note.
                   </Typography>
                 </>
               ) : (
@@ -411,13 +421,13 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
                 <>
                   <Info className="w-8 h-8 mx-auto mb-4 primary" />
                   <Typography className="mb-2 font-medium">
-                    No New Entities Found
+                    No New Content Found
                   </Typography>
                   <div className="space-y-2">
                     {lastExtractionStats && lastExtractionStats.totalFound > 0 ? (
                       <>
                         <Typography color="secondary" variant="body-sm">
-                          Found {lastExtractionStats.totalFound} potential {lastExtractionStats.totalFound === 1 ? 'entity' : 'entities'}, but {lastExtractionStats.filteredOut === lastExtractionStats.totalFound ? 'all' : lastExtractionStats.filteredOut} {lastExtractionStats.filteredOut === 1 ? 'matches' : 'match'} existing campaign elements.
+                          Found {lastExtractionStats.totalFound} potential {lastExtractionStats.totalFound === 1 ? 'item' : 'items'}, but {lastExtractionStats.filteredOut === lastExtractionStats.totalFound ? 'all' : lastExtractionStats.filteredOut} {lastExtractionStats.filteredOut === 1 ? 'matches' : 'match'} existing campaign content.
                         </Typography>
                         <Typography color="secondary" variant="body-sm">
                           Check the "Campaign References Found" section below to see what was already identified.
@@ -425,7 +435,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
                       </>
                     ) : (
                       <Typography color="secondary" variant="body-sm">
-                        No entities were detected in your note content. Try adding more specific names, locations, or quest details.
+                        No characters, locations, quests, or rumors were detected. Try adding more specific names or details.
                       </Typography>
                     )}
                   </div>

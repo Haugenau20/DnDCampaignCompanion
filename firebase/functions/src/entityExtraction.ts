@@ -133,7 +133,96 @@ function initializeUsageData(): EntityExtractionUsage {
 }
 
 /**
- * Check and update usage limits
+ * Get usage status without incrementing counters
+ * Used for display purposes only
+ */
+async function getUserUsageStatus(userId: string): Promise<UsageStatus> {
+  const userRef = admin.firestore().collection("users").doc(userId);
+  const userDoc = await userRef.get();
+  
+  let usageData: EntityExtractionUsage;
+  
+  if (!userDoc.exists || !userDoc.data()?.entityExtractionUsage) {
+    // Initialize usage data for new user
+    usageData = initializeUsageData();
+  } else {
+    usageData = userDoc.data()!.entityExtractionUsage as EntityExtractionUsage;
+  }
+  
+  // Check if user has unlimited access
+  if (usageData.isUnlimited) {
+    return {
+      usage: usageData,
+      limitExceeded: false,
+      nextReset: {
+        daily: getNextReset('daily').toISOString(),
+        weekly: getNextReset('weekly').toISOString(),
+        monthly: getNextReset('monthly').toISOString()
+      }
+    };
+  }
+  
+  const now = new Date().toISOString();
+  let needsUpdate = false;
+  
+  // Reset periods if needed (but don't increment counters)
+  if (shouldResetPeriod(usageData.daily.lastReset, 'daily')) {
+    usageData.daily.count = 0;
+    usageData.daily.lastReset = now;
+    needsUpdate = true;
+  }
+  
+  if (shouldResetPeriod(usageData.weekly.lastReset, 'weekly')) {
+    usageData.weekly.count = 0;
+    usageData.weekly.lastReset = now;
+    needsUpdate = true;
+  }
+  
+  if (shouldResetPeriod(usageData.monthly.lastReset, 'monthly')) {
+    usageData.monthly.count = 0;
+    usageData.monthly.lastReset = now;
+    needsUpdate = true;
+  }
+  
+  // Update database if periods were reset
+  if (needsUpdate) {
+    await userRef.set({ entityExtractionUsage: usageData }, { merge: true });
+  }
+  
+  // Check limits without incrementing
+  const dailyLimit = usageData.customLimit ?? usageData.daily.limit;
+  const weeklyLimit = usageData.weekly.limit;
+  const monthlyLimit = usageData.monthly.limit;
+  
+  let limitExceeded = false;
+  let exceededPeriod: 'daily' | 'weekly' | 'monthly' | undefined;
+  
+  if (usageData.daily.count >= dailyLimit) {
+    limitExceeded = true;
+    exceededPeriod = 'daily';
+  } else if (usageData.weekly.count >= weeklyLimit) {
+    limitExceeded = true;
+    exceededPeriod = 'weekly';
+  } else if (usageData.monthly.count >= monthlyLimit) {
+    limitExceeded = true;
+    exceededPeriod = 'monthly';
+  }
+  
+  return {
+    usage: usageData,
+    limitExceeded,
+    exceededPeriod,
+    nextReset: {
+      daily: getNextReset('daily').toISOString(),
+      weekly: getNextReset('weekly').toISOString(),
+      monthly: getNextReset('monthly').toISOString()
+    }
+  };
+}
+
+/**
+ * Check and update usage limits - increments counters
+ * Used only when actually performing extraction
  */
 async function checkAndUpdateUsage(userId: string): Promise<UsageStatus> {
   const userRef = admin.firestore().collection("users").doc(userId);
@@ -202,7 +291,7 @@ async function checkAndUpdateUsage(userId: string): Promise<UsageStatus> {
     exceededPeriod = 'monthly';
   }
   
-  // If not exceeded, increment counters
+  // If not exceeded, increment counters (this is the key difference)
   if (!limitExceeded) {
     usageData.daily.count++;
     usageData.weekly.count++;
@@ -228,6 +317,45 @@ async function checkAndUpdateUsage(userId: string): Promise<UsageStatus> {
   };
 }
 
+/**
+ * Get usage status without any API calls or counter increments
+ * Use this for UI display purposes only
+ */
+export const getUsageStatus = functions.onCall(
+  {
+    region: "europe-west1",
+  },
+  async (request: functions.CallableRequest) => {
+    try {
+      // Check authentication
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Unauthorized");
+      }
+
+      const userId = request.auth.uid;
+
+      // Get usage status without incrementing anything
+      const usageStatus = await getUserUsageStatus(userId);
+      
+      return {
+        success: true,
+        usage: usageStatus
+      };
+
+    } catch (error) {
+      console.error("Get usage status error:", error);
+      
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      throw new HttpsError("internal", "Failed to get usage status");
+    }
+  }
+);
+
+/**
+ * Extract entities and increment usage when calling OpenAI
+ */
 export const extractEntities = functions.onCall(
   {
     region: "europe-west1",
@@ -241,9 +369,9 @@ export const extractEntities = functions.onCall(
       }
 
       const userId = request.auth.uid;
-
       const { content, model = "gpt-3.5-turbo" } = request.data;
 
+      // Validate input BEFORE checking usage
       if (!content || typeof content !== "string") {
         throw new HttpsError("invalid-argument", "Content is required");
       }
@@ -252,16 +380,16 @@ export const extractEntities = functions.onCall(
         throw new HttpsError("invalid-argument", "Content too long (max 10000 characters)");
       }
 
-      // Check usage limits
+      // Check usage limits and increment counters (only if we're going to call OpenAI)
       const usageStatus = await checkAndUpdateUsage(userId);
       
       if (usageStatus.limitExceeded) {
         throw new HttpsError("resource-exhausted", "USAGE_LIMIT_EXCEEDED", {
           usage: usageStatus,
           contactInfo: {
-            message: "You've reached your entity extraction limit. Contact us to request an increase.",
+            message: "You've reached your smart detection limit. Contact us to request an increase.",
             contactUrl: "/contact",
-            prefilledSubject: "Entity Extraction Limit Increase Request"
+            prefilledSubject: "Smart Detection Limit Increase Request"
           }
         });
       }
@@ -436,7 +564,7 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
       }
       ];
 
-      // Make OpenAI API call
+      // Make OpenAI API call (this is where the cost occurs)
       const response = await openai.chat.completions.create({
         model: model,
         messages: [

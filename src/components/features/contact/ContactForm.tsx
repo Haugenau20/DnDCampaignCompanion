@@ -47,7 +47,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialData = {} }) => {
         subject: prefilledSubject,
         // Pre-fill message for limit increase requests
         message: prefilledSubject.includes('Limit Increase') 
-          ? 'Hello,\n\nI would like to request an increase to my entity extraction usage limit. I am using the service for legitimate D&D campaign management and have reached the current limit.\n\nPlease let me know what information you need from me.\n\nThank you!'
+          ? 'Hello,\n\nI would like to request an increase to my smart detection usage limit.\n\n*************\nInsert reason for usage increase here\n*************\n\nPlease let me know if you need more information from me.\n\nThank you!'
           : prev.message
       }));
     }
@@ -220,7 +220,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialData = {} }) => {
       {formData.subject.includes('Limit Increase') && (
         <div className="p-3 rounded info-container">
           <Typography variant="body-sm" color="secondary">
-            <strong>Tip:</strong> Include details about your D&D campaign and how you use the entity extraction feature to help us process your request faster.
+            <strong>Tip:</strong> Include details about your D&D campaign and how you use the smart detection feature to help us process your request better.
           </Typography>
         </div>
       )}

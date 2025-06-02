@@ -1,7 +1,6 @@
 # Prioritized Todo List
 
 NOTE-TAKING:
-    - Implement usage throttling / limit / similar
 
 1. User should be able to change their password.
 

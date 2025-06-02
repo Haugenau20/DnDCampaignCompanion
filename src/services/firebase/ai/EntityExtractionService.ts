@@ -13,6 +13,12 @@ interface ExtractEntitiesResponse {
   error?: string;
 }
 
+interface GetUsageStatusResponse {
+  success: boolean;
+  usage?: UsageStatus;
+  error?: string;
+}
+
 /**
  * Custom error class for usage limit exceeded
  */
@@ -120,15 +126,15 @@ class EntityExtractionService extends BaseFirebaseService {
             code: 'USAGE_LIMIT_EXCEEDED',
             usage: errorDetails?.usage,
             contactInfo: errorDetails?.contactInfo || {
-              message: "You've reached your extraction limit. Contact support for assistance.",
+              message: "You've reached your smart detection limit. Contact support for assistance.",
               contactUrl: "/contact",
-              prefilledSubject: "Entity Extraction Limit Increase Request"
+              prefilledSubject: "Smart Detection Limit Increase Request"
             }
           });
         }
         
         // Handle other Firebase function errors
-        throw new Error(firebaseError.message || 'Entity extraction failed');
+        throw new Error(firebaseError.message || 'Smart Detection failed');
       }
       
       // Handle other errors
@@ -138,6 +144,7 @@ class EntityExtractionService extends BaseFirebaseService {
 
   /**
    * Fetch current usage status without performing extraction
+   * NO OpenAI API calls - only reads Firestore data
    * Useful for displaying usage info in the UI
    */
   public async fetchUsageStatus(): Promise<UsageStatus | null> {
@@ -147,20 +154,16 @@ class EntityExtractionService extends BaseFirebaseService {
         return null;
       }
 
-      // Use Firebase SDK for status check too
-      const extractEntitiesFunction = httpsCallable(this.functions, 'extractEntities');
+      // Use the new getUsageStatus function - NO OpenAI calls, NO usage increments
+      const getUsageStatusFunction = httpsCallable(this.functions, 'getUsageStatus');
       
-      const result = await extractEntitiesFunction({
-        content: 'status_check', // Minimal content just to check usage
-        model: 'gpt-3.5-turbo'
-      });
-
-      const extractionResult = result.data as ExtractEntitiesResponse;
+      const result = await getUsageStatusFunction();
+      const statusResult = result.data as GetUsageStatusResponse;
 
       // If successful, extract usage from response
-      if (extractionResult.usage) {
-        this.currentUsage = extractionResult.usage;
-        return extractionResult.usage;
+      if (statusResult.success && statusResult.usage) {
+        this.currentUsage = statusResult.usage;
+        return statusResult.usage;
       }
 
       return null;

@@ -1,11 +1,13 @@
-// src/components/features/notes/UsageRing.tsx
+// src/components/features/notes/FloatingUsageIndicator.tsx
 import React, { useState } from "react";
+import { useNavigation } from "../../../hooks/useNavigation";
+import { useUsageContext } from "../../../context/UsageContext";
 import { UsageStatus, UsagePeriod } from "../../../types/usage";
 import Typography from "../../core/Typography";
 
 interface UsageRingProps {
   /** Current usage status */
-  usage: UsageStatus;
+  usage: UsageStatus | null;
   /** Size of the ring in pixels */
   size?: number;
   /** Stroke width of the ring */
@@ -15,7 +17,8 @@ interface UsageRingProps {
 }
 
 /**
- * Circular usage ring component that visually represents usage limits
+ * Internal UsageRing component for visual display
+ * Circular usage ring that visually represents usage limits
  * Shows daily usage progress but fills completely if any limit is exceeded
  */
 const UsageRing: React.FC<UsageRingProps> = ({
@@ -25,6 +28,37 @@ const UsageRing: React.FC<UsageRingProps> = ({
   className = ""
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
+
+  // Show loading state if no usage data
+  if (!usage) {
+    return (
+      <div 
+        className={`relative inline-block ${className}`}
+        style={{ width: size, height: size }}
+      >
+        <svg
+          width={size}
+          height={size}
+          className="transform -rotate-90 animate-pulse"
+        >
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={(size - strokeWidth) / 2}
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            fill="none"
+            className="card-border opacity-20"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Typography variant="body-sm" className="font-semibold opacity-50">
+            -
+          </Typography>
+        </div>
+      </div>
+    );
+  }
 
   // Calculate the fill percentage for the ring
   const calculateFillPercentage = (): number => {
@@ -56,11 +90,11 @@ const UsageRing: React.FC<UsageRingProps> = ({
     if (usage.limitExceeded) {
       return "status-failed";
     } else if (percentage >= 80) {
-      return "status-warning";
-    } else if (percentage >= 60) {
       return "status-unknown";
+    } else if (percentage >= 60) {
+      return "status-general";
     } else {
-      return "status-active";
+      return "status-completed";
     }
   };
 
@@ -74,9 +108,8 @@ const UsageRing: React.FC<UsageRingProps> = ({
     // If reset is today, show time
     if (date.toDateString() === now.toDateString()) {
       return `Today at ${date.toLocaleTimeString(undefined, { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZoneName: 'short'
+        hour: 'numeric',
+        minute: 'numeric'
       })}`;
     }
     
@@ -84,20 +117,18 @@ const UsageRing: React.FC<UsageRingProps> = ({
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     if (date.toDateString() === tomorrow.toDateString()) {
-      return `Tomorrow at ${date.toLocaleTimeString(undefined, { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        timeZoneName: 'short'
+      return `Tomorrow at ${date.toLocaleTimeString('en-uk', { 
+        hour: 'numeric',
+        minute: 'numeric'
       })}`;
     }
     
     // Otherwise show full date
-    return date.toLocaleDateString(undefined, {
+    return date.toLocaleDateString('en-uk', {
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZoneName: 'short'
+      hour: 'numeric',
+      minute: 'numeric'
     });
   };
 
@@ -170,12 +201,12 @@ const UsageRing: React.FC<UsageRingProps> = ({
         </Typography>
       </div>
 
-      {/* Tooltip */}
+      {/* Tooltip with proper positioning for bottom corner */}
       {showTooltip && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50">
-          <div className="card rounded-lg shadow-lg p-3 min-w-64">
+        <div className="absolute bottom-full right-0 mb-2" style={{ zIndex: 9999 }}>
+          <div className="card rounded-lg shadow-xl border p-3 min-w-64">
             <Typography variant="body" className="font-semibold mb-2">
-              Entity Extraction Usage
+              Smart Detection Usage
             </Typography>
             
             <div className="space-y-2">
@@ -217,7 +248,7 @@ const UsageRing: React.FC<UsageRingProps> = ({
             </div>
 
             {/* Reset times */}
-            <div className="mt-3 pt-2 border-t card-border">
+            <div className="mt-3 pt-2">
               <Typography variant="caption" color="muted" className="mb-1">
                 Next resets:
               </Typography>
@@ -251,7 +282,7 @@ const UsageRing: React.FC<UsageRingProps> = ({
 
             {/* Special statuses */}
             {usage.usage.isUnlimited && (
-              <div className="mt-2 pt-2 border-t card-border">
+              <div className="mt-2 pt-2">
                 <Typography variant="caption" className="status-success">
                   ✓ Unlimited access
                 </Typography>
@@ -259,7 +290,7 @@ const UsageRing: React.FC<UsageRingProps> = ({
             )}
 
             {usage.usage.customLimit && (
-              <div className="mt-2 pt-2 border-t card-border">
+              <div className="mt-2 pt-2">
                 <Typography variant="caption" color="muted">
                   Custom daily limit: {usage.usage.customLimit}
                 </Typography>
@@ -268,7 +299,7 @@ const UsageRing: React.FC<UsageRingProps> = ({
 
             {/* Limit exceeded warning */}
             {usage.limitExceeded && (
-              <div className="mt-2 pt-2 border-t card-border">
+              <div className="mt-2 pt-2">
                 <Typography variant="caption" className="status-failed">
                   {usage.exceededPeriod} limit exceeded
                 </Typography>
@@ -276,8 +307,8 @@ const UsageRing: React.FC<UsageRingProps> = ({
             )}
           </div>
           
-          {/* Tooltip arrow */}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+          {/* Tooltip arrow - positioned for bottom-right */}
+          <div className="absolute top-full right-6">
             <div className="w-2 h-2 card rotate-45 transform"></div>
           </div>
         </div>
@@ -286,4 +317,34 @@ const UsageRing: React.FC<UsageRingProps> = ({
   );
 };
 
-export default UsageRing;
+/**
+ * Floating usage indicator that appears in the lower right corner on note pages
+ * Now uses shared UsageContext instead of individual hook instances
+ */
+const FloatingUsageIndicator: React.FC = () => {
+  const { usageStatus } = useUsageContext(); // Use shared context directly
+  const { currentPath } = useNavigation();
+
+  // Only show on individual note pages (not the notes list)
+  const isNotePage = currentPath.startsWith('/notes/') && currentPath !== '/notes';
+
+  // Don't render if not on a note page
+  if (!isNotePage) {
+    return null;
+  }
+
+  return (
+    <div className="fixed right-6 bottom-24 z-30">
+      <div className="relative">
+        <UsageRing 
+          usage={usageStatus} 
+          size={56} 
+          strokeWidth={5}
+          className="drop-shadow-lg"
+        />
+      </div>
+    </div>
+  );
+};
+
+export default FloatingUsageIndicator;

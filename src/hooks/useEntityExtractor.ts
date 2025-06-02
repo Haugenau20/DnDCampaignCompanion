@@ -1,45 +1,34 @@
 // src/hooks/useEntityExtractor.ts
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { ExtractedEntity } from '../types/note';
-import { UsageStatus } from '../types/usage';
 import EntityExtractionService, { UsageLimitExceededError } from '../services/firebase/ai/EntityExtractionService';
-import { useNotes } from '../context/NoteContext';
+import { useUsageContext } from '../context/UsageContext';
 
 /**
- * Enhanced hook for entity extraction with usage tracking and limit handling
+ * Simplified hook for entity extraction - usage state now managed by UsageContext
  */
 export const useEntityExtractor = () => {
   const [isExtracting, setIsExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [usageStatus, setUsageStatus] = useState<UsageStatus | null>(null);
-  const [isUsageLimitExceeded, setIsUsageLimitExceeded] = useState(false);
-  const [contactInfo, setContactInfo] = useState<{
-    message: string;
-    contactUrl: string;
-    prefilledSubject: string;
-  } | null>(null);
-
-  const { updateNote } = useNotes();
+  
   const entityService = EntityExtractionService.getInstance();
-
-  /**
-   * Load current usage status on mount
-   */
-  useEffect(() => {
-    const loadUsageStatus = async () => {
-      try {
-        const status = await entityService.fetchUsageStatus();
-        if (status) {
-          setUsageStatus(status);
-          setIsUsageLimitExceeded(status.limitExceeded);
-        }
-      } catch (error) {
-        console.error('Error loading usage status:', error);
-      }
-    };
-
-    loadUsageStatus();
-  }, [entityService]);
+  
+  // Get usage state and functions from context
+  const usageContext = useUsageContext();
+  const { 
+    usageStatus,
+    isLoadingUsage,
+    isUsageLimitExceeded,
+    contactInfo,
+    refreshUsageStatus,
+    updateUsageStatus,
+    setUsageLimitExceededWithInfo,
+    clearUsageStatus,
+    isExtractionAvailable,
+    hasUsageData,
+    isUnlimited,
+    hasCustomLimit
+  } = usageContext;
 
   /**
    * Extract entities from note content with usage tracking
@@ -47,27 +36,31 @@ export const useEntityExtractor = () => {
   const extractWithOpenAI = useCallback(async (content: string): Promise<ExtractedEntity[]> => {
     setIsExtracting(true);
     setError(null);
-    setIsUsageLimitExceeded(false);
-    setContactInfo(null);
     
     try {
-      // Extract entities directly from content
+      // Validate content before making the call
+      if (!content || content.trim().length === 0) {
+        throw new Error('Content is required for entity extraction');
+      }
+
+      if (content.length > 10000) {
+        throw new Error('Content is too long (maximum 10,000 characters)');
+      }
+
+      // Extract entities - this will update usage in the service
       const entities = await entityService.extractEntities(content);
       
-      // Update usage status from the service
+      // Update shared usage status from the service after successful extraction
       const newUsageStatus = entityService.getCurrentUsage();
       if (newUsageStatus) {
-        setUsageStatus(newUsageStatus);
-        setIsUsageLimitExceeded(newUsageStatus.limitExceeded);
+        updateUsageStatus(newUsageStatus);
       }
 
       return entities;
     } catch (err) {
       if (err instanceof UsageLimitExceededError) {
-        // Handle usage limit exceeded
-        setIsUsageLimitExceeded(true);
-        setUsageStatus(err.usage);
-        setContactInfo(err.contactInfo);
+        // Handle usage limit exceeded - update shared context
+        setUsageLimitExceededWithInfo(err.usage, err.contactInfo);
         setError(err.message);
         return [];
       } else {
@@ -79,7 +72,7 @@ export const useEntityExtractor = () => {
     } finally {
       setIsExtracting(false);
     }
-  }, [entityService]);
+  }, [entityService, updateUsageStatus, setUsageLimitExceededWithInfo]);
 
   /**
    * Extract entities from arbitrary content (not tied to a note)
@@ -87,26 +80,31 @@ export const useEntityExtractor = () => {
   const extractFromContent = useCallback(async (content: string): Promise<ExtractedEntity[]> => {
     setIsExtracting(true);
     setError(null);
-    setIsUsageLimitExceeded(false);
-    setContactInfo(null);
     
     try {
+      // Validate content before making the call
+      if (!content || content.trim().length === 0) {
+        throw new Error('Content is required for entity extraction');
+      }
+
+      if (content.length > 10000) {
+        throw new Error('Content is too long (maximum 10,000 characters)');
+      }
+
+      // Extract entities - usage will only increment when OpenAI is called
       const entities = await entityService.extractEntities(content);
       
-      // Update usage status from the service
+      // Update shared usage status from the service after successful extraction
       const newUsageStatus = entityService.getCurrentUsage();
       if (newUsageStatus) {
-        setUsageStatus(newUsageStatus);
-        setIsUsageLimitExceeded(newUsageStatus.limitExceeded);
+        updateUsageStatus(newUsageStatus);
       }
 
       return entities;
     } catch (err) {
       if (err instanceof UsageLimitExceededError) {
-        // Handle usage limit exceeded
-        setIsUsageLimitExceeded(true);
-        setUsageStatus(err.usage);
-        setContactInfo(err.contactInfo);
+        // Handle usage limit exceeded - update shared context
+        setUsageLimitExceededWithInfo(err.usage, err.contactInfo);
         setError(err.message);
         return [];
       } else {
@@ -118,84 +116,66 @@ export const useEntityExtractor = () => {
     } finally {
       setIsExtracting(false);
     }
-  }, [entityService]);
-
-  /**
-   * Refresh usage status from server
-   */
-  const refreshUsageStatus = useCallback(async () => {
-    try {
-      const status = await entityService.fetchUsageStatus();
-      if (status) {
-        setUsageStatus(status);
-        setIsUsageLimitExceeded(status.limitExceeded);
-      }
-    } catch (error) {
-      console.error('Error refreshing usage status:', error);
-    }
-  }, [entityService]);
-
-  /**
-   * Clear usage cache (useful after manual limit increases)
-   */
-  const clearUsageCache = useCallback(() => {
-    entityService.clearUsageCache();
-    setUsageStatus(null);
-    setIsUsageLimitExceeded(false);
-    setContactInfo(null);
-    setError(null);
-  }, [entityService]);
+  }, [entityService, updateUsageStatus, setUsageLimitExceededWithInfo]);
 
   /**
    * Reset error state
    */
   const resetError = useCallback(() => {
     setError(null);
-    setIsUsageLimitExceeded(false);
-    setContactInfo(null);
   }, []);
 
   /**
-   * Check if extraction is available (not at limit)
-   */
-  const isExtractionAvailable = useCallback((): boolean => {
-    if (!usageStatus) return true; // Allow if we don't have status yet
-    return !usageStatus.limitExceeded;
-  }, [usageStatus]);
-
-  /**
-   * Get usage percentage for display
+   * Get usage percentage for display (based on daily usage)
    */
   const getUsagePercentage = useCallback((): number => {
     if (!usageStatus) return 0;
+    if (usageStatus.usage.isUnlimited) return 0; // Unlimited users show 0%
     
     const { daily } = usageStatus.usage;
     const dailyLimit = usageStatus.usage.customLimit ?? daily.limit;
     return Math.min((daily.count / dailyLimit) * 100, 100);
   }, [usageStatus]);
 
+  /**
+   * Get remaining extractions for today
+   */
+  const getRemainingExtractions = useCallback((): number => {
+    if (!usageStatus) return 0;
+    if (usageStatus.usage.isUnlimited) return Infinity;
+    
+    const { daily } = usageStatus.usage;
+    const dailyLimit = usageStatus.usage.customLimit ?? daily.limit;
+    return Math.max(0, dailyLimit - daily.count);
+  }, [usageStatus]);
+
   return {
     // Extraction functions
-    extractWithOpenAI, // Now takes content directly: extractWithOpenAI(content)
+    extractWithOpenAI,
     extractFromContent,
     
-    // State
+    // Local state (extraction-specific)
     isExtracting,
     error,
+    resetError,
+    
+    // Usage state (from context)
     usageStatus,
+    isLoadingUsage,
     isUsageLimitExceeded,
     contactInfo,
-    
-    // Utility functions
     refreshUsageStatus,
-    clearUsageCache,
-    resetError,
+    clearUsageCache: clearUsageStatus,
     isExtractionAvailable,
     getUsagePercentage,
+    getRemainingExtractions,
     
-    // Usage display helpers
-    hasUsageData: !!usageStatus,
-    isUnlimited: usageStatus?.usage.isUnlimited ?? false,
-    hasCustomLimit: !!usageStatus?.usage.customLimit
+    // Usage display helpers (from context)
+    hasUsageData,
+    isUnlimited,
+    hasCustomLimit,
+    
+    // Loading state for UI
+    isReady: hasUsageData && !isLoadingUsage
   };
 };

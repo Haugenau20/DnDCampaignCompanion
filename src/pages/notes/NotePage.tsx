@@ -6,6 +6,7 @@ import Button from "../../components/core/Button";
 import NoteEditor from "../../components/features/notes/NoteEditor";
 import EntityExtractor from "../../components/features/notes/EntityExtractor";
 import NoteReferences from "../../components/features/notes/NoteReferences";
+import FloatingUsageIndicator from "../../components/features/notes/FloatingUsageIndicator";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useNotes } from "../../context/NoteContext";
 import { useCampaigns } from "../../context/firebase";
@@ -18,6 +19,7 @@ import { useAuth, useGroups } from "../../context/firebase";
 /**
  * Page for viewing and editing an individual user note
  * Handles campaign context and cross-campaign note access
+ * Now includes floating usage indicator for Smart Detection
  */
 const NotePage: React.FC = () => {
   const { noteId } = useParams<{ noteId: string }>();
@@ -241,6 +243,9 @@ const NotePage: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Floating usage indicator - only shows on note pages */}
+      <FloatingUsageIndicator />
     </div>
   );
 };
