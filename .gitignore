@@ -27,6 +27,7 @@ Thumbs.db
 
 # Firebase cache
 /.firebase/
+/firebase/emulator-data/*
 
 # Docker data
 /docker/emulators/data/

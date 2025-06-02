@@ -407,7 +407,7 @@ export const extractEntities = functions.onCall(
 
       // Your existing system prompt and function definitions
       const systemPrompt = `
-You are a Dungeons & Dragons session‐note parser.
+You are a Dungeons & Dragons session-note parser.
 Your *only* job is to call the function "extract_entities" with valid arguments.
 
 The function schema strictly defines the allowed 'type' field as one of:
