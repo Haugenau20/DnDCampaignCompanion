@@ -1,8 +1,5 @@
 # Prioritized Todo List
 
-DO A NOTE_TAKING CLEANUP BEFORE PULL REQUEST AND MERGING!!!
-(docker, README, etc.)
-
 1. User should be able to change their password.
 
 2. Have registration tokens expire after X days
@@ -37,9 +34,6 @@ DO A NOTE_TAKING CLEANUP BEFORE PULL REQUEST AND MERGING!!!
 
 15.1. Major do-over of the project structure
 
-15.2. Update README
-
-
 Not prioritized yet:
 
 Make a dedicated page for profile options
@@ -51,15 +45,3 @@ NPCs Page seems to take longer to load than the rest of the pages.
 Not signed in UI must be updated and made the same on every page.
 
 Make project true Single Page Application.
-
-
-Based on my search, I've identified several concerning security issues in your codebase:
-
-  1. Exposed Firebase API Keys: Your Firebase configuration in src/services/firebase/config/firebaseConfig.ts contains hardcoded
-   API keys.
-  2. Permissive Firebase Rules: Both Firestore and Storage rules are set to allow unrestricted access with allow read, write: if
-   true; in development mode.
-  4. Weak Authorization Checks: The isGroupMember() function doesn't properly verify group membership.
-  5. Client-side API Keys: API keys for external services should not be included in client-side code.
-  6. Missing Input Sanitization: There appears to be inadequate sanitization for user inputs, creating potential XSS
-  vulnerabilities.
