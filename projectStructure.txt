@@ -29,6 +29,7 @@ DnDCampaignCompanion
 │   │   │   └── attribution-utils.ts
 │   │   ├── types
 │   │   │   ├── user.ts
+│   │   │   ├── usage.ts
 │   │   │   ├── story.ts
 │   │   │   ├── search.ts
 │   │   │   ├── saga.ts
@@ -59,8 +60,6 @@ DnDCampaignCompanion
 │   │   │   ├── search
 │   │   │   │   └── SearchService.ts
 │   │   │   ├── openai
-│   │   │   │   ├── __tests__
-│   │   │   │   │   └── entityExtractor.test.ts
 │   │   │   │   └── types.ts
 │   │   │   ├── firebase
 │   │   │   │   ├── user
@@ -149,6 +148,7 @@ DnDCampaignCompanion
 │   │   │   │   └── FirebaseContext.tsx
 │   │   │   ├── __tests__
 │   │   │   │   └── NoteContext.test.tsx
+│   │   │   ├── UsageContext.tsx
 │   │   │   ├── StoryContext.tsx
 │   │   │   ├── SearchContext.tsx
 │   │   │   ├── RumorContext.tsx
@@ -160,7 +160,6 @@ DnDCampaignCompanion
 │   │   ├── constants
 │   │   │   └── time.ts
 │   │   ├── config
-│   │   │   ├── openai.ts
 │   │   │   └── buildConfig.ts
 │   │   ├── components
 │   │   │   ├── shared
@@ -217,13 +216,12 @@ DnDCampaignCompanion
 │   │   │   │   │   ├── NPCDirectory.tsx
 │   │   │   │   │   └── NPCCard.tsx
 │   │   │   │   ├── notes
-│   │   │   │   │   ├── __tests__
-│   │   │   │   │   │   └── NoteEditor.test.tsx
 │   │   │   │   │   ├── README.md
 │   │   │   │   │   ├── NotesList.tsx
 │   │   │   │   │   ├── NoteReferences.tsx
 │   │   │   │   │   ├── NoteEditor.tsx
 │   │   │   │   │   ├── NoteCard.tsx
+│   │   │   │   │   ├── FloatingUsageIndicator.tsx
 │   │   │   │   │   ├── EntityExtractor.tsx
 │   │   │   │   │   └── EntityCard.tsx
 │   │   │   │   ├── locations
@@ -302,6 +300,7 @@ DnDCampaignCompanion
 │   │   ├── index.tsx
 │   │   └── App.tsx
 │   ├── scripts
+│   │   ├── start-dev.ps1
 │   │   ├── manage-environment.ps1
 │   │   ├── manage-dev-data.ps1
 │   │   ├── dirTree.ps1
@@ -321,7 +320,6 @@ DnDCampaignCompanion
 │   │   │   │   │   ├── removeUserFromGroup.ts
 │   │   │   │   │   ├── index.ts
 │   │   │   │   │   └── deleteUser.ts
-│   │   │   │   ├── simpleTest.ts
 │   │   │   │   ├── index.ts
 │   │   │   │   ├── entityExtraction.ts
 │   │   │   │   └── contact.ts
@@ -333,8 +331,6 @@ DnDCampaignCompanion
 │   │   │   │   │   ├── index.js
 │   │   │   │   │   ├── deleteUser.js.map
 │   │   │   │   │   └── deleteUser.js
-│   │   │   │   ├── simpleTest.js.map
-│   │   │   │   ├── simpleTest.js
 │   │   │   │   ├── index.js.map
 │   │   │   │   ├── index.js
 │   │   │   │   ├── entityExtraction.js.map
@@ -345,9 +341,22 @@ DnDCampaignCompanion
 │   │   │   ├── tsconfig.dev.json
 │   │   │   ├── package-lock.json
 │   │   │   ├── package.json
+│   │   │   ├── firestore-debug.log
 │   │   │   ├── .gitignore
 │   │   │   └── .eslintrc.js
+│   │   ├── emulator-data
+│   │   │   ├── firestore_export
+│   │   │   │   ├── all_namespaces
+│   │   │   │   │   └── all_kinds
+│   │   │   │   │       ├── output-0
+│   │   │   │   │       └── all_namespaces_all_kinds.export_metadata
+│   │   │   │   └── firestore_export.overall_export_metadata
+│   │   │   ├── auth_export
+│   │   │   │   ├── config.json
+│   │   │   │   └── accounts.json
+│   │   │   └── firebase-export-metadata.json
 │   │   ├── storage.rules
+│   │   ├── firestore-debug.log
 │   │   ├── firestore.rules
 │   │   ├── firestore.indexes.json
 │   │   ├── firebase.json
@@ -373,28 +382,10 @@ DnDCampaignCompanion
 │   │   ├── emulators
 │   │   │   ├── logs
 │   │   │   └── data
-│   │   │       ├── storage_export
-│   │   │       │   ├── metadata
-│   │   │       │   ├── blobs
-│   │   │       │   └── buckets.json
-│   │   │       ├── firestore_export
-│   │   │       │   ├── all_namespaces
-│   │   │       │   │   └── all_kinds
-│   │   │       │   │       ├── output-0
-│   │   │       │   │       └── all_namespaces_all_kinds.export_metadata
-│   │   │       │   └── firestore_export.overall_export_metadata
-│   │   │       ├── auth_export
-│   │   │       │   ├── config.json
-│   │   │       │   └── accounts.json
-│   │   │       └── firebase-export-metadata.json
 │   │   ├── config
-│   │   │   ├── nginx.conf
-│   │   │   └── firebase-emulator.json
-│   │   ├── emulator-entrypoint.sh
-│   │   ├── Dockerfile.functions
+│   │   │   └── nginx.conf
 │   │   ├── Dockerfile.frontend.prod
 │   │   ├── Dockerfile.frontend.dev
-│   │   ├── Dockerfile.emulators
 │   │   ├── docker-compose.prod.yml
 │   │   └── docker-compose.dev.yml
 │   ├── .github
