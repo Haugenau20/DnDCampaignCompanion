@@ -26,6 +26,7 @@ jobs:
           echo "REACT_APP_STORAGE_BUCKET=${{ secrets.REACT_APP_STORAGE_BUCKET }}" >> .env
           echo "REACT_APP_MESSAGING_SENDER_ID=${{ secrets.REACT_APP_MESSAGING_SENDER_ID }}" >> .env
           echo "REACT_APP_APP_ID=${{ secrets.REACT_APP_APP_ID }}" >> .env
+          echo "REACT_APP_RECAPTCHA_SITE_KEY=${{ secrets.REACT_APP_RECAPTCHA_SITE_KEY }}" >> .env
           
           # Build using Docker
           docker build -t app-builder -f docker/Dockerfile.frontend.prod .
