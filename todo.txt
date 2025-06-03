@@ -1,6 +1,7 @@
 # Prioritized Todo List
 
-NOTE-TAKING:
+DO A NOTE_TAKING CLEANUP BEFORE PULL REQUEST AND MERGING!!!
+(docker, README, etc.)
 
 1. User should be able to change their password.
 
@@ -31,8 +32,6 @@ NOTE-TAKING:
     - campaigns cannot be deleted.
 
 13. New feature idea (partly implemented already): sub-chapters.
-
-14. New feature idea: note taking in the app.
 
 15. CLAUDE Code: 
 

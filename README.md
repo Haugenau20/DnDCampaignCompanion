@@ -102,21 +102,7 @@ The D&D Campaign Companion is built with a component-based architecture followin
 
 ### Installation
 
-1. Clone the repository
-   ```
-   git clone https://github.com/haugenau20/DnDCampaignCompanion.git
-   cd DnDCampaignCompanion
-   ```
-
-2. Install dependencies
-   ```
-   npm install
-   ```
-
-3. Start the development environment
-   ```
-   .\scripts\manage-environment.ps1 -Environment dev -Action start
-   ```
+(🚧 Coming soon)
 
 ### Firebase Configuration
 
@@ -127,7 +113,7 @@ The D&D Campaign Companion is built with a component-based architecture followin
 ### OpenAI Configuration (for Note Feature)
 
 1. Obtain an OpenAI API key
-2. Add your API key to the configuration in `src/config/openai.ts`
+2. Set as teh API key as a secret for your firebase functions
 
 ## 📁 Project Structure
 
@@ -152,14 +138,6 @@ DnDCampaignCompanion/
 ├── functions/          # Firebase Cloud Functions
 └── ...                 # Configuration files
 ```
-
-## 📦 Deployment
-
-The application is configured for automatic deployment to Firebase Hosting using GitHub Actions:
-
-1. Push changes to the main branch
-2. GitHub Actions automatically builds and deploys the application
-3. Visit the deployed application at https://dnd-campaign-companion.web.app/
 
 ## 🚧 Project Status
 This project is currently under active development and updates are being made regularly. The search functionality and several other features are still being built and refined.
