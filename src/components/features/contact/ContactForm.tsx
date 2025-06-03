@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';
 import Button from '../../core/Button';
-import { Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { Send, Check, AlertCircle } from 'lucide-react';
 
 interface ContactFormData {
   name: string;
@@ -139,18 +139,17 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialData = {} }) => {
   // Show success state
   if (submitSuccess) {
     return (
-      <div className="max-w-md mx-auto text-center py-8">
-        <CheckCircle className="w-12 h-12 mx-auto mb-4 status-success" />
+      <div className="text-center py-6">
+        <div className="mb-4 mx-auto w-12 h-12 rounded-full flex items-center justify-center success-icon-bg">
+          <Check size={24} className="success-icon" />
+        </div>
         <Typography variant="h3" className="mb-2">
           Message Sent!
         </Typography>
         <Typography color="secondary" className="mb-4">
           Thank you for contacting us. We'll get back to you as soon as possible.
         </Typography>
-        <Button
-          variant="outline"
-          onClick={() => setSubmitSuccess(false)}
-        >
+        <Button onClick={() => setSubmitSuccess(false)}>
           Send Another Message
         </Button>
       </div>
