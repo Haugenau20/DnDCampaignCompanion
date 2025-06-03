@@ -144,7 +144,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialData = {} }) => {
           <Check size={24} className="success-icon" />
         </div>
         <Typography variant="h3" className="mb-2">
-          Message Sent!x
+          Message Sent!
         </Typography>
         <Typography color="secondary" className="mb-4">
           Thank you for contacting us. We'll get back to you as soon as possible.

@@ -14,7 +14,7 @@ const CampaignBanner: React.FC = () => {
     return (
       <div className="p-6 mb-4 text-center typograhpy">
         <Typography variant="h2" className="mb-2">
-          Welcome to D&D Campaign Companion x
+          Welcome to D&D Campaign Companion
         </Typography>
         <Typography color="secondary">
           {!hasGroup 
