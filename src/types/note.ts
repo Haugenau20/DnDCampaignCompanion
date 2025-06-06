@@ -1,3 +1,5 @@
+// Updated src/types/note.ts
+
 // src/types/note.ts
 import { BaseContent } from "./common";
 
@@ -53,8 +55,10 @@ export interface Note extends BaseContent {
   tags: string[];
   /** Last updated timestamp */
   updatedAt: string;
-
+  /** Campaign ID this note belongs to */
   campaignId: string;
+  /** Whether this note exists only locally and hasn't been saved to Firebase yet */
+  isUnsaved?: boolean;
 }
 
 /**
@@ -76,12 +80,20 @@ export interface NoteContextValue {
   getNoteById: (id: string) => Note | undefined;
   
   /**
-   * Create a new note
+   * Create a new note locally (not saved to Firebase until saveNote is called)
    * @param title Title of the note
    * @param content Content of the note
    * @returns Promise resolving to the ID of the created note
    */
   createNote: (title: string, content: string) => Promise<string>;
+  
+  /**
+   * Save a note to Firebase (handles both new and existing notes)
+   * @param noteId ID of the note to save
+   * @param updates Optional updates to apply before saving
+   * @returns Promise resolving when save is complete
+   */
+  saveNote: (noteId: string, updates?: Partial<Note>) => Promise<void>;
   
   /**
    * Convert an extracted entity to a campaign element
@@ -104,7 +116,7 @@ export interface NoteContextValue {
   markEntityAsConverted: (noteId: string, entityId: string, createdId: string) => Promise<void>;
   
   /**
-   * Update a note
+   * Update a note (for unsaved notes, updates locally; for saved notes, saves to Firebase)
    * @param noteId ID of the note to update
    * @param updateData Data to update on the note
    * @returns Promise resolving when update is complete

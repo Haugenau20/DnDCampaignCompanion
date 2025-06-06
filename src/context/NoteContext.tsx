@@ -1,4 +1,4 @@
-// src/context/NoteContext.tsx
+// src/context/NoteContext.tsx - Complete Fixed Version
 import React, { createContext, useContext, useCallback, useState, useEffect } from "react";
 import { Note, NoteContextValue, ExtractedEntity, EntityType } from "../types/note";
 import DocumentService from "../services/firebase/data/DocumentService";
@@ -108,7 +108,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [notes]);
 
   /**
-   * Create a new note
+   * Create a new note locally (not saved to Firebase until saveNote is called)
    */
   const createNote = useCallback(async (title: string, content: string): Promise<string> => {
     if (!user || !activeGroupId) throw new Error("User not authenticated or no active group");
@@ -121,6 +121,8 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     const now = new Date().toISOString();
     const username = getUserName(activeGroupUserProfile);
     const characterName = getActiveCharacterName(activeGroupUserProfile);
+    
+    // Create note object locally only - don't save to Firebase yet
     const newNote: Note = {
       id: noteId,
       title,
@@ -137,20 +139,97 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       modifiedBy: user.uid,
       modifiedByUsername: username || "",
       modifiedByCharacterName: characterName || "",
-      campaignId: activeCampaignId, // Always set to active campaign
+      campaignId: activeCampaignId,
+      isUnsaved: true, // Mark as unsaved
     };
     
-    // Save to the correct path using DocumentService
-    const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
-    await documentService.createDocument(notesCollection, newNote, noteId);
+    // Add to local state immediately for instant feedback
+    setNotes(prevNotes => [newNote, ...prevNotes]);
     
-    console.log(`NoteContext: Created note ${noteId} for campaign ${activeCampaignId}`);
-    
-    // Refresh notes list
-    await fetchNotes();
+    console.log(`NoteContext: Created local note ${noteId} for campaign ${activeCampaignId}`);
     
     return noteId;
-  }, [user, activeGroupId, activeCampaignId, generateSequentialNoteId, documentService, fetchNotes, activeGroupUserProfile]);
+  }, [user, activeGroupId, activeCampaignId, generateSequentialNoteId, activeGroupUserProfile]);
+
+  /**
+   * Save a note to Firebase (handles both new and existing notes)
+   */
+  const saveNote = useCallback(async (noteId: string, updates: Partial<Note> = {}) => {
+    if (!user?.uid || !activeGroupId) {
+      throw new Error("User not authenticated or no active group");
+    }
+
+    const note = getNoteById(noteId);
+    if (!note) throw new Error("Note not found");
+    
+    const username = getUserName(activeGroupUserProfile);
+    const characterName = getActiveCharacterName(activeGroupUserProfile);
+    const now = new Date().toISOString();
+    
+    const updatedFields = {
+      ...updates,
+      dateModified: now,
+      modifiedBy: user.uid,
+      modifiedByUsername: username || "",
+      modifiedByCharacterName: characterName || "",
+      updatedAt: now,
+      // Don't include isUnsaved in updates - we'll handle it separately
+    };
+    
+    const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
+    
+    if (note.isUnsaved) {
+      // First save - create document (exclude isUnsaved field entirely)
+      const noteToSave = { ...note, ...updatedFields };
+      delete noteToSave.isUnsaved; // Remove before saving
+      
+      await documentService.createDocument(notesCollection, noteToSave, noteId);
+      console.log(`NoteContext: Saved new note ${noteId} to Firebase`);
+    } else {
+      // Update existing document (don't send isUnsaved field)
+      await documentService.updateDocument(notesCollection, noteId, updatedFields);
+      console.log(`NoteContext: Updated note ${noteId} in Firebase`);
+    }
+    
+    // Update local state (remove isUnsaved flag)
+    setNotes(prevNotes => 
+      prevNotes.map(n => 
+        n.id === noteId 
+          ? { ...n, ...updatedFields, isUnsaved: false } 
+          : n
+      )
+    );
+  }, [user, activeGroupId, documentService, getNoteById, activeGroupUserProfile]);
+
+  /**
+   * Update a note (now calls saveNote internally for saved notes, updates locally for unsaved)
+   */
+  const updateNote = useCallback(async (noteId: string, updates: Partial<Note>) => {
+    const note = getNoteById(noteId);
+    if (!note) throw new Error("Note not found");
+    
+    if (note.isUnsaved) {
+      // Just update local state for unsaved notes (don't save to Firebase yet)
+      const now = new Date().toISOString();
+      const updatedLocalFields = {
+        ...updates,
+        updatedAt: now,
+        dateModified: now,
+        // Keep isUnsaved: true for local notes
+      };
+      
+      setNotes(prevNotes => 
+        prevNotes.map(n => 
+          n.id === noteId 
+            ? { ...n, ...updatedLocalFields }
+            : n
+        )
+      );
+    } else {
+      // Save immediately for existing notes (this will remove isUnsaved if present)
+      await saveNote(noteId, updates);
+    }
+  }, [getNoteById, saveNote]);
   
   /**
    * Convert an extracted entity to a campaign element
@@ -306,34 +385,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     await updateNote(noteId, {
       extractedEntities: updatedEntities,
     });
-  }, [getNoteById]);
-  
-  /**
-   * Update a note
-   */
-  const updateNote = useCallback(async (noteId: string, updates: Partial<Note>) => {
-    if (!user?.uid || !activeGroupId) {
-      throw new Error("User not authenticated or no active group");
-    }
-
-    const note = getNoteById(noteId);
-    if (!note) throw new Error("Note not found");
-    
-    const updatedFields = {
-      ...updates,
-      dateModified: new Date().toISOString(),
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile) || "",
-      updatedAt: new Date().toISOString()
-    };
-    
-    // Update document at the correct path
-    const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
-    await documentService.updateDocument(notesCollection, noteId, updatedFields);
-    
-    // Refresh notes list
-    await fetchNotes();
-  }, [getNoteById, user, activeGroupId, documentService, fetchNotes, activeGroupUserProfile]);
+  }, [getNoteById, updateNote]);
   
   /**
    * Archive a note
@@ -367,6 +419,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     error,
     getNoteById,
     createNote,
+    saveNote, // Add saveNote to context
     convertEntity,
     updateNote,
     archiveNote,

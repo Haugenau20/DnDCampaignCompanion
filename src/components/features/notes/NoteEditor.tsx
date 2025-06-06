@@ -1,12 +1,13 @@
-// src/components/features/notes/NoteEditor.tsx
-import React, { useState, useEffect, useCallback } from "react";
+// Updated src/components/features/notes/NoteEditor.tsx
+
+import React, { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from "react";
 import { Note } from "../../../types/note";
 import Typography from "../../core/Typography";
 import Input from "../../core/Input";
 import Button from "../../core/Button";
 import { useNotes } from "../../../context/NoteContext";
 import { debounce } from "lodash";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Save, AlertCircle } from 'lucide-react';
 
 interface NoteEditorProps {
   /** ID of the note to edit */
@@ -19,26 +20,41 @@ interface NoteEditorProps {
   onSave?: () => void;
 }
 
+export interface NoteEditorRef {
+  /** Get the current content from the editor */
+  getCurrentContent: () => { title: string; content: string };
+  /** Save the current content to Firebase */
+  saveCurrentContent: () => Promise<void>;
+}
+
 /**
  * Component for editing note content
- * Features auto-save functionality via debounce
+ * Features auto-save functionality via debounce and handles unsaved notes
+ * Exposes methods to get and save current content for external components
  */
-const NoteEditor: React.FC<NoteEditorProps> = ({ 
+const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ 
   noteId, 
   readOnly = false,
   onExtractEntities,
   onSave 
-}) => {
-  const { getNoteById, updateNote } = useNotes();
+}, ref) => {
+  const { getNoteById, updateNote, saveNote } = useNotes();
   const [note, setNote] = useState<Note | undefined>();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Autosave interval configuration
   const AUTOSAVE_DELAY_MS = 45000; // 45 seconds - optimized for D&D sessions
   const MIN_CONTENT_LENGTH = 3; // Minimum characters to trigger autosave
+
+  // Expose methods to parent components
+  useImperativeHandle(ref, () => ({
+    getCurrentContent: () => ({ title, content }),
+    saveCurrentContent: handleManualSave
+  }), [title, content]);
 
   // Load note data when ID changes
   useEffect(() => {
@@ -47,12 +63,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
     if (noteData) {
       setTitle(noteData.title || "");
       setContent(noteData.content || "");
-      // Set last saved time from note's modification date
-      setLastSaved(noteData.dateModified ? new Date(noteData.dateModified) : null);
+      setHasUnsavedChanges(!!noteData.isUnsaved);
+      // Set last saved time from note's modification date (if saved)
+      setLastSaved(noteData.isUnsaved ? null : (noteData.dateModified ? new Date(noteData.dateModified) : null));
     }
   }, [noteId, getNoteById]);
 
-  // Debounced save function with improved timing
+  // Debounced save function for autosave
   const debouncedSave = useCallback(
     debounce(async (noteId: string, field: string, value: string) => {
       // Skip save if content is too short
@@ -62,11 +79,19 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
       try {
         setIsSaving(true);
-        await updateNote(noteId, { 
-          [field]: value, 
-          updatedAt: new Date().toISOString() 
-        });
-        setLastSaved(new Date());
+        
+        // For unsaved notes, just update locally until manual save
+        const currentNote = getNoteById(noteId);
+        if (currentNote?.isUnsaved) {
+          await updateNote(noteId, { [field]: value });
+          setHasUnsavedChanges(true);
+        } else {
+          // For saved notes, save to Firebase
+          await updateNote(noteId, { [field]: value });
+          setLastSaved(new Date());
+          setHasUnsavedChanges(false);
+        }
+        
         // Notify parent of save
         onSave?.();
       } catch (error) {
@@ -75,29 +100,34 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         setIsSaving(false);
       }
     }, AUTOSAVE_DELAY_MS),
-    [updateNote, onSave]
+    [updateNote, getNoteById, onSave]
   );
 
-  // Manual save function for Ctrl+S
+  // Manual save function for Ctrl+S and save button
   const handleManualSave = useCallback(async () => {
     if (!note || readOnly) return;
     
     try {
       setIsSaving(true);
-      await updateNote(note.id, { 
+      
+      // Always save to Firebase on manual save
+      await saveNote(note.id, { 
         title,
-        content,
-        updatedAt: new Date().toISOString() 
+        content 
       });
+      
       setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+      
       // Notify parent of save
       onSave?.();
     } catch (error) {
       console.error("Failed to manually save note:", error);
+      throw error; // Re-throw so calling components can handle the error
     } finally {
       setIsSaving(false);
     }
-  }, [note, readOnly, title, content, updateNote, onSave]);
+  }, [note, readOnly, title, content, saveNote, onSave]);
 
   // Add keyboard shortcut for manual save
   useEffect(() => {
@@ -116,6 +146,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
     setTitle(newTitle);
+    setHasUnsavedChanges(true);
     
     if (!readOnly && note) {
       debouncedSave(note.id, "title", newTitle);
@@ -126,6 +157,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
     setContent(newContent);
+    setHasUnsavedChanges(true);
     
     if (!readOnly && note) {
       debouncedSave(note.id, "content", newContent);
@@ -134,6 +166,10 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
 
   // Format last saved time
   const getLastSavedText = () => {
+    if (note?.isUnsaved || hasUnsavedChanges) {
+      return "Not saved";
+    }
+    
     if (!lastSaved) return "Never saved";
     
     const now = new Date();
@@ -148,6 +184,35 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       const diffInHours = Math.floor(diffInSeconds / 3600);
       return `Saved ${diffInHours}h ago`;
     }
+  };
+
+  // Get status indicator
+  const getStatusIndicator = () => {
+    if (isSaving) {
+      return (
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin primary" />
+          <Typography variant="body-sm" color="secondary">Saving...</Typography>
+        </div>
+      );
+    }
+
+    if (note?.isUnsaved || hasUnsavedChanges) {
+      return (
+        <div className="flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 status-unknown" />
+          <Typography variant="body-sm" className="status-unknown">
+            {note?.isUnsaved ? "Not saved to server" : "Unsaved changes"}
+          </Typography>
+        </div>
+      );
+    }
+
+    return (
+      <Typography variant="body-sm" color="secondary">
+        {getLastSavedText()}
+      </Typography>
+    );
   };
 
   return (
@@ -169,11 +234,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
           className="note-title font-bold"
         />
       </div>
+      
       <div className="flex justify-between items-center">
         <Typography variant="h3">
           Content
         </Typography>
       </div>
+      
       {/* Content editor */}
       <Input
         value={content}
@@ -188,34 +255,37 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       {/* Enhanced status bar with manual save button */}
       <div className="flex flex-col gap-2">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Typography variant="body-sm" color="secondary">
-              {isSaving ? "Saving..." : getLastSavedText()}
-            </Typography>
-            {isSaving && (
-              <Loader2 className="w-4 h-4 animate-spin primary" />
-            )}
-          </div>
+          {getStatusIndicator()}
+          
           <Button
             variant="primary"
             size="sm"
             onClick={handleManualSave}
             disabled={readOnly || isSaving}
+            startIcon={<Save className="w-4 h-4" />}
             className="save-manually-button"
           >
             Save (Ctrl+S)
           </Button>
         </div>
         
-        {/* Manual save button */}
-        <div className="flex justify-end">
+        {/* Helpful text */}
+        <div className="flex justify-between items-center">
           <Typography variant="body-sm" color="secondary" className="italic">
-            Autosave every {AUTOSAVE_DELAY_MS / 1000}s
+            {note?.isUnsaved ? "Click Save to store this note permanently" : `Autosave every ${AUTOSAVE_DELAY_MS / 1000}s`}
           </Typography>
+          
+          {(note?.isUnsaved || hasUnsavedChanges) && (
+            <Typography variant="body-sm" className="status-unknown italic">
+              Remember to save your work!
+            </Typography>
+          )}
         </div>
       </div>
     </div>
   );
-};
+});
+
+NoteEditor.displayName = 'NoteEditor';
 
 export default NoteEditor;

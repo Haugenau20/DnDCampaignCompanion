@@ -1,4 +1,5 @@
-// src/components/features/notes/EntityExtractor.tsx
+// Updated src/components/features/notes/EntityExtractor.tsx
+
 import React, { useState, useEffect } from "react";
 import { ExtractedEntity } from "../../../types/note";
 import Typography from "../../core/Typography";
@@ -21,18 +22,24 @@ interface EntityExtractorProps {
   referencesSearchComplete?: boolean;
   /** Callback when an entity is converted */
   onEntityConverted?: (entityId: string, createdId: string) => void;
+  /** Function to get current editor content */
+  getCurrentEditorContent?: () => { title: string; content: string };
+  /** Function to save current editor content */
+  saveCurrentEditorContent?: () => Promise<void>;
 }
 
 /**
  * Component for extracting and displaying entities from notes
  * Integrates with OpenAI for entity extraction and checks for existing campaign elements
- * Usage tracking now handled by FloatingUsageIndicator
+ * Now automatically saves current editor content before extraction to prevent data loss
  */
 const EntityExtractor: React.FC<EntityExtractorProps> = ({ 
   noteId,
   existingReferences = [],
   referencesSearchComplete = false,
-  onEntityConverted 
+  onEntityConverted,
+  getCurrentEditorContent,
+  saveCurrentEditorContent 
 }) => {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedEntities, setExtractedEntities] = useState<ExtractedEntity[]>([]);
@@ -42,6 +49,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
     totalFound: number;
     filteredOut: number;
   } | null>(null);
+  const [isSavingBeforeExtraction, setIsSavingBeforeExtraction] = useState(false);
   
   const { 
     extractWithOpenAI, 
@@ -187,6 +195,7 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
   
   /**
    * Perform entity extraction on the note
+   * Now automatically saves current editor content before extraction
    */
   const handleExtract = async () => {
     setIsExtracting(true);
@@ -194,40 +203,65 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
     setHasAttemptedExtraction(true);
     
     try {
-      // Get the note first to verify it exists
+      // Step 1: Save current editor content before extraction
+      if (saveCurrentEditorContent) {
+        setIsSavingBeforeExtraction(true);
+        try {
+          await saveCurrentEditorContent();
+          console.log("EntityExtractor: Saved current editor content before extraction");
+        } catch (saveError) {
+          console.error("EntityExtractor: Failed to save content before extraction:", saveError);
+          throw new Error("Failed to save your work before analysis. Please save manually and try again.");
+        } finally {
+          setIsSavingBeforeExtraction(false);
+        }
+      }
+
+      // Step 2: Get the content to extract from
+      let contentToExtract = "";
+      
+      if (getCurrentEditorContent) {
+        // Use current editor content if available (most up-to-date)
+        const editorContent = getCurrentEditorContent();
+        contentToExtract = editorContent.content;
+      } else {
+        // Fallback to note content from context
+        const note = getNoteById(noteId);
+        if (!note) {
+          throw new Error("Note not found");
+        }
+        contentToExtract = note.content;
+      }
+      
+      // Step 3: Validate content
+      if (contentToExtract.length < 50) {
+        throw new Error("Note content is too short for analysis (minimum 50 characters)");
+      }
+      
+      // Step 4: Clear any previously extracted entities that haven't been converted
       const note = getNoteById(noteId);
-      if (!note) {
-        throw new Error("Note not found");
+      if (note) {
+        const convertedEntities = note.extractedEntities.filter(entity => entity.isConverted);
+        
+        // Update the note to keep only converted entities
+        await updateNote(noteId, {
+          extractedEntities: convertedEntities,
+        });
+        
+        // Clear local state of extracted entities
+        setExtractedEntities([]);
       }
       
-      // First clear any previously extracted entities that haven't been converted
-      const convertedEntities = note.extractedEntities.filter(entity => entity.isConverted);
-      
-      // Update the note to keep only converted entities
-      await updateNote(noteId, {
-        extractedEntities: convertedEntities,
-      });
-      
-      // Clear local state of extracted entities
-      setExtractedEntities([]);
-      
-      // Don't extract if content is too short
-      if (note.content.length < 50) {
-        throw new Error("Note content is too short for analysis");
-      }
-      
-      // Extract entities using the simplified method
-      const rawEntities = await extractWithOpenAI(note.content);
+      // Step 5: Extract entities using the current content
+      const rawEntities = await extractWithOpenAI(contentToExtract);
       
       // If extraction failed due to limits, the error will be handled by the hook
       if (rawEntities.length === 0 && isUsageLimitExceeded) {
         return; // Don't proceed with processing if limit exceeded
       }
       
-      // Deduplicate entities with smart matching
+      // Step 6: Process extracted entities
       const uniqueEntities = deduplicateEntities(rawEntities);
-      
-      // Filter out entities that already exist in campaign
       const newEntities = await filterNewEntities(uniqueEntities);
       
       // Calculate statistics for user feedback
@@ -239,19 +273,22 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
         filteredOut: filteredOutCount
       });
       
-      // Update the note in the database with converted entities + newly extracted entities
-      await updateNote(noteId, {
-        extractedEntities: [...convertedEntities, ...uniqueEntities],
-      });
+      // Step 7: Update the note in the database with all entities
+      if (note) {
+        const convertedEntities = note.extractedEntities.filter(entity => entity.isConverted);
+        await updateNote(noteId, {
+          extractedEntities: [...convertedEntities, ...uniqueEntities],
+        });
+      }
       
-      // Update local state with only the new entities (for display)
+      // Step 8: Update local state with only the new entities (for display)
       setExtractedEntities(newEntities);
       
     } catch (err) {
       // Note: Usage limit errors are now handled by the hook
       const errorMessage = err instanceof Error ? err.message : "Failed to analyze note";
       setError(errorMessage);
-      console.error(err);
+      console.error("EntityExtractor:", err);
     } finally {
       setIsExtracting(false);
     }
@@ -316,6 +353,9 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
     );
   }
 
+  // Determine if we're currently processing
+  const isProcessing = isExtracting || hookIsExtracting || isSavingBeforeExtraction;
+
   return (
     <Card className="entity-extractor">
       <Card.Content>
@@ -325,11 +365,11 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
             <Typography variant="h4">Smart Detection</Typography>
             <Button
               onClick={handleExtract}
-              disabled={isExtracting || hookIsExtracting || !isExtractionAvailable}
+              disabled={isProcessing || !isExtractionAvailable}
               className="extract-button w-12 h-12 p-0"
-              title="Analyze note to find characters, locations, quests, and rumors"
+              title="Analyze note to find characters, locations, quests, and rumors (auto-saves first)"
             >
-              {(isExtracting || hookIsExtracting) ? 
+              {isProcessing ? 
                 <Loader2 className="w-5 h-5 animate-spin" /> : 
                 <Search className="w-5 h-5" />
               }
@@ -371,18 +411,23 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
             </div>
           )}
 
-          {/* Loading state with animated spinner */}
-          {(isExtracting || hookIsExtracting) && (
+          {/* Loading state with detailed feedback */}
+          {isProcessing && (
             <div className="text-center py-8">
               <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin primary" />
               <Typography color="secondary">
-                Analyzing note content...
+                {isSavingBeforeExtraction ? "Saving your work..." : "Analyzing note content..."}
               </Typography>
+              {isSavingBeforeExtraction && (
+                <Typography variant="body-sm" color="secondary" className="mt-2">
+                  Making sure your content is saved before analysis
+                </Typography>
+              )}
             </div>
           )}
 
           {/* New extracted entities that can be converted */}
-          {!(isExtracting || hookIsExtracting) && extractedEntities.length > 0 && (
+          {!isProcessing && extractedEntities.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Typography variant="h4">Found in Your Note</Typography>
@@ -406,14 +451,17 @@ const EntityExtractor: React.FC<EntityExtractorProps> = ({
           )}
           
           {/* Empty state - different messages based on extraction status */}
-          {!(isExtracting || hookIsExtracting) && extractedEntities.length === 0 && !(error || hookError) && !isUsageLimitExceeded && (
+          {!isProcessing && extractedEntities.length === 0 && !(error || hookError) && !isUsageLimitExceeded && (
             <div className="text-center py-8">
               {!hasAttemptedExtraction ? (
                 // Never attempted extraction
                 <>
                   <Info className="w-8 h-8 mx-auto mb-4 primary" />
-                  <Typography color="secondary">
+                  <Typography color="secondary" className="mb-2">
                     Click the search button to automatically find characters, locations, quests, and rumors in your note.
+                  </Typography>
+                  <Typography variant="body-sm" color="secondary" className="italic">
+                    Your work will be saved automatically before analysis
                   </Typography>
                 </>
               ) : (

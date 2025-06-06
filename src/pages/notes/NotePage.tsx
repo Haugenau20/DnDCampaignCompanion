@@ -1,9 +1,9 @@
 // src/pages/notes/NotePage.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Typography from "../../components/core/Typography";
 import Button from "../../components/core/Button";
-import NoteEditor from "../../components/features/notes/NoteEditor";
+import NoteEditor, { NoteEditorRef } from "../../components/features/notes/NoteEditor";
 import EntityExtractor from "../../components/features/notes/EntityExtractor";
 import NoteReferences from "../../components/features/notes/NoteReferences";
 import FloatingUsageIndicator from "../../components/features/notes/FloatingUsageIndicator";
@@ -34,6 +34,9 @@ const NotePage: React.FC = () => {
   const [crossCampaignNote, setCrossCampaignNote] = useState<Note | null>(null);
   const [isLoadingCrossCampaignNote, setIsLoadingCrossCampaignNote] = useState(false);
   const documentService = DocumentService.getInstance();
+
+  // Ref to access NoteEditor methods for auto-save functionality
+  const noteEditorRef = useRef<NoteEditorRef>(null);
 
   // Try to get the note from the current campaign context first
   const currentCampaignNote = noteId ? getNoteById(noteId) : undefined;
@@ -75,6 +78,20 @@ const NotePage: React.FC = () => {
       fetchCrossCampaignNote();
     }
   }, [noteId, currentCampaignNote, crossCampaignNote, isLoadingCrossCampaignNote, user?.uid, activeGroupId, activeCampaignId, documentService]);
+
+  // Functions to expose editor content to EntityExtractor
+  const getCurrentEditorContent = () => {
+    if (noteEditorRef.current) {
+      return noteEditorRef.current.getCurrentContent();
+    }
+    return { title: "", content: "" };
+  };
+
+  const saveCurrentEditorContent = async () => {
+    if (noteEditorRef.current) {
+      await noteEditorRef.current.saveCurrentContent();
+    }
+  };
 
   if (!noteId) {
     return (
@@ -220,6 +237,7 @@ const NotePage: React.FC = () => {
       <div className="grid md:grid-cols-3 gap-6">
         <div className="space-y-6 col-span-2">
           <NoteEditor 
+            ref={noteEditorRef}
             noteId={noteId}
             onSave={refreshReferences}
             readOnly={isFromDifferentCampaign} // Make cross-campaign notes read-only
@@ -233,6 +251,8 @@ const NotePage: React.FC = () => {
               existingReferences={foundReferences}
               referencesSearchComplete={referencesSearchComplete}
               onEntityConverted={refreshReferences}
+              getCurrentEditorContent={getCurrentEditorContent}
+              saveCurrentEditorContent={saveCurrentEditorContent}
             />
           )}
           <NoteReferences 

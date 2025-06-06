@@ -1,4 +1,5 @@
-// src/components/features/notes/NotesList.tsx
+// Updated src/components/features/notes/NotesList.tsx
+
 import React from "react";
 import Typography from "../../core/Typography";
 import NoteCard from "./NoteCard";
@@ -10,6 +11,7 @@ import { Loader2, AlertCircle, Book, Plus, Users } from 'lucide-react';
 
 /**
  * Component for displaying a list of user notes filtered by active campaign
+ * Now handles unsaved notes properly
  */
 const NotesList: React.FC = () => {
   const { notes, isLoading, error, createNote } = useNotes();
@@ -17,7 +19,7 @@ const NotesList: React.FC = () => {
   const { navigateToPage } = useNavigation();
 
   /**
-   * Create a new note and navigate to it
+   * Create a new note and navigate to it (now instant)
    */
   const handleCreateNote = async () => {
     try {
@@ -26,6 +28,7 @@ const NotesList: React.FC = () => {
         throw new Error("No active campaign selected. Please select a campaign first.");
       }
       
+      // Create note locally (instant) and navigate
       const noteId = await createNote("New Note", "");
       navigateToPage(`/notes/${noteId}`);
     } catch (error) {
@@ -78,20 +81,56 @@ const NotesList: React.FC = () => {
     );
   }
 
+  // Separate saved and unsaved notes for better organization
+  const savedNotes = notes.filter(note => !note.isUnsaved);
+  const unsavedNotes = notes.filter(note => note.isUnsaved);
+
   return (
     <div className="notes-list space-y-4">
       <div className="flex items-center justify-between">
         <Typography variant="body-sm" color="secondary">
           {notes.length} {notes.length === 1 ? "note" : "notes"}
+          {unsavedNotes.length > 0 && (
+            <span className="ml-2 status-unknown">
+              ({unsavedNotes.length} unsaved)
+            </span>
+          )}
         </Typography>
       </div>
 
       {/* Notes list */}
       {notes.length > 0 ? (
         <div className="space-y-3">
-          {notes.map(note => (
-            <NoteCard key={note.id} note={note} />
-          ))}
+          {/* Show unsaved notes first with visual indicator */}
+          {unsavedNotes.length > 0 && (
+            <div className="space-y-3">
+              <Typography variant="body-sm" className="status-unknown font-medium">
+                Unsaved Notes
+              </Typography>
+              {unsavedNotes.map(note => (
+                <div key={note.id} className="relative">
+                  <NoteCard note={note} />
+                  <div className="absolute top-2 right-2 px-2 py-1 rounded-md card border status-unknown text-xs font-medium">
+                    Not Saved
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Show saved notes */}
+          {savedNotes.length > 0 && (
+            <div className="space-y-3">
+              {unsavedNotes.length > 0 && (
+                <Typography variant="body-sm" color="secondary" className="font-medium mt-6">
+                  Saved Notes
+                </Typography>
+              )}
+              {savedNotes.map(note => (
+                <NoteCard key={note.id} note={note} />
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         // Empty state for active campaign with no notes

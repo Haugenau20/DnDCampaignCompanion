@@ -1,7 +1,9 @@
-// components/features/dashboard/GlobalActionButton.tsx
+// Updated components/features/dashboard/GlobalActionButton.tsx
+
 import React, { useState } from 'react';
 import { useNavigation } from '../../context/NavigationContext';
-import { Plus, BookOpen, User, Scroll, MessageSquare, MapPin, X } from 'lucide-react';
+import { useNotes } from '../../context/NoteContext';
+import { Plus, BookOpen, User, Scroll, MessageSquare, MapPin, FileText, X } from 'lucide-react';
 import Button from '../core/Button';
 import clsx from 'clsx';
 
@@ -10,12 +12,35 @@ import clsx from 'clsx';
  */
 const GlobalActionButton: React.FC = () => {
   const { navigateToPage } = useNavigation();
+  const { createNote } = useNotes();
   
   // State for open/closed
   const [isOpen, setIsOpen] = useState(false);
   
+  /**
+   * Handle creating a new note
+   * Creates a new note locally and navigates to the note editor instantly
+   */
+  const handleCreateNote = async () => {
+    try {
+      // Create note locally (no Firebase operations, so it's instant)
+      const noteId = await createNote("New Note", "");
+      // Navigate immediately since note creation is now instant
+      navigateToPage(`/notes/${noteId}`);
+      setIsOpen(false); // Close menu after creation
+    } catch (error) {
+      console.error("Failed to create note:", error);
+      // Note: Error handling is managed by the NoteContext
+    }
+  };
+  
   // Navigation actions
   const actions = [
+    {
+      label: 'New Note',
+      icon: <FileText className="w-5 h-5" />,
+      onClick: handleCreateNote
+    },
     {
       label: 'New Location',
       icon: <MapPin className="w-5 h-5" />,
