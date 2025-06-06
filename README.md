@@ -2,7 +2,7 @@
 
 ## 📖 Overview
 
-D&D Campaign Companion is a comprehensive web application designed to help players track and organize their Dungeons & Dragons campaigns. This fully-featured React application provides intuitive tools for managing campaign stories, quests, rumors, NPCs, and locations - all with a themed interface that enhances the D&D experience.
+D&D Campaign Companion is a comprehensive web application designed to help players track and organize their Dungeons & Dragons campaigns. This fully-featured React application provides intuitive tools for managing campaign stories, quests, rumors, NPCs, locations, and notes - all with a themed interface that enhances the D&D experience.
 
 ### 🔗 [Live Demo](https://dnd-campaign-companion.web.app/) | [Repository](https://github.com/haugenau20/DnDCampaignCompanion)
 
@@ -32,10 +32,16 @@ D&D Campaign Companion is a comprehensive web application designed to help playe
 - **Connected Information**: Link locations to related NPCs and quests
 - **Discovery Status**: Track location discovery status (known, explored, visited)
 
-### Rumor Tracking
+### 📢 Rumor Tracking
 - **Rumor Management**: Create, edit, and organize campaign rumors
 - **Status Tracking**: Track the state of the rumor to see if it is confirmed, unconfirmed or false
 - **Combine and Convert**: Combine several rumors or convert them into a quest
+
+### 📝 Note Taking (NEW!)
+- **Personal Notes**: Create and manage personal notes within your campaign
+- **Entity Extraction**: Automatically extract NPCs, locations, quests, and rumors from your notes using AI
+- **Entity Conversion**: Convert extracted entities directly into campaign elements
+- **Automatic Saving**: Notes are saved automatically as you type with bidirectional relationships
 
 ### 🔍 Global Search (🚧 Under construction)
 - **Cross-section Search**: Find content across stories, quests, NPCs, and locations
@@ -58,6 +64,7 @@ The D&D Campaign Companion is built with a component-based architecture followin
 - **Context API**: State management using React's Context API
 - **Firebase Integration**: Data storage and authentication using Firebase
 - **Custom Hooks**: Specialized hooks for data fetching, search, and navigation
+- **OpenAI Integration**: AI-powered entity extraction from notes
 
 ### Frontend Technologies
 
@@ -76,6 +83,7 @@ The D&D Campaign Companion is built with a component-based architecture followin
 
 - **Firebase Firestore**: Real-time database for storing campaign data
 - **Authentication**: Secure content editing with Firebase Authentication
+- **OpenAI API**: AI-powered entity extraction from notes
 
 ### Performance Optimizations
 
@@ -90,6 +98,7 @@ The D&D Campaign Companion is built with a component-based architecture followin
 
 - Node.js (v14 or newer)
 - npm or yarn
+- Docker (optional, for containerized development)
 
 ### Installation
 
@@ -99,7 +108,12 @@ The D&D Campaign Companion is built with a component-based architecture followin
 
 1. Create a Firebase project at [firebase.google.com](https://firebase.google.com)
 2. Enable Firestore Database and Authentication
-3. Add your Firebase configuration in `src/services/firebase/FirebaseService.ts`
+3. Add your Firebase configuration in `src/services/firebase/config/firebaseConfig.ts`
+
+### OpenAI Configuration (for Note Feature)
+
+1. Obtain an OpenAI API key
+2. Set as teh API key as a secret for your firebase functions
 
 ## 📁 Project Structure
 
@@ -114,21 +128,16 @@ DnDCampaignCompanion/
 │   ├── context/        # React Context definitions
 │   ├── hooks/          # Custom React hooks
 │   ├── pages/          # Page components
-│   ├── services/       # Service integrations (Firebase, etc.)
+│   ├── services/       # Service integrations (Firebase, OpenAI, etc.)
 │   ├── styles/         # Global styles and theme definitions
 │   ├── types/          # TypeScript type definitions
 │   └── utils/          # Utility functions
 ├── public/             # Static assets
+├── docker/             # Docker configuration files
+├── firebase/           # Firebase configuration
+├── functions/          # Firebase Cloud Functions
 └── ...                 # Configuration files
 ```
-
-## 📦 Deployment
-
-The application is configured for automatic deployment to Firebase Hosting using GitHub Actions:
-
-1. Push changes to the main branch
-2. GitHub Actions automatically builds and deploys the application
-3. Visit the deployed application at https://dnd-campaign-companion.web.app/
 
 ## 🚧 Project Status
 This project is currently under active development and updates are being made regularly. The search functionality and several other features are still being built and refined.
@@ -159,4 +168,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Firebase](https://firebase.google.com/)
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Lucide Icons](https://lucide.dev/)
+- [OpenAI](https://openai.com)
 - All the D&D enthusiasts who provided feedback and suggestions

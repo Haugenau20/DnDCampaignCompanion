@@ -40,11 +40,17 @@ class DocumentService extends BaseFirebaseService {
   }
   
   /**
-   * Get collection reference with group/campaign context
-   * @param collectionName Name of the collection to access
+   * Get collection reference - handles different path formats
+   * @param collectionPath Full collection path or collection name
    * @returns Firestore collection reference with proper path
    */
-  private getCollectionRef(collectionName: string) {
+  private getCollectionRef(collectionPath: string) {
+    // If path already contains '/', it's a full path - use directly
+    if (collectionPath.includes('/')) {
+      return collection(this.db, collectionPath);
+    }
+    
+    // Otherwise, construct path with group/campaign context
     const activeGroupId = this.getActiveGroupId();
     const activeCampaignId = this.getActiveCampaignId();
     
@@ -60,7 +66,7 @@ class DocumentService extends BaseFirebaseService {
         activeGroupId,
         'campaigns',
         activeCampaignId,
-        collectionName
+        collectionPath
       );
     } else {
       // Group-level collections
@@ -68,7 +74,7 @@ class DocumentService extends BaseFirebaseService {
         this.db,
         'groups',
         activeGroupId,
-        collectionName
+        collectionPath
       );
     }
   }
@@ -191,7 +197,7 @@ class DocumentService extends BaseFirebaseService {
 
   /**
    * Create a new document with attribution metadata including character information
-   * @param collectionName Name of the collection
+   * @param collectionName Collection name or full path
    * @param data Document data
    * @param id Optional document ID (generated if not provided)
    * @returns ID of the created document
@@ -243,7 +249,7 @@ class DocumentService extends BaseFirebaseService {
 
   /**
    * Update specific fields in a document with attribution metadata
-   * @param collectionName Name of the collection
+   * @param collectionName Collection name or full path
    * @param documentId ID of the document to update
    * @param data Partial data to update
    * @returns Promise that resolves when update is complete
@@ -284,7 +290,7 @@ class DocumentService extends BaseFirebaseService {
 
   /**
    * Get a document by ID with or without group/campaign context
-   * @param collectionName Name of the collection to access
+   * @param collectionName Collection name or full path
    * @param documentId ID of the document to retrieve
    * @param requireContext Whether to require group/campaign context (default: true)
    * @returns Document data or null if not found
@@ -296,7 +302,7 @@ class DocumentService extends BaseFirebaseService {
   ): Promise<T | null> {
     try {
       // Special case for global collections (like 'users')
-      if (collectionName === 'users' || !requireContext) {
+      if (!requireContext || (collectionName === 'users' && !collectionName.includes('/'))) {
         // Access these collections directly without group/campaign context
         const docRef = doc(this.db, collectionName, documentId);
         const docSnap = await getDoc(docRef);
@@ -308,7 +314,7 @@ class DocumentService extends BaseFirebaseService {
         return null;
       }
       
-      // For collections that require group/campaign context
+      // For collections that require group/campaign context or use full paths
       const collectionRef = this.getCollectionRef(collectionName);
       const docRef = doc(collectionRef, documentId);
       const docSnap = await getDoc(docRef);
@@ -326,6 +332,9 @@ class DocumentService extends BaseFirebaseService {
 
   /**
    * Get all documents in a collection with group/campaign context
+   * @param collectionName Collection name or full path
+   * @param constraints Query constraints to apply
+   * @returns Array of documents
    */
   public async getCollection<T>(
     collectionName: string,
@@ -370,7 +379,7 @@ class DocumentService extends BaseFirebaseService {
   public async queryDocuments<T>(
     collectionName: string,
     field: string,
-    operator: '==' | '!=' | '>' | '<' | '>=' | '<=',
+    operator: '==' | '!=' | '>' | '<' | '>=' | '<=' | 'array-contains',
     value: any
   ): Promise<T[]> {
     try {

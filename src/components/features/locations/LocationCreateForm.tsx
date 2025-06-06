@@ -1,10 +1,11 @@
 // components/features/locations/LocationCreateForm.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Location } from '../../../types/location';
 import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import Card from '../../core/Card';
 import { useNPCs } from '../../../context/NPCContext';
+import { useNotes } from '../../../context/NoteContext';
 import {
   BasicInfoSection,
   FeaturesSection,
@@ -17,22 +18,74 @@ import { useAuth, useUser, useGroups, useCampaigns } from '../../../context/fire
 import { useLocations } from '../../../context/LocationContext';
 
 interface LocationCreateFormProps {
+  /** Initial data for the form (e.g., from a converted entity) */
+  initialData?: {
+    name?: string;
+    title?: string;
+    description?: string;
+    parentId?: string;
+    noteId?: string;
+    entityId?: string;
+    [key: string]: any;
+  };
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
+/**
+ * Generate location ID from name
+ */
+const generateLocationId = (name: string): string => {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
 const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
+  initialData,
   onSuccess,
   onCancel,
 }) => {
-  // Form state
-  const [formData, setFormData] = useState<Partial<Location>>({
-    status: 'known',
-    type: 'poi',
-    features: [],
-    connectedNPCs: [],
-    notes: [],
-    tags: []
+  // Get locations to validate parent ID
+  const { getLocationById } = useLocations();
+  
+  // Validate and clean initial data
+  const validateInitialData = (data?: typeof initialData) => {
+    if (!data) return {};
+    
+    const { parentId, ...rest } = data;
+    
+    // Verify parent location exists
+    const validatedData = { ...rest };
+    if (parentId) {
+      const parentLocation = getLocationById(parentId);
+      if (parentLocation) {
+        validatedData.parentId = parentId;
+      }
+      // If parent location doesn't exist, we don't include parentId
+    }
+    
+    return validatedData;
+  };
+
+  // Form state with validated initial data
+  const [formData, setFormData] = useState<Partial<Location>>(() => {
+    const validatedData = validateInitialData(initialData);
+    
+    return {
+      status: validatedData.status || 'known',
+      type: validatedData.type || 'poi',
+      features: [],
+      connectedNPCs: [],
+      notes: [],
+      tags: [],
+      ...validatedData,
+      name: validatedData.name || '',
+      description: validatedData.description || '',
+      parentId: validatedData.parentId || '',
+    };
   });
 
   const [loading, setLoading] = useState(false);
@@ -54,6 +107,7 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
 
   // Use LocationContext for creating
   const { createLocation } = useLocations();
+  const { markEntityAsConverted } = useNotes();
 
   // Check if we have required context
   const hasRequiredContext = !!activeGroupId && !!activeCampaignId;
@@ -63,11 +117,35 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
     field: K,
     value: Location[K]
   ) => {
+    // Validate parent ID when it's being changed
+    if (field === 'parentId' && value) {
+      const parentId = typeof value === 'string' ? value : String(value);
+      const parentLocation = getLocationById(parentId);
+      if (!parentLocation) {
+        // If parent location doesn't exist, clear the value
+        value = '' as Location[K];
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
   };
+
+  // Validate parent ID on mount and when it changes
+  useEffect(() => {
+    if (formData.parentId) {
+      const parentLocation = getLocationById(formData.parentId);
+      if (!parentLocation) {
+        // Clear invalid parent ID
+        setFormData(prev => ({
+          ...prev,
+          parentId: ''
+        }));
+      }
+    }
+  }, [formData.parentId, getLocationById]);
 
   // Handle form submission - now includes all selected NPCs and Quests
   const handleSubmit = async (e: React.FormEvent) => {
@@ -93,7 +171,12 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
         lastVisited: formData.lastVisited || new Date().toISOString().split('T')[0],
       } as Omit<Location, 'id'>;
 
-      await createLocation(locationData);
+      const locationId = await createLocation(locationData);
+      
+      // If this was created from a note entity, mark it as converted
+      if (initialData?.noteId && initialData?.entityId) {
+        await markEntityAsConverted(initialData.noteId, initialData.entityId, locationId);
+      }
       
       if (onSuccess) {
         onSuccess();

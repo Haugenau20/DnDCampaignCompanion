@@ -28,7 +28,6 @@ This is a tool for D&D players (not DMs) to collect and organize their shared ca
 - Maintain DRY (Don't Repeat Yourself): Avoid code duplication
 
 ## Architecture
-- **Theming**: Always use `useTheme()` hook and apply themed classes with `${themePrefix}-className` pattern
 - **State Management**: Use React Context API providers for state
 - **Components**: Organized in core, features, layout, and shared directories
 - **Firebase**: Access through context hooks like `useAuth()`, `useGroups()`, etc.

@@ -3,7 +3,6 @@
 /**
  * Firebase configuration object with environment-aware settings
  */
-// Get configuration from environment variables if available, otherwise use hardcoded values
 const config = {
   apiKey: process.env.REACT_APP_API_KEY || "AIzaSyAxoVz2ELzTQ4qTFsLfpI_WmvPGxB13St8",
   authDomain: process.env.REACT_APP_AUTH_DOMAIN || "dnd-campaign-companion.firebaseapp.com",
@@ -19,11 +18,9 @@ export const firebaseConfig = config;
 /**
  * Emulator configuration
  */
-// Check if emulators should be used (development environment)
 export const useEmulators = process.env.REACT_APP_USE_EMULATORS === "true";
-
-// Emulator connection information
 export const emulatorHost = process.env.REACT_APP_EMULATOR_HOST || "localhost";
+
 export const emulatorPorts = {
   auth: process.env.REACT_APP_AUTH_EMULATOR_PORT || "9099",
   firestore: process.env.REACT_APP_FIRESTORE_EMULATOR_PORT || "8080",
@@ -32,8 +29,22 @@ export const emulatorPorts = {
 };
 
 /**
+ * Debug logging for emulator configuration (development only)
+ */
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔧 Firebase Configuration:');
+  console.log('  Using emulators:', useEmulators);
+  if (useEmulators) {
+    console.log('  Emulator host:', emulatorHost);
+    console.log('  Auth emulator:', `http://${emulatorHost}:${emulatorPorts.auth}`);
+    console.log('  Firestore emulator:', `${emulatorHost}:${emulatorPorts.firestore}`);
+    console.log('  Functions emulator:', `${emulatorHost}:${emulatorPorts.functions}`);
+    console.log('  Frontend served by hosting emulator on port 5000');
+  }
+}
+
+/**
  * Time constants used for session management
- * (Re-exported here for convenience)
  */
 export {
   SESSION_DURATION,

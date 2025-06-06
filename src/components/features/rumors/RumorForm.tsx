@@ -4,6 +4,7 @@ import { Rumor, RumorStatus, SourceType } from '../../../types/rumor';
 import { useRumors } from '../../../context/RumorContext';
 import { useNPCs } from '../../../context/NPCContext';
 import { useLocations } from '../../../context/LocationContext';
+import { useNotes } from '../../../context/NoteContext';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';
 import Button from '../../core/Button';
@@ -14,8 +15,18 @@ import clsx from 'clsx';
 import { AlertCircle, Save, X, Users, MapPin } from 'lucide-react';
 
 interface RumorFormProps {
-  /** Existing rumor for editing, or undefined for creating a new one */
+  /** Existing rumor for editing */
   rumor?: Rumor;
+  /** Initial data for creating a new rumor (e.g., from note conversion) */
+  initialData?: {
+    title?: string;
+    content?: string;
+    noteId?: string;
+    entityId?: string;
+    status?: RumorStatus;
+    sourceType?: SourceType;
+    sourceName?: string;
+  };
   /** Title for the form */
   title: string;
   /** Callback when form is submitted successfully */
@@ -26,6 +37,7 @@ interface RumorFormProps {
 
 const RumorForm: React.FC<RumorFormProps> = ({
   rumor,
+  initialData,
   title,
   onSuccess,
   onCancel
@@ -59,10 +71,11 @@ const RumorForm: React.FC<RumorFormProps> = ({
   const { npcs } = useNPCs();
   const { locations } = useLocations();
   const { addRumor, updateRumor } = useRumors();
+  const { markEntityAsConverted } = useNotes();
   const { user } = useAuth();
   const { userProfile } = useUser();
 
-  // Pre-populate form if editing an existing rumor
+  // Pre-populate form if editing or using initial data
   useEffect(() => {
     if (rumor) {
       setFormData({
@@ -72,8 +85,17 @@ const RumorForm: React.FC<RumorFormProps> = ({
       // Initialize selection sets
       setSelectedNPCs(new Set(rumor.relatedNPCs || []));
       setSelectedLocations(new Set(rumor.relatedLocations || []));
+    } else if (initialData) {
+      setFormData(prev => ({
+        ...prev,
+        title: initialData.title || '',
+        content: initialData.content || '',
+        status: initialData.status || 'unconfirmed',
+        sourceType: initialData.sourceType || 'other',
+        sourceName: initialData.sourceName || '',
+      }));
     }
-  }, [rumor]);
+  }, [rumor, initialData]);
 
   // Handle basic input changes
   const handleInputChange = <K extends keyof Rumor>(
@@ -174,7 +196,7 @@ const RumorForm: React.FC<RumorFormProps> = ({
         relatedLocations: Array.from(selectedLocations)
       };
   
-      if (rumor) {
+      if (rumor?.id) {
         // Updating existing rumor
         await updateRumor({
           ...rumor,
@@ -182,7 +204,12 @@ const RumorForm: React.FC<RumorFormProps> = ({
         });
       } else {
         // Creating new rumor - no need to specify ID here
-        await addRumor(updatedFormData as Omit<Rumor, 'id'>);
+        const rumorId = await addRumor(updatedFormData as Omit<Rumor, 'id'>);
+        
+        // If this was created from a note entity, mark it as converted
+        if (initialData?.noteId && initialData?.entityId) {
+          await markEntityAsConverted(initialData.noteId, initialData.entityId, rumorId);
+        }
       }
       
       onSuccess?.();
@@ -417,7 +444,7 @@ const RumorForm: React.FC<RumorFormProps> = ({
               startIcon={<Save />}
               isLoading={isSubmitting}
             >
-              {rumor ? 'Save Changes' : 'Add Rumor'}
+              {rumor?.id ? 'Save Changes' : 'Add Rumor'}
             </Button>
           </div>
         </form>

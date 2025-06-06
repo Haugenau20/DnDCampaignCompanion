@@ -7,6 +7,7 @@
 /node_modules/
 
 # Environment variables (consider which ones to ignore)
+*.local
 .env
 .env.local
 .env.*.local
@@ -26,10 +27,12 @@ Thumbs.db
 
 # Firebase cache
 /.firebase/
+/firebase/emulator-data/*
 
 # Docker data
 /docker/emulators/data/
 /docker/emulators/logs/
+*.log
 
 # IDE specific files
 /.idea/

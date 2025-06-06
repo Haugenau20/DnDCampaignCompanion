@@ -22,18 +22,23 @@ DnDCampaignCompanion
 │   │   │   ├── user-utils.ts
 │   │   │   ├── search.ts
 │   │   │   ├── password-validation.ts
+│   │   │   ├── note-relationships.ts
 │   │   │   ├── navigation.ts
 │   │   │   ├── export-utils.ts
+│   │   │   ├── dateFormatter.ts
 │   │   │   └── attribution-utils.ts
 │   │   ├── types
 │   │   │   ├── user.ts
+│   │   │   ├── usage.ts
 │   │   │   ├── story.ts
 │   │   │   ├── search.ts
 │   │   │   ├── saga.ts
 │   │   │   ├── rumor.ts
 │   │   │   ├── quest.ts
 │   │   │   ├── npc.ts
-│   │   │   └── location.ts
+│   │   │   ├── note.ts
+│   │   │   ├── location.ts
+│   │   │   └── common.ts
 │   │   ├── themes
 │   │   │   ├── definitions
 │   │   │   │   ├── medievalTheme.ts
@@ -54,6 +59,8 @@ DnDCampaignCompanion
 │   │   ├── services
 │   │   │   ├── search
 │   │   │   │   └── SearchService.ts
+│   │   │   ├── openai
+│   │   │   │   └── types.ts
 │   │   │   ├── firebase
 │   │   │   │   ├── user
 │   │   │   │   │   └── UserService.ts
@@ -71,6 +78,9 @@ DnDCampaignCompanion
 │   │   │   │   │   └── CampaignService.ts
 │   │   │   │   ├── auth
 │   │   │   │   │   └── AuthService.ts
+│   │   │   │   ├── ai
+│   │   │   │   │   ├── entityMapper.ts
+│   │   │   │   │   └── EntityExtractionService.ts
 │   │   │   │   └── index.ts
 │   │   │   └── index.ts
 │   │   ├── pages
@@ -98,6 +108,10 @@ DnDCampaignCompanion
 │   │   │   │   ├── NPCsEditPage.tsx
 │   │   │   │   ├── NPCsCreatePage.tsx
 │   │   │   │   └── index.ts
+│   │   │   ├── notes
+│   │   │   │   ├── NotesPage.tsx
+│   │   │   │   ├── NotePage.tsx
+│   │   │   │   └── index.ts
 │   │   │   ├── locations
 │   │   │   │   ├── LocationsPage.tsx
 │   │   │   │   ├── LocationEditPage.tsx
@@ -112,14 +126,18 @@ DnDCampaignCompanion
 │   │   │   ├── useSagaData.ts
 │   │   │   ├── useRumorData.ts
 │   │   │   ├── useQuestData.ts
+│   │   │   ├── useOpenAIExtractor.ts
 │   │   │   ├── useNPCData.ts
+│   │   │   ├── useNoteData.ts
 │   │   │   ├── useNavigation.ts
 │   │   │   ├── useLocationData.ts
 │   │   │   ├── useFirebaseData.ts
+│   │   │   ├── useEntityExtractor.ts
 │   │   │   └── useChapterData.ts
 │   │   ├── context
 │   │   │   ├── firebase
 │   │   │   │   ├── hooks
+│   │   │   │   │   ├── useUsernameLookup.ts
 │   │   │   │   │   ├── useUser.ts
 │   │   │   │   │   ├── useInvitations.ts
 │   │   │   │   │   ├── useGroups.ts
@@ -128,11 +146,15 @@ DnDCampaignCompanion
 │   │   │   │   │   └── useAuth.ts
 │   │   │   │   ├── index.ts
 │   │   │   │   └── FirebaseContext.tsx
+│   │   │   ├── __tests__
+│   │   │   │   └── NoteContext.test.tsx
+│   │   │   ├── UsageContext.tsx
 │   │   │   ├── StoryContext.tsx
 │   │   │   ├── SearchContext.tsx
 │   │   │   ├── RumorContext.tsx
 │   │   │   ├── QuestContext.tsx
 │   │   │   ├── NPCContext.tsx
+│   │   │   ├── NoteContext.tsx
 │   │   │   ├── NavigationContext.tsx
 │   │   │   └── LocationContext.tsx
 │   │   ├── constants
@@ -193,6 +215,15 @@ DnDCampaignCompanion
 │   │   │   │   │   ├── NPCEditForm.tsx
 │   │   │   │   │   ├── NPCDirectory.tsx
 │   │   │   │   │   └── NPCCard.tsx
+│   │   │   │   ├── notes
+│   │   │   │   │   ├── README.md
+│   │   │   │   │   ├── NotesList.tsx
+│   │   │   │   │   ├── NoteReferences.tsx
+│   │   │   │   │   ├── NoteEditor.tsx
+│   │   │   │   │   ├── NoteCard.tsx
+│   │   │   │   │   ├── FloatingUsageIndicator.tsx
+│   │   │   │   │   ├── EntityExtractor.tsx
+│   │   │   │   │   └── EntityCard.tsx
 │   │   │   │   ├── locations
 │   │   │   │   │   ├── LocationFormSections.tsx
 │   │   │   │   │   ├── LocationEditForm.tsx
@@ -269,6 +300,7 @@ DnDCampaignCompanion
 │   │   ├── index.tsx
 │   │   └── App.tsx
 │   ├── scripts
+│   │   ├── start-dev.ps1
 │   │   ├── manage-environment.ps1
 │   │   ├── manage-dev-data.ps1
 │   │   ├── dirTree.ps1
@@ -281,22 +313,50 @@ DnDCampaignCompanion
 │   │   ├── manifest.json
 │   │   ├── index.html
 │   │   └── 404.html
-│   ├── functions
-│   │   ├── src
-│   │   │   ├── userManagement
-│   │   │   │   ├── removeUserFromGroup.ts
-│   │   │   │   ├── index.ts
-│   │   │   │   └── deleteUser.ts
-│   │   │   ├── index.ts
-│   │   │   └── contact.ts
-│   │   ├── tsconfig.json
-│   │   ├── tsconfig.dev.json
-│   │   ├── package-lock.json
-│   │   ├── package.json
-│   │   ├── .gitignore
-│   │   └── .eslintrc.js
 │   ├── firebase
+│   │   ├── functions
+│   │   │   ├── src
+│   │   │   │   ├── userManagement
+│   │   │   │   │   ├── removeUserFromGroup.ts
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   └── deleteUser.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── entityExtraction.ts
+│   │   │   │   └── contact.ts
+│   │   │   ├── lib
+│   │   │   │   ├── userManagement
+│   │   │   │   │   ├── removeUserFromGroup.js.map
+│   │   │   │   │   ├── removeUserFromGroup.js
+│   │   │   │   │   ├── index.js.map
+│   │   │   │   │   ├── index.js
+│   │   │   │   │   ├── deleteUser.js.map
+│   │   │   │   │   └── deleteUser.js
+│   │   │   │   ├── index.js.map
+│   │   │   │   ├── index.js
+│   │   │   │   ├── entityExtraction.js.map
+│   │   │   │   ├── entityExtraction.js
+│   │   │   │   ├── contact.js.map
+│   │   │   │   └── contact.js
+│   │   │   ├── tsconfig.json
+│   │   │   ├── tsconfig.dev.json
+│   │   │   ├── package-lock.json
+│   │   │   ├── package.json
+│   │   │   ├── firestore-debug.log
+│   │   │   ├── .gitignore
+│   │   │   └── .eslintrc.js
+│   │   ├── emulator-data
+│   │   │   ├── firestore_export
+│   │   │   │   ├── all_namespaces
+│   │   │   │   │   └── all_kinds
+│   │   │   │   │       ├── output-0
+│   │   │   │   │       └── all_namespaces_all_kinds.export_metadata
+│   │   │   │   └── firestore_export.overall_export_metadata
+│   │   │   ├── auth_export
+│   │   │   │   ├── config.json
+│   │   │   │   └── accounts.json
+│   │   │   └── firebase-export-metadata.json
 │   │   ├── storage.rules
+│   │   ├── firestore-debug.log
 │   │   ├── firestore.rules
 │   │   ├── firestore.indexes.json
 │   │   ├── firebase.json
@@ -309,43 +369,23 @@ DnDCampaignCompanion
 │   │   │   ├── user-management.md
 │   │   │   ├── rumor-management.md
 │   │   │   ├── public-sample-data.md
-│   │   │   ├── group-scaling.md
 │   │   │   ├── databaseStructure.md
 │   │   │   └── chapter-management.md
-│   │   ├── futureThoughts
-│   │   │   ├── homepageUpdate.md
-│   │   │   └── AdventureJournal.md
 │   │   ├── design
 │   │   │   └── ui
 │   │   │       └── page-layouts
 │   │   │           └── rumors.md
+│   │   ├── backlog
+│   │   │   └── FormContextStandard.txt
 │   │   └── README.md
 │   ├── docker
 │   │   ├── emulators
 │   │   │   ├── logs
 │   │   │   └── data
-│   │   │       ├── storage_export
-│   │   │       │   ├── metadata
-│   │   │       │   ├── blobs
-│   │   │       │   └── buckets.json
-│   │   │       ├── firestore_export
-│   │   │       │   ├── all_namespaces
-│   │   │       │   │   └── all_kinds
-│   │   │       │   │       ├── output-0
-│   │   │       │   │       └── all_namespaces_all_kinds.export_metadata
-│   │   │       │   └── firestore_export.overall_export_metadata
-│   │   │       ├── auth_export
-│   │   │       │   ├── config.json
-│   │   │       │   └── accounts.json
-│   │   │       └── firebase-export-metadata.json
 │   │   ├── config
-│   │   │   ├── nginx.conf
-│   │   │   └── firebase-emulator.json
-│   │   ├── emulator-entrypoint.sh
-│   │   ├── Dockerfile.functions
+│   │   │   └── nginx.conf
 │   │   ├── Dockerfile.frontend.prod
 │   │   ├── Dockerfile.frontend.dev
-│   │   ├── Dockerfile.emulators
 │   │   ├── docker-compose.prod.yml
 │   │   └── docker-compose.dev.yml
 │   ├── .github

@@ -30,14 +30,9 @@
 
 13. New feature idea (partly implemented already): sub-chapters.
 
-14. New feature idea: note taking in the app.
-
 15. CLAUDE Code: 
 
 15.1. Major do-over of the project structure
-
-15.2. Update README
-
 
 Not prioritized yet:
 
@@ -46,3 +41,7 @@ Make a dedicated page for profile options
 Form/Context Responsibility Pattern Standardization (look at docs/backlog/FormContextStandard)
 
 NPCs Page seems to take longer to load than the rest of the pages.
+
+Not signed in UI must be updated and made the same on every page.
+
+Make project true Single Page Application.

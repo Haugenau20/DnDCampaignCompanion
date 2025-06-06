@@ -1,70 +1,62 @@
 // src/pages/locations/LocationCreatePage.tsx
-import React, { useEffect } from 'react';
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
-import Card from '../../components/core/Card';
 import LocationCreateForm from '../../components/features/locations/LocationCreateForm';
-import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
+import Breadcrumb from '../../components/layout/Breadcrumb';
 import { ArrowLeft } from 'lucide-react';
-import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../themes/ThemeContext';
 
 const LocationCreatePage: React.FC = () => {
-  const { user } = useAuth();
-  const { activeGroupId } = useGroups();
-  const { activeCampaignId } = useCampaigns();
-  const { navigateToPage } = useNavigation();
+  const navigate = useNavigate();
+  const location = useLocation();
   
-  // Check if we have required context
-  const hasRequiredContext = !!activeGroupId && !!activeCampaignId;
-  
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!user) {
-      navigateToPage('/locations');
-    }
-  }, [user, navigateToPage]);
+  // Check for initial data from navigation state
+  const initialData = location.state?.initialData;
+  const noteId = location.state?.noteId;
+  const entityId = location.state?.entityId;
 
-  if (!hasRequiredContext) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <Card>
-          <Card.Content className="text-center py-8">
-            <Typography variant="h3" className="mb-4">
-              No Active Group or Campaign
-            </Typography>
-            <Typography color="secondary" className="mb-4">
-              Please select a group and campaign to create a location.
-            </Typography>
-            <Button
-              variant="ghost"
-              onClick={() => navigateToPage('/locations')}
-              startIcon={<ArrowLeft />}
-            >
-              Back to Locations
-            </Button>
-          </Card.Content>
-        </Card>
-      </div>
-    );
-  }
+  const handleSuccess = () => {
+    navigate('/locations');
+  };
+
+  const handleCancel = () => {
+    // Go back to the previous page (note if coming from note conversion)
+    if (noteId) {
+      navigate(`/notes/${noteId}`);
+    } else {
+      navigate('/locations');
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-8 flex items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={() => navigateToPage('/locations')}
-          startIcon={<ArrowLeft />}
-        >
-          Back to Locations
-        </Button>
-        <Typography variant="h1">Create New Location</Typography>
+      <Breadcrumb
+        items={[
+          { label: 'Locations', href: '/locations' },
+          { label: 'Create' }
+        ]}
+        className="mb-4"
+      />
+
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <Button
+            variant="ghost"
+            className="mb-4"
+            onClick={handleCancel}
+            startIcon={<ArrowLeft className="w-4 h-4" />}
+          >
+            Back to {noteId ? 'Note' : 'Locations'}
+          </Button>
+          <Typography variant="h2">Create New Location</Typography>
+        </div>
       </div>
 
       <LocationCreateForm
-        onSuccess={() => navigateToPage('/locations')}
-        onCancel={() => navigateToPage('/locations')}
+        initialData={{ ...initialData, noteId, entityId }}
+        onSuccess={handleSuccess}
+        onCancel={handleCancel}
       />
     </div>
   );

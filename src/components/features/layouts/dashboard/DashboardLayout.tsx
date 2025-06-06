@@ -3,7 +3,6 @@ import React from 'react';
 import CampaignBanner from './sections/CampaignBanner';
 import ActivityFeed from './sections/ActivityFeed';
 import CampaignStats from './sections/CampaignStats';
-import GlobalActionButton from '../../../shared/GlobalActionButton';
 
 // Props interface for layout components
 export interface LayoutProps {
@@ -56,9 +55,6 @@ const DashboardLayout: React.FC<LayoutProps> = ({
           />
         </div>
       </div>
-      
-      {/* Global Action Button */}
-      <GlobalActionButton />
     </>
   );
 };

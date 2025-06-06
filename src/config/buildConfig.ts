@@ -2,7 +2,7 @@
 const buildConfig = {
   features: {
     enableSidebar: false,
-    showNPCLegend: false,  // Added this feature flag
+    showNPCLegend: false,
   },
   // Add other build configurations here
   version: '1.0.0',

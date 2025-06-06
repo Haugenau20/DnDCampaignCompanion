@@ -1,9 +1,10 @@
 // components/layout/Layout.tsx
 import React from 'react';
-import clsx from 'clsx';
 import Header from './Header';
 import Footer from './Footer';
 import Navigation from './Navigation';
+import FloatingUsageIndicator from '../features/notes/FloatingUsageIndicator';
+import GlobalActionButton from '../shared/GlobalActionButton';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -19,6 +20,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {children}
         </main>
       <Footer />
+      
+      {/* Floating usage indicator - only shows on note pages */}
+      <FloatingUsageIndicator />
+      <GlobalActionButton />
     </div>
   );
 };

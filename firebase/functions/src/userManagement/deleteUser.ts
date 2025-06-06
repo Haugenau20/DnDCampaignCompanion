@@ -7,6 +7,9 @@ interface DeleteUserData {
 }
 
 export const deleteUser = functions.onCall(
+  {
+    region: "europe-west1",
+  },
   async (request: functions.CallableRequest<DeleteUserData>) => {
     const data = request.data;
     // Check if the caller is authenticated

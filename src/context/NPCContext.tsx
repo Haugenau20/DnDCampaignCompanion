@@ -1,7 +1,7 @@
 // context/NPCContext.tsx
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { NPC, NPCContextValue, NPCRelationship, NPCNote } from '../types/npc';
-import { ContentAttribution, BaseContent } from '../types/common';
+import { ContentAttribution} from '../types/common';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
 import { useGroups, useCampaigns, useAuth, useUser } from './firebase';
