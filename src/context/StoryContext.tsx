@@ -23,7 +23,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { userProfile, activeGroupUserProfile } = useUser();
   
   // Local state for story-specific functionality
-  const [currentChapter, setCurrentChapter] = useState<Chapter | null>(null);
+  const [currentChapter, setCurrentChapterState] = useState<Chapter | null>(null);
   const [storyProgress, setStoryProgress] = useState<StoryProgress>(defaultProgress);
   
   // Firebase operations
@@ -69,7 +69,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...data
     };
 
-    await addData(id, chapter);
+    await addData(chapter, id);
     await refreshData();
     return chapter;
   }, [validateAuth, user, userProfile, activeGroupUserProfile, addData, refreshData]);
@@ -139,7 +139,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [chapters, getById]);
 
   const setCurrentChapter = useCallback((chapter: Chapter): void => {
-    setCurrentChapter(chapter);
+    setCurrentChapterState(chapter);
     setStoryProgress(prev => ({
       ...prev,
       currentChapter: chapter.id,

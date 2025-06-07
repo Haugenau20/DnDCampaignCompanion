@@ -56,7 +56,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...data
     };
 
-    await addData(id, quest);
+    await addData(quest, id);
     await refreshData();
     return quest;
   }, [validateAuth, user, userProfile, activeGroupUserProfile, addData, refreshData]);

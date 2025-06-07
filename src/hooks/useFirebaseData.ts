@@ -119,9 +119,11 @@ export function useFirebaseData<T extends Record<string, any>>(
 
   return {
     data,
+    items: data, // New standardized property name
     loading,
     error,
     getData,
+    refreshData: getData, // New standardized method name  
     addData,
     updateData,
     deleteData,

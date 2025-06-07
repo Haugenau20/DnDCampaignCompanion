@@ -133,6 +133,8 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       updatedAt: now,
       dateAdded: now,
       dateModified: now,
+      createdAt: now,
+      modifiedAt: now,
       createdBy: user.uid,
       createdByUsername: username || "",
       createdByCharacterName: characterName || "",

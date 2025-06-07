@@ -115,7 +115,7 @@ const TableView: React.FC<TableViewProps> = ({
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4 primary" />
                       <Typography variant="body-sm" color="secondary">
-                        {new Date(chapter.dateModified || chapter.dateAdded).toLocaleDateString()}
+                        {new Date(chapter.dateModified || chapter.dateAdded || chapter.modifiedAt || chapter.createdAt).toLocaleDateString()}
                       </Typography>
                     </div>
                   </td>

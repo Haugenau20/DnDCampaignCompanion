@@ -16,7 +16,6 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import BaseFirebaseService from '../core/BaseFirebaseService';
-import { ContentAttribution } from '../../../types/common';
 
 /**
  * DocumentService provides generic CRUD operations for Firestore documents

@@ -56,7 +56,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...data
     };
 
-    await addData(id, npc);
+    await addData(npc, id);
     await refreshData();
     return npc;
   }, [validateAuth, user, userProfile, activeGroupUserProfile, addData, refreshData]);

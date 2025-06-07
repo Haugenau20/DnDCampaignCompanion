@@ -29,13 +29,13 @@ export interface SystemMetadata {
 
   // Legacy field names for compatibility during Phase 4 database alignment
   /** @deprecated Use createdAt instead - legacy field for compatibility */
-  dateAdded?: string;
+  dateAdded: string; // Make required for legacy compatibility
   /** @deprecated Use modifiedAt instead - legacy field for compatibility */
-  dateModified?: string;
+  dateModified: string; // Make required for legacy compatibility
   /** @deprecated Use modifiedAt instead - legacy field for compatibility */
   lastUpdated?: string;
   /** @deprecated Use modifiedAt instead - legacy field for compatibility */
-  updatedAt?: string;
+  updatedAt: string; // Make required for legacy compatibility
 }
 
 /**

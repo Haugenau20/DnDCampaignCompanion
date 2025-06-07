@@ -85,9 +85,15 @@ const RumorCard: React.FC<RumorCardProps> = ({
       await updateRumorNote(rumor.id, {
         id: crypto.randomUUID(),
         content: noteInput.trim(),
-        dateAdded: '',  // Will be set in context
-        createdBy: '',    // Will be set in context
-        createdByUsername: '' // Will be set in context
+        createdAt: new Date().toISOString(),
+        createdBy: user?.uid || '',
+        createdByUsername: user?.displayName || '',
+        modifiedBy: user?.uid || '',
+        modifiedByUsername: user?.displayName || '',
+        modifiedAt: new Date().toISOString(),
+        dateAdded: new Date().toISOString(),
+        dateModified: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
       
       // Reset form
@@ -268,7 +274,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
                         <div className="flex items-center gap-2">
                           <Calendar size={14} className="typography-secondary" />
                           <Typography variant="body-sm" color="secondary">
-                            {new Date(note.dateAdded).toLocaleDateString()} by {note.createdByUsername}
+                            {new Date(note.dateAdded || note.createdAt).toLocaleDateString()} by {note.createdByUsername}
                           </Typography>
                         </div>
                         <Typography variant="body-sm">

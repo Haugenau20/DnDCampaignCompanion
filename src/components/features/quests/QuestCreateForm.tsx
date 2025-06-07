@@ -45,7 +45,7 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
 }) => {
   
   // Import addQuest from the context
-  const { addQuest, isLoading, error: questError } = useQuests();
+  const { create: addQuest, isLoading, error: questError } = useQuests();
   const { markEntityAsConverted } = useNotes();
 
   // Initial quest state with initial data
@@ -139,16 +139,14 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
         rewards: formData.rewards || [],
         location: formData.location || '',
         levelRange: formData.levelRange || '',
-        createdBy: formData.createdBy || '',
-        createdByUsername: formData.createdByUsername || '',
-        dateAdded: new Date().toISOString(),
+        dateCompleted: formData.dateCompleted || undefined,
       };
 
-      const questId = await addQuest(questData);
+      const createdQuest = await addQuest(questData);
       
       // If this was created from a note entity, mark it as converted
       if (initialData?.noteId && initialData?.entityId) {
-        await markEntityAsConverted(initialData.noteId, initialData.entityId, questId);
+        await markEntityAsConverted(initialData.noteId, initialData.entityId, createdQuest.id);
       }
       
       onSuccess?.();

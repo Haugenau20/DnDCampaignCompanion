@@ -30,7 +30,7 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
   existingNPCs
 }) => {
   // Use the NPCs context
-  const { updateNPC, isLoading, error } = useNPCs();
+  const { update: updateNPC, isLoading, error } = useNPCs();
   
   // Authentication and user data
   const { user } = useAuth();
@@ -66,25 +66,29 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
     }
 
     try {
-      // Include attribution metadata
-      const now = new Date().toISOString();
-      
-      const updatedNPC: NPC = {
-        ...formData,
+      // Create clean domain data for context (system metadata handled automatically)
+      const domainData = {
+        name: formData.name,
+        title: formData.title,
+        status: formData.status,
+        race: formData.race,
+        occupation: formData.occupation,
+        location: formData.location,
+        relationship: formData.relationship,
+        description: formData.description,
+        appearance: formData.appearance,
+        personality: formData.personality,
+        background: formData.background,
         connections: {
           ...formData.connections,
           relatedNPCs: Array.from(selectedNPCs),
           relatedQuests: Array.from(selectedQuests)
         },
-        modifiedBy: user?.uid || '',
-        modifiedByUsername: getUserName(activeGroupUserProfile),
-        modifiedByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
-        modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-        dateModified: now
+        notes: formData.notes || []
       };
 
-      // Use context method to update the NPC
-      await updateNPC(updatedNPC);
+      // Use context method to update the NPC  
+      await updateNPC(npc.id, domainData);
       onSuccess?.();
     } catch (err) {
       console.error('Failed to update NPC:', err);

@@ -31,6 +31,10 @@ export class SystemMetadataService {
       modifiedByCharacterId: characterId,
       modifiedByCharacterName: characterName,
       modifiedAt: now,
+      // Legacy fields for compatibility
+      dateAdded: now,
+      dateModified: now,
+      updatedAt: now,
     };
   }
 
@@ -53,6 +57,9 @@ export class SystemMetadataService {
       modifiedByCharacterId: characterId,
       modifiedByCharacterName: characterName,
       modifiedAt: now,
+      // Legacy fields for compatibility
+      dateModified: now,
+      updatedAt: now,
     };
   }
 

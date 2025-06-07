@@ -37,7 +37,7 @@ const QuestEditForm: React.FC<QuestEditFormProps> = ({
 }) => {
   
   // Import updateQuest from the context
-  const { updateQuest, isLoading, error: questError } = useQuests();
+  const { update: updateQuest, isLoading, error: questError } = useQuests();
 
   // Form state initialized with existing quest data
   const [formData, setFormData] = useState<Quest>(quest);
@@ -74,13 +74,23 @@ const QuestEditForm: React.FC<QuestEditFormProps> = ({
     try {
       setIsSubmitting(true);
       
-      // Update the quest - the context will handle attribution
-      const updatedQuest: Quest = {
-        ...formData,
-        relatedNPCIds: Array.from(selectedNPCs)
+      // Create clean domain data for context (system metadata handled automatically)
+      const domainData = {
+        title: formData.title,
+        description: formData.description,
+        status: formData.status,
+        background: formData.background,
+        objectives: formData.objectives,
+        leads: formData.leads,
+        keyLocations: formData.keyLocations,
+        complications: formData.complications,
+        rewards: formData.rewards,
+        relatedNPCIds: Array.from(selectedNPCs),
+        location: formData.location,
+        dateCompleted: formData.dateCompleted
       };
 
-      await updateQuest(updatedQuest);
+      await updateQuest(quest.id, domainData);
       onSuccess?.();
     } catch (err) {
       console.error('Failed to update quest:', err);

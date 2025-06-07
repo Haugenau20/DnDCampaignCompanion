@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(grep:*)",
+      "Bash(rm:*)",
+      "Bash(rg:*)",
+      "Bash(npx tsc:*)"
+    ],
+    "deny": [
+      "Read(docker/emulators/**)",
+      "Read(docs/design/**)",
+      "Read(docs/requirements/**)",
+      "Read(docs/technical/**)",
+      "Read(functions/package-lock.json)",
+      "Read(node_modules)",
+      "Read(node_modules/**)",
+      "Read(package-lock.json)"
+    ]
+  },
+  "enableAllProjectMcpServers": false
+}

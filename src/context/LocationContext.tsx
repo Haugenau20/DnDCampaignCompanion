@@ -11,7 +11,7 @@ export const LOCATION_CHANGED_EVENT = 'location-data-changed';
 const LocationContext = createContext<LocationContextValue | undefined>(undefined);
 
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { items: initialLocations, loading, error, refreshData: refreshLocations } = useFirebaseData<Location>({ collection: 'locations' });
+  const { items: initialLocations, loading, error, refreshData } = useFirebaseData<Location>({ collection: 'locations' });
   const [locations, setLocations] = useState<Location[]>(initialLocations);
   const hasRequiredContext = true; // TODO: Implement proper context checking
   const { user } = useAuth();
@@ -24,6 +24,11 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     setLocations(initialLocations);
   }, [initialLocations]);
+
+  // Create refresh wrapper
+  const refreshLocations = useCallback(async (): Promise<void> => {
+    await refreshData();
+  }, [refreshData]);
 
   // Add listener for the custom event
   useEffect(() => {

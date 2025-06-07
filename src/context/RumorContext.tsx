@@ -210,9 +210,16 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: crypto.randomUUID(),
       content: `Combined from rumors: ${rumorIds.join(', ')}`,
       dateAdded: now,
+      dateModified: now,
+      updatedAt: now,
+      createdAt: now,
+      modifiedAt: now,
       createdBy: user.uid,
       createdByUsername: getUserName(activeGroupUserProfile),
       createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      modifiedBy: user.uid,
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
     }];
   
     const newRumor: Rumor = {
@@ -259,9 +266,16 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               id: crypto.randomUUID(),
               content: `Combined into rumor: ${id}`,
               dateAdded: now,
+              dateModified: now,
+              updatedAt: now,
+              createdAt: now,
+              modifiedAt: now,
               createdBy: user.uid,
               createdByUsername: getUserName(activeGroupUserProfile),
               createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+              modifiedBy: user.uid,
+              modifiedByUsername: getUserName(activeGroupUserProfile),
+              modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
             }
           ]
         };
@@ -320,9 +334,16 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               id: crypto.randomUUID(),
               content: `Converted to quest: ${questId}`,
               dateAdded: now,
+              dateModified: now,
+              updatedAt: now,
+              createdAt: now,
+              modifiedAt: now,
               createdBy: user.uid,
               createdByUsername: getUserName(activeGroupUserProfile),
               createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+              modifiedBy: user.uid,
+              modifiedByUsername: getUserName(activeGroupUserProfile),
+              modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
             }
           ]
         });

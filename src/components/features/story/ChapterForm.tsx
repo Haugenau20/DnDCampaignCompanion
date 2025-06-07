@@ -120,7 +120,7 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
       }
 
       // Generate summary from content if not provided
-      const finalSummary = formData.summary.trim() || generateSummaryFromContent(formData.content);
+      const finalSummary = formData.summary?.trim() || generateSummaryFromContent(formData.content);
 
       const chapterData: ChapterFormData = {
         ...formData,
