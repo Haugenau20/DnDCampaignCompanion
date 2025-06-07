@@ -84,7 +84,7 @@ useEffect(() => {
     });
     
     // Story Chapters
-    chapters.forEach(chapter => {
+    chapters.forEach((chapter: any) => {
       if (chapter.modifiedBy) uniqueUids.add(chapter.modifiedBy);
       if (chapter.createdBy) uniqueUids.add(chapter.createdBy);
     });
@@ -122,7 +122,7 @@ useEffect(() => {
     const allActivities: Activity[] = [];
     
     // Add chapters
-    chapters.forEach(chapter => {
+    chapters.forEach((chapter: any) => {
       if (chapter.dateModified || chapter.dateAdded) {
         allActivities.push({
           id: chapter.id,

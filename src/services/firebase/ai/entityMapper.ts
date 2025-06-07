@@ -9,13 +9,22 @@ import { OpenAIEntityResponse } from '../../openai/types';
 export const mapOpenAIEntityToExtractedEntity = (
   openaiEntity: OpenAIEntityResponse
 ): ExtractedEntity => {
+  const now = new Date().toISOString();
   const baseEntity: ExtractedEntity = {
     id: `${openaiEntity.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     text: openaiEntity.text,
     type: openaiEntity.type as EntityType,
     confidence: openaiEntity.confidence,
     isConverted: false,
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    modifiedAt: now,
+    createdBy: 'system',
+    createdByUsername: 'AI Extraction',
+    modifiedBy: 'system',
+    modifiedByUsername: 'AI Extraction',
+    dateAdded: now,
+    dateModified: now,
+    updatedAt: now,
     extraData: {}
   };
 

@@ -7,8 +7,8 @@ import Card from '../../components/core/Card';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/firebase';
-import { Book, Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
 import { SagaData } from '../../types/saga';
+import { Book, Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
 import { exportChaptersAsText } from '../../utils/export-utils';
 import { useStory } from '../../context/StoryContext';
 import Dialog from '../../components/core/Dialog';
@@ -21,7 +21,7 @@ const SagaEditPage: React.FC = () => {
   const { user } = useAuth();
   const { chapters } = useStory();
   // TODO: Saga functionality needs to be implemented in story context
-  const saga = null;
+  const saga: SagaData | null = null;
   const loading = false;
   const error = null;
   const hasRequiredContext = true;
@@ -40,8 +40,9 @@ const SagaEditPage: React.FC = () => {
   // Initialize form with saga data once loaded
   useEffect(() => {
     if (saga) {
-      setTitle(saga.title);
-      setContent(saga.content);
+      const sagaData = saga as SagaData;
+      setTitle(sagaData.title || '');
+      setContent(sagaData.content || '');
     } else if (!loading && hasRequiredContext) {
       // Initialize with default content
       setContent(SAGA_DEFAULT_OPENING);
@@ -83,14 +84,21 @@ const SagaEditPage: React.FC = () => {
       }
       
       // Update or create saga document
+      const now = new Date().toISOString();
       const sagaData: SagaData = {
+        id: 'saga', // Saga is singleton
         title: title.trim(),
         content: content.trim(),
-        lastUpdated: new Date().toISOString(),
         version: '1.0', // Simple versioning for now,
+        createdAt: now,
+        modifiedAt: now,
         createdBy: user?.uid || '',
         createdByUsername: user?.displayName || '',
-        dateAdded: new Date().toISOString()
+        modifiedBy: user?.uid || '',
+        modifiedByUsername: user?.displayName || '',
+        dateAdded: now,
+        dateModified: now,
+        updatedAt: now
       };
       
       const success = await saveSaga(sagaData);

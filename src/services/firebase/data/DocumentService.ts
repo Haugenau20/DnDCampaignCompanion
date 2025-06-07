@@ -83,7 +83,7 @@ class DocumentService extends BaseFirebaseService {
    * Includes the active character information at creation time
    * @returns Attribution metadata object
    */
-  private async getCreationAttribution(): Promise<Partial<ContentAttribution>> {
+  private async getCreationAttribution(): Promise<Partial<any>> {
     const userId = this.getCurrentUser()?.uid;
     if (!userId) {
       throw new Error('Not authenticated');
@@ -109,7 +109,7 @@ class DocumentService extends BaseFirebaseService {
       
       // Create attribution metadata with character information
       const now = new Date().toISOString();
-      const attributionMetadata: Partial<ContentAttribution> = {
+      const attributionMetadata: Partial<any> = {
         createdBy: userId,
         createdByUsername: username,
         dateAdded: now,
@@ -141,7 +141,7 @@ class DocumentService extends BaseFirebaseService {
    * Includes the active character information at modification time
    * @returns Attribution metadata object
    */
-  private async getModificationAttribution(): Promise<Partial<ContentAttribution>> {
+  private async getModificationAttribution(): Promise<Partial<any>> {
     const userId = this.getCurrentUser()?.uid;
     if (!userId) {
       throw new Error('Not authenticated');
@@ -167,7 +167,7 @@ class DocumentService extends BaseFirebaseService {
       
       // Create modification metadata with character information
       const now = new Date().toISOString();
-      const attributionMetadata: Partial<ContentAttribution> = {
+      const attributionMetadata: Partial<any> = {
         modifiedBy: userId,
         modifiedByUsername: username,
         dateModified: now,

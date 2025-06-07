@@ -9,6 +9,7 @@ import { Book, Edit, Loader2 } from 'lucide-react';
 import { useStory } from '../../context/StoryContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/firebase';
+import { SagaData } from '../../types/saga';
 
 // Constants for saga default content and tips
 const SAGA_DEFAULT_OPENING = "In a realm where magic weaves through the fabric of reality and ancient powers stir from long slumber, a group of unlikely heroes finds their fates intertwined by destiny's unseen hand.";
@@ -24,7 +25,7 @@ const SagaPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
   const { user } = useAuth();
   // TODO: Saga functionality needs to be implemented in story context
-  const saga = null;
+  const saga: SagaData | null = null;
   const loading = false;
   const error = null;
   const hasRequiredContext = true;
@@ -48,8 +49,9 @@ const SagaPage: React.FC = () => {
 
   // Generate content based on whether saga exists
   const getSagaContent = () => {
-    if (saga && saga.content) {
-      return saga.content;
+    if (saga) {
+      const sagaData = saga as SagaData;
+      return sagaData.content;
     }
     
     // If no saga exists, return default content with tips
@@ -72,7 +74,7 @@ const SagaPage: React.FC = () => {
 
   // Get title
   const getSagaTitle = () => {
-    return saga?.title || "The Campaign Saga";
+    return saga ? (saga as SagaData).title : "The Campaign Saga";
   };
 
   // Handle context errors
@@ -124,9 +126,9 @@ const SagaPage: React.FC = () => {
         {/* Page Header */}
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {saga && saga.lastUpdated && (
+            {saga && (saga as SagaData).modifiedAt && (
               <Typography variant="body-sm" color="secondary" className="hidden md:block">
-                Last updated: {new Date(saga.lastUpdated).toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})}
+                Last updated: {new Date((saga as SagaData).modifiedAt).toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})}
               </Typography>
             )}
           </div>

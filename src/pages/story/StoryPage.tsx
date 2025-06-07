@@ -39,7 +39,7 @@ const StoryPage: React.FC = () => {
         const chapter = getChapterById(chapterId);
         if (chapter) {
           setCurrentChapter(chapter);
-          updateCurrentChapter(chapter.id);
+          updateCurrentChapter(chapter);
         } else {
           // If requested chapter doesn't exist, go to first chapter
           navigateToPage(`/story/chapters/${chapters[0].id}`);

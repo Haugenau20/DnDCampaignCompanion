@@ -66,7 +66,6 @@ const NPCsCreatePage: React.FC = () => {
         initialData={formInitialData}
         onSuccess={handleSuccess}
         onCancel={handleCancel}
-        existingNPCs={npcs}
       />
     </div>
   );

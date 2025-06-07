@@ -5,7 +5,11 @@
       "Bash(grep:*)",
       "Bash(rm:*)",
       "Bash(rg:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(sed:*)",
+      "Bash(cp:*)",
+      "Bash(perl:*)"
     ],
     "deny": [
       "Read(docker/emulators/**)",
