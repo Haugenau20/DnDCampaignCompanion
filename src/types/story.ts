@@ -1,10 +1,11 @@
 // src/types/story.ts
-import { BaseContent } from './common';
+import { Entity, DomainData, EntityContextValue } from './common';
 
 /**
- * Represents a single chapter in the story
+ * Domain data for Chapters - this is what forms collect and submit
+ * No system metadata, no ID - pure domain information only
  */
-export interface Chapter extends BaseContent {
+export interface ChapterDomainData {
   /** Chapter title */
   title: string;
   /** Main content of the chapter */
@@ -16,6 +17,24 @@ export interface Chapter extends BaseContent {
   /** Optional chapter summary */
   summary?: string;
 }
+
+/**
+ * Complete Chapter entity with system metadata
+ * This is what contexts store and manage
+ */
+export interface Chapter extends Entity<ChapterDomainData> {
+  // Explicit domain data properties for TypeScript
+  title: string;
+  content: string;
+  order: number;
+  subChapters?: Chapter[];
+  summary?: string;
+}
+
+/**
+ * Type alias for clean form data
+ */
+export type ChapterFormData = DomainData<Chapter>;
 
 /**
  * Tracks reading progress for a specific chapter
@@ -43,22 +62,46 @@ export interface StoryProgress {
   chapterProgress: Record<string, ChapterProgress>;
 }
 
-// Context types
+/**
+ * Extended context methods specific to Chapters/Story
+ */
+export interface StoryContextMethods {
+  /** Get next chapter by order */
+  getNextChapter: (currentId: string) => Chapter | undefined;
+  /** Get previous chapter by order */
+  getPreviousChapter: (currentId: string) => Chapter | undefined;
+  /** Set current chapter for reading */
+  setCurrentChapter: (chapter: Chapter) => void;
+  /** Check if has required context */
+  hasRequiredContext: boolean;
+}
+
+/**
+ * Extended state for story context
+ */
 export interface StoryContextState {
-  chapters: Chapter[];
+  /** Array of chapters */
+  items: Chapter[];
+  /** Current chapter being read */
   currentChapter: Chapter | null;
+  /** Loading state */
   isLoading: boolean;
+  /** Error message if any */
   error: string | null;
 }
 
-export interface StoryContextValue extends StoryContextState {
-  getChapterById: (id: string) => Chapter | undefined;
-  getNextChapter: (currentId: string) => Chapter | undefined;
-  getPreviousChapter: (currentId: string) => Chapter | undefined;
-  addChapter: (chapter: Omit<Chapter, 'id'>) => Promise<string>;
-  updateChapter: (id: string, updates: Partial<Chapter>) => Promise<void>;
-  deleteChapter: (id: string) => Promise<void>;
-  refreshChapters: () => Promise<Chapter[]>;
-  setCurrentChapter: (chapter: Chapter) => void;
-  hasRequiredContext: boolean;
+/**
+ * Complete Story context value
+ */
+export interface StoryContextValue extends StoryContextState, StoryContextMethods {
+  /** Create a new chapter from clean domain data */
+  create: (data: ChapterFormData) => Promise<Chapter>;
+  /** Update a chapter with clean domain data */
+  update: (id: string, data: ChapterFormData) => Promise<Chapter>;
+  /** Delete a chapter */
+  delete: (id: string) => Promise<void>;
+  /** Get chapter by ID */
+  getById: (id: string) => Chapter | undefined;
+  /** Refresh chapters from backend */
+  refresh: () => Promise<void>;
 }

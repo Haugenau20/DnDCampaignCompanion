@@ -1,5 +1,5 @@
 // src/types/location.ts
-import { BaseContent } from './common';
+import { Entity, DomainData, EntityContextValue } from './common';
 
 /**
  * Types of locations that can exist in the game world
@@ -23,9 +23,18 @@ export type LocationStatus =
   | 'visited';
 
 /**
- * Represents a location in the game world
+ * Note for a location
  */
-export interface Location extends BaseContent {
+export interface LocationNote {
+  date: string;
+  text: string;
+}
+
+/**
+ * Domain data for Locations - this is what forms collect and submit
+ * No system metadata, no ID - pure domain information only
+ */
+export interface LocationDomainData {
   /** Name of the location */
   name: string;
   /** Type of location */
@@ -51,26 +60,41 @@ export interface Location extends BaseContent {
 }
 
 /**
- * Note for a location
+ * Complete Location entity with system metadata
+ * This is what contexts store and manage
  */
-export interface LocationNote {
-  date: string;
-  text: string;
+export interface Location extends Entity<LocationDomainData> {
+  // Explicit domain data properties for TypeScript
+  name: string;
+  type: LocationType;
+  status: LocationStatus;
+  description: string;
+  parentId?: string;
+  features?: string[];
+  connectedNPCs?: string[];
+  relatedQuests?: string[];
+  notes?: LocationNote[];
+  tags?: string[];
+  lastVisited?: string;
 }
 
 /**
- * Context state for locations
+ * Type alias for clean form data
  */
-export interface LocationContextState {
+export type LocationFormData = DomainData<Location>;
+
+/**
+ * Complete Location context value (legacy implementation)
+ * TODO: Update to standardized pattern in Phase 4
+ */
+export interface LocationContextValue {
+  // Legacy state structure
   locations: Location[];
   isLoading: boolean;
   error: string | null;
-}
+  hasRequiredContext: boolean;
 
-/**
- * Context value including state and methods
- */
-export interface LocationContextValue extends LocationContextState {
+  // Legacy methods (to be standardized)
   getLocationById: (id: string) => Location | undefined;
   getLocationsByType: (type: LocationType) => Location[];
   getLocationsByStatus: (status: LocationStatus) => Location[];
@@ -81,6 +105,5 @@ export interface LocationContextValue extends LocationContextState {
   updateLocationStatus: (locationId: string, status: LocationStatus) => Promise<void>;
   deleteLocation: (locationId: string) => Promise<void>;
   createLocation: (locationData: Omit<Location, 'id'>) => Promise<string>;
-  refreshLocations: () => Promise<Location[]>;
-  hasRequiredContext: boolean;
+  refreshLocations: () => Promise<void>;
 }

@@ -4,7 +4,7 @@ import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import NPCDirectory from '../../components/features/npcs/NPCDirectory';
 import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
-import { useNPCData } from '../../hooks/useNPCData';
+import { useNPCs } from '../../context/NPCContext';
 import { NPC } from '../../types/npc';
 import { useNavigation } from '../../context/NavigationContext';
 import { Plus, Users, Loader2, AlertCircle } from 'lucide-react';
@@ -14,7 +14,7 @@ const NPCsPage: React.FC = () => {
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
-  const { npcs, loading, error, refreshNPCs } = useNPCData();
+  const { items: npcs, isLoading: loading, error, refresh: refreshNPCs } = useNPCs();
   const { navigateToPage } = useNavigation();
 
   // Check for missing context

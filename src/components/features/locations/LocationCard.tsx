@@ -50,8 +50,8 @@ const LocationCard: React.FC<LocationCardProps> = ({
   onToggleExpand
 }) => {
   const [isContentExpanded, setIsContentExpanded] = useState(false);
-  const { getNPCById } = useNPCs();
-  const { getQuestById } = useQuests();
+  const { getById: getNPCById } = useNPCs();
+  const { getById: getQuestById } = useQuests();
   const { user } = useAuth();
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [noteInput, setNoteInput] = useState('');

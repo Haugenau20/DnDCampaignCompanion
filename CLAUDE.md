@@ -2,12 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Build Commands
-- Run development: `.\scripts\manage-environment.ps1 -Environment dev -Action start`
-- Build production: `.\scripts\manage-environment.ps1 -Environment prod -Action start`
-- Stop environments: `.\scripts\manage-environment.ps1 -Environment dev|prod -Action stop`
-- Generate sample data: `.\scripts\manage-dev-data.ps1 -Action generate`
-- View logs: `.\scripts\manage-environment.ps1 -Environment dev|prod -Action logs [-Service frontend|emulators]`
+## Development Commands
+- **Start development**: `.\scripts\start-dev.ps1` (starts Firebase emulators + React dev server)
+- **Stop development**: `.\scripts\start-dev.ps1 -Action stop`
+- **Check status**: `.\scripts\start-dev.ps1 -Action status`
+- **Restart services**: `.\scripts\start-dev.ps1 -Action restart`
+- **Export emulator data**: `.\scripts\start-dev.ps1 -Action export`
+- **Generate sample data**: `.\scripts\manage-dev-data.ps1 -Action generate`
+
+### Development URLs
+- **React App**: http://localhost:3000
+- **Firebase Emulator UI**: http://localhost:4000
+- **Individual Emulators**:
+  - Auth: http://localhost:9099
+  - Firestore: http://localhost:8080
+  - Functions: http://localhost:5001
 
 ## Code Style Guidelines
 - **TypeScript**: Use strict typing with interfaces/types in dedicated files

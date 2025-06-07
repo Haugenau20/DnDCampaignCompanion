@@ -1,228 +1,210 @@
-// context/NPCContext.tsx
+// src/context/NPCContext.tsx
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
-import { NPC, NPCContextValue, NPCRelationship, NPCNote } from '../types/npc';
-import { ContentAttribution} from '../types/common';
-import { useNPCData } from '../hooks/useNPCData';
+import { NPC, NPCContextValue, NPCFormData, NPCRelationship, NPCNote } from '../types/npc';
+import { SystemMetadataService } from '../utils/system-metadata';
 import { useFirebaseData } from '../hooks/useFirebaseData';
 import { useGroups, useCampaigns, useAuth, useUser } from './firebase';
-import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 
 const NPCContext = createContext<NPCContextValue | undefined>(undefined);
 
 export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Use the NPCData hook for basic CRUD operations
-  const { npcs, loading, error, refreshNPCs, hasRequiredContext } = useNPCData();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();
   
-  // Additional Firebase hook for specific updates
-  const { updateData, deleteData, addData } = useFirebaseData<NPC>({
+  // Firebase operations
+  const { 
+    items: npcs, 
+    loading: isLoading, 
+    error, 
+    updateData, 
+    deleteData, 
+    addData,
+    refreshData 
+  } = useFirebaseData<NPC>({
     collection: 'npcs'
   });
 
-  // Get NPC by ID
-  const getNPCById = useCallback((id: string) => {
+  // Check if we have required context
+  const hasRequiredContext = Boolean(activeGroupId && activeCampaignId && user);
+
+  // Validate authentication for operations
+  const validateAuth = useCallback(() => {
+    if (!hasRequiredContext) {
+      throw new Error('Cannot perform operation: No group or campaign selected');
+    }
+    if (!user || !userProfile) {
+      throw new Error('User must be authenticated');
+    }
+  }, [hasRequiredContext, user, userProfile]);
+
+  // Standard CRUD operations
+  const create = useCallback(async (data: NPCFormData): Promise<NPC> => {
+    validateAuth();
+    
+    const id = SystemMetadataService.generateId();
+    const systemMetadata = SystemMetadataService.createMetadata(
+      user, 
+      userProfile, 
+      activeGroupUserProfile
+    );
+    
+    const npc: NPC = {
+      id,
+      ...systemMetadata,
+      ...data
+    };
+
+    await addData(id, npc);
+    await refreshData();
+    return npc;
+  }, [validateAuth, user, userProfile, activeGroupUserProfile, addData, refreshData]);
+
+  const update = useCallback(async (id: string, data: NPCFormData): Promise<NPC> => {
+    validateAuth();
+    
+    const existing = npcs.find(npc => npc.id === id);
+    if (!existing) {
+      throw new Error(`NPC with ID ${id} not found`);
+    }
+
+    const updateMetadata = SystemMetadataService.updateMetadata(
+      user,
+      userProfile,
+      activeGroupUserProfile
+    );
+
+    const updatedNPC: NPC = {
+      ...existing,
+      ...data,
+      ...updateMetadata
+    };
+
+    await updateData(id, updatedNPC);
+    await refreshData();
+    return updatedNPC;
+  }, [validateAuth, npcs, user, userProfile, activeGroupUserProfile, updateData, refreshData]);
+
+  const deleteNPC = useCallback(async (id: string): Promise<void> => {
+    validateAuth();
+    await deleteData(id);
+    await refreshData();
+  }, [validateAuth, deleteData, refreshData]);
+
+  const getById = useCallback((id: string): NPC | undefined => {
     return npcs.find(npc => npc.id === id);
   }, [npcs]);
 
-  // Get NPCs by quest
-  const getNPCsByQuest = useCallback((questId: string) => {
+  const refresh = useCallback(async (): Promise<void> => {
+    await refreshData();
+  }, [refreshData]);
+
+  // Feature-specific methods
+  const getByQuest = useCallback((questId: string): NPC[] => {
     return npcs.filter(npc => 
       npc.connections.relatedQuests.includes(questId)
     );
   }, [npcs]);
 
-  // Get NPCs by location
-  const getNPCsByLocation = useCallback((location: string) => {
+  const getByLocation = useCallback((location: string): NPC[] => {
     return npcs.filter(npc => 
       npc.location?.toLowerCase() === location.toLowerCase()
     );
   }, [npcs]);
 
-  // Get NPCs by relationship
-  const getNPCsByRelationship = useCallback((relationship: NPCRelationship) => {
-    return npcs.filter(npc => 
-      npc.relationship === relationship
-    );
+  const getByRelationship = useCallback((relationship: NPCRelationship): NPC[] => {
+    return npcs.filter(npc => npc.relationship === relationship);
   }, [npcs]);
 
-  // Update NPC note
-  const updateNPCNote = useCallback(async (npcId: string, note: NPCNote) => {
-    if (!hasRequiredContext) {
-      console.error('Cannot update NPC note: No group or campaign selected');
-      return;
+  const updateNote = useCallback(async (npcId: string, note: NPCNote): Promise<void> => {
+    const existing = getById(npcId);
+    if (!existing) {
+      throw new Error(`NPC with ID ${npcId} not found`);
     }
 
-    if (!user || !userProfile) {
-      throw new Error('User must be authenticated to add notes');
-    }
-
-    const npc = getNPCById(npcId);
-    if (npc) {
-      // Create modification attribution data
-      const modificationAttribution: Partial<ContentAttribution> = {
-        modifiedBy: user.uid,
-        modifiedByUsername: getUserName(activeGroupUserProfile),
-        modifiedByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
-        modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-        dateModified: new Date().toISOString()
-      };
-
-      const updatedNPC = {
-        ...npc,
-        notes: [...(npc.notes || []), note],
-        ...modificationAttribution
-      };
-      await updateData(npcId, updatedNPC);
-      refreshNPCs(); // Refresh to get updated data
-    }
-  }, [getNPCById, updateData, refreshNPCs, hasRequiredContext, user, userProfile, activeGroupUserProfile]);
-
-  // Update NPC relationship
-  const updateNPCRelationship = useCallback(async (npcId: string, relationship: NPCRelationship) => {
-    if (!hasRequiredContext) {
-      console.error('Cannot update NPC relationship: No group or campaign selected');
-      return;
-    }
-
-    if (!user || !userProfile) {
-      throw new Error('User must be authenticated to update relationship');
-    }
-
-    const npc = getNPCById(npcId);
-    if (npc) {
-      // Create modification attribution data
-      const modificationAttribution: Partial<ContentAttribution> = {
-        modifiedBy: user.uid,
-        modifiedByUsername: getUserName(activeGroupUserProfile),
-        modifiedByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
-        modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-        dateModified: new Date().toISOString()
-      };
-
-      const updatedNPC = {
-        ...npc,
-        relationship,
-        ...modificationAttribution
-      };
-      await updateData(npcId, updatedNPC);
-      refreshNPCs(); // Refresh to get updated data
-    }
-  }, [getNPCById, updateData, refreshNPCs, hasRequiredContext, user, userProfile, activeGroupUserProfile]);
-
-  // Generate NPC ID from name
-  const generateNPCId = useCallback((name: string): string => {
-    return name.toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with hyphens
-      .replace(/^-+|-+$/g, '');    // Remove leading/trailing hyphens
-  }, []);
-
-  // Add a new NPC
-  const addNPC = useCallback(async (npcData: Omit<NPC, 'id'>): Promise<string> => {
-    if (!hasRequiredContext) {
-      throw new Error('Cannot add NPC: No group or campaign selected');
-    }
-
-    if (!user || !userProfile) {
-      throw new Error('User must be authenticated to add an NPC');
-    }
-    
-    // Generate ID from name
-    const id = generateNPCId(npcData.name);
-    
-    // Create the complete NPC with ID
-    const newNPC: NPC = {
-      ...npcData,
-      id
+    const updatedData: NPCFormData = {
+      ...existing,
+      notes: [...(existing.notes || []), note]
     };
-    
-    // Add to Firebase with explicit ID
-    await addData(newNPC, id);
-    await refreshNPCs();
-    return id;
-  }, [hasRequiredContext, user, userProfile, generateNPCId, addData, refreshNPCs]);
 
-  // Update an existing NPC
-  const updateNPC = useCallback(async (npc: NPC): Promise<void> => {
-    if (!hasRequiredContext) {
-      throw new Error('Cannot update NPC: No group or campaign selected');
+    await update(npcId, updatedData);
+  }, [getById, update]);
+
+  const updateRelationship = useCallback(async (npcId: string, relationship: NPCRelationship): Promise<void> => {
+    const existing = getById(npcId);
+    if (!existing) {
+      throw new Error(`NPC with ID ${npcId} not found`);
     }
 
-    if (!user || !userProfile) {
-      throw new Error('User must be authenticated to update an NPC');
-    }
-
-    const now = new Date().toISOString();
-    
-    // Create modification attribution data
-    const modificationAttribution: Partial<ContentAttribution> = {
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      dateModified: now
+    const updatedData: NPCFormData = {
+      ...existing,
+      relationship
     };
-    
-    // Update the NPC with new modification attribution
-    const updatedNPC = {
-      ...npc,
-      ...modificationAttribution
-    };
-    
-    await updateData(npc.id, updatedNPC);
-    await refreshNPCs();
-  }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, updateData, refreshNPCs]);
 
-  // Delete an NPC
-  const deleteNPC = useCallback(async (npcId: string): Promise<void> => {
-    if (!hasRequiredContext) {
-      throw new Error('Cannot delete NPC: No group or campaign selected');
-    }
+    await update(npcId, updatedData);
+  }, [getById, update]);
 
-    if (!user) {
-      throw new Error('User must be authenticated to delete an NPC');
-    }
-
-    await deleteData(npcId);
-    await refreshNPCs();
-  }, [hasRequiredContext, user, deleteData, refreshNPCs]);
-
-  // Error message for missing context
-  const contextError = useMemo(() => {
-    if (!activeGroupId) return "Please select a group to view NPCs";
-    if (!activeCampaignId) return "Please select a campaign to view NPCs";
-    return null;
-  }, [activeGroupId, activeCampaignId]);
-
-  const value: NPCContextValue = {
+  // Memoized context value
+  const contextValue = useMemo<NPCContextValue>(() => ({
+    // Legacy state structure for compatibility
     npcs,
-    isLoading: loading,
-    error: contextError || error,
-    getNPCById,
-    getNPCsByQuest,
-    getNPCsByLocation,
-    getNPCsByRelationship,
-    updateNPCNote,
-    updateNPCRelationship,
-    addNPC,
-    updateNPC,
-    deleteNPC
-  };
+    isLoading,
+    error,
+
+    // Legacy methods for compatibility  
+    getNPCById: getById,
+    addNPC: create,
+    updateNPC: update,
+    deleteNPC,
+    updateNPCNote: updateNote,
+    updateNPCRelationship: updateRelationship,
+    getNPCsByQuest: getByQuest,
+    getNPCsByLocation: getByLocation,
+    getNPCsByRelationship: getByRelationship,
+
+    // New standardized methods (for future migration)
+    items: npcs,
+    create,
+    update,
+    delete: deleteNPC,
+    getById,
+    refresh,
+    getByQuest,
+    getByLocation,
+    getByRelationship,
+    updateNote,
+    updateRelationship
+  }), [
+    npcs,
+    isLoading,
+    error,
+    create,
+    update,
+    deleteNPC,
+    getById,
+    refresh,
+    getByQuest,
+    getByLocation,
+    getByRelationship,
+    updateNote,
+    updateRelationship
+  ]);
 
   return (
-    <NPCContext.Provider value={value}>
+    <NPCContext.Provider value={contextValue}>
       {children}
     </NPCContext.Provider>
   );
 };
 
-export const useNPCs = () => {
+export const useNPCs = (): NPCContextValue => {
   const context = useContext(NPCContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useNPCs must be used within an NPCProvider');
   }
   return context;
 };
+
+// Legacy export for backwards compatibility during transition
+export const useNPCData = useNPCs;

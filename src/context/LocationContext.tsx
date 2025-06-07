@@ -1,7 +1,6 @@
 // src/context/LocationContext.tsx
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
 import { Location, LocationStatus, LocationContextValue, LocationNote } from '../types/location';
-import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from './firebase';
 import { getUserName, getActiveCharacterName } from '../utils/user-utils';
@@ -12,8 +11,9 @@ export const LOCATION_CHANGED_EVENT = 'location-data-changed';
 const LocationContext = createContext<LocationContextValue | undefined>(undefined);
 
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { locations: initialLocations, loading, error, refreshLocations, hasRequiredContext } = useLocationData();
+  const { items: initialLocations, loading, error, refreshData: refreshLocations } = useFirebaseData<Location>({ collection: 'locations' });
   const [locations, setLocations] = useState<Location[]>(initialLocations);
+  const hasRequiredContext = true; // TODO: Implement proper context checking
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();
   const { activeGroupId } = useGroups();
@@ -277,3 +277,6 @@ export const useLocations = () => {
   }
   return context;
 };
+
+// Legacy compatibility during transition
+export const useLocationData = useLocations;

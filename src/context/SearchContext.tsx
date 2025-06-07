@@ -2,16 +2,16 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import { SearchResult, SearchResultType, SearchDocument } from '../types/search';
 import { SearchService } from '../services/search/SearchService';
-import { useChapterData } from '../hooks/useChapterData';
-import { useNPCData } from '../hooks/useNPCData';
-import { useLocationData } from '../hooks/useLocationData';
+import { useStory } from '../context/StoryContext';
+import { useNPCs } from '../context/NPCContext';
+import { useLocations } from '../context/LocationContext';
 import { useQuests } from '../context/QuestContext';
 import { Chapter } from '../types/story';
 import { Quest } from '../types/quest';
 import { NPC } from '../types/npc';
 import { Location } from '../types/location';
 import { Rumor } from '../types/rumor';
-import { useRumorData } from '../hooks/useRumorData';
+import { useRumors } from '../context/RumorContext';
 
 interface SearchContextData {
   query: string;
@@ -110,11 +110,11 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isSearching, setIsSearching] = useState(false);
 
   // Get data from all our collections
-  const { chapters } = useChapterData();
-  const { npcs } = useNPCData();
-  const { locations } = useLocationData();
-  const { quests } = useQuests();
-  const { rumors } = useRumorData();
+  const { items: chapters } = useStory();
+  const { items: npcs } = useNPCs();
+  const { locations } = useLocations();
+  const { items: quests } = useQuests();
+  const { rumors } = useRumors();
 
   // Initialize SearchService with options
   const searchService = useMemo(() => new SearchService({

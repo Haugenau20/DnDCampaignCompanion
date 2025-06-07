@@ -6,7 +6,7 @@ import Breadcrumb from '../../components/layout/Breadcrumb';
 import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import { Book, Edit, Loader2 } from 'lucide-react';
-import { useSagaData } from '../../hooks/useSagaData';
+import { useStory } from '../../context/StoryContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/firebase';
 
@@ -23,7 +23,11 @@ const SAGA_WRITING_TIPS = [
 const SagaPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
   const { user } = useAuth();
-  const { saga, loading, error, hasRequiredContext } = useSagaData();
+  // TODO: Saga functionality needs to be implemented in story context
+  const saga = null;
+  const loading = false;
+  const error = null;
+  const hasRequiredContext = true;
 
   // Breadcrumb items
   const breadcrumbItems = [

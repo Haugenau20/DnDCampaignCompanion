@@ -1,6 +1,6 @@
 // components/features/story/ChapterForm.tsx
 import React, { useState, useEffect } from 'react';
-import { Chapter } from '../../../types/story';
+import { Chapter, ChapterFormData } from '../../../types/story';
 import Card from '../../core/Card';
 import Button from '../../core/Button';
 import Typography from '../../core/Typography';
@@ -8,7 +8,6 @@ import Input from '../../core/Input';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigation } from '../../../context/NavigationContext';
 import { useStory } from '../../../context/StoryContext';
-import { useAuth } from '../../../context/firebase';
 
 interface ChapterFormProps {
   /** The chapter to edit, or undefined for create mode */
@@ -21,6 +20,7 @@ interface ChapterFormProps {
 
 /**
  * Form component for creating and editing chapters
+ * Only handles domain data - system metadata managed by context
  */
 const ChapterForm: React.FC<ChapterFormProps> = ({ 
   chapter, 
@@ -28,13 +28,17 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
   onDeleteClick 
 }) => {
   const { navigateToPage } = useNavigation();
-  const { createChapter, updateChapter, chapters } = useStory();
-  const { user } = useAuth();
+  const { create: createChapter, update: updateChapter, items: chapters } = useStory();
   
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [summary, setSummary] = useState('');
-  const [order, setOrder] = useState(1);
+  // Pure domain form state - no system metadata
+  const [formData, setFormData] = useState<ChapterFormData>({
+    title: '',
+    content: '',
+    summary: '',
+    order: 1,
+    subChapters: []
+  });
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -42,24 +46,35 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
   // Initialize form with chapter data if in edit mode
   useEffect(() => {
     if (chapter && mode === 'edit') {
-      setTitle(chapter.title);
-      setContent(chapter.content);
-      setSummary(chapter.summary || '');
-      setOrder(chapter.order);
+      setFormData({
+        title: chapter.title,
+        content: chapter.content,
+        summary: chapter.summary || '',
+        order: chapter.order,
+        subChapters: chapter.subChapters || []
+      });
     } else if (mode === 'create') {
       // For create mode, set the order to be the next in sequence
       const maxOrder = chapters.length > 0
         ? Math.max(...chapters.map(c => c.order))
         : 0;
-      setOrder(maxOrder + 1);
+      setFormData(prev => ({
+        ...prev,
+        order: maxOrder + 1
+      }));
     }
   }, [chapter, mode, chapters]);
 
+  // Generic input change handler
+  const handleInputChange = (field: keyof ChapterFormData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   /**
    * Generate a summary from content if none is provided
-   * @param content Chapter content text
-   * @param maxLength Maximum length of summary
-   * @returns Summary string with ellipsis if truncated
    */
   const generateSummaryFromContent = (content: string, maxLength: number = 200): string => {
     if (!content || content.length === 0) return '';
@@ -97,176 +112,171 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
 
     try {
       // Validate form
-      if (!title.trim()) {
+      if (!formData.title.trim()) {
         throw new Error('Title is required');
       }
-      if (!content.trim()) {
+      if (!formData.content.trim()) {
         throw new Error('Content is required');
       }
 
       // Generate summary from content if not provided
-      const finalSummary = summary.trim() || generateSummaryFromContent(content);
+      const finalSummary = formData.summary.trim() || generateSummaryFromContent(formData.content);
 
-      // Create or update the chapter
+      const chapterData: ChapterFormData = {
+        ...formData,
+        summary: finalSummary
+      };
+
+      // Create or update the chapter - context handles all system metadata
       if (mode === 'create') {
-        const newChapter: Omit<Chapter, 'id'> = {
-          title,
-          content,
-          summary: finalSummary, // Use generated summary if empty
-          order,
-          dateModified: new Date().toISOString(),
-          createdBy: user?.uid || '',
-          createdByUsername: user?.displayName || '',
-          dateAdded: new Date().toISOString(),
-        };
-        
-        await createChapter(newChapter);
+        await createChapter(chapterData);
         setSuccess('Chapter created successfully');
         
         // Reset form for create mode
-        if (mode === 'create') {
-          setTitle('');
-          setContent('');
-          setSummary('');
-          setOrder(order + 1);
-        }
-      } else if (mode === 'edit' && chapter) {
-        const updates: Partial<Chapter> = {
-          title,
-          content,
-          summary: finalSummary, // Use generated summary if empty
-          order,
-          dateModified: new Date().toISOString(),
-          modifiedBy: user?.uid || '',
-          modifiedByUsername: user?.displayName || '',
-        };
-        
-        await updateChapter(chapter.id, updates);
+        setFormData({
+          title: '',
+          content: '',
+          summary: '',
+          order: formData.order + 1, // Increment for next chapter
+          subChapters: []
+        });
+      } else if (chapter) {
+        await updateChapter(chapter.id, chapterData);
         setSuccess('Chapter updated successfully');
       }
+
+      // Navigate back after a brief delay to show success message
+      setTimeout(() => {
+        navigateToPage('/story');
+      }, 1500);
+      
     } catch (err) {
       console.error('Error saving chapter:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred while saving the chapter');
+      setError(err instanceof Error ? err.message : 'Failed to save chapter');
     } finally {
       setIsSubmitting(false);
-      
-      // Navigate back to chapters page after successful submission
-      navigateToPage('/story/chapters');
     }
   };
 
-  const handleCancel = () => {
-    navigateToPage(`/story/chapters/${chapter?.id}`);
+  const handleBack = () => {
+    navigateToPage('/story');
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <Card>
-        <Card.Header 
-          title={`${mode === 'create' ? 'Create' : 'Edit'} Chapter`}
-          subtitle={mode === 'edit' ? `Editing Chapter ${chapter?.order}: ${chapter?.title}` : 'Create a new chapter'}
-        />
-        
-        <form onSubmit={handleSubmit}>
-          <Card.Content>
-            {/* Error/Success Messages */}
-            {error && (
-              <div className="p-4 mb-6 rounded-md note">
-                <Typography color="error">{error}</Typography>
-              </div>
-            )}
+    <Card className="max-w-4xl mx-auto">
+      <Card.Header
+        title={mode === 'create' ? 'Create New Chapter' : `Edit Chapter: ${chapter?.title}`}
+        action={
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            startIcon={<ArrowLeft />}
+          >
+            Back to Story
+          </Button>
+        }
+      />
+      <Card.Content>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Title *"
+              value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+              placeholder="Chapter title..."
+              required
+            />
             
-            {success && (
-              <div className="p-4 mb-6 rounded-md success-icon-bg">
-                <Typography color="success">{success}</Typography>
-              </div>
-            )}
-            
-            {/* Form Fields */}
-            <div className="space-y-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <Input
-                    label="Chapter Title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    fullWidth
-                    required
-                  />
-                </div>
-                
-                <div className="w-32">
-                  <Input
-                    label="Order"
-                    type="number"
-                    min={1}
-                    value={order}
-                    onChange={(e) => setOrder(parseInt(e.target.value))}
-                    fullWidth
-                    required
-                  />
-                </div>
-              </div>
-              
-              <Input
-                label="Chapter Summary (optional)"
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-                fullWidth
-                helperText="A brief summary that will be shown in chapter listings. If left empty, it will be automatically generated from content."
-                isTextArea
-                rows={3}
-              />
-              
-              <Input
-                label="Chapter Content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                fullWidth
-                isTextArea
-                rows={15}
-                required
-                helperText="Press Enter for new paragraphs"
-              />
+            <Input
+              label="Order"
+              type="number"
+              value={formData.order}
+              onChange={(e) => handleInputChange('order', parseInt(e.target.value) || 1)}
+              min={1}
+              required
+            />
+          </div>
+
+          {/* Content */}
+          <div>
+            <label className="block text-sm font-medium mb-1 form-label">
+              Chapter Content *
+            </label>
+            <textarea
+              className="w-full rounded-lg border p-3 h-96 input font-mono text-sm"
+              value={formData.content}
+              onChange={(e) => handleInputChange('content', e.target.value)}
+              placeholder="Write your chapter content here..."
+              required
+            />
+            <div className="text-sm typography-secondary mt-1">
+              {formData.content.length} characters
             </div>
-          </Card.Content>
-          
-          <Card.Footer className="flex justify-between">
-            <div className="flex gap-4">
+          </div>
+
+          {/* Summary */}
+          <div>
+            <label className="block text-sm font-medium mb-1 form-label">
+              Summary
+            </label>
+            <textarea
+              className="w-full rounded-lg border p-3 h-24 input"
+              value={formData.summary}
+              onChange={(e) => handleInputChange('summary', e.target.value)}
+              placeholder="Optional summary (will be auto-generated if left empty)"
+            />
+            <div className="text-sm typography-secondary mt-1">
+              Leave empty to auto-generate from content
+            </div>
+          </div>
+
+          {/* Error and Success Messages */}
+          {error && (
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
+              <Typography variant="body" className="text-red-800 dark:text-red-200">
+                {error}
+              </Typography>
+            </div>
+          )}
+
+          {success && (
+            <div className="p-3 rounded-lg bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800">
+              <Typography variant="body" className="text-green-800 dark:text-green-200">
+                {success}
+              </Typography>
+            </div>
+          )}
+
+          {/* Form Actions */}
+          <div className="flex justify-between items-center pt-4 border-t">
+            {/* Delete button for edit mode */}
+            {mode === 'edit' && onDeleteClick && (
               <Button
-                variant="outline"
-                onClick={handleCancel}
-                startIcon={<ArrowLeft />}
                 type="button"
+                variant="outline"
+                onClick={onDeleteClick}
+                startIcon={<Trash2 />}
+                className="text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20"
               >
-                Cancel
+                Delete Chapter
               </Button>
-              
-              {mode === 'edit' && onDeleteClick && (
-                <Button
-                  variant="ghost"
-                  onClick={onDeleteClick}
-                  startIcon={<Trash2 />}
-                  type="button"
-                  className="delete-button"
-                >
-                  Delete
-                </Button>
-              )}
-            </div>
+            )}
             
-            <Button
-              variant="primary"
-              startIcon={<Save />}
-              type="submit"
-              isLoading={isSubmitting}
-            >
-              {mode === 'create' ? 'Create Chapter' : 'Save Changes'}
-            </Button>
-          </Card.Footer>
+            {/* Save button */}
+            <div className={mode === 'create' ? 'ml-auto' : ''}>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                startIcon={<Save />}
+              >
+                {isSubmitting ? 'Saving...' : mode === 'create' ? 'Create Chapter' : 'Update Chapter'}
+              </Button>
+            </div>
+          </div>
         </form>
-      </Card>
-    </div>
+      </Card.Content>
+    </Card>
   );
 };
 

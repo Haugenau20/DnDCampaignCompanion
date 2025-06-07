@@ -5,14 +5,14 @@ import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import NPCEditForm from '../../components/features/npcs/NPCEditForm';
-import { useNPCData } from '../../hooks/useNPCData';
+import { useNPCs } from '../../context/NPCContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { ArrowLeft } from 'lucide-react';
 
 const NPCsEditPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
   const { npcId } = useParams<{ npcId: string }>();
-  const { npcs } = useNPCData();
+  const { items: npcs } = useNPCs();
   
   const editingNPC = npcs.find(npc => npc.id === npcId);
 

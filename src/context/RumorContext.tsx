@@ -1,7 +1,6 @@
 // src/context/RumorContext.tsx - updating rumor context to use character names
 import React, { createContext, useContext, useCallback } from 'react';
 import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types/rumor';
-import { useRumorData } from '../hooks/useRumorData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
 import { useAuth, useUser, useFirestore } from './firebase';
 import { getUserName, getActiveCharacterName } from '../utils/user-utils';
@@ -9,7 +8,7 @@ import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 
 export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { rumors, loading, error, refreshRumors } = useRumorData();
+  const { items: rumors, loading, error, refreshData: refreshRumors } = useFirebaseData<Rumor>({ collection: 'rumors' });
   const { addData, updateData, deleteData } = useFirebaseData<Rumor>({
     collection: 'rumors'
   });
@@ -365,3 +364,6 @@ export const useRumors = () => {
   }
   return context;
 };
+
+// Legacy compatibility during transition
+export const useRumorData = useRumors;

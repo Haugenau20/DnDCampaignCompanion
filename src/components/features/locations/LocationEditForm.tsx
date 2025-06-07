@@ -54,7 +54,7 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
     const hasRequiredContext = !!activeGroupId && !!activeCampaignId;
   
     // Get NPCs data
-    const { npcs } = useNPCs();
+    const { items: npcs } = useNPCs();
 
     // Use LocationContext for updating
     const { updateLocation } = useLocations();
