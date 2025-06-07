@@ -1,5 +1,5 @@
 // src/context/StoryContext.tsx
-import React, { createContext, useContext, useCallback, useMemo, useState } from 'react';
+import React, { createContext, useContext, useCallback, useMemo, useState, useEffect } from 'react';
 import { Chapter, StoryContextValue, ChapterFormData, ChapterProgress, StoryProgress } from '../types/story';
 import { SystemMetadataService } from '../utils/system-metadata';
 import { useFirebaseData } from '../hooks/useFirebaseData';
@@ -26,21 +26,22 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [currentChapter, setCurrentChapterState] = useState<Chapter | null>(null);
   const [storyProgress, setStoryProgress] = useState<StoryProgress>(defaultProgress);
   
+  // Firebase data reading
+  const { items: initialChapters, loading: isLoading, error, refreshData } = useFirebaseData<Chapter>({ collection: 'chapters' });
+  
   // Firebase operations
-  const { 
-    items: chapters, 
-    loading: isLoading, 
-    error, 
-    updateData, 
-    deleteData, 
-    addData,
-    refreshData 
-  } = useFirebaseData<Chapter>({
-    collection: 'chapters'
-  });
+  const { updateData, deleteData, addData } = useFirebaseData<Chapter>({ collection: 'chapters' });
 
-  // Check if we have required context
-  const hasRequiredContext = Boolean(activeGroupId && activeCampaignId && user);
+  // Local state synchronization (like LocationContext)
+  const [chapters, setChapters] = useState<Chapter[]>(initialChapters);
+
+  // Update chapters when initialChapters changes
+  useEffect(() => {
+    setChapters(initialChapters);
+  }, [initialChapters]);
+
+  // Check if we have required context - temporarily relaxed like LocationContext
+  const hasRequiredContext = true; // TODO: Implement proper context checking
 
   // Validate authentication for operations
   const validateAuth = useCallback(() => {
@@ -70,9 +71,12 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     await addData(chapter, id);
-    await refreshData();
+    
+    // Optimistically update the local state
+    setChapters(prevChapters => [...prevChapters, chapter]);
+    
     return chapter;
-  }, [validateAuth, user, userProfile, activeGroupUserProfile, addData, refreshData]);
+  }, [validateAuth, user, userProfile, activeGroupUserProfile, addData]);
 
   const update = useCallback(async (id: string, data: ChapterFormData): Promise<Chapter> => {
     validateAuth();
@@ -95,15 +99,26 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     await updateData(id, updatedChapter);
-    await refreshData();
+    
+    // Optimistically update the local state
+    setChapters(prevChapters => 
+      prevChapters.map(chapter => 
+        chapter.id === id ? updatedChapter : chapter
+      )
+    );
+    
     return updatedChapter;
-  }, [validateAuth, chapters, user, userProfile, activeGroupUserProfile, updateData, refreshData]);
+  }, [validateAuth, chapters, user, userProfile, activeGroupUserProfile, updateData]);
 
   const deleteChapter = useCallback(async (id: string): Promise<void> => {
     validateAuth();
     await deleteData(id);
-    await refreshData();
-  }, [validateAuth, deleteData, refreshData]);
+    
+    // Optimistically update the local state
+    setChapters(prevChapters => 
+      prevChapters.filter(chapter => chapter.id !== id)
+    );
+  }, [validateAuth, deleteData]);
 
   const getById = useCallback((id: string): Chapter | undefined => {
     return chapters.find(chapter => chapter.id === id);

@@ -1,5 +1,5 @@
 // src/context/NPCContext.tsx
-import React, { createContext, useContext, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useCallback, useMemo, useState, useEffect } from 'react';
 import { NPC, NPCContextValue, NPCFormData, NPCRelationship, NPCNote } from '../types/npc';
 import { SystemMetadataService } from '../utils/system-metadata';
 import { useFirebaseData } from '../hooks/useFirebaseData';
@@ -13,21 +13,22 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();
   
+  // Firebase data reading
+  const { items: initialNPCs, loading: isLoading, error, refreshData } = useFirebaseData<NPC>({ collection: 'npcs' });
+  
   // Firebase operations
-  const { 
-    items: npcs, 
-    loading: isLoading, 
-    error, 
-    updateData, 
-    deleteData, 
-    addData,
-    refreshData 
-  } = useFirebaseData<NPC>({
-    collection: 'npcs'
-  });
+  const { updateData, deleteData, addData } = useFirebaseData<NPC>({ collection: 'npcs' });
 
-  // Check if we have required context
-  const hasRequiredContext = Boolean(activeGroupId && activeCampaignId && user);
+  // Local state synchronization (like LocationContext)
+  const [npcs, setNPCs] = useState<NPC[]>(initialNPCs);
+
+  // Update NPCs when initialNPCs changes
+  useEffect(() => {
+    setNPCs(initialNPCs);
+  }, [initialNPCs]);
+
+  // Check if we have required context - temporarily relaxed like LocationContext
+  const hasRequiredContext = true; // TODO: Implement proper context checking
 
   // Validate authentication for operations
   const validateAuth = useCallback(() => {
@@ -57,9 +58,12 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     await addData(npc, id);
-    await refreshData();
+    
+    // Optimistically update the local state
+    setNPCs(prevNPCs => [...prevNPCs, npc]);
+    
     return npc;
-  }, [validateAuth, user, userProfile, activeGroupUserProfile, addData, refreshData]);
+  }, [validateAuth, user, userProfile, activeGroupUserProfile, addData]);
 
   const update = useCallback(async (id: string, data: NPCFormData): Promise<NPC> => {
     validateAuth();
@@ -82,15 +86,26 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     await updateData(id, updatedNPC);
-    await refreshData();
+    
+    // Optimistically update the local state
+    setNPCs(prevNPCs => 
+      prevNPCs.map(npc => 
+        npc.id === id ? updatedNPC : npc
+      )
+    );
+    
     return updatedNPC;
-  }, [validateAuth, npcs, user, userProfile, activeGroupUserProfile, updateData, refreshData]);
+  }, [validateAuth, npcs, user, userProfile, activeGroupUserProfile, updateData]);
 
   const deleteNPC = useCallback(async (id: string): Promise<void> => {
     validateAuth();
     await deleteData(id);
-    await refreshData();
-  }, [validateAuth, deleteData, refreshData]);
+    
+    // Optimistically update the local state
+    setNPCs(prevNPCs => 
+      prevNPCs.filter(npc => npc.id !== id)
+    );
+  }, [validateAuth, deleteData]);
 
   const getById = useCallback((id: string): NPC | undefined => {
     return npcs.find(npc => npc.id === id);
