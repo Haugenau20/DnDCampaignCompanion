@@ -75,7 +75,10 @@ export interface QuestContextValue {
   // Legacy state structure for compatibility
   quests: Quest[];
   isLoading: boolean;
+  loading: boolean; // Legacy alias
   error: string | null;
+  hasRequiredContext: boolean;
+  refreshQuests: () => Promise<void>; // Legacy alias
 
   // Legacy methods for compatibility
   getQuestById: (id: string) => Quest | undefined;

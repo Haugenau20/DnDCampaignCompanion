@@ -151,6 +151,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const contextValue = useMemo<StoryContextValue>(() => ({
     // State
     items: chapters,
+    chapters, // Legacy compatibility
     currentChapter,
     isLoading,
     error,
@@ -166,8 +167,15 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     getNextChapter,
     getPreviousChapter,
     setCurrentChapter,
-    hasRequiredContext
-  }), [
+    hasRequiredContext,
+    
+    // Legacy methods for compatibility
+    getChapterById: getById,
+    deleteChapter,
+    storyProgress: { currentChapter: currentChapter?.id || '', lastRead: new Date(), chapterProgress: {} },
+    updateChapterProgress: async (chapterId: string, progress: any) => Promise.resolve(),
+    updateCurrentChapter: setCurrentChapter
+  } as any), [
     chapters,
     currentChapter,
     isLoading,

@@ -9,10 +9,41 @@ import { Location as AppLocation } from '../../../../types/location';
 type LocationType = 'region' | 'city' | 'town' | 'village' | 'dungeon' | 'landmark' | 'building' | 'poi';
 type LocationStatus = 'known' | 'explored' | 'visited';
 
-interface LocationData extends Omit<AppLocation, 'parentId' | 'lastVisited'> {
-    parentId?: string | null;
-    lastVisited?: string | null;
-  }
+interface LocationData {
+  id: string;
+  name: string;
+  type: LocationType;
+  status: LocationStatus;
+  description: string;
+  features: string[];
+  connectedNPCs: string[];
+  relatedQuests: string[];
+  parentId?: string | null;
+  lastVisited?: string | null;
+  // System metadata
+  createdAt: string;
+  modifiedAt: string;
+  updatedAt: string;
+  createdBy: string;
+  createdByUsername: string;
+  modifiedBy: string;
+  modifiedByUsername: string;
+  dateAdded: string;
+  dateModified: string;
+}
+
+// Helper function to create complete system metadata
+const createSystemMetadata = (creatorUid: string, formattedDate: string) => ({
+  createdAt: formattedDate,
+  modifiedAt: formattedDate,
+  updatedAt: formattedDate,
+  createdBy: creatorUid,
+  createdByUsername: 'DungeonMaster',
+  modifiedBy: creatorUid,
+  modifiedByUsername: 'DungeonMaster',
+  dateAdded: formattedDate,
+  dateModified: formattedDate
+});
 
 // Create locations for a specific campaign
 export const createLocations = async (
@@ -67,12 +98,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['peaceful', 'farming', 'hobbits'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'rivendell',
@@ -89,12 +115,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['elven', 'haven', 'wisdom'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'mines-of-moria',
@@ -111,12 +132,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['dangerous', 'underground', 'dwarf ruins'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'mordor',
@@ -133,12 +149,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['evil', 'volcanic', 'dangerous'],
       lastVisited: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'isengard',
@@ -155,12 +166,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['fortress', 'corruption', 'wizardry'],
       lastVisited: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     }
   ];
 };
@@ -183,12 +189,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['hobbit-hole', 'comfortable', 'starting point'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'trollshaws',
@@ -205,12 +206,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['dangerous', 'trolls', 'forest'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'misty-mountains',
@@ -227,12 +223,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['mountains', 'goblins', 'dangerous'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'mirkwood',
@@ -249,12 +240,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['forest', 'enchanted', 'dangerous', 'elves'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'erebor',
@@ -271,12 +257,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['mountain', 'dwarf kingdom', 'treasure', 'dragon'],
       lastVisited: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     }
   ];
 };
@@ -299,12 +280,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['divine', 'blessed', 'light'],
       lastVisited: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'beleriand',
@@ -321,12 +297,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['first age', 'battleground', 'elven kingdoms'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'angband',
@@ -343,12 +314,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['fortress', 'evil', 'underground'],
       lastVisited: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'gondolin',
@@ -365,12 +331,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['hidden', 'elven', 'city'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'numenor',
@@ -387,12 +348,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['island', 'human kingdom', 'downfall'],
       lastVisited: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     }
   ];
 };
@@ -415,12 +371,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['ruins', 'kingdom', 'dúnedain'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'eriador',
@@ -437,12 +388,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['wilderness', 'patrol', 'scattered settlements'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'bree',
@@ -459,12 +405,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['town', 'inn', 'crossroads'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'weathertop',
@@ -481,12 +422,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['ruins', 'watchtower', 'strategic point'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'ranger-refuge',
@@ -503,12 +439,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       ],
       tags: ['secret', 'base', 'rangers'],
       lastVisited: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     }
   ];
 };

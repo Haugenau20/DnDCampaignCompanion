@@ -9,10 +9,50 @@ import { Rumor as AppRumor } from '../../../../types/rumor';
 type RumorStatus = 'confirmed' | 'unconfirmed' | 'false';
 type SourceType = 'npc' | 'tavern' | 'notice' | 'traveler' | 'other';
 
-interface RumorData extends Omit<AppRumor, 'sourceNpcId' | 'locationId'> {
-    sourceNpcId: string | null;
-    locationId: string | null;
-  }
+interface RumorData {
+  id: string;
+  title: string;
+  content: string;
+  status: RumorStatus;
+  sourceType: SourceType;
+  sourceName: string;
+  sourceNpcId: string | null;
+  location: string;
+  locationId: string | null;
+  relatedNPCs: string[];
+  relatedLocations: string[];
+  notes: Array<{
+    id: string;
+    content: string;
+    dateAdded: string;
+    createdBy: string;
+    createdByUsername: string;
+  }>;
+  convertedToQuestId?: string;
+  // System metadata
+  createdAt: string;
+  modifiedAt: string;
+  updatedAt: string;
+  createdBy: string;
+  createdByUsername: string;
+  modifiedBy: string;
+  modifiedByUsername: string;
+  dateAdded: string;
+  dateModified: string;
+}
+
+// Helper function to create complete system metadata
+const createSystemMetadata = (creatorUid: string, formattedDate: string) => ({
+  createdAt: formattedDate,
+  modifiedAt: formattedDate,
+  updatedAt: formattedDate,
+  createdBy: creatorUid,
+  createdByUsername: 'DungeonMaster',
+  modifiedBy: creatorUid,
+  modifiedByUsername: 'DungeonMaster',
+  dateAdded: formattedDate,
+  dateModified: formattedDate
+});
 
 // Create rumors for a specific campaign
 export const createRumors = async (
@@ -70,12 +110,7 @@ const getLOTRRumors = (aragornUid: string, gandalfUid: string, gimliUid: string,
       sourceNpcId: null,
       location: 'The Shire',
       locationId: 'the-shire',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: aragornUid,
-      createdByUsername: 'Aragorn',
-      modifiedBy: aragornUid,
-      modifiedByUsername: 'Aragorn',
+      ...createSystemMetadata(aragornUid, formattedDate),
       relatedNPCs: ['frodo', 'bilbo'],
       relatedLocations: ['the-shire'],
       notes: [
@@ -98,12 +133,7 @@ const getLOTRRumors = (aragornUid: string, gandalfUid: string, gimliUid: string,
       sourceNpcId: null,
       location: 'Rivendell',
       locationId: 'rivendell',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: gandalfUid,
-      createdByUsername: 'Gandalf',
-      modifiedBy: gandalfUid,
-      modifiedByUsername: 'Gandalf',
+      ...createSystemMetadata(gandalfUid, formattedDate),
       relatedNPCs: ['sauron'],
       relatedLocations: ['mordor'],
       notes: [
@@ -126,12 +156,7 @@ const getLOTRRumors = (aragornUid: string, gandalfUid: string, gimliUid: string,
       sourceNpcId: null,
       location: 'Rivendell',
       locationId: 'rivendell',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: gimliUid,
-      createdByUsername: 'Gimli',
-      modifiedBy: gimliUid,
-      modifiedByUsername: 'Gimli',
+      ...createSystemMetadata(gimliUid, formattedDate),
       relatedNPCs: ['gimli'],
       relatedLocations: ['mines-of-moria'],
       notes: [
@@ -154,12 +179,7 @@ const getLOTRRumors = (aragornUid: string, gandalfUid: string, gimliUid: string,
       sourceNpcId: 'gandalf',
       location: 'Rivendell',
       locationId: 'rivendell',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: gandalfUid,
-      createdByUsername: 'Gandalf',
-      modifiedBy: gandalfUid,
-      modifiedByUsername: 'Gandalf',
+      ...createSystemMetadata(gandalfUid, formattedDate),
       relatedNPCs: ['gandalf', 'saruman'],
       relatedLocations: ['isengard'],
       notes: [
@@ -183,12 +203,7 @@ const getLOTRRumors = (aragornUid: string, gandalfUid: string, gimliUid: string,
       sourceNpcId: null,
       location: 'Rivendell',
       locationId: 'rivendell',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: aragornUid,
-      createdByUsername: 'Aragorn',
-      modifiedBy: aragornUid,
-      modifiedByUsername: 'Aragorn',
+      ...createSystemMetadata(aragornUid, formattedDate),
       relatedNPCs: ['gollum'],
       relatedLocations: ['mordor'],
       notes: [
@@ -217,12 +232,7 @@ const getHobbitRumors = (aragornUid: string, gandalfUid: string, gimliUid: strin
       sourceNpcId: 'gandalf',
       location: 'Bag End',
       locationId: 'bag-end',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: gandalfUid,
-      createdByUsername: 'Gandalf',
-      modifiedBy: gandalfUid,
-      modifiedByUsername: 'Gandalf',
+      ...createSystemMetadata(gandalfUid, formattedDate),
       relatedNPCs: ['thorin'],
       relatedLocations: ['erebor'],
       notes: [
@@ -245,12 +255,7 @@ const getHobbitRumors = (aragornUid: string, gandalfUid: string, gimliUid: strin
       sourceNpcId: null,
       location: 'Edge of Mirkwood',
       locationId: 'mirkwood',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: aragornUid,
-      createdByUsername: 'Aragorn',
-      modifiedBy: aragornUid,
-      modifiedByUsername: 'Aragorn',
+      ...createSystemMetadata(aragornUid, formattedDate),
       relatedNPCs: [],
       relatedLocations: ['mirkwood'],
       notes: [
@@ -273,12 +278,7 @@ const getHobbitRumors = (aragornUid: string, gandalfUid: string, gimliUid: strin
       sourceNpcId: null,
       location: 'Lake-town',
       locationId: null,
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: gimliUid,
-      createdByUsername: 'Gimli',
-      modifiedBy: gimliUid,
-      modifiedByUsername: 'Gimli',
+      ...createSystemMetadata(gimliUid, formattedDate),
       relatedNPCs: ['smaug'],
       relatedLocations: ['erebor'],
       notes: [
@@ -301,12 +301,7 @@ const getHobbitRumors = (aragornUid: string, gandalfUid: string, gimliUid: strin
       sourceNpcId: null,
       location: 'Rivendell',
       locationId: null,
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: legolasUid,
-      createdByUsername: 'Legolas',
-      modifiedBy: legolasUid,
-      modifiedByUsername: 'Legolas',
+      ...createSystemMetadata(legolasUid, formattedDate),
       relatedNPCs: ['thranduil'],
       relatedLocations: ['mirkwood'],
       notes: [
@@ -329,12 +324,7 @@ const getHobbitRumors = (aragornUid: string, gandalfUid: string, gimliUid: strin
       sourceNpcId: null,
       location: 'Bag End',
       locationId: 'bag-end',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: gandalfUid,
-      createdByUsername: 'Gandalf',
-      modifiedBy: gandalfUid,
-      modifiedByUsername: 'Gandalf',
+      ...createSystemMetadata(gandalfUid, formattedDate),
       relatedNPCs: ['thorin'],
       relatedLocations: ['erebor'],
       notes: [
@@ -364,12 +354,7 @@ const getSilmarillionRumors = (aragornUid: string, frodoUid: string, samwiseUid:
       sourceNpcId: null,
       location: 'Valinor',
       locationId: 'valinor',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: frodoUid,
-      createdByUsername: 'Frodo',
-      modifiedBy: frodoUid,
-      modifiedByUsername: 'Frodo',
+      ...createSystemMetadata(frodoUid, formattedDate),
       relatedNPCs: ['melkor'],
       relatedLocations: ['valinor'],
       notes: [
@@ -392,12 +377,7 @@ const getSilmarillionRumors = (aragornUid: string, frodoUid: string, samwiseUid:
       sourceNpcId: null,
       location: 'Tirion',
       locationId: null,
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: samwiseUid,
-      createdByUsername: 'Samwise',
-      modifiedBy: samwiseUid,
-      modifiedByUsername: 'Samwise',
+      ...createSystemMetadata(samwiseUid, formattedDate),
       relatedNPCs: ['feanor'],
       relatedLocations: ['valinor'],
       notes: [
@@ -420,12 +400,7 @@ const getSilmarillionRumors = (aragornUid: string, frodoUid: string, samwiseUid:
       sourceNpcId: null,
       location: 'Shores of Valinor',
       locationId: 'valinor',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: pipinUid,
-      createdByUsername: 'Pippin',
-      modifiedBy: pipinUid,
-      modifiedByUsername: 'Pippin',
+      ...createSystemMetadata(pipinUid, formattedDate),
       relatedNPCs: ['melkor'],
       relatedLocations: ['valinor'],
       notes: [
@@ -448,12 +423,7 @@ const getSilmarillionRumors = (aragornUid: string, frodoUid: string, samwiseUid:
       sourceNpcId: null,
       location: 'Beleriand',
       locationId: 'beleriand',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: aragornUid,
-      createdByUsername: 'Aragorn',
-      modifiedBy: aragornUid,
-      modifiedByUsername: 'Aragorn',
+      ...createSystemMetadata(aragornUid, formattedDate),
       relatedNPCs: ['turgon'],
       relatedLocations: ['gondolin'],
       notes: [
@@ -476,12 +446,7 @@ const getSilmarillionRumors = (aragornUid: string, frodoUid: string, samwiseUid:
       sourceNpcId: null,
       location: 'Tirion',
       locationId: null,
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: frodoUid,
-      createdByUsername: 'Frodo',
-      modifiedBy: frodoUid,
-      modifiedByUsername: 'Frodo',
+      ...createSystemMetadata(frodoUid, formattedDate),
       relatedNPCs: ['feanor'],
       relatedLocations: ['valinor'],
       notes: [
@@ -511,12 +476,7 @@ const getDunedainRumors = (aragornUid: string, frodoUid: string, samwiseUid: str
       sourceNpcId: null,
       location: 'Bree',
       locationId: 'bree',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: aragornUid,
-      createdByUsername: 'Aragorn',
-      modifiedBy: aragornUid,
-      modifiedByUsername: 'Aragorn',
+      ...createSystemMetadata(aragornUid, formattedDate),
       relatedNPCs: [],
       relatedLocations: ['eriador'],
       notes: [
@@ -539,12 +499,7 @@ const getDunedainRumors = (aragornUid: string, frodoUid: string, samwiseUid: str
       sourceNpcId: null,
       location: 'Weather Hills',
       locationId: 'weathertop',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: frodoUid,
-      createdByUsername: 'Frodo',
-      modifiedBy: frodoUid,
-      modifiedByUsername: 'Frodo',
+      ...createSystemMetadata(frodoUid, formattedDate),
       relatedNPCs: ['trolls'],
       relatedLocations: ['weathertop'],
       notes: [
@@ -568,12 +523,7 @@ const getDunedainRumors = (aragornUid: string, frodoUid: string, samwiseUid: str
       sourceNpcId: null,
       location: 'Bree',
       locationId: 'bree',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: samwiseUid,
-      createdByUsername: 'Samwise',
-      modifiedBy: samwiseUid,
-      modifiedByUsername: 'Samwise',
+      ...createSystemMetadata(samwiseUid, formattedDate),
       relatedNPCs: ['barrow-wights'],
       relatedLocations: ['eriador'],
       notes: [
@@ -597,12 +547,7 @@ const getDunedainRumors = (aragornUid: string, frodoUid: string, samwiseUid: str
       sourceNpcId: null,
       location: 'East of Bree',
       locationId: 'eriador',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: pipinUid,
-      createdByUsername: 'Pippin',
-      modifiedBy: pipinUid,
-      modifiedByUsername: 'Pippin',
+      ...createSystemMetadata(pipinUid, formattedDate),
       relatedNPCs: ['gollum'],
       relatedLocations: ['eriador'],
       notes: [
@@ -626,12 +571,7 @@ const getDunedainRumors = (aragornUid: string, frodoUid: string, samwiseUid: str
       sourceNpcId: null,
       location: 'Ranger Refuge',
       locationId: 'ranger-refuge',
-      dateAdded: formattedDate,
-      dateModified: formattedDate,
-      createdBy: aragornUid,
-      createdByUsername: 'Aragorn',
-      modifiedBy: aragornUid,
-      modifiedByUsername: 'Aragorn',
+      ...createSystemMetadata(aragornUid, formattedDate),
       relatedNPCs: ['aragorn-young'],
       relatedLocations: ['arnor'],
       notes: [

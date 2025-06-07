@@ -8,6 +8,19 @@ import { NPC } from '../../../../types/npc';
 type NPCStatus = 'alive' | 'deceased' | 'missing' | 'unknown';
 type NPCRelationship = 'friendly' | 'neutral' | 'hostile' | 'unknown';
 
+// Helper function to create complete system metadata
+const createSystemMetadata = (creatorUid: string, formattedDate: string) => ({
+  createdAt: formattedDate,
+  modifiedAt: formattedDate,
+  updatedAt: formattedDate,
+  createdBy: creatorUid,
+  createdByUsername: 'DungeonMaster',
+  modifiedBy: creatorUid,
+  modifiedByUsername: 'DungeonMaster',
+  dateAdded: formattedDate,
+  dateModified: formattedDate
+});
+
 // Create NPCs for a specific campaign
 export const createNPCs = async (
   db: any,
@@ -68,12 +81,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Bearer of the One Ring and central character of the quest.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'bilbo',
@@ -96,12 +104,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Found the One Ring in Gollum\'s cave during his adventure with the dwarves.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'elrond',
@@ -124,12 +127,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Hosted the Council that decided the fate of the One Ring.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'gandalf',
@@ -152,12 +150,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Fell in battle with the Balrog but will return transformed.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'aragorn',
@@ -180,12 +173,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Carries the shards of Narsil, the sword that cut the Ring from Sauron\'s hand.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'gimli',
@@ -208,12 +196,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Became a close friend of Legolas, breaking the traditional enmity between dwarves and elves.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'saruman',
@@ -236,12 +219,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Building an army of Uruk-hai to serve his and Sauron\'s purposes.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'balrog',
@@ -264,12 +242,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Fought Gandalf on the Bridge of Khazad-dûm, causing both to fall into the abyss.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'sauron',
@@ -292,12 +265,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'His power and fate are bound to the One Ring.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'gollum',
@@ -320,12 +288,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Follows the Ring-bearer out of obsession with "his precious."' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'legolas',
@@ -348,12 +311,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Forms an unlikely friendship with Gimli the dwarf, breaking centuries of mistrust between their peoples.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'arwen',
@@ -376,12 +334,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Gave the Evenstar pendant to Aragorn as a token of her love and faith.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'samwise',
@@ -404,12 +357,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'His loyalty to Frodo never wavers, even in the darkest moments.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'galadriel',
@@ -432,12 +380,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Possesses the Mirror of Galadriel, which shows things that were, things that are, and things that yet may be.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'boromir',
@@ -460,12 +403,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Increasingly tempted by the Ring, seeing it as a weapon that could save his people.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'theoden',
@@ -488,12 +426,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'His mind is poisoned by his advisor Gríma Wormtongue, who serves Saruman.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     }
   ];
 };
@@ -522,12 +455,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Finds the One Ring in Gollum\'s cave.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'gandalf',
@@ -550,12 +478,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Provides Thorin with the map and key to the secret door of Erebor.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'thorin',
@@ -578,12 +501,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Named "Oakenshield" after using an oak branch as a shield in battle against orcs.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'smaug',
@@ -606,12 +524,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Has a single vulnerability - a bare patch on his left breast where a scale is missing.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'gollum',
@@ -634,12 +547,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Refers to himself as "precious" and speaks with a distinctive hissing voice.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'balin',
@@ -662,12 +570,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'One of the more friendly dwarves toward Bilbo from the beginning.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'thranduil',
@@ -690,12 +593,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Has a strained relationship with the dwarves due to past disputes.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'bard',
@@ -718,12 +616,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Possesses the last black arrow capable of killing Smaug.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'beorn',
@@ -746,12 +639,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Keeps many animals that serve him and can speak with them.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'radagast',
@@ -774,12 +662,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Can communicate with birds and uses them as messengers.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     }
   ];
 };
@@ -808,12 +691,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'His oath to recover the Silmarils drives much of the tragedy of the First Age.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'melkor',
@@ -836,12 +714,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Stole the Silmarils and set them in his Iron Crown.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'fingolfin',
@@ -864,12 +737,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Challenged Morgoth to single combat at the gates of Angband.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'beren',
@@ -892,12 +760,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Lost his hand to Carcharoth while holding a Silmaril.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'luthien',
@@ -920,12 +783,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Used her enchantments to put Morgoth himself to sleep.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'turin',
@@ -948,12 +806,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Unwittingly married his sister Nienor, leading to their tragic suicides.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'turgon',
@@ -976,12 +829,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Gondolin remained hidden for nearly 400 years before its fall.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'ecthelion',
@@ -1004,12 +852,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Known for his silver flute and the music he would play at the fountains.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'glorfindel',
@@ -1032,12 +875,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Slew a Balrog during the escape from Gondolin, though it cost him his life.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'thingol',
@@ -1060,12 +898,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Demanded a Silmaril as bride-price for his daughter Lúthien\'s hand.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     }
   ];
 };
@@ -1094,12 +927,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Also known as Strider, one of many names he uses in his travels.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'halbarad',
@@ -1122,12 +950,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'One of Aragorn\'s most trusted companions.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'elrond',
@@ -1150,12 +973,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Raised Aragorn as "Estel" (Hope) in Rivendell, concealing his true identity until he came of age.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'arwen',
@@ -1178,12 +996,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Met Aragorn in the woods of Rivendell when he was 20 years old and mistook her for Lúthien.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'gandalf',
@@ -1206,12 +1019,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Works closely with Aragorn and the Rangers on matters concerning the growing darkness.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'barrow-wights',
@@ -1234,12 +1042,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'They entice travelers into their barrows, where they intend to kill them and make them one of their own.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'gollum',
@@ -1262,12 +1065,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'A challenging quarry who is both pitiable and dangerous.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'trolls',
@@ -1290,12 +1088,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Unusually active in the Weather Hills, suggesting something may be driving them from their usual territories.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'elder-ranger',
@@ -1318,12 +1111,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Remembers the days when the Rangers were more numerous and the threat of Angmar was still fresh.' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'butterbur',
@@ -1346,12 +1134,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       notes: [
         { date: formattedDate, text: 'Doesn\'t know Aragorn\'s true identity but recognizes him as the Ranger called "Strider."' }
       ],
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateAdded: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster',
-      dateModified: formattedDate
+      ...createSystemMetadata(dmUid, formattedDate)
     }
   ];
 };

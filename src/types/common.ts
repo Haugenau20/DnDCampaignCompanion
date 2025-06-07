@@ -50,7 +50,7 @@ export interface BaseEntity {
  * Complete entity with all system metadata
  * This is what contexts store and manage
  */
-export interface Entity<T = Record<string, any>> extends BaseEntity, SystemMetadata, T {}
+export type Entity<T = Record<string, any>> = BaseEntity & SystemMetadata & T;
 
 /**
  * Clean domain data that forms submit to contexts

@@ -7,9 +7,46 @@ import { Quest as AppQuest } from '../../../../types/quest';
 // Types for quest data
 type QuestStatus = 'active' | 'completed' | 'failed';
 
-interface QuestData extends Omit<AppQuest, 'dateCompleted'> {
-    dateCompleted: string | null;
-  }
+interface QuestData {
+  id: string;
+  title: string;
+  description: string;
+  status: QuestStatus;
+  background?: string;
+  objectives: { id: string; description: string; completed: boolean; }[];
+  leads?: string[];
+  keyLocations?: { name: string; description: string; }[];
+  importantNPCs?: { name: string; description: string; }[];
+  relatedNPCIds?: string[];
+  complications?: string[];
+  rewards?: string[];
+  location?: string;
+  levelRange?: string;
+  dateCompleted?: string | null;
+  // System metadata
+  createdAt: string;
+  modifiedAt: string;
+  updatedAt: string;
+  createdBy: string;
+  createdByUsername: string;
+  modifiedBy: string;
+  modifiedByUsername: string;
+  dateAdded: string;
+  dateModified: string;
+}
+
+// Helper function to create complete system metadata
+const createSystemMetadata = (creatorUid: string, formattedDate: string) => ({
+  createdAt: formattedDate,
+  modifiedAt: formattedDate,
+  updatedAt: formattedDate,
+  createdBy: creatorUid,
+  createdByUsername: 'DungeonMaster',
+  modifiedBy: creatorUid,
+  modifiedByUsername: 'DungeonMaster',
+  dateAdded: formattedDate,
+  dateModified: formattedDate
+});
 
 // Create quests for a specific campaign
 export const createQuests = async (
@@ -88,13 +125,7 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Knowledge of the ring\'s true nature', 'Understanding the threat to Middle-earth'],
       location: 'the-shire',
       levelRange: '1-3',
-      dateAdded: formattedDate,
-      dateCompleted: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'council-of-elrond',
@@ -134,13 +165,7 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Formation of the Fellowship of the Ring', 'A plan to destroy the Ring'],
       location: 'rivendell',
       levelRange: '3-5',
-      dateAdded: formattedDate,
-      dateCompleted: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'escape-from-moria',
@@ -180,13 +205,7 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Passage through the mountains', 'Discovery of the fate of Balin\'s expedition'],
       location: 'mines-of-moria',
       levelRange: '5-7',
-      dateAdded: formattedDate,
-      dateCompleted: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'destroy-the-ring',
@@ -226,13 +245,7 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['The destruction of the One Ring', 'The downfall of Sauron', 'Freedom for Middle-earth'],
       location: 'mordor',
       levelRange: '8-10',
-      dateAdded: formattedDate,
-      dateCompleted: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'defeat-saruman',
@@ -271,13 +284,7 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Weakening of Sauron\'s alliance', 'Recovery of lost knowledge from Orthanc'],
       location: 'isengard',
       levelRange: '6-8',
-      dateAdded: formattedDate,
-      dateCompleted: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     }
   ];
 };
@@ -323,13 +330,7 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Finding trolls\' treasure', 'Acquiring Sting and other treasures'],
       location: 'bag-end',
       levelRange: '1-3',
-      dateAdded: formattedDate,
-      dateCompleted: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'riddles-in-the-dark',
@@ -368,13 +369,7 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['The One Ring', 'Knowledge of Gollum\'s riddles', 'Escaping the mountain'],
       location: 'misty-mountains',
       levelRange: '3-5',
-      dateAdded: formattedDate,
-      dateCompleted: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'escape-from-mirkwood',
@@ -413,13 +408,7 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Reaching Lake-town', 'Freedom for the company', 'The last leg of the journey'],
       location: 'mirkwood',
       levelRange: '5-7',
-      dateAdded: formattedDate,
-      dateCompleted: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'reclaim-erebor',
@@ -458,13 +447,7 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Access to Erebor', 'Potential recovery of the Arkenstone', 'First steps to reclaiming the kingdom'],
       location: 'erebor',
       levelRange: '7-9',
-      dateAdded: formattedDate,
-      dateCompleted: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'slay-the-dragon',
@@ -503,13 +486,7 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Freedom from the dragon', 'Access to the treasure', 'Restoration of Erebor'],
       location: 'erebor',
       levelRange: '9-10',
-      dateAdded: formattedDate,
-      dateCompleted: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     }
   ];
 };
@@ -554,13 +531,7 @@ const getSilmarillionQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['The completion of the Silmarils', 'Prestige among the Eldar', 'The blessing of the Valar'],
       location: 'valinor',
       levelRange: '1-3',
-      dateAdded: formattedDate,
-      dateCompleted: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'oath-of-feanor',
@@ -599,13 +570,7 @@ const getSilmarillionQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Freedom from the rule of the Valar', 'The journey to Middle-earth', 'The pursuit of vengeance'],
       location: 'valinor',
       levelRange: '4-6',
-      dateAdded: formattedDate,
-      dateCompleted: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'quest-for-silmaril',
@@ -645,13 +610,7 @@ const getSilmarillionQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['A Silmaril', 'The union of Beren and Lúthien', 'A blow against Morgoth'],
       location: 'beleriand',
       levelRange: '7-9',
-      dateAdded: formattedDate,
-      dateCompleted: formattedDate,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'fall-of-gondolin',
@@ -691,13 +650,7 @@ const getSilmarillionQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Survival', 'Preservation of some of Gondolin\'s legacy', 'The escape of Eärendil'],
       location: 'gondolin',
       levelRange: '9-10',
-      dateAdded: formattedDate,
-      dateCompleted: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'war-of-wrath',
@@ -737,13 +690,7 @@ const getSilmarillionQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['The defeat of Morgoth', 'Recovery of the remaining Silmarils', 'The dawn of a new age'],
       location: 'beleriand',
       levelRange: '10-12',
-      dateAdded: formattedDate,
-      dateCompleted: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     }
   ];
 };
@@ -788,13 +735,7 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Safety for the northern settlements', 'Preventing a larger incursion', 'Gathering intelligence on enemy movements'],
       location: 'arnor',
       levelRange: '3-5',
-      dateAdded: formattedDate,
-      dateCompleted: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'protect-the-shire',
@@ -833,13 +774,7 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Continued peace in the Shire', 'Keeping the hobbits safe', 'Fulfilling an ancient duty'],
       location: 'eriador',
       levelRange: '2-4',
-      dateAdded: formattedDate,
-      dateCompleted: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'hunt-for-gollum',
@@ -878,13 +813,7 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Information about the Ring', 'Assisting Gandalf\'s investigation', 'Preventing Gollum from falling into enemy hands'],
       location: 'eriador',
       levelRange: '6-8',
-      dateAdded: formattedDate,
-      dateCompleted: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'barrow-downs-haunting',
@@ -923,13 +852,7 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Safer travel near the downs', 'Ancient artifacts from the barrows', 'Knowledge about the growing darkness'],
       location: 'eriador',
       levelRange: '5-7',
-      dateAdded: formattedDate,
-      dateCompleted: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     },
     {
       id: 'lost-heritage',
@@ -968,13 +891,7 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
       rewards: ['Preservation of the Dúnedain heritage', 'Recovery of powerful artifacts', 'Knowledge that may aid in future restoration'],
       location: 'arnor',
       levelRange: '4-6',
-      dateAdded: formattedDate,
-      dateCompleted: null,
-      createdBy: dmUid,
-      createdByUsername: 'DungeonMaster',
-      dateModified: formattedDate,
-      modifiedBy: dmUid,
-      modifiedByUsername: 'DungeonMaster'
+      ...createSystemMetadata(dmUid, formattedDate)
     }
   ];
 };

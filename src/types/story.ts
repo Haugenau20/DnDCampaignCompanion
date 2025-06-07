@@ -104,4 +104,12 @@ export interface StoryContextValue extends StoryContextState, StoryContextMethod
   getById: (id: string) => Chapter | undefined;
   /** Refresh chapters from backend */
   refresh: () => Promise<void>;
+
+  // Legacy compatibility properties
+  chapters: Chapter[];
+  getChapterById: (id: string) => Chapter | undefined;
+  deleteChapter: (id: string) => Promise<void>;
+  storyProgress: StoryProgress;
+  updateChapterProgress: (chapterId: string, progress: Partial<ChapterProgress>) => Promise<void>;
+  updateCurrentChapter: (chapter: Chapter) => void;
 }

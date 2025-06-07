@@ -149,7 +149,9 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Legacy state structure for compatibility
     quests,
     isLoading,
+    loading: isLoading, // Additional legacy alias
     error,
+    hasRequiredContext,
 
     // Legacy methods for compatibility
     getQuestById: getById,
@@ -160,6 +162,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     getQuestsByLocation: getByLocation,
     updateQuestStatus: updateStatus,
     updateQuestObjective: updateObjective,
+    refreshQuests: refresh,
 
     // New standardized methods (for future migration)
     items: quests,
@@ -172,7 +175,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     getByLocation,
     updateStatus,
     updateObjective
-  }), [
+  } as any), [
     quests,
     isLoading,
     error,
