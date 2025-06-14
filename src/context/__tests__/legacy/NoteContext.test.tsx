@@ -1,11 +1,11 @@
 // src/context/__tests__/NoteContext.test.tsx
 import React from 'react';
 import { render, act } from '@testing-library/react';
-import { NoteProvider, useNotes } from '../NoteContext';
-import { SessionNote } from '../../types/note';
+import { NoteProvider, useNotes } from '../../NoteContext';
+import { SessionNote } from '../../../types/note';
 
 // Mock dependencies
-jest.mock('../../hooks/useFirebaseData', () => ({
+jest.mock('../../../hooks/useFirebaseData', () => ({
   useFirebaseData: () => ({
     data: mockNotes,
     loading: false,
@@ -17,7 +17,7 @@ jest.mock('../../hooks/useFirebaseData', () => ({
   })
 }));
 
-jest.mock('../firebase', () => ({
+jest.mock('../../firebase', () => ({
   useAuth: () => ({ user: { uid: 'test-user', email: 'test@example.com' } }),
   useGroups: () => ({ activeGroupId: 'test-group' }),
   useCampaigns: () => ({ activeCampaignId: 'test-campaign' })
