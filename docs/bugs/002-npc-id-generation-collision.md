@@ -12,7 +12,7 @@ The NPC ID generation algorithm may create duplicate IDs when multiple NPCs have
 ## Discovery Details
 
 **Test File**: `src/context/__tests__/NPCContext.crud.test.tsx`  
-**Discovery Date**: January 2025  
+**Discovery Date**: June 14 2025  
 **Discovered By**: Test isolation investigation  
 **Related**: NPCContext.tsx line 116-121  
 

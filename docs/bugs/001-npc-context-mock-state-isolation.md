@@ -12,7 +12,7 @@ During NPCContext CRUD testing, discovered that mock state was not properly isol
 ## Discovery Details
 
 **Test File**: `src/context/__tests__/NPCContext.crud.test.tsx`  
-**Discovery Date**: January 2025  
+**Discovery Date**: June 14 2025  
 **Discovered By**: Automated testing with specification-based approach  
 
 ## Steps to Reproduce

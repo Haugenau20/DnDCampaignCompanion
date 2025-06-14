@@ -1,7 +1,7 @@
 # Test Design Strategy
 ## Business Logic & Data Flow Testing Before Restructuring
 
-*Strategy Document: January 2025*
+*Strategy Document: June 14 2025*
 
 ---
 

@@ -12,7 +12,7 @@ React warns about non-unique keys when rendering lists of NPCs, indicating poten
 ## Discovery Details
 
 **Test File**: `src/context/__tests__/NPCContext.crud.test.tsx`  
-**Discovery Date**: January 2025  
+**Discovery Date**: June 14 2025  
 **Console Warning**: "Encountered two children with the same key"  
 
 ## Steps to Reproduce
