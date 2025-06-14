@@ -135,7 +135,6 @@ This document outlines a comprehensive test design strategy focused on critical 
 - **Auto-Save**: Debounced saving behavior testing
 - **Manual Save**: Ctrl+S functionality and save button behavior
 - **Content Persistence**: No data loss during navigation
-- **Concurrent Editing**: Multiple users editing same note
 
 ### **Priority 2: Entity Extraction System Testing**
 
