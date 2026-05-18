@@ -3,7 +3,16 @@
     "allow": [
       "Bash(npm test:*)",
       "Bash(mkdir:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(npm ls *)",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "Bash(dir *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git add *)"
     ],
     "deny": []
   }
