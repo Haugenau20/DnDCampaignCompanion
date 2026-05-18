@@ -64,7 +64,16 @@ describe('QuestContext Objective Management Behavior', () => {
 
     mockUseUser.mockReturnValue({
       userProfile: { uid: 'test-user' },
-      activeGroupUserProfile: { uid: 'test-user', username: 'TestUser' },
+      activeGroupUserProfile: { 
+        userId: 'test-user', 
+        username: 'TestUser',
+        role: 'member',
+        joinedAt: '2025-06-15T00:00:00.000Z',
+        activeCharacterId: 'char-1',
+        characters: [
+          { id: 'char-1', name: 'Test Character' }
+        ]
+      },
     });
 
     mockUseGroups.mockReturnValue({

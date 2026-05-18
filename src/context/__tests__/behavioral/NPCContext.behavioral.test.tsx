@@ -43,6 +43,14 @@ jest.mock('../../../hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 
+// Mock user utilities for proper testing
+jest.mock('../../../utils/user-utils', () => ({
+  getUserName: jest.fn(),
+  getActiveCharacterName: jest.fn()
+}));
+
+const { getUserName, getActiveCharacterName } = require('../../../utils/user-utils');
+
 // Test component that uses the NPC context
 const NPCTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {
   const npcContext = useNPCs();
@@ -65,6 +73,10 @@ describe('NPCContext Behavioral Testing', () => {
     // Reset all mocks
     jest.clearAllMocks();
     npcContext = null;
+    
+    // Setup user utilities to return expected values
+    getUserName.mockReturnValue('Test User');
+    getActiveCharacterName.mockReturnValue('Test Character');
 
     // Create mock Firebase operations
     mockAddData = jest.fn();
@@ -206,7 +218,16 @@ describe('NPCContext Behavioral Testing', () => {
 
       mockUseUser.mockReturnValue({
         userProfile: { uid: 'test-user' },
-        activeGroupUserProfile: { uid: 'test-user' },
+        activeGroupUserProfile: { 
+          userId: 'test-user', 
+          username: 'Test User',
+          role: 'member',
+          joinedAt: '2025-06-15T00:00:00.000Z',
+          activeCharacterId: 'char-1',
+          characters: [
+            { id: 'char-1', name: 'Test Character' }
+          ]
+        },
       });
 
       renderNPCContext();
@@ -239,7 +260,16 @@ describe('NPCContext Behavioral Testing', () => {
 
       mockUseUser.mockReturnValue({
         userProfile: { uid: 'test-user' },
-        activeGroupUserProfile: { uid: 'test-user', username: 'TestUser' },
+        activeGroupUserProfile: { 
+          userId: 'test-user', 
+          username: 'Test User',
+          role: 'member',
+          joinedAt: '2025-06-15T00:00:00.000Z',
+          activeCharacterId: 'char-1',
+          characters: [
+            { id: 'char-1', name: 'Test Character' }
+          ]
+        },
       });
 
       mockUseGroups.mockReturnValue({
@@ -301,10 +331,11 @@ describe('NPCContext Behavioral Testing', () => {
         relationship: 'neutral',
       });
       
-      // DISCOVERY: NPC creation doesn't include user attribution metadata
-      expect(npcDataSent.createdBy).toBeUndefined();
-      expect(npcDataSent.createdByUsername).toBeUndefined();
-      expect(npcDataSent.dateAdded).toBeUndefined();
+      // EXPECTED: NPC creation should include proper user attribution metadata
+      expect(npcDataSent.createdBy).toBe('test-user');
+      expect(npcDataSent.createdByUsername).toBe('Test User'); // FAILS until getUserName bug is fixed
+      expect(npcDataSent.createdByCharacterName).toBe('Test Character'); // FAILS until getActiveCharacterName bug is fixed
+      expect(npcDataSent.dateAdded).toBeDefined();
 
       expect(npcDataSent.id).toBe(npcId); // ID should match
       
@@ -325,7 +356,16 @@ describe('NPCContext Behavioral Testing', () => {
       mockUseAuth.mockReturnValue({ user: { uid: 'test-user' } });
       mockUseUser.mockReturnValue({
         userProfile: { uid: 'test-user' },
-        activeGroupUserProfile: { uid: 'test-user', username: 'TestUser' },
+        activeGroupUserProfile: { 
+          userId: 'test-user', 
+          username: 'Test User',
+          role: 'member',
+          joinedAt: '2025-06-15T00:00:00.000Z',
+          activeCharacterId: 'char-1',
+          characters: [
+            { id: 'char-1', name: 'Test Character' }
+          ]
+        },
       });
       mockUseGroups.mockReturnValue({ activeGroupId: 'test-group' });
       mockUseCampaigns.mockReturnValue({ activeCampaignId: 'test-campaign' });
@@ -555,7 +595,16 @@ describe('NPCContext Behavioral Testing', () => {
       mockUseAuth.mockReturnValue({ user: { uid: 'test-user' } });
       mockUseUser.mockReturnValue({
         userProfile: { uid: 'test-user' },
-        activeGroupUserProfile: { uid: 'test-user', username: 'TestUser' },
+        activeGroupUserProfile: { 
+          userId: 'test-user', 
+          username: 'Test User',
+          role: 'member',
+          joinedAt: '2025-06-15T00:00:00.000Z',
+          activeCharacterId: 'char-1',
+          characters: [
+            { id: 'char-1', name: 'Test Character' }
+          ]
+        },
       });
       mockUseGroups.mockReturnValue({ activeGroupId: 'test-group' });
       mockUseCampaigns.mockReturnValue({ activeCampaignId: 'test-campaign' });
@@ -642,7 +691,7 @@ describe('NPCContext Behavioral Testing', () => {
       expect(updatedNPCData.description).toBe('Updated description');
       expect(updatedNPCData.relationship).toBe('ally');
       expect(updatedNPCData.modifiedBy).toBe('test-user');
-      expect(updatedNPCData.modifiedByUsername).toBe('TestUser');
+      expect(updatedNPCData.modifiedByUsername).toBe('Test User');
       expect(updatedNPCData.dateModified).toBeDefined();
 
       // BEHAVIOR: Should refresh NPCs after update
@@ -685,7 +734,7 @@ describe('NPCContext Behavioral Testing', () => {
       expect(npcId).toBe('test-npc');
       expect(updatedNPCData.relationship).toBe('ally');
       expect(updatedNPCData.modifiedBy).toBe('test-user');
-      expect(updatedNPCData.modifiedByUsername).toBe('TestUser');
+      expect(updatedNPCData.modifiedByUsername).toBe('Test User');
       expect(updatedNPCData.dateModified).toBeDefined();
 
       // BEHAVIOR: Should refresh NPCs after relationship update
