@@ -7,20 +7,17 @@
  */
 export const getUserDisplayName = (userProfile: any): string => {
   if (!userProfile) return '';
-  
-  // Only use the dedicated activeCharacterId field
-  if (userProfile.activeCharacterId && userProfile.characters) {
-    // Only support the object array format
+
+  if (userProfile.activeCharacterId && Array.isArray(userProfile.characters)) {
     const activeCharacter = userProfile.characters.find(
-      (char: any) => typeof char !== 'string' && char.id === userProfile.activeCharacterId
+      (char: any) => char && typeof char === 'object' && char.id === userProfile.activeCharacterId
     );
-    
-    if (activeCharacter && typeof activeCharacter !== 'string') {
+
+    if (activeCharacter) {
       return activeCharacter.name;
     }
   }
-  
-  // Fallback to username if no active character or character not found
+
   return userProfile.username || '';
 };
 
@@ -48,11 +45,11 @@ export const getActiveCharacterId = (userProfile: any): string | null => {
  * @returns The active character name or null if not found
  */
 export const getActiveCharacterName = (userProfile: any): string | null => {
-  if (!userProfile || !userProfile.characters || !userProfile.activeCharacterId) return null;
-  
+  if (!userProfile || !Array.isArray(userProfile.characters) || !userProfile.activeCharacterId) return null;
+
   const activeCharacter = userProfile.characters.find(
-    (char: any) => typeof char !== 'string' && char.id === userProfile.activeCharacterId
+    (char: any) => char && typeof char === 'object' && char.id === userProfile.activeCharacterId
   );
-  
+
   return activeCharacter ? activeCharacter.name : null;
 };
