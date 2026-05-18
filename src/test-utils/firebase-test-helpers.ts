@@ -49,8 +49,14 @@ export const cleanupTestData = async () => {
   console.log('Test cleanup completed');
 };
 
+interface MockFirebaseContextOverrides {
+  auth?: Record<string, unknown>;
+  firestore?: Record<string, unknown>;
+  isEmulator?: boolean;
+}
+
 // Enhanced mock Firebase context for unit tests
-export const createMockFirebaseContext = (overrides = {}) => ({
+export const createMockFirebaseContext = (overrides: MockFirebaseContextOverrides = {}) => ({
   auth: {
     currentUser: TEST_USERS.testUser1,
     signOut: jest.fn(),
