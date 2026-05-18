@@ -34,7 +34,11 @@ const config: Config.InitialOptions = {
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
     '!src/index.tsx',
-    '!src/setupTests.ts'
+    '!src/setupTests.ts',
+    '!src/utils/__dev__/**',
+    '!src/test-utils/**',
+    '!src/__mocks__/**',
+    '!src/themes/definitions/**'
   ],
   // No coverage thresholds for HTML reports
   // Jest HTML Reporter configuration
