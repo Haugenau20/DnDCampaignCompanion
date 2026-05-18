@@ -1,4 +1,4 @@
-// jest.config.ts
+// jest.config.html.ts - Configuration for HTML reporting (no coverage thresholds)
 import type { Config } from '@jest/types';
 
 const config: Config.InitialOptions = {
@@ -36,14 +36,7 @@ const config: Config.InitialOptions = {
     '!src/index.tsx',
     '!src/setupTests.ts'
   ],
-  coverageThreshold: {
-    global: {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80
-    }
-  },
+  // No coverage thresholds for HTML reports
   // Jest HTML Reporter configuration
   reporters: [
     'default',
@@ -58,7 +51,10 @@ const config: Config.InitialOptions = {
         theme: 'defaultTheme',
         sort: 'status',
         executionTimeWarningThreshold: 5,
-        dateFormat: 'yyyy-mm-dd HH:MM:ss'
+        dateFormat: 'yyyy-mm-dd HH:MM:ss',
+        includeStackTrace: true,
+        customScriptPath: null,
+        customStylesheetPath: null
       }
     ]
   ]

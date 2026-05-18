@@ -220,30 +220,32 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
-    // Add creation attribution data
+    const now = new Date().toISOString();
+    const characterId = activeGroupUserProfile?.activeCharacterId || null;
+
     const newLocation = {
       ...locationData,
       id: locationId,
       createdBy: user.uid,
       createdByUsername: getUserName(activeGroupUserProfile),
+      createdByCharacterId: characterId,
       createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      dateAdded: new Date().toISOString(),
+      dateAdded: now,
       modifiedBy: user.uid,
       modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterId: characterId,
       modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      dateModified: new Date().toISOString()
+      dateModified: now
     } as Location;
 
     await addData(newLocation, locationId);
-    
-    // Optimistically update the local state
+
     setLocations(prevLocations => [...prevLocations, newLocation]);
-    
-    // Trigger refresh of locations
+
     dispatchLocationChangedEvent();
-    
+
     return locationId;
-  }, [user, activeGroupId, activeCampaignId, addData, dispatchLocationChangedEvent]);
+  }, [user, activeGroupId, activeCampaignId, activeGroupUserProfile, addData, dispatchLocationChangedEvent]);
 
   const value: LocationContextValue = {
     locations,

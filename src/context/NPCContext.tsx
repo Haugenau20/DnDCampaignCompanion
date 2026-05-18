@@ -129,21 +129,33 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to add an NPC');
     }
-    
-    // Generate ID from name
+
     const id = generateNPCId(npcData.name);
-    
-    // Create the complete NPC with ID
+    const now = new Date().toISOString();
+
+    const creationAttribution: Partial<ContentAttribution> = {
+      createdBy: user.uid,
+      createdByUsername: getUserName(activeGroupUserProfile),
+      createdByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
+      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      dateAdded: now,
+      modifiedBy: user.uid,
+      modifiedByUsername: getUserName(activeGroupUserProfile),
+      modifiedByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
+      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      dateModified: now
+    };
+
     const newNPC: NPC = {
       ...npcData,
-      id
+      id,
+      ...creationAttribution
     };
-    
-    // Add to Firebase with explicit ID
+
     await addData(newNPC, id);
     await refreshNPCs();
     return id;
-  }, [hasRequiredContext, user, userProfile, generateNPCId, addData, refreshNPCs]);
+  }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, generateNPCId, addData, refreshNPCs]);
 
   // Update an existing NPC
   const updateNPC = useCallback(async (npc: NPC): Promise<void> => {

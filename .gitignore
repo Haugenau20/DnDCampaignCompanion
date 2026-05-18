@@ -40,4 +40,7 @@ Thumbs.db
 
 coverage
 
+# Test reports
+/test-reports/
+
 /scripts/*

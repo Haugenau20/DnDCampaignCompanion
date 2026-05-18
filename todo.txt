@@ -1,5 +1,9 @@
 # Prioritized Todo List
 
+The note taking feature becomes unstable at times and changes are reverted and then thrown back. 
+I do not know if it is from a mix of use of local storage and firebase saving/fetching?
+Or maybe the autosave feature doing some unwanted stuff?
+
 1. User should be able to change their password.
 
 2. Have registration tokens expire after X days
@@ -35,6 +39,9 @@
 15.1. Major do-over of the project structure
 
 Not prioritized yet:
+
+PC's are seen as NPCs when doing smart detection in the notes feature. 
+There should be some sort of setup or config so PC's can be defined and not included in smart detection.
 
 Make a dedicated page for profile options
 
