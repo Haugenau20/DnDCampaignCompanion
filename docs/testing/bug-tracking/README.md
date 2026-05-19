@@ -28,6 +28,7 @@ All bugs below were discovered through **behavioral testing** - testing actual c
 
 | Bug # | Status | Category | Title | Impact | Priority | Context |
 |-------|--------|----------|-------|---------|----------|---------|
+| [#023](./023-entity-mapper-extract-details-empty-body.md) | 🔍 DISCOVERED | DATA | entityMapper.extractDetailsByType has empty body — silent data loss | High | High | EntityExtractionService / entityMapper |
 | [#001](./001-npc-context-mock-state-isolation.md) | ✅ FIXED | CONTEXT | NPCContext Mock State Isolation Issues | High (Testing) | Fixed | Testing Infrastructure |
 | [#002](./002-npc-id-generation-collision.md) | ⚠️ NEEDS DECISION | DATA | NPC ID Generation Collision Risk | Medium | Medium | NPCContext |
 | [#003](./003-react-key-uniqueness-warning.md) | ⚠️ NEEDS DECISION | UI | React Key Uniqueness Warning | Low | Low-Medium | NPCContext |
