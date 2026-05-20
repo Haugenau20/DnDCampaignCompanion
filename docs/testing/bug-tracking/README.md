@@ -28,6 +28,9 @@ All bugs below were discovered through **behavioral testing** - testing actual c
 
 | Bug # | Status | Category | Title | Impact | Priority | Context |
 |-------|--------|----------|-------|---------|----------|---------|
+| [#302](./302-location-quest-form-sections-dialog-content-unreachable.md) | 🔍 DISCOVERED | UI / TESTABILITY | LocationFormSections and QuestFormSections dialog content unreachable in JSDOM — extends bug #150 | Medium (testing) | Low | LocationFormSections.tsx, QuestFormSections.tsx |
+| [#301](./301-join-group-dialog-form-content-unreachable-in-jsdom.md) | 🔍 DISCOVERED | UI / TESTABILITY | JoinGroupDialog entire form content unreachable in JSDOM due to Dialog portal — extends bug #150 | Medium (testing) | Medium | JoinGroupDialog.tsx |
+| [#300](./300-quest-form-sections-crypto-random-uuid-not-available-in-jest.md) | 🔍 DISCOVERED | UI / TESTABILITY | QuestFormSections ObjectivesSection uses crypto.randomUUID() which crashes in Jest/JSDOM | Medium (testing) | Medium | QuestFormSections.tsx |
 | [#251](./251-input-component-missing-htmlfor-label-association.md) | 🔍 DISCOVERED | UI / TESTABILITY | Input component missing `htmlFor`/`id` label association — breaks accessibility and `getByLabelText` testing | High (a11y) / Medium (testing) | Medium | Input.tsx (core) |
 | [#250](./250-npccard-related-quests-header-renders-with-no-content.md) | 🔍 DISCOVERED | UI | NPCCard "Related Quests" header renders even when all quest IDs are unresolvable | Low | Low | NPCCard.tsx |
 | [#023](./023-entity-mapper-extract-details-empty-body.md) | 🔍 DISCOVERED | DATA | entityMapper.extractDetailsByType has empty body — silent data loss | High | High | EntityExtractionService / entityMapper |
