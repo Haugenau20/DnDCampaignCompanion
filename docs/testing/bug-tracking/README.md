@@ -50,6 +50,8 @@ All bugs below were discovered through **behavioral testing** - testing actual c
 | [#019](./019-story-chapter-order-validation.md) | 🔍 DISCOVERED | VALIDATION | Story Chapter Order Validation Issues | Low | Low | StoryContext |
 | [#050](./050-use-note-data-unreachable-catch-block.md) | 🔍 DISCOVERED | VALIDATION | useNoteData: Unreachable Catch Block in getNoteCountForCampaign | Low | Low | useNoteData hook |
 | [#150](./150-dialog-portal-ref-testability.md) | 🔍 DISCOVERED | UI | Dialog Portal Ref Pattern Prevents JSDOM Testing — content never visible in RTL | Medium | Medium | Dialog.tsx / DeleteConfirmationDialog.tsx |
+| [#100](./100-navigation-missing-key-prop-mobile-layout.md) | 🔍 DISCOVERED | UI | Navigation component missing React key prop on mobile layout wrapper divs | Low | Low | Navigation.tsx |
+| [#101](./101-card-test-stale-class-assertion.md) | 🔍 DISCOVERED | UI | Card.test.tsx stale assertion — `default-card` class no longer emitted | Low | Low | Card.test.tsx |
 
 ## New Bugs Discovered Through Behavioral Testing
 

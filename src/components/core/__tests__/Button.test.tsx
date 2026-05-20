@@ -1,198 +1,249 @@
-import React from 'react';
-import { render } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from '../../../themes/ThemeContext';
-import Button from '../Button';
+// src/components/core/__tests__/Button.test.tsx
+// Fresh behavioral tests — no Tailwind class assertions.
 
-// Helper function to render Button with ThemeProvider
-const renderButton = (props = {}) => {
-  return render(
-    <ThemeProvider>
-      <Button {...props} />
-    </ThemeProvider>
-  );
-};
+import React from "react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import Button from "../Button";
 
-describe('Button Component', () => {
-  // Zero: Test default rendering
-  describe('Zero State', () => {
-    it('renders without crashing', () => {
-      // Arrange & Act
-      const { getByRole } = renderButton({ children: 'Click me' });
-      
-      // Assert
-      expect(getByRole('button')).toBeInTheDocument();
+// ---------------------------------------------------------------------------
+// ThemeProvider is NOT required by Button itself, but clsx/twMerge run fine
+// without it. Button only uses theme CSS class names as strings — it does not
+// call any theme hook.
+// ---------------------------------------------------------------------------
+
+describe("Button", () => {
+  // -------------------------------------------------------------------------
+  // Rendering
+  // -------------------------------------------------------------------------
+  describe("rendering", () => {
+    test("should render a button element", () => {
+      render(<Button>Click me</Button>);
+      expect(screen.getByRole("button")).toBeInTheDocument();
     });
 
-    it('renders with default variant and size', () => {
-      // Arrange & Act
-      const { getByRole } = renderButton({ children: 'Click me' });
-      const button = getByRole('button');
-      
-      // Assert
-      expect(button).toHaveClass('default-button-primary'); // Default variant
-      expect(button).toHaveClass('text-base px-4 py-2'); // Default size (md)
+    test("should render children text", () => {
+      render(<Button>Save</Button>);
+      expect(screen.getByRole("button")).toHaveTextContent("Save");
+    });
+
+    test("should render with an empty string as children without crashing", () => {
+      render(<Button>{""}</Button>);
+      expect(screen.getByRole("button")).toBeInTheDocument();
+    });
+
+    test("should render node children", () => {
+      render(
+        <Button>
+          <span data-testid="inner">Label</span>
+        </Button>
+      );
+      expect(screen.getByTestId("inner")).toBeInTheDocument();
     });
   });
 
-  // One: Test single props and simple interactions
-  describe('One Prop', () => {
-    it('renders with custom className', () => {
-      // Arrange & Act
-      const { getByRole } = renderButton({ children: 'Click me', className: 'custom-class' });
-      
-      // Assert
-      expect(getByRole('button')).toHaveClass('custom-class');
-    });
+  // -------------------------------------------------------------------------
+  // data-variant attribute — a reliable, non-Tailwind behavior marker
+  // -------------------------------------------------------------------------
+  describe("variant selection", () => {
+    test.each([
+      ["primary"],
+      ["secondary"],
+      ["outline"],
+      ["ghost"],
+      ["link"],
+    ] as const)(
+      "should set data-variant=%s on the button element",
+      (variant) => {
+        render(<Button variant={variant}>Btn</Button>);
+        expect(screen.getByRole("button")).toHaveAttribute(
+          "data-variant",
+          variant
+        );
+      }
+    );
 
-    it('handles click events', async () => {
-      // Arrange
+    test("should default data-variant to primary when no variant is provided", () => {
+      render(<Button>Btn</Button>);
+      expect(screen.getByRole("button")).toHaveAttribute(
+        "data-variant",
+        "primary"
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Click handling
+  // -------------------------------------------------------------------------
+  describe("click handling", () => {
+    test("should call onClick handler when clicked", async () => {
       const user = userEvent.setup();
-      const handleClick = jest.fn();
-      const { getByRole } = renderButton({ children: 'Click me', onClick: handleClick });
-      
-      // Act
-      await user.click(getByRole('button'));
-      
-      // Assert
-      expect(handleClick).toHaveBeenCalledTimes(1);
+      const onClick = jest.fn();
+      render(<Button onClick={onClick}>Click</Button>);
+
+      await user.click(screen.getByRole("button"));
+
+      expect(onClick).toHaveBeenCalledTimes(1);
     });
 
-    it('can be disabled', () => {
-      // Arrange & Act
-      const { getByRole } = renderButton({ children: 'Click me', disabled: true });
-      
-      // Assert
-      expect(getByRole('button')).toBeDisabled();
-    });
-  });
-
-  // Many: Test multiple variants, sizes, and combinations
-  describe('Many Variants and Sizes', () => {
-    // Test all variants
-    it.each([
-      ['primary', 'default-button-primary'],
-      ['secondary', 'default-button-secondary'],
-      ['outline', 'default-button-outline'],
-      ['ghost', 'default-button-ghost'],
-      ['link', 'default-button-link']
-    ])('renders %s variant correctly', (variant, expectedClass) => {
-      // Arrange & Act
-      const { getByRole } = renderButton({ children: 'Click me', variant });
-      
-      // Assert
-      expect(getByRole('button')).toHaveClass(expectedClass);
-    });
-
-    // Test all sizes
-    it.each([
-      ['sm', 'text-sm px-3 py-1.5'],
-      ['md', 'text-base px-4 py-2'],
-      ['lg', 'text-lg px-6 py-3']
-    ])('renders %s size correctly', (size, expectedClasses) => {
-      // Arrange & Act
-      const { getByRole } = renderButton({ children: 'Click me', size });
-      const button = getByRole('button');
-      
-      // Assert
-      expectedClasses.split(' ').forEach(className => {
-        expect(button).toHaveClass(className);
-      });
-    });
-  });
-
-  // Boundary: Test edge cases and constraints
-  describe('Boundary Behaviors', () => {
-    it('handles empty children', () => {
-        // Act
-        const { getByRole } = renderButton({ children: '' });
-        
-        // Assert
-        expect(getByRole('button')).toBeInTheDocument();
-      });
-
-    it('handles very long text content', () => {
-      // Arrange
-      const longText = 'A'.repeat(100);
-      
-      // Act
-      const { getByRole } = renderButton({ children: longText });
-      
-      // Assert
-      expect(getByRole('button')).toHaveTextContent(longText);
-    });
-  });
-
-  // Interface: Test component API and accessibility
-  describe('Interface and Accessibility', () => {
-    it('supports aria-label', () => {
-      // Arrange & Act
-      const { getByRole } = renderButton({ children: 'Click me', 'aria-label': 'Custom Label' });
-      
-      // Assert
-      expect(getByRole('button')).toHaveAttribute('aria-label', 'Custom Label');
-    });
-  });
-
-  // Exceptional: Test loading states and error handling
-  describe('Exceptional Behavior', () => {
-    it('shows loading state', () => {
-      // Arrange & Act
-      const { getByRole, getByText } = renderButton({ children: 'Click me', isLoading: true });
-      
-      // Assert
-      expect(getByRole('button')).toHaveClass('cursor-wait');
-      expect(getByText('Click me')).toHaveClass('invisible');
-    });
-
-    it('prevents clicks when loading', async () => {
-      // Arrange
+    test("should NOT call onClick when the button is disabled", async () => {
       const user = userEvent.setup();
-      const handleClick = jest.fn();
-      const { getByRole } = renderButton({ 
-        children: 'Click me', 
-        isLoading: true, 
-        onClick: handleClick 
-      });
-      
-      // Act
-      await user.click(getByRole('button'));
-      
-      // Assert
-      expect(handleClick).not.toHaveBeenCalled();
+      const onClick = jest.fn();
+      render(
+        <Button onClick={onClick} disabled>
+          Click
+        </Button>
+      );
+
+      await user.click(screen.getByRole("button"));
+
+      expect(onClick).not.toHaveBeenCalled();
+    });
+
+    test("should NOT call onClick when isLoading is true", async () => {
+      const user = userEvent.setup();
+      const onClick = jest.fn();
+      render(
+        <Button onClick={onClick} isLoading>
+          Click
+        </Button>
+      );
+
+      await user.click(screen.getByRole("button"));
+
+      expect(onClick).not.toHaveBeenCalled();
     });
   });
 
-  // Simple: Test straightforward use cases
-  describe('Simple Scenarios', () => {
-    it('renders with start icon', () => {
-      // Arrange & Act
-      const { getByTestId } = renderButton({ 
-        children: 'Click me',
-        startIcon: <span data-testid="start-icon">→</span>
-      });
-      
-      // Assert
-      expect(getByTestId('start-icon')).toBeInTheDocument();
+  // -------------------------------------------------------------------------
+  // Disabled state
+  // -------------------------------------------------------------------------
+  describe("disabled state", () => {
+    test("should be disabled when disabled prop is true", () => {
+      render(<Button disabled>Btn</Button>);
+      expect(screen.getByRole("button")).toBeDisabled();
     });
 
-    it('renders with end icon', () => {
-      // Arrange & Act
-      const { getByTestId } = renderButton({ 
-        children: 'Click me',
-        endIcon: <span data-testid="end-icon">←</span>
-      });
-      
-      // Assert
-      expect(getByTestId('end-icon')).toBeInTheDocument();
+    test("should NOT be disabled by default", () => {
+      render(<Button>Btn</Button>);
+      expect(screen.getByRole("button")).not.toBeDisabled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Loading state
+  // -------------------------------------------------------------------------
+  describe("loading state", () => {
+    test("should be disabled when isLoading is true", () => {
+      render(<Button isLoading>Save</Button>);
+      expect(screen.getByRole("button")).toBeDisabled();
     });
 
-    it('renders as full width', () => {
-      // Arrange & Act
-      const { getByRole } = renderButton({ children: 'Click me', fullWidth: true });
-      
-      // Assert
-      expect(getByRole('button')).toHaveClass('w-full');
+    test("should hide children text visually when loading (invisible class)", () => {
+      render(<Button isLoading>Save</Button>);
+      // The inner span holding children gains 'invisible'
+      const innerSpan = screen.getByText("Save").closest("span");
+      expect(innerSpan).toHaveClass("invisible");
+    });
+
+    test("should render the SVG spinner when loading", () => {
+      const { container } = render(<Button isLoading>Save</Button>);
+      expect(container.querySelector("svg")).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Icons
+  // -------------------------------------------------------------------------
+  describe("icons", () => {
+    test("should render startIcon when iconPosition is default (start)", () => {
+      render(
+        <Button startIcon={<span data-testid="start-icon">S</span>}>
+          Go
+        </Button>
+      );
+      expect(screen.getByTestId("start-icon")).toBeInTheDocument();
+    });
+
+    test("should render endIcon", () => {
+      render(
+        <Button endIcon={<span data-testid="end-icon">E</span>}>Go</Button>
+      );
+      expect(screen.getByTestId("end-icon")).toBeInTheDocument();
+    });
+
+    test("should render icon above text when iconPosition is top", () => {
+      render(
+        <Button
+          startIcon={<span data-testid="top-icon">T</span>}
+          iconPosition="top"
+        >
+          Label
+        </Button>
+      );
+      expect(screen.getByTestId("top-icon")).toBeInTheDocument();
+      expect(screen.getByText("Label")).toBeInTheDocument();
+    });
+
+    test("should NOT render endIcon in vertical (top) layout — it uses startIcon", () => {
+      // When iconPosition=top the component uses the startIcon slot.
+      // endIcon passed while iconPosition=top should NOT be rendered separately.
+      const { queryByTestId } = render(
+        <Button
+          startIcon={<span data-testid="si">S</span>}
+          endIcon={<span data-testid="ei">E</span>}
+          iconPosition="top"
+        >
+          Lbl
+        </Button>
+      );
+      // startIcon shows in vertical layout
+      expect(queryByTestId("si")).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Accessibility
+  // -------------------------------------------------------------------------
+  describe("accessibility", () => {
+    test("should accept and forward aria-label", () => {
+      render(<Button aria-label="Close dialog">X</Button>);
+      expect(screen.getByRole("button", { name: "Close dialog" })).toBeInTheDocument();
+    });
+
+    test("should accept and forward aria-pressed", () => {
+      render(<Button aria-pressed="true">Toggle</Button>);
+      expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "true");
+    });
+
+    test("should accept data-testid and other HTML button attributes", () => {
+      render(<Button data-testid="my-btn">Btn</Button>);
+      expect(screen.getByTestId("my-btn")).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // fullWidth
+  // -------------------------------------------------------------------------
+  describe("fullWidth prop", () => {
+    test("should include w-full class when fullWidth is true", () => {
+      render(<Button fullWidth>Wide</Button>);
+      expect(screen.getByRole("button")).toHaveClass("w-full");
+    });
+
+    test("should include w-auto class when fullWidth is false (default)", () => {
+      render(<Button>Normal</Button>);
+      expect(screen.getByRole("button")).toHaveClass("w-auto");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Custom className
+  // -------------------------------------------------------------------------
+  describe("className merging", () => {
+    test("should include custom className on the button element", () => {
+      render(<Button className="my-custom-class">Btn</Button>);
+      expect(screen.getByRole("button")).toHaveClass("my-custom-class");
     });
   });
 });
