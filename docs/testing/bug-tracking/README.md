@@ -49,6 +49,7 @@ All bugs below were discovered through **behavioral testing** - testing actual c
 | [#018](./018-story-progress-tracking-integration.md) | 🔍 DISCOVERED | INTEGRATION | Story Progress Tracking Integration Issues | Medium | Medium | StoryContext |
 | [#019](./019-story-chapter-order-validation.md) | 🔍 DISCOVERED | VALIDATION | Story Chapter Order Validation Issues | Low | Low | StoryContext |
 | [#050](./050-use-note-data-unreachable-catch-block.md) | 🔍 DISCOVERED | VALIDATION | useNoteData: Unreachable Catch Block in getNoteCountForCampaign | Low | Low | useNoteData hook |
+| [#150](./150-dialog-portal-ref-testability.md) | 🔍 DISCOVERED | UI | Dialog Portal Ref Pattern Prevents JSDOM Testing — content never visible in RTL | Medium | Medium | Dialog.tsx / DeleteConfirmationDialog.tsx |
 
 ## New Bugs Discovered Through Behavioral Testing
 
