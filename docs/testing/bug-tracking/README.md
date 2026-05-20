@@ -28,6 +28,8 @@ All bugs below were discovered through **behavioral testing** - testing actual c
 
 | Bug # | Status | Category | Title | Impact | Priority | Context |
 |-------|--------|----------|-------|---------|----------|---------|
+| [#251](./251-input-component-missing-htmlfor-label-association.md) | 🔍 DISCOVERED | UI / TESTABILITY | Input component missing `htmlFor`/`id` label association — breaks accessibility and `getByLabelText` testing | High (a11y) / Medium (testing) | Medium | Input.tsx (core) |
+| [#250](./250-npccard-related-quests-header-renders-with-no-content.md) | 🔍 DISCOVERED | UI | NPCCard "Related Quests" header renders even when all quest IDs are unresolvable | Low | Low | NPCCard.tsx |
 | [#023](./023-entity-mapper-extract-details-empty-body.md) | 🔍 DISCOVERED | DATA | entityMapper.extractDetailsByType has empty body — silent data loss | High | High | EntityExtractionService / entityMapper |
 | [#001](./001-npc-context-mock-state-isolation.md) | ✅ FIXED | CONTEXT | NPCContext Mock State Isolation Issues | High (Testing) | Fixed | Testing Infrastructure |
 | [#002](./002-npc-id-generation-collision.md) | ⚠️ NEEDS DECISION | DATA | NPC ID Generation Collision Risk | Medium | Medium | NPCContext |
