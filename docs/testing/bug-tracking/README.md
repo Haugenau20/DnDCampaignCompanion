@@ -52,6 +52,8 @@ All bugs below were discovered through **behavioral testing** - testing actual c
 | [#150](./150-dialog-portal-ref-testability.md) | 🔍 DISCOVERED | UI | Dialog Portal Ref Pattern Prevents JSDOM Testing — content never visible in RTL | Medium | Medium | Dialog.tsx / DeleteConfirmationDialog.tsx |
 | [#100](./100-navigation-missing-key-prop-mobile-layout.md) | 🔍 DISCOVERED | UI | Navigation component missing React key prop on mobile layout wrapper divs | Low | Low | Navigation.tsx |
 | [#101](./101-card-test-stale-class-assertion.md) | 🔍 DISCOVERED | UI | Card.test.tsx stale assertion — `default-card` class no longer emitted | Low | Low | Card.test.tsx |
+| [#200](./200-user-profile-low-statement-coverage-debounce.md) | 🔍 DISCOVERED | UI / TESTABILITY | UserProfile username debounce validation branch untestable without fake timer coordination | Low | Low | UserProfile.tsx |
+| [#201](./201-group-management-view-error-not-displayed-in-dialog.md) | 🔍 DISCOVERED | UI | GroupManagementView error state not visible in dialog after createGroup failure | Low | Low | GroupManagementView.tsx |
 
 ## New Bugs Discovered Through Behavioral Testing
 
