@@ -28,6 +28,7 @@ All bugs below were discovered through **behavioral testing** - testing actual c
 
 | Bug # | Status | Category | Title | Impact | Priority | Context |
 |-------|--------|----------|-------|---------|----------|---------|
+| [#650](./650-usage-context-infinite-refresh-loop-on-null-status.md) | 🔍 DISCOVERED | CONTEXT / PERFORMANCE | UsageContext infinite refresh loop when fetchUsageStatus returns null (unauthenticated) | High | High | UsageContext.tsx |
 | [#302](./302-location-quest-form-sections-dialog-content-unreachable.md) | 🔍 DISCOVERED | UI / TESTABILITY | LocationFormSections and QuestFormSections dialog content unreachable in JSDOM — extends bug #150 | Medium (testing) | Low | LocationFormSections.tsx, QuestFormSections.tsx |
 | [#301](./301-join-group-dialog-form-content-unreachable-in-jsdom.md) | 🔍 DISCOVERED | UI / TESTABILITY | JoinGroupDialog entire form content unreachable in JSDOM due to Dialog portal — extends bug #150 | Medium (testing) | Medium | JoinGroupDialog.tsx |
 | [#300](./300-quest-form-sections-crypto-random-uuid-not-available-in-jest.md) | 🔍 DISCOVERED | UI / TESTABILITY | QuestFormSections ObjectivesSection uses crypto.randomUUID() which crashes in Jest/JSDOM | Medium (testing) | Medium | QuestFormSections.tsx |
@@ -60,6 +61,7 @@ All bugs below were discovered through **behavioral testing** - testing actual c
 | [#101](./101-card-test-stale-class-assertion.md) | 🔍 DISCOVERED | UI | Card.test.tsx stale assertion — `default-card` class no longer emitted | Low | Low | Card.test.tsx |
 | [#200](./200-user-profile-low-statement-coverage-debounce.md) | 🔍 DISCOVERED | UI / TESTABILITY | UserProfile username debounce validation branch untestable without fake timer coordination | Low | Low | UserProfile.tsx |
 | [#201](./201-group-management-view-error-not-displayed-in-dialog.md) | 🔍 DISCOVERED | UI | GroupManagementView error state not visible in dialog after createGroup failure | Low | Low | GroupManagementView.tsx |
+| [#600](./600-location-sort-order-inconsistency.md) | 🔍 DISCOVERED | UI / DATA | Location sort order for "explored" status is reversed between useLayoutData and LocationsMap | Low | Low | useLayoutData.ts, LocationsMap.tsx |
 
 ## New Bugs Discovered Through Behavioral Testing
 
