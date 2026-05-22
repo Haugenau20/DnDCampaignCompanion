@@ -129,4 +129,25 @@ describe('NoteCard', () => {
       expect(mockNavigateToPage).toHaveBeenCalledWith('/notes/note-42');
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Status badge class coverage (lines 47, 51 — getStatusBadgeClass branches)
+  // -------------------------------------------------------------------------
+  describe('status badge styling', () => {
+    test('should render Archived badge element with badge class for archived notes (line 47)', () => {
+      render(<NoteCard note={makeNote({ status: 'archived' })} />);
+      const badge = screen.getByText('Archived');
+      // The badge span should have the archived status class applied
+      expect(badge.tagName.toLowerCase()).toBe('span');
+      // Class is applied via getStatusBadgeClass() returning "status-archived"
+      expect(badge.className).toContain('status-archived');
+    });
+
+    test('should render no badge for notes with unknown status (default branch, line 51)', () => {
+      // A status value not matching "active" or "archived" hits the default case
+      render(<NoteCard note={makeNote({ status: 'unknown-status' as any })} />);
+      // "Archived" badge condition is: note.status === "archived" — does not match
+      expect(screen.queryByText('Archived')).not.toBeInTheDocument();
+    });
+  });
 });

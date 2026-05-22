@@ -86,6 +86,11 @@ describe('EntityCard', () => {
       render(<EntityCard entity={makeEntity({ confidence: 0.45 })} noteId="note-1" />);
       expect(screen.getByText(/45%/)).toBeInTheDocument();
     });
+
+    test('should render confidence for medium confidence entity (0.5–0.79 range)', () => {
+      render(<EntityCard entity={makeEntity({ confidence: 0.65 })} noteId="note-1" />);
+      expect(screen.getByText(/65%/)).toBeInTheDocument();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -101,6 +106,28 @@ describe('EntityCard', () => {
     test('should NOT render convert button for converted entities', () => {
       render(<EntityCard entity={makeEntity({ isConverted: true })} noteId="note-1" />);
       expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Default entity type (lines 45, 63 — default cases in getEntityIcon and getEntityTypeName)
+  // -------------------------------------------------------------------------
+  describe('unknown entity type (default branch)', () => {
+    test('should render the raw type string as name for unknown entity types (line 63)', () => {
+      render(
+        <EntityCard entity={makeEntity({ type: 'unknown' as any, text: 'Mystery Thing' })} noteId="note-1" />
+      );
+      // getEntityTypeName default returns the type string itself
+      expect(screen.getByText(/unknown/i)).toBeInTheDocument();
+    });
+
+    test('should render without crashing for an unknown entity type (default icon, line 45)', () => {
+      // getEntityIcon default returns <FileQuestion /> — just verify no crash
+      expect(() => {
+        render(
+          <EntityCard entity={makeEntity({ type: 'other' as any, text: 'Odd Entity' })} noteId="note-1" />
+        );
+      }).not.toThrow();
     });
   });
 

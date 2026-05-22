@@ -89,6 +89,10 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#851](./851-storypage-page1-always-marks-complete.md) | 🔍 DISCOVERED | DATA | StoryPage `page === 1` condition always marks chapter complete on page 1 navigation/load | Medium | Medium | StoryPage.tsx |
 | [#900](./900-firebase-context-auth-loading-never-false-on-success.md) | 🔍 DISCOVERED | CONTEXT | FirebaseContext `authLoading` never set to `false` after successful profile + group load | High | High | FirebaseContext.tsx |
 | [#901](./901-load-user-profile-hardcoded-retry-delays-untestable.md) | 🔍 DISCOVERED | TESTABILITY | `loadUserProfile` hardcoded 1-second retry delays make error/retry path untestable | Medium | Medium | FirebaseContext.tsx |
+| [#1000](./1000-settheme-catch-dead-branch.md) | 🔍 DISCOVERED | ARCHITECTURE | `setTheme` catch block (lines 192-193) is unreachable dead code — `useState` setters never throw | Low | Low | ThemeContext.tsx |
+| [#1050](./1050-notecard-getstatusbadgeclass-dead-code.md) | 🔍 DISCOVERED | ARCHITECTURE | NoteCard `getStatusBadgeClass` "active" and default branches are dead code — function only called in archived condition | Low | Low | NoteCard.tsx |
+| [#1051](./1051-noteeditor-manualsave-rethrows-unhandled.md) | 🔍 DISCOVERED | UI | NoteEditor `handleManualSave` re-throws error causing unhandled rejection from Save button / Ctrl+S click handler | Medium | Medium | NoteEditor.tsx |
+| [#1052](./1052-noteeditor-getlastsavedtext-dead-branch.md) | 🔍 DISCOVERED | ARCHITECTURE | NoteEditor `getLastSavedText` line 170 is dead code — guard is redundant with calling function's condition | Low | Low | NoteEditor.tsx |
 
 ## Per-context testing summaries
 
