@@ -80,6 +80,10 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#350](./350-entity-extractor-infinite-render-loop.md) | 🔍 DISCOVERED | UI / DATA | EntityExtractor infinite render loop via unstable `existingReferences = []` default | High | High | EntityExtractor.tsx |
 | [#600](./600-location-sort-order-inconsistency.md) | 🔍 DISCOVERED | UI / DATA | Location sort order for `explored` status reversed between useLayoutData and LocationsMap | Low | Low | useLayoutData.ts, LocationsMap.tsx |
 | [#650](./650-usage-context-infinite-refresh-loop-on-null-status.md) | 🔍 DISCOVERED | CONTEXT / PERFORMANCE | UsageContext infinite refresh loop when `fetchUsageStatus()` returns null | High | High | UsageContext.tsx |
+| [#700](./700-use-campaigns-create-campaign-name-lost-in-3arg-convention.md) | 🔍 DISCOVERED | VALIDATION | useCampaigns createCampaign 3-arg convention silently coerces falsy name to empty string | Low | Low | useCampaigns.ts |
+| [#701](./701-use-groups-loading-never-false-for-users-with-no-groups.md) | 🔍 DISCOVERED | CONTEXT | useGroups loading never becomes false for authenticated users with no groups | High | High | useGroups.ts |
+| [#702](./702-invitation-admin-role-check-case-sensitive.md) | 🔍 DISCOVERED | VALIDATION | useInvitations admin role check is case-sensitive, inconsistent with useGroups.isAdmin | Low | Low | useInvitations.ts |
+| [#750](./750-location-create-page-initial-data-always-object.md) | 🔍 DISCOVERED | DATA | LocationCreatePage always passes object (never `undefined`) to LocationCreateForm.initialData | Low | Low | LocationCreatePage.tsx |
 
 ## Per-context testing summaries
 
