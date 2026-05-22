@@ -408,7 +408,7 @@ describe("FirebaseContext Behavioral Testing", () => {
     // authenticated users with a loaded profile + groups.
     // When loadGroups completes successfully, setAuthLoading(false) is never called.
     // loading stays true indefinitely after successful authentication.
-    test.skip(
+    test(
       "loading should be false after authenticated user data fully loads — skipped due to bug #900",
       async () => {
         const fakeUser = makeUser("u-1");

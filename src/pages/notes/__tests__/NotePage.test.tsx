@@ -208,7 +208,7 @@ describe("NotePage", () => {
     // to a sentinel "not found" value, so the useEffect dependency on
     // isLoadingCrossCampaignNote causes a re-fetch loop that prevents
     // the "Note Not Found" UI from ever rendering.
-    it.skip("renders 'Note Not Found' heading after loading completes", async () => {
+    it("renders 'Note Not Found' heading after loading completes", async () => {
       renderPage();
       await waitFor(() => {
         expect(screen.getByText("Note Not Found")).toBeInTheDocument();
@@ -216,7 +216,7 @@ describe("NotePage", () => {
     });
 
     // Bug #800: same root cause as above.
-    it.skip("renders 'Back to Notes' button in the not-found state", async () => {
+    it("renders 'Back to Notes' button in the not-found state", async () => {
       renderPage();
       await waitFor(() => {
         expect(screen.getByText("Back to Notes")).toBeInTheDocument();

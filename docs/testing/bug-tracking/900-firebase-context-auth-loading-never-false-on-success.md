@@ -4,7 +4,7 @@
 FirebaseContext `authLoading` never set to `false` after successful profile + group load for authenticated users
 
 ## Status
-🔍 DISCOVERED
+✅ FIXED — Added `setAuthLoading(false)` after `setGroupsLoading(false)` in the authenticated success path of `FirebaseContext.tsx`. Test un-skipped and passing.
 
 ## Category
 CONTEXT

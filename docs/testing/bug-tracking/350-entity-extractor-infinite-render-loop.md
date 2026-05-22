@@ -1,6 +1,6 @@
 # Bug #350: EntityExtractor infinite render loop via unstable existingReferences default
 
-**Status**: 🔍 DISCOVERED
+**Status**: ✅ FIXED — Hoisted `EMPTY_REFERENCES: PotentialReference[] = []` as a module-level constant and changed the default prop from `existingReferences = []` to `existingReferences = EMPTY_REFERENCES`. This gives the default a stable identity across renders, breaking the infinite loop. 8 previously-skipped tests in `EntityExtractor.test.tsx` now pass. Fixed 2026-05-22.
 **Priority**: High
 **Category**: UI / DATA
 **Context**: EntityExtractor component (`src/components/features/notes/EntityExtractor.tsx`)

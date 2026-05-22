@@ -222,7 +222,7 @@ describe("useGroups Behavioral Testing", () => {
     // The useEffect condition uses `groups.length > 0` which is false for empty array,
     // contradicting the comment "even if empty array". New users who haven't joined
     // any group will see loading=true indefinitely.
-    test.skip("should become false when user is authenticated but has no groups (post-load) — skipped due to bug #701", async () => {
+    test("should become false when user is authenticated but has no groups (post-load) — skipped due to bug #701", async () => {
       // Expected: after Firebase confirms the user has 0 groups, loading should resolve to false
       // Actual: loading stays true forever because groups.length > 0 is never satisfied
       mockContextValue = makeContext({

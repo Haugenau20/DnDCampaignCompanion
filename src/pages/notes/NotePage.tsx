@@ -33,6 +33,7 @@ const NotePage: React.FC = () => {
   const [referencesSearchComplete, setReferencesSearchComplete] = useState(false);
   const [crossCampaignNote, setCrossCampaignNote] = useState<Note | null>(null);
   const [isLoadingCrossCampaignNote, setIsLoadingCrossCampaignNote] = useState(false);
+  const [crossCampaignNotFound, setCrossCampaignNotFound] = useState(false);
   const documentService = DocumentService.getInstance();
 
   // Ref to access NoteEditor methods for auto-save functionality
@@ -45,10 +46,11 @@ const NotePage: React.FC = () => {
   useEffect(() => {
     // Only fetch if we have a noteId and meet all the conditions
     const shouldFetchCrossCampaignNote = noteId &&
-                                        !currentCampaignNote && 
-                                        !crossCampaignNote && 
-                                        !isLoadingCrossCampaignNote && 
-                                        user?.uid && 
+                                        !currentCampaignNote &&
+                                        !crossCampaignNote &&
+                                        !crossCampaignNotFound &&
+                                        !isLoadingCrossCampaignNote &&
+                                        user?.uid &&
                                         activeGroupId &&
                                         activeCampaignId; // Only fetch if we have an active campaign to compare against
 
@@ -67,6 +69,11 @@ const NotePage: React.FC = () => {
             // Note belongs to current campaign but wasn't found in context
             // This could happen due to timing issues - don't treat as cross-campaign
             setCrossCampaignNote(null);
+          } else {
+            // note is null — not found in Firestore. Mark as not found so the
+            // effect does not re-trigger on every isLoadingCrossCampaignNote
+            // state change (fixes infinite re-fetch loop, bug #800).
+            setCrossCampaignNotFound(true);
           }
         } catch (error) {
           console.error("Error fetching cross-campaign note:", error);
@@ -77,7 +84,7 @@ const NotePage: React.FC = () => {
 
       fetchCrossCampaignNote();
     }
-  }, [noteId, currentCampaignNote, crossCampaignNote, isLoadingCrossCampaignNote, user?.uid, activeGroupId, activeCampaignId, documentService]);
+  }, [noteId, currentCampaignNote, crossCampaignNote, crossCampaignNotFound, isLoadingCrossCampaignNote, user?.uid, activeGroupId, activeCampaignId, documentService]);
 
   // Functions to expose editor content to EntityExtractor
   const getCurrentEditorContent = () => {

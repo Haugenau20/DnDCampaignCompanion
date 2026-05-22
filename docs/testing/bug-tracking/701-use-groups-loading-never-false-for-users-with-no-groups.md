@@ -2,7 +2,7 @@
 
 **Title**: useGroups loading state never becomes false for authenticated users who have no groups
 
-**Status**: 🔍 DISCOVERED
+**Status**: ✅ FIXED — Changed `groups.length > 0` to `Array.isArray(groups)` in the `fullyLoaded` useEffect in `useGroups.ts`. The fix aligns the condition with the code comment ("even if empty array"). Test un-skipped and passing.
 
 **Category**: CONTEXT
 

@@ -4,7 +4,7 @@
 NotePage infinite re-fetch loop when note ID is valid but note is not found in Firestore
 
 ## Status
-🔍 DISCOVERED
+✅ FIXED — Added `crossCampaignNotFound: boolean` state (default `false`). When `getDocument` resolves to `null`, the new `else` branch calls `setCrossCampaignNotFound(true)`. The `shouldFetchCrossCampaignNote` guard now includes `&& !crossCampaignNotFound`, and `crossCampaignNotFound` is added to the `useEffect` dependency array. This prevents re-fetch after a null result; the "Note Not Found" UI renders correctly. 2 previously-skipped tests in `NotePage.test.tsx` now pass. Fixed 2026-05-22.
 
 ## Category
 UI / ARCHITECTURE

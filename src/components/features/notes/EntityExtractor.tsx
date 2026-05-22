@@ -28,14 +28,18 @@ interface EntityExtractorProps {
   saveCurrentEditorContent?: () => Promise<void>;
 }
 
+/** Stable empty array so the default prop for existingReferences never changes
+ *  reference between renders (fixes the infinite render loop, bug #350). */
+const EMPTY_REFERENCES: PotentialReference[] = [];
+
 /**
  * Component for extracting and displaying entities from notes
  * Integrates with OpenAI for entity extraction and checks for existing campaign elements
  * Now automatically saves current editor content before extraction to prevent data loss
  */
-const EntityExtractor: React.FC<EntityExtractorProps> = ({ 
+const EntityExtractor: React.FC<EntityExtractorProps> = ({
   noteId,
-  existingReferences = [],
+  existingReferences = EMPTY_REFERENCES,
   referencesSearchComplete = false,
   onEntityConverted,
   getCurrentEditorContent,

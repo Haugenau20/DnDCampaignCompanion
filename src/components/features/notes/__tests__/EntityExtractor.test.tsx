@@ -177,7 +177,7 @@ describe('EntityExtractor', () => {
   // -------------------------------------------------------------------------
   // SKIPPED: triggers bug #350 infinite render loop. Re-enable when the
   // production bug is fixed (existingReferences default `[]` is unstable).
-  describe.skip('initial render (referencesSearchComplete=true, synchronous only)', () => {
+  describe('initial render (referencesSearchComplete=true, synchronous only)', () => {
     test('should render Smart Detection heading', () => {
       render(<EntityExtractor noteId="note-1" referencesSearchComplete={true} />);
       expect(screen.getByText('Smart Detection')).toBeInTheDocument();
