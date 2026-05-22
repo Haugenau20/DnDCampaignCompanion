@@ -87,6 +87,8 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#800](./800-notepage-infinite-refetch-not-found.md) | 🔍 DISCOVERED | UI / ARCHITECTURE | NotePage infinite re-fetch loop when note ID is valid but note is not found in Firestore | High | High | NotePage.tsx |
 | [#850](./850-homepage-activity-inclusion-inconsistency.md) | 🔍 DISCOVERED | DATA | HomePage chapter activity includes items with only `dateAdded`; other entity types require `dateModified` | Low | Low | HomePage.tsx |
 | [#851](./851-storypage-page1-always-marks-complete.md) | 🔍 DISCOVERED | DATA | StoryPage `page === 1` condition always marks chapter complete on page 1 navigation/load | Medium | Medium | StoryPage.tsx |
+| [#900](./900-firebase-context-auth-loading-never-false-on-success.md) | 🔍 DISCOVERED | CONTEXT | FirebaseContext `authLoading` never set to `false` after successful profile + group load | High | High | FirebaseContext.tsx |
+| [#901](./901-load-user-profile-hardcoded-retry-delays-untestable.md) | 🔍 DISCOVERED | TESTABILITY | `loadUserProfile` hardcoded 1-second retry delays make error/retry path untestable | Medium | Medium | FirebaseContext.tsx |
 
 ## Per-context testing summaries
 
