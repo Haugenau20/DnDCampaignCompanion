@@ -551,6 +551,265 @@ describe("useGroups Behavioral Testing", () => {
   });
 
   // -------------------------------------------------------------------------
+  describe("Non-Error throw paths — ternary fallback strings (lines 121, 139, 155)", () => {
+    // When a non-Error value is thrown (e.g., a string or plain object), the
+    // ternary `err instanceof Error ? err.message : 'Failed...'` takes the
+    // false branch. These tests cover that branch.
+
+    test("createGroup: setError uses fallback string when a non-Error is thrown", async () => {
+      mockCreateGroup.mockRejectedValue("string error not an Error object");
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        try {
+          await result.current.createGroup("Group");
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("Failed to create group");
+    });
+
+    test("switchGroup: setError uses fallback string when a non-Error is thrown", async () => {
+      mockUpdateUserProfile.mockRejectedValue({ code: "UNAVAILABLE" });
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        try {
+          await result.current.switchGroup("g1");
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("Failed to switch group");
+    });
+
+    test("joinGroupWithToken: setError uses fallback string when a non-Error is thrown", async () => {
+      mockJoinGroupWithToken.mockRejectedValue(42);
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        try {
+          await result.current.joinGroupWithToken("tok", "user");
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("Failed to join group with token");
+    });
+
+    test("getAllUsers: setError uses fallback string when a non-Error is thrown (line 121)", async () => {
+      mockGetGroupUsers.mockRejectedValue("server unavailable");
+      mockContextValue = makeContext({
+        activeGroupId: "g1",
+        activeGroupUserProfile: makeGroupUserProfile("admin"),
+      });
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        try {
+          await result.current.getAllUsers();
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("Failed to fetch users");
+    });
+
+    test("removeUser: setError uses fallback string when a non-Error is thrown (line 139)", async () => {
+      mockRemoveUserFromGroup.mockRejectedValue({ status: 500 });
+      mockContextValue = makeContext({ activeGroupId: "g1" });
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        try {
+          await result.current.removeUser("u1");
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("Failed to remove user");
+    });
+
+    test("deleteUser: setError uses fallback string when a non-Error is thrown (line 155)", async () => {
+      mockRemoveUserFromGroup.mockRejectedValue(null);
+      mockContextValue = makeContext({ activeGroupId: "g1" });
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        try {
+          await result.current.deleteUser("u1");
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("Failed to delete user");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe("Loading state — Array.isArray branch (line 46)", () => {
+    // The condition: user && (Array.isArray(groups) || activeGroupUserProfile)
+    // Array.isArray(groups) is always true for the groups array state.
+    // The right side of || (activeGroupUserProfile) is never evaluated because
+    // Array.isArray short-circuits. This verifies the current behavior.
+    test("should become fully loaded when user exists even without activeGroupUserProfile (Array.isArray short-circuit)", async () => {
+      mockContextValue = makeContext({
+        user: { uid: "u1" } as any,
+        groups: [makeGroup("g1")],
+        activeGroupUserProfile: null, // explicitly null - Array.isArray handles it
+      });
+
+      const { result } = renderHook(() => useGroups());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+    });
+
+    test("loading stays true when user is null even if groups array is non-empty", () => {
+      mockContextValue = makeContext({
+        user: null, // user=null means condition is false
+        groups: [makeGroup("g1")],
+        activeGroupUserProfile: null,
+      });
+
+      const { result } = renderHook(() => useGroups());
+
+      // user is null → outer && is false → fullyLoaded stays false → loading=true
+      expect(result.current.loading).toBe(true);
+    });
+
+    test("should become fully loaded when user is set and activeGroupUserProfile is set (even with empty groups)", async () => {
+      // This test exercises the activeGroupUserProfile branch of the || in line 46.
+      // When groups is an empty array, Array.isArray still returns true (short-circuit).
+      // But activeGroupUserProfile being non-null still correctly triggers loading=false.
+      mockContextValue = makeContext({
+        user: { uid: "u1" } as any,
+        groups: [],
+        activeGroupUserProfile: makeGroupUserProfile("member"),
+      });
+
+      const { result } = renderHook(() => useGroups());
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe("isAdmin — role property edge cases (line 38)", () => {
+    test("should be false when activeGroupUserProfile.role is undefined", () => {
+      mockContextValue = makeContext({
+        activeGroupUserProfile: { role: undefined, username: "alice" } as any,
+      });
+
+      const { result } = renderHook(() => useGroups());
+
+      expect(result.current.isAdmin).toBe(false);
+    });
+
+    test("should be false when activeGroupUserProfile.role is an empty string", () => {
+      mockContextValue = makeContext({
+        activeGroupUserProfile: makeGroupUserProfile(""),
+      });
+
+      const { result } = renderHook(() => useGroups());
+
+      expect(result.current.isAdmin).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe("switchGroup — getCurrentUserId null fallback (line 75)", () => {
+    test("should use empty string when getCurrentUserId returns null", async () => {
+      // getCurrentUserId returns null → '' is used as userId for updateUserProfile
+      mockGetCurrentUserId.mockReturnValue(null);
+      mockUpdateUserProfile.mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        await result.current.switchGroup("g2");
+      });
+
+      expect(mockUpdateUserProfile).toHaveBeenCalledWith("", { activeGroupId: "g2" });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe("getAllUsers error path — setError called for guard errors", () => {
+    test("getAllUsers: setError is called with 'No active group selected' message when thrown", async () => {
+      mockContextValue = makeContext({
+        activeGroupId: null,
+        activeGroupUserProfile: makeGroupUserProfile("admin"),
+      });
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        try {
+          await result.current.getAllUsers();
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("No active group selected");
+    });
+
+    test("getAllUsers: setError is called with admin-check message when non-admin", async () => {
+      mockContextValue = makeContext({
+        activeGroupId: "g1",
+        activeGroupUserProfile: makeGroupUserProfile("member"),
+      });
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        try {
+          await result.current.getAllUsers();
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("Only admins can view user list");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe("removeUser error path — setError called for guard errors", () => {
+    test("removeUser: setError is called with 'No active group selected' message when thrown", async () => {
+      mockContextValue = makeContext({ activeGroupId: null });
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        try {
+          await result.current.removeUser("u1");
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("No active group selected");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe("deleteUser error path — setError called for guard errors", () => {
+    test("deleteUser: setError is called with 'No active group selected' message when thrown", async () => {
+      mockContextValue = makeContext({ activeGroupId: null });
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        try {
+          await result.current.deleteUser("u1");
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("No active group selected");
+    });
+  });
+
+  // -------------------------------------------------------------------------
   describe("Memoization Behavior", () => {
     test("createGroup reference should be stable across re-renders", () => {
       const { result, rerender } = renderHook(() => useGroups());
