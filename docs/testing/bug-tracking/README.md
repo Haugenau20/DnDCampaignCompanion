@@ -84,6 +84,9 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#701](./701-use-groups-loading-never-false-for-users-with-no-groups.md) | 🔍 DISCOVERED | CONTEXT | useGroups loading never becomes false for authenticated users with no groups | High | High | useGroups.ts |
 | [#702](./702-invitation-admin-role-check-case-sensitive.md) | 🔍 DISCOVERED | VALIDATION | useInvitations admin role check is case-sensitive, inconsistent with useGroups.isAdmin | Low | Low | useInvitations.ts |
 | [#750](./750-location-create-page-initial-data-always-object.md) | 🔍 DISCOVERED | DATA | LocationCreatePage always passes object (never `undefined`) to LocationCreateForm.initialData | Low | Low | LocationCreatePage.tsx |
+| [#800](./800-notepage-infinite-refetch-not-found.md) | 🔍 DISCOVERED | UI / ARCHITECTURE | NotePage infinite re-fetch loop when note ID is valid but note is not found in Firestore | High | High | NotePage.tsx |
+| [#850](./850-homepage-activity-inclusion-inconsistency.md) | 🔍 DISCOVERED | DATA | HomePage chapter activity includes items with only `dateAdded`; other entity types require `dateModified` | Low | Low | HomePage.tsx |
+| [#851](./851-storypage-page1-always-marks-complete.md) | 🔍 DISCOVERED | DATA | StoryPage `page === 1` condition always marks chapter complete on page 1 navigation/load | Medium | Medium | StoryPage.tsx |
 
 ## Per-context testing summaries
 
