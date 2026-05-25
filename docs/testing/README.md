@@ -14,6 +14,7 @@ testing/
 
 ## Where to start
 
+- **What to work on next (post-coverage)** → [`post-test-coverage-roadmap.md`](post-test-coverage-roadmap.md)
 - **Writing new tests** → [`methodology/testing-lessons-learned.md`](methodology/testing-lessons-learned.md)
 - **Pre-restructuring testing strategy** → [`methodology/testing-before-restructuring-guide.md`](methodology/testing-before-restructuring-guide.md)
 - **Test design patterns** → [`methodology/test-design-strategy.md`](methodology/test-design-strategy.md)
