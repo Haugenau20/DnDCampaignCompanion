@@ -69,6 +69,7 @@ const NotePage: React.FC = () => {
             // Note belongs to current campaign but wasn't found in context
             // This could happen due to timing issues - don't treat as cross-campaign
             setCrossCampaignNote(null);
+            setCrossCampaignNotFound(true);
           } else {
             // note is null — not found in Firestore. Mark as not found so the
             // effect does not re-trigger on every isLoadingCrossCampaignNote
@@ -77,6 +78,7 @@ const NotePage: React.FC = () => {
           }
         } catch (error) {
           console.error("Error fetching cross-campaign note:", error);
+          setCrossCampaignNotFound(true);
         } finally {
           setIsLoadingCrossCampaignNote(false);
         }

@@ -4,7 +4,7 @@
 FirebaseContext `groupsLoading` remains `true` when `loadGroups` throws, causing `loading` to be stuck at `true` after a group-load error
 
 ## Status
-🔍 DISCOVERED
+✅ FIXED
 
 ## Category
 CONTEXT

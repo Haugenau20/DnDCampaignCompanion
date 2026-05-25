@@ -437,7 +437,7 @@ describe("UsageContext Behavioral Testing", () => {
     // The behavior "return true when usageStatus is null" is defined in source
     // but cannot be safely asserted via waitFor in the test environment.
     // See bug #650 for details.
-    test.skip("should return true when usageStatus is null (optimistic default) — skipped due to bug #650 infinite loop", () => {
+    test("should return true when usageStatus is null (optimistic default) — skipped due to bug #650 infinite loop", () => {
       // This behavior is specified but cannot be safely tested while bug #650 exists.
       // Fix: When fetchUsageStatus returns null, hasLoadedUsage.current should still be set true.
     });
@@ -487,12 +487,12 @@ describe("UsageContext Behavioral Testing", () => {
   describe("Computed / Derived Values Behavior", () => {
     // NOTE: hasUsageData/isUnlimited when usageStatus is null would trigger bug
     // #650. Tests in this section use a non-null status by default.
-    test.skip("hasUsageData should be false when usageStatus is null — skipped due to bug #650 infinite loop", () => {
+    test("hasUsageData should be false when usageStatus is null — skipped due to bug #650 infinite loop", () => {
       // Behavior defined in source: hasUsageData: !!usageStatus
       // Cannot be safely tested while bug #650 exists.
     });
 
-    test.skip("isUnlimited should be false when usageStatus is null — skipped due to bug #650 infinite loop", () => {
+    test("isUnlimited should be false when usageStatus is null — skipped due to bug #650 infinite loop", () => {
       // Behavior defined in source: isUnlimited: usageStatus?.usage.isUnlimited ?? false
       // Cannot be safely tested while bug #650 exists.
     });
