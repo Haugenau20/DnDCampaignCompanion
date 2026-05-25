@@ -450,7 +450,7 @@ describe("NotePage", () => {
     });
 
     // BUG #1150: same-campaign timing branch causes infinite re-fetch.
-    it.skip("renders 'Note Not Found' because same-campaign note is not treated as cross-campaign — skipped due to bug #1150", async () => {
+    it("renders 'Note Not Found' because same-campaign note is not treated as cross-campaign — skipped due to bug #1150", async () => {
       renderPage();
       await waitFor(() => {
         expect(screen.getByText("Note Not Found")).toBeInTheDocument();
@@ -458,19 +458,13 @@ describe("NotePage", () => {
     });
 
     // BUG #1150: same root cause.
-    it.skip("does NOT show the cross-campaign warning banner for same-campaign notes — skipped due to bug #1150", async () => {
+    it("does NOT show the cross-campaign warning banner for same-campaign notes — skipped due to bug #1150", async () => {
       renderPage();
       await waitFor(() => {
         expect(screen.queryByText("Note from Different Campaign")).not.toBeInTheDocument();
       });
     });
 
-    it("shows loading indicator while stuck in the same-campaign timing case (demonstrates bug #1150)", async () => {
-      renderPage();
-      await waitFor(() => {
-        expect(screen.getByText("Loading note...")).toBeInTheDocument();
-      });
-    });
   });
 
   // -------------------------------------------------------------------------
@@ -491,7 +485,7 @@ describe("NotePage", () => {
     });
 
     // BUG #1151: catch block does not set crossCampaignNotFound causing infinite re-fetch.
-    it.skip("shows 'Note Not Found' after a fetch error (does not crash) — skipped due to bug #1151", async () => {
+    it("shows 'Note Not Found' after a fetch error (does not crash) — skipped due to bug #1151", async () => {
       renderPage();
       await waitFor(() => {
         expect(screen.getByText("Note Not Found")).toBeInTheDocument();
@@ -499,19 +493,13 @@ describe("NotePage", () => {
     });
 
     // BUG #1151: same root cause.
-    it.skip("does NOT render NoteEditor after a cross-campaign fetch error — skipped due to bug #1151", async () => {
+    it("does NOT render NoteEditor after a cross-campaign fetch error — skipped due to bug #1151", async () => {
       renderPage();
       await waitFor(() => {
         expect(screen.queryByTestId("note-editor")).not.toBeInTheDocument();
       });
     });
 
-    it("shows loading indicator while stuck in the error retry loop (demonstrates bug #1151)", async () => {
-      renderPage();
-      await waitFor(() => {
-        expect(screen.getByText("Loading note...")).toBeInTheDocument();
-      });
-    });
   });
 
   // -------------------------------------------------------------------------

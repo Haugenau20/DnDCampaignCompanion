@@ -47,10 +47,12 @@ export const UsageProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (status) {
         setUsageStatus(status);
         setIsUsageLimitExceeded(status.limitExceeded);
-        hasLoadedUsage.current = true;
       }
+      // Always mark as loaded, even for null (unauthenticated) responses:
+      hasLoadedUsage.current = true;
     } catch (error) {
       console.error('Error refreshing usage status:', error);
+      hasLoadedUsage.current = true; // Prevent retry on error too
     } finally {
       setIsLoadingUsage(false);
     }

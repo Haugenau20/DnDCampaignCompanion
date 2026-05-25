@@ -4,7 +4,7 @@
 NotePage same-campaign timing branch (line 71) causes infinite re-fetch loop — loading spinner never resolves
 
 ## Status
-🔍 DISCOVERED
+✅ FIXED
 
 ## Category
 UI / ARCHITECTURE

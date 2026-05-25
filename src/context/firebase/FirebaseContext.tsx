@@ -293,6 +293,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           } catch (err) {
             console.error('Error in auth state change loading:', err);
             setError(err instanceof Error ? err.message : 'Failed to load user data');
+            setGroupsLoading(false);
             setAuthLoading(false);
           }
         } else {

@@ -1128,7 +1128,7 @@ describe("FirebaseContext Behavioral Testing", () => {
     // and is never reset on the error path. loading stays true indefinitely because
     // loading = authLoading || profileLoading || groupsLoading, and groupsLoading
     // remains true. Fix: add setGroupsLoading(false) in the catch block.
-    test.skip("should set loading=false after getGroups throws during auth state change — skipped due to bug #1153", async () => {
+    test("should set loading=false after getGroups throws during auth state change — skipped due to bug #1153", async () => {
       const fakeUser = makeUser("u-1");
       mockGetUserProfile.mockResolvedValue(
         makeUserProfile({ id: "u-1", activeGroupId: null })

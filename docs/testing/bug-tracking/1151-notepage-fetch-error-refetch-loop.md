@@ -4,7 +4,7 @@
 NotePage catch block (line 79) does not halt re-fetch loop after a Firestore error
 
 ## Status
-🔍 DISCOVERED
+✅ FIXED
 
 ## Category
 UI / ARCHITECTURE

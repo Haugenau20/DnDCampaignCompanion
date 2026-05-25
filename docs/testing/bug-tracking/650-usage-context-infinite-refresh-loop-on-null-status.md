@@ -4,7 +4,7 @@
 UsageContext enters an infinite refresh loop when the user is unauthenticated or fetchUsageStatus returns null
 
 ## Status
-🔍 DISCOVERED
+✅ FIXED
 
 ## Category
 CONTEXT / PERFORMANCE
