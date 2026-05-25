@@ -91,6 +91,35 @@ After all four domains have landed, walk the open bug tracker. Many bugs will lo
 
 ---
 
+## Salvage from `feature/form-context-separation`
+
+An abandoned refactoring branch (last commit 2025-06-07, ~11 months old) attempted a form/context separation with a new `SystemMetadata` type, `Entity<T>` / `DomainData<T>` pattern, and a centralized `SystemMetadataService`. It was never finished — left with 213 TS errors, introduced data-loading bugs in the next commit, never compiled cleanly, and conflicts with the behavioral tests on main. **Do not merge or cherry-pick the contexts/forms/hooks portions** — they would fight the test suite we just landed.
+
+But three small pieces are worth pulling into the upcoming feature-first migration:
+
+| What | Source path on the archived branch | Why it's worth salvaging | Where to land it |
+|---|---|---|---|
+| `SystemMetadataService` class (~70 lines) | `src/utils/system-metadata.ts` | Centralizes attribution generation — directly addresses the highest-priority systematic user-attribution bug (#008/#011/#015/#020). Self-contained, no dependencies on the abandoned context rewrites. | `features/campaign-entities/services/` (or `shared/services/` if cross-domain) when the migration creates those directories |
+| `SystemMetadata` interface + `Entity<T> = BaseEntity & SystemMetadata & T` + `DomainData<T>` types | `src/types/common.ts` (top half — the new section, **not** the legacy-field compatibility shims) | Sound type pattern that matches the form/context boundary the migration will enforce | New feature-first `types/` modules. **Drop the `@deprecated dateAdded/dateModified/lastUpdated/updatedAt` shims** — the migration should rename properly, not maintain dual fields. |
+| Database-alignment design doc | `docs/backlog/DatabaseAlignmentForFormContextSeparation.md` | Pre-written field-rename plan (`dateAdded → createdAt`, etc.) that the migration will need eventually | Copy into `docs/architecture/migration/` as a sub-plan; treat as a starting outline, not a final spec |
+
+**What to ignore** (do not salvage): the rewritten `NPCContext` / `QuestContext` / `StoryContext`, the stripped forms (`NPCForm`, `ChapterForm`), the hook deletions (`useNPCData`, etc.), the hybrid/legacy API compatibility shims, and `chapterGenerator.ts.backup` (committed by accident).
+
+**Recommended preservation steps** (run before deleting the branch on origin):
+
+```bash
+# Tag the archived branch so its history is preserved
+git tag archive/form-context-separation origin/feature/form-context-separation
+git push origin archive/form-context-separation
+
+# Then the remote branch is safe to delete (only run when ready):
+# git push origin --delete feature/form-context-separation
+```
+
+The actual salvage work should happen **during the migration** — specifically when the new feature directory that needs `SystemMetadataService` is being created. Don't pull these files into the current structure first; they belong in the new structure.
+
+---
+
 ## How to orchestrate (notes for the next Opus session)
 
 Carrying forward the rules that worked during the test-coverage push:
