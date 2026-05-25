@@ -285,6 +285,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               // Pass the firebaseUser directly to loadGroups
               await loadGroups(firebaseUser.uid, profile, firebaseUser);
               setGroupsLoading(false);
+              setAuthLoading(false);
             } else {
               console.warn(`No profile loaded for user ${firebaseUser.uid}, cannot load groups`);
               setAuthLoading(false);

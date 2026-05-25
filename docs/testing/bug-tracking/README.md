@@ -1,177 +1,110 @@
 # Bug Tracking
 
-This directory contains documentation of bugs discovered during comprehensive behavioral testing of campaign entity contexts.
+Catalogue of bugs discovered during behavioral testing of the D&D Campaign Companion codebase. This README is both the entry point for the directory and the live tracking table.
 
-## Bug Status Legend
+## How to read this
 
-- 🔍 **DISCOVERED** - Bug identified through behavioral testing
-- 🔄 **IN PROGRESS** - Bug is being investigated or fixed
-- ✅ **FIXED** - Bug has been resolved
-- 🚫 **WONT FIX** - Bug will not be addressed (with reason)
-- ⚠️ **NEEDS DECISION** - Implementation decision required
+- The **bugs table** below is the authoritative current state. Each row links to a detailed report.
+- Bugs are kept in the table after they're fixed — status changes, the row stays.
+- Individual bug files use the format `NNN-short-slug.md`. Bug numbers are not reused.
 
-## Bug Categories
+## How to file a new bug
 
-- **CONTEXT** - Issues with React Context providers and hooks
-- **CRUD** - Create, Read, Update, Delete operation issues
-- **UI** - User interface and component issues  
-- **DATA** - Data integrity and consistency issues
-- **VALIDATION** - Input validation and error handling issues
-- **PERFORMANCE** - Performance and scalability issues
-- **INTEGRATION** - Third-party integration issues
+1. Pick the next unused number. Recent agents have used ranges (#100s navigation/core, #200s auth, #250s NPCs, #300s locations/quests/groups, #350s notes, #600s layouts, #650s contexts) — continue in a similar bracket or pick the next free integer.
+2. Create `NNN-short-slug.md` with these sections: **Title**, **Status**, **Category**, **Discovered In** (test file), **Affected File**, **Description**, **Reproduction**, **Expected vs Actual**, **Recommended Fix**.
+3. Add a row to the table below.
+4. If you skip a test because of the bug, reference the bug number in a comment on the `.skip`.
 
-## Discovery Method: Behavioral Testing Success
+## Status legend
 
-All bugs below were discovered through **behavioral testing** - testing actual context behavior rather than mocks. This demonstrates the effectiveness of the behavioral testing approach in revealing real implementation issues.
+| Symbol | Meaning |
+|---|---|
+| 🔍 DISCOVERED | Bug identified through testing |
+| 🔄 IN PROGRESS | Being investigated or fixed |
+| ✅ FIXED | Resolved |
+| 🚫 WONT FIX | Will not be addressed (with reason in the file) |
+| ⚠️ NEEDS DECISION | Implementation decision required |
 
-## Current Bugs
+## Categories
 
-| Bug # | Status | Category | Title | Impact | Priority | Context |
-|-------|--------|----------|-------|---------|----------|---------|
-| [#001](./001-npc-context-mock-state-isolation.md) | ✅ FIXED | CONTEXT | NPCContext Mock State Isolation Issues | High (Testing) | Fixed | Testing Infrastructure |
-| [#002](./002-npc-id-generation-collision.md) | ⚠️ NEEDS DECISION | DATA | NPC ID Generation Collision Risk | Medium | Medium | NPCContext |
-| [#003](./003-react-key-uniqueness-warning.md) | ⚠️ NEEDS DECISION | UI | React Key Uniqueness Warning | Low | Low-Medium | NPCContext |
-| [#004](./004-quest-id-generation-collision.md) | ⚠️ NEEDS DECISION | DATA | Quest ID Generation Collision Risk | Medium | Medium | QuestContext |
-| [#005](./005-validation-inconsistency-patterns.md) | 🔍 DISCOVERED | VALIDATION | Validation Error Precedence Inconsistency | Medium | Medium | Cross-Context |
-| [#006](./006-missing-existence-validation.md) | 🔍 DISCOVERED | VALIDATION | Missing Entity Existence Validation | Medium | Medium | NPCContext |
-| [#007](./007-user-attribution-inconsistency.md) | 🔍 DISCOVERED | DATA | User Attribution Metadata Inconsistency | Low | Low | Cross-Context |
-| [#008](./008-location-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Location User Attribution Metadata Issues | High | High | LocationContext |
-| [#009](./009-location-id-generation-collision.md) | 🔍 DISCOVERED | DATA | Location ID Generation Collision Risk | Medium | Medium | LocationContext |
-| [#010](./010-location-deletion-order-logic.md) | 🔍 DISCOVERED | DATA | Location Hierarchical Deletion Order Logic | Medium | Medium | LocationContext |
-| [#011](./011-rumor-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Rumor User Attribution Metadata Issues | High | High | RumorContext |
-| [#012](./012-rumor-id-generation-collision.md) | 🔍 DISCOVERED | DATA | Rumor ID Generation Collision Risk | Medium | Medium | RumorContext |
-| [#013](./013-rumor-combine-function-logic.md) | 🔍 DISCOVERED | INTEGRATION | Rumor Combine Function Complex Logic Issues | Medium | Medium | RumorContext |
-| [#014](./014-quest-conversion-integration.md) | 🔍 DISCOVERED | INTEGRATION | Quest Conversion Function Integration Issues | Medium | Medium | RumorContext |
-| [#015](./015-story-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Story User Attribution Metadata Issues | High | High | StoryContext |
-| [#016](./016-story-chapter-id-generation-system.md) | 🔍 DISCOVERED | ARCHITECTURE | Story Chapter ID Generation System Issues | Medium | Medium | StoryContext |
-| [#017](./017-story-chapter-reordering-complexity.md) | 🔍 DISCOVERED | ARCHITECTURE | Story Chapter Reordering Complexity Issues | Medium | Medium | StoryContext |
-| [#018](./018-story-progress-tracking-integration.md) | 🔍 DISCOVERED | INTEGRATION | Story Progress Tracking Integration Issues | Medium | Medium | StoryContext |
-| [#019](./019-story-chapter-order-validation.md) | 🔍 DISCOVERED | VALIDATION | Story Chapter Order Validation Issues | Low | Low | StoryContext |
+| Category | Scope |
+|---|---|
+| CONTEXT | React Context providers and hooks |
+| CRUD | Create / Read / Update / Delete operations |
+| UI | Component rendering and user interaction |
+| DATA | Data integrity and consistency |
+| VALIDATION | Input validation and error handling |
+| PERFORMANCE | Performance and scalability |
+| INTEGRATION | Third-party integration |
+| ARCHITECTURE | Cross-cutting structural issues |
+| TESTABILITY | Issues that prevent or complicate testing |
 
-## New Bugs Discovered Through Behavioral Testing
+## Bugs
 
-### Major Discoveries
+| Bug # | Status | Category | Title | Impact | Priority | Affected file(s) |
+|-------|--------|----------|-------|--------|----------|------------------|
+| [#001](./001-npc-context-mock-state-isolation.md) | ✅ FIXED | CONTEXT | NPCContext mock state isolation issues | High (testing) | Fixed | Testing infrastructure |
+| [#002](./002-npc-id-generation-collision.md) | ⚠️ NEEDS DECISION | DATA | NPC ID generation collision risk | Medium | Medium | NPCContext |
+| [#003](./003-react-key-uniqueness-warning.md) | ⚠️ NEEDS DECISION | UI | React key uniqueness warning | Low | Low-Medium | NPCContext |
+| [#004](./004-quest-id-generation-collision.md) | ⚠️ NEEDS DECISION | DATA | Quest ID generation collision risk | Medium | Medium | QuestContext |
+| [#005](./005-validation-inconsistency-patterns.md) | 🔍 DISCOVERED | VALIDATION | Validation error precedence inconsistency | Medium | Medium | Cross-context |
+| [#006](./006-missing-existence-validation.md) | 🔍 DISCOVERED | VALIDATION | Missing entity existence validation | Medium | Medium | NPCContext |
+| [#007](./007-user-attribution-inconsistency.md) | 🔍 DISCOVERED | DATA | User attribution metadata inconsistency | Low | Low | Cross-context |
+| [#008](./008-location-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Location user attribution metadata issues | High | High | LocationContext |
+| [#009](./009-location-id-generation-collision.md) | 🔍 DISCOVERED | DATA | Location ID generation collision risk | Medium | Medium | LocationContext |
+| [#010](./010-location-deletion-order-logic.md) | 🔍 DISCOVERED | DATA | Location hierarchical deletion order logic | Medium | Medium | LocationContext |
+| [#011](./011-rumor-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Rumor user attribution metadata issues | High | High | RumorContext |
+| [#012](./012-rumor-id-generation-collision.md) | 🔍 DISCOVERED | DATA | Rumor ID generation collision risk | Medium | Medium | RumorContext |
+| [#013](./013-rumor-combine-function-logic.md) | 🔍 DISCOVERED | INTEGRATION | Rumor combine function complex logic issues | Medium | Medium | RumorContext |
+| [#014](./014-quest-conversion-integration.md) | 🔍 DISCOVERED | INTEGRATION | Quest conversion function integration issues | Medium | Medium | RumorContext |
+| [#015](./015-story-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Story user attribution metadata issues | High | High | StoryContext |
+| [#016](./016-story-chapter-id-generation-system.md) | 🔍 DISCOVERED | ARCHITECTURE | Story chapter ID generation system issues | Medium | Medium | StoryContext |
+| [#017](./017-story-chapter-reordering-complexity.md) | 🔍 DISCOVERED | ARCHITECTURE | Story chapter reordering complexity | Medium | Medium | StoryContext |
+| [#018](./018-story-progress-tracking-integration.md) | 🔍 DISCOVERED | INTEGRATION | Story progress tracking integration issues | Medium | Medium | StoryContext |
+| [#019](./019-story-chapter-order-validation.md) | 🔍 DISCOVERED | VALIDATION | Story chapter order validation issues | Low | Low | StoryContext |
+| [#020](./020-note-user-attribution-metadata.md) | ✅ FIXED | TESTABILITY | Note user attribution metadata (test issue, not implementation bug) | Closed | Closed | NoteContext tests |
+| [#021](./021-note-sequential-id-generation.md) | 🔍 DISCOVERED | DATA | Note sequential ID generation implementation issues | Medium | Medium | NoteContext |
+| [#022](./022-note-context-state-management.md) | 🔍 DISCOVERED | ARCHITECTURE | Note context state management issues | Medium | Medium | NoteContext |
+| [#023](./023-entity-mapper-extract-details-empty-body.md) | 🔍 DISCOVERED | DATA | `entityMapper.extractDetailsByType` has empty body — silent data loss | High | High | EntityExtractionService / entityMapper |
+| [#050](./050-use-note-data-unreachable-catch-block.md) | 🔍 DISCOVERED | VALIDATION | `useNoteData.getNoteCountForCampaign` has unreachable catch block | Low | Low | useNoteData hook |
+| [#100](./100-navigation-missing-key-prop-mobile-layout.md) | 🔍 DISCOVERED | UI | Navigation missing React `key` prop on mobile layout wrapper divs | Low | Low | Navigation.tsx |
+| [#101](./101-card-test-stale-class-assertion.md) | 🔍 DISCOVERED | UI | Card.test.tsx stale assertion — `default-card` class no longer emitted | Low | Low | Card.test.tsx |
+| [#150](./150-dialog-portal-ref-testability.md) | 🔍 DISCOVERED | TESTABILITY | Dialog portal ref pattern prevents JSDOM testing | Medium | Medium | Dialog.tsx, DeleteConfirmationDialog.tsx |
+| [#200](./200-user-profile-low-statement-coverage-debounce.md) | 🔍 DISCOVERED | TESTABILITY | UserProfile username debounce validation branch hard to test | Low | Low | UserProfile.tsx |
+| [#201](./201-group-management-view-error-not-displayed-in-dialog.md) | 🔍 DISCOVERED | UI | GroupManagementView error state not visible after createGroup failure | Low | Low | GroupManagementView.tsx |
+| [#250](./250-npccard-related-quests-header-renders-with-no-content.md) | 🔍 DISCOVERED | UI | NPCCard "Related Quests" header renders with no content | Low | Low | NPCCard.tsx |
+| [#251](./251-input-component-missing-htmlfor-label-association.md) | 🔍 DISCOVERED | TESTABILITY | Input component missing `htmlFor`/`id` label association | High (a11y) | Medium | Input.tsx (core) |
+| [#300](./300-quest-form-sections-crypto-random-uuid-not-available-in-jest.md) | 🔍 DISCOVERED | TESTABILITY | QuestFormSections uses `crypto.randomUUID()` (unavailable in JSDOM) | Medium | Medium | QuestFormSections.tsx |
+| [#301](./301-join-group-dialog-form-content-unreachable-in-jsdom.md) | 🔍 DISCOVERED | TESTABILITY | JoinGroupDialog form content unreachable in JSDOM (extends #150) | Medium | Medium | JoinGroupDialog.tsx |
+| [#302](./302-location-quest-form-sections-dialog-content-unreachable.md) | 🔍 DISCOVERED | TESTABILITY | Location/Quest FormSections dialog content unreachable (extends #150) | Medium | Low | LocationFormSections.tsx, QuestFormSections.tsx |
+| [#350](./350-entity-extractor-infinite-render-loop.md) | ✅ FIXED | UI / DATA | EntityExtractor infinite render loop via unstable `existingReferences = []` default | High | High | EntityExtractor.tsx |
+| [#600](./600-location-sort-order-inconsistency.md) | 🔍 DISCOVERED | UI / DATA | Location sort order for `explored` status reversed between useLayoutData and LocationsMap | Low | Low | useLayoutData.ts, LocationsMap.tsx |
+| [#650](./650-usage-context-infinite-refresh-loop-on-null-status.md) | 🔍 DISCOVERED | CONTEXT / PERFORMANCE | UsageContext infinite refresh loop when `fetchUsageStatus()` returns null | High | High | UsageContext.tsx |
+| [#700](./700-use-campaigns-create-campaign-name-lost-in-3arg-convention.md) | 🔍 DISCOVERED | VALIDATION | useCampaigns createCampaign 3-arg convention silently coerces falsy name to empty string | Low | Low | useCampaigns.ts |
+| [#701](./701-use-groups-loading-never-false-for-users-with-no-groups.md) | ✅ FIXED | CONTEXT | useGroups loading never becomes false for authenticated users with no groups | High | High | useGroups.ts |
+| [#702](./702-invitation-admin-role-check-case-sensitive.md) | 🔍 DISCOVERED | VALIDATION | useInvitations admin role check is case-sensitive, inconsistent with useGroups.isAdmin | Low | Low | useInvitations.ts |
+| [#750](./750-location-create-page-initial-data-always-object.md) | 🔍 DISCOVERED | DATA | LocationCreatePage always passes object (never `undefined`) to LocationCreateForm.initialData | Low | Low | LocationCreatePage.tsx |
+| [#800](./800-notepage-infinite-refetch-not-found.md) | ✅ FIXED | UI / ARCHITECTURE | NotePage infinite re-fetch loop when note ID is valid but note is not found in Firestore | High | High | NotePage.tsx |
+| [#850](./850-homepage-activity-inclusion-inconsistency.md) | 🔍 DISCOVERED | DATA | HomePage chapter activity includes items with only `dateAdded`; other entity types require `dateModified` | Low | Low | HomePage.tsx |
+| [#851](./851-storypage-page1-always-marks-complete.md) | 🔍 DISCOVERED | DATA | StoryPage `page === 1` condition always marks chapter complete on page 1 navigation/load | Medium | Medium | StoryPage.tsx |
+| [#900](./900-firebase-context-auth-loading-never-false-on-success.md) | ✅ FIXED | CONTEXT | FirebaseContext `authLoading` never set to `false` after successful profile + group load | High | High | FirebaseContext.tsx |
+| [#901](./901-load-user-profile-hardcoded-retry-delays-untestable.md) | 🔍 DISCOVERED | TESTABILITY | `loadUserProfile` hardcoded 1-second retry delays make error/retry path untestable | Medium | Medium | FirebaseContext.tsx |
+| [#1000](./1000-settheme-catch-dead-branch.md) | 🔍 DISCOVERED | ARCHITECTURE | `setTheme` catch block (lines 192-193) is unreachable dead code — `useState` setters never throw | Low | Low | ThemeContext.tsx |
+| [#1050](./1050-notecard-getstatusbadgeclass-dead-code.md) | 🔍 DISCOVERED | ARCHITECTURE | NoteCard `getStatusBadgeClass` "active" and default branches are dead code — function only called in archived condition | Low | Low | NoteCard.tsx |
+| [#1051](./1051-noteeditor-manualsave-rethrows-unhandled.md) | 🔍 DISCOVERED | UI | NoteEditor `handleManualSave` re-throws error causing unhandled rejection from Save button / Ctrl+S click handler | Medium | Medium | NoteEditor.tsx |
+| [#1052](./1052-noteeditor-getlastsavedtext-dead-branch.md) | 🔍 DISCOVERED | ARCHITECTURE | NoteEditor `getLastSavedText` line 170 is dead code — guard is redundant with calling function's condition | Low | Low | NoteEditor.tsx |
+| [#1150](./1150-notepage-same-campaign-timing-refetch-loop.md) | 🔍 DISCOVERED | UI / ARCHITECTURE | NotePage same-campaign timing branch (line 71) causes infinite re-fetch loop — `setCrossCampaignNote(null)` is a no-op; `crossCampaignNotFound` never set | High | High | NotePage.tsx |
+| [#1151](./1151-notepage-fetch-error-refetch-loop.md) | 🔍 DISCOVERED | UI / ARCHITECTURE | NotePage catch block (line 79) does not set `crossCampaignNotFound`, causing infinite re-fetch on every Firestore error | High | High | NotePage.tsx |
+| [#1152](./1152-firebase-context-dead-code-no-profile-branch.md) | 🔍 DISCOVERED | ARCHITECTURE | FirebaseContext `if (profile)` else branch (lines 289-291) is unreachable dead code — `loadUserProfile` always returns a profile or throws | Low | Low | FirebaseContext.tsx |
+| [#1153](./1153-firebase-context-groups-loading-not-reset-on-error.md) | 🔍 DISCOVERED | CONTEXT | FirebaseContext `groupsLoading` not reset to `false` when `loadGroups` throws — `loading` stays `true` indefinitely after group-load error | High | High | FirebaseContext.tsx |
 
-#### ID Collision Bugs (#002, #004, #009, #012, #016)
-**Impact**: Data loss, entity overwrites
-- NPC, Quest, Location, and Rumor contexts have identical ID generation algorithms
-- Story context has order-based system but still has edge cases
-- Case-insensitive names generate identical IDs
-- No uniqueness validation before database writes
-- Systematic pattern across all entity contexts
+## Per-context testing summaries
 
-#### Validation Inconsistencies (#005, #006, #019)
-**Impact**: Inconsistent user experience, potential data integrity issues  
-- Different error checking precedence between contexts
-- Some operations don't validate entity existence
-- Error messages differ between similar operations
-- Story context has incomplete order validation
+Behavioral testing summaries for each campaign-entity context, including discovered bug patterns and coverage achieved at the time of writing:
 
-#### Data Attribution Issues (#007, #008, #011, #015)
-**Impact**: Inconsistent audit trails, broken user attribution
-- getUserName and getActiveCharacterName utilities return empty/null values
-- LocationContext, RumorContext, and StoryContext attribution completely broken (High Priority)
-- Systematic issue affecting ALL tested entity contexts
-- Entity creation/updates lack proper audit metadata
-
-#### Complex Function Integration Issues (#013, #014, #017, #018)
-**Impact**: Feature completeness, data integrity, user experience
-- RumorContext has complex functions (combine, quest conversion) with integration challenges
-- StoryContext has sophisticated reordering operations with data integrity risks
-- Progress tracking integration issues in StoryContext
-- Multi-step operations lack proper error recovery
-
-## Bug Summary by Testing Phase
-
-### Pre-Behavioral Testing (Legacy)
-- **Bugs Found**: 1 (testing infrastructure issue)
-- **Real Implementation Bugs**: 0
-- **Discovery Method**: Mock-based testing (ineffective)
-
-### Post-Behavioral Testing (Current)
-- **Bugs Found**: 19 total
-- **Real Implementation Bugs**: 18
-- **Discovery Method**: Behavioral testing (highly effective)
-- **Coverage Contexts**: NPCContext (88.77%), QuestContext (84.25%), LocationContext (100%), RumorContext (70.16%), StoryContext (70.85%)
-
-## Priority Assessment
-
-### High Priority (Immediate Attention)
-- **#008**: Location User Attribution Metadata Issues (data integrity)
-- **#011**: Rumor User Attribution Metadata Issues (data integrity)
-- **#015**: Story User Attribution Metadata Issues (data integrity)
-
-### Medium Priority (Implementation Decisions Needed)
-- **#002, #004, #009, #012**: ID collision risks (data integrity, cross-context pattern)
-- **#016**: Story Chapter ID Generation System Issues (architecture)
-- **#017**: Story Chapter Reordering Complexity Issues (architecture)
-- **#013**: Rumor Combine Function Complex Logic Issues (integration)
-- **#014**: Quest Conversion Function Integration Issues (integration)
-- **#018**: Story Progress Tracking Integration Issues (integration)
-- **#005**: Validation inconsistency (user experience)
-- **#006**: Missing validation (data integrity)
-- **#010**: Location deletion order logic (database integrity)
-
-### Low Priority (Improvement Opportunities)
-- **#003**: React key warnings (development experience)
-- **#007**: Attribution inconsistency (data tracking)
-- **#019**: Story Chapter Order Validation Issues (input validation)
-
-## Testing Effectiveness Analysis
-
-### Behavioral Testing Success Rate
-- **118 behavioral tests** implemented (53 NPC/Quest + 24 Location + 22 Rumor + 19 Story)
-- **18 real bugs** discovered (15.3% bug discovery rate)
-- **100% of bugs** discovered through actual context behavior testing
-- **0 false positives** (no bugs in tests themselves)
-
-### Comparison: Mock vs Behavioral Testing
-```
-Mock-Based Testing:     1 bug found  (testing infrastructure only)
-Behavioral Testing:     18 bugs found (actual implementation issues)
-Effectiveness Gain:    1800% improvement in real bug discovery
-```
-
-## Recommendations
-
-### For Bug Resolution
-1. **User Attribution** (#008, #011, #015): Fix getUserName and getActiveCharacterName utilities (High Priority)
-2. **ID Collision** (#002, #004, #009, #012, #016): Implement UUID or incremental ID system  
-3. **Complex Operations** (#013, #014, #017, #018): Improve error recovery and data integrity
-4. **Validation Patterns** (#005, #006, #019): Standardize validation order and existence checks
-
-### For Testing Strategy
-1. **Complete Context Testing**: Apply behavioral testing to NoteContext (final context)
-2. **Integration Testing**: Add Firebase emulator tests for data persistence validation
-3. **Cross-Context Testing**: Test relationship integrity across multiple contexts
-4. **Complex Function Testing**: Develop patterns for testing multi-step operations
-
-### For Code Quality
-1. **Attribution Standards**: Fix systematic user attribution utility issues
-2. **Validation Standards**: Establish consistent error handling patterns
-3. **Data Integrity**: Implement proper entity existence validation and error recovery
-4. **User Experience**: Standardize error messages across contexts
-
-## Next Steps
-
-1. **Complete Context Testing**: Apply behavioral testing to NoteContext (final campaign entity context)
-2. **High Priority Bug Fixes**: Address user attribution utilities across all contexts
-3. **Cross-Context Integration**: Test entity relationships and systematic issues
-4. **Complex Function Infrastructure**: Develop testing patterns for multi-step operations
-5. **Bug Prioritization**: Determine implementation timeline for medium/low priority bugs
-
-## Key Testing Insights
-
-### Cross-Context Bug Patterns Confirmed
-- **User Attribution**: ALL tested contexts have identical attribution utility failures
-- **ID Generation**: Systematic collision vulnerabilities across all name-based ID systems
-- **Validation Inconsistencies**: Similar gaps and patterns across all contexts
-- **Complex Functions**: Advanced operations in RumorContext and StoryContext reveal new testing challenges
-
-### Testing Infrastructure Evolution
-- **Behavioral Testing**: Proven highly effective across 5 contexts
-- **Coverage Limitations**: Complex functions require specialized testing approaches
-- **Bug Discovery Rate**: 15.3% average discovery rate demonstrates methodology effectiveness
-- **Pattern Recognition**: Cross-context testing reveals systematic issues
-
-The behavioral testing approach has proven **revolutionary** in discovering real implementation issues that would affect users in production. The expansion to RumorContext and StoryContext has revealed both systematic issues (attribution, ID generation) and new challenges (complex operations, integration testing) that inform future testing strategy.
+- [NPC](./npc-testing-summary.md)
+- [Quest](./quest-testing-summary.md)
+- [Location](./location-testing-summary.md)
+- [Rumor](./rumor-testing-summary.md)
+- [Story](./story-testing-summary.md)
+- [Cross-context patterns](./cross-context-patterns.md) — systematic issues recurring across multiple contexts (user attribution, ID generation, validation)

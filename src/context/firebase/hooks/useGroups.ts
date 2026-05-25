@@ -43,7 +43,7 @@ export function useGroups() {
     // Consider fully loaded when we have a user and either:
     // 1. We have groups loaded (even if empty array)
     // 2. We have an active group profile
-    if (user && (groups.length > 0 || activeGroupUserProfile)) {
+    if (user && (Array.isArray(groups) || activeGroupUserProfile)) {
       console.log("useGroups: Setting fully loaded to true");
       setFullyLoaded(true);
     }
