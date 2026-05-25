@@ -3,7 +3,7 @@ import React, { createContext, useContext, useCallback } from 'react';
 import { Quest, QuestStatus } from '../types/quest';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useAuth, useUser, useGroups, useCampaigns } from './firebase';
+import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 
 // Context interface

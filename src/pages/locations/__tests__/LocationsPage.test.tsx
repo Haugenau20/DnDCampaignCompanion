@@ -1,4 +1,4 @@
-// src/pages/locations/__tests__/LocationsPage.test.tsx
+﻿// src/pages/locations/__tests__/LocationsPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import LocationsPage from "../LocationsPage";
@@ -16,7 +16,7 @@ jest.mock("react-router-dom", () => ({
 // ---------------------------------------------------------------------------
 let mockUser: any = { uid: "user-1" };
 
-jest.mock("../../../context/firebase", () => ({
+jest.mock("@/features/user-management", () => ({
   useAuth: () => ({ user: mockUser }),
 }));
 

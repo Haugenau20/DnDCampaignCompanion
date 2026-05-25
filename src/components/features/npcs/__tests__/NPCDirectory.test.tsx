@@ -1,4 +1,4 @@
-// src/components/features/npcs/__tests__/NPCDirectory.test.tsx
+﻿// src/components/features/npcs/__tests__/NPCDirectory.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
@@ -21,7 +21,7 @@ jest.mock('../../../../context/NPCContext', () => ({
   useNPCs: jest.fn(),
 }));
 
-jest.mock('../../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
 }));
@@ -47,7 +47,7 @@ const mockGetCurrentQueryParams = jest.fn(() => ({}));
 const { useNavigation } = require('../../../../context/NavigationContext');
 const { useQuests } = require('../../../../context/QuestContext');
 const { useNPCs } = require('../../../../context/NPCContext');
-const { useAuth } = require('../../../../context/firebase');
+const { useAuth } = require('@/features/user-management');
 
 function setupMocks(
   user: { uid: string } | null = { uid: 'user-1' },

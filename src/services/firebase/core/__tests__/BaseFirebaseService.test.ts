@@ -298,3 +298,5 @@ describe('BaseFirebaseService', () => {
     });
   });
 });
+
+export {};

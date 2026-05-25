@@ -1,4 +1,4 @@
-// src/pages/locations/__tests__/LocationEditPage.test.tsx
+﻿// src/pages/locations/__tests__/LocationEditPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import LocationEditPage from "../LocationEditPage";
@@ -43,7 +43,7 @@ jest.mock("../../../context/LocationContext", () => ({
   useLocations: () => mockLocationContext,
 }));
 
-jest.mock("../../../context/firebase", () => ({
+jest.mock("@/features/user-management", () => ({
   useAuth: () => ({ user: { uid: "user-1" } }),
 }));
 

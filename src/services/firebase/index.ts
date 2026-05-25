@@ -1,10 +1,10 @@
 // src/services/firebase/index.ts
 import { firebaseConfig } from './config/firebaseConfig';
 import ServiceRegistry from './core/ServiceRegistry';
-import AuthService from './auth/AuthService';
-import UserService from './user/UserService';
-import GroupService from './group/GroupService';
-import InvitationService from './group/InvitationService';
+import AuthService from 'features/user-management/auth/services/AuthService';
+import UserService from 'features/user-management/profiles/services/UserService';
+import GroupService from 'features/user-management/groups/services/GroupService';
+import InvitationService from 'features/user-management/groups/services/InvitationService';
 import CampaignService from './campaign/CampaignService';
 import DocumentService from './data/DocumentService';
 

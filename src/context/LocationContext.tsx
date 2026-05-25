@@ -3,7 +3,7 @@ import React, { createContext, useContext, useCallback, useState, useEffect } fr
 import { Location, LocationStatus, LocationContextValue, LocationNote } from '../types/location';
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useAuth, useUser, useGroups, useCampaigns } from './firebase';
+import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 
 // Custom event for location changes (deletion, update, etc.)

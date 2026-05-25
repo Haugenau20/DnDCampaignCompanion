@@ -1,4 +1,4 @@
-// src/pages/story/__tests__/SagaEditPage.test.tsx
+﻿// src/pages/story/__tests__/SagaEditPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import SagaEditPage from "../SagaEditPage";
@@ -17,7 +17,7 @@ let mockUser: { uid: string; displayName: string } | null = {
   displayName: "TestUser",
 };
 
-jest.mock("../../../context/firebase", () => ({
+jest.mock("@/features/user-management", () => ({
   useAuth: () => ({ user: mockUser }),
 }));
 

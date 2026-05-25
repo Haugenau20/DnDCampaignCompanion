@@ -1,4 +1,4 @@
-// src/pages/__tests__/HomePage.test.tsx
+﻿// src/pages/__tests__/HomePage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import HomePage from "../HomePage";
@@ -6,7 +6,7 @@ import HomePage from "../HomePage";
 // ---------------------------------------------------------------------------
 // Context / hook mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../context/firebase", () => ({
+jest.mock("@/features/user-management", () => ({
   useAuth: () => ({ user: mockUser }),
   useGroups: () => ({ activeGroupId: mockActiveGroupId }),
   useCampaigns: () => ({ activeCampaignId: "campaign-1" }),

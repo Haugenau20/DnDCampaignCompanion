@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Quest } from '../types/quest';
 import { useFirebaseData } from './useFirebaseData';
-import { useAuth, useGroups, useCampaigns } from '../context/firebase';
+import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 
 /**
  * Hook for managing Quest data fetching and state with proper group/campaign context

@@ -1,4 +1,4 @@
-// src/pages/rumors/__tests__/RumorEditPage.test.tsx
+﻿// src/pages/rumors/__tests__/RumorEditPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import RumorEditPage from "../RumorEditPage";
@@ -50,7 +50,7 @@ jest.mock("../../../context/RumorContext", () => ({
   useRumors: () => mockRumorContext,
 }));
 
-jest.mock("../../../context/firebase", () => ({
+jest.mock("@/features/user-management", () => ({
   useAuth: () => ({ user: { uid: "user-1" } }),
 }));
 

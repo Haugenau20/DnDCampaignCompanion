@@ -1,4 +1,4 @@
-// src/context/__tests__/behavioral/LocationContext.bugs.test.tsx
+﻿// src/context/__tests__/behavioral/LocationContext.bugs.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
@@ -23,7 +23,7 @@ const mockUseCampaigns = jest.fn();
 const mockUseLocationData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
-jest.mock('../../firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
   useGroups: () => mockUseGroups(),

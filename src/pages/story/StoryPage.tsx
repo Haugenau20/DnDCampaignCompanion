@@ -9,7 +9,7 @@ import Card from '../../components/core/Card';
 import Button from '../../components/core/Button';
 import { useStory } from '../../context/StoryContext';
 import { useNavigation } from '../../context/NavigationContext';
-import { useAuth } from '../../context/firebase';
+import { useAuth } from 'features/user-management';
 import { Book, Menu, Loader2, Edit } from 'lucide-react';
 
 const StoryPage: React.FC = () => {

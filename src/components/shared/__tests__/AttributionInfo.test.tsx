@@ -1,4 +1,4 @@
-// src/components/shared/__tests__/AttributionInfo.test.tsx
+﻿// src/components/shared/__tests__/AttributionInfo.test.tsx
 
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -7,11 +7,11 @@ import AttributionInfo from '../AttributionInfo';
 // ---------------------------------------------------------------------------
 // Mock firebase context
 // ---------------------------------------------------------------------------
-jest.mock('../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useFirebase: jest.fn(),
 }));
 
-const { useFirebase } = require('../../../context/firebase');
+const { useFirebase } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------
 // Mock attribution-utils

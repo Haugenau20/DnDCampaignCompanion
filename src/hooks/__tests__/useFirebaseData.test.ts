@@ -1,7 +1,7 @@
-// src/hooks/__tests__/useFirebaseData.test.ts
+﻿// src/hooks/__tests__/useFirebaseData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useFirebaseData } from '../useFirebaseData';
-import { AUTH_STATE_CHANGED_EVENT } from '../../context/firebase';
+import { AUTH_STATE_CHANGED_EVENT } from '@/features/user-management';
 
 // ---------------------------------------------------------------------------
 // Mock the firebase context hook
@@ -11,13 +11,13 @@ const mockSetDocument = jest.fn();
 const mockUpdateDocument = jest.fn();
 const mockDeleteDocument = jest.fn();
 
-jest.mock('../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useFirestore: jest.fn(),
   AUTH_STATE_CHANGED_EVENT: 'auth-state-changed',
 }));
 
 // We need to get a reference to the mocked useFirestore
-const { useFirestore } = require('../../context/firebase');
+const { useFirestore } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -1,4 +1,4 @@
-// src/hooks/__tests__/useSessionManager.test.ts
+﻿// src/hooks/__tests__/useSessionManager.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { useSessionManager } from '../useSessionManager';
 
@@ -9,11 +9,11 @@ const mockSignOut = jest.fn();
 const mockRefreshSession = jest.fn();
 const mockCheckSessionExpired = jest.fn();
 
-jest.mock('../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
 }));
 
-const { useAuth } = require('../../context/firebase');
+const { useAuth } = require('@/features/user-management');
 
 const setupAuthMock = (overrides: Record<string, unknown> = {}) => {
   (useAuth as jest.Mock).mockReturnValue({

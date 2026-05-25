@@ -6,7 +6,7 @@ import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import RumorForm from '../../components/features/rumors/RumorForm';
 import { useRumors } from '../../context/RumorContext';
-import { useAuth } from '../../context/firebase';
+import { useAuth } from 'features/user-management';
 import { useNavigation } from '../../hooks/useNavigation';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 

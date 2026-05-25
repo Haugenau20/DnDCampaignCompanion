@@ -1,8 +1,8 @@
 // src/hooks/useSagaData.ts
 import { useState, useEffect, useCallback } from 'react';
 import { SagaData } from '../types/saga';
-import { useFirestore } from '../context/firebase';
-import { useAuth, useGroups, useCampaigns } from '../context/firebase';
+import { useFirestore } from 'features/user-management';
+import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 
 /**
  * Hook for managing saga data fetching and state with proper group/campaign context

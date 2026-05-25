@@ -1,4 +1,4 @@
-// src/hooks/__tests__/useLocationData.test.ts
+﻿// src/hooks/__tests__/useLocationData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useLocationData } from '../useLocationData';
 import { Location, LocationType, LocationStatus } from '../../types/location';
@@ -12,14 +12,14 @@ jest.mock('../useFirebaseData', () => ({
   useFirebaseData: jest.fn(),
 }));
 
-jest.mock('../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
 }));
 
 const { useFirebaseData } = require('../useFirebaseData');
-const { useAuth, useGroups, useCampaigns } = require('../../context/firebase');
+const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 const makeLocation = (id: string, name: string): Location => ({
   id,

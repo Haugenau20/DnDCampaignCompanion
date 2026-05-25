@@ -1,4 +1,4 @@
-// src/components/features/locations/__tests__/LocationEditForm.test.tsx
+﻿// src/components/features/locations/__tests__/LocationEditForm.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -24,7 +24,7 @@ jest.mock('../../../../context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
-jest.mock('../../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
@@ -37,7 +37,7 @@ jest.mock('../../../../context/firebase', () => ({
 const { useLocations } = require('../../../../context/LocationContext');
 const { useNPCs } = require('../../../../context/NPCContext');
 const { useQuests } = require('../../../../context/QuestContext');
-const { useAuth, useGroups, useCampaigns } = require('../../../../context/firebase');
+const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 function setupMocks({
   updateLocation = mockUpdateLocation,

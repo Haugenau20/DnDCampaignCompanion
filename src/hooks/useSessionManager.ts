@@ -1,6 +1,6 @@
 // src/hooks/useSessionManager.ts
 import { useEffect, useCallback, useRef } from 'react';
-import { useAuth } from '../context/firebase';
+import { useAuth } from 'features/user-management';
 import { 
   ACTIVITY_UPDATE_THROTTLE,
   SESSION_CHECK_INTERVAL 

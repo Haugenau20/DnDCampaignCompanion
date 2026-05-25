@@ -5,7 +5,7 @@ import Card from '../../core/Card';
 import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import Input from '../../core/Input';
-import { useAuth } from '../../../context/firebase';
+import { useAuth } from 'features/user-management';
 import { useRumors } from '../../../context/RumorContext';
 import { useNavigation } from '../../../hooks/useNavigation';
 import { useNPCs } from '../../../context/NPCContext';

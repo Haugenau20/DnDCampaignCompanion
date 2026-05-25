@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import Typography from '../../components/core/Typography';
 import Card from '../../components/core/Card';
 import LocationDirectory from '../../components/features/locations/LocationDirectory';
-import { useAuth } from '../../context/firebase';
+import { useAuth } from 'features/user-management';
 import { useLocations } from '../../context/LocationContext';
 import { Map, MapPin, Eye, EyeOff, Plus } from 'lucide-react';
 import Button from '../../components/core/Button';

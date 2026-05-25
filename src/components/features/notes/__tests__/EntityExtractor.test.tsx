@@ -1,4 +1,4 @@
-// src/components/features/notes/__tests__/EntityExtractor.test.tsx
+﻿// src/components/features/notes/__tests__/EntityExtractor.test.tsx
 //
 // Bug #350 (EntityExtractor infinite render loop) was fixed in commit ec8f3cb.
 // The `existingReferences` default is now a module-level stable EMPTY_REFERENCES
@@ -47,7 +47,7 @@ jest.mock('../../../../services/firebase/data/DocumentService', () => {
 });
 
 // NoteReferences is imported by EntityExtractor; need to mock firebase context
-jest.mock('../../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useCampaigns: jest.fn(() => ({ activeCampaignId: 'campaign-1' })),
   useAuth: jest.fn(() => ({ user: { uid: 'user-1' } })),
 }));

@@ -3,7 +3,7 @@ import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import NPCDirectory from '../../components/features/npcs/NPCDirectory';
-import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
+import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 import { useNPCData } from '../../hooks/useNPCData';
 import { NPC } from '../../types/npc';
 import { useNavigation } from '../../context/NavigationContext';

@@ -14,7 +14,7 @@ import {
   RelatedQuestsSection
 } from './LocationFormSections';
 import { AlertCircle, Save, X } from 'lucide-react';
-import { useAuth, useUser, useGroups, useCampaigns } from '../../../context/firebase';
+import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { useLocations } from '../../../context/LocationContext';
 
 interface LocationCreateFormProps {

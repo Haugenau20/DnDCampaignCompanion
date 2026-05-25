@@ -2,7 +2,7 @@ import React, { useState, useEffect} from 'react';
 import { Location, LocationNote, LocationType } from '../../../types/location';
 import { useNPCs } from '../../../context/NPCContext';
 import { useQuests } from '../../../context/QuestContext';
-import { useAuth } from '../../../context/firebase';
+import { useAuth } from 'features/user-management';
 import { useLocations } from '../../../context/LocationContext';
 import Typography from '../../core/Typography';
 import Card from '../../core/Card';

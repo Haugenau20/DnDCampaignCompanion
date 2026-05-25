@@ -3,7 +3,7 @@ import React, { createContext, useContext, useCallback } from 'react';
 import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types/rumor';
 import { useRumorData } from '../hooks/useRumorData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useAuth, useUser, useFirestore } from './firebase';
+import { useAuth, useUser, useFirestore } from 'features/user-management';
 import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);

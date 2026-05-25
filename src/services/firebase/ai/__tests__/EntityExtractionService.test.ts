@@ -466,3 +466,5 @@ describe('EntityExtractionService', () => {
     });
   });
 });
+
+export {};

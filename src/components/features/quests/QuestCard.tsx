@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Quest } from '../../../types/quest';
 import { useNPCs } from '../../../context/NPCContext';
-import { useAuth } from '../../../context/firebase';
+import { useAuth } from 'features/user-management';
 import Typography from '../../core/Typography';
 import Card from '../../core/Card';
 import Button from '../../core/Button';

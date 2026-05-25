@@ -4,7 +4,7 @@ import React from "react";
 import Typography from "../../core/Typography";
 import NoteCard from "./NoteCard";
 import { useNotes } from "../../../context/NoteContext";
-import { useCampaigns } from "../../../context/firebase";
+import { useCampaigns } from "features/user-management";
 import Button from "../../core/Button";
 import { useNavigation } from "../../../hooks/useNavigation";
 import { Loader2, AlertCircle, Book, Plus, Users } from 'lucide-react';

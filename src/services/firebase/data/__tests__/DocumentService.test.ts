@@ -484,3 +484,5 @@ describe('DocumentService', () => {
     });
   });
 });
+
+export {};

@@ -1,4 +1,4 @@
-// src/components/features/layouts/common/hooks/__tests__/useCampaignInfo.test.ts
+﻿// src/components/features/layouts/common/hooks/__tests__/useCampaignInfo.test.ts
 import { renderHook } from '@testing-library/react';
 import { useCampaignInfo } from '../useCampaignInfo';
 
@@ -7,7 +7,7 @@ import { useCampaignInfo } from '../useCampaignInfo';
 // ---------------------------------------------------------------------------
 
 // Mock the Firebase context hooks
-jest.mock('../../../../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
 }));
@@ -19,7 +19,7 @@ jest.mock('../../../../../../utils/dateFormatter', () => ({
 }));
 
 // Pull mock references after jest.mock declarations
-const { useGroups, useCampaigns } = require('../../../../../../context/firebase');
+const { useGroups, useCampaigns } = require('@/features/user-management');
 const {
   formatDisplayDate,
   convertFirestoreTimestamp,

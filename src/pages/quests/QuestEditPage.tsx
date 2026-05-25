@@ -6,7 +6,7 @@ import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import QuestEditForm from '../../components/features/quests/QuestEditForm';
 import { useQuests } from '../../context/QuestContext';
-import { useAuth, useGroups } from '../../context/firebase';
+import { useAuth, useGroups } from 'features/user-management';
 import { useNavigation } from '../../context/NavigationContext';
 import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 

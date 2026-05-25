@@ -7,7 +7,7 @@ import RumorDirectory from '../../components/features/rumors/RumorDirectory';
 import CombineRumorsDialog from '../../components/features/rumors/CombineRumorsDialog';
 import ConvertToQuestDialog from '../../components/features/rumors/ConvertToQuestDialog';
 import { useRumors } from '../../context/RumorContext';
-import { useAuth } from '../../context/firebase';
+import { useAuth } from 'features/user-management';
 import { useNavigation } from '../../hooks/useNavigation';
 import { 
   MessageSquare, 

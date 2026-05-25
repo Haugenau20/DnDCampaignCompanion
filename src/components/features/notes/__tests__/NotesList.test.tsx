@@ -1,4 +1,4 @@
-// src/components/features/notes/__tests__/NotesList.test.tsx
+﻿// src/components/features/notes/__tests__/NotesList.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -16,7 +16,7 @@ jest.mock('../../../../context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
 
-jest.mock('../../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useCampaigns: jest.fn(),
 }));
 
@@ -25,7 +25,7 @@ jest.mock('../../../../hooks/useNavigation', () => ({
 }));
 
 const { useNotes } = require('../../../../context/NoteContext');
-const { useCampaigns } = require('../../../../context/firebase');
+const { useCampaigns } = require('@/features/user-management');
 const { useNavigation } = require('../../../../hooks/useNavigation');
 
 function setupMocks({

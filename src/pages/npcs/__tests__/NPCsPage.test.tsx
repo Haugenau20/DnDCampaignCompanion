@@ -1,4 +1,4 @@
-// src/pages/npcs/__tests__/NPCsPage.test.tsx
+﻿// src/pages/npcs/__tests__/NPCsPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import NPCsPage from "../NPCsPage";
@@ -18,7 +18,7 @@ let mockUser: any = { uid: "user-1" };
 let mockActiveGroupId: string | null = "group-1";
 let mockActiveCampaignId: string | null = "campaign-1";
 
-jest.mock("../../../context/firebase", () => ({
+jest.mock("@/features/user-management", () => ({
   useAuth: () => ({ user: mockUser }),
   useGroups: () => ({ activeGroupId: mockActiveGroupId }),
   useCampaigns: () => ({ activeCampaignId: mockActiveCampaignId }),

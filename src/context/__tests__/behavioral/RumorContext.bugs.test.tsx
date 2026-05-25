@@ -1,4 +1,4 @@
-// src/context/__tests__/behavioral/RumorContext.bugs.test.tsx
+﻿// src/context/__tests__/behavioral/RumorContext.bugs.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
@@ -22,7 +22,7 @@ const mockUseFirestore = jest.fn();
 const mockUseRumorData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
-jest.mock('../../firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
   useFirestore: () => mockUseFirestore(),

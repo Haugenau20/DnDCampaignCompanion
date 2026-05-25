@@ -9,7 +9,7 @@ import Dialog from '../../core/Dialog';
 import { useQuests } from '../../../context/QuestContext';
 import { useNPCs } from '../../../context/NPCContext';
 import { useNotes } from '../../../context/NoteContext';
-import { useAuth, useUser } from '../../../context/firebase';
+import { useAuth, useUser } from 'features/user-management';
 import clsx from 'clsx';
 import { getUserName, getActiveCharacterName } from '../../../utils/user-utils';
 

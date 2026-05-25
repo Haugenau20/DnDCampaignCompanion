@@ -6,7 +6,7 @@ import Button from '../../core/Button';
 import Input from '../../core/Input';
 import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import { useQuests } from '../../../context/QuestContext';
-import { useAuth } from '../../../context/firebase';
+import { useAuth } from 'features/user-management';
 import { useNavigation } from '../../../context/NavigationContext';
 import { useNPCs } from '../../../context/NPCContext';
 import AttributionInfo from '../../shared/AttributionInfo';

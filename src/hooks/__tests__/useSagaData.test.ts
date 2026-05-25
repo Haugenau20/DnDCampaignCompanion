@@ -1,4 +1,4 @@
-// src/hooks/__tests__/useSagaData.test.ts
+﻿// src/hooks/__tests__/useSagaData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useSagaData } from '../useSagaData';
 import { SagaData } from '../../types/saga';
@@ -10,14 +10,14 @@ const mockGetDocument = jest.fn();
 const mockSetDocument = jest.fn();
 const mockUpdateDocument = jest.fn();
 
-jest.mock('../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useFirestore: jest.fn(),
   useAuth: jest.fn(),
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
 }));
 
-const { useFirestore, useAuth, useGroups, useCampaigns } = require('../../context/firebase');
+const { useFirestore, useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 const makeSaga = (title: string = 'The Great Saga'): SagaData => ({
   title,
