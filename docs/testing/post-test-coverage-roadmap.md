@@ -1,16 +1,16 @@
 # Post-Test-Coverage Roadmap
 
-*Last updated: 2026-05-25 — end of the unit-test-coverage push.*
+*Last updated: 2026-05-25 — after the unit-test-coverage push merged to main.*
 
-This guide picks up where `feature/unit-test-coverage` lands. It tells the next orchestrator (and the agents it spawns) what to do, in what order, and where to stop.
+This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
 
 ---
 
 ## Where we are now
 
-- Branch `feature/unit-test-coverage` has shipped **1,016 new tests across 47 files**, lifting coverage from **71.26% → 89.66% statements** (lines 90.37%, branches 81.18%, functions 85.98%).
-- **18 bugs filed** during this push; **4 fixed** (#350, #701, #800, #900).
-- **53 failing tests** in the suite are intentional bug markers (`*.bugs.test.tsx`) plus a small set of pre-existing infra issues (`Card.test.tsx`, `entityMapper.test.ts`, `enhanced-test-utils.test.tsx`). None of these are regressions from this branch.
+- The unit-test-coverage work has merged to main: **1,016 new tests across 47 files**, lifting coverage from **71.26% → 89.66% statements** (lines 90.37%, branches 81.18%, functions 85.98%).
+- **18 bugs filed** during that push; **4 fixed** (#350, #701, #800, #900).
+- **53 failing tests** in the suite are intentional bug markers (`*.bugs.test.tsx`) plus a small set of pre-existing infra issues (`Card.test.tsx`, `entityMapper.test.ts`, `enhanced-test-utils.test.tsx`). None are regressions.
 - Three sibling bugs surfaced after the #800 / #900 fixes — same shape, not yet fixed:
   - **#1150**, **#1151** — additional NotePage re-fetch loops the #800 fix missed
   - **#1153** — `groupsLoading` not reset on error (sibling to #900)
@@ -28,18 +28,13 @@ Behavioral testing methodology stays in force: **failing tests are bug markers; 
 | Migration approach | **Incremental, one domain at a time.** | Matches `docs/architecture/migration/hybrid-feature-first-restructuring-strategy.md`. Each phase ends with green tests; rollback stays local. |
 | Migration order | **user-management → storytelling → campaign-entities → collaboration** | Smallest blast radius first. Collaboration (notes) has the most active bug surface — migrate last when it's stable. |
 | Coverage gate | **Add CI floor at 85%** | Below today's 89.66% but high enough that migration can't silently rot tests. |
-| Test baseline | **Tag `pre-migration-baseline` on main after this PR merges.** | Lets you diff coverage and pass-counts after each migration phase. |
-| This PR | **Land as-is** | Pure test additions + 4 small bug fixes. No structural risk. |
+| Test baseline | **Tag `pre-migration-baseline` on main before any migration commits.** | Lets you diff coverage and pass-counts after each migration phase. |
 
 ---
 
 ## Execution order
 
-### Phase 1 — Land this branch (now)
-
-PR `feature/unit-test-coverage → main`. No further work on this branch.
-
-### Phase 2 — Sibling-bug fix round (≈ half a day)
+### Phase 1 — Sibling-bug fix round (≈ half a day)
 
 **Goal**: clear four bugs of the exact same one-line shape as already-fixed #800 / #900, removing known broken paths before restructuring.
 
@@ -51,28 +46,28 @@ PR `feature/unit-test-coverage → main`. No further work on this branch.
 
 **Out of scope** (defer): #1152, #1000, #1050, #1051, #1052 (all dead-code; restructuring will likely sweep them). #901, #702, #850, #851, #750, #700, #200, #201 (architectural, test-infra, or low value relative to migration).
 
-**Halt-on-failure protocol** (mandatory — same as the round that produced ec8f3cb):
+**Halt-on-failure protocol** (mandatory — same as the round that produced ec8f3cb on main):
 1. Agent reads the bug report and the associated skipped/failing tests.
 2. Agent makes the production fix.
 3. Agent un-skips the relevant tests (un-skip; never edit the assertions).
 4. Agent runs the targeted test file. If it does not pass, agent reverts the prod change with `git checkout -- <file>` and reports back — does **not** modify the test.
 5. On success, agent updates the bug report to FIXED and stages.
 
-**Spawn pattern**: one agent per bug. Two in flight max. Each agent gets one bug number, one file path, one test path. Branch from main as `fix/sibling-bugs-after-test-coverage`.
+**Spawn pattern**: one agent per bug. Two in flight max — this is the one phase where parallel workers fit cleanly. Each agent gets one bug number, one file path, one test path. Branch from main as `fix/sibling-bugs-after-test-coverage`.
 
-### Phase 3 — Pre-migration housekeeping (small)
+### Phase 2 — Pre-migration housekeeping (small)
 
 Before any restructuring commits:
 
-1. **Tag `pre-migration-baseline`** on `main` (after Phase 2 merges).
+1. **Tag `pre-migration-baseline`** on `main` (after Phase 1 merges).
 2. **Add CI coverage floor of 85%** — either in `jest.config` `coverageThreshold` or as a CI check.
 3. **Re-run full coverage** and snapshot the result in `docs/testing/results/pre-migration-baseline.md` (test count, pass/fail/skip count, coverage per metric).
 
-These three steps are one short PR.
+These three steps are one short PR. Single agent; no parallelism needed.
 
-### Phase 4 — Restructuring (8–12 weeks, incremental)
+### Phase 3 — Restructuring (8–12 weeks, incremental, strictly sequential)
 
-Follow `docs/architecture/migration/hybrid-feature-first-restructuring-strategy.md`. Recommended order:
+Follow `docs/architecture/migration/hybrid-feature-first-restructuring-strategy.md`. **Do not run two domains in parallel** — each phase needs the test suite green before the next begins. Recommended order:
 
 1. **`user-management/`** — Auth, Groups, Profiles. Most self-contained; the cleanest starter domain. Branch: `migration/user-management`.
 2. **`storytelling/`** — Chapters, Stories, Timeline. Already well-tested; few cross-feature ties.
@@ -85,7 +80,9 @@ Follow `docs/architecture/migration/hybrid-feature-first-restructuring-strategy.
 - No new entries in the bug tracker introduced by the move itself.
 - Tag `migration/<domain>-complete` on main when merged.
 
-### Phase 5 — Post-migration bug triage
+Within a single domain, sub-tasks (move file A, move file B, update imports) can sometimes parallelise across two workers — but only when they touch disjoint file sets. When in doubt, sequential.
+
+### Phase 4 — Post-migration bug triage
 
 After all four domains have landed, walk the open bug tracker. Many bugs will look different (or be moot) under the new structure. Re-file, close as obsolete, or fix — whichever fits.
 
@@ -130,8 +127,8 @@ Carrying forward the rules that worked during the test-coverage push:
 - **Forbid Skill invocations in agent prompts**: include "Do NOT invoke any Skill tool" in every prompt.
 - **Staging only**: agents stage via `git add` and let the parent commit. Agents never commit or push.
 - **Per-file jest runs are fast**: `npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="…"` — use this for verification before staging.
-- **Halt-on-failure for any bug-fix work**: see Phase 2 protocol above. This is non-negotiable — it's what keeps the behavioral methodology honest.
-- **Sonnet 4.6 is fine for the worker role** in all of Phases 2–4. Opus stays in the orchestrator seat.
+- **Halt-on-failure for any bug-fix work**: see Phase 1 protocol above. This is non-negotiable — it's what keeps the behavioral methodology honest.
+- **Sonnet 4.6 is fine for the worker role** in all of Phases 1–3. Opus stays in the orchestrator seat.
 
 ---
 
