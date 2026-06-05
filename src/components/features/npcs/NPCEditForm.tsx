@@ -8,7 +8,7 @@ import Dialog from '../../core/Dialog';
 import { Save, X, Users, Scroll } from 'lucide-react';
 import { useQuests } from '../../../context/QuestContext';
 import { useNPCs } from '../../../context/NPCContext';
-import { useAuth, useUser } from '../../../context/firebase';
+import { useAuth, useUser } from 'features/user-management';
 import clsx from 'clsx';
 import { getUserName, getActiveCharacterName } from '../../../utils/user-utils';
 

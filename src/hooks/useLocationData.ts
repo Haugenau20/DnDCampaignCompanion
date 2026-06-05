@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Location } from '../types/location';
 import { useFirebaseData } from './useFirebaseData';
-import { useAuth, useGroups, useCampaigns } from '../context/firebase';
+import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 
 /**
  * Hook for managing location data fetching and state with proper group/campaign context

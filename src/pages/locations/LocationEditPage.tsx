@@ -6,7 +6,7 @@ import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import LocationEditForm from '../../components/features/locations/LocationEditForm';
 import { useLocations } from '../../context/LocationContext';
-import { useAuth } from '../../context/firebase';
+import { useAuth } from 'features/user-management';
 import { useNavigation } from '../../context/NavigationContext';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 

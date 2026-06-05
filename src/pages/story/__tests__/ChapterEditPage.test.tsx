@@ -1,4 +1,4 @@
-// src/pages/story/__tests__/ChapterEditPage.test.tsx
+﻿// src/pages/story/__tests__/ChapterEditPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import ChapterEditPage from "../ChapterEditPage";
@@ -51,7 +51,7 @@ jest.mock("../../../context/StoryContext", () => ({
   useStory: () => mockStoryContext,
 }));
 
-jest.mock("../../../context/firebase", () => ({
+jest.mock("@/features/user-management", () => ({
   useAuth: () => ({ user: { uid: "user-1" } }),
 }));
 

@@ -6,7 +6,7 @@ import Input from '../../components/core/Input';
 import Button from '../../components/core/Button';
 import { QuestStatus } from '../../types/quest';
 import QuestCard from '../../components/features/quests/QuestCard';
-import { useAuth, useGroups, useCampaigns } from '../../context/firebase';
+import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 import { useQuests } from '../../context/QuestContext';
 import { useNavigation } from '../../hooks/useNavigation';
 import clsx from 'clsx';

@@ -1,4 +1,4 @@
-// src/context/__tests__/behavioral/NPCContext.notes.test.tsx
+﻿// src/context/__tests__/behavioral/NPCContext.notes.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
@@ -20,7 +20,7 @@ const mockUseCampaigns = jest.fn();
 const mockUseNPCData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
-jest.mock('../../firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
   useGroups: () => mockUseGroups(),

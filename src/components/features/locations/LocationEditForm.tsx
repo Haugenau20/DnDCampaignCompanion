@@ -13,7 +13,7 @@ import {
   RelatedQuestsSection
 } from './LocationFormSections';
 import { AlertCircle, Save, X } from 'lucide-react';
-import { useAuth, useGroups, useCampaigns } from '../../../context/firebase';
+import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 import { useLocations } from '../../../context/LocationContext';
 
 interface LocationEditFormProps {

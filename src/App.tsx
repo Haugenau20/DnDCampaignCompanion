@@ -6,16 +6,16 @@ import { SearchProvider } from './context/SearchContext';
 import { NPCProvider } from './context/NPCContext';
 import { StoryProvider } from './context/StoryContext';
 import { LocationProvider } from './context/LocationContext';
-import { FirebaseProvider } from './context/firebase/FirebaseContext';
+import { FirebaseProvider } from 'features/user-management/auth/context/FirebaseContext';
 import { RumorProvider } from './context/RumorContext';
 import { QuestProvider } from './context/QuestContext';
 import { NoteProvider } from './context/NoteContext';
 import { UsageProvider } from './context/UsageContext';
 import ErrorBoundary from './components/shared/ErrorBoundary';
 import Layout from './components/layout/Layout';
-import SessionTimeoutWarning from './components/features/auth/SessionTimeoutWarning';
-import SessionManager from './components/features/auth/SessionManager';
-import PrivacyNotice from './components/features/auth/PrivacyNotice';
+import SessionTimeoutWarning from 'features/user-management/auth/components/SessionTimeoutWarning';
+import SessionManager from 'features/user-management/auth/components/SessionManager';
+import PrivacyNotice from 'features/user-management/auth/components/PrivacyNotice';
 
 // Import pages
 import HomePage from './pages/HomePage';

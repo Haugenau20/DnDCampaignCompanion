@@ -1,4 +1,4 @@
-// src/components/features/npcs/__tests__/NPCEditForm.test.tsx
+﻿// src/components/features/npcs/__tests__/NPCEditForm.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -21,7 +21,7 @@ jest.mock('../../../../context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
-jest.mock('../../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
   useUser: jest.fn(),
 }));
@@ -37,7 +37,7 @@ jest.mock('../../../../utils/user-utils', () => ({
 
 const { useNPCs } = require('../../../../context/NPCContext');
 const { useQuests } = require('../../../../context/QuestContext');
-const { useAuth, useUser } = require('../../../../context/firebase');
+const { useAuth, useUser } = require('@/features/user-management');
 
 function setupMocks({
   updateNPC = mockUpdateNPC,

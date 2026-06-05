@@ -4,7 +4,7 @@ import Typography from "../../components/core/Typography";
 import Button from "../../components/core/Button";
 import NotesList from "../../components/features/notes/NotesList";
 import { useNotes } from "../../context/NoteContext";
-import { useCampaigns } from "../../context/firebase";
+import { useCampaigns } from "features/user-management";
 import { useNavigation } from "../../hooks/useNavigation";
 import { Plus, AlertCircle } from 'lucide-react';
 

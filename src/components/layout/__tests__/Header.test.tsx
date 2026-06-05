@@ -1,4 +1,4 @@
-// src/components/layout/__tests__/Header.test.tsx
+﻿// src/components/layout/__tests__/Header.test.tsx
 // Behavioral tests for the Header component.
 // Header pulls in many contexts and feature components — mock aggressively.
 
@@ -38,7 +38,7 @@ const { useNavigate } = require("react-router-dom");
 // ---------------------------------------------------------------------------
 const mockSignOut = jest.fn();
 
-jest.mock("../../../context/firebase", () => ({
+jest.mock("@/features/user-management", () => ({
   useAuth: jest.fn(),
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
@@ -48,7 +48,7 @@ const {
   useAuth,
   useGroups,
   useCampaigns,
-} = require("../../../context/firebase");
+} = require("@/features/user-management");
 
 // ---------------------------------------------------------------------------
 // Mock shared components used inside Header
@@ -70,23 +70,23 @@ jest.mock("../../shared/ContextSwitcher", () => ({
 // ---------------------------------------------------------------------------
 // Mock feature components rendered inside Header dialogs
 // ---------------------------------------------------------------------------
-jest.mock("../../features/groups/JoinGroupDialog", () => ({
+jest.mock("@/features/user-management/groups/components/JoinGroupDialog", () => ({
   __esModule: true,
   default: ({ open }: { open: boolean }) =>
     open ? <div data-testid="join-group-dialog" /> : null,
 }));
 
-jest.mock("../../features/auth/adminPanel/AdminPanel", () => ({
+jest.mock("@/features/user-management/admin/components/AdminPanel", () => ({
   __esModule: true,
   default: () => <div data-testid="admin-panel" />,
 }));
 
-jest.mock("../../features/auth/UserProfile", () => ({
+jest.mock("@/features/user-management/profiles/components/UserProfile", () => ({
   __esModule: true,
   default: () => <div data-testid="user-profile" />,
 }));
 
-jest.mock("../../features/auth/SignInForm", () => ({
+jest.mock("@/features/user-management/auth/components/SignInForm", () => ({
   __esModule: true,
   default: () => <div data-testid="sign-in-form" />,
 }));

@@ -1,4 +1,4 @@
-// src/pages/notes/__tests__/NotesPage.test.tsx
+﻿// src/pages/notes/__tests__/NotesPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import NotesPage from "../NotesPage";
@@ -24,7 +24,7 @@ let mockCampaigns: CampaignsMock = {
   activeCampaign: { id: "campaign-1", name: "The Fellowship" },
 };
 
-jest.mock("../../../context/firebase", () => ({
+jest.mock("@/features/user-management", () => ({
   useCampaigns: () => mockCampaigns,
 }));
 

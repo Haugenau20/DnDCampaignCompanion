@@ -3,7 +3,7 @@ import React, { createContext, useContext, useCallback, useState } from 'react';
 import { Chapter, ChapterProgress, StoryProgress } from '../types/story';
 import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useAuth, useUser } from './firebase';
+import { useAuth, useUser } from 'features/user-management';
 import firebaseServices from '../services/firebase';
 import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 

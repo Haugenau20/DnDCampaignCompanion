@@ -362,3 +362,5 @@ describe('CampaignService', () => {
     });
   });
 });
+
+export {};

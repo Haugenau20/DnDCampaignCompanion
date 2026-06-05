@@ -52,3 +52,6 @@ NPCs Page seems to take longer to load than the rest of the pages.
 Not signed in UI must be updated and made the same on every page.
 
 Make project true Single Page Application.
+
+It should be possible to use other services (e.g. Google) to sign in. in this it must still be ensured people 
+can't just create their own users, or maybe some kind of limit during a beta roll-out to avoid backend usage runaway (potential firebase cost runaway)

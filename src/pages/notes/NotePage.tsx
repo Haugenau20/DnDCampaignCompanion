@@ -9,12 +9,12 @@ import NoteReferences from "../../components/features/notes/NoteReferences";
 import FloatingUsageIndicator from "../../components/features/notes/FloatingUsageIndicator";
 import { useNavigation } from "../../hooks/useNavigation";
 import { useNotes } from "../../context/NoteContext";
-import { useCampaigns } from "../../context/firebase";
+import { useCampaigns } from "features/user-management";
 import { ArrowLeft, Trash2, AlertCircle, ExternalLink } from 'lucide-react';
 import { PotentialReference } from "../../components/features/notes/NoteReferences";
 import { Note } from "../../types/note";
 import DocumentService from "../../services/firebase/data/DocumentService";
-import { useAuth, useGroups } from "../../context/firebase";
+import { useAuth, useGroups } from "features/user-management";
 
 /**
  * Page for viewing and editing an individual user note

@@ -1,4 +1,4 @@
-// src/components/features/locations/__tests__/LocationDirectory.test.tsx
+﻿// src/components/features/locations/__tests__/LocationDirectory.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -35,7 +35,7 @@ jest.mock('../../../../context/LocationContext', () => ({
   })),
 }));
 
-jest.mock('../../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(() => ({ user: { uid: 'user-1' } })),
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
 }));

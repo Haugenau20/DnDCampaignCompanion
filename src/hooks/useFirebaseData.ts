@@ -1,7 +1,7 @@
 // src/hooks/useFirebaseData.ts
 import { useState, useCallback, useEffect } from 'react';
-import { useFirestore } from '../context/firebase';
-import { AUTH_STATE_CHANGED_EVENT } from '../context/firebase';
+import { useFirestore } from 'features/user-management';
+import { AUTH_STATE_CHANGED_EVENT } from 'features/user-management';
 
 interface UseFirebaseDataOptions<T> {
   collection: string;

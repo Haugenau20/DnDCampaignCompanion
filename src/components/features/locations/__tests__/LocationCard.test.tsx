@@ -1,4 +1,4 @@
-// src/components/features/locations/__tests__/LocationCard.test.tsx
+﻿// src/components/features/locations/__tests__/LocationCard.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -35,7 +35,7 @@ jest.mock('../../../../context/LocationContext', () => ({
 }));
 
 const mockUser = { uid: 'user-1' };
-jest.mock('../../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
 }));
@@ -54,7 +54,7 @@ const { useNPCs } = require('../../../../context/NPCContext');
 const { useQuests } = require('../../../../context/QuestContext');
 const { useNavigation } = require('../../../../context/NavigationContext');
 const { useLocations } = require('../../../../context/LocationContext');
-const { useAuth } = require('../../../../context/firebase');
+const { useAuth } = require('@/features/user-management');
 
 function setupMocks({
   user = mockUser,

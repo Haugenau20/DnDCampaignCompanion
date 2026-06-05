@@ -1,4 +1,4 @@
-// src/context/__tests__/behavioral/StoryContext.behavioral.test.tsx
+﻿// src/context/__tests__/behavioral/StoryContext.behavioral.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
@@ -25,7 +25,7 @@ const mockUseChapterData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
 // Mock the Firebase context hooks
-jest.mock('../../firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
 }));

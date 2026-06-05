@@ -1,4 +1,4 @@
-// src/components/features/rumors/__tests__/RumorForm.test.tsx
+﻿// src/components/features/rumors/__tests__/RumorForm.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -39,7 +39,7 @@ jest.mock('../../../../context/LocationContext', () => ({
 jest.mock('../../../../context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
-jest.mock('../../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
   useUser: jest.fn(),
 }));
@@ -48,7 +48,7 @@ const { useRumors } = require('../../../../context/RumorContext');
 const { useNPCs } = require('../../../../context/NPCContext');
 const { useLocations } = require('../../../../context/LocationContext');
 const { useNotes } = require('../../../../context/NoteContext');
-const { useAuth, useUser } = require('../../../../context/firebase');
+const { useAuth, useUser } = require('@/features/user-management');
 
 beforeEach(() => {
   jest.clearAllMocks();

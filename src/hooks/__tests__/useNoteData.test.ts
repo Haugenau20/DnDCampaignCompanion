@@ -1,4 +1,4 @@
-// src/hooks/__tests__/useNoteData.test.ts
+﻿// src/hooks/__tests__/useNoteData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useNoteData } from '../useNoteData';
 import { Note } from '../../types/note';
@@ -16,14 +16,14 @@ jest.mock('../../services/firebase/data/DocumentService', () => ({
   },
 }));
 
-jest.mock('../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
 }));
 
 const DocumentService = require('../../services/firebase/data/DocumentService').default;
-const { useAuth, useGroups, useCampaigns } = require('../../context/firebase');
+const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 const makeNote = (id: string, title: string, campaignId: string = 'campaign-1'): Note => ({
   id,

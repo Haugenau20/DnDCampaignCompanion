@@ -1,4 +1,4 @@
-// src/pages/story/__tests__/ChaptersPage.test.tsx
+﻿// src/pages/story/__tests__/ChaptersPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ChaptersPage from "../ChaptersPage";
@@ -37,7 +37,7 @@ jest.mock("../../../context/StoryContext", () => ({
 
 let mockUser: { uid: string } | null = { uid: "user-1" };
 
-jest.mock("../../../context/firebase", () => ({
+jest.mock("@/features/user-management", () => ({
   useAuth: () => ({ user: mockUser }),
 }));
 

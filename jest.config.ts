@@ -8,6 +8,9 @@ const config: Config.InitialOptions = {
   moduleNameMapper: {
     // Handle module aliases
     '^@/(.*)$': '<rootDir>/src/$1',
+    // Resolve bare paths from src/ (mirrors tsconfig.json `baseUrl: "src"`) at runtime
+    // without using `modulePaths`, which can disturb ts-jest's per-file compilation isolation.
+    '^(app|components|context|features|hooks|pages|services|themes|types|utils|constants)/(.*)$': '<rootDir>/src/$1/$2',
     // Handle CSS imports (with CSS modules)
     '\\.module\\.(css|sass|scss)$': 'identity-obj-proxy',
     // Handle all CSS imports (new line added)

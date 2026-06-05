@@ -1,4 +1,4 @@
-// src/pages/story/__tests__/ChapterCreatePage.test.tsx
+﻿// src/pages/story/__tests__/ChapterCreatePage.test.tsx
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import ChapterCreatePage from "../ChapterCreatePage";
@@ -37,7 +37,7 @@ jest.mock("../../../context/StoryContext", () => ({
   }),
 }));
 
-jest.mock("../../../context/firebase", () => ({
+jest.mock("@/features/user-management", () => ({
   useAuth: () => ({ user: { uid: "user-1" } }),
 }));
 
@@ -172,7 +172,7 @@ describe("ChapterCreatePage", () => {
 
     it("returns null (renders nothing) when user is null after loaded", () => {
       // Re-mock useAuth to return null user
-      jest.doMock("../../../context/firebase", () => ({
+      jest.doMock("@/features/user-management", () => ({
         useAuth: () => ({ user: null }),
       }));
       // Page renders null when !isLoading && !user — tested via redirect effect

@@ -181,3 +181,5 @@ describe('firebase/index', () => {
     });
   });
 });
+
+export {};

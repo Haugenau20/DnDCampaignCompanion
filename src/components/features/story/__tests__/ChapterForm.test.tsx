@@ -1,4 +1,4 @@
-// src/components/features/story/__tests__/ChapterForm.test.tsx
+﻿// src/components/features/story/__tests__/ChapterForm.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -22,13 +22,13 @@ jest.mock('../../../../context/StoryContext', () => ({
   useStory: jest.fn(),
 }));
 
-jest.mock('../../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
 }));
 
 const { useNavigation } = require('../../../../context/NavigationContext');
 const { useStory } = require('../../../../context/StoryContext');
-const { useAuth } = require('../../../../context/firebase');
+const { useAuth } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------
 // Fixture helpers

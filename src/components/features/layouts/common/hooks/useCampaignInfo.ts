@@ -1,5 +1,5 @@
 // components/features/layouts/common/hooks/useCampaignInfo.ts
-import { useGroups, useCampaigns } from '../../../../../context/firebase';
+import { useGroups, useCampaigns } from 'features/user-management';
 import { formatDisplayDate, convertFirestoreTimestamp } from '../../../../../utils/dateFormatter';
 
 /**

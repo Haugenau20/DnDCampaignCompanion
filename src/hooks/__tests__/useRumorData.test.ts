@@ -1,4 +1,4 @@
-// src/hooks/__tests__/useRumorData.test.ts
+﻿// src/hooks/__tests__/useRumorData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useRumorData } from '../useRumorData';
 import { Rumor, RumorStatus, SourceType } from '../../types/rumor';
@@ -12,14 +12,14 @@ jest.mock('../useFirebaseData', () => ({
   useFirebaseData: jest.fn(),
 }));
 
-jest.mock('../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
 }));
 
 const { useFirebaseData } = require('../useFirebaseData');
-const { useAuth, useGroups, useCampaigns } = require('../../context/firebase');
+const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 const makeRumor = (id: string, title: string): Rumor => ({
   id,

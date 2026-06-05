@@ -6,7 +6,7 @@ import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useNavigation } from '../../context/NavigationContext';
-import { useAuth } from '../../context/firebase';
+import { useAuth } from 'features/user-management';
 import { useSagaData } from '../../hooks/useSagaData';
 import { Book, Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
 import { SagaData } from '../../types/saga';

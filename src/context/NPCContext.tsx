@@ -4,7 +4,7 @@ import { NPC, NPCContextValue, NPCRelationship, NPCNote } from '../types/npc';
 import { ContentAttribution} from '../types/common';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from '../hooks/useFirebaseData';
-import { useGroups, useCampaigns, useAuth, useUser } from './firebase';
+import { useGroups, useCampaigns, useAuth, useUser } from 'features/user-management';
 import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 
 const NPCContext = createContext<NPCContextValue | undefined>(undefined);

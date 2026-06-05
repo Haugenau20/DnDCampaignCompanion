@@ -1,4 +1,4 @@
-// src/__tests__/App.test.tsx
+﻿// src/__tests__/App.test.tsx
 // Behavioral tests for App.tsx — verifies provider composition and route table.
 // All real providers and page components are stubbed so this test focuses solely
 // on the wiring in App.tsx itself.
@@ -64,7 +64,7 @@ jest.mock("../context/LocationContext", () => ({
   useLocations: () => ({}),
 }));
 
-jest.mock("../context/firebase/FirebaseContext", () => ({
+jest.mock("@/features/user-management/auth/context/FirebaseContext", () => ({
   FirebaseProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="firebase-provider">{children}</div>
   ),
@@ -117,19 +117,19 @@ jest.mock("../components/layout/Layout", () => ({
   ),
 }));
 
-jest.mock("../components/features/auth/SessionTimeoutWarning", () => ({
+jest.mock("@/features/user-management/auth/components/SessionTimeoutWarning", () => ({
   __esModule: true,
   default: () => <div data-testid="session-timeout-warning" />,
 }));
 
-jest.mock("../components/features/auth/SessionManager", () => ({
+jest.mock("@/features/user-management/auth/components/SessionManager", () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="session-manager">{children}</div>
   ),
 }));
 
-jest.mock("../components/features/auth/PrivacyNotice", () => ({
+jest.mock("@/features/user-management/auth/components/PrivacyNotice", () => ({
   __esModule: true,
   default: () => <div data-testid="privacy-notice" />,
 }));

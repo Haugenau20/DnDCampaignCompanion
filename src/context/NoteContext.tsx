@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useCallback, useState, useEffect } from "react";
 import { Note, NoteContextValue, ExtractedEntity, EntityType } from "../types/note";
 import DocumentService from "../services/firebase/data/DocumentService";
-import { useAuth, useGroups, useCampaigns, useUser } from "./firebase";
+import { useAuth, useGroups, useCampaigns, useUser } from "features/user-management";
 import { getUserName, getActiveCharacterName } from '../utils/user-utils';
 import { useNavigate } from 'react-router-dom';
 

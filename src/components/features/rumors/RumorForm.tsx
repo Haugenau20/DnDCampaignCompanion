@@ -10,7 +10,7 @@ import Input from '../../core/Input';
 import Button from '../../core/Button';
 import Card from '../../core/Card';
 import Dialog from '../../core/Dialog';
-import { useAuth, useUser } from '../../../context/firebase';
+import { useAuth, useUser } from 'features/user-management';
 import clsx from 'clsx';
 import { AlertCircle, Save, X, Users, MapPin } from 'lucide-react';
 

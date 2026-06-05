@@ -8,7 +8,7 @@ import Input from '../../core/Input';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigation } from '../../../context/NavigationContext';
 import { useStory } from '../../../context/StoryContext';
-import { useAuth } from '../../../context/firebase';
+import { useAuth } from 'features/user-management';
 
 interface ChapterFormProps {
   /** The chapter to edit, or undefined for create mode */

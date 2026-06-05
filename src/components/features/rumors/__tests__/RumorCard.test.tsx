@@ -1,4 +1,4 @@
-// src/components/features/rumors/__tests__/RumorCard.test.tsx
+﻿// src/components/features/rumors/__tests__/RumorCard.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
@@ -43,7 +43,7 @@ const mockCreatePath = jest.fn(
 const mockGetNPCById = jest.fn();
 const mockGetLocationById = jest.fn();
 
-jest.mock('../../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
 }));
@@ -71,7 +71,7 @@ jest.mock('../../../../utils/attribution-utils', () => ({
 
 jest.mock('../../../../services/firebase', () => ({ default: {} }));
 
-const { useAuth } = require('../../../../context/firebase');
+const { useAuth } = require('@/features/user-management');
 const { useRumors } = require('../../../../context/RumorContext');
 const { useNavigation } = require('../../../../hooks/useNavigation');
 const { useNPCs } = require('../../../../context/NPCContext');

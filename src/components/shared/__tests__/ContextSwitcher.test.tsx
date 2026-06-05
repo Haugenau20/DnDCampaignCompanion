@@ -1,4 +1,4 @@
-// src/components/shared/__tests__/ContextSwitcher.test.tsx
+﻿// src/components/shared/__tests__/ContextSwitcher.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
@@ -10,17 +10,17 @@ import ContextSwitcher from '../ContextSwitcher';
 const mockSetActiveGroup = jest.fn();
 const mockSetActiveCampaign = jest.fn();
 
-jest.mock('../../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
 }));
 
-const { useGroups, useCampaigns } = require('../../../context/firebase');
+const { useGroups, useCampaigns } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------
 // Mock JoinGroupDialog to avoid deep dependency chain
 // ---------------------------------------------------------------------------
-jest.mock('../../features/groups/JoinGroupDialog', () => {
+jest.mock('@/features/user-management/groups/components/JoinGroupDialog', () => {
   const MockJoinGroupDialog: React.FC<{
     open: boolean;
     onClose: () => void;
@@ -366,7 +366,7 @@ describe('ContextSwitcher', () => {
   describe('JoinGroupDialog onSuccess', () => {
     test('should reload page when JoinGroupDialog reports success', async () => {
       // Override JoinGroupDialog to expose onSuccess trigger
-      jest.doMock('../../features/groups/JoinGroupDialog', () => {
+      jest.doMock('@/features/user-management/groups/components/JoinGroupDialog', () => {
         const Mock: React.FC<{
           open: boolean;
           onClose: () => void;

@@ -1,4 +1,4 @@
-// src/hooks/__tests__/useNPCData.test.ts
+﻿// src/hooks/__tests__/useNPCData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useNPCData } from '../useNPCData';
 import { NPC, NPCStatus, NPCRelationship } from '../../types/npc';
@@ -12,14 +12,14 @@ jest.mock('../useFirebaseData', () => ({
   useFirebaseData: jest.fn(),
 }));
 
-jest.mock('../../context/firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
 }));
 
 const { useFirebaseData } = require('../useFirebaseData');
-const { useAuth, useGroups, useCampaigns } = require('../../context/firebase');
+const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 const makeNPC = (id: string, name: string): NPC => ({
   id,

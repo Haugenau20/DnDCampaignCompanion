@@ -1,4 +1,4 @@
-// src/context/__tests__/behavioral/NoteContext.bugs.test.tsx
+﻿// src/context/__tests__/behavioral/NoteContext.bugs.test.tsx
 import React from 'react';
 import { render, act } from '@testing-library/react';
 import { NoteProvider, useNotes } from '../../NoteContext';
@@ -11,7 +11,7 @@ const mockUseCampaigns = jest.fn();
 const mockUseUser = jest.fn();
 const mockNavigate = jest.fn();
 
-jest.mock('../../firebase', () => ({
+jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
   useGroups: () => mockUseGroups(),
   useCampaigns: () => mockUseCampaigns(),

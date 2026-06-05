@@ -8,7 +8,7 @@ import Card from '../../components/core/Card';
 import { Book, Edit, Loader2 } from 'lucide-react';
 import { useSagaData } from '../../hooks/useSagaData';
 import { useNavigation } from '../../context/NavigationContext';
-import { useAuth } from '../../context/firebase';
+import { useAuth } from 'features/user-management';
 
 // Constants for saga default content and tips
 const SAGA_DEFAULT_OPENING = "In a realm where magic weaves through the fabric of reality and ancient powers stir from long slumber, a group of unlikely heroes finds their fates intertwined by destiny's unseen hand.";

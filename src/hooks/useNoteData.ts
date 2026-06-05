@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Note } from "../types/note";
 import DocumentService from "../services/firebase/data/DocumentService";
-import { useAuth, useGroups, useCampaigns } from "../context/firebase";
+import { useAuth, useGroups, useCampaigns } from "features/user-management";
 
 /**
  * Hook for fetching and managing user notes filtered by active campaign
