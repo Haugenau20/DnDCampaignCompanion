@@ -2,7 +2,7 @@
 
 import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from '../userGenerator';
-import { Chapter as AppChapter } from '../../../../types/story';
+import type { Chapter as AppChapter } from 'features/storytelling';
 
 interface ChapterData extends Omit<AppChapter, 'dateModified'> {
     dateModified: string;

@@ -7,11 +7,10 @@ import Card from '../../components/core/Card';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from 'features/user-management';
-import { useSagaData } from '../../hooks/useSagaData';
+import { useSagaData, useStory } from 'features/storytelling';
+import type { SagaData } from 'features/storytelling';
 import { Book, Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
-import { SagaData } from '../../types/saga';
 import { exportChaptersAsText } from '../../utils/export-utils';
-import { useStory } from '../../context/StoryContext';
 import Dialog from '../../components/core/Dialog';
 
 // Constants for default content if none exists

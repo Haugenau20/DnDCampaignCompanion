@@ -1,9 +1,9 @@
-// src/components/features/story/__tests__/SlidingChapters.test.tsx
+// src/features/storytelling/stories/components/__tests__/SlidingChapters.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import SlidingChapters from '../SlidingChapters';
-import { Chapter } from '../../../../types/story';
+import { Chapter } from 'features/storytelling/chapters/types';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers

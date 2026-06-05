@@ -1,7 +1,7 @@
 // pages/HomePage.tsx
 import React, { useState, useEffect } from 'react';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
-import { useStory } from '../context/StoryContext';
+import { useStory } from 'features/storytelling';
 import { useQuests } from '../context/QuestContext';
 import { useRumors } from '../context/RumorContext';
 import { useNPCs } from '../context/NPCContext';

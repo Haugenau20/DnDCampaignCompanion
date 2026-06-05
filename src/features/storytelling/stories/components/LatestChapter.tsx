@@ -1,9 +1,9 @@
 import React from 'react';
-import Card from '../../core/Card';
-import Typography from '../../core/Typography';
-import Button from '../../core/Button';
+import Card from 'components/core/Card';
+import Typography from 'components/core/Typography';
+import Button from 'components/core/Button';
 import { Book, Clock, ChevronRight } from 'lucide-react';
-import { useNavigation } from '../../../context/NavigationContext';
+import { useNavigation } from 'context/NavigationContext';
 
 interface LatestChapterProps {
   chapter: {

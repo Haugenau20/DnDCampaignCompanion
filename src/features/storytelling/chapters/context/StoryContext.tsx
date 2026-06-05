@@ -1,11 +1,11 @@
-// src/context/StoryContext.tsx
+// src/features/storytelling/chapters/context/StoryContext.tsx
 import React, { createContext, useContext, useCallback, useState } from 'react';
-import { Chapter, ChapterProgress, StoryProgress } from '../types/story';
+import { Chapter, ChapterProgress, StoryProgress } from '../types';
 import { useChapterData } from '../hooks/useChapterData';
-import { useFirebaseData } from '../hooks/useFirebaseData';
+import { useFirebaseData } from 'hooks/useFirebaseData';
 import { useAuth, useUser } from 'features/user-management';
-import firebaseServices from '../services/firebase';
-import { getUserName, getActiveCharacterName } from '../utils/user-utils';
+import firebaseServices from 'services/firebase';
+import { getUserName, getActiveCharacterName } from 'utils/user-utils';
 
 interface StoryContextState {
   chapters: Chapter[];

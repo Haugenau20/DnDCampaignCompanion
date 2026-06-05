@@ -8,7 +8,7 @@ import clsx from 'clsx';
 import { NPC } from '../../../../../types/npc';
 import { Location } from '../../../../../types/location';
 import { Quest } from '../../../../../types/quest';
-import { Chapter } from '../../../../../types/story';
+import type { Chapter } from 'features/storytelling';
 import { Rumor } from '../../../../../types/rumor';
 
 interface CampaignStatsProps {

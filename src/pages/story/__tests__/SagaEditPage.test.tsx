@@ -39,15 +39,12 @@ let mockSagaData: SagaDataMock = {
   saveSaga: mockSaveSaga,
 };
 
-jest.mock("../../../hooks/useSagaData", () => ({
-  useSagaData: () => mockSagaData,
-}));
-
 let mockChapters: any[] = [
   { id: "ch-1", title: "Chapter 1", order: 1, content: "Content 1" },
 ];
 
-jest.mock("../../../context/StoryContext", () => ({
+jest.mock("features/storytelling", () => ({
+  useSagaData: () => mockSagaData,
   useStory: () => ({ chapters: mockChapters }),
 }));
 

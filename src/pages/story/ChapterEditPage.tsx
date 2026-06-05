@@ -2,10 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import Typography from '../../components/core/Typography';
-import ChapterForm from '../../components/features/story/ChapterForm';
+import { ChapterForm, useStory } from 'features/storytelling';
 import DeleteConfirmationDialog from '../../components/shared/DeleteConfirmationDialog';
 import Breadcrumb from '../../components/layout/Breadcrumb';
-import { useStory } from '../../context/StoryContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from 'features/user-management';
 import { BookOpen } from 'lucide-react';

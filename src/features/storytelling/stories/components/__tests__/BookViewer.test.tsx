@@ -1,4 +1,4 @@
-// src/components/features/story/__tests__/BookViewer.test.tsx
+// src/features/storytelling/stories/components/__tests__/BookViewer.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';

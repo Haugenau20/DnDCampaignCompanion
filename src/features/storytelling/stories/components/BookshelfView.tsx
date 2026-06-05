@@ -1,7 +1,7 @@
-// components/features/story/BookshelfView.tsx
+// src/features/storytelling/stories/components/BookshelfView.tsx
 import React, { useMemo } from 'react';
-import Typography from '../../core/Typography';
-import { Chapter } from '../../../types/story';
+import Typography from 'components/core/Typography';
+import { Chapter } from 'features/storytelling/chapters/types';
 import clsx from 'clsx';
 
 // Import book SVG components

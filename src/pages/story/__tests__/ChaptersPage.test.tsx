@@ -31,8 +31,43 @@ let mockStoryContext: StoryContextMock = {
   isLoading: false,
 };
 
-jest.mock("../../../context/StoryContext", () => ({
+jest.mock("features/storytelling", () => ({
   useStory: () => mockStoryContext,
+  BookshelfView: (props: any) => (
+    <div
+      data-testid="bookshelf-view"
+      data-chapter-count={props.chapters?.length}
+      data-current-chapter={props.currentChapterId}
+    />
+  ),
+  TableView: (props: any) => (
+    <div
+      data-testid="table-view"
+      data-chapter-count={props.chapters?.length}
+      data-sort-field={props.sortField}
+      data-sort-direction={props.sortDirection}
+      data-is-admin={String(props.isAdmin)}
+    >
+      <button
+        data-testid="table-sort-order"
+        onClick={() => props.onSort("order")}
+      >
+        Sort by Order
+      </button>
+      <button
+        data-testid="table-sort-title"
+        onClick={() => props.onSort("title")}
+      >
+        Sort by Title
+      </button>
+      <button
+        data-testid="table-edit-chapter"
+        onClick={() => props.onEditChapter?.("chapter-01")}
+      >
+        Edit
+      </button>
+    </div>
+  ),
 }));
 
 let mockUser: { uid: string } | null = { uid: "user-1" };
@@ -80,49 +115,6 @@ jest.mock("../../../components/core/Button", () => ({
     <button data-testid={`button-${String(children).trim().replace(/\s+/g, "-").toLowerCase()}`} onClick={onClick}>
       {children}
     </button>
-  ),
-}));
-
-jest.mock("../../../components/features/story/BookshelfView", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <div
-      data-testid="bookshelf-view"
-      data-chapter-count={props.chapters?.length}
-      data-current-chapter={props.currentChapterId}
-    />
-  ),
-}));
-
-jest.mock("../../../components/features/story/TableView", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <div
-      data-testid="table-view"
-      data-chapter-count={props.chapters?.length}
-      data-sort-field={props.sortField}
-      data-sort-direction={props.sortDirection}
-      data-is-admin={String(props.isAdmin)}
-    >
-      <button
-        data-testid="table-sort-order"
-        onClick={() => props.onSort("order")}
-      >
-        Sort by Order
-      </button>
-      <button
-        data-testid="table-sort-title"
-        onClick={() => props.onSort("title")}
-      >
-        Sort by Title
-      </button>
-      <button
-        data-testid="table-edit-chapter"
-        onClick={() => props.onEditChapter?.("chapter-01")}
-      >
-        Edit
-      </button>
-    </div>
   ),
 }));
 

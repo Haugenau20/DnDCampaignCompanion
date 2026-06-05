@@ -1,9 +1,8 @@
 // pages/story/ChapterCreatePage.tsx
 import React, { useEffect } from 'react';
 import Typography from '../../components/core/Typography';
-import ChapterForm from '../../components/features/story/ChapterForm';
+import { ChapterForm, useStory } from 'features/storytelling';
 import Breadcrumb from '../../components/layout/Breadcrumb';
-import { useStory } from '../../context/StoryContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from 'features/user-management';
 import { BookPlus } from 'lucide-react';

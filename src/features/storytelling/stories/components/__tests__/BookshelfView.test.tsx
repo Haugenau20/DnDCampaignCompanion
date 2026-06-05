@@ -1,9 +1,9 @@
-// src/components/features/story/__tests__/BookshelfView.test.tsx
+// src/features/storytelling/stories/components/__tests__/BookshelfView.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import BookshelfView from '../BookshelfView';
-import { Chapter } from '../../../../types/story';
+import { Chapter } from 'features/storytelling/chapters/types';
 
 // ---------------------------------------------------------------------------
 // Mock book SVG components — pure presentational; we only care about the

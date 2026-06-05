@@ -1,7 +1,7 @@
 // components/features/layouts/common/hooks/useLayoutData.ts
 import { useMemo, useState, useEffect } from 'react';
 import { Activity } from '../../../../../pages/HomePage';
-import { Chapter } from '../../../../../types/story';
+import type { Chapter } from 'features/storytelling';
 import { Quest } from '../../../../../types/quest';
 import { Rumor } from '../../../../../types/rumor';
 import { NPC } from '../../../../../types/npc';

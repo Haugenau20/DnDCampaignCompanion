@@ -29,12 +29,17 @@ let mockStoryContext: StoryContextMock = {
   chapters: [],
 };
 
-jest.mock("../../../context/StoryContext", () => ({
+jest.mock("features/storytelling", () => ({
   useStory: () => ({
     ...mockStoryContext,
     getChapterById: jest.fn(),
     deleteChapter: jest.fn(),
   }),
+  ChapterForm: (props: any) => (
+    <div data-testid="chapter-form">
+      <span data-testid="chapter-form-mode">{props.mode}</span>
+    </div>
+  ),
 }));
 
 jest.mock("@/features/user-management", () => ({
@@ -44,15 +49,6 @@ jest.mock("@/features/user-management", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/features/story/ChapterForm", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <div data-testid="chapter-form">
-      <span data-testid="chapter-form-mode">{props.mode}</span>
-    </div>
-  ),
-}));
-
 jest.mock("../../../components/layout/Breadcrumb", () => ({
   __esModule: true,
   default: (props: any) => (

@@ -1,16 +1,16 @@
-﻿// src/context/__tests__/behavioral/StoryContext.bugs.test.tsx
+﻿// src/features/storytelling/chapters/context/__tests__/StoryContext.bugs.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
-import { StoryProvider, useStory } from '../../StoryContext';
-import { Chapter } from '../../../types/story';
+import { StoryProvider, useStory } from '../StoryContext';
+import { Chapter } from 'features/storytelling/chapters/types';
 
 /**
  * StoryContext Bug Discovery Testing
- * 
+ *
  * Tests that INTENTIONALLY FAIL to document and track real implementation bugs.
  * These tests define the EXPECTED behavior and will pass once bugs are fixed.
- * 
+ *
  * IMPORTANT: These tests are designed to fail until bugs are resolved.
  * Do not modify these tests to make them pass - fix the implementation instead.
  */
@@ -26,16 +26,16 @@ jest.mock('@/features/user-management', () => ({
   useUser: () => mockUseUser(),
 }));
 
-jest.mock('../../../hooks/useChapterData', () => ({
+jest.mock('features/storytelling/chapters/hooks/useChapterData', () => ({
   useChapterData: () => mockUseChapterData(),
 }));
 
-jest.mock('../../../hooks/useFirebaseData', () => ({
+jest.mock('hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 
 // Mock Firebase services
-jest.mock('../../../services/firebase', () => ({
+jest.mock('services/firebase', () => ({
   __esModule: true,
   default: {
     document: {
@@ -46,12 +46,12 @@ jest.mock('../../../services/firebase', () => ({
 }));
 
 // Mock user utilities for proper testing
-jest.mock('../../../utils/user-utils', () => ({
+jest.mock('utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('../../../utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('utils/user-utils');
 
 const StoryTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {
   const storyContext = useStory();
@@ -83,7 +83,7 @@ describe('StoryContext Bug Discovery Tests', () => {
     mockRefreshChapters = jest.fn();
 
     // Get mocked Firebase services
-    mockFirebaseServices = require('../../../services/firebase').default;
+    mockFirebaseServices = require('services/firebase').default;
 
     // Setup authenticated state for bug testing
     mockUseAuth.mockReturnValue({

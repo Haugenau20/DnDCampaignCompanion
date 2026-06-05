@@ -1,7 +1,7 @@
 // Function for exporting chapter content - can be added to a utilities file
 // src/utils/export-utils.ts
 
-import { Chapter } from "../types/story";
+import type { Chapter } from 'features/storytelling';
 
 /**
  * Generates a text file containing all chapter content in order

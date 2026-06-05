@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import StorySection from '../StorySection';
-import { Chapter } from '../../../../../../types/story';
+import type { Chapter } from 'features/storytelling';
 
 // ---------------------------------------------------------------------------
 // Mocks

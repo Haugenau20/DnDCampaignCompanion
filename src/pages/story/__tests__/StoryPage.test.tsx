@@ -50,8 +50,55 @@ let mockStoryContext: StoryContextMock = {
   updateCurrentChapter: mockUpdateCurrentChapter,
 };
 
-jest.mock("../../../context/StoryContext", () => ({
+jest.mock("features/storytelling", () => ({
   useStory: () => mockStoryContext,
+  BookViewer: (props: any) => (
+    <div
+      data-testid="book-viewer"
+      data-title={props.title}
+      data-has-next={String(props.hasNextChapter)}
+      data-has-prev={String(props.hasPreviousChapter)}
+    >
+      <button
+        data-testid="book-viewer-next"
+        onClick={props.onNextChapter}
+      >
+        Next
+      </button>
+      <button
+        data-testid="book-viewer-prev"
+        onClick={props.onPreviousChapter}
+      >
+        Prev
+      </button>
+      <button
+        data-testid="book-viewer-page-change"
+        onClick={() => props.onPageChange(2)}
+      >
+        Page Change
+      </button>
+    </div>
+  ),
+  SlidingChapters: (props: any) => (
+    <div
+      data-testid="sliding-chapters"
+      data-is-open={String(props.isOpen)}
+      data-current-chapter={props.currentChapterId}
+    >
+      <button
+        data-testid="sliding-chapters-close"
+        onClick={props.onClose}
+      >
+        Close
+      </button>
+      <button
+        data-testid="sliding-chapters-select"
+        onClick={() => props.onChapterSelect("chapter-03")}
+      >
+        Select Ch3
+      </button>
+    </div>
+  ),
 }));
 
 let mockUser: { uid: string; displayName: string } | null = {
@@ -119,61 +166,6 @@ jest.mock("../../../components/core/Card", () => {
   );
   return { __esModule: true, default: Card };
 });
-
-jest.mock("../../../components/features/story/BookViewer", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <div
-      data-testid="book-viewer"
-      data-title={props.title}
-      data-has-next={String(props.hasNextChapter)}
-      data-has-prev={String(props.hasPreviousChapter)}
-    >
-      <button
-        data-testid="book-viewer-next"
-        onClick={props.onNextChapter}
-      >
-        Next
-      </button>
-      <button
-        data-testid="book-viewer-prev"
-        onClick={props.onPreviousChapter}
-      >
-        Prev
-      </button>
-      <button
-        data-testid="book-viewer-page-change"
-        onClick={() => props.onPageChange(2)}
-      >
-        Page Change
-      </button>
-    </div>
-  ),
-}));
-
-jest.mock("../../../components/features/story/SlidingChapters", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <div
-      data-testid="sliding-chapters"
-      data-is-open={String(props.isOpen)}
-      data-current-chapter={props.currentChapterId}
-    >
-      <button
-        data-testid="sliding-chapters-close"
-        onClick={props.onClose}
-      >
-        Close
-      </button>
-      <button
-        data-testid="sliding-chapters-select"
-        onClick={() => props.onChapterSelect("chapter-03")}
-      >
-        Select Ch3
-      </button>
-    </div>
-  ),
-}));
 
 jest.mock("lucide-react", () => ({
   Book: () => <span data-testid="book-icon" />,
