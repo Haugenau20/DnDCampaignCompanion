@@ -50,7 +50,7 @@ jest.mock("../context/NPCContext", () => ({
   useNPCs: () => ({}),
 }));
 
-jest.mock("../context/StoryContext", () => ({
+jest.mock("features/storytelling", () => ({
   StoryProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="story-provider">{children}</div>
   ),

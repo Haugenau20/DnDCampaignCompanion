@@ -27,7 +27,7 @@ const mockUseLocationData = jest.fn();
 const mockUseQuests = jest.fn();
 const mockUseRumorData = jest.fn();
 
-jest.mock("../../../hooks/useChapterData", () => ({
+jest.mock("features/storytelling", () => ({
   useChapterData: () => mockUseChapterData(),
 }));
 

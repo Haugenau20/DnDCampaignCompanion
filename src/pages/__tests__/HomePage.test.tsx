@@ -15,7 +15,7 @@ jest.mock("@/features/user-management", () => ({
 let mockUser: { uid: string } | null = { uid: "user-1" };
 let mockActiveGroupId: string | null = "group-1";
 
-jest.mock("../../context/StoryContext", () => ({
+jest.mock("features/storytelling", () => ({
   useStory: () => ({
     chapters: mockChapters,
     isLoading: mockIsLoading,

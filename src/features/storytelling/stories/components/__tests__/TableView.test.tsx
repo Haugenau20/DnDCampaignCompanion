@@ -1,9 +1,9 @@
-// src/components/features/story/__tests__/TableView.test.tsx
+// src/features/storytelling/stories/components/__tests__/TableView.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TableView from '../TableView';
-import { Chapter } from '../../../../types/story';
+import { Chapter } from 'features/storytelling/chapters/types';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers

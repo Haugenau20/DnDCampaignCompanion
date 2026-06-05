@@ -1,12 +1,11 @@
 // pages/story/SagaPage.tsx
 import React from 'react';
-import BookViewer from '../../components/features/story/BookViewer';
+import { BookViewer, useSagaData } from 'features/storytelling';
 import Typography from '../../components/core/Typography';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
 import { Book, Edit, Loader2 } from 'lucide-react';
-import { useSagaData } from '../../hooks/useSagaData';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from 'features/user-management';
 

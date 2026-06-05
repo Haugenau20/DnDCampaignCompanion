@@ -1,13 +1,11 @@
 // pages/story/StoryPage.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import BookViewer from '../../components/features/story/BookViewer';
+import { BookViewer, SlidingChapters, useStory } from 'features/storytelling';
 import Typography from '../../components/core/Typography';
 import Breadcrumb from '../../components/layout/Breadcrumb';
-import SlidingChapters from '../../components/features/story/SlidingChapters';
 import Card from '../../components/core/Card';
 import Button from '../../components/core/Button';
-import { useStory } from '../../context/StoryContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from 'features/user-management';
 import { Book, Menu, Loader2, Edit } from 'lucide-react';

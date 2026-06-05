@@ -1,6 +1,6 @@
-// src/hooks/useSagaData.ts
+// src/features/storytelling/sagas/hooks/useSagaData.ts
 import { useState, useEffect, useCallback } from 'react';
-import { SagaData } from '../types/saga';
+import { SagaData } from '../types';
 import { useFirestore } from 'features/user-management';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 

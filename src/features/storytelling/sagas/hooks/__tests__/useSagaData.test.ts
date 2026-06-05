@@ -1,7 +1,7 @@
-﻿// src/hooks/__tests__/useSagaData.test.ts
+﻿// src/features/storytelling/sagas/hooks/__tests__/useSagaData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useSagaData } from '../useSagaData';
-import { SagaData } from '../../types/saga';
+import { SagaData } from 'features/storytelling/sagas/types';
 
 // ---------------------------------------------------------------------------
 // Mocks

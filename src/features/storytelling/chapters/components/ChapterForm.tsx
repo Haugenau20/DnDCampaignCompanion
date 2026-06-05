@@ -1,13 +1,13 @@
-// components/features/story/ChapterForm.tsx
+// src/features/storytelling/chapters/components/ChapterForm.tsx
 import React, { useState, useEffect } from 'react';
-import { Chapter } from '../../../types/story';
-import Card from '../../core/Card';
-import Button from '../../core/Button';
-import Typography from '../../core/Typography';
-import Input from '../../core/Input';
+import { Chapter } from '../types';
+import Card from 'components/core/Card';
+import Button from 'components/core/Button';
+import Typography from 'components/core/Typography';
+import Input from 'components/core/Input';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
-import { useNavigation } from '../../../context/NavigationContext';
-import { useStory } from '../../../context/StoryContext';
+import { useNavigation } from 'context/NavigationContext';
+import { useStory } from '../context/StoryContext';
 import { useAuth } from 'features/user-management';
 
 interface ChapterFormProps {

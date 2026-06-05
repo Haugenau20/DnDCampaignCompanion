@@ -1,7 +1,7 @@
 import React from 'react';
-import { Chapter } from '../../../types/story';
-import Typography from '../../core/Typography';
-import Button from '../../core/Button';
+import { Chapter } from 'features/storytelling/chapters/types';
+import Typography from 'components/core/Typography';
+import Button from 'components/core/Button';
 import { Book, X } from 'lucide-react';
 import clsx from 'clsx';
 

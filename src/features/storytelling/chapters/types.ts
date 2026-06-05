@@ -1,5 +1,5 @@
-// src/types/story.ts
-import { BaseContent } from './common';
+// src/features/storytelling/chapters/types.ts
+import { BaseContent } from 'types/common';
 
 /**
  * Represents a single chapter in the story

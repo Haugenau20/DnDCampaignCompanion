@@ -1,4 +1,4 @@
-// src/components/features/story/__tests__/LatestChapter.test.tsx
+// src/features/storytelling/stories/components/__tests__/LatestChapter.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -10,11 +10,11 @@ import LatestChapter from '../LatestChapter';
 
 const mockNavigateToPage = jest.fn();
 
-jest.mock('../../../../context/NavigationContext', () => ({
+jest.mock('context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
-const { useNavigation } = require('../../../../context/NavigationContext');
+const { useNavigation } = require('context/NavigationContext');
 
 function setupMocks() {
   (useNavigation as jest.Mock).mockReturnValue({

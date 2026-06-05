@@ -1,14 +1,14 @@
-﻿// src/hooks/__tests__/useChapterData.test.ts
+﻿// src/features/storytelling/chapters/hooks/__tests__/useChapterData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useChapterData } from '../useChapterData';
-import { Chapter } from '../../types/story';
+import { Chapter } from 'features/storytelling/chapters/types';
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 const mockGetData = jest.fn();
 
-jest.mock('../useFirebaseData', () => ({
+jest.mock('hooks/useFirebaseData', () => ({
   useFirebaseData: jest.fn(),
 }));
 
@@ -18,7 +18,7 @@ jest.mock('@/features/user-management', () => ({
   useCampaigns: jest.fn(),
 }));
 
-const { useFirebaseData } = require('../useFirebaseData');
+const { useFirebaseData } = require('hooks/useFirebaseData');
 const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 const makeChapter = (id: string, title: string, order: number): Chapter => ({

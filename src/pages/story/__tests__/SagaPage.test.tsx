@@ -32,8 +32,17 @@ let mockSagaData: SagaDataMock = {
   hasRequiredContext: true,
 };
 
-jest.mock("../../../hooks/useSagaData", () => ({
+jest.mock("features/storytelling", () => ({
   useSagaData: () => mockSagaData,
+  BookViewer: (props: any) => (
+    <div
+      data-testid="book-viewer"
+      data-title={props.title}
+      data-content={props.content}
+      data-has-next={String(props.hasNextChapter)}
+      data-has-prev={String(props.hasPreviousChapter)}
+    />
+  ),
 }));
 
 // ---------------------------------------------------------------------------
@@ -90,19 +99,6 @@ jest.mock("../../../components/core/Card", () => {
   );
   return { __esModule: true, default: Card };
 });
-
-jest.mock("../../../components/features/story/BookViewer", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <div
-      data-testid="book-viewer"
-      data-title={props.title}
-      data-content={props.content}
-      data-has-next={String(props.hasNextChapter)}
-      data-has-prev={String(props.hasPreviousChapter)}
-    />
-  ),
-}));
 
 jest.mock("lucide-react", () => ({
   Book: () => <span data-testid="book-icon" />,

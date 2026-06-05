@@ -4,7 +4,7 @@ import { Routes, Route } from 'react-router-dom';
 import { NavigationProvider } from './context/NavigationContext';
 import { SearchProvider } from './context/SearchContext';
 import { NPCProvider } from './context/NPCContext';
-import { StoryProvider } from './context/StoryContext';
+import { StoryProvider } from 'features/storytelling';
 import { LocationProvider } from './context/LocationContext';
 import { FirebaseProvider } from 'features/user-management/auth/context/FirebaseContext';
 import { RumorProvider } from './context/RumorContext';

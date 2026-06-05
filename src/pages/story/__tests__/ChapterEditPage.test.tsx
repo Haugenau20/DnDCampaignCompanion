@@ -47,20 +47,9 @@ let mockStoryContext: StoryContextMock = {
   getChapterById: mockGetChapterById,
 };
 
-jest.mock("../../../context/StoryContext", () => ({
+jest.mock("features/storytelling", () => ({
   useStory: () => mockStoryContext,
-}));
-
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: { uid: "user-1" } }),
-}));
-
-// ---------------------------------------------------------------------------
-// Child component mocks
-// ---------------------------------------------------------------------------
-jest.mock("../../../components/features/story/ChapterForm", () => ({
-  __esModule: true,
-  default: (props: any) => (
+  ChapterForm: (props: any) => (
     <div data-testid="chapter-form">
       <span data-testid="chapter-form-mode">{props.mode}</span>
       <span data-testid="chapter-form-chapter-id">{props.chapter?.id}</span>
@@ -77,6 +66,13 @@ jest.mock("../../../components/features/story/ChapterForm", () => ({
   ),
 }));
 
+jest.mock("@/features/user-management", () => ({
+  useAuth: () => ({ user: { uid: "user-1" } }),
+}));
+
+// ---------------------------------------------------------------------------
+// Child component mocks
+// ---------------------------------------------------------------------------
 jest.mock("../../../components/shared/DeleteConfirmationDialog", () => ({
   __esModule: true,
   default: (props: any) => (

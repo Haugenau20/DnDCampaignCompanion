@@ -1,10 +1,10 @@
-﻿// src/components/features/story/__tests__/ChapterForm.test.tsx
+﻿// src/features/storytelling/chapters/components/__tests__/ChapterForm.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChapterForm from '../ChapterForm';
-import { Chapter } from '../../../../types/story';
+import { Chapter } from 'features/storytelling/chapters/types';
 
 // ---------------------------------------------------------------------------
 // Mock contexts
@@ -14,11 +14,11 @@ const mockNavigateToPage = jest.fn();
 const mockCreateChapter = jest.fn();
 const mockUpdateChapter = jest.fn();
 
-jest.mock('../../../../context/NavigationContext', () => ({
+jest.mock('context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
-jest.mock('../../../../context/StoryContext', () => ({
+jest.mock('features/storytelling/chapters/context/StoryContext', () => ({
   useStory: jest.fn(),
 }));
 
@@ -26,8 +26,8 @@ jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
 }));
 
-const { useNavigation } = require('../../../../context/NavigationContext');
-const { useStory } = require('../../../../context/StoryContext');
+const { useNavigation } = require('context/NavigationContext');
+const { useStory } = require('features/storytelling/chapters/context/StoryContext');
 const { useAuth } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------

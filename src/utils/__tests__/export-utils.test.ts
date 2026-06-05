@@ -1,7 +1,7 @@
 // src/utils/__tests__/export-utils.test.ts
 
 import { exportChaptersAsText } from '../export-utils';
-import { Chapter } from '../../types/story';
+import type { Chapter } from 'features/storytelling';
 
 /**
  * Read a Blob's text content. jsdom's Blob does not implement .text(),

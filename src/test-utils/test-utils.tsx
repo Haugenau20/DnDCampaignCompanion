@@ -8,7 +8,7 @@ import { NavigationProvider } from '../context/NavigationContext';
 import { SearchProvider } from '../context/SearchContext';
 import { NPCProvider } from '../context/NPCContext';
 import { LocationProvider } from '../context/LocationContext';
-import { StoryProvider } from '../context/StoryContext';
+import { StoryProvider } from '@/features/storytelling';
 
 const AllTheProviders: FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
