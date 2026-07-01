@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { NPC } from '../../../types/npc';
-import Typography from '../../core/Typography';
-import Input from '../../core/Input';
-import Button from '../../core/Button';
-import Card from '../../core/Card';
-import Dialog from '../../core/Dialog';
+import { NPC } from '../types';
+import Typography from '../../../../components/core/Typography';
+import Input from '../../../../components/core/Input';
+import Button from '../../../../components/core/Button';
+import Card from '../../../../components/core/Card';
+import Dialog from '../../../../components/core/Dialog';
 import { Save, X, Users, Scroll } from 'lucide-react';
-import { useQuests } from '../../../context/QuestContext';
-import { useNPCs } from '../../../context/NPCContext';
+import { useQuests } from '../../../../context/QuestContext';
+import { useNPCs } from '../context/NPCContext';
 import { useAuth, useUser } from 'features/user-management';
 import clsx from 'clsx';
-import { getUserName, getActiveCharacterName } from '../../../utils/user-utils';
+import { getUserName, getActiveCharacterName } from '../../../../utils/user-utils';
 
 interface NPCEditFormProps {
   /** The NPC being edited */

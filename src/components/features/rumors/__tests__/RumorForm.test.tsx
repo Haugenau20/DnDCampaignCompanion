@@ -30,7 +30,7 @@ const mockMarkEntityAsConverted = jest.fn();
 jest.mock('../../../../context/RumorContext', () => ({
   useRumors: jest.fn(),
 }));
-jest.mock('../../../../context/NPCContext', () => ({
+jest.mock('features/campaign-entities', () => ({
   useNPCs: jest.fn(),
 }));
 jest.mock('../../../../context/LocationContext', () => ({
@@ -45,7 +45,7 @@ jest.mock('@/features/user-management', () => ({
 }));
 
 const { useRumors } = require('../../../../context/RumorContext');
-const { useNPCs } = require('../../../../context/NPCContext');
+const { useNPCs } = require('features/campaign-entities');
 const { useLocations } = require('../../../../context/LocationContext');
 const { useNotes } = require('../../../../context/NoteContext');
 const { useAuth, useUser } = require('@/features/user-management');

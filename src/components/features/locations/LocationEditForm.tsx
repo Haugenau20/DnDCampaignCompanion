@@ -4,7 +4,7 @@ import { Location } from '../../../types/location';
 import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import Card from '../../core/Card';
-import { useNPCs } from '../../../context/NPCContext';
+import { useNPCs } from 'features/campaign-entities';
 import {
   BasicInfoSection,
   FeaturesSection,

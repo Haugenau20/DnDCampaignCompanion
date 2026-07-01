@@ -1,6 +1,6 @@
 // src/test-utils/test-data-helpers.ts
 
-import { NPC } from '../types/npc';
+import { NPC } from 'features/campaign-entities';
 import { Quest, QuestObjective, QuestLocation, QuestNPC, QuestStatus } from '../types/quest';
 import { Location } from '../types/location';
 import { Rumor } from '../types/rumor';

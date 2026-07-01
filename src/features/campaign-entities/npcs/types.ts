@@ -1,5 +1,5 @@
-// src/types/npc.ts
-import { BaseContent } from './common';
+// src/features/campaign-entities/npcs/types.ts
+import { BaseContent } from '../../../types/common';
 
 export type NPCStatus = 'alive' | 'deceased' | 'missing' | 'unknown';
 export type NPCRelationship = 'friendly' | 'neutral' | 'hostile' | 'unknown';

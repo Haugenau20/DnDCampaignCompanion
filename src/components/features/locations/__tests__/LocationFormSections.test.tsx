@@ -11,7 +11,7 @@ import {
   RelatedNPCsSection,
 } from '../LocationFormSections';
 import { Location } from '../../../../types/location';
-import { NPC } from '../../../../types/npc';
+import { NPC } from 'features/campaign-entities';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Quest } from '../../../types/quest';
-import { useNPCs } from '../../../context/NPCContext';
+import { useNPCs } from 'features/campaign-entities';
 import { useAuth } from 'features/user-management';
 import Typography from '../../core/Typography';
 import Card from '../../core/Card';

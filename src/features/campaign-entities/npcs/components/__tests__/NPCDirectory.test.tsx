@@ -1,23 +1,23 @@
-﻿// src/components/features/npcs/__tests__/NPCDirectory.test.tsx
+﻿// src/features/campaign-entities/npcs/components/__tests__/NPCDirectory.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import NPCDirectory from '../NPCDirectory';
-import { NPC, NPCStatus, NPCRelationship } from '../../../../types/npc';
+import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs/types';
 
 // ---------------------------------------------------------------------------
 // Mock all context dependencies used by NPCDirectory and its child NPCCard
 // ---------------------------------------------------------------------------
 
-jest.mock('../../../../context/NavigationContext', () => ({
+jest.mock('context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
-jest.mock('../../../../context/QuestContext', () => ({
+jest.mock('context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
-jest.mock('../../../../context/NPCContext', () => ({
+jest.mock('features/campaign-entities/npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
 }));
 
@@ -27,11 +27,11 @@ jest.mock('@/features/user-management', () => ({
 }));
 
 // AttributionInfo dependencies
-jest.mock('../../../../utils/attribution-utils', () => ({
+jest.mock('utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
-jest.mock('../../../../services/firebase', () => ({ default: {} }));
+jest.mock('services/firebase', () => ({ default: {} }));
 
 // ---------------------------------------------------------------------------
 // Hook setup helpers
@@ -44,9 +44,9 @@ const mockCreatePath = jest.fn(
 );
 const mockGetCurrentQueryParams = jest.fn(() => ({}));
 
-const { useNavigation } = require('../../../../context/NavigationContext');
-const { useQuests } = require('../../../../context/QuestContext');
-const { useNPCs } = require('../../../../context/NPCContext');
+const { useNavigation } = require('context/NavigationContext');
+const { useQuests } = require('context/QuestContext');
+const { useNPCs } = require('features/campaign-entities/npcs/context/NPCContext');
 const { useAuth } = require('@/features/user-management');
 
 function setupMocks(

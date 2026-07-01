@@ -21,7 +21,7 @@ jest.mock('../../../../context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
 
-jest.mock('../../../../context/NPCContext', () => ({
+jest.mock('features/campaign-entities', () => ({
   useNPCs: jest.fn(),
 }));
 
@@ -42,7 +42,7 @@ jest.mock('@/features/user-management', () => ({
 
 const { useLocations } = require('../../../../context/LocationContext');
 const { useNotes } = require('../../../../context/NoteContext');
-const { useNPCs } = require('../../../../context/NPCContext');
+const { useNPCs } = require('features/campaign-entities');
 const { useQuests } = require('../../../../context/QuestContext');
 const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 

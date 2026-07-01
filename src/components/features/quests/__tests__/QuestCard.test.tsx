@@ -10,7 +10,7 @@ import { Quest, QuestStatus, QuestObjective } from '../../../../types/quest';
 // ---------------------------------------------------------------------------
 
 const mockGetNPCById = jest.fn();
-jest.mock('../../../../context/NPCContext', () => ({
+jest.mock('features/campaign-entities', () => ({
   useNPCs: jest.fn(),
 }));
 
@@ -48,7 +48,7 @@ jest.mock('../../../../services/firebase', () => ({ default: {} }));
 // Hook setup helpers
 // ---------------------------------------------------------------------------
 
-const { useNPCs } = require('../../../../context/NPCContext');
+const { useNPCs } = require('features/campaign-entities');
 const { useLocations } = require('../../../../context/LocationContext');
 const { useNavigation } = require('../../../../context/NavigationContext');
 const { useQuests } = require('../../../../context/QuestContext');

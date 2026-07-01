@@ -1,9 +1,9 @@
-﻿// src/context/__tests__/behavioral/NPCContext.behavioral.test.tsx
+﻿// src/features/campaign-entities/npcs/context/__tests__/NPCContext.behavioral.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
-import { NPCProvider, useNPCs } from '../../NPCContext';
-import { NPC, NPCStatus, NPCRelationship } from '../../../types/npc';
+import { NPCProvider, useNPCs } from 'features/campaign-entities/npcs/context/NPCContext';
+import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs/types';
 
 /**
  * NPC Context Behavioral Testing
@@ -35,21 +35,21 @@ jest.mock('@/features/user-management', () => ({
 }));
 
 // Mock the data hooks
-jest.mock('../../../hooks/useNPCData', () => ({
+jest.mock('features/campaign-entities/npcs/hooks/useNPCData', () => ({
   useNPCData: () => mockUseNPCData(),
 }));
 
-jest.mock('../../../hooks/useFirebaseData', () => ({
+jest.mock('hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 
 // Mock user utilities for proper testing
-jest.mock('../../../utils/user-utils', () => ({
+jest.mock('utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('../../../utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('utils/user-utils');
 
 // Test component that uses the NPC context
 const NPCTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {

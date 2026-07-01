@@ -7,7 +7,7 @@ import { ThemeProvider } from '../themes/ThemeContext';
 import { FirebaseProvider } from '@/features/user-management/auth/context/FirebaseContext';
 import { NavigationProvider } from '../context/NavigationContext';
 import { SearchProvider } from '../context/SearchContext';
-import { NPCProvider } from '../context/NPCContext';
+import { NPCProvider } from 'features/campaign-entities';
 import { LocationProvider } from '../context/LocationContext';
 import { StoryProvider } from '@/features/storytelling';
 import { QuestProvider } from '../context/QuestContext';

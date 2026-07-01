@@ -5,7 +5,7 @@ import { useQuests } from '../../../context/QuestContext'; // Import useQuests f
 import Typography from '../../core/Typography';
 import Button from '../../core/Button';
 import Card from '../../core/Card';
-import { useNPCs } from '../../../context/NPCContext';
+import { useNPCs } from 'features/campaign-entities';
 import {
   BasicInfoSection,
   ObjectivesSection,

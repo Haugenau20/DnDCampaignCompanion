@@ -1,7 +1,7 @@
 // components/features/layouts/journal/sections/CharacterGallery.tsx
 import React from 'react';
 import { useNavigation } from '../../../../../context/NavigationContext';
-import { NPC } from '../../../../../types/npc';
+import { NPC } from 'features/campaign-entities';
 import { User, Users } from 'lucide-react';
 
 interface CharacterGalleryProps {

@@ -1,9 +1,9 @@
-﻿// src/context/__tests__/behavioral/NPCContext.notes.test.tsx
+﻿// src/features/campaign-entities/npcs/context/__tests__/NPCContext.notes.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
-import { NPCProvider, useNPCs } from '../../NPCContext';
-import { NPC, NPCNote } from '../../../types/npc';
+import { NPCProvider, useNPCs } from 'features/campaign-entities/npcs/context/NPCContext';
+import { NPC, NPCNote } from 'features/campaign-entities/npcs/types';
 
 /**
  * NPC Context Note Management Behavioral Testing
@@ -27,11 +27,11 @@ jest.mock('@/features/user-management', () => ({
   useCampaigns: () => mockUseCampaigns(),
 }));
 
-jest.mock('../../../hooks/useNPCData', () => ({
+jest.mock('features/campaign-entities/npcs/hooks/useNPCData', () => ({
   useNPCData: () => mockUseNPCData(),
 }));
 
-jest.mock('../../../hooks/useFirebaseData', () => ({
+jest.mock('hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 

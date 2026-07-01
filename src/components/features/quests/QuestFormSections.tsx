@@ -1,5 +1,5 @@
 // src/components/features/quests/QuestFormSections.tsx
-import { NPC } from '../../../types/npc';
+import { NPC } from 'features/campaign-entities';
 import React from 'react';
 import { Quest, QuestStatus } from '../../../types/quest';
 import Typography from '../../core/Typography';

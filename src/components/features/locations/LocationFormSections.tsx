@@ -1,7 +1,7 @@
 // src/components/features/locations/LocationFormSections.tsx
 import React, { useState } from 'react';
 import { Location, LocationType } from '../../../types/location';
-import { NPC } from '../../../types/npc';
+import { NPC } from 'features/campaign-entities';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';
 import Button from '../../core/Button';

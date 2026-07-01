@@ -8,7 +8,7 @@ import Input from '../../core/Input';
 import { useAuth } from 'features/user-management';
 import { useRumors } from '../../../context/RumorContext';
 import { useNavigation } from '../../../hooks/useNavigation';
-import { useNPCs } from '../../../context/NPCContext';
+import { useNPCs } from 'features/campaign-entities';
 import { useLocations } from '../../../context/LocationContext';
 import AttributionInfo from '../../shared/AttributionInfo';
 import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';

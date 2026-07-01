@@ -16,7 +16,7 @@ jest.mock('../../../../context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
-jest.mock('../../../../context/NPCContext', () => ({
+jest.mock('features/campaign-entities', () => ({
   useNPCs: jest.fn(),
 }));
 
@@ -29,7 +29,7 @@ jest.mock('../../../../context/LocationContext', () => ({
 // ---------------------------------------------------------------------------
 
 const { useQuests } = require('../../../../context/QuestContext');
-const { useNPCs } = require('../../../../context/NPCContext');
+const { useNPCs } = require('features/campaign-entities');
 
 function setupMocks({
   updateQuest = mockUpdateQuest,

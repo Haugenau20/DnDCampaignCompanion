@@ -4,11 +4,11 @@ import { SearchResult, SearchResultType, SearchDocument } from '../types/search'
 import { SearchService } from '../services/search/SearchService';
 import { useChapterData } from 'features/storytelling';
 import type { Chapter } from 'features/storytelling';
-import { useNPCData } from '../hooks/useNPCData';
+import { useNPCData } from 'features/campaign-entities';
 import { useLocationData } from '../hooks/useLocationData';
 import { useQuests } from '../context/QuestContext';
 import { Quest } from '../types/quest';
-import { NPC } from '../types/npc';
+import { NPC } from 'features/campaign-entities';
 import { Location } from '../types/location';
 import { Rumor } from '../types/rumor';
 import { useRumorData } from '../hooks/useRumorData';

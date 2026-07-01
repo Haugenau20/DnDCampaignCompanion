@@ -1,17 +1,17 @@
 import React, { useState, useMemo } from 'react';
-import { NPC, NPCStatus, NPCRelationship } from '../../../types/npc';
+import { NPC, NPCStatus, NPCRelationship } from '../types';
 import { AlertCircle, Save, X, Users, Scroll } from 'lucide-react';
-import Input from '../../core/Input';
-import Button from '../../core/Button';
-import Typography from '../../core/Typography';
-import Card from '../../core/Card';
-import Dialog from '../../core/Dialog';
-import { useQuests } from '../../../context/QuestContext';
-import { useNPCs } from '../../../context/NPCContext';
-import { useNotes } from '../../../context/NoteContext';
+import Input from '../../../../components/core/Input';
+import Button from '../../../../components/core/Button';
+import Typography from '../../../../components/core/Typography';
+import Card from '../../../../components/core/Card';
+import Dialog from '../../../../components/core/Dialog';
+import { useQuests } from '../../../../context/QuestContext';
+import { useNPCs } from '../context/NPCContext';
+import { useNotes } from '../../../../context/NoteContext';
 import { useAuth, useUser } from 'features/user-management';
 import clsx from 'clsx';
-import { getUserName, getActiveCharacterName } from '../../../utils/user-utils';
+import { getUserName, getActiveCharacterName } from '../../../../utils/user-utils';
 
 interface NPCFormProps {
   /** Initial data for the form (e.g., from a converted entity) */

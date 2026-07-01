@@ -31,7 +31,7 @@ jest.mock("features/storytelling", () => ({
   useChapterData: () => mockUseChapterData(),
 }));
 
-jest.mock("../../../hooks/useNPCData", () => ({
+jest.mock("features/campaign-entities", () => ({
   useNPCData: () => mockUseNPCData(),
 }));
 

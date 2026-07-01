@@ -13,7 +13,7 @@ import {
   RelatedNPCsSection,
 } from '../QuestFormSections';
 import { Quest, QuestObjective } from '../../../../types/quest';
-import { NPC } from '../../../../types/npc';
+import { NPC } from 'features/campaign-entities';
 
 // ---------------------------------------------------------------------------
 // Mock LocationContext (used by BasicInfoSection via LocationCombobox)

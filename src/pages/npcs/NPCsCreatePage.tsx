@@ -3,9 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
-import NPCForm from '../../components/features/npcs/NPCForm';
+import { NPCForm, useNPCs } from 'features/campaign-entities';
 import Breadcrumb from '../../components/layout/Breadcrumb';
-import { useNPCs } from '../../context/NPCContext';
 import { ArrowLeft } from 'lucide-react';
 
 const NPCsCreatePage: React.FC = () => {

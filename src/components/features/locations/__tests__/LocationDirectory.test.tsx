@@ -19,7 +19,7 @@ jest.mock('../../../../context/NavigationContext', () => ({
 }));
 
 // LocationCard has many deps — mock them all
-jest.mock('../../../../context/NPCContext', () => ({
+jest.mock('features/campaign-entities', () => ({
   useNPCs: jest.fn(() => ({ getNPCById: jest.fn(() => undefined) })),
 }));
 

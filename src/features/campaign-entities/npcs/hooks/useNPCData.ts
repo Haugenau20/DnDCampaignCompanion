@@ -1,7 +1,7 @@
-// src/hooks/useNPCData.ts
+// src/features/campaign-entities/npcs/hooks/useNPCData.ts
 import { useState, useEffect, useCallback } from 'react';
-import { NPC } from '../types/npc';
-import { useFirebaseData } from './useFirebaseData';
+import { NPC } from '../types';
+import { useFirebaseData } from '../../../../hooks/useFirebaseData';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 
 /**

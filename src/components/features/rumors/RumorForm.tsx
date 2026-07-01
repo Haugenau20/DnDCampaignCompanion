@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Rumor, RumorStatus, SourceType } from '../../../types/rumor';
 import { useRumors } from '../../../context/RumorContext';
-import { useNPCs } from '../../../context/NPCContext';
+import { useNPCs } from 'features/campaign-entities';
 import { useLocations } from '../../../context/LocationContext';
 import { useNotes } from '../../../context/NoteContext';
 import Typography from '../../core/Typography';

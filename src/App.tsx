@@ -3,7 +3,7 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { NavigationProvider } from './context/NavigationContext';
 import { SearchProvider } from './context/SearchContext';
-import { NPCProvider } from './context/NPCContext';
+import { NPCProvider } from 'features/campaign-entities';
 import { StoryProvider } from 'features/storytelling';
 import { LocationProvider } from './context/LocationContext';
 import { FirebaseProvider } from 'features/user-management/auth/context/FirebaseContext';

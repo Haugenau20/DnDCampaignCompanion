@@ -1,16 +1,16 @@
-﻿// src/components/features/npcs/__tests__/NPCCard.test.tsx
+﻿// src/features/campaign-entities/npcs/components/__tests__/NPCCard.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import NPCCard from '../NPCCard';
-import { NPC, NPCStatus, NPCRelationship } from '../../../../types/npc';
+import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs/types';
 
 // ---------------------------------------------------------------------------
 // Mock external context dependencies
 // ---------------------------------------------------------------------------
 
 const mockGetQuestById = jest.fn();
-jest.mock('../../../../context/QuestContext', () => ({
+jest.mock('context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
@@ -18,13 +18,13 @@ const mockNavigateToPage = jest.fn();
 const mockCreatePath = jest.fn((path: string, _p: unknown, query?: Record<string, string>) =>
   query ? `${path}?${new URLSearchParams(query).toString()}` : path
 );
-jest.mock('../../../../context/NavigationContext', () => ({
+jest.mock('context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
 const mockUpdateNPCNote = jest.fn();
 const mockDeleteNPC = jest.fn();
-jest.mock('../../../../context/NPCContext', () => ({
+jest.mock('features/campaign-entities/npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
 }));
 
@@ -35,19 +35,19 @@ jest.mock('@/features/user-management', () => ({
 }));
 
 // AttributionInfo has its own firebase dependency — mock it at the module level
-jest.mock('../../../../utils/attribution-utils', () => ({
+jest.mock('utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
-jest.mock('../../../../services/firebase', () => ({ default: {} }));
+jest.mock('services/firebase', () => ({ default: {} }));
 
 // ---------------------------------------------------------------------------
 // Hook setup helpers
 // ---------------------------------------------------------------------------
 
-const { useQuests } = require('../../../../context/QuestContext');
-const { useNavigation } = require('../../../../context/NavigationContext');
-const { useNPCs } = require('../../../../context/NPCContext');
+const { useQuests } = require('context/QuestContext');
+const { useNavigation } = require('context/NavigationContext');
+const { useNPCs } = require('features/campaign-entities/npcs/context/NPCContext');
 const { useAuth } = require('@/features/user-management');
 
 function setupMocks({

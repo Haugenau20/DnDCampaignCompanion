@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CharacterGallery from '../CharacterGallery';
-import { NPC } from '../../../../../../types/npc';
+import { NPC } from 'features/campaign-entities';
 
 // ---------------------------------------------------------------------------
 // Mocks

@@ -43,7 +43,7 @@ jest.mock("../context/SearchContext", () => ({
   useSearch: () => ({}),
 }));
 
-jest.mock("../context/NPCContext", () => ({
+jest.mock("features/campaign-entities", () => ({
   NPCProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="npc-provider">{children}</div>
   ),

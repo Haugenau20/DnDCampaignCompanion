@@ -4,7 +4,7 @@ import { useLayoutData } from '../useLayoutData';
 import type { Chapter } from 'features/storytelling';
 import { Quest } from '../../../../../../types/quest';
 import { Rumor } from '../../../../../../types/rumor';
-import { NPC } from '../../../../../../types/npc';
+import { NPC } from 'features/campaign-entities';
 import { Location } from '../../../../../../types/location';
 import { Activity } from '../../../../../../pages/HomePage';
 

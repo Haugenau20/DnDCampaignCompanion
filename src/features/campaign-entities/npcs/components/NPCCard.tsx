@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { NPC, NPCNote } from '../../../types/npc';
-import Typography from '../../core/Typography';
-import Card from '../../core/Card';
-import Button from '../../core/Button';
-import Input from '../../core/Input';
-import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
-import { useQuests } from '../../../context/QuestContext';
+import { NPC, NPCNote } from '../types';
+import Typography from '../../../../components/core/Typography';
+import Card from '../../../../components/core/Card';
+import Button from '../../../../components/core/Button';
+import Input from '../../../../components/core/Input';
+import DeleteConfirmationDialog from '../../../../components/shared/DeleteConfirmationDialog';
+import { useQuests } from '../../../../context/QuestContext';
 import { useAuth } from 'features/user-management';
-import { useNavigation } from '../../../context/NavigationContext';
-import { useNPCs } from '../../../context/NPCContext';
-import AttributionInfo from '../../shared/AttributionInfo';
+import { useNavigation } from '../../../../context/NavigationContext';
+import { useNPCs } from '../context/NPCContext';
+import AttributionInfo from '../../../../components/shared/AttributionInfo';
 import clsx from 'clsx';
 import { 
   ChevronDown, 

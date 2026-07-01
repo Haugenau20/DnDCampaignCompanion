@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import Typography from '../../core/Typography';
-import Card from '../../core/Card';
-import Button from '../../core/Button';
+import Typography from '../../../../components/core/Typography';
+import Card from '../../../../components/core/Card';
+import Button from '../../../../components/core/Button';
 import {
   Shield,
   Skull,

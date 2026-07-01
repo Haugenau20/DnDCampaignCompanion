@@ -2,7 +2,7 @@
 
 import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from '../userGenerator';
-import { NPC } from '../../../../types/npc';
+import { NPC } from 'features/campaign-entities';
 
 // NPC types
 type NPCStatus = 'alive' | 'deceased' | 'missing' | 'unknown';

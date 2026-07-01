@@ -36,7 +36,7 @@ jest.mock("../../context/RumorContext", () => ({
   }),
 }));
 
-jest.mock("../../context/NPCContext", () => ({
+jest.mock("features/campaign-entities", () => ({
   useNPCs: () => ({
     npcs: mockNpcs,
     isLoading: mockIsLoading,

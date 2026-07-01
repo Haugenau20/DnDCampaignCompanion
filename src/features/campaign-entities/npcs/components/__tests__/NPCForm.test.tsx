@@ -1,11 +1,11 @@
-﻿// src/components/features/npcs/__tests__/NPCForm.test.tsx
+﻿// src/features/campaign-entities/npcs/components/__tests__/NPCForm.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import NPCForm from '../NPCForm';
-import { NPC, NPCStatus, NPCRelationship } from '../../../../types/npc';
-import { Quest } from '../../../../types/quest';
+import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs/types';
+import { Quest } from 'types/quest';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -14,15 +14,15 @@ import { Quest } from '../../../../types/quest';
 const mockAddNPC = jest.fn();
 const mockMarkEntityAsConverted = jest.fn();
 
-jest.mock('../../../../context/NPCContext', () => ({
+jest.mock('features/campaign-entities/npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
 }));
 
-jest.mock('../../../../context/NoteContext', () => ({
+jest.mock('context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
 
-jest.mock('../../../../context/QuestContext', () => ({
+jest.mock('context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
@@ -31,7 +31,7 @@ jest.mock('@/features/user-management', () => ({
   useUser: jest.fn(),
 }));
 
-jest.mock('../../../../utils/user-utils', () => ({
+jest.mock('utils/user-utils', () => ({
   getUserName: jest.fn(() => 'TestUser'),
   getActiveCharacterName: jest.fn(() => null),
 }));
@@ -40,9 +40,9 @@ jest.mock('../../../../utils/user-utils', () => ({
 // Hook setup helpers
 // ---------------------------------------------------------------------------
 
-const { useNPCs } = require('../../../../context/NPCContext');
-const { useNotes } = require('../../../../context/NoteContext');
-const { useQuests } = require('../../../../context/QuestContext');
+const { useNPCs } = require('features/campaign-entities/npcs/context/NPCContext');
+const { useNotes } = require('context/NoteContext');
+const { useQuests } = require('context/QuestContext');
 const { useAuth, useUser } = require('@/features/user-management');
 
 function setupMocks({
