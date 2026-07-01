@@ -1,7 +1,7 @@
 // src/components/features/rumors/ConvertToQuestDialog.tsx
 import React, { useState, useEffect } from 'react';
 import { Rumor } from '../../../types/rumor';
-import { Quest, QuestObjective } from '../../../types/quest';
+import type { Quest, QuestObjective } from 'features/campaign-entities';
 import Dialog from '../../core/Dialog';
 import Typography from '../../core/Typography';
 import Input from '../../core/Input';

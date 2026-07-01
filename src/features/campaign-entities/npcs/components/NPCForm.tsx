@@ -6,7 +6,7 @@ import Button from '../../../../components/core/Button';
 import Typography from '../../../../components/core/Typography';
 import Card from '../../../../components/core/Card';
 import Dialog from '../../../../components/core/Dialog';
-import { useQuests } from '../../../../context/QuestContext';
+import { useQuests } from '../../quests/context/QuestContext';
 import { useNPCs } from '../context/NPCContext';
 import { useNotes } from '../../../../context/NoteContext';
 import { useAuth, useUser } from 'features/user-management';

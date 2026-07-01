@@ -21,9 +21,6 @@ jest.mock('../../../../context/NavigationContext', () => ({
 // LocationCard has many deps — mock them all
 jest.mock('features/campaign-entities', () => ({
   useNPCs: jest.fn(() => ({ getNPCById: jest.fn(() => undefined) })),
-}));
-
-jest.mock('../../../../context/QuestContext', () => ({
   useQuests: jest.fn(() => ({ getQuestById: jest.fn(() => undefined) })),
 }));
 

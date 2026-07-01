@@ -5,7 +5,7 @@ import Card from '../../../../components/core/Card';
 import Button from '../../../../components/core/Button';
 import Input from '../../../../components/core/Input';
 import DeleteConfirmationDialog from '../../../../components/shared/DeleteConfirmationDialog';
-import { useQuests } from '../../../../context/QuestContext';
+import { useQuests } from '../../quests/context/QuestContext';
 import { useAuth } from 'features/user-management';
 import { useNavigation } from '../../../../context/NavigationContext';
 import { useNPCs } from '../context/NPCContext';

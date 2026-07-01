@@ -1,10 +1,10 @@
-// src/context/QuestContext.tsx
+// src/features/campaign-entities/quests/context/QuestContext.tsx
 import React, { createContext, useContext, useCallback } from 'react';
-import { Quest, QuestStatus } from '../types/quest';
+import { Quest, QuestStatus } from '../types';
 import { useQuestData } from '../hooks/useQuestData';
-import { useFirebaseData } from '../hooks/useFirebaseData';
+import { useFirebaseData } from '../../../../hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
-import { getUserName, getActiveCharacterName } from '../utils/user-utils';
+import { getUserName, getActiveCharacterName } from '../../../../utils/user-utils';
 
 // Context interface
 interface QuestContextValue {

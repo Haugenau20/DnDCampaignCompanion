@@ -1,14 +1,14 @@
 ﻿// src/hooks/__tests__/useQuestData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useQuestData } from '../useQuestData';
-import { Quest, QuestStatus } from '../../types/quest';
+import { Quest, QuestStatus } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 const mockGetData = jest.fn();
 
-jest.mock('../useFirebaseData', () => ({
+jest.mock('../../../../../hooks/useFirebaseData', () => ({
   useFirebaseData: jest.fn(),
 }));
 
@@ -18,7 +18,7 @@ jest.mock('@/features/user-management', () => ({
   useCampaigns: jest.fn(),
 }));
 
-const { useFirebaseData } = require('../useFirebaseData');
+const { useFirebaseData } = require('../../../../../hooks/useFirebaseData');
 const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 const makeQuest = (id: string, title: string, status: QuestStatus = 'active'): Quest => ({

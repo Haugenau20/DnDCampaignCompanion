@@ -10,7 +10,7 @@ import { SearchProvider } from '../context/SearchContext';
 import { NPCProvider } from 'features/campaign-entities';
 import { LocationProvider } from '../context/LocationContext';
 import { StoryProvider } from '@/features/storytelling';
-import { QuestProvider } from '../context/QuestContext';
+import { QuestProvider } from 'features/campaign-entities';
 import { RumorProvider } from '../context/RumorContext';
 import { NoteProvider } from '../context/NoteContext';
 import { createMockFirebaseContext } from './firebase-test-helpers';

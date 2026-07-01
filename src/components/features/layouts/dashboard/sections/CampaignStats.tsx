@@ -7,7 +7,7 @@ import { Users, Map, Scroll, BookOpen, MessageSquare, List } from 'lucide-react'
 import clsx from 'clsx';
 import { NPC } from 'features/campaign-entities';
 import { Location } from '../../../../../types/location';
-import { Quest } from '../../../../../types/quest';
+import type { Quest } from 'features/campaign-entities';
 import type { Chapter } from 'features/storytelling';
 import { Rumor } from '../../../../../types/rumor';
 

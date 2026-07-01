@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Activity } from '../../../../../pages/HomePage';
 import type { Chapter } from 'features/storytelling';
-import { Quest } from '../../../../../types/quest';
+import type { Quest } from 'features/campaign-entities';
 import { Rumor } from '../../../../../types/rumor';
 import { NPC } from 'features/campaign-entities';
 import { Location } from '../../../../../types/location';

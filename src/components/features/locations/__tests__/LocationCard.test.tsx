@@ -10,12 +10,9 @@ import { Location, LocationType, LocationStatus } from '../../../../types/locati
 // ---------------------------------------------------------------------------
 
 const mockGetNPCById = jest.fn();
+const mockGetQuestById = jest.fn();
 jest.mock('features/campaign-entities', () => ({
   useNPCs: jest.fn(),
-}));
-
-const mockGetQuestById = jest.fn();
-jest.mock('../../../../context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
@@ -50,8 +47,7 @@ jest.mock('../../../../services/firebase', () => ({ default: {} }));
 // Hook setup helpers
 // ---------------------------------------------------------------------------
 
-const { useNPCs } = require('features/campaign-entities');
-const { useQuests } = require('../../../../context/QuestContext');
+const { useNPCs, useQuests } = require('features/campaign-entities');
 const { useNavigation } = require('../../../../context/NavigationContext');
 const { useLocations } = require('../../../../context/LocationContext');
 const { useAuth } = require('@/features/user-management');

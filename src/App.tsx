@@ -8,7 +8,7 @@ import { StoryProvider } from 'features/storytelling';
 import { LocationProvider } from './context/LocationContext';
 import { FirebaseProvider } from 'features/user-management/auth/context/FirebaseContext';
 import { RumorProvider } from './context/RumorContext';
-import { QuestProvider } from './context/QuestContext';
+import { QuestProvider } from './features/campaign-entities';
 import { NoteProvider } from './context/NoteContext';
 import { UsageProvider } from './context/UsageContext';
 import ErrorBoundary from './components/shared/ErrorBoundary';

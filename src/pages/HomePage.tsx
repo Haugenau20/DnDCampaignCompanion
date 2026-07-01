@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 import { useStory } from 'features/storytelling';
-import { useQuests } from '../context/QuestContext';
+import { useQuests } from 'features/campaign-entities';
 import { useRumors } from '../context/RumorContext';
 import { useNPCs } from 'features/campaign-entities';
 import { useLocations } from '../context/LocationContext';

@@ -3,18 +3,18 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import QuestCard from '../QuestCard';
-import { Quest, QuestStatus, QuestObjective } from '../../../../types/quest';
+import { Quest, QuestStatus, QuestObjective } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock external context dependencies
 // ---------------------------------------------------------------------------
 
 const mockGetNPCById = jest.fn();
-jest.mock('features/campaign-entities', () => ({
+jest.mock('../../../npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
 }));
 
-jest.mock('../../../../context/LocationContext', () => ({
+jest.mock('../../../../../context/LocationContext', () => ({
   useLocations: jest.fn(),
 }));
 
@@ -23,12 +23,12 @@ const mockCreatePath = jest.fn(
   (path: string, _p: unknown, query?: Record<string, string>) =>
     query ? `${path}?${new URLSearchParams(query).toString()}` : path
 );
-jest.mock('../../../../context/NavigationContext', () => ({
+jest.mock('../../../../../context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
 const mockDeleteQuest = jest.fn();
-jest.mock('../../../../context/QuestContext', () => ({
+jest.mock('../../context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
@@ -38,20 +38,20 @@ jest.mock('@/features/user-management', () => ({
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
 }));
 
-jest.mock('../../../../utils/attribution-utils', () => ({
+jest.mock('../../../../../utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
-jest.mock('../../../../services/firebase', () => ({ default: {} }));
+jest.mock('../../../../../services/firebase', () => ({ default: {} }));
 
 // ---------------------------------------------------------------------------
 // Hook setup helpers
 // ---------------------------------------------------------------------------
 
-const { useNPCs } = require('features/campaign-entities');
-const { useLocations } = require('../../../../context/LocationContext');
-const { useNavigation } = require('../../../../context/NavigationContext');
-const { useQuests } = require('../../../../context/QuestContext');
+const { useNPCs } = require('../../../npcs/context/NPCContext');
+const { useLocations } = require('../../../../../context/LocationContext');
+const { useNavigation } = require('../../../../../context/NavigationContext');
+const { useQuests } = require('../../context/QuestContext');
 const { useAuth } = require('@/features/user-management');
 
 function setupMocks({

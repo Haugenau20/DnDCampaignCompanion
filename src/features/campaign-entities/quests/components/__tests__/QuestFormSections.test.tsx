@@ -12,14 +12,14 @@ import {
   RewardsSection,
   RelatedNPCsSection,
 } from '../QuestFormSections';
-import { Quest, QuestObjective } from '../../../../types/quest';
-import { NPC } from 'features/campaign-entities';
+import { Quest, QuestObjective } from '../../types';
+import { NPC } from '../../../npcs/types';
 
 // ---------------------------------------------------------------------------
 // Mock LocationContext (used by BasicInfoSection via LocationCombobox)
 // ---------------------------------------------------------------------------
 
-jest.mock('../../../../context/LocationContext', () => ({
+jest.mock('../../../../../context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ locations: [] })),
 }));
 

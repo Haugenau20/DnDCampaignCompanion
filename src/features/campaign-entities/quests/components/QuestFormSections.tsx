@@ -1,12 +1,12 @@
-// src/components/features/quests/QuestFormSections.tsx
-import { NPC } from 'features/campaign-entities';
+// src/features/campaign-entities/quests/components/QuestFormSections.tsx
+import { NPC } from '../../npcs/types';
 import React from 'react';
-import { Quest, QuestStatus } from '../../../types/quest';
-import Typography from '../../core/Typography';
-import Input from '../../core/Input';
-import Button from '../../core/Button';
-import LocationCombobox from '../locations/LocationCombobox';
-import Dialog from '../../core/Dialog';
+import { Quest, QuestStatus } from '../types';
+import Typography from '../../../../components/core/Typography';
+import Input from '../../../../components/core/Input';
+import Button from '../../../../components/core/Button';
+import LocationCombobox from '../../../../components/features/locations/LocationCombobox';
+import Dialog from '../../../../components/core/Dialog';
 import clsx from 'clsx';
 import { PlusCircle, X, Target } from 'lucide-react';
 

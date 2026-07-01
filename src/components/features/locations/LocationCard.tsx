@@ -1,7 +1,7 @@
 import React, { useState, useEffect} from 'react';
 import { Location, LocationNote, LocationType } from '../../../types/location';
 import { useNPCs } from 'features/campaign-entities';
-import { useQuests } from '../../../context/QuestContext';
+import { useQuests } from 'features/campaign-entities';
 import { useAuth } from 'features/user-management';
 import { useLocations } from '../../../context/LocationContext';
 import Typography from '../../core/Typography';

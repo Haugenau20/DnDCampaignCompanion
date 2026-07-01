@@ -1,5 +1,5 @@
-// src/types/quest.ts
-import { BaseContent } from './common';
+// src/features/campaign-entities/quests/types.ts
+import { BaseContent } from '../../../types/common';
 
 export type QuestStatus = 'active' | 'completed' | 'failed';
 

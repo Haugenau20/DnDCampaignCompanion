@@ -13,7 +13,7 @@ jest.mock('context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
-jest.mock('context/QuestContext', () => ({
+jest.mock('../../../quests/context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
@@ -45,7 +45,7 @@ const mockCreatePath = jest.fn(
 const mockGetCurrentQueryParams = jest.fn(() => ({}));
 
 const { useNavigation } = require('context/NavigationContext');
-const { useQuests } = require('context/QuestContext');
+const { useQuests } = require('../../../quests/context/QuestContext');
 const { useNPCs } = require('features/campaign-entities/npcs/context/NPCContext');
 const { useAuth } = require('@/features/user-management');
 

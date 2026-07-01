@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
-import { QuestProvider, useQuests } from '../../QuestContext';
-import { Quest, QuestStatus } from '../../../types/quest';
+import { QuestProvider, useQuests } from '../QuestContext';
+import { Quest, QuestStatus } from '../../types';
 
 /**
  * Quest Context Bug Tests - FAILING TESTS for Known Bugs
@@ -28,11 +28,11 @@ jest.mock('@/features/user-management', () => ({
   useCampaigns: () => mockUseCampaigns(),
 }));
 
-jest.mock('../../../hooks/useQuestData', () => ({
+jest.mock('../../hooks/useQuestData', () => ({
   useQuestData: () => mockUseQuestData(),
 }));
 
-jest.mock('../../../hooks/useFirebaseData', () => ({
+jest.mock('../../../../../hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 

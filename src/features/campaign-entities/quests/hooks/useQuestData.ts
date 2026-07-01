@@ -1,7 +1,7 @@
-// src/hooks/useQuestData.ts
+// src/features/campaign-entities/quests/hooks/useQuestData.ts
 import { useState, useEffect, useCallback } from 'react';
-import { Quest } from '../types/quest';
-import { useFirebaseData } from './useFirebaseData';
+import { Quest } from '../types';
+import { useFirebaseData } from '../../../../hooks/useFirebaseData';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 
 /**

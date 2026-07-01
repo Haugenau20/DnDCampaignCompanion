@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
-import { QuestProvider, useQuests } from '../../QuestContext';
-import { Quest, QuestStatus } from '../../../types/quest';
+import { QuestProvider, useQuests } from '../QuestContext';
+import { Quest, QuestStatus } from '../../types';
 
 /**
  * Quest Context Behavioral Testing
@@ -35,21 +35,21 @@ jest.mock('@/features/user-management', () => ({
 }));
 
 // Mock the data hooks
-jest.mock('../../../hooks/useQuestData', () => ({
+jest.mock('../../hooks/useQuestData', () => ({
   useQuestData: () => mockUseQuestData(),
 }));
 
-jest.mock('../../../hooks/useFirebaseData', () => ({
+jest.mock('../../../../../hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 
 // Mock user utilities for proper testing
-jest.mock('../../../utils/user-utils', () => ({
+jest.mock('../../../../../utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('../../../utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('../../../../../utils/user-utils');
 
 // Test component that uses the Quest context
 const QuestTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {

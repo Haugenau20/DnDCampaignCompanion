@@ -3,7 +3,7 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
-import QuestCreateForm from '../../components/features/quests/QuestCreateForm';
+import { QuestCreateForm } from 'features/campaign-entities';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { ArrowLeft } from 'lucide-react';
 

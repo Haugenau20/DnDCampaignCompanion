@@ -1,7 +1,7 @@
 // components/features/layouts/journal/sections/ActiveQuestsList.tsx
 import React from 'react';
 import { useNavigation } from '../../../../../context/NavigationContext';
-import { Quest } from '../../../../../types/quest';
+import type { Quest } from 'features/campaign-entities';
 import { Scroll, CheckCircle } from 'lucide-react';
 import SectionHeading from '../../common/components/SectionHeading';
 import LoadingState from '../../common/components/LoadingState';

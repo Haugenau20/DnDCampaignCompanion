@@ -21,11 +21,11 @@ jest.mock('../../../../context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ locations: [] })),
 }));
 
-jest.mock('../../../../context/QuestContext', () => ({
+jest.mock('features/campaign-entities', () => ({
   useQuests: jest.fn(),
 }));
 
-const { useQuests } = require('../../../../context/QuestContext');
+const { useQuests } = require('features/campaign-entities');
 
 function setupQuestsMock(quests: any[] = []) {
   (useQuests as jest.Mock).mockReturnValue({ quests });

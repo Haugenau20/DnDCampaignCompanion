@@ -2,7 +2,7 @@
 
 import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from '../userGenerator';
-import { Quest as AppQuest } from '../../../../types/quest';
+import type { Quest as AppQuest } from 'features/campaign-entities';
 
 // Types for quest data
 type QuestStatus = 'active' | 'completed' | 'failed';

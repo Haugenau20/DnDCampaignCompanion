@@ -12,19 +12,19 @@ import QuestCreateForm from '../QuestCreateForm';
 const mockAddQuest = jest.fn();
 const mockMarkEntityAsConverted = jest.fn();
 
-jest.mock('../../../../context/QuestContext', () => ({
+jest.mock('../../context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
-jest.mock('../../../../context/NoteContext', () => ({
+jest.mock('../../../../../context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
 
-jest.mock('features/campaign-entities', () => ({
+jest.mock('../../../npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
 }));
 
-jest.mock('../../../../context/LocationContext', () => ({
+jest.mock('../../../../../context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ locations: [] })),
 }));
 
@@ -32,9 +32,9 @@ jest.mock('../../../../context/LocationContext', () => ({
 // Hook setup helpers
 // ---------------------------------------------------------------------------
 
-const { useQuests } = require('../../../../context/QuestContext');
-const { useNotes } = require('../../../../context/NoteContext');
-const { useNPCs } = require('features/campaign-entities');
+const { useQuests } = require('../../context/QuestContext');
+const { useNotes } = require('../../../../../context/NoteContext');
+const { useNPCs } = require('../../../npcs/context/NPCContext');
 
 function setupMocks({
   addQuest = mockAddQuest,

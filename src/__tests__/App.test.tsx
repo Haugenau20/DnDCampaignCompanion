@@ -48,6 +48,10 @@ jest.mock("features/campaign-entities", () => ({
     <div data-testid="npc-provider">{children}</div>
   ),
   useNPCs: () => ({}),
+  QuestProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="quest-provider">{children}</div>
+  ),
+  useQuests: () => ({}),
 }));
 
 jest.mock("features/storytelling", () => ({
@@ -79,12 +83,6 @@ jest.mock("../context/RumorContext", () => ({
   useRumors: () => ({}),
 }));
 
-jest.mock("../context/QuestContext", () => ({
-  QuestProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="quest-provider">{children}</div>
-  ),
-  useQuests: () => ({}),
-}));
 
 jest.mock("../context/NoteContext", () => ({
   NoteProvider: ({ children }: { children: React.ReactNode }) => (

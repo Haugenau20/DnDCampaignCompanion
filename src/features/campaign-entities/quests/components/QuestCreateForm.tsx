@@ -1,13 +1,13 @@
-// src/components/features/quests/QuestCreateForm.tsx
+// src/features/campaign-entities/quests/components/QuestCreateForm.tsx
 import React, { useState, useEffect } from 'react';
-import { Quest, QuestStatus } from '../../../types/quest';
-import { QuestObjective } from '../../../types/quest';
-import { useQuests } from '../../../context/QuestContext'; // Import useQuests from context
-import { useNotes } from '../../../context/NoteContext';
-import Typography from '../../core/Typography';
-import Button from '../../core/Button';
-import Card from '../../core/Card';
-import { useNPCs } from 'features/campaign-entities';
+import { Quest, QuestStatus } from '../types';
+import { QuestObjective } from '../types';
+import { useQuests } from '../context/QuestContext'; // Import useQuests from context
+import { useNotes } from '../../../../context/NoteContext';
+import Typography from '../../../../components/core/Typography';
+import Button from '../../../../components/core/Button';
+import Card from '../../../../components/core/Card';
+import { useNPCs } from '../../npcs/context/NPCContext';
 import {
   BasicInfoSection,
   ObjectivesSection,

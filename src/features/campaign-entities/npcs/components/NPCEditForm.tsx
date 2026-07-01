@@ -6,7 +6,7 @@ import Button from '../../../../components/core/Button';
 import Card from '../../../../components/core/Card';
 import Dialog from '../../../../components/core/Dialog';
 import { Save, X, Users, Scroll } from 'lucide-react';
-import { useQuests } from '../../../../context/QuestContext';
+import { useQuests } from '../../quests/context/QuestContext';
 import { useNPCs } from '../context/NPCContext';
 import { useAuth, useUser } from 'features/user-management';
 import clsx from 'clsx';

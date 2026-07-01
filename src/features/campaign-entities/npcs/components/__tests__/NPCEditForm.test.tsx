@@ -5,7 +5,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import NPCEditForm from '../NPCEditForm';
 import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs/types';
-import { Quest } from 'types/quest';
+import { Quest } from '../../../quests/types';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -17,7 +17,7 @@ jest.mock('features/campaign-entities/npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
 }));
 
-jest.mock('context/QuestContext', () => ({
+jest.mock('../../../quests/context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
@@ -36,7 +36,7 @@ jest.mock('utils/user-utils', () => ({
 // ---------------------------------------------------------------------------
 
 const { useNPCs } = require('features/campaign-entities/npcs/context/NPCContext');
-const { useQuests } = require('context/QuestContext');
+const { useQuests } = require('../../../quests/context/QuestContext');
 const { useAuth, useUser } = require('@/features/user-management');
 
 function setupMocks({

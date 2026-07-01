@@ -4,7 +4,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import QuestEditForm from '../QuestEditForm';
-import { Quest, QuestObjective } from '../../../../types/quest';
+import { Quest, QuestObjective } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -12,15 +12,15 @@ import { Quest, QuestObjective } from '../../../../types/quest';
 
 const mockUpdateQuest = jest.fn();
 
-jest.mock('../../../../context/QuestContext', () => ({
+jest.mock('../../context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
-jest.mock('features/campaign-entities', () => ({
+jest.mock('../../../npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
 }));
 
-jest.mock('../../../../context/LocationContext', () => ({
+jest.mock('../../../../../context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ locations: [] })),
 }));
 
@@ -28,8 +28,8 @@ jest.mock('../../../../context/LocationContext', () => ({
 // Hook setup helpers
 // ---------------------------------------------------------------------------
 
-const { useQuests } = require('../../../../context/QuestContext');
-const { useNPCs } = require('features/campaign-entities');
+const { useQuests } = require('../../context/QuestContext');
+const { useNPCs } = require('../../../npcs/context/NPCContext');
 
 function setupMocks({
   updateQuest = mockUpdateQuest,
