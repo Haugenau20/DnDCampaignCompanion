@@ -21,31 +21,27 @@ jest.mock("react-router-dom", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock(
-  "../../../components/features/locations/LocationCreateForm",
-  () => ({
-    __esModule: true,
-    default: (props: any) => (
-      <div data-testid="location-create-form">
-        <span data-testid="location-form-initial-data">
-          {JSON.stringify(props.initialData)}
-        </span>
-        <button
-          data-testid="location-form-success"
-          onClick={props.onSuccess}
-        >
-          success
-        </button>
-        <button
-          data-testid="location-form-cancel"
-          onClick={props.onCancel}
-        >
-          cancel
-        </button>
-      </div>
-    ),
-  })
-);
+jest.mock("features/campaign-entities", () => ({
+  LocationCreateForm: (props: any) => (
+    <div data-testid="location-create-form">
+      <span data-testid="location-form-initial-data">
+        {JSON.stringify(props.initialData)}
+      </span>
+      <button
+        data-testid="location-form-success"
+        onClick={props.onSuccess}
+      >
+        success
+      </button>
+      <button
+        data-testid="location-form-cancel"
+        onClick={props.onCancel}
+      >
+        cancel
+      </button>
+    </div>
+  ),
+}));
 
 jest.mock("../../../components/layout/Breadcrumb", () => ({
   __esModule: true,

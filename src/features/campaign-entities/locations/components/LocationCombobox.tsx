@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocations } from '../../../context/LocationContext';
+import { useLocations } from '../context/LocationContext';
 import { MapPin, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
-import Typography from '../../core/Typography';
+import Typography from '../../../../components/core/Typography';
 import clsx from 'clsx';
 
 interface LocationComboboxProps {

@@ -2,7 +2,7 @@
 
 import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from '../userGenerator';
-import { Location as AppLocation } from '../../../../types/location';
+import type { Location as AppLocation } from 'features/campaign-entities';
 
 
 // Types for location data

@@ -1,30 +1,32 @@
-﻿// src/components/features/locations/__tests__/LocationDirectory.test.tsx
+﻿// src/features/campaign-entities/locations/components/__tests__/LocationDirectory.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import LocationDirectory from '../LocationDirectory';
-import { Location } from '../../../../types/location';
+import { Location } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
 // ---------------------------------------------------------------------------
 
 // LocationDirectory uses useFirebaseData for real-time updates
-jest.mock('../../../../hooks/useFirebaseData', () => ({
+jest.mock('../../../../../hooks/useFirebaseData', () => ({
   useFirebaseData: jest.fn(() => ({ data: [] })),
 }));
 
-jest.mock('../../../../context/NavigationContext', () => ({
+jest.mock('../../../../../context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
 // LocationCard has many deps — mock them all
-jest.mock('features/campaign-entities', () => ({
+jest.mock('../../../npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(() => ({ getNPCById: jest.fn(() => undefined) })),
+}));
+jest.mock('../../../quests/context/QuestContext', () => ({
   useQuests: jest.fn(() => ({ getQuestById: jest.fn(() => undefined) })),
 }));
 
-jest.mock('../../../../context/LocationContext', () => ({
+jest.mock('../../context/LocationContext', () => ({
   useLocations: jest.fn(() => ({
     locations: [],
     updateLocationNote: jest.fn(),
@@ -37,15 +39,15 @@ jest.mock('@/features/user-management', () => ({
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
 }));
 
-jest.mock('../../../../utils/attribution-utils', () => ({
+jest.mock('../../../../../utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
-jest.mock('../../../../services/firebase', () => ({ default: {} }));
+jest.mock('../../../../../services/firebase', () => ({ default: {} }));
 
-const { useNavigation } = require('../../../../context/NavigationContext');
-const { useLocations } = require('../../../../context/LocationContext');
-const { useFirebaseData } = require('../../../../hooks/useFirebaseData');
+const { useNavigation } = require('../../../../../context/NavigationContext');
+const { useLocations } = require('../../context/LocationContext');
+const { useFirebaseData } = require('../../../../../hooks/useFirebaseData');
 
 function setupMocks(locations: Location[] = []) {
   (useFirebaseData as jest.Mock).mockReturnValue({ data: [] });

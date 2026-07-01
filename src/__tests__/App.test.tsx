@@ -52,6 +52,10 @@ jest.mock("features/campaign-entities", () => ({
     <div data-testid="quest-provider">{children}</div>
   ),
   useQuests: () => ({}),
+  LocationProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="location-provider">{children}</div>
+  ),
+  useLocations: () => ({}),
 }));
 
 jest.mock("features/storytelling", () => ({
@@ -61,12 +65,6 @@ jest.mock("features/storytelling", () => ({
   useStory: () => ({}),
 }));
 
-jest.mock("../context/LocationContext", () => ({
-  LocationProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="location-provider">{children}</div>
-  ),
-  useLocations: () => ({}),
-}));
 
 jest.mock("@/features/user-management/auth/context/FirebaseContext", () => ({
   FirebaseProvider: ({ children }: { children: React.ReactNode }) => (

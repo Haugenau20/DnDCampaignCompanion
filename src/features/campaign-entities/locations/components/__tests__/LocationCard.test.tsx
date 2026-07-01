@@ -1,9 +1,9 @@
-﻿// src/components/features/locations/__tests__/LocationCard.test.tsx
+﻿// src/features/campaign-entities/locations/components/__tests__/LocationCard.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import LocationCard from '../LocationCard';
-import { Location, LocationType, LocationStatus } from '../../../../types/location';
+import { Location, LocationType, LocationStatus } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock external context dependencies
@@ -11,8 +11,10 @@ import { Location, LocationType, LocationStatus } from '../../../../types/locati
 
 const mockGetNPCById = jest.fn();
 const mockGetQuestById = jest.fn();
-jest.mock('features/campaign-entities', () => ({
+jest.mock('../../../npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
+}));
+jest.mock('../../../quests/context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
@@ -21,13 +23,13 @@ const mockCreatePath = jest.fn(
   (path: string, _p: unknown, query?: Record<string, string>) =>
     query ? `${path}?${new URLSearchParams(query).toString()}` : path
 );
-jest.mock('../../../../context/NavigationContext', () => ({
+jest.mock('../../../../../context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
 const mockUpdateLocationNote = jest.fn();
 const mockDeleteLocation = jest.fn();
-jest.mock('../../../../context/LocationContext', () => ({
+jest.mock('../../context/LocationContext', () => ({
   useLocations: jest.fn(),
 }));
 
@@ -37,19 +39,20 @@ jest.mock('@/features/user-management', () => ({
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
 }));
 
-jest.mock('../../../../utils/attribution-utils', () => ({
+jest.mock('../../../../../utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
-jest.mock('../../../../services/firebase', () => ({ default: {} }));
+jest.mock('../../../../../services/firebase', () => ({ default: {} }));
 
 // ---------------------------------------------------------------------------
 // Hook setup helpers
 // ---------------------------------------------------------------------------
 
-const { useNPCs, useQuests } = require('features/campaign-entities');
-const { useNavigation } = require('../../../../context/NavigationContext');
-const { useLocations } = require('../../../../context/LocationContext');
+const { useNPCs } = require('../../../npcs/context/NPCContext');
+const { useQuests } = require('../../../quests/context/QuestContext');
+const { useNavigation } = require('../../../../../context/NavigationContext');
+const { useLocations } = require('../../context/LocationContext');
 const { useAuth } = require('@/features/user-management');
 
 function setupMocks({

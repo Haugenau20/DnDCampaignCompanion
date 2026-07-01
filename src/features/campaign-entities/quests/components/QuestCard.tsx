@@ -5,7 +5,7 @@ import { useAuth } from 'features/user-management';
 import Typography from '../../../../components/core/Typography';
 import Card from '../../../../components/core/Card';
 import Button from '../../../../components/core/Button';
-import { useLocations } from '../../../../context/LocationContext';
+import { useLocations } from '../../locations/context/LocationContext';
 import { useNavigation } from '../../../../context/NavigationContext';
 import { useQuests } from '../context/QuestContext';
 import DeleteConfirmationDialog from '../../../../components/shared/DeleteConfirmationDialog';

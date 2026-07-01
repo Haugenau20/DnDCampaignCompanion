@@ -58,9 +58,6 @@ jest.mock('../../../../hooks/useNavigation', () => ({
 
 jest.mock('features/campaign-entities', () => ({
   useNPCs: jest.fn(),
-}));
-
-jest.mock('../../../../context/LocationContext', () => ({
   useLocations: jest.fn(),
 }));
 
@@ -74,8 +71,7 @@ jest.mock('../../../../services/firebase', () => ({ default: {} }));
 const { useAuth } = require('@/features/user-management');
 const { useRumors } = require('../../../../context/RumorContext');
 const { useNavigation } = require('../../../../hooks/useNavigation');
-const { useNPCs } = require('features/campaign-entities');
-const { useLocations } = require('../../../../context/LocationContext');
+const { useNPCs, useLocations } = require('features/campaign-entities');
 
 function setupMocks({
   user = { uid: 'user-1' } as { uid: string } | null,

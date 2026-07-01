@@ -1,16 +1,16 @@
 import React, { useState, useEffect} from 'react';
-import { Location, LocationNote, LocationType } from '../../../types/location';
-import { useNPCs } from 'features/campaign-entities';
-import { useQuests } from 'features/campaign-entities';
+import { Location, LocationNote, LocationType } from '../types';
+import { useNPCs } from '../../npcs/context/NPCContext';
+import { useQuests } from '../../quests/context/QuestContext';
 import { useAuth } from 'features/user-management';
-import { useLocations } from '../../../context/LocationContext';
-import Typography from '../../core/Typography';
-import Card from '../../core/Card';
-import Button from '../../core/Button';
-import Input from '../../core/Input';
-import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
-import { useNavigation } from '../../../context/NavigationContext';
-import AttributionInfo from '../../shared/AttributionInfo';
+import { useLocations } from '../context/LocationContext';
+import Typography from '../../../../components/core/Typography';
+import Card from '../../../../components/core/Card';
+import Button from '../../../../components/core/Button';
+import Input from '../../../../components/core/Input';
+import DeleteConfirmationDialog from '../../../../components/shared/DeleteConfirmationDialog';
+import { useNavigation } from '../../../../context/NavigationContext';
+import AttributionInfo from '../../../../components/shared/AttributionInfo';
 import clsx from 'clsx';
 import { 
   MapPin, 

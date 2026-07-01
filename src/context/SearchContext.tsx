@@ -5,10 +5,10 @@ import { SearchService } from '../services/search/SearchService';
 import { useChapterData } from 'features/storytelling';
 import type { Chapter } from 'features/storytelling';
 import { useNPCData } from 'features/campaign-entities';
-import { useLocationData } from '../hooks/useLocationData';
+import { useLocationData } from 'features/campaign-entities';
 import { useQuests, Quest } from 'features/campaign-entities';
 import { NPC } from 'features/campaign-entities';
-import { Location } from '../types/location';
+import type { Location } from 'features/campaign-entities';
 import { Rumor } from '../types/rumor';
 import { useRumorData } from '../hooks/useRumorData';
 

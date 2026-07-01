@@ -39,8 +39,20 @@ let mockLocationContext: LocationContextMock = {
   hasRequiredContext: true,
 };
 
-jest.mock("../../../context/LocationContext", () => ({
+jest.mock("features/campaign-entities", () => ({
   useLocations: () => mockLocationContext,
+  LocationEditForm: (props: any) => (
+    <div data-testid="location-edit-form">
+      <span data-testid="edit-form-location-id">{props.location?.id}</span>
+      <span data-testid="edit-form-location-name">{props.location?.name}</span>
+      <button data-testid="edit-form-success" onClick={props.onSuccess}>
+        success
+      </button>
+      <button data-testid="edit-form-cancel" onClick={props.onCancel}>
+        cancel
+      </button>
+    </div>
+  ),
 }));
 
 jest.mock("@/features/user-management", () => ({
@@ -50,24 +62,6 @@ jest.mock("@/features/user-management", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock(
-  "../../../components/features/locations/LocationEditForm",
-  () => ({
-    __esModule: true,
-    default: (props: any) => (
-      <div data-testid="location-edit-form">
-        <span data-testid="edit-form-location-id">{props.location?.id}</span>
-        <span data-testid="edit-form-location-name">{props.location?.name}</span>
-        <button data-testid="edit-form-success" onClick={props.onSuccess}>
-          success
-        </button>
-        <button data-testid="edit-form-cancel" onClick={props.onCancel}>
-          cancel
-        </button>
-      </div>
-    ),
-  })
-);
 
 jest.mock("../../../components/core/Typography", () => ({
   __esModule: true,

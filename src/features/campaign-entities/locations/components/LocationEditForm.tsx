@@ -1,10 +1,10 @@
-// src/components/features/locations/LocationEditForm.tsx
+// src/features/campaign-entities/locations/components/LocationEditForm.tsx
 import React, { useState } from 'react';
-import { Location } from '../../../types/location';
-import Typography from '../../core/Typography';
-import Button from '../../core/Button';
-import Card from '../../core/Card';
-import { useNPCs } from 'features/campaign-entities';
+import { Location } from '../types';
+import Typography from '../../../../components/core/Typography';
+import Button from '../../../../components/core/Button';
+import Card from '../../../../components/core/Card';
+import { useNPCs } from '../../npcs/context/NPCContext';
 import {
   BasicInfoSection,
   FeaturesSection,
@@ -14,7 +14,7 @@ import {
 } from './LocationFormSections';
 import { AlertCircle, Save, X } from 'lucide-react';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
-import { useLocations } from '../../../context/LocationContext';
+import { useLocations } from '../context/LocationContext';
 
 interface LocationEditFormProps {
   /** The location being edited */

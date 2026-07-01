@@ -1,20 +1,20 @@
-// src/components/features/locations/__tests__/LocationCombobox.test.tsx
+// src/features/campaign-entities/locations/components/__tests__/LocationCombobox.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LocationCombobox from '../LocationCombobox';
-import { Location } from '../../../../types/location';
+import { Location } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock LocationContext
 // ---------------------------------------------------------------------------
 
-jest.mock('../../../../context/LocationContext', () => ({
+jest.mock('../../context/LocationContext', () => ({
   useLocations: jest.fn(),
 }));
 
-const { useLocations } = require('../../../../context/LocationContext');
+const { useLocations } = require('../../context/LocationContext');
 
 function makeLocation(id: string, name: string): Location {
   return {

@@ -55,9 +55,6 @@ jest.mock('../../../../context/RumorContext', () => ({
 
 jest.mock('features/campaign-entities', () => ({
   useNPCs: jest.fn(() => ({ getNPCById: jest.fn(() => undefined) })),
-}));
-
-jest.mock('../../../../context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ getLocationById: jest.fn(() => undefined) })),
 }));
 

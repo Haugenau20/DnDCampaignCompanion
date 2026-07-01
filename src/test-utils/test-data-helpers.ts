@@ -2,7 +2,7 @@
 
 import { NPC } from 'features/campaign-entities';
 import { Quest, QuestObjective, QuestLocation, QuestNPC, QuestStatus } from 'features/campaign-entities';
-import { Location } from '../types/location';
+import type { Location } from 'features/campaign-entities';
 import { Rumor } from '../types/rumor';
 
 // Counter for unique IDs

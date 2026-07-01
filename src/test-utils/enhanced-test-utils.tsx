@@ -8,7 +8,7 @@ import { FirebaseProvider } from '@/features/user-management/auth/context/Fireba
 import { NavigationProvider } from '../context/NavigationContext';
 import { SearchProvider } from '../context/SearchContext';
 import { NPCProvider } from 'features/campaign-entities';
-import { LocationProvider } from '../context/LocationContext';
+import { LocationProvider } from 'features/campaign-entities';
 import { StoryProvider } from '@/features/storytelling';
 import { QuestProvider } from 'features/campaign-entities';
 import { RumorProvider } from '../context/RumorContext';

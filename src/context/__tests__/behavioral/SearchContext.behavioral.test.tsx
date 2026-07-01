@@ -34,9 +34,6 @@ jest.mock("features/storytelling", () => ({
 jest.mock("features/campaign-entities", () => ({
   useNPCData: () => mockUseNPCData(),
   useQuests: () => mockUseQuests(),
-}));
-
-jest.mock("../../../hooks/useLocationData", () => ({
   useLocationData: () => mockUseLocationData(),
 }));
 

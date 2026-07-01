@@ -19,7 +19,7 @@ import { NPC } from '../../../npcs/types';
 // Mock LocationContext (used by BasicInfoSection via LocationCombobox)
 // ---------------------------------------------------------------------------
 
-jest.mock('../../../../../context/LocationContext', () => ({
+jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ locations: [] })),
 }));
 

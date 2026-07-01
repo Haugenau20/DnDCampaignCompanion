@@ -38,9 +38,6 @@ jest.mock("features/campaign-entities", () => ({
     quests: mockQuests,
     isLoading: mockIsLoading,
   }),
-}));
-
-jest.mock("../../context/LocationContext", () => ({
   useLocations: () => ({
     locations: mockLocations,
     isLoading: mockIsLoading,

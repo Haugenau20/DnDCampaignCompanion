@@ -34,8 +34,15 @@ let mockLocationContext: LocationContextMock = {
   hasRequiredContext: true,
 };
 
-jest.mock("../../../context/LocationContext", () => ({
+jest.mock("features/campaign-entities", () => ({
   useLocations: () => mockLocationContext,
+  LocationDirectory: (props: any) => (
+    <div data-testid="location-directory">
+      <span data-testid="location-directory-count">
+        {props.locations?.length}
+      </span>
+    </div>
+  ),
 }));
 
 const mockNavigateToPage = jest.fn();
@@ -50,19 +57,6 @@ jest.mock("../../../context/NavigationContext", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock(
-  "../../../components/features/locations/LocationDirectory",
-  () => ({
-    __esModule: true,
-    default: (props: any) => (
-      <div data-testid="location-directory">
-        <span data-testid="location-directory-count">
-          {props.locations?.length}
-        </span>
-      </div>
-    ),
-  })
-);
 
 jest.mock("../../../components/core/Typography", () => ({
   __esModule: true,

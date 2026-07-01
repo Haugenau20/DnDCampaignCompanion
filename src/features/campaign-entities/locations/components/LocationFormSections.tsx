@@ -1,13 +1,13 @@
-// src/components/features/locations/LocationFormSections.tsx
+// src/features/campaign-entities/locations/components/LocationFormSections.tsx
 import React, { useState } from 'react';
-import { Location, LocationType } from '../../../types/location';
-import { NPC } from 'features/campaign-entities';
-import Typography from '../../core/Typography';
-import Input from '../../core/Input';
-import Button from '../../core/Button';
-import Dialog from '../../core/Dialog';
-import { useQuests } from 'features/campaign-entities';
-import LocationCombobox from '../locations/LocationCombobox';
+import { Location, LocationType } from '../types';
+import { NPC } from '../../npcs/types';
+import Typography from '../../../../components/core/Typography';
+import Input from '../../../../components/core/Input';
+import Button from '../../../../components/core/Button';
+import Dialog from '../../../../components/core/Dialog';
+import { useQuests } from '../../quests/context/QuestContext';
+import LocationCombobox from './LocationCombobox';
 import { 
   PlusCircle, 
   X, 

@@ -1,9 +1,9 @@
-﻿// src/context/__tests__/behavioral/LocationContext.bugs.test.tsx
+﻿// src/features/campaign-entities/locations/context/__tests__/LocationContext.bugs.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
-import { LocationProvider, useLocations } from '../../LocationContext';
-import { Location, LocationStatus, LocationType, LocationNote } from '../../../types/location';
+import { LocationProvider, useLocations } from '../LocationContext';
+import { Location, LocationStatus, LocationType, LocationNote } from '../../types';
 
 /**
  * LocationContext Bug Discovery Testing
@@ -30,21 +30,21 @@ jest.mock('@/features/user-management', () => ({
   useCampaigns: () => mockUseCampaigns(),
 }));
 
-jest.mock('../../../hooks/useLocationData', () => ({
+jest.mock('../../hooks/useLocationData', () => ({
   useLocationData: () => mockUseLocationData(),
 }));
 
-jest.mock('../../../hooks/useFirebaseData', () => ({
+jest.mock('../../../../../hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 
 // Mock user utilities for proper testing
-jest.mock('../../../utils/user-utils', () => ({
+jest.mock('../../../../../utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('../../../utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('../../../../../utils/user-utils');
 
 const LocationTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {
   const locationContext = useLocations();

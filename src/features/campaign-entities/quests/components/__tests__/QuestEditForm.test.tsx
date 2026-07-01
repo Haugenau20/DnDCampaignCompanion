@@ -20,7 +20,7 @@ jest.mock('../../../npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
 }));
 
-jest.mock('../../../../../context/LocationContext', () => ({
+jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ locations: [] })),
 }));
 

@@ -1,5 +1,5 @@
-// src/types/location.ts
-import { BaseContent } from './common';
+// src/features/campaign-entities/locations/types.ts
+import { BaseContent } from '../../../types/common';
 
 /**
  * Types of locations that can exist in the game world

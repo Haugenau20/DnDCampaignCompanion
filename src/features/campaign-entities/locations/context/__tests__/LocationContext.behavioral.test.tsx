@@ -1,9 +1,9 @@
-﻿// src/context/__tests__/behavioral/LocationContext.behavioral.test.tsx
+﻿// src/features/campaign-entities/locations/context/__tests__/LocationContext.behavioral.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
-import { LocationProvider, useLocations } from '../../LocationContext';
-import { Location, LocationStatus, LocationType, LocationNote } from '../../../types/location';
+import { LocationProvider, useLocations } from '../LocationContext';
+import { Location, LocationStatus, LocationType, LocationNote } from '../../types';
 
 /**
  * Location Context Behavioral Testing
@@ -35,11 +35,11 @@ jest.mock('@/features/user-management', () => ({
 }));
 
 // Mock the data hooks
-jest.mock('../../../hooks/useLocationData', () => ({
+jest.mock('../../hooks/useLocationData', () => ({
   useLocationData: () => mockUseLocationData(),
 }));
 
-jest.mock('../../../hooks/useFirebaseData', () => ({
+jest.mock('../../../../../hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 

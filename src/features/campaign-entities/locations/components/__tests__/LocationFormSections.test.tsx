@@ -1,4 +1,4 @@
-// src/components/features/locations/__tests__/LocationFormSections.test.tsx
+// src/features/campaign-entities/locations/components/__tests__/LocationFormSections.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -10,22 +10,22 @@ import {
   RelatedQuestsSection,
   RelatedNPCsSection,
 } from '../LocationFormSections';
-import { Location } from '../../../../types/location';
-import { NPC } from 'features/campaign-entities';
+import { Location } from '../../types';
+import { NPC } from '../../../npcs/types';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
 // ---------------------------------------------------------------------------
 
-jest.mock('../../../../context/LocationContext', () => ({
+jest.mock('../../context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ locations: [] })),
 }));
 
-jest.mock('features/campaign-entities', () => ({
+jest.mock('../../../quests/context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
-const { useQuests } = require('features/campaign-entities');
+const { useQuests } = require('../../../quests/context/QuestContext');
 
 function setupQuestsMock(quests: any[] = []) {
   (useQuests as jest.Mock).mockReturnValue({ quests });

@@ -32,8 +32,6 @@ jest.mock('../../../../context/RumorContext', () => ({
 }));
 jest.mock('features/campaign-entities', () => ({
   useNPCs: jest.fn(),
-}));
-jest.mock('../../../../context/LocationContext', () => ({
   useLocations: jest.fn(),
 }));
 jest.mock('../../../../context/NoteContext', () => ({
@@ -45,8 +43,7 @@ jest.mock('@/features/user-management', () => ({
 }));
 
 const { useRumors } = require('../../../../context/RumorContext');
-const { useNPCs } = require('features/campaign-entities');
-const { useLocations } = require('../../../../context/LocationContext');
+const { useNPCs, useLocations } = require('features/campaign-entities');
 const { useNotes } = require('../../../../context/NoteContext');
 const { useAuth, useUser } = require('@/features/user-management');
 

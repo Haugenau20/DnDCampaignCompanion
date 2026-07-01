@@ -5,7 +5,7 @@ import { useStory } from 'features/storytelling';
 import { useQuests } from 'features/campaign-entities';
 import { useRumors } from '../context/RumorContext';
 import { useNPCs } from 'features/campaign-entities';
-import { useLocations } from '../context/LocationContext';
+import { useLocations } from 'features/campaign-entities';
 import firebaseServices from '../services/firebase';
 import { determineAttributionActor, fetchAttributionUsernames } from '../utils/attribution-utils';
 

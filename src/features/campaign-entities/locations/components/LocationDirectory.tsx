@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocation as useRouterLocation } from 'react-router-dom';
-import { Location } from '../../../types/location';
+import { Location } from '../types';
 import LocationCard from './LocationCard';
-import Card from '../../core/Card';
-import Typography from '../../core/Typography';
-import Input from '../../core/Input';
+import Card from '../../../../components/core/Card';
+import Typography from '../../../../components/core/Typography';
+import Input from '../../../../components/core/Input';
 import { Search, MapPin, Building } from 'lucide-react';
-import { useFirebaseData } from '../../../hooks/useFirebaseData';
-import { useNavigation } from '../../../context/NavigationContext';
+import { useFirebaseData } from '../../../../hooks/useFirebaseData';
+import { useNavigation } from '../../../../context/NavigationContext';
 import clsx from 'clsx';
 
 interface LocationDirectoryProps {

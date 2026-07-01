@@ -14,7 +14,7 @@ jest.mock('../../../npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
 }));
 
-jest.mock('../../../../../context/LocationContext', () => ({
+jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(),
 }));
 
@@ -49,7 +49,7 @@ jest.mock('../../../../../services/firebase', () => ({ default: {} }));
 // ---------------------------------------------------------------------------
 
 const { useNPCs } = require('../../../npcs/context/NPCContext');
-const { useLocations } = require('../../../../../context/LocationContext');
+const { useLocations } = require('../../../locations/context/LocationContext');
 const { useNavigation } = require('../../../../../context/NavigationContext');
 const { useQuests } = require('../../context/QuestContext');
 const { useAuth } = require('@/features/user-management');

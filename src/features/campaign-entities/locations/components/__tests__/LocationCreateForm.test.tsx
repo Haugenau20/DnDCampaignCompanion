@@ -1,4 +1,4 @@
-﻿// src/components/features/locations/__tests__/LocationCreateForm.test.tsx
+﻿// src/features/campaign-entities/locations/components/__tests__/LocationCreateForm.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -13,16 +13,19 @@ const mockCreateLocation = jest.fn();
 const mockGetLocationById = jest.fn();
 const mockMarkEntityAsConverted = jest.fn();
 
-jest.mock('../../../../context/LocationContext', () => ({
+jest.mock('../../context/LocationContext', () => ({
   useLocations: jest.fn(),
 }));
 
-jest.mock('../../../../context/NoteContext', () => ({
+jest.mock('../../../../../context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
 
-jest.mock('features/campaign-entities', () => ({
+jest.mock('../../../npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
+}));
+
+jest.mock('../../../quests/context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
@@ -37,9 +40,10 @@ jest.mock('@/features/user-management', () => ({
 // Hook setup helpers
 // ---------------------------------------------------------------------------
 
-const { useLocations } = require('../../../../context/LocationContext');
-const { useNotes } = require('../../../../context/NoteContext');
-const { useNPCs, useQuests } = require('features/campaign-entities');
+const { useLocations } = require('../../context/LocationContext');
+const { useNotes } = require('../../../../../context/NoteContext');
+const { useNPCs } = require('../../../npcs/context/NPCContext');
+const { useQuests } = require('../../../quests/context/QuestContext');
 const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 function setupMocks({

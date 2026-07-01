@@ -9,7 +9,7 @@ import { useAuth } from 'features/user-management';
 import { useRumors } from '../../../context/RumorContext';
 import { useNavigation } from '../../../hooks/useNavigation';
 import { useNPCs } from 'features/campaign-entities';
-import { useLocations } from '../../../context/LocationContext';
+import { useLocations } from 'features/campaign-entities';
 import AttributionInfo from '../../shared/AttributionInfo';
 import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
 import clsx from 'clsx';
