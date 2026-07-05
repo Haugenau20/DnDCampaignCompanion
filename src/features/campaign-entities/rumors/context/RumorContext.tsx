@@ -1,10 +1,10 @@
-// src/context/RumorContext.tsx - updating rumor context to use character names
+// src/features/campaign-entities/rumors/context/RumorContext.tsx - updating rumor context to use character names
 import React, { createContext, useContext, useCallback } from 'react';
-import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types/rumor';
+import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types';
 import { useRumorData } from '../hooks/useRumorData';
-import { useFirebaseData } from '../hooks/useFirebaseData';
+import { useFirebaseData } from '../../../../hooks/useFirebaseData';
 import { useAuth, useUser, useFirestore } from 'features/user-management';
-import { getUserName, getActiveCharacterName } from '../utils/user-utils';
+import { getUserName, getActiveCharacterName } from '../../../../utils/user-utils';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 

@@ -1,9 +1,9 @@
-// src/components/features/rumors/__tests__/RumorBatchActions.test.tsx
+// src/features/campaign-entities/rumors/components/__tests__/RumorBatchActions.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import RumorBatchActions from '../RumorBatchActions';
-import { Rumor } from '../../../../types/rumor';
+import { Rumor } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock children dialogs and confirmation dialog
@@ -46,7 +46,7 @@ jest.mock('../ConvertToQuestDialog', () => ({
     ) : null,
 }));
 
-jest.mock('../../../shared/DeleteConfirmationDialog', () => ({
+jest.mock('../../../../../components/shared/DeleteConfirmationDialog', () => ({
   __esModule: true,
   default: ({ isOpen, onClose, onConfirm, itemName, message }: any) =>
     isOpen ? (
@@ -67,10 +67,10 @@ const mockDeleteRumor = jest.fn();
 const mockCombineRumors = jest.fn();
 const mockConvertToQuest = jest.fn();
 
-jest.mock('../../../../context/RumorContext', () => ({
+jest.mock('../../context/RumorContext', () => ({
   useRumors: jest.fn(),
 }));
-const { useRumors } = require('../../../../context/RumorContext');
+const { useRumors } = require('../../context/RumorContext');
 
 function makeRumor(id: string): Rumor {
   return {

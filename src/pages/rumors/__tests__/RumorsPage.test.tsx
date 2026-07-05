@@ -36,10 +36,6 @@ let mockRumorContext: RumorContextMock = {
   convertToQuest: jest.fn(),
 };
 
-jest.mock("../../../context/RumorContext", () => ({
-  useRumors: () => mockRumorContext,
-}));
-
 const mockNavigateToPage = jest.fn();
 
 jest.mock("../../../hooks/useNavigation", () => ({
@@ -50,45 +46,33 @@ jest.mock("../../../hooks/useNavigation", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Child component mocks
+// Barrel mock: useRumors hook + child components consumed via the
+// campaign-entities public API (RumorDirectory, CombineRumorsDialog,
+// ConvertToQuestDialog). Dialog-dependent components are mocked inline
+// (bug #150 — JSDOM portal limitation).
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/features/rumors/RumorDirectory", () => ({
-  __esModule: true,
-  default: (props: any) => (
+jest.mock("features/campaign-entities", () => ({
+  useRumors: () => mockRumorContext,
+  RumorDirectory: (props: any) => (
     <div data-testid="rumor-directory">
       <span data-testid="rumor-directory-count">{props.rumors?.length}</span>
     </div>
   ),
+  CombineRumorsDialog: (props: any) => (
+    <div data-testid="combine-rumors-dialog" data-open={props.open ? "true" : "false"}>
+      <button data-testid="combine-dialog-close" onClick={props.onClose}>
+        close
+      </button>
+    </div>
+  ),
+  ConvertToQuestDialog: (props: any) => (
+    <div data-testid="convert-quest-dialog" data-open={props.open ? "true" : "false"}>
+      <button data-testid="convert-dialog-close" onClick={props.onClose}>
+        close
+      </button>
+    </div>
+  ),
 }));
-
-// Mock Dialog-dependent components (bug #150 — JSDOM portal limitation)
-jest.mock(
-  "../../../components/features/rumors/CombineRumorsDialog",
-  () => ({
-    __esModule: true,
-    default: (props: any) => (
-      <div data-testid="combine-rumors-dialog" data-open={props.open ? "true" : "false"}>
-        <button data-testid="combine-dialog-close" onClick={props.onClose}>
-          close
-        </button>
-      </div>
-    ),
-  })
-);
-
-jest.mock(
-  "../../../components/features/rumors/ConvertToQuestDialog",
-  () => ({
-    __esModule: true,
-    default: (props: any) => (
-      <div data-testid="convert-quest-dialog" data-open={props.open ? "true" : "false"}>
-        <button data-testid="convert-dialog-close" onClick={props.onClose}>
-          close
-        </button>
-      </div>
-    ),
-  })
-);
 
 jest.mock("../../../components/core/Typography", () => ({
   __esModule: true,

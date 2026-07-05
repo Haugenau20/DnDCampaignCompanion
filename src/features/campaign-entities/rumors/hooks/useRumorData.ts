@@ -1,7 +1,7 @@
-// src/hooks/useRumorData.ts
+// src/features/campaign-entities/rumors/hooks/useRumorData.ts
 import { useState, useEffect, useCallback } from 'react';
-import { Rumor } from '../types/rumor';
-import { useFirebaseData } from './useFirebaseData';
+import { Rumor } from '../types';
+import { useFirebaseData } from '../../../../hooks/useFirebaseData';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 
 /**

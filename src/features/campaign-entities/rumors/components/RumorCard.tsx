@@ -1,17 +1,17 @@
-// src/components/features/rumors/RumorCard.tsx
+// src/features/campaign-entities/rumors/components/RumorCard.tsx
 import React, { useState } from 'react';
-import { Rumor, RumorStatus } from '../../../types/rumor';
-import Card from '../../core/Card';
-import Typography from '../../core/Typography';
-import Button from '../../core/Button';
-import Input from '../../core/Input';
+import { Rumor, RumorStatus } from '../types';
+import Card from '../../../../components/core/Card';
+import Typography from '../../../../components/core/Typography';
+import Button from '../../../../components/core/Button';
+import Input from '../../../../components/core/Input';
 import { useAuth } from 'features/user-management';
-import { useRumors } from '../../../context/RumorContext';
-import { useNavigation } from '../../../hooks/useNavigation';
-import { useNPCs } from 'features/campaign-entities';
-import { useLocations } from 'features/campaign-entities';
-import AttributionInfo from '../../shared/AttributionInfo';
-import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
+import { useRumors } from '../context/RumorContext';
+import { useNavigation } from '../../../../hooks/useNavigation';
+import { useNPCs } from '../../npcs/context/NPCContext';
+import { useLocations } from '../../locations/context/LocationContext';
+import AttributionInfo from '../../../../components/shared/AttributionInfo';
+import DeleteConfirmationDialog from '../../../../components/shared/DeleteConfirmationDialog';
 import clsx from 'clsx';
 import { 
   ChevronDown, 

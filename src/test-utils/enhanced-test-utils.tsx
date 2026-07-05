@@ -11,7 +11,7 @@ import { NPCProvider } from 'features/campaign-entities';
 import { LocationProvider } from 'features/campaign-entities';
 import { StoryProvider } from '@/features/storytelling';
 import { QuestProvider } from 'features/campaign-entities';
-import { RumorProvider } from '../context/RumorContext';
+import { RumorProvider } from 'features/campaign-entities';
 import { NoteProvider } from '../context/NoteContext';
 import { createMockFirebaseContext } from './firebase-test-helpers';
 

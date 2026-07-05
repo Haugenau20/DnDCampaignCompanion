@@ -1,14 +1,14 @@
-﻿// src/components/features/rumors/__tests__/RumorDirectory.test.tsx
+﻿// src/features/campaign-entities/rumors/components/__tests__/RumorDirectory.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import RumorDirectory from '../RumorDirectory';
-import { Rumor, RumorStatus, SourceType } from '../../../../types/rumor';
+import { Rumor, RumorStatus, SourceType } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock Dialog to render inline (bug #150)
 // ---------------------------------------------------------------------------
-jest.mock('../../../core/Dialog', () => {
+jest.mock('../../../../../components/core/Dialog', () => {
   const MockDialog: React.FC<{
     open: boolean;
     onClose: () => void;
@@ -40,7 +40,7 @@ if (!crypto.randomUUID) {
 // Mock all context dependencies
 // ---------------------------------------------------------------------------
 
-jest.mock('../../../../hooks/useNavigation', () => ({
+jest.mock('../../../../../hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -49,27 +49,30 @@ jest.mock('@/features/user-management', () => ({
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
 }));
 
-jest.mock('../../../../context/RumorContext', () => ({
+jest.mock('../../context/RumorContext', () => ({
   useRumors: jest.fn(),
 }));
 
-jest.mock('features/campaign-entities', () => ({
+jest.mock('../../../npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(() => ({ getNPCById: jest.fn(() => undefined) })),
+}));
+
+jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ getLocationById: jest.fn(() => undefined) })),
 }));
 
-jest.mock('../../../../utils/attribution-utils', () => ({
+jest.mock('../../../../../utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
 
-jest.mock('../../../../services/firebase', () => ({ default: {} }));
+jest.mock('../../../../../services/firebase', () => ({ default: {} }));
 
 const mockNavigateToPage = jest.fn();
 const mockGetCurrentQueryParams = jest.fn(() => ({}));
 
-const { useNavigation } = require('../../../../hooks/useNavigation');
-const { useRumors } = require('../../../../context/RumorContext');
+const { useNavigation } = require('../../../../../hooks/useNavigation');
+const { useRumors } = require('../../context/RumorContext');
 
 function setupMocks() {
   (useNavigation as jest.Mock).mockReturnValue({

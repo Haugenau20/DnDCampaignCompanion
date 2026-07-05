@@ -32,3 +32,16 @@ export { default as LocationDirectory } from './locations/components/LocationDir
 export { default as LocationEditForm } from './locations/components/LocationEditForm';
 // Location types
 export type { Location, LocationType, LocationStatus, LocationNote, LocationContextState, LocationContextValue } from './locations/types';
+
+// Rumor context and hooks
+export { RumorProvider, useRumors } from './rumors/context/RumorContext';
+export { useRumorData } from './rumors/hooks/useRumorData';
+// Components consumed by pages/rumors/* and other external consumers
+export { default as RumorCard } from './rumors/components/RumorCard';
+export { default as RumorForm } from './rumors/components/RumorForm';
+export { default as RumorDirectory } from './rumors/components/RumorDirectory';
+export { default as RumorBatchActions } from './rumors/components/RumorBatchActions';
+export { default as CombineRumorsDialog } from './rumors/components/CombineRumorsDialog';
+export { default as ConvertToQuestDialog } from './rumors/components/ConvertToQuestDialog';
+// Rumor types
+export type { Rumor, RumorStatus, SourceType, RumorNote, RumorContextState, RumorContextValue } from './rumors/types';

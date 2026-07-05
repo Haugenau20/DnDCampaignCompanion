@@ -1,15 +1,15 @@
-﻿// src/components/features/rumors/__tests__/RumorForm.test.tsx
+﻿// src/features/campaign-entities/rumors/components/__tests__/RumorForm.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RumorForm from '../RumorForm';
-import { Rumor } from '../../../../types/rumor';
+import { Rumor } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock Dialog (bug #150 — Dialog portal interior unreachable)
 // ---------------------------------------------------------------------------
-jest.mock('../../../core/Dialog', () => ({
+jest.mock('../../../../../components/core/Dialog', () => ({
   __esModule: true,
   default: ({ open, title, children }: any) =>
     open ? (
@@ -27,14 +27,16 @@ const mockAddRumor = jest.fn();
 const mockUpdateRumor = jest.fn();
 const mockMarkEntityAsConverted = jest.fn();
 
-jest.mock('../../../../context/RumorContext', () => ({
+jest.mock('../../context/RumorContext', () => ({
   useRumors: jest.fn(),
 }));
-jest.mock('features/campaign-entities', () => ({
+jest.mock('../../../npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
+}));
+jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(),
 }));
-jest.mock('../../../../context/NoteContext', () => ({
+jest.mock('../../../../../context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
 jest.mock('@/features/user-management', () => ({
@@ -42,9 +44,10 @@ jest.mock('@/features/user-management', () => ({
   useUser: jest.fn(),
 }));
 
-const { useRumors } = require('../../../../context/RumorContext');
-const { useNPCs, useLocations } = require('features/campaign-entities');
-const { useNotes } = require('../../../../context/NoteContext');
+const { useRumors } = require('../../context/RumorContext');
+const { useNPCs } = require('../../../npcs/context/NPCContext');
+const { useLocations } = require('../../../locations/context/LocationContext');
+const { useNotes } = require('../../../../../context/NoteContext');
 const { useAuth, useUser } = require('@/features/user-management');
 
 beforeEach(() => {

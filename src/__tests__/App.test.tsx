@@ -56,6 +56,10 @@ jest.mock("features/campaign-entities", () => ({
     <div data-testid="location-provider">{children}</div>
   ),
   useLocations: () => ({}),
+  RumorProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="rumor-provider">{children}</div>
+  ),
+  useRumors: () => ({}),
 }));
 
 jest.mock("features/storytelling", () => ({
@@ -73,14 +77,6 @@ jest.mock("@/features/user-management/auth/context/FirebaseContext", () => ({
   useFirebase: () => ({}),
   AUTH_STATE_CHANGED_EVENT: "auth-state-changed",
 }));
-
-jest.mock("../context/RumorContext", () => ({
-  RumorProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="rumor-provider">{children}</div>
-  ),
-  useRumors: () => ({}),
-}));
-
 
 jest.mock("../context/NoteContext", () => ({
   NoteProvider: ({ children }: { children: React.ReactNode }) => (

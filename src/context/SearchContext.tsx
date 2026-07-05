@@ -9,8 +9,8 @@ import { useLocationData } from 'features/campaign-entities';
 import { useQuests, Quest } from 'features/campaign-entities';
 import { NPC } from 'features/campaign-entities';
 import type { Location } from 'features/campaign-entities';
-import { Rumor } from '../types/rumor';
-import { useRumorData } from '../hooks/useRumorData';
+import { Rumor } from 'features/campaign-entities';
+import { useRumorData } from 'features/campaign-entities';
 
 interface SearchContextData {
   query: string;
