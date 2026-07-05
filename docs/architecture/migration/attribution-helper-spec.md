@@ -1,6 +1,15 @@
 # Spec: Centralized Attribution Helper (salvage from `form-context-separation`)
 
-*Status: Ready to implement. Target branch: `migration/campaign-entities`.*
+> ⚠️ **SUPERSEDED (2026-07-05).** The problem statement below ("this is a bug fix";
+> "fixes the highest-priority user-attribution bug") did **not** survive verification: the
+> attribution bug-marker tests already pass, nothing consumes the "missing" `characterId`, and
+> the real issue is that attribution is written **three different ways** across the codebase.
+> Read **`attribution-consolidation-findings.md`** for the corrected analysis and the current
+> recommendation. The Wave-1 helper (`src/shared/attribution`) still exists and is still useful —
+> but its role is now "the single mapping function," not "wire it into the contexts." Do **not**
+> execute the "call sites to update" plan below as written.
+
+*Status: SUPERSEDED — see attribution-consolidation-findings.md. Wave-1 helper built & merged.*
 *Author context: distilled from the abandoned `feature/form-context-separation` branch and verified against the current codebase on 2026-07-05.*
 
 This spec turns the one salvageable idea from the abandoned `feature/form-context-separation`
