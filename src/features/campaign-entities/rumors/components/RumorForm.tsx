@@ -1,15 +1,15 @@
-// src/components/features/rumors/RumorForm.tsx
+// src/features/campaign-entities/rumors/components/RumorForm.tsx
 import React, { useState, useEffect } from 'react';
-import { Rumor, RumorStatus, SourceType } from '../../../types/rumor';
-import { useRumors } from '../../../context/RumorContext';
-import { useNPCs } from 'features/campaign-entities';
-import { useLocations } from 'features/campaign-entities';
-import { useNotes } from '../../../context/NoteContext';
-import Typography from '../../core/Typography';
-import Input from '../../core/Input';
-import Button from '../../core/Button';
-import Card from '../../core/Card';
-import Dialog from '../../core/Dialog';
+import { Rumor, RumorStatus, SourceType } from '../types';
+import { useRumors } from '../context/RumorContext';
+import { useNPCs } from '../../npcs/context/NPCContext';
+import { useLocations } from '../../locations/context/LocationContext';
+import { useNotes } from '../../../../context/NoteContext';
+import Typography from '../../../../components/core/Typography';
+import Input from '../../../../components/core/Input';
+import Button from '../../../../components/core/Button';
+import Card from '../../../../components/core/Card';
+import Dialog from '../../../../components/core/Dialog';
 import { useAuth, useUser } from 'features/user-management';
 import clsx from 'clsx';
 import { AlertCircle, Save, X, Users, MapPin } from 'lucide-react';

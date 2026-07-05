@@ -9,7 +9,7 @@ import { NPC } from 'features/campaign-entities';
 import type { Location } from 'features/campaign-entities';
 import type { Quest } from 'features/campaign-entities';
 import type { Chapter } from 'features/storytelling';
-import { Rumor } from '../../../../../types/rumor';
+import { Rumor } from 'features/campaign-entities';
 
 interface CampaignStatsProps {
   npcs?: NPC[];

@@ -1,5 +1,5 @@
-// src/types/rumor.ts
-import { BaseContent } from './common';
+// src/features/campaign-entities/rumors/types.ts
+import { BaseContent } from '../../../types/common';
 
 export type RumorStatus = 'confirmed' | 'unconfirmed' | 'false';
 export type SourceType = 'npc' | 'tavern' | 'notice' | 'traveler' | 'other';

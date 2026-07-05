@@ -1,11 +1,11 @@
-// src/components/features/rumors/ConvertToQuestDialog.tsx
+// src/features/campaign-entities/rumors/components/ConvertToQuestDialog.tsx
 import React, { useState, useEffect } from 'react';
-import { Rumor } from '../../../types/rumor';
-import type { Quest, QuestObjective } from 'features/campaign-entities';
-import Dialog from '../../core/Dialog';
-import Typography from '../../core/Typography';
-import Input from '../../core/Input';
-import Button from '../../core/Button';
+import { Rumor } from '../types';
+import type { Quest, QuestObjective } from '../../quests/types';
+import Dialog from '../../../../components/core/Dialog';
+import Typography from '../../../../components/core/Typography';
+import Input from '../../../../components/core/Input';
+import Button from '../../../../components/core/Button';
 import { X, MessageSquare, PlusCircle, AlertCircle } from 'lucide-react';
 
 interface ConvertToQuestDialogProps {

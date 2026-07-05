@@ -1,9 +1,9 @@
-﻿// src/context/__tests__/behavioral/RumorContext.bugs.test.tsx
+﻿// src/features/campaign-entities/rumors/context/__tests__/RumorContext.bugs.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
-import { RumorProvider, useRumors } from '../../RumorContext';
-import { Rumor, RumorStatus, RumorNote, SourceType } from '../../../types/rumor';
+import { RumorProvider, useRumors } from '../RumorContext';
+import { Rumor, RumorStatus, RumorNote, SourceType } from '../../types';
 
 /**
  * RumorContext Bug Discovery Testing
@@ -28,21 +28,21 @@ jest.mock('@/features/user-management', () => ({
   useFirestore: () => mockUseFirestore(),
 }));
 
-jest.mock('../../../hooks/useRumorData', () => ({
+jest.mock('../../hooks/useRumorData', () => ({
   useRumorData: () => mockUseRumorData(),
 }));
 
-jest.mock('../../../hooks/useFirebaseData', () => ({
+jest.mock('../../../../../hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 
 // Mock user utilities for proper testing
-jest.mock('../../../utils/user-utils', () => ({
+jest.mock('../../../../../utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('../../../utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('../../../../../utils/user-utils');
 
 const RumorTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {
   const rumorContext = useRumors();

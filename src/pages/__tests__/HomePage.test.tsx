@@ -22,13 +22,6 @@ jest.mock("features/storytelling", () => ({
   }),
 }));
 
-jest.mock("../../context/RumorContext", () => ({
-  useRumors: () => ({
-    rumors: mockRumors,
-    isLoading: mockIsLoading,
-  }),
-}));
-
 jest.mock("features/campaign-entities", () => ({
   useNPCs: () => ({
     npcs: mockNpcs,
@@ -40,6 +33,10 @@ jest.mock("features/campaign-entities", () => ({
   }),
   useLocations: () => ({
     locations: mockLocations,
+    isLoading: mockIsLoading,
+  }),
+  useRumors: () => ({
+    rumors: mockRumors,
     isLoading: mockIsLoading,
   }),
 }));

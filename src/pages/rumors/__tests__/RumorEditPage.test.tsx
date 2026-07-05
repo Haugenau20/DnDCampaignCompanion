@@ -46,20 +46,17 @@ let mockRumorContext: RumorContextMock = {
   error: null,
 };
 
-jest.mock("../../../context/RumorContext", () => ({
-  useRumors: () => mockRumorContext,
-}));
-
 jest.mock("@/features/user-management", () => ({
   useAuth: () => ({ user: { uid: "user-1" } }),
 }));
 
 // ---------------------------------------------------------------------------
-// Child component mocks
+// Barrel mock: useRumors hook + RumorForm consumed via the campaign-entities
+// public API.
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/features/rumors/RumorForm", () => ({
-  __esModule: true,
-  default: (props: any) => (
+jest.mock("features/campaign-entities", () => ({
+  useRumors: () => mockRumorContext,
+  RumorForm: (props: any) => (
     <div data-testid="rumor-form">
       <span data-testid="rumor-form-rumor-id">{props.rumor?.id}</span>
       <span data-testid="rumor-form-rumor-title">{props.rumor?.title}</span>

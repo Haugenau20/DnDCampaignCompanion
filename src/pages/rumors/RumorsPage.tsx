@@ -3,10 +3,7 @@ import React, { useState, useMemo } from 'react';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
-import RumorDirectory from '../../components/features/rumors/RumorDirectory';
-import CombineRumorsDialog from '../../components/features/rumors/CombineRumorsDialog';
-import ConvertToQuestDialog from '../../components/features/rumors/ConvertToQuestDialog';
-import { useRumors } from '../../context/RumorContext';
+import { RumorDirectory, CombineRumorsDialog, ConvertToQuestDialog, useRumors } from 'features/campaign-entities';
 import { useAuth } from 'features/user-management';
 import { useNavigation } from '../../hooks/useNavigation';
 import { 

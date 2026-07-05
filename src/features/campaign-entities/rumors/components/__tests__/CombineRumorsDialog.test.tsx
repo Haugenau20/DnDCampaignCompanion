@@ -1,15 +1,15 @@
-// src/components/features/rumors/__tests__/CombineRumorsDialog.test.tsx
+// src/features/campaign-entities/rumors/components/__tests__/CombineRumorsDialog.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CombineRumorsDialog from '../CombineRumorsDialog';
-import { Rumor } from '../../../../types/rumor';
+import { Rumor } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock Dialog to render children inline (bug #150)
 // ---------------------------------------------------------------------------
-jest.mock('../../../core/Dialog', () => ({
+jest.mock('../../../../../components/core/Dialog', () => ({
   __esModule: true,
   default: ({ open, title, children }: any) =>
     open ? (

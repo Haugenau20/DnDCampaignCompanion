@@ -35,9 +35,6 @@ jest.mock("features/campaign-entities", () => ({
   useNPCData: () => mockUseNPCData(),
   useQuests: () => mockUseQuests(),
   useLocationData: () => mockUseLocationData(),
-}));
-
-jest.mock("../../../hooks/useRumorData", () => ({
   useRumorData: () => mockUseRumorData(),
 }));
 

@@ -3,7 +3,7 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
-import RumorForm from '../../components/features/rumors/RumorForm';
+import { RumorForm } from 'features/campaign-entities';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { ArrowLeft } from 'lucide-react';
 

@@ -1,15 +1,15 @@
-﻿// src/components/features/rumors/__tests__/RumorCard.test.tsx
+﻿// src/features/campaign-entities/rumors/components/__tests__/RumorCard.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RumorCard from '../RumorCard';
-import { Rumor, RumorStatus } from '../../../../types/rumor';
+import { Rumor, RumorStatus } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock Dialog to render children inline (bug #150 — Dialog portal unreachable)
 // ---------------------------------------------------------------------------
-jest.mock('../../../core/Dialog', () => {
+jest.mock('../../../../../components/core/Dialog', () => {
   const MockDialog: React.FC<{
     open: boolean;
     onClose: () => void;
@@ -48,30 +48,34 @@ jest.mock('@/features/user-management', () => ({
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
 }));
 
-jest.mock('../../../../context/RumorContext', () => ({
+jest.mock('../../context/RumorContext', () => ({
   useRumors: jest.fn(),
 }));
 
-jest.mock('../../../../hooks/useNavigation', () => ({
+jest.mock('../../../../../hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
-jest.mock('features/campaign-entities', () => ({
+jest.mock('../../../npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
+}));
+
+jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(),
 }));
 
-jest.mock('../../../../utils/attribution-utils', () => ({
+jest.mock('../../../../../utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
 
-jest.mock('../../../../services/firebase', () => ({ default: {} }));
+jest.mock('../../../../../services/firebase', () => ({ default: {} }));
 
 const { useAuth } = require('@/features/user-management');
-const { useRumors } = require('../../../../context/RumorContext');
-const { useNavigation } = require('../../../../hooks/useNavigation');
-const { useNPCs, useLocations } = require('features/campaign-entities');
+const { useRumors } = require('../../context/RumorContext');
+const { useNavigation } = require('../../../../../hooks/useNavigation');
+const { useNPCs } = require('../../../npcs/context/NPCContext');
+const { useLocations } = require('../../../locations/context/LocationContext');
 
 function setupMocks({
   user = { uid: 'user-1' } as { uid: string } | null,

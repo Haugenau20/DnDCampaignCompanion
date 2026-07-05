@@ -1,13 +1,13 @@
-// src/components/features/rumors/RumorDirectory.tsx
+// src/features/campaign-entities/rumors/components/RumorDirectory.tsx
 import React, { useState, useMemo, useEffect } from 'react';
-import { Rumor, RumorStatus, SourceType } from '../../../types/rumor';
+import { Rumor, RumorStatus, SourceType } from '../types';
 import RumorCard from './RumorCard';
-import Typography from '../../core/Typography';
-import Input from '../../core/Input';
-import Button from '../../core/Button';
-import Card from '../../core/Card';
+import Typography from '../../../../components/core/Typography';
+import Input from '../../../../components/core/Input';
+import Button from '../../../../components/core/Button';
+import Card from '../../../../components/core/Card';
 import RumorBatchActions from './RumorBatchActions';
-import { useNavigation } from '../../../hooks/useNavigation';
+import { useNavigation } from '../../../../hooks/useNavigation';
 import clsx from 'clsx';
 import { 
   Search, 

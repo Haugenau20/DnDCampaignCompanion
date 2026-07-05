@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import RumorsSection from '../RumorsSection';
-import { Rumor } from '../../../../../../types/rumor';
+import { Rumor } from 'features/campaign-entities';
 
 // ---------------------------------------------------------------------------
 // Mocks

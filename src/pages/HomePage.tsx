@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 import { useStory } from 'features/storytelling';
 import { useQuests } from 'features/campaign-entities';
-import { useRumors } from '../context/RumorContext';
+import { useRumors } from 'features/campaign-entities';
 import { useNPCs } from 'features/campaign-entities';
 import { useLocations } from 'features/campaign-entities';
 import firebaseServices from '../services/firebase';

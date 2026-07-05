@@ -1,10 +1,10 @@
-// src/components/features/rumors/RumorBatchActions.tsx
+// src/features/campaign-entities/rumors/components/RumorBatchActions.tsx
 import React, { useState } from 'react';
-import Button from '../../core/Button';
-import Typography from '../../core/Typography';
-import { RumorStatus } from '../../../types/rumor';
-import { useRumors } from '../../../context/RumorContext';
-import DeleteConfirmationDialog from '../../shared/DeleteConfirmationDialog';
+import Button from '../../../../components/core/Button';
+import Typography from '../../../../components/core/Typography';
+import { RumorStatus } from '../types';
+import { useRumors } from '../context/RumorContext';
+import DeleteConfirmationDialog from '../../../../components/shared/DeleteConfirmationDialog';
 import { 
   CheckCircle, 
   HelpCircle, 

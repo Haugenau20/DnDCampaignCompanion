@@ -2,7 +2,7 @@
 
 import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from '../userGenerator';
-import { Rumor as AppRumor } from '../../../../types/rumor';
+import type { Rumor as AppRumor } from 'features/campaign-entities';
 
 
 // Types for rumor data
