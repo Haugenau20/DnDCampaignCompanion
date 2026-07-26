@@ -1,4 +1,4 @@
-﻿// src/hooks/__tests__/useSessionManager.test.ts
+﻿// src/features/user-management/auth/hooks/__tests__/useSessionManager.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { useSessionManager } from '../useSessionManager';
 
@@ -9,11 +9,15 @@ const mockSignOut = jest.fn();
 const mockRefreshSession = jest.fn();
 const mockCheckSessionExpired = jest.fn();
 
-jest.mock('@/features/user-management', () => ({
+// useSessionManager now lives inside user-management and imports useAuth from
+// its sibling module rather than the domain barrel (importing your own barrel
+// from inside the domain is a circular import). The mock has to target that
+// sibling module — pointed at the barrel it would silently stop intercepting.
+jest.mock('../useAuth', () => ({
   useAuth: jest.fn(),
 }));
 
-const { useAuth } = require('@/features/user-management');
+const { useAuth } = require('../useAuth');
 
 const setupAuthMock = (overrides: Record<string, unknown> = {}) => {
   (useAuth as jest.Mock).mockReturnValue({

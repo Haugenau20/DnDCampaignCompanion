@@ -1,4 +1,4 @@
-﻿// src/components/features/auth/__tests__/SessionManager.test.tsx
+﻿// src/features/user-management/auth/components/__tests__/SessionManager.test.tsx
 
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
@@ -6,12 +6,12 @@ import SessionManager from '../SessionManager';
 
 // ---------------------------------------------------------------------------
 // Mock useSessionManager hook
-// The component imports via: import useSessionManager from '../../../hooks/useSessionManager'
+// The component imports via: import useSessionManager from '../hooks/useSessionManager'
 // The hook file exports: export default useSessionManager;
 // ---------------------------------------------------------------------------
 const mockUseSessionManagerFn = jest.fn().mockReturnValue({ checkSession: jest.fn() });
 
-jest.mock('@/hooks/useSessionManager', () => {
+jest.mock('../../hooks/useSessionManager', () => {
   const mockFn = jest.fn().mockReturnValue({ checkSession: jest.fn() });
   return {
     __esModule: true,
@@ -20,7 +20,7 @@ jest.mock('@/hooks/useSessionManager', () => {
   };
 });
 
-const useSessionManagerModule = require('@/hooks/useSessionManager');
+const useSessionManagerModule = require('../../hooks/useSessionManager');
 
 // ---------------------------------------------------------------------------
 // Mock context/firebase

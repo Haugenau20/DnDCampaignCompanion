@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import useSessionManager from 'hooks/useSessionManager';
+import useSessionManager from '../hooks/useSessionManager';
 import { useGroups } from 'features/user-management';
 import { useTheme } from 'themes/ThemeContext';
 import { ThemeName } from 'themes/types';

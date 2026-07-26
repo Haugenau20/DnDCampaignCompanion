@@ -1,10 +1,10 @@
-// src/hooks/useSessionManager.ts
+// src/features/user-management/auth/hooks/useSessionManager.ts
 import { useEffect, useCallback, useRef } from 'react';
-import { useAuth } from 'features/user-management';
-import { 
+import { useAuth } from './useAuth';
+import {
   ACTIVITY_UPDATE_THROTTLE,
-  SESSION_CHECK_INTERVAL 
-} from '../constants/time';
+  SESSION_CHECK_INTERVAL
+} from 'constants/time';
 
 // Events to track for user activity
 const ACTIVITY_EVENTS = [
