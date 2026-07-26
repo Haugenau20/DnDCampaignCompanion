@@ -25,9 +25,9 @@ jest.mock("../Footer", () => ({
   default: () => <footer data-testid="footer" />,
 }));
 
-jest.mock("../../features/notes/FloatingUsageIndicator", () => ({
+jest.mock("features/collaboration", () => ({
   __esModule: true,
-  default: () => <div data-testid="floating-usage" />,
+  FloatingUsageIndicator: () => <div data-testid="floating-usage" />,
 }));
 
 jest.mock("../../shared/GlobalActionButton", () => ({

@@ -5,7 +5,7 @@ import Typography from '../../../../components/core/Typography';
 import Button from '../../../../components/core/Button';
 import Card from '../../../../components/core/Card';
 import { useNPCs } from '../../npcs/context/NPCContext';
-import { useNotes } from '../../../../context/NoteContext';
+import { useNotes } from 'features/collaboration';
 import {
   BasicInfoSection,
   FeaturesSection,

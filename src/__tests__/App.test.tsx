@@ -78,14 +78,11 @@ jest.mock("@/features/user-management/auth/context/FirebaseContext", () => ({
   AUTH_STATE_CHANGED_EVENT: "auth-state-changed",
 }));
 
-jest.mock("../context/NoteContext", () => ({
+jest.mock("features/collaboration", () => ({
   NoteProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="note-provider">{children}</div>
   ),
   useNotes: () => ({}),
-}));
-
-jest.mock("../context/UsageContext", () => ({
   UsageProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="usage-provider">{children}</div>
   ),

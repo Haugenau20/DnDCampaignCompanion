@@ -4,29 +4,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🚧 ARCHITECTURE EVOLUTION IN PROGRESS
 
-**IMPORTANT**: The feature-first restructuring is **in progress**, three domains of four complete.
+**IMPORTANT**: All four feature domains are migrated. The `shared/`/`core/` pass is what remains.
 
 | Domain | Status |
 |---|---|
 | `features/user-management/` (auth, groups, profiles, admin) | ✅ migrated |
 | `features/storytelling/` (chapters, stories, sagas) | ✅ migrated |
 | `features/campaign-entities/` (npcs, quests, locations, rumors) | ✅ migrated |
-| `features/collaboration/` (notes, AI entity extraction) | ⬜ **next** |
-| `shared/` + `core/` infrastructure pass | ⬜ not started |
+| `features/collaboration/` (notes, AI entity extraction) | ✅ migrated |
+| `shared/` + `core/` infrastructure pass | ⬜ **next** |
 
 **What that means in practice**: migrated domains live in `src/features/<domain>/` and expose a
 barrel `index.ts` — import from the barrel, never reach into their internals. Everything not yet
-migrated still sits in the old functional layout (`src/context/`, `src/components/features/`,
-`src/hooks/`, `src/types/`). Expect both shapes in the tree, and put new code in the shape its
-domain has already reached.
+migrated still sits in the old functional layout (`src/context/`, `src/components/`, `src/hooks/`,
+`src/types/`). Expect both shapes in the tree, and put new code in the shape its domain has
+already reached.
 
-**Still awaiting migration**: `NoteContext`, `UsageContext`, `components/features/notes/`,
-`useNoteData`, `useEntityExtractor`, `useOpenAIExtractor`, `types/{note,usage}.ts`,
-`services/firebase/ai/` → all bound for `collaboration/`. `NavigationContext`, `SearchContext`,
-`components/features/layouts/`, `components/features/contact/`, `useFirebaseData`, `useSearch`,
-`useNavigation` → bound for `shared/` or `core/`. `useSessionManager` belongs to
-`features/user-management/` — it tracks auth session activity and was simply left behind when that
-domain migrated.
+**Still awaiting migration** — all bound for `shared/` or `core/`: `context/{NavigationContext,SearchContext}`,
+`components/core/`, `components/layout/`, `components/shared/`, `components/features/contact/`,
+`hooks/{useFirebaseData,useNavigation,useSearch}`, `types/{common,search,user}.ts`,
+`services/firebase/` (minus the AI service, now in `collaboration`), and `test-utils/`.
+
+**Two boundary calls that filenames get wrong** — verify by opening the file, not by guessing from
+the name: `UsageContext` sounds like shared infrastructure but imports `EntityExtractionService`, so
+it is `collaboration/entity-extraction/`. `useSessionManager` sounds like collaboration but tracks
+auth session activity via `useAuth`, so it is `user-management/auth/hooks/`. Both are now in their
+correct homes.
+
+**Known deviation from the dependency rules below**: `features/` → other `features/` is stated as
+forbidden but is not the case — there are 26 such edges (campaign-entities and storytelling both
+depend on user-management; the four entity create/edit forms depend on collaboration for
+`useNotes().markEntityAsConverted`). Every one goes through the target domain's **barrel**, and
+nothing reaches into another feature's internals. See the roadmap doc for the decision still owed
+here: introduce a decoupling seam, or amend the rule to match three domains of actual practice.
 
 **Key Documents** (note: `docs/backlog/` no longer exists — these moved):
 - `docs/testing/post-test-coverage-roadmap.md` — **start here**; the live status and execution order
@@ -110,7 +120,7 @@ src/
 ├── features/
 │   ├── campaign-entities/     # NPCs, Quests, Locations, Rumors + shared relationship logic
 │   ├── storytelling/         # Chapters, Stories, Timeline
-│   ├── collaboration/        # Notes, Sessions, Real-time features
+│   ├── collaboration/        # Notes, AI entity extraction, AI usage tracking
 │   └── user-management/      # Auth, Groups, Profiles
 ├── shared/                   # Cross-domain shared components, hooks, contexts
 ├── core/                     # Infrastructure: Firebase services, UI primitives, theme
@@ -126,8 +136,8 @@ src/
 - `core/` → (no internal dependencies)
 
 ### Migration Status
-- **Phase**: Restructuring in progress — user-management, storytelling and campaign-entities have merged to `main`. Collaboration (notes + AI extraction) is next, then the `shared/`/`core/` infrastructure pass, then post-migration bug triage.
-- **Order**: user-management → storytelling → campaign-entities → collaboration. Deliberately sequential; each domain must be green before the next starts.
+- **Phase**: All four feature domains are migrated. Next is the `shared`/`core` infrastructure pass, then post-migration bug triage.
+- **Order**: user-management → storytelling → campaign-entities → collaboration. Deliberately sequential; each domain must be green before the next starts. Within collaboration, `notes` had to precede `entity-extraction` for the same reason — extraction imports notes' types and helpers.
 - **Per-domain exit criteria**: all tests pass except the documented bug markers, coverage on the migrated domain does not drop, no new bugs introduced by the move itself, and a `migration/<domain>-complete` tag on `main` at merge.
 - **Risk Level**: Low-Medium (incremental, with a behavioural test suite as the safety net)
 

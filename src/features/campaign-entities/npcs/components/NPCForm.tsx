@@ -8,7 +8,7 @@ import Card from '../../../../components/core/Card';
 import Dialog from '../../../../components/core/Dialog';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useNPCs } from '../context/NPCContext';
-import { useNotes } from '../../../../context/NoteContext';
+import { useNotes } from 'features/collaboration';
 import { useAuth, useUser } from 'features/user-management';
 import clsx from 'clsx';
 import { getUserName, getActiveCharacterName } from '../../../../utils/user-utils';

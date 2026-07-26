@@ -40,13 +40,6 @@ jest.mock("@/features/user-management", () => ({
 const mockDeleteNote = jest.fn().mockResolvedValue(undefined);
 const mockGetNoteById = jest.fn();
 
-jest.mock("../../../context/NoteContext", () => ({
-  useNotes: () => ({
-    deleteNote: mockDeleteNote,
-    getNoteById: mockGetNoteById,
-  }),
-}));
-
 const mockNavigateToPage = jest.fn();
 
 jest.mock("../../../hooks/useNavigation", () => ({
@@ -73,7 +66,10 @@ jest.mock("../../../services/firebase/data/DocumentService", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/features/notes/NoteEditor", () => {
+// NoteEditor, NoteReferences, useNotes, EntityExtractor and
+// FloatingUsageIndicator all come from the collaboration domain barrel now,
+// so they are mocked together in a single factory.
+jest.mock("features/collaboration", () => {
   const React = require("react");
   const NoteEditorMock = React.forwardRef((props: any, ref: any) => {
     React.useImperativeHandle(ref, () => ({
@@ -93,33 +89,8 @@ jest.mock("../../../components/features/notes/NoteEditor", () => {
     );
   });
   NoteEditorMock.displayName = "NoteEditor";
-  return { __esModule: true, default: NoteEditorMock };
-});
 
-jest.mock("../../../components/features/notes/EntityExtractor", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <div data-testid="entity-extractor" data-note-id={props.noteId}>
-      {/* Expose triggers so tests can fire getCurrentEditorContent and saveCurrentEditorContent */}
-      <button
-        data-testid="entity-extractor-get-content"
-        onClick={() => props.getCurrentEditorContent && props.getCurrentEditorContent()}
-      >
-        Get Content
-      </button>
-      <button
-        data-testid="entity-extractor-save-content"
-        onClick={async () => props.saveCurrentEditorContent && await props.saveCurrentEditorContent()}
-      >
-        Save Content
-      </button>
-    </div>
-  ),
-}));
-
-jest.mock("../../../components/features/notes/NoteReferences", () => ({
-  __esModule: true,
-  default: (props: any) => (
+  const NoteReferencesMock = (props: any) => (
     <div
       data-testid="note-references"
       data-note-id={props.noteId}
@@ -138,13 +109,40 @@ jest.mock("../../../components/features/notes/NoteReferences", () => ({
         Fire Search Complete
       </button>
     </div>
-  ),
-}));
+  );
 
-jest.mock("../../../components/features/notes/FloatingUsageIndicator", () => ({
-  __esModule: true,
-  default: () => <div data-testid="floating-usage-indicator" />,
-}));
+  const EntityExtractorMock = (props: any) => (
+    <div data-testid="entity-extractor" data-note-id={props.noteId}>
+      {/* Expose triggers so tests can fire getCurrentEditorContent and saveCurrentEditorContent */}
+      <button
+        data-testid="entity-extractor-get-content"
+        onClick={() => props.getCurrentEditorContent && props.getCurrentEditorContent()}
+      >
+        Get Content
+      </button>
+      <button
+        data-testid="entity-extractor-save-content"
+        onClick={async () => props.saveCurrentEditorContent && await props.saveCurrentEditorContent()}
+      >
+        Save Content
+      </button>
+    </div>
+  );
+
+  const FloatingUsageIndicatorMock = () => <div data-testid="floating-usage-indicator" />;
+
+  return {
+    __esModule: true,
+    NoteEditor: NoteEditorMock,
+    NoteReferences: NoteReferencesMock,
+    EntityExtractor: EntityExtractorMock,
+    FloatingUsageIndicator: FloatingUsageIndicatorMock,
+    useNotes: () => ({
+      deleteNote: mockDeleteNote,
+      getNoteById: mockGetNoteById,
+    }),
+  };
+});
 
 jest.mock("../../../components/core/Typography", () => ({
   __esModule: true,

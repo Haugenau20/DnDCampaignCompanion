@@ -21,11 +21,11 @@ const { useNavigation } = require('../../../context/NavigationContext');
 // ---------------------------------------------------------------------------
 const mockCreateNote = jest.fn();
 
-jest.mock('../../../context/NoteContext', () => ({
+jest.mock('features/collaboration', () => ({
   useNotes: jest.fn(),
 }));
 
-const { useNotes } = require('../../../context/NoteContext');
+const { useNotes } = require('features/collaboration');
 
 // ---------------------------------------------------------------------------
 // Helpers

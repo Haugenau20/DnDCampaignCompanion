@@ -12,7 +12,7 @@ import { LocationProvider } from 'features/campaign-entities';
 import { StoryProvider } from '@/features/storytelling';
 import { QuestProvider } from 'features/campaign-entities';
 import { RumorProvider } from 'features/campaign-entities';
-import { NoteProvider } from '../context/NoteContext';
+import { NoteProvider } from 'features/collaboration';
 import { createMockFirebaseContext } from './firebase-test-helpers';
 
 interface TestWrapperProps {

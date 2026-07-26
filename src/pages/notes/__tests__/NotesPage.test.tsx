@@ -30,12 +30,6 @@ jest.mock("@/features/user-management", () => ({
 
 const mockCreateNote = jest.fn().mockResolvedValue("new-note-id");
 
-jest.mock("../../../context/NoteContext", () => ({
-  useNotes: () => ({
-    createNote: mockCreateNote,
-  }),
-}));
-
 const mockNavigateToPage = jest.fn();
 
 jest.mock("../../../hooks/useNavigation", () => ({
@@ -48,9 +42,14 @@ jest.mock("../../../hooks/useNavigation", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/features/notes/NotesList", () => ({
+// NotesList and useNotes both come from the collaboration domain barrel now,
+// so they are mocked together in a single factory.
+jest.mock("features/collaboration", () => ({
   __esModule: true,
-  default: () => <div data-testid="notes-list" />,
+  useNotes: () => ({
+    createNote: mockCreateNote,
+  }),
+  NotesList: () => <div data-testid="notes-list" />,
 }));
 
 jest.mock("../../../components/core/Typography", () => ({

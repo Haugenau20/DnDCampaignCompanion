@@ -16,7 +16,7 @@ jest.mock('../../context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
 
-jest.mock('../../../../../context/NoteContext', () => ({
+jest.mock('features/collaboration', () => ({
   useNotes: jest.fn(),
 }));
 
@@ -33,7 +33,7 @@ jest.mock('../../../locations/context/LocationContext', () => ({
 // ---------------------------------------------------------------------------
 
 const { useQuests } = require('../../context/QuestContext');
-const { useNotes } = require('../../../../../context/NoteContext');
+const { useNotes } = require('features/collaboration');
 const { useNPCs } = require('../../../npcs/context/NPCContext');
 
 function setupMocks({

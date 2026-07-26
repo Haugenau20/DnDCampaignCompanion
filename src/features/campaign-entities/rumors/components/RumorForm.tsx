@@ -4,7 +4,7 @@ import { Rumor, RumorStatus, SourceType } from '../types';
 import { useRumors } from '../context/RumorContext';
 import { useNPCs } from '../../npcs/context/NPCContext';
 import { useLocations } from '../../locations/context/LocationContext';
-import { useNotes } from '../../../../context/NoteContext';
+import { useNotes } from 'features/collaboration';
 import Typography from '../../../../components/core/Typography';
 import Input from '../../../../components/core/Input';
 import Button from '../../../../components/core/Button';

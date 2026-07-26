@@ -3,7 +3,7 @@ import React from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import Navigation from './Navigation';
-import FloatingUsageIndicator from '../features/notes/FloatingUsageIndicator';
+import { FloatingUsageIndicator } from 'features/collaboration';
 import GlobalActionButton from '../shared/GlobalActionButton';
 
 interface LayoutProps {
