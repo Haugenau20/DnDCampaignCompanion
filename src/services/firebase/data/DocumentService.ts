@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import BaseFirebaseService from '../core/BaseFirebaseService';
 import { ContentAttribution } from '../../../types/common';
+import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
 
 /**
  * DocumentService provides generic CRUD operations for Firestore documents
@@ -106,31 +107,8 @@ class DocumentService extends BaseFirebaseService {
       }
 
       const userProfile = userProfileDoc.data();
-      const username = userProfile.username || '';
-      
-      // Create attribution metadata with character information
-      const now = new Date().toISOString();
-      const attributionMetadata: Partial<ContentAttribution> = {
-        createdBy: userId,
-        createdByUsername: username,
-        dateAdded: now,
-        // Include character information
-        createdByCharacterId: userProfile.activeCharacterId || null,
-        createdByCharacterName: null // Will be set below if available
-      };
-      
-      // If user has an active character, get its name
-      if (userProfile.activeCharacterId && userProfile.characters) {
-        const activeCharacter = userProfile.characters.find(
-          (char: any) => char.id === userProfile.activeCharacterId
-        );
-        
-        if (activeCharacter) {
-          attributionMetadata.createdByCharacterName = activeCharacter.name;
-        }
-      }
 
-      return attributionMetadata;
+      return buildCreationAttribution({ uid: userId, activeGroupUserProfile: userProfile });
     } catch (error) {
       console.error('Error getting attribution metadata:', error);
       throw error;
@@ -164,31 +142,8 @@ class DocumentService extends BaseFirebaseService {
       }
 
       const userProfile = userProfileDoc.data();
-      const username = userProfile.username || '';
-      
-      // Create modification metadata with character information
-      const now = new Date().toISOString();
-      const attributionMetadata: Partial<ContentAttribution> = {
-        modifiedBy: userId,
-        modifiedByUsername: username,
-        dateModified: now,
-        // Include character information
-        modifiedByCharacterId: userProfile.activeCharacterId || null,
-        modifiedByCharacterName: null // Will be set below if available
-      };
-      
-      // If user has an active character, get its name
-      if (userProfile.activeCharacterId && userProfile.characters) {
-        const activeCharacter = userProfile.characters.find(
-          (char: any) => char.id === userProfile.activeCharacterId
-        );
-        
-        if (activeCharacter) {
-          attributionMetadata.modifiedByCharacterName = activeCharacter.name;
-        }
-      }
 
-      return attributionMetadata;
+      return buildModificationAttribution({ uid: userId, activeGroupUserProfile: userProfile });
     } catch (error) {
       console.error('Error getting modification attribution:', error);
       throw error;

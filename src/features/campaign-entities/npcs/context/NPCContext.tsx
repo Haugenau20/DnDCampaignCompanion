@@ -1,11 +1,10 @@
 // src/features/campaign-entities/npcs/context/NPCContext.tsx
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { NPC, NPCContextValue, NPCRelationship, NPCNote } from '../types';
-import { ContentAttribution} from '../../../../types/common';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from '../../../../hooks/useFirebaseData';
 import { useGroups, useCampaigns, useAuth, useUser } from 'features/user-management';
-import { getUserName, getActiveCharacterName } from '../../../../utils/user-utils';
+import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
 
 const NPCContext = createContext<NPCContextValue | undefined>(undefined);
 
@@ -62,13 +61,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const npc = getNPCById(npcId);
     if (npc) {
       // Create modification attribution data
-      const modificationAttribution: Partial<ContentAttribution> = {
-        modifiedBy: user.uid,
-        modifiedByUsername: getUserName(activeGroupUserProfile),
-        modifiedByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
-        modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-        dateModified: new Date().toISOString()
-      };
+      const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
 
       const updatedNPC = {
         ...npc,
@@ -94,13 +87,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const npc = getNPCById(npcId);
     if (npc) {
       // Create modification attribution data
-      const modificationAttribution: Partial<ContentAttribution> = {
-        modifiedBy: user.uid,
-        modifiedByUsername: getUserName(activeGroupUserProfile),
-        modifiedByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
-        modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-        dateModified: new Date().toISOString()
-      };
+      const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
 
       const updatedNPC = {
         ...npc,
@@ -131,20 +118,8 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const id = generateNPCId(npcData.name);
-    const now = new Date().toISOString();
 
-    const creationAttribution: Partial<ContentAttribution> = {
-      createdBy: user.uid,
-      createdByUsername: getUserName(activeGroupUserProfile),
-      createdByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
-      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      dateAdded: now,
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      dateModified: now
-    };
+    const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
 
     const newNPC: NPC = {
       ...npcData,
@@ -167,17 +142,9 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('User must be authenticated to update an NPC');
     }
 
-    const now = new Date().toISOString();
-    
     // Create modification attribution data
-    const modificationAttribution: Partial<ContentAttribution> = {
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      dateModified: now
-    };
-    
+    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+
     // Update the NPC with new modification attribution
     const updatedNPC = {
       ...npc,

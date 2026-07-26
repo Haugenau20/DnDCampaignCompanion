@@ -4,7 +4,7 @@ import { Location, LocationStatus, LocationContextValue, LocationNote } from '..
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from '../../../../hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
-import { getUserName, getActiveCharacterName } from '../../../../utils/user-utils';
+import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
 
 // Custom event for location changes (deletion, update, etc.)
 export const LOCATION_CHANGED_EVENT = 'location-data-changed';
@@ -82,12 +82,10 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     // Add attribution data
+    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
     const updatedData = {
       ...updatedLocation,
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      dateModified: new Date().toISOString()
+      ...modificationAttribution
     };
 
     await updateData(locationId, updatedData);
@@ -220,22 +218,12 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
-    const now = new Date().toISOString();
-    const characterId = activeGroupUserProfile?.activeCharacterId || null;
+    const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
 
     const newLocation = {
       ...locationData,
       id: locationId,
-      createdBy: user.uid,
-      createdByUsername: getUserName(activeGroupUserProfile),
-      createdByCharacterId: characterId,
-      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      dateAdded: now,
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterId: characterId,
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      dateModified: now
+      ...creationAttribution
     } as Location;
 
     await addData(newLocation, locationId);

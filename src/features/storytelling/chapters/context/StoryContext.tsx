@@ -5,7 +5,7 @@ import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from 'hooks/useFirebaseData';
 import { useAuth, useUser } from 'features/user-management';
 import firebaseServices from 'services/firebase';
-import { getUserName, getActiveCharacterName } from 'utils/user-utils';
+import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
 
 interface StoryContextState {
   chapters: Chapter[];
@@ -203,10 +203,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (updates.order === undefined || updates.order === chapter.order) {
         await updateData(chapterId, {
           ...updates,
-          dateModified: new Date().toISOString(),
-          modifiedBy: user.uid,
-          modifiedByUsername: getUserName(activeGroupUserProfile),
-          modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile)
+          ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile })
         });
         await refreshChapters();
         return;
@@ -259,16 +256,16 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Set the moving chapter's new order
       newOrderMap.set(chapterId, newOrder);
-      
+
+      // Compute the modification attribution once for the chapter being moved
+      const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+
       // Create array of chapters with their new orders
       const updatedChapters = affectedChapters.map(c => ({
         ...c,
         id: generateChapterId(newOrderMap.get(c.id)),
         order: newOrderMap.get(c.id),
-        dateModified: c.id === chapterId ? new Date() : c.dateModified,
-        modifiedBy: c.id === chapterId ? user.uid : c.modifiedBy,
-        modifiedByUsername: c.id === chapterId ? getUserName(activeGroupUserProfile) || '' : c.modifiedByUsername,
-        modifiedByCharacterName: c.id === chapterId ? getActiveCharacterName(activeGroupUserProfile) || '' : c.modifiedByCharacterName,
+        ...(c.id === chapterId ? modificationAttribution : {}),
         // Add any other updates for the target chapter
         ...(c.id === chapterId ? updates : {})
       }));
@@ -360,14 +357,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ...chapterData,
         id: chapterId,
         order: newOrder,
-        dateAdded: new Date().toISOString(),
-        createdBy: user.uid,
-        createdByUsername: getUserName(activeGroupUserProfile) || '',
-        createdByCharacterName: getActiveCharacterName(activeGroupUserProfile) || '',
-        dateModified: new Date().toISOString(),
-        modifiedBy: user.uid,
-        modifiedByUsername: getUserName(activeGroupUserProfile) || '',
-        modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile) || ''
+        ...buildCreationAttribution({ uid: user.uid, activeGroupUserProfile })
       };
       
       // Add chapter to Firebase

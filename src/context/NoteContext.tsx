@@ -3,7 +3,7 @@ import React, { createContext, useContext, useCallback, useState, useEffect } fr
 import { Note, NoteContextValue, ExtractedEntity, EntityType } from "../types/note";
 import DocumentService from "../services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns, useUser } from "features/user-management";
-import { getUserName, getActiveCharacterName } from '../utils/user-utils';
+import { buildCreationAttribution, buildModificationAttribution } from "shared/attribution";
 import { useNavigate } from 'react-router-dom';
 
 // Create the context with initial undefined value
@@ -119,9 +119,8 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     
     const noteId = generateSequentialNoteId();
     const now = new Date().toISOString();
-    const username = getUserName(activeGroupUserProfile);
-    const characterName = getActiveCharacterName(activeGroupUserProfile);
-    
+    const attribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
+
     // Create note object locally only - don't save to Firebase yet
     const newNote: Note = {
       id: noteId,
@@ -131,14 +130,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       status: "active",
       tags: [],
       updatedAt: now,
-      dateAdded: now,
-      dateModified: now,
-      createdBy: user.uid,
-      createdByUsername: username || "",
-      createdByCharacterName: characterName || "",
-      modifiedBy: user.uid,
-      modifiedByUsername: username || "",
-      modifiedByCharacterName: characterName || "",
+      ...attribution,
       campaignId: activeCampaignId,
       isUnsaved: true, // Mark as unsaved
     };
@@ -162,16 +154,12 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     const note = getNoteById(noteId);
     if (!note) throw new Error("Note not found");
     
-    const username = getUserName(activeGroupUserProfile);
-    const characterName = getActiveCharacterName(activeGroupUserProfile);
+    const attribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
     const now = new Date().toISOString();
-    
+
     const updatedFields = {
       ...updates,
-      dateModified: now,
-      modifiedBy: user.uid,
-      modifiedByUsername: username || "",
-      modifiedByCharacterName: characterName || "",
+      ...attribution,
       updatedAt: now,
       // Don't include isUnsaved in updates - we'll handle it separately
     };
