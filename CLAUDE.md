@@ -20,11 +20,13 @@ migrated still sits in the old functional layout (`src/context/`, `src/component
 `src/hooks/`, `src/types/`). Expect both shapes in the tree, and put new code in the shape its
 domain has already reached.
 
-**Still awaiting migration**: `NoteContext`, `components/features/notes/`, `useNoteData`,
-`useEntityExtractor`, `useOpenAIExtractor`, `useSessionManager`, `types/note.ts`,
+**Still awaiting migration**: `NoteContext`, `UsageContext`, `components/features/notes/`,
+`useNoteData`, `useEntityExtractor`, `useOpenAIExtractor`, `types/{note,usage}.ts`,
 `services/firebase/ai/` → all bound for `collaboration/`. `NavigationContext`, `SearchContext`,
-`UsageContext`, `components/features/layouts/`, `useFirebaseData`, `useSearch`, `useNavigation` →
-bound for `shared/` or `core/`.
+`components/features/layouts/`, `components/features/contact/`, `useFirebaseData`, `useSearch`,
+`useNavigation` → bound for `shared/` or `core/`. `useSessionManager` belongs to
+`features/user-management/` — it tracks auth session activity and was simply left behind when that
+domain migrated.
 
 **Key Documents** (note: `docs/backlog/` no longer exists — these moved):
 - `docs/testing/post-test-coverage-roadmap.md` — **start here**; the live status and execution order

@@ -120,13 +120,20 @@ speculative ("BUG POTENTIAL"). Decide whether to correct or delete it during the
 than carrying it as a phantom marker.
 
 Scope for the collaboration domain: `src/context/NoteContext.tsx`,
-`src/components/features/notes/` (15 files), `src/hooks/{useNoteData,useEntityExtractor,useOpenAIExtractor,useSessionManager}.ts`,
-`src/types/note.ts`, `src/services/firebase/ai/`, `src/pages/notes/`.
+`src/components/features/notes/` (15 files), `src/hooks/{useNoteData,useEntityExtractor,useOpenAIExtractor}.ts`,
+`src/types/note.ts`, `src/services/firebase/ai/`, `src/pages/notes/`, plus
+**`src/context/UsageContext.tsx` and `src/types/usage.ts`** — usage tracking imports
+`EntityExtractionService` directly and is AI-usage bookkeeping, so it belongs here rather than in
+`shared/`.
+
+**`useSessionManager` is NOT collaboration.** It tracks user activity and idle timeout via
+`useAuth`; it belongs to `features/user-management/`. It is a straggler left behind by an
+already-completed domain migration — move it there, either during this phase or as its own tidy-up.
 
 After collaboration, the `shared/`/`core/` pass takes what remains in the old layout:
-`NavigationContext`, `SearchContext`, `UsageContext`, `components/features/layouts/`,
+`NavigationContext`, `SearchContext`, `components/features/layouts/`,
 `components/features/contact/`, `useFirebaseData`, `useSearch`, `useNavigation`, and
-`types/{common,search,usage,user}.ts`.
+`types/{common,search,user}.ts`.
 
 **Per-phase exit criteria**:
 - All tests pass except the documented bug-marker set.
