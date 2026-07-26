@@ -1,6 +1,6 @@
-﻿// src/context/__tests__/behavioral/NoteContext.bugs.test.tsx
+// src/context/__tests__/behavioral/NoteContext.bugs.test.tsx
 import React from 'react';
-import { render, act } from '@testing-library/react';
+import { render, act, waitFor } from '@testing-library/react';
 import { NoteProvider, useNotes } from '../../NoteContext';
 import { Note, ExtractedEntity, EntityType, NoteStatus } from '../../../types/note';
 
@@ -58,7 +58,7 @@ describe('NoteContext Bug Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Setup default mock returns
     mockUseAuth.mockReturnValue({
       user: { uid: 'test-user', email: 'test@example.com' }
@@ -71,8 +71,8 @@ describe('NoteContext Bug Tests', () => {
     });
     mockUseUser.mockReturnValue({
       userProfile: { id: 'test-user', name: 'Test User' },
-      activeGroupUserProfile: { 
-        userId: 'test-user', 
+      activeGroupUserProfile: {
+        userId: 'test-user',
         username: 'Test User',
         role: 'member',
         joinedAt: '2025-06-15T00:00:00.000Z',
@@ -82,7 +82,7 @@ describe('NoteContext Bug Tests', () => {
         ]
       }
     });
-    
+
     // Default empty collection
     mockDocumentService.getCollection.mockResolvedValue([]);
   });
@@ -92,20 +92,27 @@ describe('NoteContext Bug Tests', () => {
       // Mock utilities to return EXPECTED values (specification-based testing)
       getUserName.mockReturnValue('Test User');
       getActiveCharacterName.mockReturnValue('Test Character');
-      
+
       let capturedContext: any;
       render(
         <NoteProvider>
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      // The mount-time fetchNotes() call is async; without waiting for it
+      // to settle first, its own setNotes(sortedNotes) call can resolve
+      // *after* createNote() below and silently overwrite the new note
+      // with the (empty) fetched collection.
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
       });
 
       const note = capturedContext.notes[0];
-      
+
       // Test for EXPECTED behavior - fails until implementation is correct
       expect(note.createdByUsername).toBe('Test User'); // FAILS until bug fixed
       expect(note.createdByCharacterName).toBe('Test Character'); // FAILS until bug fixed
@@ -116,13 +123,16 @@ describe('NoteContext Bug Tests', () => {
     test('should call user attribution utilities with correct profile data', async () => {
       getUserName.mockReturnValue('Test User'); // Expected return value
       getActiveCharacterName.mockReturnValue('Test Character'); // Expected return value
-      
+
       let capturedContext: any;
       render(
         <NoteProvider>
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
@@ -130,7 +140,7 @@ describe('NoteContext Bug Tests', () => {
 
       // Verify utilities are called with correct profile data
       expect(getUserName).toHaveBeenCalledWith({
-        userId: 'test-user', 
+        userId: 'test-user',
         username: 'Test User',
         role: 'member',
         joinedAt: '2025-06-15T00:00:00.000Z',
@@ -140,7 +150,7 @@ describe('NoteContext Bug Tests', () => {
         ]
       });
       expect(getActiveCharacterName).toHaveBeenCalledWith({
-        userId: 'test-user', 
+        userId: 'test-user',
         username: 'Test User',
         role: 'member',
         joinedAt: '2025-06-15T00:00:00.000Z',
@@ -154,16 +164,27 @@ describe('NoteContext Bug Tests', () => {
     test('should include user attribution in note save operations', async () => {
       getUserName.mockReturnValue('Test User'); // Expected return value
       getActiveCharacterName.mockReturnValue('Test Character'); // Expected return value
-      
+
       let capturedContext: any;
       render(
         <NoteProvider>
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
+      // createNote and saveNote must be in separate act() calls: saveNote's
+      // getNoteById is a useCallback closed over `notes` as of the last
+      // committed render. Calling both inside one act() with no render in
+      // between means saveNote still sees the pre-createNote (empty)
+      // `notes` and throws "Note not found" -- a stale-closure test-timing
+      // artifact, not the behavior under test.
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         await capturedContext.saveNote('note-1', { title: 'Updated Title' });
       });
 
@@ -183,7 +204,7 @@ describe('NoteContext Bug Tests', () => {
     test('should generate sequential IDs based on existing notes', async () => {
       getUserName.mockReturnValue('Test User');
       getActiveCharacterName.mockReturnValue('Test Character');
-      
+
       // Mock existing notes to test sequence calculation
       const existingNotes: Note[] = [
         {
@@ -213,10 +234,15 @@ describe('NoteContext Bug Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      // Wait for the mocked existing notes to actually land in state before
+      // generating the next sequential ID off of them.
+      await waitFor(() => {
+        expect(capturedContext.notes).toHaveLength(1);
+      });
 
       await act(async () => {
         const noteId = await capturedContext.createNote('New Note', 'New content');
-        
+
         // EXPECTED: Sequential ID generation should handle existing notes correctly
         expect(noteId).toBe('note-6'); // Should be next in sequence (FAILS until fixed)
       });
@@ -252,13 +278,16 @@ describe('NoteContext Bug Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.notes).toHaveLength(1);
+      });
 
       await act(async () => {
         const noteId = await capturedContext.createNote('New Note', 'New content');
-        
+
         // Should default to note-1 when no valid sequential IDs exist
         expect(noteId).toBe('note-1');
-        
+
         console.log('Generated ID with malformed existing IDs:', noteId);
       });
     });
@@ -266,38 +295,45 @@ describe('NoteContext Bug Tests', () => {
 
   describe('Entity Conversion Requirements', () => {
     test('should handle entity conversion with minimal data', async () => {
-      getUserName.mockReturnValue('Test User'); 
+      getUserName.mockReturnValue('Test User');
       getActiveCharacterName.mockReturnValue('Test Character');
-      
+
       let capturedContext: any;
       render(
         <NoteProvider>
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
-        
-        // Add entity with missing required fields
-        const incompleteEntity: ExtractedEntity = {
-          id: 'entity-1',
-          text: '', // EMPTY TEXT - should this be allowed?
-          type: 'npc' as EntityType,
-          confidence: 0.1, // VERY LOW CONFIDENCE - should this be converted?
-          isConverted: false,
-          createdAt: '2025-06-15T00:00:00.000Z',
-          extraData: {} // EMPTY EXTRA DATA - will this cause issues?
-        };
-        
+      });
+
+      // Add entity with missing required fields
+      const incompleteEntity: ExtractedEntity = {
+        id: 'entity-1',
+        text: '', // EMPTY TEXT - should this be allowed?
+        type: 'npc' as EntityType,
+        confidence: 0.1, // VERY LOW CONFIDENCE - should this be converted?
+        isConverted: false,
+        createdAt: '2025-06-15T00:00:00.000Z',
+        extraData: {} // EMPTY EXTRA DATA - will this cause issues?
+      };
+
+      await act(async () => {
         await capturedContext.updateNote('note-1', {
           extractedEntities: [incompleteEntity]
         });
-        
+      });
+
+      await act(async () => {
         // BUG POTENTIAL: Should there be validation before conversion?
         const result = await capturedContext.convertEntity('note-1', 'entity-1', 'npc');
         expect(result).toBe(''); // Function completes without validation
-        
+
         // Check what data gets passed to navigation
         expect(mockNavigate).toHaveBeenCalledWith('/npcs/create', {
           state: expect.objectContaining({
@@ -307,7 +343,7 @@ describe('NoteContext Bug Tests', () => {
             })
           })
         });
-        
+
         // EXPECTED: Entity conversion should work with minimal but valid data
       });
     });
@@ -315,35 +351,42 @@ describe('NoteContext Bug Tests', () => {
     test('should handle rumor conversion with invalid source type', async () => {
       getUserName.mockReturnValue('Test User');
       getActiveCharacterName.mockReturnValue('Test Character');
-      
+
       let capturedContext: any;
       render(
         <NoteProvider>
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
-        
-        const rumorEntity: ExtractedEntity = {
-          id: 'entity-1',
-          text: 'Strange Rumor',
-          type: 'rumor' as EntityType,
-          confidence: 0.9,
-          isConverted: false,
-          createdAt: '2025-06-15T00:00:00.000Z',
-          extraData: {
-            sourceType: 'invalid-source-type' // NOT in valid list: ['npc', 'tavern', 'notice', 'traveler', 'other']
-          }
-        };
-        
+      });
+
+      const rumorEntity: ExtractedEntity = {
+        id: 'entity-1',
+        text: 'Strange Rumor',
+        type: 'rumor' as EntityType,
+        confidence: 0.9,
+        isConverted: false,
+        createdAt: '2025-06-15T00:00:00.000Z',
+        extraData: {
+          sourceType: 'invalid-source-type' // NOT in valid list: ['npc', 'tavern', 'notice', 'traveler', 'other']
+        }
+      };
+
+      await act(async () => {
         await capturedContext.updateNote('note-1', {
           extractedEntities: [rumorEntity]
         });
-        
+      });
+
+      await act(async () => {
         await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
-        
+
         // BUG DISCOVERY: How does invalid sourceType get handled?
         expect(mockNavigate).toHaveBeenCalledWith('/rumors/create', {
           state: expect.objectContaining({
@@ -353,7 +396,7 @@ describe('NoteContext Bug Tests', () => {
             })
           })
         });
-        
+
         // EXPECTED: Invalid source types should be handled gracefully
       });
     });
@@ -363,16 +406,19 @@ describe('NoteContext Bug Tests', () => {
     test('should handle campaign switching properly', async () => {
       getUserName.mockReturnValue('Test User');
       getActiveCharacterName.mockReturnValue('Test Character');
-      
+
       // Start with campaign A
       mockUseCampaigns.mockReturnValue({ activeCampaignId: 'campaign-a' });
-      
+
       let capturedContext: any;
       const { rerender } = render(
         <NoteProvider>
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Campaign A Note', 'Content for campaign A');
@@ -383,17 +429,25 @@ describe('NoteContext Bug Tests', () => {
 
       // Switch to campaign B
       mockUseCampaigns.mockReturnValue({ activeCampaignId: 'campaign-b' });
-      
+
       rerender(
         <NoteProvider>
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
 
+      // The campaignId change gives fetchNotes a new identity, so the
+      // mount-style effect re-runs and re-fetches asynchronously again;
+      // wait for that to actually settle before reading the result instead
+      // of asserting against whatever was left over from before it ran.
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
+
       // BUG POTENTIAL: What happens to unsaved notes when campaign switches?
       // The unsaved note for campaign A should disappear since it's filtered by campaign
       expect(capturedContext.notes).toHaveLength(0);
-      
+
       // EXPECTED: Campaign filtering should handle unsaved notes appropriately
     });
   });
@@ -401,7 +455,7 @@ describe('NoteContext Bug Tests', () => {
   describe('Bug #024: Error Handling and State Management', () => {
     test('should reveal error handling in fetch operations', async () => {
       mockDocumentService.getCollection.mockRejectedValue(new Error('Firebase connection failed'));
-      
+
       let capturedContext: any;
       render(
         <NoteProvider>
@@ -409,44 +463,53 @@ describe('NoteContext Bug Tests', () => {
         </NoteProvider>
       );
 
-      // Should handle error gracefully
-      expect(capturedContext.error).toBe('Failed to fetch notes');
+      // Should handle error gracefully -- but only once the rejected fetch
+      // promise has actually been handled by the catch block, which is
+      // asynchronous relative to render().
+      await waitFor(() => {
+        expect(capturedContext.error).toBe('Failed to fetch notes');
+      });
       expect(capturedContext.notes).toEqual([]);
       expect(capturedContext.isLoading).toBe(false);
-      
+
       // BUG POTENTIAL: Can notes still be created when in error state?
       await act(async () => {
         const noteId = await capturedContext.createNote('Test Note', 'Test content');
         expect(noteId).toBe('note-1'); // Should still work locally
       });
-      
+
       console.log('Notes can be created locally even when fetch errors occur');
     });
 
     test('should handle partial Firebase failures correctly', async () => {
       getUserName.mockReturnValue('Test User');
       getActiveCharacterName.mockReturnValue('Test Character');
-      
+
       let capturedContext: any;
       render(
         <NoteProvider>
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
-        
-        // Simulate save failure
-        mockDocumentService.createDocument.mockRejectedValue(new Error('Save failed'));
-        
+      });
+
+      // Simulate save failure
+      mockDocumentService.createDocument.mockRejectedValue(new Error('Save failed'));
+
+      await act(async () => {
         await expect(capturedContext.saveNote('note-1')).rejects.toThrow('Save failed');
       });
 
       // BUG POTENTIAL: Note should remain marked as unsaved after save failure
       const note = capturedContext.notes[0];
       expect(note.isUnsaved).toBe(true); // Should remain unsaved after failure
-      
+
       // EXPECTED: Note should remain unsaved after save failure
     });
   });
@@ -455,38 +518,45 @@ describe('NoteContext Bug Tests', () => {
     test('should handle malformed entity extraData gracefully', async () => {
       getUserName.mockReturnValue('Test User');
       getActiveCharacterName.mockReturnValue('Test Character');
-      
+
       let capturedContext: any;
       render(
         <NoteProvider>
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
-        
-        const malformedEntity: ExtractedEntity = {
-          id: 'entity-1',
-          text: 'Test Entity',
-          type: 'quest' as EntityType,
-          confidence: 0.9,
-          isConverted: false,
-          createdAt: '2025-06-15T00:00:00.000Z',
-          extraData: {
-            objectives: 'not-an-array', // BUG: Should be array but is string
-            relatedNPCIds: null, // BUG: Should be array but is null
-            title: ['array', 'instead', 'of', 'string'] // BUG: Should be string but is array
-          }
-        };
-        
+      });
+
+      const malformedEntity: ExtractedEntity = {
+        id: 'entity-1',
+        text: 'Test Entity',
+        type: 'quest' as EntityType,
+        confidence: 0.9,
+        isConverted: false,
+        createdAt: '2025-06-15T00:00:00.000Z',
+        extraData: {
+          objectives: 'not-an-array', // BUG: Should be array but is string
+          relatedNPCIds: null, // BUG: Should be array but is null
+          title: ['array', 'instead', 'of', 'string'] // BUG: Should be string but is array
+        }
+      };
+
+      await act(async () => {
         await capturedContext.updateNote('note-1', {
           extractedEntities: [malformedEntity]
         });
-        
+      });
+
+      await act(async () => {
         // BUG POTENTIAL: How does malformed extraData get processed?
         await capturedContext.convertEntity('note-1', 'entity-1', 'quest');
-        
+
         expect(mockNavigate).toHaveBeenCalledWith('/quests/create', {
           state: expect.objectContaining({
             initialData: expect.objectContaining({
@@ -496,7 +566,7 @@ describe('NoteContext Bug Tests', () => {
             })
           })
         });
-        
+
         // EXPECTED: System should handle malformed data gracefully (may need validation)
       });
     });

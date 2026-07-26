@@ -1,6 +1,6 @@
 # Post-Test-Coverage Roadmap
 
-*Last updated: 2026-05-25 — after the unit-test-coverage push merged to main.*
+*Last updated: 2026-07-26 — after the attribution-consolidation effort.*
 
 This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
 
@@ -8,15 +8,46 @@ This guide is the starting point for the next session. Point your orchestrator (
 
 ## Where we are now
 
-- The unit-test-coverage work has merged to main: **1,016 new tests across 47 files**, lifting coverage from **71.26% → 89.66% statements** (lines 90.37%, branches 81.18%, functions 85.98%).
-- **18 bugs filed** during that push; **4 fixed** (#350, #701, #800, #900).
-- **53 failing tests** in the suite are intentional bug markers (`*.bugs.test.tsx`) plus a small set of pre-existing infra issues (`Card.test.tsx`, `entityMapper.test.ts`, `enhanced-test-utils.test.tsx`). None are regressions.
-- Three sibling bugs surfaced after the #800 / #900 fixes — same shape, not yet fixed:
-  - **#1150**, **#1151** — additional NotePage re-fetch loops the #800 fix missed
-  - **#1153** — `groupsLoading` not reset on error (sibling to #900)
-- One older bug (**#650**, UsageContext infinite refresh on null status) has the same one-line shape and is good company for the round above.
+**Restructuring: three domains of four are merged to `main`.**
+
+| Domain | Status |
+|---|---|
+| user-management | ✅ merged (PR #13) |
+| storytelling | ✅ merged (PR #14) |
+| campaign-entities | ✅ merged (PR #15) |
+| **collaboration (notes + AI extraction)** | ⬜ **next up** |
+| `shared/` + `core/` infrastructure pass | ⬜ not started |
+| post-migration bug triage (Phase 4) | ⬜ not started |
+
+**Interleaved effort, complete:** attribution consolidation — `src/shared/attribution` is the single
+place attribution values are built, and `DocumentService` is the single write path that applies them.
+Read `docs/architecture/migration/attribution-consolidation-findings.md` before touching attribution;
+its "RESOLVED" section records three predictions the original analysis got wrong, including two
+categories of write that must **never** be routed through `createDocument`.
+
+**Test baseline: 22 failed / 3 skipped / 3946 passed of 3971.** Coverage ~89% statements. The 22 are
+catalogued bug markers — compare against this number before treating a red test as a regression.
+
+That number was **53** before this round. It did not fall because bugs were fixed; it fell because
+**25 of those failures were never bugs.** Five tracker entries (#013, #014, #300, #021, #022) turned
+out to be test-environment defects: a missing `crypto.randomUUID` in JSDOM, an unawaited initial
+fetch, and stale closures from chaining dependent calls inside a single `act()`. In every case the
+test aborted or read stale state before exercising the behaviour it named, and the resulting red was
+filed as a production defect. Roughly **half the failing suite was measuring its own harness.**
+
+**Bug tracker: 59 filed, 17 fixed, 39 open, 3 needing a decision.**
 
 Behavioral testing methodology stays in force: **failing tests are bug markers; never modify a test to make it pass.** See `docs/testing/methodology/testing-lessons-learned.md`.
+
+### Two lessons worth carrying into the next session
+
+1. **A red test has not necessarily executed anything.** #013, #014 and #300 sat here for a year as
+   deferred "architectural" bugs. They were a missing `crypto.randomUUID` in JSDOM — the tests
+   aborted before reaching an assertion. Establish that a failing test actually ran the code it
+   names before believing what it claims about that code.
+2. **`tsc --noEmit` + jest green does not prove the app builds.** `react-scripts`' webpack ignores
+   tsconfig `paths`, so `@/...` imports pass both and still fail the production build. Run
+   `npm run build` before proposing any merge.
 
 ---
 
@@ -69,10 +100,33 @@ These three steps are one short PR. Single agent; no parallelism needed.
 
 Follow `docs/architecture/migration/hybrid-feature-first-restructuring-strategy.md`. **Do not run two domains in parallel** — each phase needs the test suite green before the next begins. Recommended order:
 
-1. **`user-management/`** — Auth, Groups, Profiles. Most self-contained; the cleanest starter domain. Branch: `migration/user-management`.
-2. **`storytelling/`** — Chapters, Stories, Timeline. Already well-tested; few cross-feature ties.
-3. **`campaign-entities/`** — NPCs, Quests, Locations, Rumors. Biggest, but well-tested and structurally similar across the four sub-features.
-4. **`collaboration/`** — Notes, AI extraction. Migrate last; this is where the active bug churn lives and we want it stable first.
+1. ✅ **`user-management/`** — Auth, Groups, Profiles. Merged, tagged.
+2. ✅ **`storytelling/`** — Chapters, Stories, Sagas. Merged.
+3. ✅ **`campaign-entities/`** — NPCs, Quests, Locations, Rumors. Merged.
+4. ⬜ **`collaboration/`** — Notes, AI extraction. **Next.** Migrate last; this is where the active bug churn lives and we want it stable first.
+
+**The `NoteContext` suites have been repaired — this domain now has a working safety net.** They
+previously carried ~28 failures, of which 25 were test-timing defects (unawaited initial fetch;
+stale `getNoteById` closures when chained calls shared one `act()`). They were fixed in the test
+files only, no production change, and bugs #021/#022 were corrected from "NoteContext
+implementation issues" to test-environment artifacts. Those tests now genuinely exercise
+`NoteContext`, so the suite can be trusted to catch a migration regression — which was not true
+a day ago.
+
+One `NoteContext` failure is left and is **not** a bug: `should handle malformed entity extraData
+gracefully` expects `relatedNPCIds: null` to pass through untouched, while the production code
+defaults `null` to `[]`, which is the more defensible behaviour. The test's own comment marks it as
+speculative ("BUG POTENTIAL"). Decide whether to correct or delete it during the migration rather
+than carrying it as a phantom marker.
+
+Scope for the collaboration domain: `src/context/NoteContext.tsx`,
+`src/components/features/notes/` (15 files), `src/hooks/{useNoteData,useEntityExtractor,useOpenAIExtractor,useSessionManager}.ts`,
+`src/types/note.ts`, `src/services/firebase/ai/`, `src/pages/notes/`.
+
+After collaboration, the `shared/`/`core/` pass takes what remains in the old layout:
+`NavigationContext`, `SearchContext`, `UsageContext`, `components/features/layouts/`,
+`components/features/contact/`, `useFirebaseData`, `useSearch`, `useNavigation`, and
+`types/{common,search,usage,user}.ts`.
 
 **Per-phase exit criteria**:
 - All tests pass except the documented bug-marker set.

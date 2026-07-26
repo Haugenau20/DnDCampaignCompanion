@@ -1,11 +1,48 @@
 # Bug #021: Note Sequential ID Generation Implementation Issues
 
-**Status**: 🔍 DISCOVERED  
-**Priority**: Medium  
-**Category**: DATA  
-**Context**: NoteContext  
-**Discovery Date**: June 15, 2025  
+**Status**: ✅ FIXED — test-environment artifact, not a production bug
+**Priority**: ~~Medium~~ → Closed
+**Category**: DATA → TESTABILITY
+**Context**: NoteContext
+**Discovery Date**: June 15, 2025
 **Discovery Method**: Behavioral Testing
+**Resolved**: 2026-07-26
+
+## Resolution
+
+Re-diagnosed during the NoteContext behavioral-suite audit (2026-07-26). This report is the
+same misdiagnosis pattern as #013/#014/#300: a test-timing defect that was written up as a
+production "implementation issue."
+
+**Root cause, proven directly**: `NoteProvider`'s mount-time `fetchNotes()` call is
+asynchronous (it awaits the mocked `documentService.getCollection(...)`). The failing tests
+called `capturedContext.createNote(...)` immediately after `render(...)`, with no wait for that
+initial fetch to settle. Two consequences, both confirmed with an isolated diagnostic test
+(render → act(createNote) → check `notes.length`):
+
+1. When `generateSequentialNoteId()` ran, `notes` was still `[]` (the mocked existing notes
+   hadn't landed yet), so it always produced `note-1` regardless of what the mock returned. This
+   is exactly the "Received: note-1" failure this report attributes to "ID generation doesn't
+   properly access loaded notes state."
+2. Once the initial fetch's own `setNotes(sortedNotes)` finally resolved (after `createNote` had
+   already run), it unconditionally *replaced* `notes` with the fetched data, wiping out the note
+   `createNote` had just added. That is the "note not added to state" failure mode this report
+   attributes to `setNotes` "not taking effect."
+
+Neither is a state-management defect in `NoteContext.tsx`. Adding
+`await waitFor(() => expect(capturedContext.isLoading).toBe(false))` immediately after `render()`
+— before touching the context at all — makes both failure modes disappear, using the *existing*
+`generateSequentialNoteId` and `fetchNotes` implementations unchanged. See
+`src/context/__tests__/behavioral/NoteContext.bugs.test.tsx` ("should generate sequential IDs
+based on existing notes", "should reveal ID generation with malformed existing IDs") and
+`NoteContext.behavioral.test.tsx` ("should generate sequential note IDs"), all now passing
+against the original production code.
+
+The "Sequential vs Name-Based" and "Campaign Filtering Interaction" architectural discussion
+below was speculative at the time and is superseded by this finding — sequential ID generation
+works correctly once the test gives the initial fetch a chance to complete.
+
+## Original report (superseded by the resolution above)
 
 ## Summary
 

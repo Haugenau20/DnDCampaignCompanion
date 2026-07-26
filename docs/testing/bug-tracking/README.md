@@ -63,8 +63,8 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#018](./018-story-progress-tracking-integration.md) | 🔍 DISCOVERED | INTEGRATION | Story progress tracking integration issues | Medium | Medium | StoryContext |
 | [#019](./019-story-chapter-order-validation.md) | 🔍 DISCOVERED | VALIDATION | Story chapter order validation issues | Low | Low | StoryContext |
 | [#020](./020-note-user-attribution-metadata.md) | ✅ FIXED | TESTABILITY | Note user attribution metadata (test issue, not implementation bug) | Closed | Closed | NoteContext tests |
-| [#021](./021-note-sequential-id-generation.md) | 🔍 DISCOVERED | DATA | Note sequential ID generation implementation issues | Medium | Medium | NoteContext |
-| [#022](./022-note-context-state-management.md) | 🔍 DISCOVERED | ARCHITECTURE | Note context state management issues | Medium | Medium | NoteContext |
+| [#021](./021-note-sequential-id-generation.md) | ✅ FIXED | TESTABILITY | Note sequential ID "implementation issues" — actually a missing post-render `waitFor`; tests read state before the mocked async `fetchNotes()` settled. Fixed in test files, no production change | Closed | Closed | NoteContext tests |
+| [#022](./022-note-context-state-management.md) | ✅ FIXED | TESTABILITY | Note context "state management issues" — actually two test-timing gaps: an unawaited initial fetch, and same-`act()` stale closures across chained calls. Fixed in test files, no production change | Closed | Closed | NoteContext tests |
 | [#023](./023-entity-mapper-extract-details-empty-body.md) | 🔍 DISCOVERED | DATA | `entityMapper.extractDetailsByType` has empty body — silent data loss | High | High | EntityExtractionService / entityMapper |
 | [#050](./050-use-note-data-unreachable-catch-block.md) | 🔍 DISCOVERED | VALIDATION | `useNoteData.getNoteCountForCampaign` has unreachable catch block | Low | Low | useNoteData hook |
 | [#100](./100-navigation-missing-key-prop-mobile-layout.md) | 🔍 DISCOVERED | UI | Navigation missing React `key` prop on mobile layout wrapper divs | Low | Low | Navigation.tsx |
