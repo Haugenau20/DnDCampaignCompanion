@@ -1,23 +1,36 @@
 # Post-Test-Coverage Roadmap
 
-*Last updated: 2026-07-26 — after the collaboration domain migration.*
+*Last updated: 2026-07-27 — after collaboration merged to `main` and the shared/core pass was audited.*
 
 This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
+
+**Next session starts at [Phase 3e](#phase-3e--the-sharedcore-infrastructure-pass--start-here).** It
+carries a measured audit of the remaining work and six findings that should shape the plan — read
+those before writing one, because the previous one-line description of that phase understated it
+badly.
 
 ---
 
 ## Where we are now
 
-**Restructuring: all four domains are migrated. The `shared/`/`core/` pass is next.**
+**Restructuring: all four domains are merged and tagged. The `shared/`/`core/` pass is next.**
 
 | Domain | Status |
 |---|---|
-| user-management | ✅ merged (PR #13) |
-| storytelling | ✅ merged (PR #14) |
-| campaign-entities | ✅ merged (PR #15) |
-| collaboration (notes + AI extraction) | ✅ done on `migration/collaboration` |
-| `shared/` + `core/` infrastructure pass | ⬜ **next up** |
+| user-management | ✅ merged (PR #13), tagged |
+| storytelling | ✅ merged (PR #14), tagged |
+| campaign-entities | ✅ merged (PR #15), tagged |
+| collaboration (notes + AI extraction) | ✅ merged (PR #17), tagged `411d9c8` |
+| attribution consolidation (interleaved) | ✅ merged (PR #16) |
+| `shared/` + `core/` infrastructure pass | ⬜ **next up — see Phase 3e** |
 | post-migration bug triage (Phase 4) | ⬜ not started |
+
+**95 of 233 source files still need to move (41%).** Of the 233: 103 are in `features/`, 2 in
+`shared/`, 30 in `pages/` (already a valid target directory — these never needed migrating), and 3 are
+`src/` root files (`App.tsx`, `index.tsx`, `setupTests.ts`). All four *domains* are done; none of the
+infrastructure pass is. Even 41% flatters the position — the domains were self-contained moves with a
+behavioural suite as a net, whereas what is left is the plumbing every test transitively loads,
+including two dependency inversions and 25 files of cross-domain view code with no agreed home.
 
 **Interleaved effort, complete:** attribution consolidation — `src/shared/attribution` is the single
 place attribution values are built, and `DocumentService` is the single write path that applies them.
@@ -173,13 +186,6 @@ out of scope for a structural move. **Decide during the `shared/`/`core/` pass**
 that seam or to amend the rule in `CLAUDE.md` to "features may depend on another feature's barrel,
 never its internals", which is what the codebase has actually been doing for three domains.
 
-After collaboration, the `shared/`/`core/` pass takes what remains in the old layout:
-`NavigationContext`, `SearchContext`, `components/features/layouts/`,
-`components/features/contact/`, `useFirebaseData`, `useSearch`, `useNavigation`, and
-`types/{common,search,user}.ts` — plus `components/shared/GlobalActionButton.tsx` and
-`components/layout/Layout.tsx`, which both import `features/collaboration` and so are `shared → feature`
-edges until they move.
-
 **Per-phase exit criteria**:
 - All tests pass except the documented bug-marker set.
 - Coverage on the migrated domain stays ≥ pre-phase coverage.
@@ -188,9 +194,133 @@ edges until they move.
 
 Within a single domain, sub-tasks (move file A, move file B, update imports) can sometimes parallelise across two workers — but only when they touch disjoint file sets. When in doubt, sequential.
 
+**All four domains are merged and tagged.** `migration/collaboration-complete` → `411d9c8`
+(PR #17), which sits on top of the attribution consolidation (PR #16, `47c5e9d`).
+
+---
+
+### Phase 3e — the `shared/`/`core/` infrastructure pass ⬅ **START HERE**
+
+*Audited against the tree on `main` at `411d9c8`, 2026-07-27. Numbers below are measured, not
+estimated.*
+
+**Do not start from the old one-line summary of this phase** — it listed `layouts/` next to
+`contact/` as if they were comparable, and understated the work by an order of magnitude.
+
+**Scale:** 95 files, enumerated in the destination table at the end of this section. The domains were
+the safe half — self-contained moves, each with a working behavioural suite as a net. This phase
+touches the plumbing every test transitively loads, so a mistake here is not contained to one domain.
+
+**Directory reality vs the target:**
+
+| Target | Actual |
+|---|---|
+| `features/` | ✅ four domains, all with barrels |
+| `shared/` | ⚠️ exists, holds only `attribution` (2 files) |
+| `core/` | ❌ does not exist |
+| `pages/` | ✅ exists |
+| `app/` | ❌ does not exist — `App.tsx` sits at `src/` root |
+
+#### The six findings that should shape the plan
+
+**1. `components/features/layouts/` is 25 files of cross-domain view code, and its destination is
+undecided.** It has its own `common/{components,hooks,utils}` plus dashboard and journal layouts with
+sections, and it consumes `features/campaign-entities` **20×**, `features/storytelling` **5×**,
+`features/user-management` **1×**. Sections like `CharacterGallery`, `LocationsMap`,
+`ActiveQuestsList` and `StorySection` aggregate several domains, so **no single feature can own
+them** and they cannot go in `core/` (which must have no internal dependencies). Realistic options:
+a `shared/layouts/` that is permitted to depend on feature barrels, or a fifth feature-like
+"dashboard/journal" domain, or push them down into `pages/`. **Decide this before moving any
+file** — it determines whether `shared/` is allowed to depend on `features/`, which is a change to
+the dependency rules either way. This is the largest single chunk left and the only genuinely
+architectural question in the phase.
+
+**2. `core/` → `features/` dependency inversion, 5 instances — this blocks creating `core/` at all.**
+`src/services/firebase/index.ts` imports `AuthService`, `UserService`, `GroupService` and
+`InvitationService` from `features/user-management`, and `services/firebase/campaign/CampaignService.ts`
+imports `UserService`. The target rule is `core/` → *no internal dependencies*. Those services live
+in `user-management` because that domain migrated first and took them along. Either the service
+registry stops importing them directly (register from the feature side instead), or the services move
+down into `core/`. **Same file, same fix as finding 3.**
+
+**3. `services/firebase/index.ts` calls `initializeFirebaseServices()` at module scope**, and
+therefore `getAnalytics()`, on any import. Consequences already observed:
+`src/test-utils/__tests__/enhanced-test-utils.test.tsx` has **never been able to load** (it is the
+9th failing suite and executes zero tests), and re-exporting anything with a transitive path to this
+index poisons a whole domain barrel — which is why `collaboration`'s barrel deliberately omits
+`notes/utils/note-relationships`. **Making this init lazy is the highest-leverage single change in
+the phase**: it removes a whole hazard class, unblocks a permanently-dead test suite, and is the same
+edit as finding 2.
+
+**4. The `user-management` barrel is incomplete, and 14 imports bypass it into internals.** Export
+counts tell the story — `campaign-entities` 32, `collaboration` 17, `storytelling` 11,
+**`user-management` 8** (hooks plus `FirebaseProvider`; zero components, zero services). So
+`App.tsx` (×4), `components/layout/Header.tsx` (×4) and `components/shared/ContextSwitcher.tsx` (×1)
+reach in for components the barrel never exposed, and the 5 service imports from finding 2 do the
+same. It was the first domain migrated, before the pattern settled. **This is a barrel-completeness
+fix, not a find-and-replace** — the exports have to be added before the call sites can be corrected.
+One of the 14 is gratuitous: `App.tsx` imports `FirebaseProvider` by internal path although the
+barrel does export it.
+
+**5. `dateFormatter` exists twice** — `src/utils/dateFormatter.ts` (117 lines) and
+`components/features/layouts/common/utils/dateFormatter.ts` (49 lines). Different content, same job.
+Reconcile during the move rather than relocating both.
+
+**6. `src/utils/__dev__/` is 14 sample-data generator files that the target architecture has no home
+for.** It is tooling, not application code (`dndSampleDataGenerator`, per-entity generators,
+`sessionTester`). Decide explicitly: leave it, or lift it out of `src/` so it stops counting as
+application surface. Note `scripts/manage-dev-data.ps1` depends on it.
+
+Also still true and already documented above: **26 `features/` → `features/` barrel edges**, and
+`components/shared/GlobalActionButton.tsx` + `components/layout/Layout.tsx` import
+`features/collaboration`, so they are `shared → feature` edges until they move.
+
+#### Suggested order
+
+Findings 2, 3 and 4 are one tangle in two files — do them first, as a single preparatory slice, since
+`core/` cannot exist until they are resolved and finding 3 makes everything after it easier to test.
+Then take finding 1's architectural decision. Only then start moving files, cheapest first:
+`themes/` (7) and `components/core/` (5) → `core/`; `types/{common,search,user}` (3),
+`context/{Navigation,Search}` (2), `hooks/{useFirebaseData,useNavigation,useSearch}` (3) → `shared/`;
+then `components/{shared,layout}` (12); then `layouts/` (25) last, per the decision from finding 1.
+
+#### What remains, by destination
+
+| Current location | Files | Destination |
+|---|---|---|
+| `components/features/layouts/` | 25 | **undecided — finding 1** |
+| `utils/__dev__/` | 14 | **undecided — finding 6** |
+| `services/` (firebase core, DocumentService, SearchService, openai) | 9 | `core/` |
+| `components/shared/` | 7 | `shared/` |
+| `themes/` | 7 | `core/` |
+| `utils/` (attribution, date, export, navigation, password, search, user) | 7 | `shared/` |
+| `components/core/` | 5 | `core/` |
+| `components/layout/` | 5 | `shared/` or `app/` |
+| `test-utils/` | 5 | test infrastructure |
+| `types/{common,search,user}.ts` | 3 | `shared/` |
+| `hooks/{useFirebaseData,useNavigation,useSearch}` | 3 | `shared/` |
+| `context/{Navigation,Search}Context.tsx` | 2 | `shared/` |
+| `config/`, `constants/` | 2 | `core/` |
+| `components/features/contact/` | 1 | `shared/` or `pages/` |
+| **total** | **95** | |
+
+Separately, `src/App.tsx` belongs in `app/`, which does not exist yet; `index.tsx` and
+`setupTests.ts` stay at the root. `src/pages/` (30 files) is already a valid target directory and is
+not part of this phase, beyond fixing any imports that break as things move beneath it.
+
 ### Phase 4 — Post-migration bug triage
 
-After all four domains have landed, walk the open bug tracker. Many bugs will look different (or be moot) under the new structure. Re-file, close as obsolete, or fix — whichever fits.
+All four domains have landed, so this is now unblocked. Walk the open tracker: **59 filed, 17 fixed,
+39 open, 3 needing a decision.** Many will look different (or be moot) under the new structure —
+re-file, close as obsolete, or fix, whichever fits. Two specific items already queued:
+
+- **#1202 needs a production data pass** (not a code fix): chapters reordered before the attribution
+  branch hold a Firestore `Timestamp` in `dateModified` where a string is expected, and render a
+  blank modified date.
+- **#1201 and #1204** are unfixed by design — each needs its failing test written first.
+
+Before believing any red test, confirm it reached an assertion. Five tracker entries (#013, #014,
+#300, #021, #022) were filed as production defects and were harness problems.
 
 ---
 

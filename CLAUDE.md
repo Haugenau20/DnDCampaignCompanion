@@ -31,12 +31,27 @@ it is `collaboration/entity-extraction/`. `useSessionManager` sounds like collab
 auth session activity via `useAuth`, so it is `user-management/auth/hooks/`. Both are now in their
 correct homes.
 
-**Known deviation from the dependency rules below**: `features/` → other `features/` is stated as
-forbidden but is not the case — there are 26 such edges (campaign-entities and storytelling both
-depend on user-management; the four entity create/edit forms depend on collaboration for
-`useNotes().markEntityAsConverted`). Every one goes through the target domain's **barrel**, and
-nothing reaches into another feature's internals. See the roadmap doc for the decision still owed
-here: introduce a decoupling seam, or amend the rule to match three domains of actual practice.
+**Two known deviations from the dependency rules below** — both audited 2026-07-27, both with a
+decision owed during the `shared`/`core` pass. Read Phase 3e in the roadmap before acting on either.
+
+1. **`features/` → other `features/`**, stated as forbidden, happens 26 times (campaign-entities and
+   storytelling both depend on user-management; the four entity create/edit forms depend on
+   collaboration for `useNotes().markEntityAsConverted`). All go through the target domain's
+   **barrel**. Decision owed: introduce a decoupling seam, or amend the rule to match three domains
+   of actual practice.
+2. **`core/` → `features/`, which is a genuine inversion and blocks creating `core/` at all.**
+   `services/firebase/index.ts` imports four services from `features/user-management`, and
+   `services/firebase/campaign/CampaignService.ts` imports `UserService`. A further 9 imports reach
+   into user-management's internals from `App.tsx`, `components/layout/Header.tsx` and
+   `components/shared/ContextSwitcher.tsx`, because that domain's barrel exports only 8 symbols —
+   hooks plus `FirebaseProvider`, no components and no services. It migrated first, before the
+   pattern settled.
+
+**Related trap in the same file**: `services/firebase/index.ts` runs `initializeFirebaseServices()`
+— and therefore `getAnalytics()` — at module scope. Any barrel that re-exports something with a
+transitive path to it will eagerly initialize Firebase and crash jsdom tests. That is why
+`collaboration`'s barrel omits `notes/utils/note-relationships`, and why
+`test-utils/__tests__/enhanced-test-utils.test.tsx` has never been able to load.
 
 **Key Documents** (note: `docs/backlog/` no longer exists — these moved):
 - `docs/testing/post-test-coverage-roadmap.md` — **start here**; the live status and execution order
