@@ -50,6 +50,19 @@ style in these files.
 > `Cannot find module 'shared/attribution'`. `shared` has been added to the list. If you still see
 > that error, your working tree is stale — do **not** work around it by switching to `@/`.
 
+> **Never use the `@/` alias in code that ships.** `react-scripts`' webpack config honours
+> tsconfig's `baseUrl` but **ignores `paths`**. So `@/...` imports resolve under `tsc --noEmit`
+> and under Jest (whose `moduleNameMapper` has a `@/` catch-all), and then fail the production
+> build with `Module not found: Can't resolve '@/utils/user-utils'`. The helper itself shipped
+> with two such imports and they went unnoticed for weeks, because until Wave A wired it up
+> nothing imported the module, so webpack never had to resolve it. Fixed to bare `types/common`
+> and `utils/user-utils`.
+>
+> **Consequence for verification: `tsc --noEmit` + Jest green is NOT sufficient.** Neither
+> exercises webpack's resolver. Run `npm run build` before proposing a merge — that is what CI
+> and the deploy actually run. The `@/` form remains fine in `src/test-utils/` and `__tests__/`,
+> which are never bundled.
+
 `AttributionSource.activeGroupUserProfile` accepts any object with `username`,
 `activeCharacterId`, and `characters[]` — which is true both of the in-memory React
 `activeGroupUserProfile` and of the raw Firestore `groups/{gid}/users/{uid}` document.
