@@ -1,4 +1,4 @@
-﻿// src/components/features/notes/__tests__/EntityExtractor.test.tsx
+﻿// src/features/collaboration/entity-extraction/components/__tests__/EntityExtractor.test.tsx
 //
 // Bug #350 (EntityExtractor infinite render loop) was fixed in commit ec8f3cb.
 // The `existingReferences` default is now a module-level stable EMPTY_REFERENCES
@@ -7,7 +7,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import EntityExtractor from '../EntityExtractor';
-import { Note, ExtractedEntity } from 'features/collaboration';
+import { Note, ExtractedEntity } from '../../../notes/types';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -22,32 +22,29 @@ const mockConvertEntity = jest.fn();
 // triggers. This reduces (but cannot fully eliminate) the infinite loop.
 const stableGetNoteById = jest.fn();
 
-jest.mock('../../../../hooks/useEntityExtractor', () => ({
+jest.mock('../../hooks/useEntityExtractor', () => ({
   useEntityExtractor: jest.fn(),
 }));
 
-// useNotes is mocked, but normalizeTextForComparison must stay the real
+// EntityExtractor now imports useNotes and normalizeTextForComparison
+// directly from their intra-domain source modules (NoteContext and
+// NoteReferences) instead of through the collaboration barrel. useNotes is
+// mocked here at its source so EntityExtractor's own render doesn't require
+// a real NoteProvider. normalizeTextForComparison must stay the REAL
 // implementation (EntityExtractor calls it directly to dedupe/filter
-// entities). Both now come from the collaboration barrel, so the real
-// normalizeTextForComparison is pulled straight from its source file
-// (NOT via the barrel, to avoid eagerly loading note-relationships.ts,
-// which pulls in the real, uninitialized-in-tests services/firebase index).
-jest.mock('features/collaboration', () => {
-  const actualNoteReferences = jest.requireActual(
-    '../../../../features/collaboration/notes/components/NoteReferences'
-  );
-  return {
-    __esModule: true,
-    useNotes: jest.fn(),
-    normalizeTextForComparison: actualNoteReferences.normalizeTextForComparison,
-  };
-});
+// entities), so NoteReferences is intentionally left unmocked — safe because
+// its other dependencies (DocumentService, useNavigation,
+// features/user-management) are already mocked below by module path, and
+// NoteReferences itself is never rendered in this suite.
+jest.mock('../../../notes/context/NoteContext', () => ({
+  useNotes: jest.fn(),
+}));
 
-jest.mock('../../../../hooks/useNavigation', () => ({
+jest.mock('../../../../../hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
-jest.mock('../../../../services/firebase/data/DocumentService', () => {
+jest.mock('../../../../../services/firebase/data/DocumentService', () => {
   const getCollectionMock = jest.fn().mockResolvedValue([]);
   const instance = { getCollection: getCollectionMock };
   return {
@@ -65,12 +62,12 @@ jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(() => ({ user: { uid: 'user-1' } })),
 }));
 
-const { useEntityExtractor } = require('../../../../hooks/useEntityExtractor');
-const { useNotes } = require('features/collaboration');
-const { useNavigation } = require('../../../../hooks/useNavigation');
+const { useEntityExtractor } = require('../../hooks/useEntityExtractor');
+const { useNotes } = require('../../../notes/context/NoteContext');
+const { useNavigation } = require('../../../../../hooks/useNavigation');
 
 // Grab the DocumentService mock instance for per-test configuration
-const DocumentService = require('../../../../services/firebase/data/DocumentService').default;
+const DocumentService = require('../../../../../services/firebase/data/DocumentService').default;
 
 function setupMocks({
   extractWithOpenAI = mockExtractWithOpenAI,

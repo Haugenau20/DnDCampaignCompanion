@@ -23,3 +23,29 @@ export type { Note, NoteStatus, ExtractedEntity, EntityType, NoteContextValue } 
 // jsdom test that has not mocked it — the same failure that keeps
 // src/test-utils/__tests__/enhanced-test-utils.test.tsx from loading.
 // It currently has no consumers outside the domain; import it by path if that changes.
+
+// Entity extraction: usage context and hooks
+export { UsageProvider, useUsageContext } from './entity-extraction/context/UsageContext';
+export { useEntityExtractor } from './entity-extraction/hooks/useEntityExtractor';
+export { useOpenAIExtractor } from './entity-extraction/hooks/useOpenAIExtractor';
+// Entity extraction components consumed by pages/notes/* and layout
+export { default as EntityExtractor } from './entity-extraction/components/EntityExtractor';
+export { default as FloatingUsageIndicator } from './entity-extraction/components/FloatingUsageIndicator';
+export { default as EntityCard } from './entity-extraction/components/EntityCard';
+// Entity extraction / usage types
+export type {
+  UsagePeriod,
+  PeriodUsage,
+  EntityExtractionUsage,
+  UsageStatus,
+  UsageLimitError,
+} from './entity-extraction/types';
+
+// NOTE: `entity-extraction/services/EntityExtractionService` and
+// `entity-extraction/services/entityMapper` are deliberately NOT re-exported
+// here. Both import only direct service files (`services/firebase/core/*`,
+// `services/openai/types`), not the `services/firebase` index, so they don't
+// carry the eager-Firebase-init hazard described above — but they currently
+// have no consumers outside this domain (only used via the useEntityExtractor
+// / useOpenAIExtractor hooks and UsageContext, all already re-exported).
+// Import by path if that changes.

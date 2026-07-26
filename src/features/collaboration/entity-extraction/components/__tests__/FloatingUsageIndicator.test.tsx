@@ -1,24 +1,24 @@
-// src/components/features/notes/__tests__/FloatingUsageIndicator.test.tsx
+// src/features/collaboration/entity-extraction/components/__tests__/FloatingUsageIndicator.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import FloatingUsageIndicator from '../FloatingUsageIndicator';
-import { UsageStatus } from '../../../../types/usage';
+import { UsageStatus } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
 // ---------------------------------------------------------------------------
 
-jest.mock('../../../../context/UsageContext', () => ({
+jest.mock('../../context/UsageContext', () => ({
   useUsageContext: jest.fn(),
 }));
 
-jest.mock('../../../../hooks/useNavigation', () => ({
+jest.mock('../../../../../hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
-const { useUsageContext } = require('../../../../context/UsageContext');
-const { useNavigation } = require('../../../../hooks/useNavigation');
+const { useUsageContext } = require('../../context/UsageContext');
+const { useNavigation } = require('../../../../../hooks/useNavigation');
 
 function setupMocks({
   usageStatus = null as UsageStatus | null,

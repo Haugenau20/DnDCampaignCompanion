@@ -66,8 +66,9 @@ jest.mock("../../../services/firebase/data/DocumentService", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-// NoteEditor, NoteReferences and useNotes all come from the collaboration
-// domain barrel now, so they are mocked together in a single factory.
+// NoteEditor, NoteReferences, useNotes, EntityExtractor and
+// FloatingUsageIndicator all come from the collaboration domain barrel now,
+// so they are mocked together in a single factory.
 jest.mock("features/collaboration", () => {
   const React = require("react");
   const NoteEditorMock = React.forwardRef((props: any, ref: any) => {
@@ -110,20 +111,7 @@ jest.mock("features/collaboration", () => {
     </div>
   );
 
-  return {
-    __esModule: true,
-    NoteEditor: NoteEditorMock,
-    NoteReferences: NoteReferencesMock,
-    useNotes: () => ({
-      deleteNote: mockDeleteNote,
-      getNoteById: mockGetNoteById,
-    }),
-  };
-});
-
-jest.mock("../../../components/features/notes/EntityExtractor", () => ({
-  __esModule: true,
-  default: (props: any) => (
+  const EntityExtractorMock = (props: any) => (
     <div data-testid="entity-extractor" data-note-id={props.noteId}>
       {/* Expose triggers so tests can fire getCurrentEditorContent and saveCurrentEditorContent */}
       <button
@@ -139,13 +127,22 @@ jest.mock("../../../components/features/notes/EntityExtractor", () => ({
         Save Content
       </button>
     </div>
-  ),
-}));
+  );
 
-jest.mock("../../../components/features/notes/FloatingUsageIndicator", () => ({
-  __esModule: true,
-  default: () => <div data-testid="floating-usage-indicator" />,
-}));
+  const FloatingUsageIndicatorMock = () => <div data-testid="floating-usage-indicator" />;
+
+  return {
+    __esModule: true,
+    NoteEditor: NoteEditorMock,
+    NoteReferences: NoteReferencesMock,
+    EntityExtractor: EntityExtractorMock,
+    FloatingUsageIndicator: FloatingUsageIndicatorMock,
+    useNotes: () => ({
+      deleteNote: mockDeleteNote,
+      getNoteById: mockGetNoteById,
+    }),
+  };
+});
 
 jest.mock("../../../components/core/Typography", () => ({
   __esModule: true,

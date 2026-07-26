@@ -1,9 +1,9 @@
-// src/hooks/__tests__/useEntityExtractor.test.ts
+// src/features/collaboration/entity-extraction/hooks/__tests__/useEntityExtractor.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { useEntityExtractor } from '../useEntityExtractor';
-import { ExtractedEntity } from 'features/collaboration';
-import { UsageLimitExceededError } from '../../services/firebase/ai/EntityExtractionService';
-import { UsageStatus } from '../../types/usage';
+import { ExtractedEntity } from '../../../notes/types';
+import { UsageLimitExceededError } from '../../services/EntityExtractionService';
+import { UsageStatus } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -11,7 +11,7 @@ import { UsageStatus } from '../../types/usage';
 const mockExtractEntities = jest.fn();
 const mockGetCurrentUsage = jest.fn();
 
-jest.mock('../../services/firebase/ai/EntityExtractionService', () => {
+jest.mock('../../services/EntityExtractionService', () => {
   const mockUsageLimitExceededError = class UsageLimitExceededError extends Error {
     public usage: any;
     public contactInfo: any;
@@ -36,9 +36,9 @@ jest.mock('../../context/UsageContext', () => ({
   useUsageContext: jest.fn(),
 }));
 
-const EntityExtractionService = require('../../services/firebase/ai/EntityExtractionService').default;
+const EntityExtractionService = require('../../services/EntityExtractionService').default;
 const { useUsageContext } = require('../../context/UsageContext');
-const { UsageLimitExceededError: MockUsageLimitExceededError } = require('../../services/firebase/ai/EntityExtractionService');
+const { UsageLimitExceededError: MockUsageLimitExceededError } = require('../../services/EntityExtractionService');
 
 // ---------------------------------------------------------------------------
 // Helpers

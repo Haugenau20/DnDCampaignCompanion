@@ -1,7 +1,7 @@
-// src/context/UsageContext.tsx
+// src/features/collaboration/entity-extraction/context/UsageContext.tsx
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import { UsageStatus } from '../types/usage';
-import EntityExtractionService from '../services/firebase/ai/EntityExtractionService';
+import { UsageStatus } from '../types';
+import EntityExtractionService from '../services/EntityExtractionService';
 
 interface UsageContextValue {
   usageStatus: UsageStatus | null;

@@ -83,9 +83,6 @@ jest.mock("features/collaboration", () => ({
     <div data-testid="note-provider">{children}</div>
   ),
   useNotes: () => ({}),
-}));
-
-jest.mock("../context/UsageContext", () => ({
   UsageProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="usage-provider">{children}</div>
   ),

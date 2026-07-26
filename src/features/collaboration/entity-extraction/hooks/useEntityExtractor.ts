@@ -1,7 +1,7 @@
-// src/hooks/useEntityExtractor.ts
+// src/features/collaboration/entity-extraction/hooks/useEntityExtractor.ts
 import { useState, useCallback } from 'react';
-import { ExtractedEntity } from 'features/collaboration';
-import EntityExtractionService, { UsageLimitExceededError } from '../services/firebase/ai/EntityExtractionService';
+import { ExtractedEntity } from '../../notes/types';
+import EntityExtractionService, { UsageLimitExceededError } from '../services/EntityExtractionService';
 import { useUsageContext } from '../context/UsageContext';
 
 /**

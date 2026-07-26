@@ -1,7 +1,7 @@
-// src/services/firebase/ai/__tests__/entityMapper.test.ts
+// src/features/collaboration/entity-extraction/services/__tests__/entityMapper.test.ts
 
 import { mapOpenAIEntityToExtractedEntity, extractDetailsByType } from '../entityMapper';
-import { OpenAIEntityResponse } from '../../../openai/types';
+import { OpenAIEntityResponse } from 'services/openai/types';
 
 /**
  * Tests for entityMapper.ts

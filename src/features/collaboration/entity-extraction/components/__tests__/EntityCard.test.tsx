@@ -1,9 +1,9 @@
-// src/components/features/notes/__tests__/EntityCard.test.tsx
+// src/features/collaboration/entity-extraction/components/__tests__/EntityCard.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EntityCard from '../EntityCard';
-import { ExtractedEntity } from 'features/collaboration';
+import { ExtractedEntity } from '../../../notes/types';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -11,11 +11,11 @@ import { ExtractedEntity } from 'features/collaboration';
 
 const mockConvertEntity = jest.fn();
 
-jest.mock('features/collaboration', () => ({
+jest.mock('../../../notes/context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
 
-const { useNotes } = require('features/collaboration');
+const { useNotes } = require('../../../notes/context/NoteContext');
 
 function setupMocks({ convertEntity = mockConvertEntity } = {}) {
   (useNotes as jest.Mock).mockReturnValue({ convertEntity });

@@ -1,15 +1,17 @@
-// Updated src/components/features/notes/EntityExtractor.tsx
+// src/features/collaboration/entity-extraction/components/EntityExtractor.tsx
 
 import React, { useState, useEffect } from "react";
-import { ExtractedEntity, useNotes, PotentialReference, normalizeTextForComparison } from "features/collaboration";
-import Typography from "../../core/Typography";
-import Button from "../../core/Button";
-import Card from "../../core/Card";
+import { ExtractedEntity } from "../../notes/types";
+import { useNotes } from "../../notes/context/NoteContext";
+import { PotentialReference, normalizeTextForComparison } from "../../notes/components/NoteReferences";
+import Typography from "../../../../components/core/Typography";
+import Button from "../../../../components/core/Button";
+import Card from "../../../../components/core/Card";
 import EntityCard from "./EntityCard";
-import { useEntityExtractor } from "../../../hooks/useEntityExtractor";
-import { useNavigation } from "../../../hooks/useNavigation";
+import { useEntityExtractor } from "../hooks/useEntityExtractor";
+import { useNavigation } from "../../../../hooks/useNavigation";
 import { Loader2, AlertCircle, Info, ExternalLink, Search } from 'lucide-react';
-import DocumentService from "../../../services/firebase/data/DocumentService";
+import DocumentService from "../../../../services/firebase/data/DocumentService";
 
 interface EntityExtractorProps {
   /** ID of the note to extract entities from */

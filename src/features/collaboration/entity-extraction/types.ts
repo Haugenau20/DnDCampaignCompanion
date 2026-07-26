@@ -1,4 +1,4 @@
-// src/types/usage.ts
+// src/features/collaboration/entity-extraction/types.ts
 
 /**
  * Time period for usage tracking

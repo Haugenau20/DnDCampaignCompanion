@@ -1,7 +1,7 @@
-// src/hooks/useOpenAIExtractor.ts
+// src/features/collaboration/entity-extraction/hooks/useOpenAIExtractor.ts
 import { useState, useCallback } from "react";
-import { ExtractedEntity } from "features/collaboration";
-import EntityExtractionService from "../services/firebase/ai/EntityExtractionService";
+import { ExtractedEntity } from "../../notes/types";
+import EntityExtractionService from "../services/EntityExtractionService";
 
 /**
  * Hook for extracting entities from text using Firebase Cloud Functions

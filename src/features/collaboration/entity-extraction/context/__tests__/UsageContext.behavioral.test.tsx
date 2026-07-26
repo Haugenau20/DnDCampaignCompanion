@@ -1,9 +1,9 @@
-// src/context/__tests__/behavioral/UsageContext.behavioral.test.tsx
+// src/features/collaboration/entity-extraction/context/__tests__/UsageContext.behavioral.test.tsx
 
 import React from "react";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { UsageProvider, useUsageContext } from "../../UsageContext";
-import { UsageStatus } from "../../../types/usage";
+import { UsageProvider, useUsageContext } from "../UsageContext";
+import { UsageStatus } from "../../types";
 
 /**
  * UsageContext Behavioral Testing
@@ -33,7 +33,7 @@ import { UsageStatus } from "../../../types/usage";
 const mockFetchUsageStatus = jest.fn();
 const mockClearUsageCache = jest.fn();
 
-jest.mock("../../../services/firebase/ai/EntityExtractionService", () => ({
+jest.mock("../../services/EntityExtractionService", () => ({
   __esModule: true,
   default: {
     getInstance: () => ({

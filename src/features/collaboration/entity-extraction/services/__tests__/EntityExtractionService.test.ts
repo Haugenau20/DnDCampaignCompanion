@@ -1,4 +1,4 @@
-// src/services/firebase/ai/__tests__/EntityExtractionService.test.ts
+// src/features/collaboration/entity-extraction/services/__tests__/EntityExtractionService.test.ts
 
 /**
  * Tests for EntityExtractionService
@@ -32,14 +32,14 @@ jest.mock('firebase/firestore', () => ({
   connectFirestoreEmulator: jest.fn(),
 }));
 
-jest.mock('../../config/firebaseConfig', () => ({
+jest.mock('services/firebase/config/firebaseConfig', () => ({
   firebaseConfig: { apiKey: 'test', projectId: 'test' },
   useEmulators: false,
   emulatorHost: 'localhost',
   emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001' },
 }));
 
-jest.mock('../../core/ServiceRegistry', () => {
+jest.mock('services/firebase/core/ServiceRegistry', () => {
   const registry = new Map<string, any>();
   return {
     __esModule: true,
@@ -101,7 +101,7 @@ describe('EntityExtractionService', () => {
     mockHttpsCallable.mockReset();
 
     const registry = new Map<string, any>();
-    jest.doMock('../../core/ServiceRegistry', () => ({
+    jest.doMock('services/firebase/core/ServiceRegistry', () => ({
       __esModule: true,
       default: {
         getInstance: jest.fn(() => ({
@@ -129,7 +129,7 @@ describe('EntityExtractionService', () => {
       getFirestore: jest.fn(() => ({})),
       connectFirestoreEmulator: jest.fn(),
     }));
-    jest.doMock('../../config/firebaseConfig', () => ({
+    jest.doMock('services/firebase/config/firebaseConfig', () => ({
       firebaseConfig: { apiKey: 'test', projectId: 'test' },
       useEmulators: false,
       emulatorHost: 'localhost',
@@ -240,7 +240,7 @@ describe('EntityExtractionService', () => {
     test('should throw "User not authenticated" when no current user', async () => {
       jest.resetModules();
       const reg = new Map<string, any>();
-      jest.doMock('../../core/ServiceRegistry', () => ({
+      jest.doMock('services/firebase/core/ServiceRegistry', () => ({
         __esModule: true,
         default: {
           getInstance: jest.fn(() => ({
@@ -265,7 +265,7 @@ describe('EntityExtractionService', () => {
         getFirestore: jest.fn(() => ({})),
         connectFirestoreEmulator: jest.fn(),
       }));
-      jest.doMock('../../config/firebaseConfig', () => ({
+      jest.doMock('services/firebase/config/firebaseConfig', () => ({
         firebaseConfig: { apiKey: 'test', projectId: 'test' },
         useEmulators: false, emulatorHost: 'localhost',
         emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001' },
@@ -383,7 +383,7 @@ describe('EntityExtractionService', () => {
     test('should return null when no user is authenticated', async () => {
       jest.resetModules();
       const reg = new Map<string, any>();
-      jest.doMock('../../core/ServiceRegistry', () => ({
+      jest.doMock('services/firebase/core/ServiceRegistry', () => ({
         __esModule: true,
         default: {
           getInstance: jest.fn(() => ({
@@ -408,7 +408,7 @@ describe('EntityExtractionService', () => {
         getFirestore: jest.fn(() => ({})),
         connectFirestoreEmulator: jest.fn(),
       }));
-      jest.doMock('../../config/firebaseConfig', () => ({
+      jest.doMock('services/firebase/config/firebaseConfig', () => ({
         firebaseConfig: { apiKey: 'test', projectId: 'test' },
         useEmulators: false, emulatorHost: 'localhost',
         emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001' },

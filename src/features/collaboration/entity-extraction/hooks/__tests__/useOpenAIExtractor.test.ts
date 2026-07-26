@@ -1,7 +1,7 @@
-// src/hooks/__tests__/useOpenAIExtractor.test.ts
+// src/features/collaboration/entity-extraction/hooks/__tests__/useOpenAIExtractor.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { useOpenAIExtractor } from '../useOpenAIExtractor';
-import { ExtractedEntity } from 'features/collaboration';
+import { ExtractedEntity } from '../../../notes/types';
 
 // ---------------------------------------------------------------------------
 // Mock EntityExtractionService
@@ -9,14 +9,14 @@ import { ExtractedEntity } from 'features/collaboration';
 const mockExtractEntities = jest.fn();
 const mockGetInstance = jest.fn();
 
-jest.mock('../../services/firebase/ai/EntityExtractionService', () => ({
+jest.mock('../../services/EntityExtractionService', () => ({
   __esModule: true,
   default: {
     getInstance: jest.fn(),
   },
 }));
 
-const EntityExtractionService = require('../../services/firebase/ai/EntityExtractionService').default;
+const EntityExtractionService = require('../../services/EntityExtractionService').default;
 
 const makeExtractedEntity = (id: string, text: string, type: 'npc' | 'location' | 'quest' | 'rumor'): ExtractedEntity => ({
   id,
