@@ -1,7 +1,7 @@
 // src/hooks/__tests__/useEntityExtractor.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { useEntityExtractor } from '../useEntityExtractor';
-import { ExtractedEntity } from '../../types/note';
+import { ExtractedEntity } from 'features/collaboration';
 import { UsageLimitExceededError } from '../../services/firebase/ai/EntityExtractionService';
 import { UsageStatus } from '../../types/usage';
 

@@ -40,13 +40,6 @@ jest.mock("@/features/user-management", () => ({
 const mockDeleteNote = jest.fn().mockResolvedValue(undefined);
 const mockGetNoteById = jest.fn();
 
-jest.mock("../../../context/NoteContext", () => ({
-  useNotes: () => ({
-    deleteNote: mockDeleteNote,
-    getNoteById: mockGetNoteById,
-  }),
-}));
-
 const mockNavigateToPage = jest.fn();
 
 jest.mock("../../../hooks/useNavigation", () => ({
@@ -73,7 +66,9 @@ jest.mock("../../../services/firebase/data/DocumentService", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/features/notes/NoteEditor", () => {
+// NoteEditor, NoteReferences and useNotes all come from the collaboration
+// domain barrel now, so they are mocked together in a single factory.
+jest.mock("features/collaboration", () => {
   const React = require("react");
   const NoteEditorMock = React.forwardRef((props: any, ref: any) => {
     React.useImperativeHandle(ref, () => ({
@@ -93,7 +88,37 @@ jest.mock("../../../components/features/notes/NoteEditor", () => {
     );
   });
   NoteEditorMock.displayName = "NoteEditor";
-  return { __esModule: true, default: NoteEditorMock };
+
+  const NoteReferencesMock = (props: any) => (
+    <div
+      data-testid="note-references"
+      data-note-id={props.noteId}
+    >
+      {/* Expose triggers so tests can fire callbacks */}
+      <button
+        data-testid="note-references-found"
+        onClick={() => props.onReferencesFound && props.onReferencesFound([{ id: "ref-1" }])}
+      >
+        Fire References Found
+      </button>
+      <button
+        data-testid="note-references-complete"
+        onClick={() => props.onSearchComplete && props.onSearchComplete()}
+      >
+        Fire Search Complete
+      </button>
+    </div>
+  );
+
+  return {
+    __esModule: true,
+    NoteEditor: NoteEditorMock,
+    NoteReferences: NoteReferencesMock,
+    useNotes: () => ({
+      deleteNote: mockDeleteNote,
+      getNoteById: mockGetNoteById,
+    }),
+  };
 });
 
 jest.mock("../../../components/features/notes/EntityExtractor", () => ({
@@ -112,30 +137,6 @@ jest.mock("../../../components/features/notes/EntityExtractor", () => ({
         onClick={async () => props.saveCurrentEditorContent && await props.saveCurrentEditorContent()}
       >
         Save Content
-      </button>
-    </div>
-  ),
-}));
-
-jest.mock("../../../components/features/notes/NoteReferences", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <div
-      data-testid="note-references"
-      data-note-id={props.noteId}
-    >
-      {/* Expose triggers so tests can fire callbacks */}
-      <button
-        data-testid="note-references-found"
-        onClick={() => props.onReferencesFound && props.onReferencesFound([{ id: "ref-1" }])}
-      >
-        Fire References Found
-      </button>
-      <button
-        data-testid="note-references-complete"
-        onClick={() => props.onSearchComplete && props.onSearchComplete()}
-      >
-        Fire Search Complete
       </button>
     </div>
   ),

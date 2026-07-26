@@ -1,9 +1,9 @@
-// src/components/features/notes/__tests__/NoteEditor.test.tsx
+// src/features/collaboration/notes/components/__tests__/NoteEditor.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import NoteEditor from '../NoteEditor';
-import { Note } from '../../../../types/note';
+import { Note } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -13,7 +13,7 @@ const mockGetNoteById = jest.fn();
 const mockUpdateNote = jest.fn();
 const mockSaveNote = jest.fn();
 
-jest.mock('../../../../context/NoteContext', () => ({
+jest.mock('../../context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
 
@@ -22,7 +22,7 @@ jest.mock('lodash', () => ({
   debounce: (fn: (...args: any[]) => any) => fn,
 }));
 
-const { useNotes } = require('../../../../context/NoteContext');
+const { useNotes } = require('../../context/NoteContext');
 
 function setupMocks({
   note = undefined as Note | undefined,

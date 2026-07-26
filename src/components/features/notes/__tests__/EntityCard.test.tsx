@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EntityCard from '../EntityCard';
-import { ExtractedEntity } from '../../../../types/note';
+import { ExtractedEntity } from 'features/collaboration';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -11,11 +11,11 @@ import { ExtractedEntity } from '../../../../types/note';
 
 const mockConvertEntity = jest.fn();
 
-jest.mock('../../../../context/NoteContext', () => ({
+jest.mock('features/collaboration', () => ({
   useNotes: jest.fn(),
 }));
 
-const { useNotes } = require('../../../../context/NoteContext');
+const { useNotes } = require('features/collaboration');
 
 function setupMocks({ convertEntity = mockConvertEntity } = {}) {
   (useNotes as jest.Mock).mockReturnValue({ convertEntity });

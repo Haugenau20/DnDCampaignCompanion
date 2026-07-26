@@ -1,5 +1,5 @@
 // src/services/firebase/ai/entityMapper.ts
-import { ExtractedEntity, EntityType } from '../../../types/note';
+import { ExtractedEntity, EntityType } from 'features/collaboration';
 import { OpenAIEntityResponse } from '../../openai/types';
 
 /**

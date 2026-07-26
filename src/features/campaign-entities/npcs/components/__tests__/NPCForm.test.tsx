@@ -18,7 +18,7 @@ jest.mock('features/campaign-entities/npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
 }));
 
-jest.mock('context/NoteContext', () => ({
+jest.mock('features/collaboration', () => ({
   useNotes: jest.fn(),
 }));
 
@@ -41,7 +41,7 @@ jest.mock('utils/user-utils', () => ({
 // ---------------------------------------------------------------------------
 
 const { useNPCs } = require('features/campaign-entities/npcs/context/NPCContext');
-const { useNotes } = require('context/NoteContext');
+const { useNotes } = require('features/collaboration');
 const { useQuests } = require('../../../quests/context/QuestContext');
 const { useAuth, useUser } = require('@/features/user-management');
 

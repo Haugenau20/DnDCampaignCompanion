@@ -1,11 +1,11 @@
-// Updated src/components/features/notes/NoteEditor.tsx
+// Updated src/features/collaboration/notes/components/NoteEditor.tsx
 
 import React, { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from "react";
-import { Note } from "../../../types/note";
-import Typography from "../../core/Typography";
-import Input from "../../core/Input";
-import Button from "../../core/Button";
-import { useNotes } from "../../../context/NoteContext";
+import { Note } from "../types";
+import Typography from "../../../../components/core/Typography";
+import Input from "../../../../components/core/Input";
+import Button from "../../../../components/core/Button";
+import { useNotes } from "../context/NoteContext";
 import { debounce } from "lodash";
 import { Loader2, Save, AlertCircle } from 'lucide-react';
 

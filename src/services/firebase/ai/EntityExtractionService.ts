@@ -2,7 +2,7 @@
 import { httpsCallable } from 'firebase/functions';
 import BaseFirebaseService from '../core/BaseFirebaseService';
 import ServiceRegistry from '../core/ServiceRegistry';
-import { ExtractedEntity, EntityType } from '../../../types/note';
+import { ExtractedEntity, EntityType } from 'features/collaboration';
 import { UsageStatus, UsageLimitError } from '../../../types/usage';
 import { OpenAIEntityResponse, ExtractedEntityDetails } from '../../openai/types';
 

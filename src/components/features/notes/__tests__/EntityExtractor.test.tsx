@@ -7,7 +7,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import EntityExtractor from '../EntityExtractor';
-import { Note, ExtractedEntity } from '../../../../types/note';
+import { Note, ExtractedEntity } from 'features/collaboration';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -26,9 +26,22 @@ jest.mock('../../../../hooks/useEntityExtractor', () => ({
   useEntityExtractor: jest.fn(),
 }));
 
-jest.mock('../../../../context/NoteContext', () => ({
-  useNotes: jest.fn(),
-}));
+// useNotes is mocked, but normalizeTextForComparison must stay the real
+// implementation (EntityExtractor calls it directly to dedupe/filter
+// entities). Both now come from the collaboration barrel, so the real
+// normalizeTextForComparison is pulled straight from its source file
+// (NOT via the barrel, to avoid eagerly loading note-relationships.ts,
+// which pulls in the real, uninitialized-in-tests services/firebase index).
+jest.mock('features/collaboration', () => {
+  const actualNoteReferences = jest.requireActual(
+    '../../../../features/collaboration/notes/components/NoteReferences'
+  );
+  return {
+    __esModule: true,
+    useNotes: jest.fn(),
+    normalizeTextForComparison: actualNoteReferences.normalizeTextForComparison,
+  };
+});
 
 jest.mock('../../../../hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
@@ -53,7 +66,7 @@ jest.mock('@/features/user-management', () => ({
 }));
 
 const { useEntityExtractor } = require('../../../../hooks/useEntityExtractor');
-const { useNotes } = require('../../../../context/NoteContext');
+const { useNotes } = require('features/collaboration');
 const { useNavigation } = require('../../../../hooks/useNavigation');
 
 // Grab the DocumentService mock instance for per-test configuration

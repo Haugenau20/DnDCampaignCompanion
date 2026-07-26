@@ -7,7 +7,7 @@ import { NPCProvider, LocationProvider, RumorProvider } from 'features/campaign-
 import { StoryProvider } from 'features/storytelling';
 import { FirebaseProvider } from 'features/user-management/auth/context/FirebaseContext';
 import { QuestProvider } from './features/campaign-entities';
-import { NoteProvider } from './context/NoteContext';
+import { NoteProvider } from 'features/collaboration';
 import { UsageProvider } from './context/UsageContext';
 import ErrorBoundary from './components/shared/ErrorBoundary';
 import Layout from './components/layout/Layout';

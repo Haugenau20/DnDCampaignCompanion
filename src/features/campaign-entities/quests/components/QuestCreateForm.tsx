@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Quest, QuestStatus } from '../types';
 import { QuestObjective } from '../types';
 import { useQuests } from '../context/QuestContext'; // Import useQuests from context
-import { useNotes } from '../../../../context/NoteContext';
+import { useNotes } from 'features/collaboration';
 import Typography from '../../../../components/core/Typography';
 import Button from '../../../../components/core/Button';
 import Card from '../../../../components/core/Card';

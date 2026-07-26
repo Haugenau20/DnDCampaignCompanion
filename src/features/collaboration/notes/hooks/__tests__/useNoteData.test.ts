@@ -1,7 +1,7 @@
-﻿// src/hooks/__tests__/useNoteData.test.ts
+﻿// src/features/collaboration/notes/hooks/__tests__/useNoteData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useNoteData } from '../useNoteData';
-import { Note } from '../../types/note';
+import { Note } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -9,7 +9,7 @@ import { Note } from '../../types/note';
 const mockGetCollection = jest.fn();
 const mockGetInstance = jest.fn();
 
-jest.mock('../../services/firebase/data/DocumentService', () => ({
+jest.mock('../../../../../services/firebase/data/DocumentService', () => ({
   __esModule: true,
   default: {
     getInstance: jest.fn(),
@@ -22,7 +22,7 @@ jest.mock('@/features/user-management', () => ({
   useCampaigns: jest.fn(),
 }));
 
-const DocumentService = require('../../services/firebase/data/DocumentService').default;
+const DocumentService = require('../../../../../services/firebase/data/DocumentService').default;
 const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 const makeNote = (id: string, title: string, campaignId: string = 'campaign-1'): Note => ({

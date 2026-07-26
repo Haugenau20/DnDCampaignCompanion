@@ -1,10 +1,9 @@
 // src/components/features/notes/EntityCard.tsx
 import React, { useState } from "react";
-import { ExtractedEntity, EntityType } from "../../../types/note";
+import { ExtractedEntity, EntityType, useNotes } from "features/collaboration";
 import Typography from "../../core/Typography";
 import Button from "../../core/Button";
 import Card from "../../core/Card";
-import { useNotes } from "../../../context/NoteContext";
 import { Users, MapPin, Scroll, MessageSquare, FileQuestion, Check, Plus, Loader2 } from 'lucide-react';
 
 interface EntityCardProps {

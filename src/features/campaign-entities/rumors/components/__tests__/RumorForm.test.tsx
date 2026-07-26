@@ -36,7 +36,7 @@ jest.mock('../../../npcs/context/NPCContext', () => ({
 jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(),
 }));
-jest.mock('../../../../../context/NoteContext', () => ({
+jest.mock('features/collaboration', () => ({
   useNotes: jest.fn(),
 }));
 jest.mock('@/features/user-management', () => ({
@@ -47,7 +47,7 @@ jest.mock('@/features/user-management', () => ({
 const { useRumors } = require('../../context/RumorContext');
 const { useNPCs } = require('../../../npcs/context/NPCContext');
 const { useLocations } = require('../../../locations/context/LocationContext');
-const { useNotes } = require('../../../../../context/NoteContext');
+const { useNotes } = require('features/collaboration');
 const { useAuth, useUser } = require('@/features/user-management');
 
 beforeEach(() => {

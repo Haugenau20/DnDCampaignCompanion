@@ -1,13 +1,13 @@
-// src/components/features/notes/NoteReferences.tsx
+// src/features/collaboration/notes/components/NoteReferences.tsx
 import React, { useState, useEffect } from "react";
-import { EntityType } from "../../../types/note";
-import Typography from "../../core/Typography";
-import Card from "../../core/Card";
-import Button from "../../core/Button";
-import { useNavigation } from "../../../hooks/useNavigation";
-import { useNotes } from "../../../context/NoteContext";
+import { EntityType } from "../types";
+import Typography from "../../../../components/core/Typography";
+import Card from "../../../../components/core/Card";
+import Button from "../../../../components/core/Button";
+import { useNavigation } from "../../../../hooks/useNavigation";
+import { useNotes } from "../context/NoteContext";
 import { useCampaigns } from "features/user-management";
-import DocumentService from "../../../services/firebase/data/DocumentService";
+import DocumentService from "../../../../services/firebase/data/DocumentService";
 import { Loader2, Users, MapPin, Scroll, MessageSquare, ExternalLink } from 'lucide-react';
 
 export interface PotentialReference {

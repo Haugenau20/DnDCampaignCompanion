@@ -1,6 +1,6 @@
 // src/hooks/useOpenAIExtractor.ts
 import { useState, useCallback } from "react";
-import { ExtractedEntity } from "../types/note";
+import { ExtractedEntity } from "features/collaboration";
 import EntityExtractionService from "../services/firebase/ai/EntityExtractionService";
 
 /**

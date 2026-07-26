@@ -1,7 +1,7 @@
 // src/hooks/__tests__/useOpenAIExtractor.test.ts
 import { renderHook, act } from '@testing-library/react';
 import { useOpenAIExtractor } from '../useOpenAIExtractor';
-import { ExtractedEntity } from '../../types/note';
+import { ExtractedEntity } from 'features/collaboration';
 
 // ---------------------------------------------------------------------------
 // Mock EntityExtractionService

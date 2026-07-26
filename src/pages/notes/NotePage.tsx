@@ -3,16 +3,12 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Typography from "../../components/core/Typography";
 import Button from "../../components/core/Button";
-import NoteEditor, { NoteEditorRef } from "../../components/features/notes/NoteEditor";
 import EntityExtractor from "../../components/features/notes/EntityExtractor";
-import NoteReferences from "../../components/features/notes/NoteReferences";
 import FloatingUsageIndicator from "../../components/features/notes/FloatingUsageIndicator";
 import { useNavigation } from "../../hooks/useNavigation";
-import { useNotes } from "../../context/NoteContext";
+import { useNotes, NoteEditor, NoteEditorRef, NoteReferences, PotentialReference, Note } from "features/collaboration";
 import { useCampaigns } from "features/user-management";
 import { ArrowLeft, Trash2, AlertCircle, ExternalLink } from 'lucide-react';
-import { PotentialReference } from "../../components/features/notes/NoteReferences";
-import { Note } from "../../types/note";
 import DocumentService from "../../services/firebase/data/DocumentService";
 import { useAuth, useGroups } from "features/user-management";
 

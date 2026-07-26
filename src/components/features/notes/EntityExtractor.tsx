@@ -1,17 +1,15 @@
 // Updated src/components/features/notes/EntityExtractor.tsx
 
 import React, { useState, useEffect } from "react";
-import { ExtractedEntity } from "../../../types/note";
+import { ExtractedEntity, useNotes, PotentialReference, normalizeTextForComparison } from "features/collaboration";
 import Typography from "../../core/Typography";
 import Button from "../../core/Button";
 import Card from "../../core/Card";
 import EntityCard from "./EntityCard";
 import { useEntityExtractor } from "../../../hooks/useEntityExtractor";
-import { useNotes } from "../../../context/NoteContext";
 import { useNavigation } from "../../../hooks/useNavigation";
 import { Loader2, AlertCircle, Info, ExternalLink, Search } from 'lucide-react';
 import DocumentService from "../../../services/firebase/data/DocumentService";
-import { PotentialReference, normalizeTextForComparison } from './NoteReferences';
 
 interface EntityExtractorProps {
   /** ID of the note to extract entities from */

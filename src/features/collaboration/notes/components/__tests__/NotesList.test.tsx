@@ -1,9 +1,9 @@
-﻿// src/components/features/notes/__tests__/NotesList.test.tsx
+﻿// src/features/collaboration/notes/components/__tests__/NotesList.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import NotesList from '../NotesList';
-import { Note } from '../../../../types/note';
+import { Note } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -12,7 +12,7 @@ import { Note } from '../../../../types/note';
 const mockCreateNote = jest.fn();
 const mockNavigateToPage = jest.fn();
 
-jest.mock('../../../../context/NoteContext', () => ({
+jest.mock('../../context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
 
@@ -20,13 +20,13 @@ jest.mock('@/features/user-management', () => ({
   useCampaigns: jest.fn(),
 }));
 
-jest.mock('../../../../hooks/useNavigation', () => ({
+jest.mock('../../../../../hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
-const { useNotes } = require('../../../../context/NoteContext');
+const { useNotes } = require('../../context/NoteContext');
 const { useCampaigns } = require('@/features/user-management');
-const { useNavigation } = require('../../../../hooks/useNavigation');
+const { useNavigation } = require('../../../../../hooks/useNavigation');
 
 function setupMocks({
   notes = [] as Note[],

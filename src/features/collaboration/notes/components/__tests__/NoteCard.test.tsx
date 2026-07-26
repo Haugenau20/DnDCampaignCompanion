@@ -1,9 +1,9 @@
-// src/components/features/notes/__tests__/NoteCard.test.tsx
+// src/features/collaboration/notes/components/__tests__/NoteCard.test.tsx
 
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import NoteCard from '../NoteCard';
-import { Note } from '../../../../types/note';
+import { Note } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -11,11 +11,11 @@ import { Note } from '../../../../types/note';
 
 const mockNavigateToPage = jest.fn();
 
-jest.mock('../../../../hooks/useNavigation', () => ({
+jest.mock('../../../../../hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
-const { useNavigation } = require('../../../../hooks/useNavigation');
+const { useNavigation } = require('../../../../../hooks/useNavigation');
 
 function setupMocks() {
   (useNavigation as jest.Mock).mockReturnValue({

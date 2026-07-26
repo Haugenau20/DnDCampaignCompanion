@@ -1,8 +1,8 @@
-// src/context/__tests__/behavioral/NoteContext.behavioral.test.tsx
+// src/features/collaboration/notes/context/__tests__/NoteContext.behavioral.test.tsx
 import React from 'react';
 import { render, act, waitFor } from '@testing-library/react';
-import { NoteProvider, useNotes } from '../../NoteContext';
-import { Note, ExtractedEntity, EntityType, NoteStatus } from '../../../types/note';
+import { NoteProvider, useNotes } from '../NoteContext';
+import { Note, ExtractedEntity, EntityType, NoteStatus } from '../../types';
 
 // Mock Firebase dependencies (NOT the context being tested)
 const mockUseAuth = jest.fn();
@@ -31,7 +31,7 @@ const mockDocumentService = {
   deleteDocument: jest.fn()
 };
 
-jest.mock('../../../services/firebase/data/DocumentService', () => ({
+jest.mock('../../../../../services/firebase/data/DocumentService', () => ({
   __esModule: true,
   default: {
     getInstance: () => mockDocumentService
@@ -39,12 +39,12 @@ jest.mock('../../../services/firebase/data/DocumentService', () => ({
 }));
 
 // Mock user utilities
-jest.mock('../../../utils/user-utils', () => ({
+jest.mock('../../../../../utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('../../../utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('../../../../../utils/user-utils');
 
 describe('NoteContext Behavioral Tests', () => {
   // Test component to access context
