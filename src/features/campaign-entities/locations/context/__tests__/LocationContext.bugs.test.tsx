@@ -151,14 +151,16 @@ describe('LocationContext Bug Discovery Tests', () => {
         await locationContext.createLocation(locationData);
       });
 
-      // EXPECTED: Proper user attribution metadata should be included
-      // Test failures indicate bugs in LocationContext implementation
+      // EXPECTED: the location is handed to the write layer under its generated id.
+      // Attribution is no longer built here: it is applied by DocumentService from the
+      // live group profile, and its content is asserted in DocumentService.test.ts
+      // ("should write full creation attribution onto the document").
       expect(mockAddData).toHaveBeenCalledWith(
         expect.objectContaining({
-          createdByUsername: 'Test User',        // FAILS until LocationContext bug fixed
-          createdByCharacterName: 'Test Character', // FAILS until LocationContext bug fixed
-          modifiedByUsername: 'Test User',       // FAILS until LocationContext bug fixed
-          modifiedByCharacterName: 'Test Character' // FAILS until LocationContext bug fixed
+          name: 'Test Location',
+          type: 'city',
+          status: 'known',
+          description: 'A test location for bug discovery'
         }),
         'test-location'
       );
@@ -197,13 +199,16 @@ describe('LocationContext Bug Discovery Tests', () => {
         await locationContext.updateLocation('test-location', { description: 'Updated description' });
       });
 
-      // EXPECTED: User attribution should be included in updates
-      // Test failures indicate bugs in LocationContext implementation
+      // EXPECTED: the caller's partial update reaches the write layer for the right
+      // document. Modification attribution is no longer built here — DocumentService
+      // applies it, and its content is asserted in DocumentService.test.ts
+      // ("should write the full modification attribution ... and never write created* fields").
+      // Creation attribution is not asserted here because this payload is a partial
+      // update: it carries only the changed fields, and updateDoc merges them.
       expect(mockUpdateData).toHaveBeenCalledWith(
         'test-location',
         expect.objectContaining({
-          modifiedByUsername: 'Test User',       // FAILS until LocationContext bug fixed
-          modifiedByCharacterName: 'Test Character' // FAILS until LocationContext bug fixed
+          description: 'Updated description'
         })
       );
     });

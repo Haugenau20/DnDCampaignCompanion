@@ -4,21 +4,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🚧 ARCHITECTURE EVOLUTION IN PROGRESS
 
-**IMPORTANT**: This codebase is planned for major restructuring. Before starting new development:
+**IMPORTANT**: The feature-first restructuring is **in progress**, three domains of four complete.
 
-1. **Review Backlog**: `docs/backlog/` contains comprehensive transformation plans
-2. **Current State**: Functional/technical architecture (components/, context/, services/)  
-3. **Target State**: Feature-first domains (campaign-entities/, storytelling/, collaboration/, user-management/)
-4. **Testing First**: All business logic must be tested before restructuring begins (see `docs/backlog/testing-before-restructuring-guide.md`)
-5. **Migration Status**: Track progress in `docs/backlog/hybrid-feature-first-restructuring-strategy.md`
+| Domain | Status |
+|---|---|
+| `features/user-management/` (auth, groups, profiles, admin) | ✅ migrated |
+| `features/storytelling/` (chapters, stories, sagas) | ✅ migrated |
+| `features/campaign-entities/` (npcs, quests, locations, rumors) | ✅ migrated |
+| `features/collaboration/` (notes, AI entity extraction) | ⬜ **next** |
+| `shared/` + `core/` infrastructure pass | ⬜ not started |
 
-**For New Features**: Consider whether to implement in current structure (if urgent) or wait for post-restructuring (if possible). Complex features should align with planned domain boundaries.
+**What that means in practice**: migrated domains live in `src/features/<domain>/` and expose a
+barrel `index.ts` — import from the barrel, never reach into their internals. Everything not yet
+migrated still sits in the old functional layout (`src/context/`, `src/components/features/`,
+`src/hooks/`, `src/types/`). Expect both shapes in the tree, and put new code in the shape its
+domain has already reached.
 
-**Key Documents**:
-- `docs/backlog/codebase-restructuring-analysis.md` - Architecture analysis and recommendations
-- `docs/backlog/hybrid-feature-first-restructuring-strategy.md` - Step-by-step migration plan
-- `docs/backlog/deep-dive-feature-enhancements.md` - Advanced feature roadmap
-- `docs/backlog/third-party-integration-analysis.md` - Integration opportunities
+**Still awaiting migration**: `NoteContext`, `UsageContext`, `components/features/notes/`,
+`useNoteData`, `useEntityExtractor`, `useOpenAIExtractor`, `types/{note,usage}.ts`,
+`services/firebase/ai/` → all bound for `collaboration/`. `NavigationContext`, `SearchContext`,
+`components/features/layouts/`, `components/features/contact/`, `useFirebaseData`, `useSearch`,
+`useNavigation` → bound for `shared/` or `core/`. `useSessionManager` belongs to
+`features/user-management/` — it tracks auth session activity and was simply left behind when that
+domain migrated.
+
+**Key Documents** (note: `docs/backlog/` no longer exists — these moved):
+- `docs/testing/post-test-coverage-roadmap.md` — **start here**; the live status and execution order
+- `docs/architecture/migration/hybrid-feature-first-restructuring-strategy.md` — the original plan (not updated with progress)
+- `docs/architecture/migration/codebase-restructuring-analysis.md` - Architecture analysis and recommendations
+- `docs/architecture/migration/attribution-consolidation-findings.md` — a worked example of an audit whose predictions were wrong, and why
+- `docs/testing/bug-tracking/README.md` — live bug tracker
+- `docs/architecture/migration/deep-dive-feature-enhancements.md` - Advanced feature roadmap
+- `docs/architecture/migration/third-party-integration-analysis.md` - Integration opportunities
 
 ## Build Commands
 
@@ -29,11 +46,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Generate sample data: `.\scripts\manage-dev-data.ps1 -Action generate`
 - View logs: `.\scripts\manage-environment.ps1 -Environment dev|prod -Action logs [-Service frontend|emulators]`
 
-### Testing Commands (PLANNED - See testing-before-restructuring-guide.md)
-- Run test suite: `npm test` (to be implemented)
-- Run integration tests with Firebase emulators: `npm run test:integration` (planned)
-- Run performance tests: `npm run test:performance` (planned)
-- Test business logic coverage: `npm run test:coverage` (required pre-restructuring)
+### Testing Commands
+- Run test suite: `npm test` (jest)
+- Coverage: `npm run test:coverage` — CI floor is set in `jest.config.ts` (85% statements/functions/lines, 81% branches)
+- Behavioural suites only: `npm run test:behavioral`
+- HTML report: `npm run test:html`
+- Single file, fast: `npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="<pattern>"`
+
+**A non-zero failure count is expected.** The behavioural suites intentionally contain failing
+tests that mark catalogued bugs (`docs/testing/bug-tracking/`). Compare against the current
+baseline before assuming you broke something — never "fix" a red test by editing it.
+
+### Verifying a change before proposing a merge
+- `npx tsc --noEmit` — type errors block the deploy, since `react-scripts build` type-checks all of `src/`
+- `npm test` — compare the failure count against the recorded baseline
+- **`npm run build` — required, and not implied by the two above.** `react-scripts`' webpack honours
+  tsconfig `baseUrl` but **ignores `paths`**, so `@/...` alias imports pass both `tsc` and jest and
+  then fail the production build with `Module not found`. Use bare `baseUrl` imports
+  (`types/common`, `shared/attribution`) in anything that ships; `@/` is safe only in `__tests__/`
+  and `test-utils/`, which are never bundled. Adding a new top-level `src/` directory also means
+  adding it to the resolver allow-list in `jest.config.ts`.
 
 ## Code Style Guidelines
 
@@ -94,10 +126,10 @@ src/
 - `core/` → (no internal dependencies)
 
 ### Migration Status
-- **Phase**: Pre-restructuring (testing implementation required first)
-- **Timeline**: 8-12 weeks estimated for complete migration
-- **Risk Level**: Low-Medium (incremental approach with comprehensive testing)
-- **Dependencies**: Complete business logic test coverage required before starting
+- **Phase**: Restructuring in progress — user-management, storytelling and campaign-entities have merged to `main`. Collaboration (notes + AI extraction) is next, then the `shared/`/`core/` infrastructure pass, then post-migration bug triage.
+- **Order**: user-management → storytelling → campaign-entities → collaboration. Deliberately sequential; each domain must be green before the next starts.
+- **Per-domain exit criteria**: all tests pass except the documented bug markers, coverage on the migrated domain does not drop, no new bugs introduced by the move itself, and a `migration/<domain>-complete` tag on `main` at merge.
+- **Risk Level**: Low-Medium (incremental, with a behavioural test suite as the safety net)
 
 ## Testing Strategy (CRITICAL PRE-RESTRUCTURING)
 
@@ -118,9 +150,18 @@ src/
 - **Use test failures to improve code quality before major refactoring**
 
 ### Current State
-- **Testing Infrastructure**: Basic Jest + React Testing Library setup
-- **Coverage**: Minimal - needs comprehensive expansion before restructuring
+- **Testing Infrastructure**: Jest + React Testing Library, ~3,970 tests across ~180 suites
+- **Coverage**: ~89% statements / ~90% lines / ~86% functions / ~81% branches, with a CI floor in `jest.config.ts`
+- **Baseline**: the documented-bug-marker failures. Check `docs/testing/results/pre-migration-baseline.md` and the latest migration doc for the current number before treating any red test as a regression.
 - **Firebase Testing**: Emulator integration available but underutilized
+
+#### A failing test is not automatically a bug
+Three of the catalogued "bugs" (#013, #014, #300) turned out to be a missing `crypto.randomUUID` in
+JSDOM: the tests aborted on the environment error *before reaching any assertion*, so the behaviour
+they described was never exercised. They sat in the tracker for a year as deferred architectural
+work. When triaging a red test, first establish that it actually executed the code it names — a test
+that dies on an environment error is indistinguishable, in a failure count, from one that found a
+real defect.
 
 ### Required Before Restructuring
 1. **Context Layer Testing**: All Firebase contexts (NPC, Quest, Location, Rumor, Story, Note)

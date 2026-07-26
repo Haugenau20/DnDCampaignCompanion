@@ -1,11 +1,27 @@
 # Bug #300: QuestFormSections ObjectivesSection uses crypto.randomUUID() — crashes in Jest/JSDOM
 
-**Status**: 🔍 DISCOVERED  
+**Status**: ✅ FIXED  
 **Category**: UI / TESTABILITY  
 **Priority**: Medium  
 **Affected File**: `src/components/features/quests/QuestFormSections.tsx`  
 **Discovery Method**: Unit test (QuestFormSections.test.tsx)  
-**Discovered**: 2026-05-20
+**Discovered**: 2026-05-20  
+**Resolved**: 2026-07-26
+
+## Resolution
+
+Fixed at the root: a deterministic `crypto.randomUUID` polyfill was added to `src/setupTests.ts`
+during the attribution-consolidation work, so the API is available to every suite. The counter-based
+implementation returns v4-shaped ids that are stable across runs, which makes generated ids
+assertable rather than random.
+
+Production code was not changed — `crypto.randomUUID` is a legitimate browser API, and the gap was
+in the test environment.
+
+This same gap was also the sole cause of bugs [#013](./013-rumor-combine-function-logic.md) and
+[#014](./014-quest-conversion-integration.md), whose marker tests silently never executed the logic
+they were written to check. Worth remembering: a test that aborts on an environment error looks
+identical, in the failure count, to a test that found a real defect.
 
 ---
 

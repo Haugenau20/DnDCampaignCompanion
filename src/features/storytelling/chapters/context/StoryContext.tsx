@@ -5,7 +5,7 @@ import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from 'hooks/useFirebaseData';
 import { useAuth, useUser } from 'features/user-management';
 import firebaseServices from 'services/firebase';
-import { getUserName, getActiveCharacterName } from 'utils/user-utils';
+import { buildModificationAttribution } from 'shared/attribution';
 
 interface StoryContextState {
   chapters: Chapter[];
@@ -203,10 +203,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (updates.order === undefined || updates.order === chapter.order) {
         await updateData(chapterId, {
           ...updates,
-          dateModified: new Date().toISOString(),
-          modifiedBy: user.uid,
-          modifiedByUsername: getUserName(activeGroupUserProfile),
-          modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile)
+          ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile })
         });
         await refreshChapters();
         return;
@@ -259,16 +256,16 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Set the moving chapter's new order
       newOrderMap.set(chapterId, newOrder);
-      
+
+      // Compute the modification attribution once for the chapter being moved
+      const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+
       // Create array of chapters with their new orders
       const updatedChapters = affectedChapters.map(c => ({
         ...c,
         id: generateChapterId(newOrderMap.get(c.id)),
         order: newOrderMap.get(c.id),
-        dateModified: c.id === chapterId ? new Date() : c.dateModified,
-        modifiedBy: c.id === chapterId ? user.uid : c.modifiedBy,
-        modifiedByUsername: c.id === chapterId ? getUserName(activeGroupUserProfile) || '' : c.modifiedByUsername,
-        modifiedByCharacterName: c.id === chapterId ? getActiveCharacterName(activeGroupUserProfile) || '' : c.modifiedByCharacterName,
+        ...(c.id === chapterId ? modificationAttribution : {}),
         // Add any other updates for the target chapter
         ...(c.id === chapterId ? updates : {})
       }));
@@ -284,6 +281,12 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Create all chapters with their new IDs and orders
       for (const updatedChapter of updatedChapters) {
         console.log(`Creating chapter ${updatedChapter.id} (order ${updatedChapter.order})`);
+        // Re-key: this rewrites an EXISTING chapter under a new id (the id encodes
+        // order), spreading `...c` above so its original created* fields ride along
+        // untouched; modification attribution was already applied above only to the
+        // chapter the user actually moved. Do NOT switch this to createDocument —
+        // that stamps fresh creation attribution from whoever triggered the reorder,
+        // overwriting the true original author/date (this is exactly bug #1203).
         await firebaseServices.document.setDocument('chapters', updatedChapter.id, updatedChapter);
       }
       
@@ -339,40 +342,42 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           id: newId,
           order: shiftedOrder
         };
-        
+
+        // Re-key: this is an EXISTING chapter being shifted to make room for the
+        // new one, not a new creation. `...chapterToShift` carries its original
+        // created*/modified* fields forward unchanged. Do NOT switch this to
+        // createDocument — that would stamp fresh creation attribution from
+        // whoever is creating the new chapter, overwriting this shifted chapter's
+        // true original author/date (bug #1203).
         await firebaseServices.document.setDocument('chapters', newId, updatedChapter);
-        
+
         // Verify it exists before deleting the old one
         const newExists = await firebaseServices.document.getDocument('chapters', newId);
         if (!newExists) {
           throw new Error(`Failed to shift chapter ${oldId} to ${newId}`);
         }
-        
+
         // Delete the old chapter
         await deleteData(oldId);
       }
-      
+
       // Create consistent ID based on order
       const chapterId = generateChapterId(newOrder);
-      
+
       // Prepare chapter data with consistent ID and order
       const newChapter: Chapter = {
         ...chapterData,
         id: chapterId,
-        order: newOrder,
-        dateAdded: new Date().toISOString(),
-        createdBy: user.uid,
-        createdByUsername: getUserName(activeGroupUserProfile) || '',
-        createdByCharacterName: getActiveCharacterName(activeGroupUserProfile) || '',
-        dateModified: new Date().toISOString(),
-        modifiedBy: user.uid,
-        modifiedByUsername: getUserName(activeGroupUserProfile) || '',
-        modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile) || ''
+        order: newOrder
       };
-      
-      // Add chapter to Firebase
-      await firebaseServices.document.setDocument('chapters', chapterId, newChapter);
-      
+
+      // Add chapter to Firebase via the attribution-aware create path. This is a
+      // genuine creation (a brand-new chapter, not a re-key of an existing one), so
+      // it is correct for createDocument to stamp created*/modified* attribution
+      // from the current user/live profile — unlike the re-key writes elsewhere in
+      // this file, which must never go through createDocument (see comments below).
+      await firebaseServices.document.createDocument('chapters', newChapter, chapterId);
+
       // Verify it exists
       const exists = await firebaseServices.document.getDocument('chapters', chapterId);
       if (!exists) {
@@ -437,22 +442,28 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           id: newId,
           order: shiftedOrder
         };
-        
+
+        // Re-key: this is an EXISTING chapter being shifted down to close the gap
+        // left by the deletion, not a new creation. `...chapterToShift` carries its
+        // original created*/modified* fields forward unchanged. Do NOT switch this
+        // to createDocument — that would stamp fresh creation attribution from
+        // whoever triggered the delete, overwriting this chapter's true original
+        // author/date (bug #1203).
         await firebaseServices.document.setDocument('chapters', newId, updatedChapter);
-        
+
         // Verify it exists before deleting the old one
         const newExists = await firebaseServices.document.getDocument('chapters', newId);
         if (!newExists) {
           throw new Error(`Failed to shift chapter ${oldId} to ${newId}`);
         }
-        
+
         // Delete the old chapter
         await deleteData(oldId);
       }
-      
+
       // Refresh chapters
       await refreshChapters();
-      
+
       console.log('Chapter deleted successfully');
     } catch (error) {
       console.error('Failed to delete chapter:', error);
@@ -490,8 +501,12 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             order: newOrder,
             id: newId
           };
-          
-          // Create new document with updated ID
+
+          // Re-key: this renumbers an EXISTING chapter to close gaps, not a new
+          // creation. `...chapter` carries its original created*/modified* fields
+          // forward unchanged. Do NOT switch this to createDocument — that would
+          // stamp fresh creation attribution from whoever triggered the renumbering,
+          // overwriting the chapter's true original author/date (bug #1203).
           await firebaseServices.document.setDocument('chapters', newId, updatedChapter);
           
           // Verify it exists

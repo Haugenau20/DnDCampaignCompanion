@@ -1,11 +1,30 @@
 # Bug #013: Rumor Combine Function Complex Logic Issues
 
-**Status**: 🔍 DISCOVERED  
+**Status**: ✅ FIXED — test-environment artifact, not a production bug  
 **Priority**: Medium  
 **Category**: INTEGRATION  
 **Context**: RumorContext  
 **Discovery Date**: June 15, 2025  
-**Discovery Method**: Behavioral Testing
+**Discovery Method**: Behavioral Testing  
+**Resolved**: 2026-07-26
+
+## Resolution
+
+The blocker named in the summary below — "cannot be properly tested due to `crypto.randomUUID`
+dependency issues in the Jest environment" — was the entire defect. JSDOM does not implement
+`crypto.randomUUID`, so `combineRumors` threw `TypeError: crypto.randomUUID is not a function`
+before reaching any assertion. The two marker tests were failing on that throw, not on the
+combine logic.
+
+A deterministic `crypto.randomUUID` polyfill was added to `src/setupTests.ts` during the
+attribution-consolidation work. Both marker tests now **pass** unchanged. No production code was
+modified to achieve this.
+
+**Scope of this resolution:** what is now proven is exactly what the marker tests assert. The
+broader concerns this report speculates about — relationship deduplication edge cases and error
+handling — were never encoded as tests, so they are neither confirmed nor refuted. If those
+matter, they need tests of their own; this entry should not be read as certifying the whole
+`combineRumors` implementation.
 
 ## Summary
 

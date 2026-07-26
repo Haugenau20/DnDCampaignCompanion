@@ -1,6 +1,6 @@
-﻿// src/context/__tests__/behavioral/NoteContext.behavioral.test.tsx
+// src/context/__tests__/behavioral/NoteContext.behavioral.test.tsx
 import React from 'react';
-import { render, act } from '@testing-library/react';
+import { render, act, waitFor } from '@testing-library/react';
 import { NoteProvider, useNotes } from '../../NoteContext';
 import { Note, ExtractedEntity, EntityType, NoteStatus } from '../../../types/note';
 
@@ -27,6 +27,7 @@ const mockDocumentService = {
   getCollection: jest.fn(),
   createDocument: jest.fn(),
   updateDocument: jest.fn(),
+  updateDocumentWithAttribution: jest.fn(),
   deleteDocument: jest.fn()
 };
 
@@ -57,7 +58,7 @@ describe('NoteContext Behavioral Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Setup default mock returns
     mockUseAuth.mockReturnValue({
       user: { uid: 'test-user', email: 'test@example.com' }
@@ -70,8 +71,8 @@ describe('NoteContext Behavioral Tests', () => {
     });
     mockUseUser.mockReturnValue({
       userProfile: { id: 'test-user', name: 'Test User' },
-      activeGroupUserProfile: { 
-        userId: 'test-user', 
+      activeGroupUserProfile: {
+        userId: 'test-user',
         username: 'Test User',
         role: 'member',
         joinedAt: '2025-06-15T00:00:00.000Z',
@@ -81,10 +82,10 @@ describe('NoteContext Behavioral Tests', () => {
         ]
       }
     });
-    
+
     getUserName.mockReturnValue('Test User');
     getActiveCharacterName.mockReturnValue('Test Character');
-    
+
     // Default empty collection
     mockDocumentService.getCollection.mockResolvedValue([]);
   });
@@ -92,7 +93,7 @@ describe('NoteContext Behavioral Tests', () => {
   describe('Authentication Requirements', () => {
     test('should throw error when creating note without authentication', async () => {
       mockUseAuth.mockReturnValue({ user: null });
-      
+
       let capturedContext: any;
       render(
         <NoteProvider>
@@ -108,7 +109,7 @@ describe('NoteContext Behavioral Tests', () => {
 
     test('should throw error when creating note without active group', async () => {
       mockUseGroups.mockReturnValue({ activeGroupId: null });
-      
+
       let capturedContext: any;
       render(
         <NoteProvider>
@@ -124,7 +125,7 @@ describe('NoteContext Behavioral Tests', () => {
 
     test('should throw error when creating note without active campaign', async () => {
       mockUseCampaigns.mockReturnValue({ activeCampaignId: null });
-      
+
       let capturedContext: any;
       render(
         <NoteProvider>
@@ -141,12 +142,22 @@ describe('NoteContext Behavioral Tests', () => {
 
   describe('Note Creation (createNote)', () => {
     test('should create note with sequential ID and metadata', async () => {
+      // NOTE: The mount-time fetchNotes() call is asynchronous (mocked
+      // getCollection resolves on a later microtask). If we act on the
+      // context before that initial fetch settles, fetchNotes' own
+      // setNotes(sortedNotes) call resolves afterwards and silently
+      // overwrites whatever createNote() just added. Waiting for
+      // isLoading to go false first avoids that race -- see the bug
+      // report on this test suite's diagnosis for detail.
       let capturedContext: any;
       render(
         <NoteProvider>
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         const noteId = await capturedContext.createNote('Test Note', 'Test content here');
@@ -198,6 +209,11 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      // Wait for the mocked existing notes to actually land in state before
+      // generating the next sequential ID off of them.
+      await waitFor(() => {
+        expect(capturedContext.notes).toHaveLength(1);
+      });
 
       await act(async () => {
         const noteId = await capturedContext.createNote('New Note', 'New content');
@@ -212,6 +228,9 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
@@ -237,9 +256,20 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
+      // createNote and saveNote are split into separate act() calls: saveNote
+      // reads the just-created note via getNoteById, which is a useCallback
+      // closed over `notes` from the last committed render. If both calls
+      // happen inside the same act() with no render in between, saveNote
+      // still sees the pre-createNote (empty) `notes` and throws "Note not
+      // found" -- a stale-closure timing issue, not a behavior under test.
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         await capturedContext.saveNote('note-1');
       });
 
@@ -266,18 +296,29 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         await capturedContext.saveNote('note-1'); // Save it first
-        jest.clearAllMocks();
-        
-        // Now update it
+      });
+      jest.clearAllMocks();
+
+      // Now update it
+      await act(async () => {
         await capturedContext.saveNote('note-1', { title: 'Updated Title' });
       });
 
-      // Verify Firebase updateDocument was called
-      expect(mockDocumentService.updateDocument).toHaveBeenCalledWith(
+      // Verify the update reached Firebase through the attribution-aware write.
+      // This assertion previously named updateDocument; saveNote's update branch
+      // was deliberately moved onto updateDocumentWithAttribution so that note
+      // edits get attribution from the same single write path as every other
+      // content type. The old assertion encoded the superseded contract.
+      expect(mockDocumentService.updateDocumentWithAttribution).toHaveBeenCalledWith(
         'groups/test-group/users/test-user/notes',
         'note-1',
         expect.objectContaining({
@@ -286,15 +327,78 @@ describe('NoteContext Behavioral Tests', () => {
       );
     });
 
-    test('should throw error when saving note without authentication', async () => {
-      mockUseAuth.mockReturnValue({ user: null });
-      
+    test('should route updates to an already-saved note through updateDocumentWithAttribution, preserving updatedAt and the caller\'s updates', async () => {
+      // Seed an already-saved note via the initial fetch, rather than via
+      // createNote()+saveNote() in the same act(), to avoid the pre-existing,
+      // unrelated stale-closure bug where getNoteById can't see a note
+      // created moments earlier in the same act() callback.
+      const existingNote: Note = {
+        id: 'note-42',
+        title: 'Existing Note',
+        content: 'Original content',
+        extractedEntities: [],
+        status: 'active' as NoteStatus,
+        tags: [],
+        updatedAt: '2025-06-01T00:00:00.000Z',
+        campaignId: 'test-campaign',
+        createdBy: 'test-user',
+        createdByUsername: 'Test User',
+        createdByCharacterName: 'Test Character',
+        dateAdded: '2025-06-01T00:00:00.000Z',
+        dateModified: '2025-06-01T00:00:00.000Z',
+        modifiedBy: 'test-user',
+        modifiedByUsername: 'Test User',
+        modifiedByCharacterName: 'Test Character'
+      };
+      mockDocumentService.getCollection.mockResolvedValue([existingNote]);
+
       let capturedContext: any;
       render(
         <NoteProvider>
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+
+      // The initial fetch that populates `notes` (and therefore what
+      // getNoteById can see) resolves asynchronously; wait for it to land
+      // before acting, rather than assuming it beat the next statement.
+      await waitFor(() => {
+        expect(capturedContext.notes).toHaveLength(1);
+      });
+
+      await act(async () => {
+        await capturedContext.saveNote('note-42', { title: 'Updated Title', tags: ['lore'] });
+      });
+
+      // BEHAVIOR: Updating an already-saved note must go through the
+      // attribution-aware updateDocumentWithAttribution (the same single
+      // write path createDocument already uses for new notes), while still
+      // sending updatedAt -- a Note-specific field, not attribution -- and
+      // the caller's own ...updates.
+      expect(mockDocumentService.updateDocumentWithAttribution).toHaveBeenCalledWith(
+        'groups/test-group/users/test-user/notes',
+        'note-42',
+        expect.objectContaining({
+          title: 'Updated Title',
+          tags: ['lore'],
+          updatedAt: expect.any(String)
+        })
+      );
+      expect(mockDocumentService.updateDocument).not.toHaveBeenCalled();
+    });
+
+    test('should throw error when saving note without authentication', async () => {
+      mockUseAuth.mockReturnValue({ user: null });
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await expect(capturedContext.saveNote('note-1'))
@@ -309,6 +413,9 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await expect(capturedContext.saveNote('nonexistent-note'))
@@ -325,9 +432,14 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         await capturedContext.updateNote('note-1', { title: 'Updated Title' });
       });
 
@@ -344,17 +456,26 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         await capturedContext.saveNote('note-1'); // Save it first
-        jest.clearAllMocks();
-        
+      });
+      jest.clearAllMocks();
+
+      await act(async () => {
         await capturedContext.updateNote('note-1', { title: 'Updated Title' });
       });
 
-      // Should call saveNote internally, which calls updateDocument
-      expect(mockDocumentService.updateDocument).toHaveBeenCalled();
+      // Should call saveNote internally, which routes an already-saved note
+      // through the attribution-aware updateDocumentWithAttribution. This
+      // assertion previously named updateDocument, the pre-refactor contract.
+      expect(mockDocumentService.updateDocumentWithAttribution).toHaveBeenCalled();
     });
 
     test('should throw error when updating nonexistent note', async () => {
@@ -364,6 +485,9 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await expect(capturedContext.updateNote('nonexistent-note', { title: 'New Title' }))
@@ -394,14 +518,20 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         // Add entity to note
         await capturedContext.updateNote('note-1', {
           extractedEntities: [mockEntity]
         });
-        
+      });
+      await act(async () => {
         const result = await capturedContext.convertEntity('note-1', 'entity-1', 'npc');
         expect(result).toBe(''); // Returns empty string for navigation
       });
@@ -436,13 +566,19 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         await capturedContext.updateNote('note-1', {
           extractedEntities: [locationEntity]
         });
-        
+      });
+      await act(async () => {
         await capturedContext.convertEntity('note-1', 'entity-1', 'location');
       });
 
@@ -475,13 +611,19 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         await capturedContext.updateNote('note-1', {
           extractedEntities: [questEntity]
         });
-        
+      });
+      await act(async () => {
         await capturedContext.convertEntity('note-1', 'entity-1', 'quest');
       });
 
@@ -516,13 +658,19 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         await capturedContext.updateNote('note-1', {
           extractedEntities: [rumorEntity]
         });
-        
+      });
+      await act(async () => {
         await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
       });
 
@@ -546,6 +694,9 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await expect(capturedContext.convertEntity('nonexistent-note', 'entity-1', 'npc'))
@@ -560,9 +711,14 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         await expect(capturedContext.convertEntity('note-1', 'nonexistent-entity', 'npc'))
           .rejects.toThrow('Entity not found');
       });
@@ -586,13 +742,19 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         await capturedContext.updateNote('note-1', {
           extractedEntities: [mockEntity]
         });
-        
+      });
+      await act(async () => {
         await capturedContext.markEntityAsConverted('note-1', 'entity-1', 'galadriel-the-wise');
       });
 
@@ -609,6 +771,9 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await expect(capturedContext.markEntityAsConverted('nonexistent-note', 'entity-1', 'created-id'))
@@ -625,6 +790,9 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
@@ -642,6 +810,9 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       const note = capturedContext.getNoteById('nonexistent-note');
       expect(note).toBeUndefined();
@@ -656,9 +827,14 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         await capturedContext.archiveNote('note-1');
       });
 
@@ -675,10 +851,17 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
         await capturedContext.saveNote('note-1'); // Save it first
+      });
+      await act(async () => {
         await capturedContext.deleteNote('note-1');
       });
 
@@ -691,13 +874,16 @@ describe('NoteContext Behavioral Tests', () => {
 
     test('should throw error when deleting without authentication', async () => {
       mockUseAuth.mockReturnValue({ user: null });
-      
+
       let capturedContext: any;
       render(
         <NoteProvider>
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
 
       await act(async () => {
         await expect(capturedContext.deleteNote('note-1'))
@@ -755,14 +941,17 @@ describe('NoteContext Behavioral Tests', () => {
         </NoteProvider>
       );
 
-      // Should only show notes for active campaign
-      expect(capturedContext.notes).toHaveLength(1);
+      // Should only show notes for active campaign, once the async fetch
+      // has actually resolved and filtered them into state.
+      await waitFor(() => {
+        expect(capturedContext.notes).toHaveLength(1);
+      });
       expect(capturedContext.notes[0].campaignId).toBe('test-campaign');
     });
 
     test('should show no notes when no active campaign', async () => {
       mockUseCampaigns.mockReturnValue({ activeCampaignId: null });
-      
+
       const mockNotes: Note[] = [
         {
           id: 'note-1',
@@ -792,6 +981,12 @@ describe('NoteContext Behavioral Tests', () => {
         </NoteProvider>
       );
 
+      // Wait for the fetch to settle so this reflects the actual filtered
+      // result, not just the pre-fetch initial state (which also happens
+      // to be an empty array, coincidentally).
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
       expect(capturedContext.notes).toHaveLength(0);
     });
 
@@ -803,8 +998,13 @@ describe('NoteContext Behavioral Tests', () => {
         </NoteProvider>
       );
 
-      // Should start as not loading (since mock resolves immediately)
-      expect(capturedContext.isLoading).toBe(false);
+      // isLoading starts true and only becomes false once the mocked
+      // getCollection() promise resolves and the fetch's `finally` block
+      // runs -- that takes at least one microtask tick, so this must be
+      // awaited rather than checked synchronously right after render().
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
     });
 
     test('should handle errors gracefully', async () => {
@@ -817,7 +1017,11 @@ describe('NoteContext Behavioral Tests', () => {
         </NoteProvider>
       );
 
-      expect(capturedContext.error).toBe('Failed to fetch notes');
+      // The rejection is only reflected in state after the fetch's catch
+      // block runs, which is asynchronous relative to render().
+      await waitFor(() => {
+        expect(capturedContext.error).toBe('Failed to fetch notes');
+      });
       expect(capturedContext.notes).toEqual([]);
     });
   });
@@ -826,11 +1030,11 @@ describe('NoteContext Behavioral Tests', () => {
     test('should throw error when useNotes is used outside provider', () => {
       // Mock console.error to suppress error output in test
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      
+
       expect(() => render(<TestComponent />)).toThrow(
         'useNotes must be used within a NoteProvider'
       );
-      
+
       consoleSpy.mockRestore();
     });
   });

@@ -330,13 +330,8 @@ describe('NPCContext Behavioral Testing', () => {
         status: 'alive',
         relationship: 'neutral',
       });
-      
-      // EXPECTED: NPC creation should include proper user attribution metadata
-      expect(npcDataSent.createdBy).toBe('test-user');
-      expect(npcDataSent.createdByUsername).toBe('Test User'); // FAILS until getUserName bug is fixed
-      expect(npcDataSent.createdByCharacterName).toBe('Test Character'); // FAILS until getActiveCharacterName bug is fixed
-      expect(npcDataSent.dateAdded).toBeDefined();
 
+      // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
       expect(npcDataSent.id).toBe(npcId); // ID should match
       
       // Verify connection arrays are passed through correctly
@@ -690,9 +685,7 @@ describe('NPCContext Behavioral Testing', () => {
       expect(npcId).toBe('test-npc');
       expect(updatedNPCData.description).toBe('Updated description');
       expect(updatedNPCData.relationship).toBe('ally');
-      expect(updatedNPCData.modifiedBy).toBe('test-user');
-      expect(updatedNPCData.modifiedByUsername).toBe('Test User');
-      expect(updatedNPCData.dateModified).toBeDefined();
+      // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
 
       // BEHAVIOR: Should refresh NPCs after update
       expect(mockRefreshNPCs).toHaveBeenCalledTimes(1);
@@ -733,9 +726,7 @@ describe('NPCContext Behavioral Testing', () => {
 
       expect(npcId).toBe('test-npc');
       expect(updatedNPCData.relationship).toBe('ally');
-      expect(updatedNPCData.modifiedBy).toBe('test-user');
-      expect(updatedNPCData.modifiedByUsername).toBe('Test User');
-      expect(updatedNPCData.dateModified).toBeDefined();
+      // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
 
       // BEHAVIOR: Should refresh NPCs after relationship update
       expect(mockRefreshNPCs).toHaveBeenCalledTimes(1);

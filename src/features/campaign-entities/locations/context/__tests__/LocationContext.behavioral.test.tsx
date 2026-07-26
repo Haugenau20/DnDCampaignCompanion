@@ -303,7 +303,8 @@ describe('LocationContext Behavioral Testing', () => {
         expect(locationId).toBe('waterdeep');
       });
 
-      // BEHAVIOR: Should add location with generated ID and basic metadata (excluding broken attribution)
+      // BEHAVIOR: Should add location with generated ID and domain data
+      // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
       expect(mockAddData).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'Waterdeep',
@@ -312,11 +313,7 @@ describe('LocationContext Behavioral Testing', () => {
           description: 'A great city of the North',
           features: ['Harbor', 'Castle Ward'],
           tags: ['major', 'port'],
-          id: 'waterdeep',
-          createdBy: 'test-user',
-          dateAdded: expect.any(String),
-          modifiedBy: 'test-user',
-          dateModified: expect.any(String)
+          id: 'waterdeep'
         }),
         'waterdeep'
       );
@@ -622,13 +619,12 @@ describe('LocationContext Behavioral Testing', () => {
         await locationContext.updateLocation('test-location', updates);
       });
 
-      // BEHAVIOR: Should update with basic attribution metadata
+      // BEHAVIOR: Should update with domain data
+      // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
       expect(mockUpdateData).toHaveBeenCalledWith(
         'test-location',
         expect.objectContaining({
-          ...updates,
-          modifiedBy: 'test-user',
-          dateModified: expect.any(String)
+          ...updates
         })
       );
     });

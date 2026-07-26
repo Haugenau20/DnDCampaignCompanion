@@ -1,11 +1,16 @@
 // src/features/storytelling/sagas/hooks/useSagaData.ts
 import { useState, useEffect, useCallback } from 'react';
-import { SagaData } from '../types';
+import { SagaData, SagaContentInput } from '../types';
 import { useFirestore } from 'features/user-management';
-import { useAuth, useGroups, useCampaigns } from 'features/user-management';
+import { useAuth, useGroups, useCampaigns, useUser } from 'features/user-management';
+import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
 
 /**
  * Hook for managing saga data fetching and state with proper group/campaign context
+ *
+ * Owns all write-side attribution for the saga document (see bug #1203): callers
+ * supply only the domain fields (`SagaContentInput`) and this hook computes
+ * `created*` / `modified*` metadata via `shared/attribution`, never the page.
  * @returns Object containing saga data, loading state, error state, and refresh function
  */
 export const useSagaData = () => {
@@ -14,6 +19,7 @@ export const useSagaData = () => {
   const [error, setError] = useState<string | null>(null);
   const { getDocument, setDocument, updateDocument } = useFirestore();
   const { user } = useAuth();
+  const { activeGroupUserProfile } = useUser();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
 
@@ -52,23 +58,56 @@ export const useSagaData = () => {
   }, [getDocument, activeGroupId, activeCampaignId]);
 
   /**
-   * Save saga data to Firebase
+   * Save saga data to Firebase.
+   *
+   * `setDocument` is an upsert, so this single method must cover both creation and
+   * modification: if a saga document already exists (it already carries `createdBy`),
+   * this save is a modification and the original `created*` fields are preserved by
+   * spreading the existing saga before the incoming update; otherwise this is the
+   * first save and full creation attribution is written.
+   *
+   * The cached `saga` state is trusted only when it already has `createdBy` — if it
+   * doesn't (e.g. the initial `fetchSaga` failed or hasn't resolved a real document),
+   * this re-confirms directly against Firestore before deciding, since guessing "no
+   * saga exists" incorrectly would silently overwrite the real creator/creation date.
    */
-  const saveSaga = useCallback(async (sagaData: SagaData) => {
+  const saveSaga = useCallback(async (sagaData: SagaContentInput) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       if (!activeGroupId) {
         throw new Error('No active group selected');
       }
-      
+
       if (!activeCampaignId) {
         throw new Error('No active campaign selected');
       }
-      
-      await setDocument('saga', 'sagaData', sagaData);
-      setSaga(sagaData);
+
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
+
+      // Cached state can be null even when a document exists (the initial fetch may
+      // have failed), so confirm before treating this as a first save — guessing wrong
+      // overwrites the original author (bug #1203).
+      const existing = saga?.createdBy
+        ? saga
+        : await getDocument<SagaData>('saga', 'sagaData');
+
+      const fullSagaData: SagaData = existing?.createdBy
+        ? {
+            ...existing,
+            ...sagaData,
+            ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile }),
+          }
+        : {
+            ...sagaData,
+            ...buildCreationAttribution({ uid: user.uid, activeGroupUserProfile }),
+          };
+
+      await setDocument('saga', 'sagaData', fullSagaData);
+      setSaga(fullSagaData);
       return true;
     } catch (err) {
       console.error('Error saving saga:', err);
@@ -77,26 +116,38 @@ export const useSagaData = () => {
     } finally {
       setLoading(false);
     }
-  }, [setDocument, activeGroupId, activeCampaignId]);
+  }, [setDocument, getDocument, activeGroupId, activeCampaignId, user, activeGroupUserProfile, saga]);
 
   /**
-   * Update saga data in Firebase
+   * Update saga data in Firebase.
+   *
+   * Always writes modification attribution only — it never touches `created*`
+   * fields, so the original author and creation date are preserved.
    */
   const updateSaga = useCallback(async (updates: Partial<SagaData>) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       if (!activeGroupId) {
         throw new Error('No active group selected');
       }
-      
+
       if (!activeCampaignId) {
         throw new Error('No active campaign selected');
       }
-      
-      await updateDocument('saga', 'sagaData', updates);
-      setSaga(prev => prev ? { ...prev, ...updates } : null);
+
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
+
+      const fullUpdates: Partial<SagaData> = {
+        ...updates,
+        ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile }),
+      };
+
+      await updateDocument('saga', 'sagaData', fullUpdates);
+      setSaga(prev => prev ? { ...prev, ...fullUpdates } : null);
       return true;
     } catch (err) {
       console.error('Error updating saga:', err);
@@ -105,7 +156,7 @@ export const useSagaData = () => {
     } finally {
       setLoading(false);
     }
-  }, [updateDocument, activeGroupId, activeCampaignId]);
+  }, [updateDocument, activeGroupId, activeCampaignId, user, activeGroupUserProfile]);
 
   // Load saga on mount and when group/campaign changes
   useEffect(() => {

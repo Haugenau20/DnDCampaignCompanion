@@ -4,7 +4,7 @@ import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types';
 import { useRumorData } from '../hooks/useRumorData';
 import { useFirebaseData } from '../../../../hooks/useFirebaseData';
 import { useAuth, useUser, useFirestore } from 'features/user-management';
-import { getUserName, getActiveCharacterName } from '../../../../utils/user-utils';
+import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 
@@ -15,7 +15,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();
-  const { setDocument } = useFirestore();
+  const { createDocument } = useFirestore();
 
   // Get rumor by ID
   const getRumorById = useCallback((id: string) => {
@@ -50,13 +50,12 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Rumor not found');
     }
 
+    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+
     const updatedRumor = {
       ...rumor,
       status,
-      dateModified: new Date().toISOString(),
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      ...modificationAttribution
     };
 
     await updateData(rumorId, updatedRumor);
@@ -74,21 +73,18 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Rumor not found');
     }
 
+    const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
+    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+
     const noteWithUser = {
       ...note,
-      createdBy: user.uid,
-      createdByUsername: getUserName(activeGroupUserProfile),
-      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      dateAdded: new Date().toISOString()
+      ...creationAttribution
     };
 
     const updatedRumor = {
       ...rumor,
       notes: [...rumor.notes, noteWithUser],
-      dateModified: new Date().toISOString(),
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      ...modificationAttribution
     };
 
     await updateData(rumorId, updatedRumor);
@@ -110,29 +106,22 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('User must be authenticated to add rumors');
     }
   
-    const now = new Date().toISOString();
-    
     // Generate ID from title
     const id = generateRumorId(rumorData.title);
-  
+
+    const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
+
     // Create the complete rumor object including the id
     const newRumor: Rumor = {
       id,  // Include the ID in the object
       ...rumorData,
-      dateAdded: now,
-      dateModified: now,
-      createdBy: user.uid,
-      createdByUsername: getUserName(activeGroupUserProfile),
-      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      ...creationAttribution,
       // Ensure arrays are properly initialized
       relatedNPCs: rumorData.relatedNPCs || [],
       relatedLocations: rumorData.relatedLocations || [],
       notes: rumorData.notes || []
     };
-    
+
     // Add the document with the explicit ID
     await addData(newRumor, id);
     refreshRumors();
@@ -145,12 +134,11 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('User must be authenticated to update rumors');
     }
 
+    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+
     const updatedRumor = {
       ...rumor,
-      dateModified: new Date().toISOString(),
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      ...modificationAttribution
     };
 
     await updateData(rumor.id, updatedRumor);
@@ -197,25 +185,25 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       )
     )];
   
-    // Create the new combined rumor
-    const now = new Date().toISOString();
-    
     // Use the provided title or generate one
     const title = newRumorData.title || `Combined Rumor (${new Date().toLocaleDateString()})`;
-    
+
     // Generate ID from title
     const id = generateRumorId(title);
-    
+
+    // Compute attribution once and reuse across the new rumor, its initial
+    // note, and every original rumor updated below so the whole combine
+    // operation is attributed to a single actor/timestamp pair.
+    const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
+    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+
     // Initialize the notes array with a new note about the combination
     const initialNotes = [{
       id: crypto.randomUUID(),
       content: `Combined from rumors: ${rumorIds.join(', ')}`,
-      dateAdded: now,
-      createdBy: user.uid,
-      createdByUsername: getUserName(activeGroupUserProfile),
-      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      ...creationAttribution
     }];
-  
+
     const newRumor: Rumor = {
       id,
       title,
@@ -223,54 +211,41 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       status: newRumorData.status || 'unconfirmed',
       sourceType: newRumorData.sourceType || 'other',
       sourceName: newRumorData.sourceName || 'Multiple Sources',
-      dateAdded: now,
-      dateModified: now,
-      createdBy: user.uid,
-      createdByUsername: getUserName(activeGroupUserProfile),
-      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      ...creationAttribution,
       relatedNPCs,
       relatedLocations,
       notes: initialNotes  // Use our explicit notes array
     };
-  
+
     // Add the new combined rumor with the explicit ID
     await addData(newRumor, id);
-  
+
     // Mark original rumors as confirmed and linked to the new rumor
     for (const rumorId of rumorIds) {
       const rumor = getRumorById(rumorId);
       if (rumor) {
         // Make sure the notes array is defined before trying to spread it
         const existingNotes = Array.isArray(rumor.notes) ? rumor.notes : [];
-        
+
         // Explicitly set status as a RumorStatus type
         const updatedRumor: Partial<Rumor> = {
           ...rumor,
           status: 'confirmed' as RumorStatus, // Explicitly cast to RumorStatus
-          dateModified: now,
-          modifiedBy: user.uid,
-          modifiedByUsername: getUserName(activeGroupUserProfile),
-          modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+          ...modificationAttribution,
           notes: [
             ...existingNotes,
             {
               id: crypto.randomUUID(),
               content: `Combined into rumor: ${id}`,
-              dateAdded: now,
-              createdBy: user.uid,
-              createdByUsername: getUserName(activeGroupUserProfile),
-              createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+              ...creationAttribution
             }
           ]
         };
-        
+
         await updateData(rumorId, updatedRumor);
       }
     }
-  
+
     refreshRumors();
     return id;
   }, [user, userProfile, getRumorById, addData, updateData, refreshRumors, generateRumorId]);
@@ -286,23 +261,24 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('One or more rumors not found');
     }
 
-    // Create a new quest based on the rumors and provided quest data
-    const now = new Date().toISOString();
-    
     // Generate a proper quest ID from the title
-    const questId = questData.title 
+    const questId = questData.title
       ? questData.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
       : crypto.randomUUID();
-    
-    // Use Firebase service to add quest
-    await setDocument('quests', questId, {
+
+    // Compute attribution once and reuse across the new quest document and
+    // every original rumor updated below so the whole conversion operation
+    // is attributed to a single actor/timestamp pair.
+    const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
+    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+
+    // Use the attribution-aware create path: this genuinely creates a new
+    // quest document, so DocumentService.createDocument stamps attribution
+    // for it (rather than the context hand-rolling it via creationAttribution).
+    await createDocument('quests', {
       ...questData,
-      id: questId,
-      dateAdded: now,
-      createdBy: user.uid,
-      createdByUsername: getUserName(activeGroupUserProfile),
-      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-    });
+      id: questId
+    }, questId);
 
     // Update all rumors to mark them as converted
     for (const rumorId of rumorIds) {
@@ -311,19 +287,13 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         await updateData(rumorId, {
           ...rumor,
           convertedToQuestId: questId,
-          dateModified: now,
-          modifiedBy: user.uid,
-          modifiedByUsername: getUserName(activeGroupUserProfile),
-          modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+          ...modificationAttribution,
           notes: [
             ...rumor.notes,
             {
               id: crypto.randomUUID(),
               content: `Converted to quest: ${questId}`,
-              dateAdded: now,
-              createdBy: user.uid,
-              createdByUsername: getUserName(activeGroupUserProfile),
-              createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+              ...creationAttribution
             }
           ]
         });

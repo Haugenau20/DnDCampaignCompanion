@@ -170,8 +170,67 @@ one path" change isolated so a regression is easy to bisect.
 - ⛔ **Wave 2** — NOT done. Deliberately paused: the original plan (wire contexts to the helper)
   is superseded by this document's recommendation.
 
-## Open decision for next session
-Confirm the direction: **standardize all entity writes on `DocumentService`'s attribution methods
-(single write path) + helper as the single mapping function**, then schedule it as a focused,
-test-re-seaming effort separate from the migration. If agreed, step 1 (DocumentService → helper
-delegation) is the safe, self-contained starting point.
+## RESOLVED — both waves shipped on `refactor/attribution-consolidation` (2026-07-26)
+
+The direction above was confirmed and executed. `src/shared/attribution` is the single mapping
+function; `DocumentService` is the single write path. What follows corrects three predictions this
+document got wrong, because they are the useful part for the next effort.
+
+### Correction 1 — the predicted "primary risk" mostly evaporated
+
+This document budgeted "real time" for re-seaming context tests from the `useFirebaseData` mock to
+`documentService`. That was based on a wrong model. **`useFirebaseData` is a shared choke point**
+used by all four campaign-entity contexts *and* storytelling. Changing its internals to call
+`createDocument` / `updateDocumentWithAttribution` sits *below* the context→hook seam, so every
+context test was unaffected — the contexts still pass identical payloads. The write path was
+unified with zero context-test churn.
+
+The cost that did materialise was different: once the contexts' own attribution was deleted, the
+assertions reading attribution *out of the captured payload* had to move. That was ~38 assertions
+across 8 files, not the 358 attribution references a naive grep suggests — the overwhelming
+majority of those references are mock fixtures, which are data, not assertions.
+
+### Correction 2 — `NoteContext` was not the clean reference
+
+This document held up `NoteContext` as "the intended path". It was not. It hand-rolled attribution
+in both `createNote` and `saveNote`, dropped both `characterId` fields, and used the
+attribution-free `updateDocument` for every update after the first save. Only its *first* save went
+through `createDocument`.
+
+### Correction 3 — "route everything through the service" is wrong as stated
+
+The recommendation to route **all** writes through `createDocument` would have caused data loss.
+Three categories must be distinguished:
+
+| Category | Correct handling | Why |
+|---|---|---|
+| Genuine document creation | `createDocument` | Creation attribution from the live profile is right |
+| **Re-key of an existing document** | **Keep `setDocument` + `buildModificationAttribution`** | `createDocument` stamps *creation* attribution, overwriting the original author. `StoryContext` rewrites existing chapters under new ids on every reorder/insert/delete — migrating those five writes would have destroyed chapter authorship |
+| **Nested objects inside a document** | Keep context-built attribution | `DocumentService` attributes only the top-level document. Rumor notes live inside a rumor document; removing their attribution would silently strip it |
+
+The re-key writes in `StoryContext` now carry comments explaining this, plus a regression test
+(reorder as user B, assert user A's `createdBy` survives) guarding against a future
+"finish the migration" change.
+
+### What shipped
+
+Wave A: `shared/attribution` is the only place attribution values are built — six contexts plus
+`DocumentService`. Wave B: `useFirestore` exposes the attribution-aware pair, `useFirebaseData`
+routes through it, redundant context attribution removed from NPC/Location/Quest, and the three
+genuine creates (`createChapter`, `convertToQuest`, `saveNote`'s update branch) migrated.
+
+Bugs found and filed while auditing: #1200, #1201, #1202 (fixed), #1203 (fixed), #1204.
+Closed as test-environment artifacts, not production bugs: #013, #014, #300.
+
+Suite went from 53 failures to **49**, with 29 tests added and none weakened.
+
+### Still open
+
+- **Data normalization for #1202.** Chapters reordered before the fix hold a Firestore Timestamp in
+  `dateModified` where a string is expected; those still render a blank modified date.
+- **#1201, #1204** remain unfixed by design — each needs its failing test first.
+- **The ~28 `NoteContext` test failures are still unexplained.** An early theory blamed a
+  `@/features/user-management` vs `features/user-management` mock mismatch; that is almost certainly
+  wrong, since `jest.config.ts` maps both specifiers to the same path. Cause unknown — worth a
+  dedicated look, because it means `NoteContext` is substantially less covered than the numbers
+  suggest.

@@ -871,6 +871,137 @@ describe('RumorContext Behavioral Testing', () => {
     });
   });
 
+  describe('Rumor Convert To Quest Behavior', () => {
+    let mockCreateDocument: jest.Mock;
+
+    beforeEach(() => {
+      const mockRumors: Rumor[] = [
+        {
+          id: 'rumor-to-convert',
+          title: 'Quest Worthy Rumor',
+          content: 'This rumor should become a quest',
+          status: 'confirmed' as RumorStatus,
+          sourceType: 'npc' as SourceType,
+          sourceName: 'Quest Giver',
+          relatedNPCs: ['quest-giver-1'],
+          relatedLocations: ['quest-location'],
+          notes: [],
+          createdBy: 'test-user',
+          createdByUsername: 'Test User',
+          dateAdded: '2025-06-15T00:00:00.000Z'
+        }
+      ];
+
+      // Authenticated state with a full profile so the attribution helpers
+      // have real username/character data to resolve.
+      mockUseAuth.mockReturnValue({
+        user: { uid: 'test-user' },
+      });
+
+      mockUseUser.mockReturnValue({
+        userProfile: { name: 'Test User' },
+        activeGroupUserProfile: {
+          userId: 'test-user',
+          username: 'Test User',
+          role: 'member',
+          joinedAt: '2025-06-15T00:00:00.000Z',
+          activeCharacterId: 'char-1',
+          characters: [
+            { id: 'char-1', name: 'Test Character' }
+          ]
+        },
+      });
+
+      mockUseRumorData.mockReturnValue({
+        rumors: mockRumors,
+        loading: false,
+        error: null,
+        refreshRumors: mockRefreshRumors,
+      });
+
+      mockCreateDocument = jest.fn().mockResolvedValue('investigate-dragon-rumors');
+      mockUseFirestore.mockReturnValue({
+        setDocument: mockSetDocument,
+        createDocument: mockCreateDocument,
+      });
+
+      mockUpdateData.mockResolvedValue(undefined);
+    });
+
+    test('should create the quest document through the attribution-aware createDocument path with the caller\'s domain data', async () => {
+      renderRumorContext();
+
+      await waitFor(() => {
+        expect(rumorContext).toBeDefined();
+      });
+
+      const questData = {
+        title: 'Investigate Dragon Rumors',
+        description: 'Look into the dragon sightings',
+        status: 'active'
+      };
+
+      await act(async () => {
+        const questId = await rumorContext.convertToQuest(['rumor-to-convert'], questData);
+        expect(questId).toBe('investigate-dragon-rumors');
+      });
+
+      // BEHAVIOR: convertToQuest creates a brand new quest document, so it
+      // must go through the attribution-aware createDocument path (the
+      // single write path for new documents), not the plain setDocument path.
+      expect(mockCreateDocument).toHaveBeenCalledWith(
+        'quests',
+        expect.objectContaining({
+          title: 'Investigate Dragon Rumors',
+          description: 'Look into the dragon sightings',
+          status: 'active',
+          id: 'investigate-dragon-rumors'
+        }),
+        'investigate-dragon-rumors'
+      );
+      expect(mockSetDocument).not.toHaveBeenCalled();
+
+      // The context itself should no longer hand-roll creation attribution
+      // onto the quest document object -- DocumentService.createDocument now
+      // owns stamping createdBy*/modifiedBy* fields for documents it writes.
+      const questPayload = mockCreateDocument.mock.calls[0][1];
+      expect(questPayload).not.toHaveProperty('createdByUsername');
+      expect(questPayload).not.toHaveProperty('modifiedByUsername');
+    });
+
+    test('should still attribute the note appended to converted rumors (nested note, not a document write)', async () => {
+      renderRumorContext();
+
+      await waitFor(() => {
+        expect(rumorContext).toBeDefined();
+      });
+
+      await act(async () => {
+        await rumorContext.convertToQuest(['rumor-to-convert'], { title: 'Investigate Dragon Rumors' });
+      });
+
+      // BEHAVIOR: The note recording the conversion is appended to the
+      // *original* rumor's `notes` array -- a plain field inside the rumor
+      // document, not a document of its own. DocumentService only attributes
+      // the top-level document it writes, so this nested note must keep
+      // carrying its own creation attribution built by the context.
+      expect(mockUpdateData).toHaveBeenCalledWith(
+        'rumor-to-convert',
+        expect.objectContaining({
+          convertedToQuestId: 'investigate-dragon-rumors',
+          notes: expect.arrayContaining([
+            expect.objectContaining({
+              content: 'Converted to quest: investigate-dragon-rumors',
+              createdBy: 'test-user',
+              createdByUsername: 'Test User',
+              createdByCharacterName: 'Test Character'
+            })
+          ])
+        })
+      );
+    });
+  });
+
   describe('useRumors Hook Behavior', () => {
     test('should throw error when used outside RumorProvider', () => {
       // Create a test component that uses the hook outside of provider

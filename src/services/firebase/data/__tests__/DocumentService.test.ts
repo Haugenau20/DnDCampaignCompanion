@@ -98,6 +98,15 @@ function makeQuerySnapshot(docs: ReturnType<typeof makeDocSnapshot>[]) {
   return { docs };
 }
 
+/**
+ * Asserts that `value` is a string in ISO 8601 format (e.g. produced by
+ * `new Date().toISOString()`), without pinning to an exact instant.
+ */
+function expectIso8601String(value: unknown) {
+  expect(typeof value).toBe('string');
+  expect(value as string).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+}
+
 // ─── Suite ────────────────────────────────────────────────────────────────────
 
 describe('DocumentService', () => {
@@ -415,6 +424,101 @@ describe('DocumentService', () => {
         'User profile not found'
       );
     });
+
+    // ─── attribution content ────────────────────────────────────────────────
+
+    test('should write full creation attribution onto the document, preserving caller data', async () => {
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, {
+          username: 'Bilbo',
+          activeCharacterId: 'char-1',
+          characters: [
+            { id: 'char-1', name: 'Frodo' },
+            { id: 'char-2', name: 'Sam' },
+          ],
+        })
+      );
+      mockSetDoc.mockResolvedValueOnce(undefined);
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await svc.createDocument('npcs', { name: 'Gandalf', race: 'Maia' }, 'explicit-id');
+
+      const [, data] = mockSetDoc.mock.calls[0];
+
+      // caller's own data fields survive
+      expect(data.name).toBe('Gandalf');
+      expect(data.race).toBe('Maia');
+
+      // created* fields
+      expect(data.createdBy).toBe('user-doc-test');
+      expect(data.createdByUsername).toBe('Bilbo');
+      expect(data.createdByCharacterId).toBe('char-1');
+      expect(data.createdByCharacterName).toBe('Frodo');
+      expectIso8601String(data.dateAdded);
+
+      // creation also stamps modified* (creation and initial modification are
+      // the same event)
+      expect(data.modifiedBy).toBe('user-doc-test');
+      expect(data.modifiedByUsername).toBe('Bilbo');
+      expect(data.modifiedByCharacterId).toBe('char-1');
+      expect(data.modifiedByCharacterName).toBe('Frodo');
+      expectIso8601String(data.dateModified);
+      expect(data.dateModified).toBe(data.dateAdded);
+    });
+
+    test('should null both character-name fields when the profile has no activeCharacterId', async () => {
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, { username: 'Bilbo', characters: [] })
+      );
+      mockSetDoc.mockResolvedValueOnce(undefined);
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await svc.createDocument('npcs', { name: 'Gandalf' });
+
+      const [, data] = mockSetDoc.mock.calls[0];
+      expect(data.createdByCharacterId).toBeNull();
+      expect(data.createdByCharacterName).toBeNull();
+      expect(data.modifiedByCharacterId).toBeNull();
+      expect(data.modifiedByCharacterName).toBeNull();
+    });
+
+    test('should keep the character id but null the character name when activeCharacterId matches no entry in characters[]', async () => {
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, {
+          username: 'Bilbo',
+          activeCharacterId: 'char-missing',
+          characters: [{ id: 'char-1', name: 'Frodo' }],
+        })
+      );
+      mockSetDoc.mockResolvedValueOnce(undefined);
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await svc.createDocument('npcs', { name: 'Gandalf' });
+
+      const [, data] = mockSetDoc.mock.calls[0];
+      expect(data.createdByCharacterId).toBe('char-missing');
+      expect(data.createdByCharacterName).toBeNull();
+      expect(data.modifiedByCharacterId).toBe('char-missing');
+      expect(data.modifiedByCharacterName).toBeNull();
+    });
+
+    test('should default the username to an empty string when the profile has no username', async () => {
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, { activeCharacterId: null, characters: [] })
+      );
+      mockSetDoc.mockResolvedValueOnce(undefined);
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await svc.createDocument('npcs', { name: 'Gandalf' });
+
+      const [, data] = mockSetDoc.mock.calls[0];
+      expect(data.createdByUsername).toBe('');
+      expect(data.modifiedByUsername).toBe('');
+    });
   });
 
   // ─── updateDocumentWithAttribution ──────────────────────────────────────────
@@ -442,6 +546,49 @@ describe('DocumentService', () => {
       await svc.updateDocumentWithAttribution('npcs', 'n1', { name: 'Sam' });
       const [, updateData] = mockUpdateDoc.mock.calls[0];
       expect(updateData).toHaveProperty('modifiedBy', 'user-doc-test');
+    });
+
+    // ─── attribution content ────────────────────────────────────────────────
+
+    test('should write the full modification attribution, preserving caller data, and never write created* fields', async () => {
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, {
+          username: 'Sam',
+          activeCharacterId: 'char-2',
+          characters: [
+            { id: 'char-1', name: 'Frodo' },
+            { id: 'char-2', name: 'Samwise' },
+          ],
+        })
+      );
+      mockUpdateDoc.mockResolvedValueOnce(undefined);
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await svc.updateDocumentWithAttribution('npcs', 'n1', {
+        name: 'Samwise Gamgee',
+        race: 'Hobbit',
+      });
+
+      const [, data] = mockUpdateDoc.mock.calls[0];
+
+      // caller's own data fields survive
+      expect(data.name).toBe('Samwise Gamgee');
+      expect(data.race).toBe('Hobbit');
+
+      // full modified* set
+      expect(data.modifiedBy).toBe('user-doc-test');
+      expect(data.modifiedByUsername).toBe('Sam');
+      expect(data.modifiedByCharacterId).toBe('char-2');
+      expect(data.modifiedByCharacterName).toBe('Samwise');
+      expectIso8601String(data.dateModified);
+
+      // updates must never overwrite creation attribution (bug #1203)
+      expect(data).not.toHaveProperty('createdBy');
+      expect(data).not.toHaveProperty('createdByUsername');
+      expect(data).not.toHaveProperty('createdByCharacterId');
+      expect(data).not.toHaveProperty('createdByCharacterName');
+      expect(data).not.toHaveProperty('dateAdded');
     });
   });
 

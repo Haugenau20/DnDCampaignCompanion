@@ -1,11 +1,60 @@
 # Bug #022: Note Context State Management Issues
 
-**Status**: 🔍 DISCOVERED  
-**Priority**: Medium  
-**Category**: ARCHITECTURE  
-**Context**: NoteContext  
-**Discovery Date**: June 15, 2025  
+**Status**: ✅ FIXED — test-environment artifact, not a production bug
+**Priority**: ~~Medium~~ → Closed
+**Category**: ARCHITECTURE → TESTABILITY
+**Context**: NoteContext
+**Discovery Date**: June 15, 2025
 **Discovery Method**: Behavioral Testing
+**Resolved**: 2026-07-26
+
+## Resolution
+
+Re-diagnosed during the NoteContext behavioral-suite audit (2026-07-26), together with #021 —
+same misdiagnosis pattern as #013/#014/#300 (a test-timing gap written up as an architectural
+production defect).
+
+**Root cause, proven with an isolated diagnostic test, not inferred**:
+
+1. **Initial-fetch race.** `NoteProvider`'s mount effect calls `fetchNotes()`, which `await`s the
+   mocked `documentService.getCollection(...)`. The failing tests acted on `capturedContext`
+   immediately after `render()`, before that promise resolved. When it resolved *after* a test's
+   `createNote()` call, `fetchNotes`'s own `setNotes(sortedNotes)` overwrote the just-created note
+   with the (empty, or pre-seeded-but-not-yet-applied) fetched collection — this is what the
+   report calls "fetchNotes overwrites locally created notes" and "note creation doesn't update
+   context state." It is real *sequencing*, but the sequencing is in the test, not the provider:
+   the same createNote() call, awaited only after
+   `await waitFor(() => expect(capturedContext.isLoading).toBe(false))` following `render()`,
+   reliably lands in `notes` with no change to `NoteContext.tsx`.
+2. **Same-`act()` stale closure.** Separately, several tests called `createNote()` and then
+   `saveNote()`/`updateNote()`/etc. inside the *same* `act(async () => { ... })` block. `getNoteById`
+   is a `useCallback` closed over `notes` as of the last committed render; two state-dependent
+   calls made back-to-back with no render in between both see the *pre-first-call* `notes`, so
+   the second throws "Note not found." Confirmed directly: an isolated test chaining
+   `createNote()` + `saveNote()` in one `act()` fails with "Note not found" even after fix (1)
+   above is applied; splitting them into two sequential `act()` calls (letting React commit and
+   re-run effects between them) makes the same code path succeed with the note reliably found.
+
+Both are test-harness timing gaps, not "multiple state update patterns [that] may conflict" or
+"missing dependencies" in `NoteContext.tsx`. The suggested fixes in the "Recommended Resolution"
+section below (merging unsaved notes back into `fetchNotes`, adding debug logging, changing
+`useCallback` deps) were not applied — no production change was needed. The fix was entirely in
+`src/context/__tests__/behavioral/NoteContext.behavioral.test.tsx` and
+`NoteContext.bugs.test.tsx`: wait for the initial fetch before acting, and give each
+state-mutating call its own `act()`. With that change alone, 37 of the 40 previously-timing-broken
+assertions across both files now pass against the unmodified `NoteContext.tsx`.
+
+**Note on the "Campaign Filtering Requirements" scenario**: with the timing fixed, creating an
+unsaved note and then switching the active campaign still ends with that note gone from `notes`
+entirely (not merely hidden by the campaign filter) once the resulting re-fetch resolves — because
+`fetchNotes()` replaces `notes` wholesale with whatever Firestore returns, and an unsaved note was
+never persisted there to be re-fetched. Whether an in-flight campaign switch should be allowed to
+discard an unsaved draft this way is a genuine product/design question, but the existing test does
+not distinguish "properly hidden" from "actually destroyed," so it is not by itself evidence of a
+bug — flagging it here for whoever picks up the `collaboration/` migration to consider, rather than
+filing a new numbered bug on a hunch.
+
+## Original report (superseded by the resolution above)
 
 ## Summary
 

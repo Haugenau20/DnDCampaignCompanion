@@ -4,7 +4,6 @@ import { Quest, QuestStatus } from '../types';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from '../../../../hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
-import { getUserName, getActiveCharacterName } from '../../../../utils/user-utils';
 
 // Context interface
 interface QuestContextValue {
@@ -96,10 +95,6 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const updatedQuest = {
       ...quest,
       status,
-      dateModified: now,
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       // If completing, set the completion date
       ...(status === 'completed' && { dateCompleted: now })
     };
@@ -136,12 +131,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const updatedQuest = {
       ...quest,
       objectives: updatedObjectives,
-      dateModified: now,
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       // Auto-update status to completed if all objectives are done
-      ...(allCompleted && quest.status === 'active' && { 
+      ...(allCompleted && quest.status === 'active' && {
         status: 'completed' as QuestStatus,
         dateCompleted: now
       })
@@ -161,23 +152,13 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Group and campaign context must be set to add quests');
     }
   
-    const now = new Date().toISOString();
-    
     // Generate ID from title
     const id = generateQuestId(questData.title);
-  
+
     // Create the complete quest object including the id
     const newQuest: Quest = {
       id,
       ...questData,
-      dateAdded: now,
-      dateModified: now,
-      createdBy: user.uid,
-      createdByUsername: getUserName(activeGroupUserProfile),
-      createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       // Ensure arrays are properly initialized
       objectives: questData.objectives || [],
       relatedNPCIds: questData.relatedNPCIds || [],
@@ -204,14 +185,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Group and campaign context must be set to update quests');
     }
 
-    const now = new Date().toISOString();
-
     const updatedQuest = {
-      ...quest,
-      dateModified: now,
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      ...quest
     };
 
     await updateData(quest.id, updatedQuest);
@@ -260,10 +235,6 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...quest,
       status: 'completed' as QuestStatus,
       dateCompleted: completionDate,
-      dateModified: now,
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
       objectives: completedObjectives
     };
 
@@ -286,15 +257,9 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Quest not found');
     }
 
-    const now = new Date().toISOString();
-
     const updatedQuest = {
       ...quest,
-      status: 'failed' as QuestStatus,
-      dateModified: now,
-      modifiedBy: user.uid,
-      modifiedByUsername: getUserName(activeGroupUserProfile),
-      modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
+      status: 'failed' as QuestStatus
     };
 
     await updateData(questId, updatedQuest);

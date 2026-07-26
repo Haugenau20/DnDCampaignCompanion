@@ -55,16 +55,16 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#010](./010-location-deletion-order-logic.md) | 🔍 DISCOVERED | DATA | Location hierarchical deletion order logic | Medium | Medium | LocationContext |
 | [#011](./011-rumor-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Rumor user attribution metadata issues | High | High | RumorContext |
 | [#012](./012-rumor-id-generation-collision.md) | 🔍 DISCOVERED | DATA | Rumor ID generation collision risk | Medium | Medium | RumorContext |
-| [#013](./013-rumor-combine-function-logic.md) | 🔍 DISCOVERED | INTEGRATION | Rumor combine function complex logic issues | Medium | Medium | RumorContext |
-| [#014](./014-quest-conversion-integration.md) | 🔍 DISCOVERED | INTEGRATION | Quest conversion function integration issues | Medium | Medium | RumorContext |
+| [#013](./013-rumor-combine-function-logic.md) | ✅ FIXED | INTEGRATION | Rumor combine "logic issues" — actually the JSDOM `crypto.randomUUID` gap; tests aborted before asserting. Polyfilled, marker tests pass, no production change | Closed | Closed | Test environment |
+| [#014](./014-quest-conversion-integration.md) | ✅ FIXED | INTEGRATION | Quest conversion "integration issues" — same JSDOM `crypto.randomUUID` gap; the workflow was never executed under test. Polyfilled, marker tests pass | Closed | Closed | Test environment |
 | [#015](./015-story-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Story user attribution metadata issues | High | High | StoryContext |
 | [#016](./016-story-chapter-id-generation-system.md) | 🔍 DISCOVERED | ARCHITECTURE | Story chapter ID generation system issues | Medium | Medium | StoryContext |
 | [#017](./017-story-chapter-reordering-complexity.md) | 🔍 DISCOVERED | ARCHITECTURE | Story chapter reordering complexity | Medium | Medium | StoryContext |
 | [#018](./018-story-progress-tracking-integration.md) | 🔍 DISCOVERED | INTEGRATION | Story progress tracking integration issues | Medium | Medium | StoryContext |
 | [#019](./019-story-chapter-order-validation.md) | 🔍 DISCOVERED | VALIDATION | Story chapter order validation issues | Low | Low | StoryContext |
 | [#020](./020-note-user-attribution-metadata.md) | ✅ FIXED | TESTABILITY | Note user attribution metadata (test issue, not implementation bug) | Closed | Closed | NoteContext tests |
-| [#021](./021-note-sequential-id-generation.md) | 🔍 DISCOVERED | DATA | Note sequential ID generation implementation issues | Medium | Medium | NoteContext |
-| [#022](./022-note-context-state-management.md) | 🔍 DISCOVERED | ARCHITECTURE | Note context state management issues | Medium | Medium | NoteContext |
+| [#021](./021-note-sequential-id-generation.md) | ✅ FIXED | TESTABILITY | Note sequential ID "implementation issues" — actually a missing post-render `waitFor`; tests read state before the mocked async `fetchNotes()` settled. Fixed in test files, no production change | Closed | Closed | NoteContext tests |
+| [#022](./022-note-context-state-management.md) | ✅ FIXED | TESTABILITY | Note context "state management issues" — actually two test-timing gaps: an unawaited initial fetch, and same-`act()` stale closures across chained calls. Fixed in test files, no production change | Closed | Closed | NoteContext tests |
 | [#023](./023-entity-mapper-extract-details-empty-body.md) | 🔍 DISCOVERED | DATA | `entityMapper.extractDetailsByType` has empty body — silent data loss | High | High | EntityExtractionService / entityMapper |
 | [#050](./050-use-note-data-unreachable-catch-block.md) | 🔍 DISCOVERED | VALIDATION | `useNoteData.getNoteCountForCampaign` has unreachable catch block | Low | Low | useNoteData hook |
 | [#100](./100-navigation-missing-key-prop-mobile-layout.md) | 🔍 DISCOVERED | UI | Navigation missing React `key` prop on mobile layout wrapper divs | Low | Low | Navigation.tsx |
@@ -74,7 +74,7 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#201](./201-group-management-view-error-not-displayed-in-dialog.md) | 🔍 DISCOVERED | UI | GroupManagementView error state not visible after createGroup failure | Low | Low | GroupManagementView.tsx |
 | [#250](./250-npccard-related-quests-header-renders-with-no-content.md) | 🔍 DISCOVERED | UI | NPCCard "Related Quests" header renders with no content | Low | Low | NPCCard.tsx |
 | [#251](./251-input-component-missing-htmlfor-label-association.md) | 🔍 DISCOVERED | TESTABILITY | Input component missing `htmlFor`/`id` label association | High (a11y) | Medium | Input.tsx (core) |
-| [#300](./300-quest-form-sections-crypto-random-uuid-not-available-in-jest.md) | 🔍 DISCOVERED | TESTABILITY | QuestFormSections uses `crypto.randomUUID()` (unavailable in JSDOM) | Medium | Medium | QuestFormSections.tsx |
+| [#300](./300-quest-form-sections-crypto-random-uuid-not-available-in-jest.md) | ✅ FIXED | TESTABILITY | QuestFormSections uses `crypto.randomUUID()` (unavailable in JSDOM) — deterministic polyfill added to `setupTests.ts`; also the root cause of #013 and #014 | Medium | Medium | setupTests.ts |
 | [#301](./301-join-group-dialog-form-content-unreachable-in-jsdom.md) | 🔍 DISCOVERED | TESTABILITY | JoinGroupDialog form content unreachable in JSDOM (extends #150) | Medium | Medium | JoinGroupDialog.tsx |
 | [#302](./302-location-quest-form-sections-dialog-content-unreachable.md) | 🔍 DISCOVERED | TESTABILITY | Location/Quest FormSections dialog content unreachable (extends #150) | Medium | Low | LocationFormSections.tsx, QuestFormSections.tsx |
 | [#350](./350-entity-extractor-infinite-render-loop.md) | ✅ FIXED | UI / DATA | EntityExtractor infinite render loop via unstable `existingReferences = []` default | High | High | EntityExtractor.tsx |
@@ -97,6 +97,11 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#1151](./1151-notepage-fetch-error-refetch-loop.md) | ✅ FIXED | UI / ARCHITECTURE | NotePage catch block (line 79) does not set `crossCampaignNotFound`, causing infinite re-fetch on every Firestore error | High | High | NotePage.tsx |
 | [#1152](./1152-firebase-context-dead-code-no-profile-branch.md) | 🔍 DISCOVERED | ARCHITECTURE | FirebaseContext `if (profile)` else branch (lines 289-291) is unreachable dead code — `loadUserProfile` always returns a profile or throws | Low | Low | FirebaseContext.tsx |
 | [#1153](./1153-firebase-context-groups-loading-not-reset-on-error.md) | ✅ FIXED | CONTEXT | FirebaseContext `groupsLoading` not reset to `false` when `loadGroups` throws — `loading` stays `true` indefinitely after group-load error | High | High | FirebaseContext.tsx |
+| [#1200](./1200-chapter-form-dead-attribution-overwritten-by-storycontext.md) | 🔍 DISCOVERED | ARCHITECTURE | ChapterForm builds attribution from `user.displayName` that StoryContext unconditionally overwrites — wrong source, and inert | Low (latent) | Low | ChapterForm.tsx |
+| [#1201](./1201-location-context-update-stale-profile-missing-dep.md) | 🔍 DISCOVERED | DATA | `updateLocation` omits `activeGroupUserProfile` from its `useCallback` deps — location edits can be attributed to the previously-active character | Medium | Medium | LocationContext.tsx |
+| [#1202](./1202-story-reorder-datemodified-date-object-not-iso-string.md) | ✅ FIXED | DATA | Chapter reorder wrote `dateModified` as a `Date` (→ Firestore Timestamp) where every other path writes an ISO string; blanks the modified date in the UI. Code fixed by Wave A; **existing documents still need a data normalization pass** | Medium | Medium | StoryContext.tsx |
+| [#1203](./1203-saga-edit-page-attribution-wrong-source-and-overwrites-creator.md) | ✅ FIXED | DATA | Saga saves write attribution from `user.displayName` with no character fields, and reset `createdBy`/`dateAdded` on every edit — original author is permanently lost | High | High | SagaEditPage.tsx, useSagaData.ts |
+| [#1204](./1204-component-layer-hand-rolled-attribution-discarded.md) | 🔍 DISCOVERED | ARCHITECTURE | NPCForm / NPCEditForm / QuestCreateForm / RumorCard build attribution their context discards — dead code, latent regression if spread order changes (same shape as #1200, #1203) | Low (latent) | Low | 4 form components |
 
 ## Per-context testing summaries
 

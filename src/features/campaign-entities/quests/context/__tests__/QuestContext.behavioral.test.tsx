@@ -315,13 +315,10 @@ describe('QuestContext Behavioral Testing', () => {
         description: 'A test quest',
         status: 'active',
         objectives: [],
-        createdBy: 'test-user',
-        createdByUsername: 'Test User',  // FAILS until getUserName bug is fixed
-        createdByCharacterName: 'Test Character', // FAILS until getActiveCharacterName bug is fixed
       });
 
+      // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
       expect(questDataSent.id).toBe(questId); // ID should match
-      expect(questDataSent.dateAdded).toBeDefined();
       expect(Array.isArray(questDataSent.objectives)).toBe(true);
 
       // BEHAVIOR: Should refresh quests after creation
@@ -644,10 +641,7 @@ describe('QuestContext Behavioral Testing', () => {
       expect(questId).toBe('test-quest');
       expect(updatedQuestData.status).toBe('completed');
       expect(updatedQuestData.dateCompleted).toBeDefined(); // Should set completion date
-      expect(updatedQuestData.modifiedBy).toBe('test-user');
-      expect(updatedQuestData.modifiedByUsername).toBe('Test User'); // FAILS until getUserName bug is fixed
-      expect(updatedQuestData.modifiedByCharacterName).toBe('Test Character'); // FAILS until getActiveCharacterName bug is fixed
-      expect(updatedQuestData.dateModified).toBeDefined();
+      // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
 
       // BEHAVIOR: Should refresh quests after update
       expect(mockRefreshQuests).toHaveBeenCalledTimes(1);

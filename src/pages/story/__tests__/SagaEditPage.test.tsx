@@ -416,9 +416,24 @@ describe("SagaEditPage", () => {
           title: "Updated Saga",
           content: "Updated content here.",
           version: "1.0",
-          createdBy: "user-1",
         })
       );
+    });
+
+    // Regression test for bug #1203: the page must never own write attribution.
+    // useSagaData computes createdBy/createdByUsername/dateAdded from the acting
+    // user and group profile; SagaEditPage must not construct or pass them.
+    it("does NOT include attribution fields in the saveSaga payload", async () => {
+      renderPage();
+      await act(async () => {
+        fireEvent.submit(screen.getByTestId("card").querySelector("form")!);
+      });
+      const [payload] = mockSaveSaga.mock.calls[0];
+      expect(payload).not.toHaveProperty("createdBy");
+      expect(payload).not.toHaveProperty("createdByUsername");
+      expect(payload).not.toHaveProperty("createdByCharacterId");
+      expect(payload).not.toHaveProperty("createdByCharacterName");
+      expect(payload).not.toHaveProperty("dateAdded");
     });
 
     it("shows success message after successful save", async () => {

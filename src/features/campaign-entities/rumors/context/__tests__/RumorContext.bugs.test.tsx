@@ -60,6 +60,7 @@ describe('RumorContext Bug Discovery Tests', () => {
   let mockUpdateData: jest.Mock;
   let mockDeleteData: jest.Mock;
   let mockSetDocument: jest.Mock;
+  let mockCreateDocument: jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -73,6 +74,7 @@ describe('RumorContext Bug Discovery Tests', () => {
     mockUpdateData = jest.fn();
     mockDeleteData = jest.fn();
     mockSetDocument = jest.fn();
+    mockCreateDocument = jest.fn();
 
     // Setup authenticated state for bug testing
     mockUseAuth.mockReturnValue({
@@ -89,6 +91,7 @@ describe('RumorContext Bug Discovery Tests', () => {
 
     mockUseFirestore.mockReturnValue({
       setDocument: mockSetDocument,
+      createDocument: mockCreateDocument,
     });
 
     mockUseRumorData.mockReturnValue({
@@ -520,7 +523,7 @@ describe('RumorContext Bug Discovery Tests', () => {
         refreshRumors: jest.fn(),
       });
 
-      mockSetDocument.mockResolvedValue(undefined);
+      mockCreateDocument.mockResolvedValue('investigate-dragon-rumors');
       mockUpdateData.mockResolvedValue(undefined);
       renderRumorContext();
 
@@ -539,20 +542,22 @@ describe('RumorContext Bug Discovery Tests', () => {
         expect(questId).toBe('investigate-dragon-rumors');
       });
 
-      // BUG DISCOVERY: Quest creation should include proper attribution metadata
-      expect(mockSetDocument).toHaveBeenCalledWith(
+      // Re-seamed for the attribution consolidation: convertToQuest now writes
+      // the quest through the attribution-aware createDocument path instead of
+      // the plain setDocument path, so DocumentService (not this context) owns
+      // stamping createdBy*/modifiedBy* -- invisible at this mocked boundary.
+      // That attribution behavior is covered separately in
+      // RumorContext.behavioral.test.tsx > 'Rumor Convert To Quest Behavior'.
+      expect(mockCreateDocument).toHaveBeenCalledWith(
         'quests',
-        'investigate-dragon-rumors',
         expect.objectContaining({
           title: 'Investigate Dragon Rumors',
           description: 'Look into the dragon sightings',
-          status: 'active',
-          createdBy: 'test-user',
-          createdByUsername: 'Test User',        // BUG: May receive ""
-          createdByCharacterName: 'Test Character', // BUG: May receive null
-          dateAdded: expect.any(String)
-        })
+          status: 'active'
+        }),
+        'investigate-dragon-rumors'
       );
+      expect(mockSetDocument).not.toHaveBeenCalled();
 
       // Should update rumor with conversion tracking
       expect(mockUpdateData).toHaveBeenCalledWith(
@@ -595,7 +600,7 @@ describe('RumorContext Bug Discovery Tests', () => {
         refreshRumors: jest.fn(),
       });
 
-      mockSetDocument.mockResolvedValue(undefined);
+      mockCreateDocument.mockResolvedValue('quest-with-special-characters');
       renderRumorContext();
 
       await waitFor(() => {
@@ -611,13 +616,15 @@ describe('RumorContext Bug Discovery Tests', () => {
         await rumorContext.convertToQuest(['special-rumor'], questData);
       });
 
-      // BUG DISCOVERY: Quest ID generation should handle special characters properly
-      expect(mockSetDocument).toHaveBeenCalledWith(
+      // BUG DISCOVERY: Quest ID generation should handle special characters properly.
+      // Re-seamed to createDocument (see note above) -- same sanitized-ID
+      // assertion, just against the collaborator the context now calls.
+      expect(mockCreateDocument).toHaveBeenCalledWith(
         'quests',
-        'quest-with-special-characters', // Should be sanitized ID
         expect.objectContaining({
-          id: 'quest-with-special-characters'
-        })
+          id: 'quest-with-special-characters' // Should be sanitized ID
+        }),
+        'quest-with-special-characters'
       );
     });
   });
