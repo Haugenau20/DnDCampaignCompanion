@@ -55,8 +55,8 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#010](./010-location-deletion-order-logic.md) | 🔍 DISCOVERED | DATA | Location hierarchical deletion order logic | Medium | Medium | LocationContext |
 | [#011](./011-rumor-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Rumor user attribution metadata issues | High | High | RumorContext |
 | [#012](./012-rumor-id-generation-collision.md) | 🔍 DISCOVERED | DATA | Rumor ID generation collision risk | Medium | Medium | RumorContext |
-| [#013](./013-rumor-combine-function-logic.md) | 🔍 DISCOVERED | INTEGRATION | Rumor combine function complex logic issues | Medium | Medium | RumorContext |
-| [#014](./014-quest-conversion-integration.md) | 🔍 DISCOVERED | INTEGRATION | Quest conversion function integration issues | Medium | Medium | RumorContext |
+| [#013](./013-rumor-combine-function-logic.md) | ✅ FIXED | INTEGRATION | Rumor combine "logic issues" — actually the JSDOM `crypto.randomUUID` gap; tests aborted before asserting. Polyfilled, marker tests pass, no production change | Closed | Closed | Test environment |
+| [#014](./014-quest-conversion-integration.md) | ✅ FIXED | INTEGRATION | Quest conversion "integration issues" — same JSDOM `crypto.randomUUID` gap; the workflow was never executed under test. Polyfilled, marker tests pass | Closed | Closed | Test environment |
 | [#015](./015-story-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Story user attribution metadata issues | High | High | StoryContext |
 | [#016](./016-story-chapter-id-generation-system.md) | 🔍 DISCOVERED | ARCHITECTURE | Story chapter ID generation system issues | Medium | Medium | StoryContext |
 | [#017](./017-story-chapter-reordering-complexity.md) | 🔍 DISCOVERED | ARCHITECTURE | Story chapter reordering complexity | Medium | Medium | StoryContext |
@@ -74,7 +74,7 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#201](./201-group-management-view-error-not-displayed-in-dialog.md) | 🔍 DISCOVERED | UI | GroupManagementView error state not visible after createGroup failure | Low | Low | GroupManagementView.tsx |
 | [#250](./250-npccard-related-quests-header-renders-with-no-content.md) | 🔍 DISCOVERED | UI | NPCCard "Related Quests" header renders with no content | Low | Low | NPCCard.tsx |
 | [#251](./251-input-component-missing-htmlfor-label-association.md) | 🔍 DISCOVERED | TESTABILITY | Input component missing `htmlFor`/`id` label association | High (a11y) | Medium | Input.tsx (core) |
-| [#300](./300-quest-form-sections-crypto-random-uuid-not-available-in-jest.md) | 🔍 DISCOVERED | TESTABILITY | QuestFormSections uses `crypto.randomUUID()` (unavailable in JSDOM) | Medium | Medium | QuestFormSections.tsx |
+| [#300](./300-quest-form-sections-crypto-random-uuid-not-available-in-jest.md) | ✅ FIXED | TESTABILITY | QuestFormSections uses `crypto.randomUUID()` (unavailable in JSDOM) — deterministic polyfill added to `setupTests.ts`; also the root cause of #013 and #014 | Medium | Medium | setupTests.ts |
 | [#301](./301-join-group-dialog-form-content-unreachable-in-jsdom.md) | 🔍 DISCOVERED | TESTABILITY | JoinGroupDialog form content unreachable in JSDOM (extends #150) | Medium | Medium | JoinGroupDialog.tsx |
 | [#302](./302-location-quest-form-sections-dialog-content-unreachable.md) | 🔍 DISCOVERED | TESTABILITY | Location/Quest FormSections dialog content unreachable (extends #150) | Medium | Low | LocationFormSections.tsx, QuestFormSections.tsx |
 | [#350](./350-entity-extractor-infinite-render-loop.md) | ✅ FIXED | UI / DATA | EntityExtractor infinite render loop via unstable `existingReferences = []` default | High | High | EntityExtractor.tsx |

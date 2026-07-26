@@ -1,11 +1,33 @@
 # Bug #014: Quest Conversion Function Integration Issues
 
-**Status**: 🔍 DISCOVERED  
+**Status**: ✅ FIXED — test-environment artifact, not a production bug  
 **Priority**: Medium  
 **Category**: INTEGRATION  
 **Context**: RumorContext  
 **Discovery Date**: June 15, 2025  
-**Discovery Method**: Behavioral Testing
+**Discovery Method**: Behavioral Testing  
+**Resolved**: 2026-07-26
+
+## Resolution
+
+`convertToQuest` calls `crypto.randomUUID()`, which JSDOM does not implement, so the function threw
+`TypeError: crypto.randomUUID is not a function` before reaching any assertion. The two marker tests
+were failing on that throw — the conversion workflow they describe was never actually executed under
+test.
+
+A deterministic `crypto.randomUUID` polyfill was added to `src/setupTests.ts` during the
+attribution-consolidation work. Both marker tests now **pass** unchanged, with no production change.
+
+**Note on the "user attribution issues" this report cites:** that concern has since been addressed
+separately and properly. `convertToQuest`'s quest-document write now goes through
+`DocumentService.createDocument`, which stamps attribution from the live group profile; see
+`docs/architecture/migration/attribution-consolidation-wave-a.md`. Attribution on the nested rumor
+notes is still built in the context by design — `DocumentService` attributes only the top-level
+document it writes.
+
+**Scope of this resolution:** only what the marker tests assert is proven. The report's broader
+speculation about cross-system data inconsistency was never encoded as a test and is therefore
+neither confirmed nor refuted.
 
 ## Summary
 
