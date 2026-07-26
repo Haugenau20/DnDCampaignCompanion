@@ -4,7 +4,6 @@ import { NPC, NPCContextValue, NPCRelationship, NPCNote } from '../types';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from '../../../../hooks/useFirebaseData';
 import { useGroups, useCampaigns, useAuth, useUser } from 'features/user-management';
-import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
 
 const NPCContext = createContext<NPCContextValue | undefined>(undefined);
 
@@ -60,13 +59,9 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const npc = getNPCById(npcId);
     if (npc) {
-      // Create modification attribution data
-      const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
-
       const updatedNPC = {
         ...npc,
-        notes: [...(npc.notes || []), note],
-        ...modificationAttribution
+        notes: [...(npc.notes || []), note]
       };
       await updateData(npcId, updatedNPC);
       refreshNPCs(); // Refresh to get updated data
@@ -86,13 +81,9 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const npc = getNPCById(npcId);
     if (npc) {
-      // Create modification attribution data
-      const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
-
       const updatedNPC = {
         ...npc,
-        relationship,
-        ...modificationAttribution
+        relationship
       };
       await updateData(npcId, updatedNPC);
       refreshNPCs(); // Refresh to get updated data
@@ -119,12 +110,9 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const id = generateNPCId(npcData.name);
 
-    const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
-
     const newNPC: NPC = {
       ...npcData,
-      id,
-      ...creationAttribution
+      id
     };
 
     await addData(newNPC, id);
@@ -142,15 +130,10 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('User must be authenticated to update an NPC');
     }
 
-    // Create modification attribution data
-    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
-
-    // Update the NPC with new modification attribution
     const updatedNPC = {
-      ...npc,
-      ...modificationAttribution
+      ...npc
     };
-    
+
     await updateData(npc.id, updatedNPC);
     await refreshNPCs();
   }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, updateData, refreshNPCs]);

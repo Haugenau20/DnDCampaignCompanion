@@ -160,10 +160,7 @@ describe('QuestContext Objective Management Behavior', () => {
       expect(updatedQuestData.status).toBe('active');
       expect(updatedQuestData.dateCompleted).toBeUndefined();
 
-      // Should have modification metadata
-      expect(updatedQuestData.modifiedBy).toBe('test-user');
-      expect(updatedQuestData.modifiedByUsername).toBe('TestUser');
-      expect(updatedQuestData.dateModified).toBeDefined();
+      // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
     });
 
     test('should auto-complete quest when all objectives completed', async () => {
@@ -358,9 +355,7 @@ describe('QuestContext Objective Management Behavior', () => {
       expect(updatedQuestData.status).toBe('completed');
       expect(updatedQuestData.dateCompleted).toBeDefined();
 
-      // BEHAVIOR: Should have completion metadata
-      expect(updatedQuestData.modifiedBy).toBe('test-user');
-      expect(updatedQuestData.modifiedByUsername).toBe('TestUser');
+      // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
     });
 
     test('should complete quest with custom completion date', async () => {
@@ -448,10 +443,7 @@ describe('QuestContext Objective Management Behavior', () => {
       // BEHAVIOR: Objectives should remain unchanged when quest fails
       expect(updatedQuestData.objectives[0].completed).toBe(false);
 
-      // BEHAVIOR: Should have modification metadata
-      expect(updatedQuestData.modifiedBy).toBe('test-user');
-      expect(updatedQuestData.modifiedByUsername).toBe('TestUser');
-      expect(updatedQuestData.dateModified).toBeDefined();
+      // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
     });
   });
 

@@ -163,10 +163,7 @@ describe('NPCContext Note Management Behavior', () => {
         text: 'Met this NPC at the tavern. Seems trustworthy.'
       });
 
-      // Should have modification metadata
-      expect(updatedNPCData.modifiedBy).toBe('test-user');
-      expect(updatedNPCData.modifiedByUsername).toBe('TestUser');
-      expect(updatedNPCData.dateModified).toBeDefined();
+      // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
 
       // BEHAVIOR: Should refresh NPCs after note addition
       expect(mockRefreshNPCs).toHaveBeenCalledTimes(1);

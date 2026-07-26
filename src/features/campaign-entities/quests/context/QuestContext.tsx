@@ -4,7 +4,6 @@ import { Quest, QuestStatus } from '../types';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from '../../../../hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
-import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
 
 // Context interface
 interface QuestContextValue {
@@ -96,7 +95,6 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const updatedQuest = {
       ...quest,
       status,
-      ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile }),
       // If completing, set the completion date
       ...(status === 'completed' && { dateCompleted: now })
     };
@@ -133,7 +131,6 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const updatedQuest = {
       ...quest,
       objectives: updatedObjectives,
-      ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile }),
       // Auto-update status to completed if all objectives are done
       ...(allCompleted && quest.status === 'active' && {
         status: 'completed' as QuestStatus,
@@ -162,7 +159,6 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const newQuest: Quest = {
       id,
       ...questData,
-      ...buildCreationAttribution({ uid: user.uid, activeGroupUserProfile }),
       // Ensure arrays are properly initialized
       objectives: questData.objectives || [],
       relatedNPCIds: questData.relatedNPCIds || [],
@@ -190,8 +186,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     const updatedQuest = {
-      ...quest,
-      ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile }),
+      ...quest
     };
 
     await updateData(quest.id, updatedQuest);
@@ -240,7 +235,6 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...quest,
       status: 'completed' as QuestStatus,
       dateCompleted: completionDate,
-      ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile }),
       objectives: completedObjectives
     };
 
@@ -265,8 +259,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const updatedQuest = {
       ...quest,
-      status: 'failed' as QuestStatus,
-      ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile }),
+      status: 'failed' as QuestStatus
     };
 
     await updateData(questId, updatedQuest);

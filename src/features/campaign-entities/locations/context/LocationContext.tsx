@@ -4,7 +4,6 @@ import { Location, LocationStatus, LocationContextValue, LocationNote } from '..
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from '../../../../hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
-import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
 
 // Custom event for location changes (deletion, update, etc.)
 export const LOCATION_CHANGED_EVENT = 'location-data-changed';
@@ -81,11 +80,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('Location not found');
     }
 
-    // Add attribution data
-    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
     const updatedData = {
-      ...updatedLocation,
-      ...modificationAttribution
+      ...updatedLocation
     };
 
     await updateData(locationId, updatedData);
@@ -218,12 +214,9 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
-    const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
-
     const newLocation = {
       ...locationData,
-      id: locationId,
-      ...creationAttribution
+      id: locationId
     } as Location;
 
     await addData(newLocation, locationId);
