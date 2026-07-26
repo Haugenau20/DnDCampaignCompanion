@@ -3,7 +3,7 @@ export { StoryProvider, useStory } from './chapters/context/StoryContext';
 export { useChapterData } from './chapters/hooks/useChapterData';
 export { useSagaData } from './sagas/hooks/useSagaData';
 export type { Chapter, ChapterProgress, StoryProgress, StoryContextState, StoryContextValue } from './chapters/types';
-export type { SagaData, SagaContextState, SagaContextValue } from './sagas/types';
+export type { SagaData, SagaContentInput, SagaContextState, SagaContextValue } from './sagas/types';
 // Components (used by pages/story/* and other consumers)
 export { default as BookViewer } from './stories/components/BookViewer';
 export { default as BookshelfView } from './stories/components/BookshelfView';

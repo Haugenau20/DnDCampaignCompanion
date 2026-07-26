@@ -8,7 +8,7 @@ import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from 'features/user-management';
 import { useSagaData, useStory } from 'features/storytelling';
-import type { SagaData } from 'features/storytelling';
+import type { SagaContentInput } from 'features/storytelling';
 import { Book, Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
 import { exportChaptersAsText } from '../../utils/export-utils';
 import Dialog from '../../components/core/Dialog';
@@ -74,15 +74,14 @@ const SagaEditPage: React.FC = () => {
         throw new Error('Content is required');
       }
       
-      // Update or create saga document
-      const sagaData: SagaData = {
+      // Update or create saga document. Attribution (created*/modified*) is not a
+      // page concern — useSagaData computes it from the acting user and group
+      // profile (see bug #1203).
+      const sagaData: SagaContentInput = {
         title: title.trim(),
         content: content.trim(),
         lastUpdated: new Date().toISOString(),
-        version: '1.0', // Simple versioning for now,
-        createdBy: user?.uid || '',
-        createdByUsername: user?.displayName || '',
-        dateAdded: new Date().toISOString()
+        version: '1.0' // Simple versioning for now
       };
       
       const success = await saveSaga(sagaData);

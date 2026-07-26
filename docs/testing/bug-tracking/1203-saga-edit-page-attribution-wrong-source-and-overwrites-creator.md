@@ -4,7 +4,45 @@
 `SagaEditPage` is the only attribution source for saga documents, and it writes the wrong username, no character fields, and resets `createdBy`/`dateAdded` on every save
 
 ## Status
-🔍 DISCOVERED
+✅ FIXED
+
+### Fix summary
+
+Attribution is now built exclusively inside `useSagaData`, using `buildCreationAttribution` /
+`buildModificationAttribution` from `shared/attribution`:
+
+- `SagaEditPage.tsx` no longer constructs any `created*`/`modified*` field. Its payload is now typed
+  `SagaContentInput` (`title`, `content`, `lastUpdated`, `version` only) — a new type exported from
+  `sagas/types.ts` alongside `SagaData`, since `SagaData` itself still requires the full
+  `ContentAttribution` shape for a persisted document.
+- `useSagaData.saveSaga(sagaData: SagaContentInput)` now pulls `user` (`useAuth`) and
+  `activeGroupUserProfile` (`useUser`), both from `features/user-management`. Because `setDocument`
+  is an upsert, `saveSaga` itself decides create vs. modify by checking whether the hook's cached
+  `saga` state already has a `createdBy`: if so, it spreads the existing saga first (preserving
+  `created*`/`dateAdded`) and overlays only `buildModificationAttribution(...)`; if not, it writes
+  `buildCreationAttribution(...)` in full. Also added a `Not authenticated` guard (needed once the
+  hook itself touches `user.uid`), matching the existing `No active group/campaign selected` guards.
+- `useSagaData.updateSaga` now always merges `buildModificationAttribution(...)` into the update and
+  never references `created*` fields.
+- Added `src/features/storytelling/sagas/hooks/__tests__/useSagaData.test.ts` coverage for creation
+  attribution (incl. character fields), preservation of `createdBy`/`dateAdded` across a save by a
+  different user, modification attribution on subsequent saves, and `updateSaga` never touching
+  `created*`. Updated the pre-existing `SagaEditPage.test.tsx` assertion that hard-coded
+  `createdBy: "user-1"` in the `saveSaga` payload — that assertion encoded exactly this bug's buggy
+  contract, so it was replaced with an assertion that the page's payload carries no attribution
+  fields at all.
+
+**Follow-up — stale-cache reopening of the same bug.** `saveSaga` originally decided create-vs-modify
+purely from the hook's cached `saga` state (`saga?.createdBy`). That cache can be `null` even when a
+document already exists in Firestore — `fetchSaga` catches its own read errors and leaves `saga` at
+`null` with `loading` false, and `SagaEditPage`'s effect then happily populates the form with
+`SAGA_DEFAULT_OPENING` and lets the user submit. A transient read failure (or any moment before the
+first fetch resolves) was therefore enough to make `saveSaga` treat an *existing* saga as brand new
+and overwrite its `created*`/`dateAdded` — bug #1203 again, through a narrower door. Fixed by having
+`saveSaga` fall back to a direct `getDocument('saga', 'sagaData')` confirmation read (mirroring
+`fetchSaga`'s call exactly) whenever the cached `saga` doesn't already carry a `createdBy`, and
+branching create-vs-modify on that confirmed result instead of the cache. When the cache already has
+`createdBy`, no extra read happens — the happy path is unchanged.
 
 ## Category
 DATA

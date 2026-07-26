@@ -15,6 +15,15 @@ export interface SagaData extends ContentAttribution {
   version: string;
 }
 
+/**
+ * The domain fields a caller supplies when saving a saga.
+ *
+ * Attribution metadata (`created*` / `modified*` / `dateAdded` / `dateModified`) is
+ * computed exclusively by `useSagaData` (see bug #1203) — a page or component must
+ * never construct those fields itself.
+ */
+export type SagaContentInput = Pick<SagaData, 'title' | 'content' | 'lastUpdated' | 'version'>;
+
 // Context types
 export interface SagaContextState {
   saga: SagaData | null;
