@@ -3,7 +3,7 @@ import React, { createContext, useContext, useCallback, useState, useEffect } fr
 import { Note, NoteContextValue, ExtractedEntity, EntityType } from "../types/note";
 import DocumentService from "../services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns, useUser } from "features/user-management";
-import { buildCreationAttribution, buildModificationAttribution } from "shared/attribution";
+import { buildCreationAttribution } from "shared/attribution";
 import { useNavigate } from 'react-router-dom';
 
 // Create the context with initial undefined value
@@ -153,29 +153,28 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const note = getNoteById(noteId);
     if (!note) throw new Error("Note not found");
-    
-    const attribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+
     const now = new Date().toISOString();
 
     const updatedFields = {
       ...updates,
-      ...attribution,
       updatedAt: now,
       // Don't include isUnsaved in updates - we'll handle it separately
     };
-    
+
     const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
-    
+
     if (note.isUnsaved) {
       // First save - create document (exclude isUnsaved field entirely)
       const noteToSave = { ...note, ...updatedFields };
       delete noteToSave.isUnsaved; // Remove before saving
-      
+
       await documentService.createDocument(notesCollection, noteToSave, noteId);
       console.log(`NoteContext: Saved new note ${noteId} to Firebase`);
     } else {
-      // Update existing document (don't send isUnsaved field)
-      await documentService.updateDocument(notesCollection, noteId, updatedFields);
+      // Update existing document (don't send isUnsaved field). Attribution
+      // is now stamped by DocumentService itself, not hand-rolled here.
+      await documentService.updateDocumentWithAttribution(notesCollection, noteId, updatedFields);
       console.log(`NoteContext: Updated note ${noteId} in Firebase`);
     }
     

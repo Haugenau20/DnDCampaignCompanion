@@ -15,7 +15,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();
-  const { setDocument } = useFirestore();
+  const { createDocument } = useFirestore();
 
   // Get rumor by ID
   const getRumorById = useCallback((id: string) => {
@@ -272,12 +272,13 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
     const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
 
-    // Use Firebase service to add quest
-    await setDocument('quests', questId, {
+    // Use the attribution-aware create path: this genuinely creates a new
+    // quest document, so DocumentService.createDocument stamps attribution
+    // for it (rather than the context hand-rolling it via creationAttribution).
+    await createDocument('quests', {
       ...questData,
-      id: questId,
-      ...creationAttribution
-    });
+      id: questId
+    }, questId);
 
     // Update all rumors to mark them as converted
     for (const rumorId of rumorIds) {

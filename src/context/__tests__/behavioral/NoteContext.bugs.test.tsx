@@ -27,6 +27,7 @@ const mockDocumentService = {
   getCollection: jest.fn(),
   createDocument: jest.fn(),
   updateDocument: jest.fn(),
+  updateDocumentWithAttribution: jest.fn(),
   deleteDocument: jest.fn()
 };
 

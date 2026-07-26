@@ -1,6 +1,6 @@
 ﻿// src/context/__tests__/behavioral/NoteContext.behavioral.test.tsx
 import React from 'react';
-import { render, act } from '@testing-library/react';
+import { render, act, waitFor } from '@testing-library/react';
 import { NoteProvider, useNotes } from '../../NoteContext';
 import { Note, ExtractedEntity, EntityType, NoteStatus } from '../../../types/note';
 
@@ -27,6 +27,7 @@ const mockDocumentService = {
   getCollection: jest.fn(),
   createDocument: jest.fn(),
   updateDocument: jest.fn(),
+  updateDocumentWithAttribution: jest.fn(),
   deleteDocument: jest.fn()
 };
 
@@ -284,6 +285,66 @@ describe('NoteContext Behavioral Tests', () => {
           title: 'Updated Title'
         })
       );
+    });
+
+    test('should route updates to an already-saved note through updateDocumentWithAttribution, preserving updatedAt and the caller\'s updates', async () => {
+      // Seed an already-saved note via the initial fetch, rather than via
+      // createNote()+saveNote() in the same act(), to avoid the pre-existing,
+      // unrelated stale-closure bug where getNoteById can't see a note
+      // created moments earlier in the same act() callback.
+      const existingNote: Note = {
+        id: 'note-42',
+        title: 'Existing Note',
+        content: 'Original content',
+        extractedEntities: [],
+        status: 'active' as NoteStatus,
+        tags: [],
+        updatedAt: '2025-06-01T00:00:00.000Z',
+        campaignId: 'test-campaign',
+        createdBy: 'test-user',
+        createdByUsername: 'Test User',
+        createdByCharacterName: 'Test Character',
+        dateAdded: '2025-06-01T00:00:00.000Z',
+        dateModified: '2025-06-01T00:00:00.000Z',
+        modifiedBy: 'test-user',
+        modifiedByUsername: 'Test User',
+        modifiedByCharacterName: 'Test Character'
+      };
+      mockDocumentService.getCollection.mockResolvedValue([existingNote]);
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+
+      // The initial fetch that populates `notes` (and therefore what
+      // getNoteById can see) resolves asynchronously; wait for it to land
+      // before acting, rather than assuming it beat the next statement.
+      await waitFor(() => {
+        expect(capturedContext.notes).toHaveLength(1);
+      });
+
+      await act(async () => {
+        await capturedContext.saveNote('note-42', { title: 'Updated Title', tags: ['lore'] });
+      });
+
+      // BEHAVIOR: Updating an already-saved note must go through the
+      // attribution-aware updateDocumentWithAttribution (the same single
+      // write path createDocument already uses for new notes), while still
+      // sending updatedAt -- a Note-specific field, not attribution -- and
+      // the caller's own ...updates.
+      expect(mockDocumentService.updateDocumentWithAttribution).toHaveBeenCalledWith(
+        'groups/test-group/users/test-user/notes',
+        'note-42',
+        expect.objectContaining({
+          title: 'Updated Title',
+          tags: ['lore'],
+          updatedAt: expect.any(String)
+        })
+      );
+      expect(mockDocumentService.updateDocument).not.toHaveBeenCalled();
     });
 
     test('should throw error when saving note without authentication', async () => {
