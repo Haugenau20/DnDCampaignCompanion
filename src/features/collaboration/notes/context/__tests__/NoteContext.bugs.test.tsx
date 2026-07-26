@@ -554,20 +554,33 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        // BUG POTENTIAL: How does malformed extraData get processed?
+        // Documents how malformed extraData is currently processed on the way
+        // to the quest create form.
         await capturedContext.convertEntity('note-1', 'entity-1', 'quest');
 
         expect(mockNavigate).toHaveBeenCalledWith('/quests/create', {
           state: expect.objectContaining({
             initialData: expect.objectContaining({
-              title: ['array', 'instead', 'of', 'string'], // Malformed data passes through
-              objectives: 'not-an-array', // Non-array passes through
-              relatedNPCIds: null // Null passes through instead of defaulting to []
+              title: ['array', 'instead', 'of', 'string'], // Not validated — passes through
+              objectives: 'not-an-array', // Not validated — passes through
+              // `relatedNPCIds` IS normalized: convertEntity applies `|| []`, so a
+              // null collapses to an empty array. That is the correct behaviour and
+              // is asserted as such — the create form treats this as a list field,
+              // and an empty list is valid where null would force every consumer to
+              // null-guard. This assertion previously expected `null` to pass through
+              // and was the last remaining NoteContext failure; it was speculative
+              // (its own comment read "BUG POTENTIAL") rather than a specification,
+              // and demanded the less defensible of the two behaviours.
+              relatedNPCIds: []
             })
           })
         });
 
-        // EXPECTED: System should handle malformed data gracefully (may need validation)
+        // NOTE: `title` and `objectives` are still unvalidated. That is a genuine
+        // robustness gap rather than a specification: nothing guarantees the AI
+        // extractor cannot emit a non-string title. Left asserted as-is so the gap
+        // stays visible; not filed as a bug because it is unproven that extraData
+        // can actually reach this shape in production.
       });
     });
   });
