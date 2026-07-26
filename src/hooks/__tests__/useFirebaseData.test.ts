@@ -7,8 +7,8 @@ import { AUTH_STATE_CHANGED_EVENT } from '@/features/user-management';
 // Mock the firebase context hook
 // ---------------------------------------------------------------------------
 const mockGetCollection = jest.fn();
-const mockSetDocument = jest.fn();
-const mockUpdateDocument = jest.fn();
+const mockCreateDocument = jest.fn();
+const mockUpdateDocumentWithAttribution = jest.fn();
 const mockDeleteDocument = jest.fn();
 
 jest.mock('@/features/user-management', () => ({
@@ -30,8 +30,8 @@ interface TestItem {
 const defaultFirestoreMock = () => {
   (useFirestore as jest.Mock).mockReturnValue({
     getCollection: mockGetCollection,
-    setDocument: mockSetDocument,
-    updateDocument: mockUpdateDocument,
+    createDocument: mockCreateDocument,
+    updateDocumentWithAttribution: mockUpdateDocumentWithAttribution,
     deleteDocument: mockDeleteDocument,
   });
 };
@@ -204,7 +204,7 @@ describe('useFirebaseData', () => {
   describe('addData', () => {
     test('should add new item optimistically to data array', async () => {
       mockGetCollection.mockResolvedValue([]);
-      mockSetDocument.mockResolvedValue(undefined);
+      mockCreateDocument.mockResolvedValue(undefined);
 
       const { result } = renderHook(() =>
         useFirebaseData<TestItem>({ collection: 'items' })
@@ -221,9 +221,9 @@ describe('useFirebaseData', () => {
       expect(result.current.data).toContainEqual(expect.objectContaining({ name: 'NewItem' }));
     });
 
-    test('should use provided documentId for setDocument call', async () => {
+    test('should use provided documentId for createDocument call', async () => {
       mockGetCollection.mockResolvedValue([]);
-      mockSetDocument.mockResolvedValue(undefined);
+      mockCreateDocument.mockResolvedValue(undefined);
 
       const { result } = renderHook(() =>
         useFirebaseData<TestItem>({ collection: 'items' })
@@ -237,12 +237,12 @@ describe('useFirebaseData', () => {
         await result.current.addData(newItem, 'explicit-id');
       });
 
-      expect(mockSetDocument).toHaveBeenCalledWith('items', 'explicit-id', newItem);
+      expect(mockCreateDocument).toHaveBeenCalledWith('items', newItem, 'explicit-id');
     });
 
     test('should use idField to derive document ID when no explicit ID given', async () => {
       mockGetCollection.mockResolvedValue([]);
-      mockSetDocument.mockResolvedValue(undefined);
+      mockCreateDocument.mockResolvedValue(undefined);
 
       const { result } = renderHook(() =>
         useFirebaseData<TestItem>({ collection: 'items', idField: 'id' })
@@ -256,12 +256,12 @@ describe('useFirebaseData', () => {
         await result.current.addData(newItem);
       });
 
-      expect(mockSetDocument).toHaveBeenCalledWith('items', 'derived-id', newItem);
+      expect(mockCreateDocument).toHaveBeenCalledWith('items', newItem, 'derived-id');
     });
 
     test('should return the document ID after successful add', async () => {
       mockGetCollection.mockResolvedValue([]);
-      mockSetDocument.mockResolvedValue(undefined);
+      mockCreateDocument.mockResolvedValue(undefined);
 
       const { result } = renderHook(() =>
         useFirebaseData<TestItem>({ collection: 'items' })
@@ -279,9 +279,9 @@ describe('useFirebaseData', () => {
       expect(returnedId).toBe('ret-id');
     });
 
-    test('should set error and rethrow when setDocument fails', async () => {
+    test('should set error and rethrow when createDocument fails', async () => {
       mockGetCollection.mockResolvedValue([]);
-      mockSetDocument.mockRejectedValue(new Error('Write failed'));
+      mockCreateDocument.mockRejectedValue(new Error('Write failed'));
 
       const { result } = renderHook(() =>
         useFirebaseData<TestItem>({ collection: 'items' })
@@ -307,7 +307,7 @@ describe('useFirebaseData', () => {
 
     test('should use crypto.randomUUID when no documentId and no idField', async () => {
       mockGetCollection.mockResolvedValue([]);
-      mockSetDocument.mockResolvedValue(undefined);
+      mockCreateDocument.mockResolvedValue(undefined);
 
       // Mock crypto.randomUUID
       const mockUUID = 'generated-uuid-1234';
@@ -332,7 +332,7 @@ describe('useFirebaseData', () => {
       });
 
       expect(returnedId).toBe(mockUUID);
-      expect(mockSetDocument).toHaveBeenCalledWith('items', mockUUID, newItem);
+      expect(mockCreateDocument).toHaveBeenCalledWith('items', newItem, mockUUID);
 
       // Restore
       Object.defineProperty(global, 'crypto', {
@@ -361,7 +361,7 @@ describe('useFirebaseData', () => {
     test('should update item in data array after successful update', async () => {
       const initial: TestItem[] = [{ id: 'item-1', name: 'Original' }];
       mockGetCollection.mockResolvedValue(initial);
-      mockUpdateDocument.mockResolvedValue(undefined);
+      mockUpdateDocumentWithAttribution.mockResolvedValue(undefined);
 
       const { result } = renderHook(() =>
         useFirebaseData<TestItem>({ collection: 'items' })
@@ -378,9 +378,9 @@ describe('useFirebaseData', () => {
       );
     });
 
-    test('should call updateDocument with correct arguments', async () => {
+    test('should call updateDocumentWithAttribution with correct arguments', async () => {
       mockGetCollection.mockResolvedValue([{ id: 'x', name: 'X' }]);
-      mockUpdateDocument.mockResolvedValue(undefined);
+      mockUpdateDocumentWithAttribution.mockResolvedValue(undefined);
 
       const { result } = renderHook(() =>
         useFirebaseData<TestItem>({ collection: 'items' })
@@ -394,12 +394,12 @@ describe('useFirebaseData', () => {
         await result.current.updateData('x', updates);
       });
 
-      expect(mockUpdateDocument).toHaveBeenCalledWith('items', 'x', updates);
+      expect(mockUpdateDocumentWithAttribution).toHaveBeenCalledWith('items', 'x', updates);
     });
 
-    test('should set error and rethrow when updateDocument fails', async () => {
+    test('should set error and rethrow when updateDocumentWithAttribution fails', async () => {
       mockGetCollection.mockResolvedValue([{ id: 'x', name: 'X' }]);
-      mockUpdateDocument.mockRejectedValue(new Error('Update failed'));
+      mockUpdateDocumentWithAttribution.mockRejectedValue(new Error('Update failed'));
 
       const { result } = renderHook(() =>
         useFirebaseData<TestItem>({ collection: 'items' })
@@ -421,9 +421,9 @@ describe('useFirebaseData', () => {
       expect(result.current.error).toBe('Update failed');
     });
 
-    test('should set fallback error message for non-Error updateDocument rejections', async () => {
+    test('should set fallback error message for non-Error updateDocumentWithAttribution rejections', async () => {
       mockGetCollection.mockResolvedValue([{ id: 'x', name: 'X' }]);
-      mockUpdateDocument.mockRejectedValue('non-error-rejection');
+      mockUpdateDocumentWithAttribution.mockRejectedValue('non-error-rejection');
 
       const { result } = renderHook(() =>
         useFirebaseData<TestItem>({ collection: 'items' })
@@ -448,7 +448,7 @@ describe('useFirebaseData', () => {
         { id: '2', name: 'Two' },
       ];
       mockGetCollection.mockResolvedValue(items);
-      mockUpdateDocument.mockResolvedValue(undefined);
+      mockUpdateDocumentWithAttribution.mockResolvedValue(undefined);
 
       const { result } = renderHook(() =>
         useFirebaseData<TestItem>({ collection: 'items' })

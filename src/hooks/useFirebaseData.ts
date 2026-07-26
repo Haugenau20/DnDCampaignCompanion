@@ -14,11 +14,11 @@ export function useFirebaseData<T extends Record<string, any>>(
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { 
-    getCollection, 
-    setDocument, 
-    updateDocument, 
-    deleteDocument 
+  const {
+    getCollection,
+    createDocument,
+    updateDocumentWithAttribution,
+    deleteDocument
   } = useFirestore();
 
   const getData = useCallback(async () => {
@@ -68,10 +68,10 @@ export function useFirebaseData<T extends Record<string, any>>(
     setLoading(true);
     setError(null);
     try {
-      const id = documentId || 
+      const id = documentId ||
                 (options.idField ? newData[options.idField] as string : crypto.randomUUID());
-                
-      await setDocument(options.collection, id, newData);
+
+      await createDocument(options.collection, newData, id);
       setData(prevData => [...prevData, { ...newData, id }]);
       return id;
     } catch (err) {
@@ -81,15 +81,15 @@ export function useFirebaseData<T extends Record<string, any>>(
     } finally {
       setLoading(false);
     }
-  }, [options.collection, options.idField, setDocument]);
+  }, [options.collection, options.idField, createDocument]);
 
   const updateData = useCallback(async (id: string, updatedData: Partial<T>) => {
     setLoading(true);
     setError(null);
     try {
-      await updateDocument(options.collection, id, updatedData);
-      setData(prevData => 
-        prevData.map(item => 
+      await updateDocumentWithAttribution(options.collection, id, updatedData);
+      setData(prevData =>
+        prevData.map(item =>
           'id' in item && item.id === id ? { ...item, ...updatedData } : item
         )
       );
@@ -100,7 +100,7 @@ export function useFirebaseData<T extends Record<string, any>>(
     } finally {
       setLoading(false);
     }
-  }, [options.collection, updateDocument]);
+  }, [options.collection, updateDocumentWithAttribution]);
 
   const deleteData = useCallback(async (id: string) => {
     setLoading(true);

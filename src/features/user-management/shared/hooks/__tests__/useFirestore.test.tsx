@@ -22,6 +22,8 @@ const mockGetDocument = jest.fn();
 const mockGetCollection = jest.fn();
 const mockSetDocument = jest.fn();
 const mockUpdateDocument = jest.fn();
+const mockCreateDocument = jest.fn();
+const mockUpdateDocumentWithAttribution = jest.fn();
 const mockDeleteDocument = jest.fn();
 const mockQueryDocuments = jest.fn();
 const mockBatchOperations = jest.fn();
@@ -34,6 +36,8 @@ jest.mock("@/services/firebase", () => ({
       getCollection: (...args: any[]) => mockGetCollection(...args),
       setDocument: (...args: any[]) => mockSetDocument(...args),
       updateDocument: (...args: any[]) => mockUpdateDocument(...args),
+      createDocument: (...args: any[]) => mockCreateDocument(...args),
+      updateDocumentWithAttribution: (...args: any[]) => mockUpdateDocumentWithAttribution(...args),
       deleteDocument: (...args: any[]) => mockDeleteDocument(...args),
       queryDocuments: (...args: any[]) => mockQueryDocuments(...args),
       batchOperations: (...args: any[]) => mockBatchOperations(...args),
@@ -92,6 +96,8 @@ describe("useFirestore Behavioral Testing", () => {
       expect(typeof result.current.getCollection).toBe("function");
       expect(typeof result.current.setDocument).toBe("function");
       expect(typeof result.current.updateDocument).toBe("function");
+      expect(typeof result.current.createDocument).toBe("function");
+      expect(typeof result.current.updateDocumentWithAttribution).toBe("function");
       expect(typeof result.current.deleteDocument).toBe("function");
       expect(typeof result.current.queryDocuments).toBe("function");
       expect(typeof result.current.batchOperations).toBe("function");
@@ -283,6 +289,102 @@ describe("useFirestore Behavioral Testing", () => {
   });
 
   // -------------------------------------------------------------------------
+  describe("createDocument Behavior", () => {
+    test("should call document.createDocument with correct args", async () => {
+      mockCreateDocument.mockResolvedValue("new-doc-id");
+
+      const { result } = renderHook(() => useFirestore());
+
+      let res: any;
+      await act(async () => {
+        res = await result.current.createDocument("npcs", { name: "Goblin" }, "d1");
+      });
+
+      expect(mockCreateDocument).toHaveBeenCalledWith("npcs", { name: "Goblin" }, "d1");
+      expect(res).toBe("new-doc-id");
+    });
+
+    test("should clear error before writing", async () => {
+      mockCreateDocument.mockResolvedValue("new-doc-id");
+
+      const { result } = renderHook(() => useFirestore());
+
+      await act(async () => {
+        await result.current.createDocument("npcs", {});
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith(null);
+    });
+
+    test("should call setError with message on failure", async () => {
+      mockCreateDocument.mockRejectedValue(new Error("Write failed"));
+
+      const { result } = renderHook(() => useFirestore());
+
+      await act(async () => {
+        try {
+          await result.current.createDocument("npcs", {});
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("Write failed");
+    });
+
+    test("should re-throw on failure", async () => {
+      mockCreateDocument.mockRejectedValue(new Error("Firestore error"));
+
+      const { result } = renderHook(() => useFirestore());
+
+      await expect(
+        act(async () => {
+          await result.current.createDocument("npcs", {});
+        })
+      ).rejects.toThrow("Firestore error");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe("updateDocumentWithAttribution Behavior", () => {
+    test("should call document.updateDocumentWithAttribution with correct args", async () => {
+      mockUpdateDocumentWithAttribution.mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useFirestore());
+
+      await act(async () => {
+        await result.current.updateDocumentWithAttribution("npcs", "d1", { name: "Orc" });
+      });
+
+      expect(mockUpdateDocumentWithAttribution).toHaveBeenCalledWith("npcs", "d1", { name: "Orc" });
+    });
+
+    test("should clear error before updating", async () => {
+      mockUpdateDocumentWithAttribution.mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useFirestore());
+
+      await act(async () => {
+        await result.current.updateDocumentWithAttribution("npcs", "d1", {});
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith(null);
+    });
+
+    test("should call setError and re-throw on failure", async () => {
+      mockUpdateDocumentWithAttribution.mockRejectedValue(new Error("Update failed"));
+
+      const { result } = renderHook(() => useFirestore());
+
+      await act(async () => {
+        try {
+          await result.current.updateDocumentWithAttribution("npcs", "d1", {});
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("Update failed");
+    });
+  });
+
+  // -------------------------------------------------------------------------
   describe("deleteDocument Behavior", () => {
     test("should call document.deleteDocument with correct args", async () => {
       mockDeleteDocument.mockResolvedValue(undefined);
@@ -420,6 +522,24 @@ describe("useFirestore Behavioral Testing", () => {
       rerender();
 
       expect(result.current.setDocument).toBe(firstRef);
+    });
+
+    test("createDocument reference should be stable across re-renders", () => {
+      const { result, rerender } = renderHook(() => useFirestore());
+
+      const firstRef = result.current.createDocument;
+      rerender();
+
+      expect(result.current.createDocument).toBe(firstRef);
+    });
+
+    test("updateDocumentWithAttribution reference should be stable across re-renders", () => {
+      const { result, rerender } = renderHook(() => useFirestore());
+
+      const firstRef = result.current.updateDocumentWithAttribution;
+      rerender();
+
+      expect(result.current.updateDocumentWithAttribution).toBe(firstRef);
     });
 
     test("batchOperations reference should be stable across re-renders", () => {

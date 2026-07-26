@@ -69,6 +69,37 @@ export function useFirestore() {
     }
   }, [setError]);
 
+  // Create document with attribution metadata
+  const createDocument = useCallback(async <T>(
+    collectionName: string,
+    data: T,
+    id?: string
+  ): Promise<string> => {
+    try {
+      setError(null);
+      // Use type assertion to make this work with any type
+      return await firebaseServices.document.createDocument(collectionName, data as any, id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create document');
+      throw err;
+    }
+  }, [setError]);
+
+  // Update document with attribution metadata
+  const updateDocumentWithAttribution = useCallback(async <T>(
+    collectionName: string,
+    documentId: string,
+    data: Partial<T>
+  ): Promise<void> => {
+    try {
+      setError(null);
+      await firebaseServices.document.updateDocumentWithAttribution(collectionName, documentId, data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update document');
+      throw err;
+    }
+  }, [setError]);
+
   // Delete document
   const deleteDocument = useCallback(async (
     collectionName: string,
@@ -124,6 +155,8 @@ export function useFirestore() {
     getCollection,
     setDocument,
     updateDocument,
+    createDocument,
+    updateDocumentWithAttribution,
     deleteDocument,
     queryDocuments,
     batchOperations
