@@ -1,6 +1,6 @@
 # Post-Test-Coverage Roadmap
 
-*Last updated: 2026-07-26 — after the attribution-consolidation effort.*
+*Last updated: 2026-07-26 — after the collaboration domain migration.*
 
 This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
 
@@ -8,15 +8,15 @@ This guide is the starting point for the next session. Point your orchestrator (
 
 ## Where we are now
 
-**Restructuring: three domains of four are merged to `main`.**
+**Restructuring: all four domains are migrated. The `shared/`/`core/` pass is next.**
 
 | Domain | Status |
 |---|---|
 | user-management | ✅ merged (PR #13) |
 | storytelling | ✅ merged (PR #14) |
 | campaign-entities | ✅ merged (PR #15) |
-| **collaboration (notes + AI extraction)** | ⬜ **next up** |
-| `shared/` + `core/` infrastructure pass | ⬜ not started |
+| collaboration (notes + AI extraction) | ✅ done on `migration/collaboration` |
+| `shared/` + `core/` infrastructure pass | ⬜ **next up** |
 | post-migration bug triage (Phase 4) | ⬜ not started |
 
 **Interleaved effort, complete:** attribution consolidation — `src/shared/attribution` is the single
@@ -25,8 +25,12 @@ Read `docs/architecture/migration/attribution-consolidation-findings.md` before 
 its "RESOLVED" section records three predictions the original analysis got wrong, including two
 categories of write that must **never** be routed through `createDocument`.
 
-**Test baseline: 22 failed / 3 skipped / 3946 passed of 3971.** Coverage ~89% statements. The 22 are
+**Test baseline: 21 failed / 3 skipped / 3947 passed of 3971.** Coverage ~89% statements. The 21 are
 catalogued bug markers — compare against this number before treating a red test as a regression.
+
+That number was 22 before the collaboration migration. The one that went away was the phantom
+`NoteContext` "malformed entity extraData" test — corrected, not fixed and not deleted; see below.
+Total test count is unchanged at 3971, so nothing was lost in the move.
 
 That number was **53** before this round. It did not fall because bugs were fixed; it fell because
 **25 of those failures were never bugs.** Five tracker entries (#013, #014, #300, #021, #022) turned
@@ -103,37 +107,78 @@ Follow `docs/architecture/migration/hybrid-feature-first-restructuring-strategy.
 1. ✅ **`user-management/`** — Auth, Groups, Profiles. Merged, tagged.
 2. ✅ **`storytelling/`** — Chapters, Stories, Sagas. Merged.
 3. ✅ **`campaign-entities/`** — NPCs, Quests, Locations, Rumors. Merged.
-4. ⬜ **`collaboration/`** — Notes, AI extraction. **Next.** Migrate last; this is where the active bug churn lives and we want it stable first.
+4. ✅ **`collaboration/`** — Notes, AI extraction. Done on `migration/collaboration`.
 
-**The `NoteContext` suites have been repaired — this domain now has a working safety net.** They
-previously carried ~28 failures, of which 25 were test-timing defects (unawaited initial fetch;
-stale `getNoteById` closures when chained calls shared one `act()`). They were fixed in the test
-files only, no production change, and bugs #021/#022 were corrected from "NoteContext
-implementation issues" to test-environment artifacts. Those tests now genuinely exercise
-`NoteContext`, so the suite can be trusted to catch a migration regression — which was not true
-a day ago.
+#### What the collaboration migration actually did
 
-One `NoteContext` failure is left and is **not** a bug: `should handle malformed entity extraData
-gracefully` expects `relatedNPCIds: null` to pass through untouched, while the production code
-defaults `null` to `[]`, which is the more defensible behaviour. The test's own comment marks it as
-speculative ("BUG POTENTIAL"). Decide whether to correct or delete it during the migration rather
-than carrying it as a phantom marker.
+Split into two sub-features under `src/features/collaboration/`, each shaped like
+`campaign-entities/rumors` (`{components,context,hooks}/` + a sub-feature `types.ts`):
 
-Scope for the collaboration domain: `src/context/NoteContext.tsx`,
-`src/components/features/notes/` (15 files), `src/hooks/{useNoteData,useEntityExtractor,useOpenAIExtractor}.ts`,
-`src/types/note.ts`, `src/services/firebase/ai/`, `src/pages/notes/`, plus
-**`src/context/UsageContext.tsx` and `src/types/usage.ts`** — usage tracking imports
-`EntityExtractionService` directly and is AI-usage bookkeeping, so it belongs here rather than in
-`shared/`.
+| `notes/` | `entity-extraction/` |
+|---|---|
+| `context/NoteContext.tsx` | `context/UsageContext.tsx` |
+| `types.ts` (was `types/note.ts`) | `types.ts` (was `types/usage.ts`) |
+| `hooks/useNoteData.ts` | `hooks/{useEntityExtractor,useOpenAIExtractor}.ts` |
+| `utils/note-relationships.ts` | `services/{EntityExtractionService,entityMapper}.ts` |
+| `components/{NoteCard,NoteEditor,NotesList,NoteReferences}.tsx` | `components/{EntityCard,EntityExtractor,FloatingUsageIndicator}.tsx` |
 
-**`useSessionManager` is NOT collaboration.** It tracks user activity and idle timeout via
-`useAuth`; it belongs to `features/user-management/`. It is a straggler left behind by an
-already-completed domain migration — move it there, either during this phase or as its own tidy-up.
+The dependency direction is `entity-extraction → notes` (extraction needs `notes/types` plus
+`PotentialReference`/`normalizeTextForComparison` from `NoteReferences`), and never the reverse.
+That is why the two halves were migrated **sequentially, not in parallel** — the file sets are not
+disjoint, so two concurrent workers would have fought over the same import rewrites.
+
+`src/services/firebase/ai/` and `src/components/features/notes/` are gone. `src/context/` now holds
+only `NavigationContext` and `SearchContext`; `src/types/` only `common`/`search`/`user`;
+`src/hooks/` only `useFirebaseData`/`useNavigation`/`useSearch` — i.e. exactly the shared/core set.
+
+**Three findings worth carrying forward:**
+
+1. **A barrel can be a landmine.** `notes/utils/note-relationships` imports the `services/firebase`
+   *index*, which calls `initializeFirebaseServices()` — and therefore `getAnalytics()` — at module
+   scope. Re-exporting it from the domain barrel made every `import ... from 'features/collaboration'`
+   eagerly initialize Firebase and crash in jsdom. It is deliberately **not** exported, with a
+   comment saying so. This is the same failure that stops
+   `src/test-utils/__tests__/enhanced-test-utils.test.tsx` from loading. **When building the
+   `shared/`/`core/` barrels, check every re-export for a transitive path to that index** — and
+   consider making the index lazy, which would remove the whole hazard class.
+2. **A stale `jest.mock` path does not error — it silently stops mocking.** Moving a module means
+   hunting every `jest.mock`/`require` that names it. Several had to be consolidated onto the single
+   barrel specifier, because mocking one old path would have left sibling barrel exports real.
+3. **`useSessionManager` was moved to `features/user-management/auth/hooks/`** as its own commit, as
+   planned. Once inside the domain it must import `./useAuth` directly rather than the
+   user-management barrel — importing your own barrel from inside a domain is a circular import.
+
+The phantom `NoteContext` test was **corrected, not deleted**: `should handle malformed entity
+extraData gracefully` expected `relatedNPCIds: null` to pass through, while `convertEntity` applies
+`|| []`. It was first confirmed to genuinely execute (it does — `mockNavigate` fires once and the
+`title`/`objectives` passthrough assertions hold), so the disagreement was real and one-assertion
+wide. `[]` is the defensible spec for a list field handed to a create form, so the assertion now
+expects `[]`. Both `NoteContext` suites are green. The `title`/`objectives` passthrough assertions
+were left alone: they still pass and keep a real robustness gap visible, but it is **not** filed as a
+bug, because nothing yet shows the extractor can emit extraData in that shape — filing unproven
+defects is what produced the five tracker entries that turned out to be harness artifacts.
+
+#### Known deviation from the stated dependency rules
+
+`features/` → other `features/` is supposed to be forbidden. It is not satisfied, and was not before
+this migration: there are 17 `campaign-entities → user-management` edges and 5
+`storytelling → user-management`. This migration adds **4 more** — `LocationCreateForm`, `NPCForm`,
+`QuestCreateForm` and `RumorForm` each call `useNotes().markEntityAsConverted`, so
+`campaign-entities → collaboration`.
+
+All of them go through the domain **barrel**; nothing reaches into another feature's internals, which
+is the invariant that actually protects refactoring, and that one is fully satisfied. Decoupling
+`markEntityAsConverted` would need a shared event/callback seam — a behaviour change, deliberately
+out of scope for a structural move. **Decide during the `shared/`/`core/` pass** whether to introduce
+that seam or to amend the rule in `CLAUDE.md` to "features may depend on another feature's barrel,
+never its internals", which is what the codebase has actually been doing for three domains.
 
 After collaboration, the `shared/`/`core/` pass takes what remains in the old layout:
 `NavigationContext`, `SearchContext`, `components/features/layouts/`,
 `components/features/contact/`, `useFirebaseData`, `useSearch`, `useNavigation`, and
-`types/{common,search,user}.ts`.
+`types/{common,search,user}.ts` — plus `components/shared/GlobalActionButton.tsx` and
+`components/layout/Layout.tsx`, which both import `features/collaboration` and so are `shared → feature`
+edges until they move.
 
 **Per-phase exit criteria**:
 - All tests pass except the documented bug-marker set.
