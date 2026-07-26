@@ -43,11 +43,23 @@ jest.mock("../context/SearchContext", () => ({
   useSearch: () => ({}),
 }));
 
-jest.mock("../context/NPCContext", () => ({
+jest.mock("features/campaign-entities", () => ({
   NPCProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="npc-provider">{children}</div>
   ),
   useNPCs: () => ({}),
+  QuestProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="quest-provider">{children}</div>
+  ),
+  useQuests: () => ({}),
+  LocationProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="location-provider">{children}</div>
+  ),
+  useLocations: () => ({}),
+  RumorProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="rumor-provider">{children}</div>
+  ),
+  useRumors: () => ({}),
 }));
 
 jest.mock("features/storytelling", () => ({
@@ -57,12 +69,6 @@ jest.mock("features/storytelling", () => ({
   useStory: () => ({}),
 }));
 
-jest.mock("../context/LocationContext", () => ({
-  LocationProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="location-provider">{children}</div>
-  ),
-  useLocations: () => ({}),
-}));
 
 jest.mock("@/features/user-management/auth/context/FirebaseContext", () => ({
   FirebaseProvider: ({ children }: { children: React.ReactNode }) => (
@@ -70,20 +76,6 @@ jest.mock("@/features/user-management/auth/context/FirebaseContext", () => ({
   ),
   useFirebase: () => ({}),
   AUTH_STATE_CHANGED_EVENT: "auth-state-changed",
-}));
-
-jest.mock("../context/RumorContext", () => ({
-  RumorProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="rumor-provider">{children}</div>
-  ),
-  useRumors: () => ({}),
-}));
-
-jest.mock("../context/QuestContext", () => ({
-  QuestProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="quest-provider">{children}</div>
-  ),
-  useQuests: () => ({}),
 }));
 
 jest.mock("../context/NoteContext", () => ({

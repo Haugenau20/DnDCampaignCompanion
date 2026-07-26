@@ -31,19 +31,10 @@ jest.mock("features/storytelling", () => ({
   useChapterData: () => mockUseChapterData(),
 }));
 
-jest.mock("../../../hooks/useNPCData", () => ({
+jest.mock("features/campaign-entities", () => ({
   useNPCData: () => mockUseNPCData(),
-}));
-
-jest.mock("../../../hooks/useLocationData", () => ({
-  useLocationData: () => mockUseLocationData(),
-}));
-
-jest.mock("../../QuestContext", () => ({
   useQuests: () => mockUseQuests(),
-}));
-
-jest.mock("../../../hooks/useRumorData", () => ({
+  useLocationData: () => mockUseLocationData(),
   useRumorData: () => mockUseRumorData(),
 }));
 

@@ -6,8 +6,8 @@ import { ThemeProvider } from '../themes/ThemeContext';
 import { FirebaseProvider } from '@/features/user-management/auth/context/FirebaseContext';
 import { NavigationProvider } from '../context/NavigationContext';
 import { SearchProvider } from '../context/SearchContext';
-import { NPCProvider } from '../context/NPCContext';
-import { LocationProvider } from '../context/LocationContext';
+import { NPCProvider } from 'features/campaign-entities';
+import { LocationProvider } from 'features/campaign-entities';
 import { StoryProvider } from '@/features/storytelling';
 
 const AllTheProviders: FC<{ children: React.ReactNode }> = ({ children }) => {

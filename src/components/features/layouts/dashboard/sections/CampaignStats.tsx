@@ -5,11 +5,11 @@ import Card from '../../../../core/Card';
 import { useNavigation } from '../../../../../context/NavigationContext';
 import { Users, Map, Scroll, BookOpen, MessageSquare, List } from 'lucide-react';
 import clsx from 'clsx';
-import { NPC } from '../../../../../types/npc';
-import { Location } from '../../../../../types/location';
-import { Quest } from '../../../../../types/quest';
+import { NPC } from 'features/campaign-entities';
+import type { Location } from 'features/campaign-entities';
+import type { Quest } from 'features/campaign-entities';
 import type { Chapter } from 'features/storytelling';
-import { Rumor } from '../../../../../types/rumor';
+import { Rumor } from 'features/campaign-entities';
 
 interface CampaignStatsProps {
   npcs?: NPC[];

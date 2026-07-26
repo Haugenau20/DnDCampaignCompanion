@@ -4,14 +4,13 @@ import { SearchResult, SearchResultType, SearchDocument } from '../types/search'
 import { SearchService } from '../services/search/SearchService';
 import { useChapterData } from 'features/storytelling';
 import type { Chapter } from 'features/storytelling';
-import { useNPCData } from '../hooks/useNPCData';
-import { useLocationData } from '../hooks/useLocationData';
-import { useQuests } from '../context/QuestContext';
-import { Quest } from '../types/quest';
-import { NPC } from '../types/npc';
-import { Location } from '../types/location';
-import { Rumor } from '../types/rumor';
-import { useRumorData } from '../hooks/useRumorData';
+import { useNPCData } from 'features/campaign-entities';
+import { useLocationData } from 'features/campaign-entities';
+import { useQuests, Quest } from 'features/campaign-entities';
+import { NPC } from 'features/campaign-entities';
+import type { Location } from 'features/campaign-entities';
+import { Rumor } from 'features/campaign-entities';
+import { useRumorData } from 'features/campaign-entities';
 
 interface SearchContextData {
   query: string;

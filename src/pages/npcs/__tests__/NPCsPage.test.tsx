@@ -38,8 +38,13 @@ let mockNPCData: NPCDataMock = {
   refreshNPCs: jest.fn(),
 };
 
-jest.mock("../../../hooks/useNPCData", () => ({
+jest.mock("features/campaign-entities", () => ({
   useNPCData: () => mockNPCData,
+  NPCDirectory: (props: any) => (
+    <div data-testid="npc-directory">
+      <span data-testid="npc-directory-count">{props.npcs?.length}</span>
+    </div>
+  ),
 }));
 
 const mockNavigateToPage = jest.fn();
@@ -49,18 +54,6 @@ jest.mock("../../../context/NavigationContext", () => ({
     navigateToPage: mockNavigateToPage,
     state: {},
   }),
-}));
-
-// ---------------------------------------------------------------------------
-// Child component mocks
-// ---------------------------------------------------------------------------
-jest.mock("../../../components/features/npcs/NPCDirectory", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <div data-testid="npc-directory">
-      <span data-testid="npc-directory-count">{props.npcs?.length}</span>
-    </div>
-  ),
 }));
 
 jest.mock("../../../components/core/Typography", () => ({

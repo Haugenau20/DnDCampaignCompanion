@@ -1,7 +1,7 @@
 // components/features/layouts/journal/sections/RumorsSection.tsx
 import React from 'react';
 import { useNavigation } from '../../../../../context/NavigationContext';
-import { Rumor } from '../../../../../types/rumor';
+import { Rumor } from 'features/campaign-entities';
 import { MessageSquare, Check, X, HelpCircle } from 'lucide-react';
 
 interface RumorsSectionProps {

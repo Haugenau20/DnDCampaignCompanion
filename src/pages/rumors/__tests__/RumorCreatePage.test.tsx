@@ -21,9 +21,8 @@ jest.mock("react-router-dom", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/features/rumors/RumorForm", () => ({
-  __esModule: true,
-  default: (props: any) => (
+jest.mock("features/campaign-entities", () => ({
+  RumorForm: (props: any) => (
     <div data-testid="rumor-form">
       <span data-testid="rumor-form-initial-data">
         {JSON.stringify(props.initialData)}

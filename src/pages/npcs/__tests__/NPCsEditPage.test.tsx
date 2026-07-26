@@ -28,16 +28,9 @@ const mockNPCsList = [
 ];
 let mockNPCDataReturn = { npcs: mockNPCsList };
 
-jest.mock("../../../hooks/useNPCData", () => ({
+jest.mock("features/campaign-entities", () => ({
   useNPCData: () => mockNPCDataReturn,
-}));
-
-// ---------------------------------------------------------------------------
-// Child component mocks
-// ---------------------------------------------------------------------------
-jest.mock("../../../components/features/npcs/NPCEditForm", () => ({
-  __esModule: true,
-  default: (props: any) => (
+  NPCEditForm: (props: any) => (
     <div data-testid="npc-edit-form">
       <span data-testid="edit-form-npc-id">{props.npc?.id}</span>
       <span data-testid="edit-form-npc-name">{props.npc?.name}</span>

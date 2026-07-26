@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import LocationsMap from '../LocationsMap';
-import { Location } from '../../../../../../types/location';
+import type { Location } from 'features/campaign-entities';
 
 // ---------------------------------------------------------------------------
 // Mocks

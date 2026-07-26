@@ -1,9 +1,9 @@
 // src/test-utils/test-data-helpers.ts
 
-import { NPC } from '../types/npc';
-import { Quest, QuestObjective, QuestLocation, QuestNPC, QuestStatus } from '../types/quest';
-import { Location } from '../types/location';
-import { Rumor } from '../types/rumor';
+import { NPC } from 'features/campaign-entities';
+import { Quest, QuestObjective, QuestLocation, QuestNPC, QuestStatus } from 'features/campaign-entities';
+import type { Location } from 'features/campaign-entities';
+import { Rumor } from 'features/campaign-entities';
 
 // Counter for unique IDs
 let testIdCounter = 1;

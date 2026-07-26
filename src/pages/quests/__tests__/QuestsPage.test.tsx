@@ -38,8 +38,15 @@ let mockQuestContext: QuestContextMock = {
   hasRequiredContext: true,
 };
 
-jest.mock("../../../context/QuestContext", () => ({
+jest.mock("features/campaign-entities", () => ({
   useQuests: () => mockQuestContext,
+  QuestCard: (props: any) => (
+    <div data-testid={`quest-card-${props.quest?.id}`}>
+      <span data-testid={`quest-card-title-${props.quest?.id}`}>
+        {props.quest?.title}
+      </span>
+    </div>
+  ),
 }));
 
 const mockNavigateToPage = jest.fn();
@@ -56,16 +63,6 @@ jest.mock("../../../hooks/useNavigation", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/features/quests/QuestCard", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <div data-testid={`quest-card-${props.quest?.id}`}>
-      <span data-testid={`quest-card-title-${props.quest?.id}`}>
-        {props.quest?.title}
-      </span>
-    </div>
-  ),
-}));
 
 jest.mock("../../../components/core/Typography", () => ({
   __esModule: true,

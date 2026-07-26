@@ -2,10 +2,10 @@
 import { renderHook, act } from '@testing-library/react';
 import { useLayoutData } from '../useLayoutData';
 import type { Chapter } from 'features/storytelling';
-import { Quest } from '../../../../../../types/quest';
-import { Rumor } from '../../../../../../types/rumor';
-import { NPC } from '../../../../../../types/npc';
-import { Location } from '../../../../../../types/location';
+import type { Quest } from 'features/campaign-entities';
+import { Rumor } from 'features/campaign-entities';
+import { NPC } from 'features/campaign-entities';
+import type { Location } from 'features/campaign-entities';
 import { Activity } from '../../../../../../pages/HomePage';
 
 // ---------------------------------------------------------------------------

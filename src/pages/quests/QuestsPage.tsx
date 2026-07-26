@@ -4,10 +4,9 @@ import Typography from '../../components/core/Typography';
 import Card from '../../components/core/Card';
 import Input from '../../components/core/Input';
 import Button from '../../components/core/Button';
-import { QuestStatus } from '../../types/quest';
-import QuestCard from '../../components/features/quests/QuestCard';
+import { QuestStatus, QuestCard } from 'features/campaign-entities';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
-import { useQuests } from '../../context/QuestContext';
+import { useQuests } from 'features/campaign-entities';
 import { useNavigation } from '../../hooks/useNavigation';
 import clsx from 'clsx';
 import { 

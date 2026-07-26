@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ActiveQuestsList from '../ActiveQuestsList';
-import { Quest } from '../../../../../../types/quest';
+import type { Quest } from 'features/campaign-entities';
 
 // ---------------------------------------------------------------------------
 // Mocks

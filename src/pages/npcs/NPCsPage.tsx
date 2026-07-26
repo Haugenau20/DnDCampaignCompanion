@@ -2,10 +2,8 @@ import React, { useMemo } from 'react';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
-import NPCDirectory from '../../components/features/npcs/NPCDirectory';
+import { NPCDirectory, useNPCData, NPC } from 'features/campaign-entities';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
-import { useNPCData } from '../../hooks/useNPCData';
-import { NPC } from '../../types/npc';
 import { useNavigation } from '../../context/NavigationContext';
 import { Plus, Users, Loader2, AlertCircle } from 'lucide-react';
 

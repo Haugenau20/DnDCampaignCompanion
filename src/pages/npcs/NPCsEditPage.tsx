@@ -4,8 +4,7 @@ import { useParams } from 'react-router-dom';
 import Typography from '../../components/core/Typography';
 import Button from '../../components/core/Button';
 import Card from '../../components/core/Card';
-import NPCEditForm from '../../components/features/npcs/NPCEditForm';
-import { useNPCData } from '../../hooks/useNPCData';
+import { NPCEditForm, useNPCData } from 'features/campaign-entities';
 import { useNavigation } from '../../context/NavigationContext';
 import { ArrowLeft } from 'lucide-react';
 

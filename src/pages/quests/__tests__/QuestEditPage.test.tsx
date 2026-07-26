@@ -41,21 +41,9 @@ let mockQuestContext: QuestContextMock = {
   hasRequiredContext: true,
 };
 
-jest.mock("../../../context/QuestContext", () => ({
+jest.mock("features/campaign-entities", () => ({
   useQuests: () => mockQuestContext,
-}));
-
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: { uid: "user-1" } }),
-  useGroups: () => ({ activeGroupId: "group-1" }),
-}));
-
-// ---------------------------------------------------------------------------
-// Child component mocks
-// ---------------------------------------------------------------------------
-jest.mock("../../../components/features/quests/QuestEditForm", () => ({
-  __esModule: true,
-  default: (props: any) => (
+  QuestEditForm: (props: any) => (
     <div data-testid="quest-edit-form">
       <span data-testid="edit-form-quest-id">{props.quest?.id}</span>
       <span data-testid="edit-form-quest-title">{props.quest?.title}</span>
@@ -68,6 +56,15 @@ jest.mock("../../../components/features/quests/QuestEditForm", () => ({
     </div>
   ),
 }));
+
+jest.mock("@/features/user-management", () => ({
+  useAuth: () => ({ user: { uid: "user-1" } }),
+  useGroups: () => ({ activeGroupId: "group-1" }),
+}));
+
+// ---------------------------------------------------------------------------
+// Child component mocks
+// ---------------------------------------------------------------------------
 
 jest.mock("../../../components/core/Typography", () => ({
   __esModule: true,

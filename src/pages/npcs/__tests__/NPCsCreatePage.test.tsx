@@ -20,16 +20,9 @@ jest.mock("react-router-dom", () => ({
 // ---------------------------------------------------------------------------
 const mockNPCs = [{ id: "npc-1", name: "Gandalf" }];
 
-jest.mock("../../../context/NPCContext", () => ({
+jest.mock("features/campaign-entities", () => ({
   useNPCs: () => ({ npcs: mockNPCs }),
-}));
-
-// ---------------------------------------------------------------------------
-// Child component mocks — keep tests focused on page orchestration
-// ---------------------------------------------------------------------------
-jest.mock("../../../components/features/npcs/NPCForm", () => ({
-  __esModule: true,
-  default: (props: any) => (
+  NPCForm: (props: any) => (
     <div data-testid="npc-form">
       <span data-testid="npc-form-initial-data">
         {JSON.stringify(props.initialData)}
