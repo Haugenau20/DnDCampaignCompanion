@@ -45,6 +45,7 @@ jest.mock('services/firebase', () => ({
   default: {
     document: {
       setDocument: jest.fn(),
+      createDocument: jest.fn(),
       getDocument: jest.fn()
     }
   },
@@ -121,6 +122,7 @@ describe('StoryContext Behavioral Testing', () => {
 
     // Mock Firebase services
     mockFirebaseServices.document.setDocument.mockResolvedValue(undefined);
+    mockFirebaseServices.document.createDocument.mockResolvedValue('mock-id');
     mockFirebaseServices.document.getDocument.mockResolvedValue({});
   });
 
@@ -321,7 +323,7 @@ describe('StoryContext Behavioral Testing', () => {
     });
 
     test('should create chapter with basic data structure', async () => {
-      mockFirebaseServices.document.setDocument.mockResolvedValue(undefined);
+      mockFirebaseServices.document.createDocument.mockResolvedValue('chapter-01');
       mockFirebaseServices.document.getDocument.mockResolvedValue({});
 
       renderStoryContext();
@@ -345,25 +347,23 @@ describe('StoryContext Behavioral Testing', () => {
         expect(chapterId).toBe('chapter-01');
       });
 
-      // BEHAVIOR: Should create chapter with generated ID and metadata
-      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
+      // BEHAVIOR: Should create chapter with generated ID via the attribution-aware
+      // create path. Attribution itself (createdBy/modifiedBy/etc.) is now stamped
+      // by DocumentService.createDocument, not by StoryContext, so this test only
+      // verifies the domain data reaches the write call correctly.
+      expect(mockFirebaseServices.document.createDocument).toHaveBeenCalledWith(
         'chapters',
-        'chapter-01',
         expect.objectContaining({
           title: 'The Beginning',
           content: 'Our adventure starts in the tavern...',
           order: 1,
-          id: 'chapter-01',
-          createdBy: 'test-user',
-          dateAdded: expect.any(String),
-          modifiedBy: 'test-user',
-          dateModified: expect.any(String)
-        })
+          id: 'chapter-01'
+        }),
+        'chapter-01'
       );
     });
 
     test('should generate consistent chapter IDs from order', async () => {
-      mockFirebaseServices.document.setDocument.mockResolvedValue(undefined);
       mockFirebaseServices.document.getDocument.mockResolvedValue({});
 
       renderStoryContext();
@@ -380,7 +380,8 @@ describe('StoryContext Behavioral Testing', () => {
       ];
 
       for (const testCase of testCases) {
-        mockFirebaseServices.document.setDocument.mockClear();
+        mockFirebaseServices.document.createDocument.mockClear();
+        mockFirebaseServices.document.createDocument.mockResolvedValue(testCase.expectedId);
 
         const chapterData: Omit<Chapter, 'id'> = {
           title: `Chapter ${testCase.order}`,
@@ -396,10 +397,10 @@ describe('StoryContext Behavioral Testing', () => {
           expect(chapterId).toBe(testCase.expectedId);
         });
 
-        expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
+        expect(mockFirebaseServices.document.createDocument).toHaveBeenCalledWith(
           'chapters',
-          testCase.expectedId,
-          expect.objectContaining({ id: testCase.expectedId, order: testCase.order })
+          expect.objectContaining({ id: testCase.expectedId, order: testCase.order }),
+          testCase.expectedId
         );
       }
     });
@@ -435,6 +436,7 @@ describe('StoryContext Behavioral Testing', () => {
       });
 
       mockFirebaseServices.document.setDocument.mockResolvedValue(undefined);
+      mockFirebaseServices.document.createDocument.mockResolvedValue('chapter-02');
       mockFirebaseServices.document.getDocument.mockResolvedValue({});
 
       renderStoryContext();
@@ -458,21 +460,222 @@ describe('StoryContext Behavioral Testing', () => {
         expect(chapterId).toBe('chapter-02');
       });
 
-      // BEHAVIOR: Should shift existing chapters and create new one
+      // BEHAVIOR: Should shift the existing chapter (re-key path, still setDocument)...
       expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
         'chapters',
         'chapter-03',
         expect.objectContaining({ order: 3 }) // Original chapter 2 shifted to 3
       );
 
+      // ...and create the genuinely new chapter via the attribution-aware path.
+      expect(mockFirebaseServices.document.createDocument).toHaveBeenCalledWith(
+        'chapters',
+        expect.objectContaining({
+          title: 'Inserted Chapter',
+          order: 2
+        }),
+        'chapter-02'
+      );
+    });
+
+    test('should route genuine chapter creation through the attribution-aware create path, not the attribution-free write', async () => {
+      mockFirebaseServices.document.createDocument.mockResolvedValue('chapter-01');
+      mockFirebaseServices.document.getDocument.mockResolvedValue({});
+
+      renderStoryContext();
+
+      await waitFor(() => {
+        expect(storyContext).toBeDefined();
+      });
+
+      const chapterData: Omit<Chapter, 'id'> = {
+        title: 'The Beginning',
+        content: 'Our adventure starts in the tavern...',
+        order: 1,
+        createdBy: 'test-user',
+        createdByUsername: 'Test User',
+        dateAdded: '2025-06-15T00:00:00.000Z'
+      };
+
+      await act(async () => {
+        await storyContext.createChapter(chapterData);
+      });
+
+      // REGRESSION TRIPWIRE: a genuine new chapter must go through
+      // DocumentService.createDocument (the attribution-aware path), carrying the
+      // caller's domain fields, and must NEVER be written via the attribution-free
+      // setDocument path (that path is reserved for the re-key writes in
+      // updateChapter/deleteChapter/reorderChapters, which preserve an EXISTING
+      // chapter's original attribution rather than stamping new attribution).
+      expect(mockFirebaseServices.document.createDocument).toHaveBeenCalledWith(
+        'chapters',
+        expect.objectContaining({
+          title: 'The Beginning',
+          content: 'Our adventure starts in the tavern...',
+          order: 1,
+          id: 'chapter-01'
+        }),
+        'chapter-01'
+      );
+      expect(mockFirebaseServices.document.setDocument).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Attribution Regression Guard — Reorder Must Not Reattribute Existing Chapters', () => {
+    test('reordering a chapter authored by user A, performed by user B, preserves A\'s createdBy/dateAdded on every rewritten chapter and touches only modified* fields', async () => {
+      // The acting user for this reorder is B -- a different person than the
+      // original author of every chapter involved.
+      mockUseAuth.mockReturnValue({
+        user: { uid: 'user-b' },
+      });
+
+      mockUseUser.mockReturnValue({
+        userProfile: { name: 'User B' },
+        activeGroupUserProfile: {
+          userId: 'user-b',
+          username: 'User B',
+          role: 'member',
+          joinedAt: '2025-06-15T00:00:00.000Z',
+          activeCharacterId: 'char-b',
+          characters: [
+            { id: 'char-b', name: 'Character B' }
+          ]
+        },
+      });
+
+      getUserName.mockReturnValue('User B');
+      getActiveCharacterName.mockReturnValue('Character B');
+
+      // All three chapters were created (and never since modified) by user A.
+      const chaptersAuthoredByA = [
+        {
+          id: 'chapter-01',
+          title: 'Chapter 1',
+          content: 'First chapter',
+          order: 1,
+          createdBy: 'user-a',
+          createdByUsername: 'User A',
+          dateAdded: '2025-01-01T00:00:00.000Z',
+          modifiedBy: 'user-a',
+          modifiedByUsername: 'User A',
+          dateModified: '2025-01-01T00:00:00.000Z'
+        },
+        {
+          id: 'chapter-02',
+          title: 'Chapter 2',
+          content: 'Second chapter',
+          order: 2,
+          createdBy: 'user-a',
+          createdByUsername: 'User A',
+          dateAdded: '2025-01-01T00:00:00.000Z',
+          modifiedBy: 'user-a',
+          modifiedByUsername: 'User A',
+          dateModified: '2025-01-01T00:00:00.000Z'
+        },
+        {
+          id: 'chapter-03',
+          title: 'Chapter 3',
+          content: 'Third chapter',
+          order: 3,
+          createdBy: 'user-a',
+          createdByUsername: 'User A',
+          dateAdded: '2025-01-01T00:00:00.000Z',
+          modifiedBy: 'user-a',
+          modifiedByUsername: 'User A',
+          dateModified: '2025-01-01T00:00:00.000Z'
+        }
+      ];
+
+      mockUseChapterData.mockReturnValue({
+        chapters: chaptersAuthoredByA,
+        loading: false,
+        error: null,
+        refreshChapters: mockRefreshChapters,
+        hasRequiredContext: true,
+      });
+
+      mockUseFirebaseData.mockReturnValue({
+        updateData: mockUpdateData,
+        deleteData: mockDeleteData,
+      });
+
+      mockFirebaseServices.document.setDocument.mockResolvedValue(undefined);
+      mockFirebaseServices.document.getDocument.mockResolvedValue({});
+
+      renderStoryContext();
+
+      await waitFor(() => {
+        expect(storyContext).toBeDefined();
+      });
+
+      // User B moves chapter-01 from order 1 to order 3. This affects all three
+      // chapters: chapter-01 becomes order 3 (id chapter-03), chapter-02 shifts to
+      // order 1 (id chapter-01), chapter-03 shifts to order 2 (id chapter-02).
+      await act(async () => {
+        await storyContext.updateChapter('chapter-01', { order: 3 });
+      });
+
+      // Every chapter written during this reorder must still carry user A's
+      // original creation attribution -- reordering must never reattribute
+      // creation to whoever performed the reorder.
+      const setDocumentCalls = mockFirebaseServices.document.setDocument.mock.calls;
+      expect(setDocumentCalls.length).toBeGreaterThan(0);
+      setDocumentCalls.forEach(([, , writtenChapter]: [string, string, any]) => {
+        expect(writtenChapter.createdBy).toBe('user-a');
+        expect(writtenChapter.createdByUsername).toBe('User A');
+        expect(writtenChapter.dateAdded).toBe('2025-01-01T00:00:00.000Z');
+      });
+
+      // The chapter the user actually moved (originally chapter-01, now living at
+      // chapter-03) gets a fresh modification stamp from B -- this is the one
+      // legitimate attribution change in this operation.
+      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
+        'chapters',
+        'chapter-03',
+        expect.objectContaining({
+          createdBy: 'user-a',
+          createdByUsername: 'User A',
+          dateAdded: '2025-01-01T00:00:00.000Z',
+          modifiedBy: 'user-b',
+          modifiedByUsername: 'User B',
+          dateModified: expect.any(String),
+          order: 3
+        })
+      );
+      const movedChapterCall = setDocumentCalls.find(([, id]: [string, string]) => id === 'chapter-03');
+      expect(movedChapterCall![2].dateModified).not.toBe('2025-01-01T00:00:00.000Z');
+
+      // The other two chapters were only re-keyed to a new id/order (mechanical
+      // shift, not a content edit by B) -- their modification attribution is left
+      // exactly as it was, untouched by this operation.
+      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
+        'chapters',
+        'chapter-01',
+        expect.objectContaining({
+          createdBy: 'user-a',
+          dateAdded: '2025-01-01T00:00:00.000Z',
+          modifiedBy: 'user-a',
+          modifiedByUsername: 'User A',
+          dateModified: '2025-01-01T00:00:00.000Z',
+          order: 1
+        })
+      );
       expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
         'chapters',
         'chapter-02',
         expect.objectContaining({
-          title: 'Inserted Chapter',
+          createdBy: 'user-a',
+          dateAdded: '2025-01-01T00:00:00.000Z',
+          modifiedBy: 'user-a',
+          modifiedByUsername: 'User A',
+          dateModified: '2025-01-01T00:00:00.000Z',
           order: 2
         })
       );
+
+      // This reorder must never route through the attribution-aware create path --
+      // none of these chapters are new.
+      expect(mockFirebaseServices.document.createDocument).not.toHaveBeenCalled();
     });
   });
 

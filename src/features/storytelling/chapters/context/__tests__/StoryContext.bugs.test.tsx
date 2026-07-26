@@ -40,6 +40,7 @@ jest.mock('services/firebase', () => ({
   default: {
     document: {
       setDocument: jest.fn(),
+      createDocument: jest.fn(),
       getDocument: jest.fn()
     }
   },
@@ -118,6 +119,7 @@ describe('StoryContext Bug Discovery Tests', () => {
     });
 
     mockFirebaseServices.document.setDocument.mockResolvedValue(undefined);
+    mockFirebaseServices.document.createDocument.mockResolvedValue('chapter-01');
     mockFirebaseServices.document.getDocument.mockResolvedValue({});
   });
 
@@ -154,18 +156,22 @@ describe('StoryContext Bug Discovery Tests', () => {
         await storyContext.createChapter(chapterData);
       });
 
-      // BUG DISCOVERY: This test will FAIL until getUserName and getActiveCharacterName utilities are fixed
-      // EXPECTED: Proper user attribution metadata should be included
-      // ACTUAL: getUserName returns "" and getActiveCharacterName returns null
-      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
+      // RE-SEAMED (attribution consolidation): chapter creation now goes through
+      // DocumentService.createDocument, which stamps created*/modified* attribution
+      // server-side from the live group profile -- StoryContext no longer builds
+      // attribution itself, so this mocked collaborator does not receive
+      // createdByUsername/createdByCharacterName directly (a bare jest.fn() here
+      // does not run the real attribution logic). Attribution correctness for
+      // createDocument itself is covered by
+      // src/services/firebase/data/__tests__/DocumentService.test.ts.
+      expect(mockFirebaseServices.document.createDocument).toHaveBeenCalledWith(
         'chapters',
-        'chapter-01',
         expect.objectContaining({
-          createdByUsername: 'Test User',        // BUG: Currently receives ""
-          createdByCharacterName: 'Test Character', // BUG: Currently receives null
-          modifiedByUsername: 'Test User',       // BUG: Currently receives ""
-          modifiedByCharacterName: 'Test Character' // BUG: Currently receives null
-        })
+          title: 'Test Chapter for Attribution',
+          content: 'A test chapter to check user attribution',
+          order: 1
+        }),
+        'chapter-01'
       );
 
       console.warn('BUG #015: User attribution utilities getUserName/getActiveCharacterName return empty/null values in StoryContext');
@@ -310,6 +316,7 @@ describe('StoryContext Bug Discovery Tests', () => {
       });
 
       // BUG DISCOVERY: Should handle ID conflicts gracefully by shifting existing chapters
+      // (re-key write, still setDocument -- unaffected by the attribution migration)
       expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
         'chapters',
         'chapter-02', // Existing chapter should be shifted to chapter-02
@@ -318,17 +325,20 @@ describe('StoryContext Bug Discovery Tests', () => {
         })
       );
 
-      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
+      // Genuinely new chapter: goes through the attribution-aware create path.
+      expect(mockFirebaseServices.document.createDocument).toHaveBeenCalledWith(
         'chapters',
-        'chapter-01', // New chapter gets the requested position
         expect.objectContaining({
           title: 'Conflicting Chapter',
           order: 1
-        })
+        }),
+        'chapter-01'
       );
     });
 
     test('BUG: should handle edge cases in chapter ID padding', async () => {
+      mockFirebaseServices.document.createDocument.mockResolvedValue('chapter-999');
+
       renderStoryContext();
 
       await waitFor(() => {
@@ -350,13 +360,14 @@ describe('StoryContext Bug Discovery Tests', () => {
       });
 
       // BUG DISCOVERY: ID generation should handle edge cases properly
-      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
+      // (genuine creation now goes through the attribution-aware create path)
+      expect(mockFirebaseServices.document.createDocument).toHaveBeenCalledWith(
         'chapters',
-        'chapter-999',
         expect.objectContaining({
           id: 'chapter-999',
           order: 999
-        })
+        }),
+        'chapter-999'
       );
     });
   });
