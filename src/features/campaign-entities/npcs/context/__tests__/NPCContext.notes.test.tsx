@@ -307,11 +307,9 @@ describe('NPCContext Note Management Behavior', () => {
         text: 'Note for nonexistent NPC'
       };
 
-      // BEHAVIOR: updateNPCNote doesn't throw for nonexistent NPC - just returns undefined
-      // DISCOVERY: This reveals that updateNPCNote doesn't validate NPC existence!
+      // BEHAVIOR: updateNPCNote validates NPC existence and rejects for a nonexistent NPC (bug #006)
       await act(async () => {
-        const result = await npcContext.updateNPCNote('nonexistent-npc', noteData);
-        expect(result).toBeUndefined();
+        await expect(npcContext.updateNPCNote('nonexistent-npc', noteData)).rejects.toThrow('NPC not found');
       });
 
       // BEHAVIOR: Firebase should not be called for nonexistent NPC
@@ -345,6 +343,17 @@ describe('NPCContext Note Management Behavior', () => {
     test('should require group and campaign context for note addition', async () => {
       // Remove group context
       mockUseGroups.mockReturnValue({ activeGroupId: null });
+
+      // Explicit mock setup (not inherited from a previous test): missing group/campaign
+      // context is signalled via hasRequiredContext, independent of NPC existence.
+      mockUseNPCData.mockReturnValue({
+        npcs: [],
+        loading: false,
+        error: null,
+        getNPCById: jest.fn(),
+        refreshNPCs: mockRefreshNPCs,
+        hasRequiredContext: false,
+      });
 
       renderNPCContext();
 
