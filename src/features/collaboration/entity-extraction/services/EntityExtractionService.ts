@@ -5,6 +5,7 @@ import ServiceRegistry from 'core/services/firebase/core/ServiceRegistry';
 import { ExtractedEntity, EntityType } from '../../notes/types';
 import { UsageStatus, UsageLimitError } from '../types';
 import { OpenAIEntityResponse, ExtractedEntityDetails } from 'core/services/openai/types';
+import { extractDetailsByType } from './entityMapper';
 
 interface ExtractEntitiesResponse {
   success: boolean;
@@ -227,52 +228,15 @@ class EntityExtractionService extends BaseFirebaseService {
 
   /**
    * Extract specific details from OpenAI response based on entity type
+   *
+   * Delegates to the shared implementation in entityMapper.ts so there is a
+   * single source of truth for this mapping (see bug #023).
    */
   private extractDetailsByType = (
     details: ExtractedEntityDetails,
     type: EntityType
   ): any => {
-    switch (type) {
-      case 'npc':
-        return {
-          name: (details as any).name,
-          title: (details as any).title,
-          race: (details as any).race,
-          occupation: (details as any).occupation,
-          location: (details as any).location,
-          relationship: (details as any).relationship || 'unknown',
-          description: (details as any).description,
-          context: (details as any).context,
-        };
-      case 'location':
-        return {
-          name: (details as any).name,
-          locationType: (details as any).locationType,
-          description: (details as any).description,
-          parentLocation: (details as any).parentLocation,
-          context: (details as any).context,
-        };
-      case 'quest':
-        return {
-          title: (details as any).title,
-          description: (details as any).description,
-          objectives: (details as any).objectives || [],
-          NPCsInvolved: (details as any).NPCsInvolved || [],
-          locationName: (details as any).locationName,
-          context: (details as any).context,
-        };
-      case 'rumor':
-        return {
-          title: (details as any).title,
-          content: (details as any).content,
-          status: (details as any).status,
-          sourceType: (details as any).sourceType,
-          sourceName: (details as any).sourceName,
-          context: (details as any).context,
-        };
-      default:
-        return details;
-    }
+    return extractDetailsByType(details, type);
   };
 }
 
