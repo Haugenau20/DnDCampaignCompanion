@@ -1,10 +1,10 @@
 // src/features/collaboration/notes/components/NoteCard.tsx
 import React from "react";
 import { Note } from "../types";
-import Typography from "../../../../components/core/Typography";
-import Card from "../../../../components/core/Card";
-import Button from "../../../../components/core/Button";
-import { useNavigation } from "../../../../hooks/useNavigation";
+import Typography from "../../../../core/components/Typography";
+import Card from "../../../../core/components/Card";
+import Button from "../../../../core/components/Button";
+import { useNavigation } from "shared/hooks/useNavigation";
 import { Calendar, Tag } from 'lucide-react';
 
 interface NoteCardProps {

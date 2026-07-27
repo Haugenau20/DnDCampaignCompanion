@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import { QueryConstraint } from 'firebase/firestore';
 import { useFirebaseContext } from 'features/user-management/auth/context/FirebaseContext';
-import firebaseServices from 'services/firebase';
+import firebaseServices from 'core/services/firebase';
 
 export function useFirestore() {
   const { setError } = useFirebaseContext();

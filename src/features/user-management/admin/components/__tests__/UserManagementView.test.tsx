@@ -15,12 +15,18 @@ jest.mock('@/features/user-management', () => ({
   useGroups: jest.fn(),
 }));
 
+// These components import their hooks directly (importing the domain barrel
+// from inside the domain would be a circular import), so point those modules
+// at the barrel mock defined above.
+jest.mock('../../../auth/hooks/useAuth', () => require('@/features/user-management'));
+jest.mock('../../../groups/hooks/useGroups', () => require('@/features/user-management'));
+
 const { useAuth, useGroups } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------
 // Mock Dialog
 // ---------------------------------------------------------------------------
-jest.mock('@/components/core/Dialog', () => {
+jest.mock('@/core/components/Dialog', () => {
   const Dialog = ({ open, onClose, title, children }: any) => {
     if (!open) return null;
     return (

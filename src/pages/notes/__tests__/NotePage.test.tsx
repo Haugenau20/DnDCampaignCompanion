@@ -42,7 +42,7 @@ const mockGetNoteById = jest.fn();
 
 const mockNavigateToPage = jest.fn();
 
-jest.mock("../../../hooks/useNavigation", () => ({
+jest.mock("shared/hooks/useNavigation", () => ({
   useNavigation: () => ({
     navigateToPage: mockNavigateToPage,
     state: {},
@@ -54,7 +54,7 @@ jest.mock("../../../hooks/useNavigation", () => ({
 // ---------------------------------------------------------------------------
 const mockGetDocument = jest.fn().mockResolvedValue(null);
 
-jest.mock("../../../services/firebase/data/DocumentService", () => ({
+jest.mock("core/services/firebase/data/DocumentService", () => ({
   __esModule: true,
   default: {
     getInstance: () => ({
@@ -144,7 +144,7 @@ jest.mock("features/collaboration", () => {
   };
 });
 
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant, color }: any) => {
     const testId = variant
@@ -156,7 +156,7 @@ jest.mock("../../../components/core/Typography", () => ({
   },
 }));
 
-jest.mock("../../../components/core/Button", () => ({
+jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick, disabled }: any) => (
     <button onClick={onClick} disabled={disabled}>

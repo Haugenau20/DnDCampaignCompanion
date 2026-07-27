@@ -32,7 +32,7 @@ const mockCreateNote = jest.fn().mockResolvedValue("new-note-id");
 
 const mockNavigateToPage = jest.fn();
 
-jest.mock("../../../hooks/useNavigation", () => ({
+jest.mock("shared/hooks/useNavigation", () => ({
   useNavigation: () => ({
     navigateToPage: mockNavigateToPage,
     state: {},
@@ -52,7 +52,7 @@ jest.mock("features/collaboration", () => ({
   NotesList: () => <div data-testid="notes-list" />,
 }));
 
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant, color }: any) => {
     const testId = variant
@@ -64,7 +64,7 @@ jest.mock("../../../components/core/Typography", () => ({
   },
 }));
 
-jest.mock("../../../components/core/Button", () => ({
+jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick }: any) => (
     <button onClick={onClick}>{children}</button>

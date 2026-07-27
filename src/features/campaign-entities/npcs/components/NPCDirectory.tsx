@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { NPC } from '../types';
 import NPCCard from './NPCCard';
-import Card from '../../../../components/core/Card';
-import Button from '../../../../components/core/Button';
-import Typography from '../../../../components/core/Typography';
-import Input from '../../../../components/core/Input';
+import Card from '../../../../core/components/Card';
+import Button from '../../../../core/components/Button';
+import Typography from '../../../../core/components/Typography';
+import Input from '../../../../core/components/Input';
 import { Search, Users, MapPin, Heart, AlertCircle } from 'lucide-react';
-import { useNavigation } from '../../../../context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 import clsx from 'clsx';
 
 interface NPCDirectoryProps {

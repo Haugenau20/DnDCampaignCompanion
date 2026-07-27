@@ -1,11 +1,11 @@
 // pages/story/ChaptersPage.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useStory, BookshelfView, TableView } from 'features/storytelling';
-import { useNavigation } from '../../context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 import { useAuth } from 'features/user-management';
-import Typography from '../../components/core/Typography';
-import Breadcrumb from '../../components/layout/Breadcrumb';
-import Button from '../../components/core/Button';
+import Typography from '../../core/components/Typography';
+import Breadcrumb from 'shared/components/Breadcrumb';
+import Button from '../../core/components/Button';
 import { 
   Plus, 
   Bookmark, 

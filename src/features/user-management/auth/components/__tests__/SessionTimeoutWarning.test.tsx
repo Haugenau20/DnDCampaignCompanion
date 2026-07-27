@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import SessionTimeoutWarning from '../SessionTimeoutWarning';
-import { INACTIVITY_TIMEOUT, SESSION_WARNING_THRESHOLD } from '@/constants/time';
+import { INACTIVITY_TIMEOUT, SESSION_WARNING_THRESHOLD } from '@/core/constants/time';
 
 // ---------------------------------------------------------------------------
 // Mock context/firebase
@@ -16,12 +16,17 @@ jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
 }));
 
+// These components import their hooks directly (importing the domain barrel
+// from inside the domain would be a circular import), so point those modules
+// at the barrel mock defined above.
+jest.mock('../../hooks/useAuth', () => require('@/features/user-management'));
+
 const { useAuth } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------
 // Mock Dialog to avoid portal rendering issues
 // ---------------------------------------------------------------------------
-jest.mock('@/components/core/Dialog', () => {
+jest.mock('@/core/components/Dialog', () => {
   const Dialog = ({ open, children, title }: any) => {
     if (!open) return null;
     return (

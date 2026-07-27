@@ -1,12 +1,12 @@
 // src/pages/quests/QuestEditPage.tsx
 import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import Typography from '../../components/core/Typography';
-import Button from '../../components/core/Button';
-import Card from '../../components/core/Card';
+import Typography from '../../core/components/Typography';
+import Button from '../../core/components/Button';
+import Card from '../../core/components/Card';
 import { QuestEditForm, useQuests } from 'features/campaign-entities';
 import { useAuth, useGroups } from 'features/user-management';
-import { useNavigation } from '../../context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 
 const QuestEditPage: React.FC = () => {

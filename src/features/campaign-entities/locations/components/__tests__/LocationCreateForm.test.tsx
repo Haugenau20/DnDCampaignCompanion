@@ -91,7 +91,7 @@ describe('LocationCreateForm', () => {
     setupMocks();
   });
 
-  // NOTE: The Input component (src/components/core/Input.tsx) renders labels without
+  // NOTE: The Input component (src/core/components/Input.tsx) renders labels without
   // htmlFor/id association — getByLabelText() will not work. Bug #251.
   // Use getByText() for labels and getAllByRole('textbox') for inputs.
 

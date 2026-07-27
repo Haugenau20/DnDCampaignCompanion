@@ -11,11 +11,11 @@ import { Note } from '../../types';
 
 const mockNavigateToPage = jest.fn();
 
-jest.mock('../../../../../hooks/useNavigation', () => ({
+jest.mock('shared/hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
-const { useNavigation } = require('../../../../../hooks/useNavigation');
+const { useNavigation } = require('shared/hooks/useNavigation');
 
 function setupMocks() {
   (useNavigation as jest.Mock).mockReturnValue({

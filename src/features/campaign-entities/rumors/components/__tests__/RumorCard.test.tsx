@@ -9,7 +9,7 @@ import { Rumor, RumorStatus } from '../../types';
 // ---------------------------------------------------------------------------
 // Mock Dialog to render children inline (bug #150 — Dialog portal unreachable)
 // ---------------------------------------------------------------------------
-jest.mock('../../../../../components/core/Dialog', () => {
+jest.mock('../../../../../core/components/Dialog', () => {
   const MockDialog: React.FC<{
     open: boolean;
     onClose: () => void;
@@ -52,7 +52,7 @@ jest.mock('../../context/RumorContext', () => ({
   useRumors: jest.fn(),
 }));
 
-jest.mock('../../../../../hooks/useNavigation', () => ({
+jest.mock('shared/hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -64,16 +64,16 @@ jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(),
 }));
 
-jest.mock('../../../../../utils/attribution-utils', () => ({
+jest.mock('shared/utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
 
-jest.mock('../../../../../services/firebase', () => ({ default: {} }));
+jest.mock('core/services/firebase', () => ({ default: {} }));
 
 const { useAuth } = require('@/features/user-management');
 const { useRumors } = require('../../context/RumorContext');
-const { useNavigation } = require('../../../../../hooks/useNavigation');
+const { useNavigation } = require('shared/hooks/useNavigation');
 const { useNPCs } = require('../../../npcs/context/NPCContext');
 const { useLocations } = require('../../../locations/context/LocationContext');
 

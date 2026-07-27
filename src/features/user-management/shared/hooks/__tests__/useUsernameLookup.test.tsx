@@ -20,7 +20,7 @@ import { useUsernameLookup } from "../useUsernameLookup";
 // ---------------------------------------------------------------------------
 // Mock firebaseServices
 // ---------------------------------------------------------------------------
-jest.mock("@/services/firebase", () => ({
+jest.mock("@/core/services/firebase", () => ({
   __esModule: true,
   default: {
     user: {
@@ -34,7 +34,7 @@ jest.mock("@/services/firebase", () => ({
 // ---------------------------------------------------------------------------
 const mockFetchAttributionUsernames = jest.fn();
 
-jest.mock("@/utils/attribution-utils", () => ({
+jest.mock("@/shared/utils/attribution-utils", () => ({
   fetchAttributionUsernames: (...args: any[]) =>
     mockFetchAttributionUsernames(...args),
 }));

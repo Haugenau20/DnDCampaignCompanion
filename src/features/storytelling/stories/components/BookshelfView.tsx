@@ -1,6 +1,6 @@
 // src/features/storytelling/stories/components/BookshelfView.tsx
 import React, { useMemo } from 'react';
-import Typography from 'components/core/Typography';
+import Typography from 'core/components/Typography';
 import { Chapter } from 'features/storytelling/chapters/types';
 import clsx from 'clsx';
 

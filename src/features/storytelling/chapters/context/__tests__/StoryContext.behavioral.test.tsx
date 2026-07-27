@@ -35,12 +35,12 @@ jest.mock('features/storytelling/chapters/hooks/useChapterData', () => ({
   useChapterData: () => mockUseChapterData(),
 }));
 
-jest.mock('hooks/useFirebaseData', () => ({
+jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 
 // Mock Firebase services
-jest.mock('services/firebase', () => ({
+jest.mock('core/services/firebase', () => ({
   __esModule: true,
   default: {
     document: {
@@ -52,12 +52,12 @@ jest.mock('services/firebase', () => ({
 }));
 
 // Mock user utilities for proper testing
-jest.mock('utils/user-utils', () => ({
+jest.mock('core/utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('core/utils/user-utils');
 
 // Test component that uses the Story context
 const StoryTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {
@@ -94,7 +94,7 @@ describe('StoryContext Behavioral Testing', () => {
     mockRefreshChapters = jest.fn();
 
     // Get mocked Firebase services
-    mockFirebaseServices = require('services/firebase').default;
+    mockFirebaseServices = require('core/services/firebase').default;
 
     // Setup default mock returns
     mockUseAuth.mockReturnValue({

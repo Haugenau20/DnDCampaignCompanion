@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import useSessionManager from '../hooks/useSessionManager';
-import { useGroups } from 'features/user-management';
-import { useTheme } from 'themes/ThemeContext';
-import { ThemeName } from 'themes/types';
+import { useGroups } from '../../groups/hooks/useGroups';
+import { useTheme } from 'core/themes/ThemeContext';
+import { ThemeName } from 'core/themes/types';
 
 /**
  * Component that manages user session activity tracking and theme preference synchronization

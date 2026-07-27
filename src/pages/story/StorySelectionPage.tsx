@@ -1,8 +1,8 @@
 // pages/story/StorySelectionPage.tsx
 import React from 'react';
-import Typography from '../../components/core/Typography';
-import Card from '../../components/core/Card';
-import { useNavigation } from '../../context/NavigationContext';
+import Typography from '../../core/components/Typography';
+import Card from '../../core/components/Card';
+import { useNavigation } from 'shared/context/NavigationContext';
 import { ScrollText, BookOpen } from 'lucide-react';
 
 /**

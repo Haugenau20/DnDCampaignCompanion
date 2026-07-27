@@ -6,15 +6,15 @@ import { useQuests } from 'features/campaign-entities';
 import { useRumors } from 'features/campaign-entities';
 import { useNPCs } from 'features/campaign-entities';
 import { useLocations } from 'features/campaign-entities';
-import firebaseServices from '../services/firebase';
-import { determineAttributionActor, fetchAttributionUsernames } from '../utils/attribution-utils';
+import firebaseServices from 'core/services/firebase';
+import { determineAttributionActor, fetchAttributionUsernames } from 'shared/utils/attribution-utils';
 
 // Import layouts
-import DashboardLayout from '../components/features/layouts/dashboard/DashboardLayout';
-import JournalLayout from '../components/features/layouts/journal/JournalLayout';
-import Button from '../components/core/Button';
+import DashboardLayout from 'pages/layouts/dashboard/DashboardLayout';
+import JournalLayout from 'pages/layouts/journal/JournalLayout';
+import Button from '../core/components/Button';
 import { Book, LayoutDashboard } from 'lucide-react';
-import useLayoutData from '../components/features/layouts/common/hooks/useLayoutData';
+import useLayoutData from 'pages/layouts/common/hooks/useLayoutData';
 
 // Combined activity type from all content types
 export interface Activity {

@@ -8,7 +8,7 @@ import SagaPage from "../SagaPage";
 // ---------------------------------------------------------------------------
 const mockNavigateToPage = jest.fn();
 
-jest.mock("../../../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 
@@ -48,7 +48,7 @@ jest.mock("features/storytelling", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, color, variant, className }: any) => (
     <div
@@ -65,7 +65,7 @@ jest.mock("../../../components/core/Typography", () => ({
   ),
 }));
 
-jest.mock("../../../components/layout/Breadcrumb", () => ({
+jest.mock("shared/components/Breadcrumb", () => ({
   __esModule: true,
   default: (props: any) => (
     <nav data-testid="breadcrumb">
@@ -78,7 +78,7 @@ jest.mock("../../../components/layout/Breadcrumb", () => ({
   ),
 }));
 
-jest.mock("../../../components/core/Button", () => ({
+jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick }: any) => (
     <button
@@ -90,7 +90,7 @@ jest.mock("../../../components/core/Button", () => ({
   ),
 }));
 
-jest.mock("../../../components/core/Card", () => {
+jest.mock("../../../core/components/Card", () => {
   const Card = ({ children }: any) => (
     <div data-testid="card">{children}</div>
   );

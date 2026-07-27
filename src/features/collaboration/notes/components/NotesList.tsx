@@ -1,12 +1,12 @@
 // Updated src/features/collaboration/notes/components/NotesList.tsx
 
 import React from "react";
-import Typography from "../../../../components/core/Typography";
+import Typography from "../../../../core/components/Typography";
 import NoteCard from "./NoteCard";
 import { useNotes } from "../context/NoteContext";
 import { useCampaigns } from "features/user-management";
-import Button from "../../../../components/core/Button";
-import { useNavigation } from "../../../../hooks/useNavigation";
+import Button from "../../../../core/components/Button";
+import { useNavigation } from "shared/hooks/useNavigation";
 import { Loader2, AlertCircle, Book, Plus, Users } from 'lucide-react';
 
 /**

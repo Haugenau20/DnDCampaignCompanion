@@ -47,7 +47,7 @@ jest.mock("features/campaign-entities", () => ({
 
 const mockNavigateToPage = jest.fn();
 
-jest.mock("../../../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({
     navigateToPage: mockNavigateToPage,
     state: {},
@@ -58,7 +58,7 @@ jest.mock("../../../context/NavigationContext", () => ({
 // Child component mocks
 // ---------------------------------------------------------------------------
 
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant, color }: any) => {
     const testId = variant
@@ -70,14 +70,14 @@ jest.mock("../../../components/core/Typography", () => ({
   },
 }));
 
-jest.mock("../../../components/core/Button", () => ({
+jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick }: any) => (
     <button onClick={onClick}>{children}</button>
   ),
 }));
 
-jest.mock("../../../components/core/Card", () => {
+jest.mock("../../../core/components/Card", () => {
   const Card = ({ children }: any) => <div data-testid="card">{children}</div>;
   Card.Content = ({ children }: any) => (
     <div data-testid="card-content">{children}</div>

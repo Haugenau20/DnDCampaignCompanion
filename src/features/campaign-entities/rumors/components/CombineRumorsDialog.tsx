@@ -1,10 +1,10 @@
 // src/features/campaign-entities/rumors/components/CombineRumorsDialog.tsx
 import React, { useState, useEffect } from 'react';
 import { Rumor, RumorStatus } from '../types';
-import Dialog from '../../../../components/core/Dialog';
-import Typography from '../../../../components/core/Typography';
-import Button from '../../../../components/core/Button';
-import Input from '../../../../components/core/Input';
+import Dialog from '../../../../core/components/Dialog';
+import Typography from '../../../../core/components/Typography';
+import Button from '../../../../core/components/Button';
+import Input from '../../../../core/components/Input';
 import { X, Layers, AlertCircle } from 'lucide-react';
 
 interface CombineRumorsDialogProps {

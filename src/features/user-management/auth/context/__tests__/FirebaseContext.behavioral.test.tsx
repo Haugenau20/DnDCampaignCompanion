@@ -3,7 +3,7 @@
 import React from "react";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { FirebaseProvider, useFirebaseContext } from "../FirebaseContext";
-import type { UserProfile, GroupUserProfile, Group, Campaign } from "@/types/user";
+import type { UserProfile, GroupUserProfile, Group, Campaign } from "@/core/types/user";
 
 /**
  * FirebaseContext Behavioral Testing
@@ -53,7 +53,7 @@ const mockGetGroupUserProfile = jest.fn();
 const mockGetGroups = jest.fn();
 const mockGetCampaigns = jest.fn();
 
-jest.mock("@/services/firebase", () => ({
+jest.mock("@/core/services/firebase", () => ({
   __esModule: true,
   default: {
     auth: {

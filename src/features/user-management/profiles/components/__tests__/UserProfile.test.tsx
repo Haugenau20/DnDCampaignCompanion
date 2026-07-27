@@ -19,6 +19,13 @@ jest.mock('@/features/user-management', () => ({
   useUser: jest.fn(),
 }));
 
+// These components import their hooks directly (importing the domain barrel
+// from inside the domain would be a circular import), so point those modules
+// at the barrel mock defined above.
+jest.mock('../../../auth/hooks/useAuth', () => require('@/features/user-management'));
+jest.mock('../../../groups/hooks/useGroups', () => require('@/features/user-management'));
+jest.mock('../../hooks/useUser', () => require('@/features/user-management'));
+
 const { useAuth, useGroups, useUser } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------
@@ -36,16 +43,16 @@ jest.mock('firebase/functions', () => ({
 // ---------------------------------------------------------------------------
 const mockSetTheme = jest.fn();
 
-jest.mock('@/themes/ThemeContext', () => ({
+jest.mock('@/core/themes/ThemeContext', () => ({
   useTheme: jest.fn(),
 }));
 
-const { useTheme } = require('@/themes/ThemeContext');
+const { useTheme } = require('@/core/themes/ThemeContext');
 
 // ---------------------------------------------------------------------------
 // Mock Dialog to avoid portal issues
 // ---------------------------------------------------------------------------
-jest.mock('@/components/core/Dialog', () => {
+jest.mock('@/core/components/Dialog', () => {
   const Dialog = ({ open, onClose, title, children }: any) => {
     if (!open) return null;
     return (
@@ -62,7 +69,7 @@ jest.mock('@/components/core/Dialog', () => {
 // ---------------------------------------------------------------------------
 // Mock firebase services
 // ---------------------------------------------------------------------------
-jest.mock('@/services/firebase', () => ({ default: {} }));
+jest.mock('@/core/services/firebase', () => ({ default: {} }));
 
 // ---------------------------------------------------------------------------
 // Helpers

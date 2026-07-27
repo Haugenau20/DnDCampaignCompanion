@@ -40,11 +40,11 @@ jest.mock('../../../notes/context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
 
-jest.mock('../../../../../hooks/useNavigation', () => ({
+jest.mock('shared/hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
-jest.mock('../../../../../services/firebase/data/DocumentService', () => {
+jest.mock('core/services/firebase/data/DocumentService', () => {
   const getCollectionMock = jest.fn().mockResolvedValue([]);
   const instance = { getCollection: getCollectionMock };
   return {
@@ -64,10 +64,10 @@ jest.mock('@/features/user-management', () => ({
 
 const { useEntityExtractor } = require('../../hooks/useEntityExtractor');
 const { useNotes } = require('../../../notes/context/NoteContext');
-const { useNavigation } = require('../../../../../hooks/useNavigation');
+const { useNavigation } = require('shared/hooks/useNavigation');
 
 // Grab the DocumentService mock instance for per-test configuration
-const DocumentService = require('../../../../../services/firebase/data/DocumentService').default;
+const DocumentService = require('core/services/firebase/data/DocumentService').default;
 
 function setupMocks({
   extractWithOpenAI = mockExtractWithOpenAI,

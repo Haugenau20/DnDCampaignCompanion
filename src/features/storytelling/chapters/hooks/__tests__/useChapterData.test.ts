@@ -8,7 +8,7 @@ import { Chapter } from 'features/storytelling/chapters/types';
 // ---------------------------------------------------------------------------
 const mockGetData = jest.fn();
 
-jest.mock('hooks/useFirebaseData', () => ({
+jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: jest.fn(),
 }));
 
@@ -18,7 +18,7 @@ jest.mock('@/features/user-management', () => ({
   useCampaigns: jest.fn(),
 }));
 
-const { useFirebaseData } = require('hooks/useFirebaseData');
+const { useFirebaseData } = require('shared/hooks/useFirebaseData');
 const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 const makeChapter = (id: string, title: string, order: number): Chapter => ({

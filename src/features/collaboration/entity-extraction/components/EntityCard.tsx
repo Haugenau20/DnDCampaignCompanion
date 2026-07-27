@@ -2,9 +2,9 @@
 import React, { useState } from "react";
 import { ExtractedEntity, EntityType } from "../../notes/types";
 import { useNotes } from "../../notes/context/NoteContext";
-import Typography from "../../../../components/core/Typography";
-import Button from "../../../../components/core/Button";
-import Card from "../../../../components/core/Card";
+import Typography from "../../../../core/components/Typography";
+import Button from "../../../../core/components/Button";
+import Card from "../../../../core/components/Card";
 import { Users, MapPin, Scroll, MessageSquare, FileQuestion, Check, Plus, Loader2 } from 'lucide-react';
 
 interface EntityCardProps {

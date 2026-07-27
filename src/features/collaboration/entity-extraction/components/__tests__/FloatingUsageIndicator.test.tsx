@@ -13,12 +13,12 @@ jest.mock('../../context/UsageContext', () => ({
   useUsageContext: jest.fn(),
 }));
 
-jest.mock('../../../../../hooks/useNavigation', () => ({
+jest.mock('shared/hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
 const { useUsageContext } = require('../../context/UsageContext');
-const { useNavigation } = require('../../../../../hooks/useNavigation');
+const { useNavigation } = require('shared/hooks/useNavigation');
 
 function setupMocks({
   usageStatus = null as UsageStatus | null,

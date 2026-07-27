@@ -8,7 +8,7 @@ import JoinGroupDialog from '../JoinGroupDialog';
 // ---------------------------------------------------------------------------
 // Mock Dialog to render children inline (bug #150 / #301 workaround)
 // ---------------------------------------------------------------------------
-jest.mock('@/components/core/Dialog', () => ({
+jest.mock('@/core/components/Dialog', () => ({
   __esModule: true,
   default: ({ open, title, children, onClose }: any) =>
     open ? (
@@ -32,6 +32,12 @@ jest.mock('@/features/user-management', () => ({
   useInvitations: jest.fn(),
   useUser: jest.fn(),
 }));
+
+// These components import their hooks directly (importing the domain barrel
+// from inside the domain would be a circular import), so point those modules
+// at the barrel mock defined above.
+jest.mock('../../hooks/useInvitations', () => require('@/features/user-management'));
+jest.mock('../../../profiles/hooks/useUser', () => require('@/features/user-management'));
 
 jest.mock('react-router-dom', () => ({
   useLocation: jest.fn(),

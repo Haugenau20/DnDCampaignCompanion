@@ -8,7 +8,7 @@ import { Rumor, RumorStatus, SourceType } from '../../types';
 // ---------------------------------------------------------------------------
 // Mock Dialog to render inline (bug #150)
 // ---------------------------------------------------------------------------
-jest.mock('../../../../../components/core/Dialog', () => {
+jest.mock('../../../../../core/components/Dialog', () => {
   const MockDialog: React.FC<{
     open: boolean;
     onClose: () => void;
@@ -40,7 +40,7 @@ if (!crypto.randomUUID) {
 // Mock all context dependencies
 // ---------------------------------------------------------------------------
 
-jest.mock('../../../../../hooks/useNavigation', () => ({
+jest.mock('shared/hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -61,17 +61,17 @@ jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ getLocationById: jest.fn(() => undefined) })),
 }));
 
-jest.mock('../../../../../utils/attribution-utils', () => ({
+jest.mock('shared/utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
 
-jest.mock('../../../../../services/firebase', () => ({ default: {} }));
+jest.mock('core/services/firebase', () => ({ default: {} }));
 
 const mockNavigateToPage = jest.fn();
 const mockGetCurrentQueryParams = jest.fn(() => ({}));
 
-const { useNavigation } = require('../../../../../hooks/useNavigation');
+const { useNavigation } = require('shared/hooks/useNavigation');
 const { useRumors } = require('../../context/RumorContext');
 
 function setupMocks() {

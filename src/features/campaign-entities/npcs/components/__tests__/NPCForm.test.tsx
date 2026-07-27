@@ -31,7 +31,7 @@ jest.mock('@/features/user-management', () => ({
   useUser: jest.fn(),
 }));
 
-jest.mock('utils/user-utils', () => ({
+jest.mock('core/utils/user-utils', () => ({
   getUserName: jest.fn(() => 'TestUser'),
   getActiveCharacterName: jest.fn(() => null),
 }));
@@ -122,7 +122,7 @@ describe('NPCForm', () => {
     setupMocks();
   });
 
-  // NOTE: The Input component (src/components/core/Input.tsx) renders its label without
+  // NOTE: The Input component (src/core/components/Input.tsx) renders its label without
   // a `for` attribute linked to the input id. This means getByLabelText() will not work.
   // We use getByText() for labels and getAllByRole('textbox') / getAllByRole('combobox')
   // for inputs. This is a known testability limitation — see bug #251.

@@ -38,7 +38,7 @@ jest.mock("features/campaign-entities", () => ({
   ),
 }));
 
-jest.mock("../../../components/layout/Breadcrumb", () => ({
+jest.mock("shared/components/Breadcrumb", () => ({
   __esModule: true,
   default: (props: any) => (
     <nav data-testid="breadcrumb">
@@ -51,14 +51,14 @@ jest.mock("../../../components/layout/Breadcrumb", () => ({
   ),
 }));
 
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant }: any) => (
     <div data-testid={`typography-${variant ?? "default"}`}>{children}</div>
   ),
 }));
 
-jest.mock("../../../components/core/Button", () => ({
+jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick }: any) => (
     <button onClick={onClick}>{children}</button>

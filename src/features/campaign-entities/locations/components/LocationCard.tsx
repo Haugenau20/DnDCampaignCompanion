@@ -4,13 +4,13 @@ import { useNPCs } from '../../npcs/context/NPCContext';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useAuth } from 'features/user-management';
 import { useLocations } from '../context/LocationContext';
-import Typography from '../../../../components/core/Typography';
-import Card from '../../../../components/core/Card';
-import Button from '../../../../components/core/Button';
-import Input from '../../../../components/core/Input';
-import DeleteConfirmationDialog from '../../../../components/shared/DeleteConfirmationDialog';
-import { useNavigation } from '../../../../context/NavigationContext';
-import AttributionInfo from '../../../../components/shared/AttributionInfo';
+import Typography from '../../../../core/components/Typography';
+import Card from '../../../../core/components/Card';
+import Button from '../../../../core/components/Button';
+import Input from '../../../../core/components/Input';
+import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
+import { useNavigation } from 'shared/context/NavigationContext';
+import AttributionInfo from 'shared/components/AttributionInfo';
 import clsx from 'clsx';
 import { 
   MapPin, 

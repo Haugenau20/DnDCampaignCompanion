@@ -1,9 +1,10 @@
 // src/components/features/auth/UserProfileButton.tsx
 import React, { useState } from 'react';
-import { useAuth, useGroups } from 'features/user-management';
-import { useTheme } from 'themes/ThemeContext';
-import Button from 'components/core/Button';
-import Dialog from 'components/core/Dialog';
+import { useAuth } from '../hooks/useAuth';
+import { useGroups } from '../../groups/hooks/useGroups';
+import { useTheme } from 'core/themes/ThemeContext';
+import Button from 'core/components/Button';
+import Dialog from 'core/components/Dialog';
 import { LogIn, User, ShieldAlert, UserPlus } from 'lucide-react';
 import SignInForm from './SignInForm';
 import UserProfile from 'features/user-management/profiles/components/UserProfile';

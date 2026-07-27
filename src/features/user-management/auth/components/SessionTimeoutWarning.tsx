@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from 'features/user-management'
-import Button from 'components/core/Button';
-import Typography from 'components/core/Typography';
-import Dialog from 'components/core/Dialog';
+import { useAuth } from '../hooks/useAuth';
+import Button from 'core/components/Button';
+import Typography from 'core/components/Typography';
+import Dialog from 'core/components/Dialog';
 import { AlertCircle, RefreshCw, Save } from 'lucide-react';
 import { 
   INACTIVITY_TIMEOUT, 
   SESSION_WARNING_THRESHOLD 
-} from 'constants/time';
+} from 'core/constants/time';
 import clsx from 'clsx';
 
 // Types of session timeout warnings

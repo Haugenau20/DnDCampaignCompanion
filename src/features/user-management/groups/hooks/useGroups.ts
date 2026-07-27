@@ -1,7 +1,7 @@
 // src/context/firebase/hooks/useGroups.ts
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useFirebaseContext } from 'features/user-management/auth/context/FirebaseContext';
-import firebaseServices from 'services/firebase';
+import firebaseServices from 'core/services/firebase';
 
 export function useGroups() {
   const { 

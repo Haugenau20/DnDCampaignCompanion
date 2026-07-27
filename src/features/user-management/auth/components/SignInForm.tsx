@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { useAuth } from 'features/user-management';
-import Typography from 'components/core/Typography';
-import Input from 'components/core/Input';
-import Button from 'components/core/Button';
-import Card from 'components/core/Card';
+import { useAuth } from '../hooks/useAuth';
+import Typography from 'core/components/Typography';
+import Input from 'core/components/Input';
+import Button from 'core/components/Button';
+import Card from 'core/components/Card';
 import { LogIn, AlertCircle, UserPlus, Save } from 'lucide-react';
 import RegistrationForm from './RegistrationForm';
 import clsx from 'clsx';

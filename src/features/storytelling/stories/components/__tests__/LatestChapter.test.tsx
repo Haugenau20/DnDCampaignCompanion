@@ -10,11 +10,11 @@ import LatestChapter from '../LatestChapter';
 
 const mockNavigateToPage = jest.fn();
 
-jest.mock('context/NavigationContext', () => ({
+jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
-const { useNavigation } = require('context/NavigationContext');
+const { useNavigation } = require('shared/context/NavigationContext');
 
 function setupMocks() {
   (useNavigation as jest.Mock).mockReturnValue({

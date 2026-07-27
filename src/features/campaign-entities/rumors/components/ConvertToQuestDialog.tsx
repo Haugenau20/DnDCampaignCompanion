@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { Rumor } from '../types';
 import type { Quest, QuestObjective } from '../../quests/types';
-import Dialog from '../../../../components/core/Dialog';
-import Typography from '../../../../components/core/Typography';
-import Input from '../../../../components/core/Input';
-import Button from '../../../../components/core/Button';
+import Dialog from '../../../../core/components/Dialog';
+import Typography from '../../../../core/components/Typography';
+import Input from '../../../../core/components/Input';
+import Button from '../../../../core/components/Button';
 import { X, MessageSquare, PlusCircle, AlertCircle } from 'lucide-react';
 
 interface ConvertToQuestDialogProps {

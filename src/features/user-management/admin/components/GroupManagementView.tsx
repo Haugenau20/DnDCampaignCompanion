@@ -1,12 +1,13 @@
 // src/components/features/auth/adminPanel/GroupManagementView.tsx
 import React, { useState } from 'react';
-import { useAuth, useGroups } from 'features/user-management'
-import Typography from 'components/core/Typography';
-import Input from 'components/core/Input';
-import Button from 'components/core/Button';
-import Card from 'components/core/Card';
-import Dialog from 'components/core/Dialog';
-import { formatDisplayDate } from 'utils/dateFormatter';
+import { useAuth } from '../../auth/hooks/useAuth';
+import { useGroups } from '../../groups/hooks/useGroups';
+import Typography from 'core/components/Typography';
+import Input from 'core/components/Input';
+import Button from 'core/components/Button';
+import Card from 'core/components/Card';
+import Dialog from 'core/components/Dialog';
+import { formatDisplayDate } from 'shared/utils/dateFormatter';
 import { 
   AlertCircle, 
   Users, 

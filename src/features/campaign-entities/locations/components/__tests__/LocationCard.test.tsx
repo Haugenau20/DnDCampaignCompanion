@@ -23,7 +23,7 @@ const mockCreatePath = jest.fn(
   (path: string, _p: unknown, query?: Record<string, string>) =>
     query ? `${path}?${new URLSearchParams(query).toString()}` : path
 );
-jest.mock('../../../../../context/NavigationContext', () => ({
+jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -39,11 +39,11 @@ jest.mock('@/features/user-management', () => ({
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
 }));
 
-jest.mock('../../../../../utils/attribution-utils', () => ({
+jest.mock('shared/utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
-jest.mock('../../../../../services/firebase', () => ({ default: {} }));
+jest.mock('core/services/firebase', () => ({ default: {} }));
 
 // ---------------------------------------------------------------------------
 // Hook setup helpers
@@ -51,7 +51,7 @@ jest.mock('../../../../../services/firebase', () => ({ default: {} }));
 
 const { useNPCs } = require('../../../npcs/context/NPCContext');
 const { useQuests } = require('../../../quests/context/QuestContext');
-const { useNavigation } = require('../../../../../context/NavigationContext');
+const { useNavigation } = require('shared/context/NavigationContext');
 const { useLocations } = require('../../context/LocationContext');
 const { useAuth } = require('@/features/user-management');
 

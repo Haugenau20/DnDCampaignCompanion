@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useInvitations, useUser } from 'features/user-management';
-import Typography from 'components/core/Typography';
-import Input from 'components/core/Input';
-import Button from 'components/core/Button';
-import Card from 'components/core/Card';
+import { useInvitations } from '../../groups/hooks/useInvitations';
+import { useUser } from '../../profiles/hooks/useUser';
+import Typography from 'core/components/Typography';
+import Input from 'core/components/Input';
+import Button from 'core/components/Button';
+import Card from 'core/components/Card';
 import { useLocation } from 'react-router-dom';
 import { LogIn, AlertCircle, UserPlus, Check, X, Loader2, Shield } from 'lucide-react';
 import clsx from 'clsx';
-import { validatePassword } from 'utils/password-validation';
+import { validatePassword } from 'shared/utils/password-validation';
 
 interface RegistrationFormProps {
   onSuccess?: () => void;

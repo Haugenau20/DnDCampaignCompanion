@@ -1,9 +1,9 @@
 // src/features/collaboration/entity-extraction/components/FloatingUsageIndicator.tsx
 import React, { useState } from "react";
-import { useNavigation } from "../../../../hooks/useNavigation";
+import { useNavigation } from "shared/hooks/useNavigation";
 import { useUsageContext } from "../context/UsageContext";
 import { UsageStatus, UsagePeriod } from "../types";
-import Typography from "../../../../components/core/Typography";
+import Typography from "../../../../core/components/Typography";
 
 interface UsageRingProps {
   /** Current usage status */

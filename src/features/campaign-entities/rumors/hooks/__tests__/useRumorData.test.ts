@@ -8,7 +8,7 @@ import { Rumor, RumorStatus, SourceType } from '../../types';
 // ---------------------------------------------------------------------------
 const mockGetData = jest.fn();
 
-jest.mock('../../../../../hooks/useFirebaseData', () => ({
+jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: jest.fn(),
 }));
 
@@ -18,7 +18,7 @@ jest.mock('@/features/user-management', () => ({
   useCampaigns: jest.fn(),
 }));
 
-const { useFirebaseData } = require('../../../../../hooks/useFirebaseData');
+const { useFirebaseData } = require('shared/hooks/useFirebaseData');
 const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 const makeRumor = (id: string, title: string): Rumor => ({

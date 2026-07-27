@@ -9,7 +9,7 @@ import { Rumor } from '../../types';
 // ---------------------------------------------------------------------------
 // Mock Dialog (bug #150)
 // ---------------------------------------------------------------------------
-jest.mock('../../../../../components/core/Dialog', () => ({
+jest.mock('../../../../../core/components/Dialog', () => ({
   __esModule: true,
   default: ({ open, title, children }: any) =>
     open ? (

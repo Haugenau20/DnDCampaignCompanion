@@ -1,6 +1,6 @@
 // src/features/collaboration/entity-extraction/services/entityMapper.ts
 import { ExtractedEntity, EntityType } from '../../notes/types';
-import { OpenAIEntityResponse } from 'services/openai/types';
+import { OpenAIEntityResponse } from 'core/services/openai/types';
 
 /**
  * Map OpenAI entity response to ExtractedEntity format

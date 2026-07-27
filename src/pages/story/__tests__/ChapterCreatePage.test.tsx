@@ -15,7 +15,7 @@ jest.mock("react-router-dom", () => ({
 // ---------------------------------------------------------------------------
 const mockNavigateToPage = jest.fn();
 
-jest.mock("../../../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 
@@ -49,7 +49,7 @@ jest.mock("@/features/user-management", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/layout/Breadcrumb", () => ({
+jest.mock("shared/components/Breadcrumb", () => ({
   __esModule: true,
   default: (props: any) => (
     <nav data-testid="breadcrumb">
@@ -62,7 +62,7 @@ jest.mock("../../../components/layout/Breadcrumb", () => ({
   ),
 }));
 
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant }: any) => (
     <div data-testid={`typography-${variant ?? "default"}`}>{children}</div>

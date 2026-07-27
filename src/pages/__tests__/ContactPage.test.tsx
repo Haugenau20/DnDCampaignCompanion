@@ -6,7 +6,7 @@ import ContactPage from "../ContactPage";
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../components/core/Typography", () => ({
+jest.mock("../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant, color }: any) => (
     <div
@@ -23,7 +23,7 @@ jest.mock("../../components/core/Typography", () => ({
   ),
 }));
 
-jest.mock("../../components/features/contact/ContactForm", () => ({
+jest.mock("shared/components/ContactForm", () => ({
   __esModule: true,
   default: () => <div data-testid="contact-form" />,
 }));

@@ -16,6 +16,11 @@ jest.mock('@/features/user-management', () => ({
   useUser: jest.fn(),
 }));
 
+// These components import their hooks directly (importing the domain barrel
+// from inside the domain would be a circular import), so point those modules
+// at the barrel mock defined above.
+jest.mock('../../hooks/useAuth', () => require('@/features/user-management'));
+
 const { useAuth, useInvitations, useUser } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------

@@ -30,12 +30,12 @@ jest.mock('features/storytelling/chapters/hooks/useChapterData', () => ({
   useChapterData: () => mockUseChapterData(),
 }));
 
-jest.mock('hooks/useFirebaseData', () => ({
+jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 
 // Mock Firebase services
-jest.mock('services/firebase', () => ({
+jest.mock('core/services/firebase', () => ({
   __esModule: true,
   default: {
     document: {
@@ -47,12 +47,12 @@ jest.mock('services/firebase', () => ({
 }));
 
 // Mock user utilities for proper testing
-jest.mock('utils/user-utils', () => ({
+jest.mock('core/utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('core/utils/user-utils');
 
 const StoryTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {
   const storyContext = useStory();
@@ -84,7 +84,7 @@ describe('StoryContext Bug Discovery Tests', () => {
     mockRefreshChapters = jest.fn();
 
     // Get mocked Firebase services
-    mockFirebaseServices = require('services/firebase').default;
+    mockFirebaseServices = require('core/services/firebase').default;
 
     // Setup authenticated state for bug testing
     mockUseAuth.mockReturnValue({
@@ -163,7 +163,7 @@ describe('StoryContext Bug Discovery Tests', () => {
       // createdByUsername/createdByCharacterName directly (a bare jest.fn() here
       // does not run the real attribution logic). Attribution correctness for
       // createDocument itself is covered by
-      // src/services/firebase/data/__tests__/DocumentService.test.ts.
+      // src/core/services/firebase/data/__tests__/DocumentService.test.ts.
       expect(mockFirebaseServices.document.createDocument).toHaveBeenCalledWith(
         'chapters',
         expect.objectContaining({

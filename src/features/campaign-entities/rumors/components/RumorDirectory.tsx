@@ -2,12 +2,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Rumor, RumorStatus, SourceType } from '../types';
 import RumorCard from './RumorCard';
-import Typography from '../../../../components/core/Typography';
-import Input from '../../../../components/core/Input';
-import Button from '../../../../components/core/Button';
-import Card from '../../../../components/core/Card';
+import Typography from '../../../../core/components/Typography';
+import Input from '../../../../core/components/Input';
+import Button from '../../../../core/components/Button';
+import Card from '../../../../core/components/Card';
 import RumorBatchActions from './RumorBatchActions';
-import { useNavigation } from '../../../../hooks/useNavigation';
+import { useNavigation } from 'shared/hooks/useNavigation';
 import clsx from 'clsx';
 import { 
   Search, 

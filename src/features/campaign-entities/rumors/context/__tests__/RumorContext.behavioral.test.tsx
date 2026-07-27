@@ -37,17 +37,17 @@ jest.mock('../../hooks/useRumorData', () => ({
   useRumorData: () => mockUseRumorData(),
 }));
 
-jest.mock('../../../../../hooks/useFirebaseData', () => ({
+jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 
 // Mock user utilities for proper testing
-jest.mock('../../../../../utils/user-utils', () => ({
+jest.mock('core/utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('../../../../../utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('core/utils/user-utils');
 
 // Test component that uses the Rumor context
 const RumorTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {

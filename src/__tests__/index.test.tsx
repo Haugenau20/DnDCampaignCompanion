@@ -49,7 +49,7 @@ jest.mock("firebase/app-check", () => ({
 // Mock App — simple stub
 // ---------------------------------------------------------------------------
 const MockApp = () => <div data-testid="app-stub" />;
-jest.mock("../App", () => ({
+jest.mock("app/App", () => ({
   __esModule: true,
   default: MockApp,
 }));
@@ -60,7 +60,7 @@ jest.mock("../App", () => ({
 const MockThemeProvider = ({ children }: { children: React.ReactNode }) => (
   <div data-testid="theme-provider">{children}</div>
 );
-jest.mock("../themes/ThemeContext", () => ({
+jest.mock("../core/themes/ThemeContext", () => ({
   ThemeProvider: MockThemeProvider,
   useTheme: () => ({ theme: "default", setTheme: jest.fn() }),
 }));
@@ -85,7 +85,7 @@ jest.mock("react-router-dom", () => ({
 const MockNavigationProvider = ({ children }: { children: React.ReactNode }) => (
   <div data-testid="navigation-provider">{children}</div>
 );
-jest.mock("../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   NavigationProvider: MockNavigationProvider,
   useNavigation: () => ({
     navigateToPage: jest.fn(),

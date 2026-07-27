@@ -2,10 +2,10 @@
 import React, { FC, ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider } from '../themes/ThemeContext';
+import { ThemeProvider } from '../core/themes/ThemeContext';
 import { FirebaseProvider } from '@/features/user-management/auth/context/FirebaseContext';
-import { NavigationProvider } from '../context/NavigationContext';
-import { SearchProvider } from '../context/SearchContext';
+import { NavigationProvider } from 'shared/context/NavigationContext';
+import { SearchProvider } from 'shared/context/SearchContext';
 import { NPCProvider } from 'features/campaign-entities';
 import { LocationProvider } from 'features/campaign-entities';
 import { StoryProvider } from '@/features/storytelling';

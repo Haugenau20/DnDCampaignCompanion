@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 import {
   ACTIVITY_UPDATE_THROTTLE,
   SESSION_CHECK_INTERVAL
-} from 'constants/time';
+} from 'core/constants/time';
 
 // Events to track for user activity
 const ACTIVITY_EVENTS = [

@@ -9,16 +9,16 @@ import PrivacyNotice from '../PrivacyNotice';
 // ---------------------------------------------------------------------------
 const mockNavigateToPage = jest.fn();
 
-jest.mock('@/hooks/useNavigation', () => ({
+jest.mock('@/shared/hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
-const { useNavigation } = require('@/hooks/useNavigation');
+const { useNavigation } = require('@/shared/hooks/useNavigation');
 
 // ---------------------------------------------------------------------------
 // Mock Button and Typography core components
 // ---------------------------------------------------------------------------
-jest.mock('@/components/core/Button', () => {
+jest.mock('@/core/components/Button', () => {
   const Button = ({ children, onClick, variant, size, startIcon, endIcon, ...rest }: any) => (
     <button onClick={onClick} {...rest}>
       {startIcon}
@@ -29,7 +29,7 @@ jest.mock('@/components/core/Button', () => {
   return Button;
 });
 
-jest.mock('@/components/core/Typography', () => {
+jest.mock('@/core/components/Typography', () => {
   const Typography = ({ children, variant, color, className }: any) => (
     <span className={className}>{children}</span>
   );

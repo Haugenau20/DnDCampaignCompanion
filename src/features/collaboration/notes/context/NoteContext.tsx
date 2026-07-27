@@ -1,9 +1,9 @@
 // src/features/collaboration/notes/context/NoteContext.tsx - Complete Fixed Version
 import React, { createContext, useContext, useCallback, useState, useEffect } from "react";
 import { Note, NoteContextValue, ExtractedEntity, EntityType } from "../types";
-import DocumentService from "../../../../services/firebase/data/DocumentService";
+import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns, useUser } from "features/user-management";
-import { buildCreationAttribution } from "shared/attribution";
+import { buildCreationAttribution } from "core/attribution";
 import { useNavigate } from 'react-router-dom';
 
 // Create the context with initial undefined value

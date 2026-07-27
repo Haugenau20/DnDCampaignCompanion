@@ -18,7 +18,7 @@ const mockNavigateToPage = jest.fn();
 const mockCreatePath = jest.fn((path: string, _p: unknown, query?: Record<string, string>) =>
   query ? `${path}?${new URLSearchParams(query).toString()}` : path
 );
-jest.mock('context/NavigationContext', () => ({
+jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -35,18 +35,18 @@ jest.mock('@/features/user-management', () => ({
 }));
 
 // AttributionInfo has its own firebase dependency — mock it at the module level
-jest.mock('utils/attribution-utils', () => ({
+jest.mock('shared/utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
-jest.mock('services/firebase', () => ({ default: {} }));
+jest.mock('core/services/firebase', () => ({ default: {} }));
 
 // ---------------------------------------------------------------------------
 // Hook setup helpers
 // ---------------------------------------------------------------------------
 
 const { useQuests } = require('../../../quests/context/QuestContext');
-const { useNavigation } = require('context/NavigationContext');
+const { useNavigation } = require('shared/context/NavigationContext');
 const { useNPCs } = require('features/campaign-entities/npcs/context/NPCContext');
 const { useAuth } = require('@/features/user-management');
 

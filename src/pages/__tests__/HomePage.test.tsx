@@ -44,9 +44,9 @@ jest.mock("features/campaign-entities", () => ({
 // ---------------------------------------------------------------------------
 // Service / utility mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../services/firebase", () => ({}));
+jest.mock("core/services/firebase", () => ({}));
 
-jest.mock("../../utils/attribution-utils", () => ({
+jest.mock("shared/utils/attribution-utils", () => ({
   determineAttributionActor: (_item: any, _map: any) => "Unknown",
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
@@ -54,7 +54,7 @@ jest.mock("../../utils/attribution-utils", () => ({
 // ---------------------------------------------------------------------------
 // Child component / layout mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../components/features/layouts/dashboard/DashboardLayout", () => ({
+jest.mock("pages/layouts/dashboard/DashboardLayout", () => ({
   __esModule: true,
   default: (props: any) => (
     <div
@@ -70,7 +70,7 @@ jest.mock("../../components/features/layouts/dashboard/DashboardLayout", () => (
   ),
 }));
 
-jest.mock("../../components/features/layouts/journal/JournalLayout", () => ({
+jest.mock("pages/layouts/journal/JournalLayout", () => ({
   __esModule: true,
   default: (props: any) => (
     <div
@@ -80,7 +80,7 @@ jest.mock("../../components/features/layouts/journal/JournalLayout", () => ({
   ),
 }));
 
-jest.mock("../../components/core/Button", () => ({
+jest.mock("../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick, startIcon }: any) => (
     <button
@@ -92,7 +92,7 @@ jest.mock("../../components/core/Button", () => ({
   ),
 }));
 
-jest.mock("../../components/features/layouts/common/hooks/useLayoutData", () => ({
+jest.mock("pages/layouts/common/hooks/useLayoutData", () => ({
   __esModule: true,
   default: (props: any) => ({
     loading:

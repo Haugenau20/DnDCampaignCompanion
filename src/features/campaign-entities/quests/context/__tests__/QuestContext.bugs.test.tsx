@@ -32,7 +32,7 @@ jest.mock('../../hooks/useQuestData', () => ({
   useQuestData: () => mockUseQuestData(),
 }));
 
-jest.mock('../../../../../hooks/useFirebaseData', () => ({
+jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 

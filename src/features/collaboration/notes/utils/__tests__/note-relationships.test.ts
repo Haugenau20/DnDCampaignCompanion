@@ -1,7 +1,7 @@
 // src/features/collaboration/notes/utils/__tests__/note-relationships.test.ts
 
 // Mock the firebase services module before importing the SUT.
-jest.mock('../../../../../services/firebase', () => ({
+jest.mock('core/services/firebase', () => ({
   __esModule: true,
   default: {
     document: {
@@ -17,7 +17,7 @@ import {
   unlinkNoteFromEntity,
   getEntitiesForNote,
 } from '../note-relationships';
-import firebaseServices from '../../../../../services/firebase';
+import firebaseServices from 'core/services/firebase';
 
 const mockedDocument = (firebaseServices as any).document as {
   getDocument: jest.Mock;

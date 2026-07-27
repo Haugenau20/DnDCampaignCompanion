@@ -27,8 +27,8 @@ Or maybe the autosave feature doing some unwanted stuff?
 12. Admin Panel:
     - Test if the creation of new groups and campaigns work
     - Right now the "groups" view only shows the current group. 
-    - Campaigns can be created. 
-    - groups cannot be created
+    - Campaigns can be created (but not deleted). 
+    - groups cannot be created (Firestore transactions require all reads to be executed before all writes.)
     - neither campaigns or groups can be edited.
     - campaigns cannot be deleted.
 

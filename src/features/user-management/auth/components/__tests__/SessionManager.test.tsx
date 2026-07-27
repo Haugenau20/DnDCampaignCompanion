@@ -31,16 +31,21 @@ jest.mock('@/features/user-management', () => ({
   useGroups: jest.fn(),
 }));
 
+// These components import their hooks directly (importing the domain barrel
+// from inside the domain would be a circular import), so point those modules
+// at the barrel mock defined above.
+jest.mock('../../../groups/hooks/useGroups', () => require('@/features/user-management'));
+
 const { useGroups } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------
 // Mock ThemeContext
 // ---------------------------------------------------------------------------
-jest.mock('@/themes/ThemeContext', () => ({
+jest.mock('@/core/themes/ThemeContext', () => ({
   useTheme: jest.fn(),
 }));
 
-const { useTheme } = require('@/themes/ThemeContext');
+const { useTheme } = require('@/core/themes/ThemeContext');
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -4,9 +4,9 @@
 @tailwind utilities;
 
 /* Import the theme system CSS */
-@import '../themes/css/variables.css';
-@import '../themes/css/components.css';
-@import '../themes/css/theme-effects.css';
+@import '../core/themes/css/variables.css';
+@import '../core/themes/css/components.css';
+@import '../core/themes/css/theme-effects.css';
 
 @layer base {
   html {

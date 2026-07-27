@@ -39,7 +39,7 @@ jest.mock('../../hooks/useLocationData', () => ({
   useLocationData: () => mockUseLocationData(),
 }));
 
-jest.mock('../../../../../hooks/useFirebaseData', () => ({
+jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 

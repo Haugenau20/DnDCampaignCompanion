@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { Quest } from '../types';
 import { useNPCs } from '../../npcs/context/NPCContext';
 import { useAuth } from 'features/user-management';
-import Typography from '../../../../components/core/Typography';
-import Card from '../../../../components/core/Card';
-import Button from '../../../../components/core/Button';
+import Typography from '../../../../core/components/Typography';
+import Card from '../../../../core/components/Card';
+import Button from '../../../../core/components/Button';
 import { useLocations } from '../../locations/context/LocationContext';
-import { useNavigation } from '../../../../context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 import { useQuests } from '../context/QuestContext';
-import DeleteConfirmationDialog from '../../../../components/shared/DeleteConfirmationDialog';
-import AttributionInfo from '../../../../components/shared/AttributionInfo'; // Import AttributionInfo
+import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
+import AttributionInfo from 'shared/components/AttributionInfo'; // Import AttributionInfo
 import clsx from 'clsx';
 import { 
   ChevronDown, 

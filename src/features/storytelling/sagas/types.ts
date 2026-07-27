@@ -1,5 +1,5 @@
 // src/features/storytelling/sagas/types.ts
-import { ContentAttribution } from 'types/common';
+import { ContentAttribution } from 'core/types/common';
 
 /**
  * Interface for the saga data structure

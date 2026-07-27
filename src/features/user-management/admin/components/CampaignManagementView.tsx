@@ -1,14 +1,16 @@
 // src/components/features/auth/adminPanel/CampaignManagementView.tsx
 
 import React, { useState, useEffect } from 'react';
-import { useCampaigns, useGroups, useAuth } from 'features/user-management'
-import Typography from 'components/core/Typography';
-import Input from 'components/core/Input';
-import Button from 'components/core/Button';
-import Card from 'components/core/Card';
-import Dialog from 'components/core/Dialog';
-import { Campaign } from 'types/user';
-import { formatDisplayDate } from 'utils/dateFormatter';
+import { useCampaigns } from '../../groups/hooks/useCampaigns';
+import { useGroups } from '../../groups/hooks/useGroups';
+import { useAuth } from '../../auth/hooks/useAuth';
+import Typography from 'core/components/Typography';
+import Input from 'core/components/Input';
+import Button from 'core/components/Button';
+import Card from 'core/components/Card';
+import Dialog from 'core/components/Dialog';
+import { Campaign } from 'core/types/user';
+import { formatDisplayDate } from 'shared/utils/dateFormatter';
 import { 
   Search, 
   BookOpen, 

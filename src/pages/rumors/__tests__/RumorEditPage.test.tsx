@@ -22,11 +22,11 @@ const mockNavigateToPage = jest.fn();
 
 // RumorEditPage imports useNavigation from '../../hooks/useNavigation'
 // which internally calls useNavigationContext from NavigationContext
-jest.mock("../../../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 
-jest.mock("../../../hooks/useNavigation", () => ({
+jest.mock("shared/hooks/useNavigation", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
   default: () => ({ navigateToPage: mockNavigateToPage }),
 }));
@@ -71,7 +71,7 @@ jest.mock("features/campaign-entities", () => ({
   ),
 }));
 
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, color, variant }: any) => (
     <div
@@ -88,14 +88,14 @@ jest.mock("../../../components/core/Typography", () => ({
   ),
 }));
 
-jest.mock("../../../components/core/Button", () => ({
+jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick }: any) => (
     <button onClick={onClick}>{children}</button>
   ),
 }));
 
-jest.mock("../../../components/core/Card", () => {
+jest.mock("../../../core/components/Card", () => {
   const Card = ({ children }: any) => <div data-testid="card">{children}</div>;
   Card.Content = ({ children }: any) => (
     <div data-testid="card-content">{children}</div>
