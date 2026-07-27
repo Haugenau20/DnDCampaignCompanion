@@ -1,4 +1,4 @@
-// src/types/user.ts
+// src/core/types/user.ts
 /**
  * Character name entry with optional campaign association
  */

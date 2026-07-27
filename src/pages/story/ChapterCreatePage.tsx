@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import Typography from '../../core/components/Typography';
 import { ChapterForm, useStory } from 'features/storytelling';
-import Breadcrumb from 'app/layout/Breadcrumb';
+import Breadcrumb from 'shared/components/Breadcrumb';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { useAuth } from 'features/user-management';
 import { BookPlus } from 'lucide-react';

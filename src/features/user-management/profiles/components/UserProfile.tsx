@@ -8,7 +8,7 @@ import Input from 'core/components/Input';
 import Button from 'core/components/Button';
 import Card from 'core/components/Card';
 import { Edit, Check, X, Loader2, AlertCircle, PlusCircle, Trash2, ChevronDown, Star, LogOut } from 'lucide-react';
-import { CharacterNameEntry } from 'shared/types/user';
+import { CharacterNameEntry } from 'core/types/user';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import Dialog from 'core/components/Dialog';
 import { useTheme } from 'core/themes/ThemeContext';

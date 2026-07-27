@@ -39,12 +39,12 @@ jest.mock('core/services/firebase/data/DocumentService', () => ({
 }));
 
 // Mock user utilities
-jest.mock('shared/utils/user-utils', () => ({
+jest.mock('core/utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('shared/utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('core/utils/user-utils');
 
 describe('NoteContext Behavioral Tests', () => {
   // Test component to access context

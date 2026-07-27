@@ -31,7 +31,7 @@ jest.mock('@/features/user-management', () => ({
   useUser: jest.fn(),
 }));
 
-jest.mock('shared/utils/user-utils', () => ({
+jest.mock('core/utils/user-utils', () => ({
   getUserName: jest.fn(() => 'TestUser'),
   getActiveCharacterName: jest.fn(() => null),
 }));

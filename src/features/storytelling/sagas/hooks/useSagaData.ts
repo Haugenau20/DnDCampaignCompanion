@@ -3,14 +3,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { SagaData, SagaContentInput } from '../types';
 import { useFirestore } from 'features/user-management';
 import { useAuth, useGroups, useCampaigns, useUser } from 'features/user-management';
-import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
+import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
 
 /**
  * Hook for managing saga data fetching and state with proper group/campaign context
  *
  * Owns all write-side attribution for the saga document (see bug #1203): callers
  * supply only the domain fields (`SagaContentInput`) and this hook computes
- * `created*` / `modified*` metadata via `shared/attribution`, never the page.
+ * `created*` / `modified*` metadata via `core/attribution`, never the page.
  * @returns Object containing saga data, loading state, error state, and refresh function
  */
 export const useSagaData = () => {

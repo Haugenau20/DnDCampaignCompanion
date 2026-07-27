@@ -1,7 +1,7 @@
 // src/utils/__tests__/search.test.ts
 
 import { fuzzySearch, extractMatches, processSearchResults, groupResultsByType } from '../search';
-import { SearchDocument, SearchResult } from '../../types/search';
+import { SearchDocument, SearchResult } from 'core/types/search';
 
 describe('search', () => {
   describe('fuzzySearch', () => {

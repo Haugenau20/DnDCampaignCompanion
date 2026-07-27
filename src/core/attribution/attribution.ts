@@ -1,4 +1,4 @@
-// src/shared/attribution/attribution.ts
+// src/core/attribution/attribution.ts
 
 // Bare baseUrl-style imports, not the "@/" alias: react-scripts' webpack config
 // honours tsconfig `baseUrl` but ignores `paths`, so "@/..." resolves under tsc

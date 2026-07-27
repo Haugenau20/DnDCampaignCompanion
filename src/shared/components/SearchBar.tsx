@@ -1,7 +1,7 @@
 // components/shared/SearchBar.tsx
 import React, { useState, useRef, useCallback } from 'react';
 import { useSearch } from '../hooks/useSearch';
-import { SearchResult, SearchResultType } from '../types/search';
+import { SearchResult, SearchResultType } from 'core/types/search';
 import Typography from 'core/components/Typography';
 import { useNavigation } from '../context/NavigationContext';
 import { clsx } from 'clsx';

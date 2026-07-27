@@ -5,7 +5,7 @@ import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser } from 'features/user-management';
 import firebaseServices from 'core/services/firebase';
-import { buildModificationAttribution } from 'shared/attribution';
+import { buildModificationAttribution } from 'core/attribution';
 
 interface StoryContextState {
   chapters: Chapter[];

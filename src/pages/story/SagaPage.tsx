@@ -2,7 +2,7 @@
 import React from 'react';
 import { BookViewer, useSagaData } from 'features/storytelling';
 import Typography from '../../core/components/Typography';
-import Breadcrumb from 'app/layout/Breadcrumb';
+import Breadcrumb from 'shared/components/Breadcrumb';
 import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
 import { Book, Edit, Loader2 } from 'lucide-react';

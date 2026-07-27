@@ -1,6 +1,6 @@
 // context/SearchContext.tsx
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
-import { SearchResult, SearchResultType, SearchDocument } from '../types/search';
+import { SearchResult, SearchResultType, SearchDocument } from 'core/types/search';
 import { SearchService } from 'core/services/search/SearchService';
 import { useChapterData } from 'features/storytelling';
 import type { Chapter } from 'features/storytelling';

@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import SearchBar from '../SearchBar';
-import { SearchResult } from '../../types/search';
+import { SearchResult } from 'core/types/search';
 
 // ---------------------------------------------------------------------------
 // Mock useSearch hook

@@ -11,7 +11,7 @@ import {
 import BaseFirebaseService from '../core/BaseFirebaseService';
 import ServiceRegistry from '../core/ServiceRegistry';
 import type UserService from '../user/UserService';
-import { Group } from 'shared/types/user';
+import { Group } from '../../../types/user';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
   /**

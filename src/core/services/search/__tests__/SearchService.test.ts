@@ -1,7 +1,7 @@
 // src/core/services/search/__tests__/SearchService.test.ts
 
 import { SearchService, SearchOptions } from '../SearchService';
-import { SearchDocument, SearchResultType } from 'shared/types/search';
+import { SearchDocument, SearchResultType } from '../../../types/search';
 
 /**
  * Tests for SearchService

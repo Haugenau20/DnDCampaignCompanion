@@ -3,7 +3,7 @@
 import React from "react";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { FirebaseProvider, useFirebaseContext } from "../FirebaseContext";
-import type { UserProfile, GroupUserProfile, Group, Campaign } from "@/shared/types/user";
+import type { UserProfile, GroupUserProfile, Group, Campaign } from "@/core/types/user";
 
 /**
  * FirebaseContext Behavioral Testing

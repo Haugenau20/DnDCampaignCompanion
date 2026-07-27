@@ -1,4 +1,4 @@
-// src/types/common.ts
+// src/core/types/common.ts
 
 /**
  * Standard attribution metadata for all content items

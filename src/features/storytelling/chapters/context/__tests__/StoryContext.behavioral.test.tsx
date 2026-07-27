@@ -52,12 +52,12 @@ jest.mock('core/services/firebase', () => ({
 }));
 
 // Mock user utilities for proper testing
-jest.mock('shared/utils/user-utils', () => ({
+jest.mock('core/utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('shared/utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('core/utils/user-utils');
 
 // Test component that uses the Story context
 const StoryTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {

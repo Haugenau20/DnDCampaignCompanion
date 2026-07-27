@@ -10,7 +10,7 @@ import {
   import BaseFirebaseService from '../core/BaseFirebaseService';
   import ServiceRegistry from '../core/ServiceRegistry';
   import type UserService from '../user/UserService';
-  import { Campaign } from 'shared/types/user';
+  import { Campaign } from '../../../types/user';
   
   /**
    * CampaignService manages campaign operations

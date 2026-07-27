@@ -1,4 +1,4 @@
-// src/utils/user-utils.ts
+// src/core/utils/user-utils.ts
 
 /**
  * Gets the user's display name based on active character or username

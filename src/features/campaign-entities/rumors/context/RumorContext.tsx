@@ -4,7 +4,7 @@ import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types';
 import { useRumorData } from '../hooks/useRumorData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useFirestore } from 'features/user-management';
-import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
+import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 

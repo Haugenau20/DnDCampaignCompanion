@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { BookViewer, SlidingChapters, useStory } from 'features/storytelling';
 import Typography from '../../core/components/Typography';
-import Breadcrumb from 'app/layout/Breadcrumb';
+import Breadcrumb from 'shared/components/Breadcrumb';
 import Card from '../../core/components/Card';
 import Button from '../../core/components/Button';
 import { useNavigation } from 'shared/context/NavigationContext';

@@ -9,7 +9,7 @@ import Input from 'core/components/Input';
 import Button from 'core/components/Button';
 import Card from 'core/components/Card';
 import Dialog from 'core/components/Dialog';
-import { Campaign } from 'shared/types/user';
+import { Campaign } from 'core/types/user';
 import { formatDisplayDate } from 'shared/utils/dateFormatter';
 import { 
   Search, 

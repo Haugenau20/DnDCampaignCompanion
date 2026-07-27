@@ -1,4 +1,4 @@
-// src/shared/attribution/__tests__/attribution.test.ts
+// src/core/attribution/__tests__/attribution.test.ts
 
 import { buildCreationAttribution, buildModificationAttribution } from "../attribution";
 

@@ -16,8 +16,8 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import BaseFirebaseService from '../core/BaseFirebaseService';
-import { ContentAttribution } from 'shared/types/common';
-import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
+import { ContentAttribution } from '../../../types/common';
+import { buildCreationAttribution, buildModificationAttribution } from '../../../attribution';
 
 /**
  * DocumentService provides generic CRUD operations for Firestore documents

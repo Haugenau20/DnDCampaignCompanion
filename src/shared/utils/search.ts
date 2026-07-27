@@ -1,5 +1,5 @@
 // utils/search.ts
-import { SearchResult, SearchResultType, SearchDocument } from '../types/search';
+import { SearchResult, SearchResultType, SearchDocument } from 'core/types/search';
 
 /**
  * Performs fuzzy search on the provided text

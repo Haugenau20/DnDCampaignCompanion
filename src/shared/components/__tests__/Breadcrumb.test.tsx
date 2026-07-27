@@ -1,4 +1,4 @@
-// src/app/layout/__tests__/Breadcrumb.test.tsx
+// src/shared/components/__tests__/Breadcrumb.test.tsx
 // Behavioral tests for Breadcrumb component.
 
 import React from "react";

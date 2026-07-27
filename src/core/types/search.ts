@@ -1,4 +1,4 @@
-// types/search.ts
+// src/core/types/search.ts
 export type SearchResultType = 'story' | 'quest' | 'npc' | 'location' | 'rumors';
 
 export interface SearchResult {

@@ -1,4 +1,4 @@
-// src/utils/__tests__/user-utils.test.ts
+// src/core/utils/__tests__/user-utils.test.ts
 
 import { 
   getUserDisplayName, 

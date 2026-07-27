@@ -38,7 +38,7 @@ jest.mock("features/campaign-entities", () => ({
   ),
 }));
 
-jest.mock("app/layout/Breadcrumb", () => ({
+jest.mock("shared/components/Breadcrumb", () => ({
   __esModule: true,
   default: (props: any) => (
     <nav data-testid="breadcrumb">

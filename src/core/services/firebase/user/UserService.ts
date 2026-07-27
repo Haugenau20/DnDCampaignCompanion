@@ -11,7 +11,7 @@ import {
     UserProfile,
     GroupUserProfile,
     UsernameValidationResult
-  } from 'shared/types/user';
+  } from '../../../types/user';
   
   /**
    * UserService handles user profile operations, both global and group-specific
