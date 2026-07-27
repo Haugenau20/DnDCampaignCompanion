@@ -4,7 +4,7 @@ import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
 import { NPCDirectory, useNPCData, NPC } from 'features/campaign-entities';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
-import { useNavigation } from '../../context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 import { Plus, Users, Loader2, AlertCircle } from 'lucide-react';
 
 const NPCsPage: React.FC = () => {

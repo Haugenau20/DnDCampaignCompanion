@@ -2,7 +2,7 @@
 import { useCallback, useMemo } from 'react';
 import { useFirebaseContext } from 'features/user-management/auth/context/FirebaseContext';
 import firebaseServices from 'core/services/firebase';
-import { Campaign } from 'types/user';
+import { Campaign } from 'shared/types/user';
 
 export function useCampaigns() {
   const { 

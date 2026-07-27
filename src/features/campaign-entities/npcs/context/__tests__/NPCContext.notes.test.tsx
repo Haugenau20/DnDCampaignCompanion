@@ -31,7 +31,7 @@ jest.mock('features/campaign-entities/npcs/hooks/useNPCData', () => ({
   useNPCData: () => mockUseNPCData(),
 }));
 
-jest.mock('hooks/useFirebaseData', () => ({
+jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 

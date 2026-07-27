@@ -52,7 +52,7 @@ jest.mock('../../context/RumorContext', () => ({
   useRumors: jest.fn(),
 }));
 
-jest.mock('../../../../../hooks/useNavigation', () => ({
+jest.mock('shared/hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -64,7 +64,7 @@ jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(),
 }));
 
-jest.mock('../../../../../utils/attribution-utils', () => ({
+jest.mock('shared/utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
@@ -73,7 +73,7 @@ jest.mock('core/services/firebase', () => ({ default: {} }));
 
 const { useAuth } = require('@/features/user-management');
 const { useRumors } = require('../../context/RumorContext');
-const { useNavigation } = require('../../../../../hooks/useNavigation');
+const { useNavigation } = require('shared/hooks/useNavigation');
 const { useNPCs } = require('../../../npcs/context/NPCContext');
 const { useLocations } = require('../../../locations/context/LocationContext');
 

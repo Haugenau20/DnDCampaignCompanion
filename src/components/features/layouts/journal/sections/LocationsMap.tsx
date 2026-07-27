@@ -1,6 +1,6 @@
 // components/features/layouts/journal/sections/LocationsMap.tsx
 import React from 'react';
-import { useNavigation } from '../../../../../context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 import type { Location } from 'features/campaign-entities';
 import { Map, MapPin } from 'lucide-react';
 import clsx from 'clsx';

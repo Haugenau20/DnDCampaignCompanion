@@ -2,7 +2,7 @@
 import React from 'react';
 import Typography from 'core/components/Typography';
 import Card from 'core/components/Card';
-import { useNavigation } from '../../../../../context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 import { Users, Map, Scroll, BookOpen, MessageSquare, List } from 'lucide-react';
 import clsx from 'clsx';
 import { NPC } from 'features/campaign-entities';

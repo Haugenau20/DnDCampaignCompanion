@@ -1,8 +1,8 @@
 // components/layout/Header.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { SearchBar } from '../shared/SearchBar';
-import ThemeSelector from '../shared/ThemeSelector';
+import { SearchBar } from 'shared/components/SearchBar';
+import ThemeSelector from 'shared/components/ThemeSelector';
 import { useNavigate } from 'react-router-dom';
 import {
   useAuth,
@@ -14,7 +14,7 @@ import {
   SignInForm
 } from 'features/user-management';
 import { Menu, X, LogOut, ShieldAlert, UserPlus, User, Book, ChevronDown, Users, LogIn } from 'lucide-react';
-import ContextSwitcher from '../shared/ContextSwitcher';
+import ContextSwitcher from 'shared/components/ContextSwitcher';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import Dialog from 'core/components/Dialog';

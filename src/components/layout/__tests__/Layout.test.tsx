@@ -30,7 +30,7 @@ jest.mock("features/collaboration", () => ({
   FloatingUsageIndicator: () => <div data-testid="floating-usage" />,
 }));
 
-jest.mock("../../shared/GlobalActionButton", () => ({
+jest.mock("shared/components/GlobalActionButton", () => ({
   __esModule: true,
   default: () => <div data-testid="global-action" />,
 }));

@@ -10,11 +10,11 @@ import { Location } from '../../types';
 // ---------------------------------------------------------------------------
 
 // LocationDirectory uses useFirebaseData for real-time updates
-jest.mock('../../../../../hooks/useFirebaseData', () => ({
+jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: jest.fn(() => ({ data: [] })),
 }));
 
-jest.mock('../../../../../context/NavigationContext', () => ({
+jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -39,15 +39,15 @@ jest.mock('@/features/user-management', () => ({
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
 }));
 
-jest.mock('../../../../../utils/attribution-utils', () => ({
+jest.mock('shared/utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
 jest.mock('core/services/firebase', () => ({ default: {} }));
 
-const { useNavigation } = require('../../../../../context/NavigationContext');
+const { useNavigation } = require('shared/context/NavigationContext');
 const { useLocations } = require('../../context/LocationContext');
-const { useFirebaseData } = require('../../../../../hooks/useFirebaseData');
+const { useFirebaseData } = require('shared/hooks/useFirebaseData');
 
 function setupMocks(locations: Location[] = []) {
   (useFirebaseData as jest.Mock).mockReturnValue({ data: [] });

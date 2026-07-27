@@ -52,7 +52,7 @@ jest.mock("features/campaign-entities", () => ({
 const mockNavigateToPage = jest.fn();
 const mockGetCurrentQueryParams = jest.fn(() => ({ highlight: undefined }));
 
-jest.mock("../../../hooks/useNavigation", () => ({
+jest.mock("shared/hooks/useNavigation", () => ({
   useNavigation: () => ({
     navigateToPage: mockNavigateToPage,
     getCurrentQueryParams: mockGetCurrentQueryParams,

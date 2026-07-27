@@ -8,7 +8,7 @@ import Card from 'core/components/Card';
 import { useLocation } from 'react-router-dom';
 import { LogIn, AlertCircle, UserPlus, Check, X, Loader2, Shield } from 'lucide-react';
 import clsx from 'clsx';
-import { validatePassword } from 'utils/password-validation';
+import { validatePassword } from 'shared/utils/password-validation';
 
 interface RegistrationFormProps {
   onSuccess?: () => void;

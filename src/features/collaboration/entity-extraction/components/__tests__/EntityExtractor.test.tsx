@@ -40,7 +40,7 @@ jest.mock('../../../notes/context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
 
-jest.mock('../../../../../hooks/useNavigation', () => ({
+jest.mock('shared/hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -64,7 +64,7 @@ jest.mock('@/features/user-management', () => ({
 
 const { useEntityExtractor } = require('../../hooks/useEntityExtractor');
 const { useNotes } = require('../../../notes/context/NoteContext');
-const { useNavigation } = require('../../../../../hooks/useNavigation');
+const { useNavigation } = require('shared/hooks/useNavigation');
 
 // Grab the DocumentService mock instance for per-test configuration
 const DocumentService = require('core/services/firebase/data/DocumentService').default;

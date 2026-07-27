@@ -7,7 +7,7 @@ import Button from '../../core/components/Button';
 import { QuestStatus, QuestCard } from 'features/campaign-entities';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 import { useQuests } from 'features/campaign-entities';
-import { useNavigation } from '../../hooks/useNavigation';
+import { useNavigation } from 'shared/hooks/useNavigation';
 import clsx from 'clsx';
 import { 
   Scroll, 

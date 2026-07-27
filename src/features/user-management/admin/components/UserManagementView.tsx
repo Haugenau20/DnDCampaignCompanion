@@ -7,7 +7,7 @@ import Typography from 'core/components/Typography';
 import Input from 'core/components/Input';
 import Button from 'core/components/Button';
 import Dialog from 'core/components/Dialog';
-import { formatDisplayDate } from 'utils/dateFormatter';
+import { formatDisplayDate } from 'shared/utils/dateFormatter';
 import { 
   Search, 
   Users, 

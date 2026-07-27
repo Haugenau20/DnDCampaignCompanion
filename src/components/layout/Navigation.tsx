@@ -1,6 +1,6 @@
 // components/layout/Navigation.tsx
 import React from 'react';
-import { useNavigation } from '../../hooks/useNavigation';
+import { useNavigation } from 'shared/hooks/useNavigation';
 import Typography from 'core/components/Typography';
 import { Book, Scroll, Users, MapPin, MessageSquare, StickyNote } from 'lucide-react';
 import { clsx } from 'clsx';

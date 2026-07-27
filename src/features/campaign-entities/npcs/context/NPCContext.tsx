@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { NPC, NPCContextValue, NPCRelationship, NPCNote } from '../types';
 import { useNPCData } from '../hooks/useNPCData';
-import { useFirebaseData } from '../../../../hooks/useFirebaseData';
+import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useGroups, useCampaigns, useAuth, useUser } from 'features/user-management';
 
 const NPCContext = createContext<NPCContextValue | undefined>(undefined);

@@ -7,7 +7,7 @@ import Input from '../../../../core/components/Input';
 import Button from '../../../../core/components/Button';
 import Card from '../../../../core/components/Card';
 import RumorBatchActions from './RumorBatchActions';
-import { useNavigation } from '../../../../hooks/useNavigation';
+import { useNavigation } from 'shared/hooks/useNavigation';
 import clsx from 'clsx';
 import { 
   Search, 

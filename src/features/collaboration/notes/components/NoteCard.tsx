@@ -4,7 +4,7 @@ import { Note } from "../types";
 import Typography from "../../../../core/components/Typography";
 import Card from "../../../../core/components/Card";
 import Button from "../../../../core/components/Button";
-import { useNavigation } from "../../../../hooks/useNavigation";
+import { useNavigation } from "shared/hooks/useNavigation";
 import { Calendar, Tag } from 'lucide-react';
 
 interface NoteCardProps {

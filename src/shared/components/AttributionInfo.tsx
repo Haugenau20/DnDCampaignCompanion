@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Typography from 'core/components/Typography';
 import { Scroll, Edit } from 'lucide-react';
-import { determineAttributionActor, fetchAttributionUsernames } from '../../utils/attribution-utils';
+import { determineAttributionActor, fetchAttributionUsernames } from '../utils/attribution-utils';
 import { useFirebase } from 'features/user-management';
 import firebaseServices from 'core/services/firebase';
 

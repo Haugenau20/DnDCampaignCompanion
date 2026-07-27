@@ -29,14 +29,14 @@ jest.mock("react-router-dom", () => {
 // Each stub renders children and exposes a data-testid so we can assert
 // the provider is present in the tree.
 // ---------------------------------------------------------------------------
-jest.mock("../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   NavigationProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="navigation-provider">{children}</div>
   ),
   useNavigation: () => ({}),
 }));
 
-jest.mock("../context/SearchContext", () => ({
+jest.mock("shared/context/SearchContext", () => ({
   SearchProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="search-provider">{children}</div>
   ),
@@ -92,7 +92,7 @@ jest.mock("features/collaboration", () => ({
 // ---------------------------------------------------------------------------
 // Mock non-provider components used inside App
 // ---------------------------------------------------------------------------
-jest.mock("../components/shared/ErrorBoundary", () => ({
+jest.mock("shared/components/ErrorBoundary", () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="error-boundary">{children}</div>

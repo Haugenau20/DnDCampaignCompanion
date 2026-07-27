@@ -4,7 +4,7 @@ import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import { RumorStatus } from '../types';
 import { useRumors } from '../context/RumorContext';
-import DeleteConfirmationDialog from '../../../../components/shared/DeleteConfirmationDialog';
+import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import { 
   CheckCircle, 
   HelpCircle, 

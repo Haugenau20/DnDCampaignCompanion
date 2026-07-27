@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useCallback } from 'react';
 import { Quest, QuestStatus } from '../types';
 import { useQuestData } from '../hooks/useQuestData';
-import { useFirebaseData } from '../../../../hooks/useFirebaseData';
+import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 
 // Context interface

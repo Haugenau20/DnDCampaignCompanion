@@ -8,7 +8,7 @@ import PrivacyPolicyPage from "../PrivacyPolicyPage";
 // ---------------------------------------------------------------------------
 const mockNavigateToPage = jest.fn();
 
-jest.mock("../../hooks/useNavigation", () => ({
+jest.mock("shared/hooks/useNavigation", () => ({
   __esModule: true,
   default: () => ({ navigateToPage: mockNavigateToPage }),
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
@@ -21,7 +21,7 @@ jest.mock("react-router-dom", () => ({
 }));
 
 // useNavigation also uses NavigationContext underneath
-jest.mock("../../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage, state: {} }),
 }));
 

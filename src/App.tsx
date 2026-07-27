@@ -1,8 +1,8 @@
 // src/App.tsx
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { NavigationProvider } from './context/NavigationContext';
-import { SearchProvider } from './context/SearchContext';
+import { NavigationProvider } from 'shared/context/NavigationContext';
+import { SearchProvider } from 'shared/context/SearchContext';
 import { NPCProvider, LocationProvider, RumorProvider } from 'features/campaign-entities';
 import { StoryProvider } from 'features/storytelling';
 import {
@@ -13,7 +13,7 @@ import {
 } from 'features/user-management';
 import { QuestProvider } from './features/campaign-entities';
 import { NoteProvider, UsageProvider } from 'features/collaboration';
-import ErrorBoundary from './components/shared/ErrorBoundary';
+import ErrorBoundary from 'shared/components/ErrorBoundary';
 import Layout from './components/layout/Layout';
 
 // Import pages

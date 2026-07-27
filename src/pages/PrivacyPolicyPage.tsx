@@ -7,7 +7,7 @@ import {
   INACTIVITY_TIMEOUT_TEXT, 
   REMEMBER_ME_TEXT 
 } from '../core/constants/time';
-import { useNavigation } from '../hooks/useNavigation';
+import { useNavigation } from 'shared/hooks/useNavigation';
 
 /**
  * Privacy Policy page component

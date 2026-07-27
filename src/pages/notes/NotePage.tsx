@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Typography from "../../core/components/Typography";
 import Button from "../../core/components/Button";
-import { useNavigation } from "../../hooks/useNavigation";
+import { useNavigation } from "shared/hooks/useNavigation";
 import { useNotes, NoteEditor, NoteEditorRef, NoteReferences, PotentialReference, Note, EntityExtractor, FloatingUsageIndicator } from "features/collaboration";
 import { useCampaigns } from "features/user-management";
 import { ArrowLeft, Trash2, AlertCircle, ExternalLink } from 'lucide-react';

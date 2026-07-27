@@ -7,7 +7,7 @@ import { Activity } from '../../../../../../pages/HomePage';
 // Mocks
 // ---------------------------------------------------------------------------
 
-jest.mock('../../../../../../context/NavigationContext', () => ({
+jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -22,7 +22,7 @@ jest.mock('../../utils/contentTypeUtils', () => ({
   getContentTypeLabel: jest.fn((type: string) => `label:${type}`),
 }));
 
-const { useNavigation } = require('../../../../../../context/NavigationContext');
+const { useNavigation } = require('shared/context/NavigationContext');
 const { getRelativeTime, formatJournalDate } = require('../../utils/dateFormatter');
 const { getContentTypeLabel } = require('../../utils/contentTypeUtils');
 

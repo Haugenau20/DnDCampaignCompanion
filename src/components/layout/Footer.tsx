@@ -1,7 +1,7 @@
 // components/layout/Footer.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useNavigation } from '../../hooks/useNavigation';
+import { useNavigation } from 'shared/hooks/useNavigation';
 
 const Footer: React.FC = () => {
   const { navigateToPage } = useNavigation();

@@ -6,7 +6,7 @@ import NoteCard from "./NoteCard";
 import { useNotes } from "../context/NoteContext";
 import { useCampaigns } from "features/user-management";
 import Button from "../../../../core/components/Button";
-import { useNavigation } from "../../../../hooks/useNavigation";
+import { useNavigation } from "shared/hooks/useNavigation";
 import { Loader2, AlertCircle, Book, Plus, Users } from 'lucide-react';
 
 /**

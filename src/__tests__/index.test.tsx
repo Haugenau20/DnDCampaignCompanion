@@ -85,7 +85,7 @@ jest.mock("react-router-dom", () => ({
 const MockNavigationProvider = ({ children }: { children: React.ReactNode }) => (
   <div data-testid="navigation-provider">{children}</div>
 );
-jest.mock("../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   NavigationProvider: MockNavigationProvider,
   useNavigation: () => ({
     navigateToPage: jest.fn(),

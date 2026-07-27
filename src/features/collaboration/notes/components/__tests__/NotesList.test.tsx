@@ -20,13 +20,13 @@ jest.mock('@/features/user-management', () => ({
   useCampaigns: jest.fn(),
 }));
 
-jest.mock('../../../../../hooks/useNavigation', () => ({
+jest.mock('shared/hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
 const { useNotes } = require('../../context/NoteContext');
 const { useCampaigns } = require('@/features/user-management');
-const { useNavigation } = require('../../../../../hooks/useNavigation');
+const { useNavigation } = require('shared/hooks/useNavigation');
 
 function setupMocks({
   notes = [] as Note[],

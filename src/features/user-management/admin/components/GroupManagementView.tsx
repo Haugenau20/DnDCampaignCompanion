@@ -7,7 +7,7 @@ import Input from 'core/components/Input';
 import Button from 'core/components/Button';
 import Card from 'core/components/Card';
 import Dialog from 'core/components/Dialog';
-import { formatDisplayDate } from 'utils/dateFormatter';
+import { formatDisplayDate } from 'shared/utils/dateFormatter';
 import { 
   AlertCircle, 
   Users, 

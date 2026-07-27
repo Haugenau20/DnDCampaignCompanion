@@ -6,7 +6,7 @@ import { useAuth } from 'features/user-management';
 import { useLocations, LocationDirectory } from 'features/campaign-entities';
 import { Map, MapPin, Eye, EyeOff, Plus } from 'lucide-react';
 import Button from '../../core/components/Button';
-import { useNavigation } from '../../context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 
 const LocationsPage: React.FC = () => {
   // Auth state

@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import SearchBar from '../SearchBar';
-import { SearchResult } from '../../../types/search';
+import { SearchResult } from '../../types/search';
 
 // ---------------------------------------------------------------------------
 // Mock useSearch hook
@@ -11,11 +11,11 @@ import { SearchResult } from '../../../types/search';
 const mockOnSearch = jest.fn();
 const mockOnClearSearch = jest.fn();
 
-jest.mock('../../../hooks/useSearch', () => ({
+jest.mock('../../hooks/useSearch', () => ({
   useSearch: jest.fn(),
 }));
 
-const { useSearch } = require('../../../hooks/useSearch');
+const { useSearch } = require('../../hooks/useSearch');
 
 // ---------------------------------------------------------------------------
 // Mock NavigationContext
@@ -32,11 +32,11 @@ const mockCreatePath = jest.fn((path: string, _params?: object, query?: object) 
   return path;
 });
 
-jest.mock('../../../context/NavigationContext', () => ({
+jest.mock('../../context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
-const { useNavigation } = require('../../../context/NavigationContext');
+const { useNavigation } = require('../../context/NavigationContext');
 
 // ---------------------------------------------------------------------------
 // Helpers

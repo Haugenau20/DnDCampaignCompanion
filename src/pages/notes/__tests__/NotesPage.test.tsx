@@ -32,7 +32,7 @@ const mockCreateNote = jest.fn().mockResolvedValue("new-note-id");
 
 const mockNavigateToPage = jest.fn();
 
-jest.mock("../../../hooks/useNavigation", () => ({
+jest.mock("shared/hooks/useNavigation", () => ({
   useNavigation: () => ({
     navigateToPage: mockNavigateToPage,
     state: {},

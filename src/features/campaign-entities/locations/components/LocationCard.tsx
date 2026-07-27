@@ -8,9 +8,9 @@ import Typography from '../../../../core/components/Typography';
 import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Input from '../../../../core/components/Input';
-import DeleteConfirmationDialog from '../../../../components/shared/DeleteConfirmationDialog';
-import { useNavigation } from '../../../../context/NavigationContext';
-import AttributionInfo from '../../../../components/shared/AttributionInfo';
+import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
+import { useNavigation } from 'shared/context/NavigationContext';
+import AttributionInfo from 'shared/components/AttributionInfo';
 import clsx from 'clsx';
 import { 
   MapPin, 

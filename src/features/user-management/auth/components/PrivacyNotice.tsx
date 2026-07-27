@@ -3,7 +3,7 @@ import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import { X, ExternalLink } from 'lucide-react';
 import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from 'core/constants/time';
-import { useNavigation } from 'hooks/useNavigation';
+import { useNavigation } from 'shared/hooks/useNavigation';
 import clsx from 'clsx';
 
 /**

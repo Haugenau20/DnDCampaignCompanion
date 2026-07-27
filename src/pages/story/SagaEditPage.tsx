@@ -5,12 +5,12 @@ import Input from '../../core/components/Input';
 import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
 import Breadcrumb from '../../components/layout/Breadcrumb';
-import { useNavigation } from '../../context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 import { useAuth } from 'features/user-management';
 import { useSagaData, useStory } from 'features/storytelling';
 import type { SagaContentInput } from 'features/storytelling';
 import { Book, Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
-import { exportChaptersAsText } from '../../utils/export-utils';
+import { exportChaptersAsText } from 'shared/utils/export-utils';
 import Dialog from '../../core/components/Dialog';
 
 // Constants for default content if none exists

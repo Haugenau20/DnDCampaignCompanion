@@ -7,7 +7,7 @@ import type { Chapter } from 'features/storytelling';
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
-jest.mock('../../../../../../context/NavigationContext', () => ({
+jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -25,7 +25,7 @@ jest.mock('core/components/Button', () => ({
   ),
 }));
 
-const { useNavigation } = require('../../../../../../context/NavigationContext');
+const { useNavigation } = require('shared/context/NavigationContext');
 const mockNavigateToPage = jest.fn();
 
 function setupMocks() {

@@ -4,7 +4,7 @@ import { EntityType } from "../types";
 import Typography from "../../../../core/components/Typography";
 import Card from "../../../../core/components/Card";
 import Button from "../../../../core/components/Button";
-import { useNavigation } from "../../../../hooks/useNavigation";
+import { useNavigation } from "shared/hooks/useNavigation";
 import { useNotes } from "../context/NoteContext";
 import { useCampaigns } from "features/user-management";
 import DocumentService from "core/services/firebase/data/DocumentService";

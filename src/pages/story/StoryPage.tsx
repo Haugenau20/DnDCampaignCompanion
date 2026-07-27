@@ -6,7 +6,7 @@ import Typography from '../../core/components/Typography';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import Card from '../../core/components/Card';
 import Button from '../../core/components/Button';
-import { useNavigation } from '../../context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 import { useAuth } from 'features/user-management';
 import { Book, Menu, Loader2, Edit } from 'lucide-react';
 

@@ -13,7 +13,7 @@ const mockNavigateToPage = jest.fn();
 const mockGetNoteById = jest.fn();
 const mockGetCollection = jest.fn();
 
-jest.mock('../../../../../hooks/useNavigation', () => ({
+jest.mock('shared/hooks/useNavigation', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -39,7 +39,7 @@ jest.mock('core/services/firebase/data/DocumentService', () => {
   };
 });
 
-const { useNavigation } = require('../../../../../hooks/useNavigation');
+const { useNavigation } = require('shared/hooks/useNavigation');
 const { useNotes } = require('../../context/NoteContext');
 const { useCampaigns } = require('@/features/user-management');
 const DocumentServiceModule = require('core/services/firebase/data/DocumentService');

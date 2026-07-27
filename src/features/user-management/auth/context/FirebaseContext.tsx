@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import firebaseServices from 'core/services/firebase';
-import { UserProfile, GroupUserProfile, Group, Campaign } from 'types/user';
+import { UserProfile, GroupUserProfile, Group, Campaign } from 'shared/types/user';
 
 // Define a custom event for auth state changes
 export const AUTH_STATE_CHANGED_EVENT = 'auth-state-changed';

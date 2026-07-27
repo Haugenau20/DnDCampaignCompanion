@@ -1,7 +1,7 @@
 // src/features/storytelling/chapters/hooks/useChapterData.ts
 import { useState, useEffect, useCallback } from 'react';
 import { Chapter } from '../types';
-import { useFirebaseData } from 'hooks/useFirebaseData';
+import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 
 /**

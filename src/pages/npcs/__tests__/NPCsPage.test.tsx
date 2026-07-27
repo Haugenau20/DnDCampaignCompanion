@@ -49,7 +49,7 @@ jest.mock("features/campaign-entities", () => ({
 
 const mockNavigateToPage = jest.fn();
 
-jest.mock("../../../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({
     navigateToPage: mockNavigateToPage,
     state: {},

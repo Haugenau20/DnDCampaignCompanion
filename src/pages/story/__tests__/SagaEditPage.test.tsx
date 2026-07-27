@@ -8,7 +8,7 @@ import SagaEditPage from "../SagaEditPage";
 // ---------------------------------------------------------------------------
 const mockNavigateToPage = jest.fn();
 
-jest.mock("../../../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 
@@ -52,7 +52,7 @@ jest.mock("features/storytelling", () => ({
 // Utility mock
 // ---------------------------------------------------------------------------
 const mockExportChaptersAsText = jest.fn();
-jest.mock("../../../utils/export-utils", () => ({
+jest.mock("shared/utils/export-utils", () => ({
   exportChaptersAsText: (chapters: any[]) => mockExportChaptersAsText(chapters),
 }));
 

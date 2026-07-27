@@ -46,7 +46,7 @@ jest.mock('../ConvertToQuestDialog', () => ({
     ) : null,
 }));
 
-jest.mock('../../../../../components/shared/DeleteConfirmationDialog', () => ({
+jest.mock('shared/components/DeleteConfirmationDialog', () => ({
   __esModule: true,
   default: ({ isOpen, onClose, onConfirm, itemName, message }: any) =>
     isOpen ? (

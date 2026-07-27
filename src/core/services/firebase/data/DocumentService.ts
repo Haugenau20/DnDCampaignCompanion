@@ -16,7 +16,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import BaseFirebaseService from '../core/BaseFirebaseService';
-import { ContentAttribution } from '../../../../types/common';
+import { ContentAttribution } from 'shared/types/common';
 import { buildCreationAttribution, buildModificationAttribution } from 'shared/attribution';
 
 /**

@@ -46,7 +46,7 @@ jest.mock("features/campaign-entities", () => ({
 // ---------------------------------------------------------------------------
 jest.mock("core/services/firebase", () => ({}));
 
-jest.mock("../../utils/attribution-utils", () => ({
+jest.mock("shared/utils/attribution-utils", () => ({
   determineAttributionActor: (_item: any, _map: any) => "Unknown",
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));

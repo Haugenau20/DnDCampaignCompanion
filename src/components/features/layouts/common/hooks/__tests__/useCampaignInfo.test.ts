@@ -13,7 +13,7 @@ jest.mock('@/features/user-management', () => ({
 }));
 
 // Mock the shared dateFormatter utility
-jest.mock('../../../../../../utils/dateFormatter', () => ({
+jest.mock('shared/utils/dateFormatter', () => ({
   formatDisplayDate: jest.fn(),
   convertFirestoreTimestamp: jest.fn(),
 }));
@@ -23,7 +23,7 @@ const { useGroups, useCampaigns } = require('@/features/user-management');
 const {
   formatDisplayDate,
   convertFirestoreTimestamp,
-} = require('../../../../../../utils/dateFormatter');
+} = require('shared/utils/dateFormatter');
 
 // ---------------------------------------------------------------------------
 // Test data builders

@@ -9,7 +9,7 @@ import Button from "../../../../core/components/Button";
 import Card from "../../../../core/components/Card";
 import EntityCard from "./EntityCard";
 import { useEntityExtractor } from "../hooks/useEntityExtractor";
-import { useNavigation } from "../../../../hooks/useNavigation";
+import { useNavigation } from "shared/hooks/useNavigation";
 import { Loader2, AlertCircle, Info, ExternalLink, Search } from 'lucide-react';
 import DocumentService from "core/services/firebase/data/DocumentService";
 

@@ -7,11 +7,11 @@ import type { Location } from 'features/campaign-entities';
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
-jest.mock('../../../../../../context/NavigationContext', () => ({
+jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
-const { useNavigation } = require('../../../../../../context/NavigationContext');
+const { useNavigation } = require('shared/context/NavigationContext');
 const mockNavigateToPage = jest.fn();
 
 function setupMocks() {

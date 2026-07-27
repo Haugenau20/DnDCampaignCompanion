@@ -4,7 +4,7 @@ import Header from './Header';
 import Footer from './Footer';
 import Navigation from './Navigation';
 import { FloatingUsageIndicator } from 'features/collaboration';
-import GlobalActionButton from '../shared/GlobalActionButton';
+import GlobalActionButton from 'shared/components/GlobalActionButton';
 
 interface LayoutProps {
   children: React.ReactNode;

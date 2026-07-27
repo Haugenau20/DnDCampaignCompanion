@@ -16,13 +16,13 @@ const { useFirebase } = require('@/features/user-management');
 // ---------------------------------------------------------------------------
 // Mock attribution-utils
 // ---------------------------------------------------------------------------
-jest.mock('../../../utils/attribution-utils', () => ({
+jest.mock('../../utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(),
   fetchAttributionUsernames: jest.fn(),
 }));
 
 const { determineAttributionActor, fetchAttributionUsernames } =
-  require('../../../utils/attribution-utils');
+  require('../../utils/attribution-utils');
 
 // ---------------------------------------------------------------------------
 // Mock firebase services

@@ -9,7 +9,7 @@ import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs
 // Mock all context dependencies used by NPCDirectory and its child NPCCard
 // ---------------------------------------------------------------------------
 
-jest.mock('context/NavigationContext', () => ({
+jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -27,7 +27,7 @@ jest.mock('@/features/user-management', () => ({
 }));
 
 // AttributionInfo dependencies
-jest.mock('utils/attribution-utils', () => ({
+jest.mock('shared/utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
@@ -44,7 +44,7 @@ const mockCreatePath = jest.fn(
 );
 const mockGetCurrentQueryParams = jest.fn(() => ({}));
 
-const { useNavigation } = require('context/NavigationContext');
+const { useNavigation } = require('shared/context/NavigationContext');
 const { useQuests } = require('../../../quests/context/QuestContext');
 const { useNPCs } = require('features/campaign-entities/npcs/context/NPCContext');
 const { useAuth } = require('@/features/user-management');

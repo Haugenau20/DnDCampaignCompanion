@@ -67,16 +67,16 @@ const {
 // ---------------------------------------------------------------------------
 // Mock shared components used inside Header
 // ---------------------------------------------------------------------------
-jest.mock("../../shared/SearchBar", () => ({
+jest.mock("shared/components/SearchBar", () => ({
   SearchBar: () => <div data-testid="search-bar" />,
 }));
 
-jest.mock("../../shared/ThemeSelector", () => ({
+jest.mock("shared/components/ThemeSelector", () => ({
   __esModule: true,
   default: () => <div data-testid="theme-selector" />,
 }));
 
-jest.mock("../../shared/ContextSwitcher", () => ({
+jest.mock("shared/components/ContextSwitcher", () => ({
   __esModule: true,
   default: () => <div data-testid="context-switcher" />,
 }));

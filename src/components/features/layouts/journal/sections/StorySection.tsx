@@ -1,6 +1,6 @@
 // components/features/layouts/journal/sections/StorySection.tsx
 import React from 'react';
-import { useNavigation } from '../../../../../context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 import type { Chapter } from 'features/storytelling';
 import { BookOpen, Bookmark } from 'lucide-react';
 import Button from 'core/components/Button';

@@ -14,7 +14,7 @@ const mockNavigateToPage = jest.fn();
 const mockCreateChapter = jest.fn();
 const mockUpdateChapter = jest.fn();
 
-jest.mock('context/NavigationContext', () => ({
+jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -26,7 +26,7 @@ jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
 }));
 
-const { useNavigation } = require('context/NavigationContext');
+const { useNavigation } = require('shared/context/NavigationContext');
 const { useStory } = require('features/storytelling/chapters/context/StoryContext');
 const { useAuth } = require('@/features/user-management');
 

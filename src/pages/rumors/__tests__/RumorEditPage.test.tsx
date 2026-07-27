@@ -22,11 +22,11 @@ const mockNavigateToPage = jest.fn();
 
 // RumorEditPage imports useNavigation from '../../hooks/useNavigation'
 // which internally calls useNavigationContext from NavigationContext
-jest.mock("../../../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 
-jest.mock("../../../hooks/useNavigation", () => ({
+jest.mock("shared/hooks/useNavigation", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
   default: () => ({ navigateToPage: mockNavigateToPage }),
 }));

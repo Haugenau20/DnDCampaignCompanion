@@ -1,6 +1,6 @@
 // components/features/layouts/common/hooks/useCampaignInfo.ts
 import { useGroups, useCampaigns } from 'features/user-management';
-import { formatDisplayDate, convertFirestoreTimestamp } from '../../../../../utils/dateFormatter';
+import { formatDisplayDate, convertFirestoreTimestamp } from 'shared/utils/dateFormatter';
 
 /**
  * Hook for retrieving and processing campaign information

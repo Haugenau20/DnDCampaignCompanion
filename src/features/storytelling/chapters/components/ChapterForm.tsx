@@ -6,7 +6,7 @@ import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import Input from 'core/components/Input';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
-import { useNavigation } from 'context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 import { useStory } from '../context/StoryContext';
 import { useAuth } from 'features/user-management';
 

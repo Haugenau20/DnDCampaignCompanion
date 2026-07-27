@@ -23,7 +23,7 @@ jest.mock("../../core/components/Typography", () => ({
   ),
 }));
 
-jest.mock("../../components/features/contact/ContactForm", () => ({
+jest.mock("shared/components/ContactForm", () => ({
   __esModule: true,
   default: () => <div data-testid="contact-form" />,
 }));

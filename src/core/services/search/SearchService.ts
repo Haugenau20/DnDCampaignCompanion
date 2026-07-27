@@ -1,5 +1,5 @@
 // src/core/services/search/SearchService.ts
-import { SearchResult, SearchResultType, SearchDocument } from '../../../types/search';
+import { SearchResult, SearchResultType, SearchDocument } from 'shared/types/search';
 import _ from 'lodash';
 
 /**

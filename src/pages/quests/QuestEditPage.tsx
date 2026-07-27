@@ -6,7 +6,7 @@ import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
 import { QuestEditForm, useQuests } from 'features/campaign-entities';
 import { useAuth, useGroups } from 'features/user-management';
-import { useNavigation } from '../../context/NavigationContext';
+import { useNavigation } from 'shared/context/NavigationContext';
 import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 
 const QuestEditPage: React.FC = () => {

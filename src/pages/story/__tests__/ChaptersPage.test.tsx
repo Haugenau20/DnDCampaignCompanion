@@ -15,7 +15,7 @@ jest.mock("react-router-dom", () => ({
 // ---------------------------------------------------------------------------
 const mockNavigateToPage = jest.fn();
 
-jest.mock("../../../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 

@@ -23,7 +23,7 @@ jest.mock("react-router-dom", () => ({
 // ---------------------------------------------------------------------------
 const mockNavigateToPage = jest.fn();
 
-jest.mock("../../../context/NavigationContext", () => ({
+jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 
@@ -73,7 +73,7 @@ jest.mock("@/features/user-management", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/shared/DeleteConfirmationDialog", () => ({
+jest.mock("shared/components/DeleteConfirmationDialog", () => ({
   __esModule: true,
   default: (props: any) => (
     <div data-testid="delete-dialog" data-open={String(props.isOpen)}>

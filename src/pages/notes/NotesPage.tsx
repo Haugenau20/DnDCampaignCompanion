@@ -4,7 +4,7 @@ import Typography from "../../core/components/Typography";
 import Button from "../../core/components/Button";
 import { NotesList, useNotes } from "features/collaboration";
 import { useCampaigns } from "features/user-management";
-import { useNavigation } from "../../hooks/useNavigation";
+import { useNavigation } from "shared/hooks/useNavigation";
 import { Plus, AlertCircle } from 'lucide-react';
 
 /**

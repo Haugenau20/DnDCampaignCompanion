@@ -11,7 +11,7 @@ import { useNPCs } from '../context/NPCContext';
 import { useNotes } from 'features/collaboration';
 import { useAuth, useUser } from 'features/user-management';
 import clsx from 'clsx';
-import { getUserName, getActiveCharacterName } from '../../../../utils/user-utils';
+import { getUserName, getActiveCharacterName } from 'shared/utils/user-utils';
 
 interface NPCFormProps {
   /** Initial data for the form (e.g., from a converted entity) */

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useFirebaseContext } from 'features/user-management/auth/context/FirebaseContext';
 import firebaseServices from 'core/services/firebase';
-import { fetchAttributionUsernames } from 'utils/attribution-utils';
+import { fetchAttributionUsernames } from 'shared/utils/attribution-utils';
 
 /**
  * Hook for looking up usernames and active character names for user IDs

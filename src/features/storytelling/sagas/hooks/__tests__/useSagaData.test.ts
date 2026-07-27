@@ -24,12 +24,12 @@ const { useFirestore, useAuth, useUser, useGroups, useCampaigns } = require('@/f
 // (specification-based mocking — see docs/testing/methodology/testing-lessons-learned.md).
 // `shared/attribution` (used by the production code) is NOT mocked: it is exercised
 // for real, using these mocked utilities as its dependency boundary.
-jest.mock('utils/user-utils', () => ({
+jest.mock('shared/utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn(),
 }));
 
-const { getUserName, getActiveCharacterName } = require('utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('shared/utils/user-utils');
 
 /** A realistic `activeGroupUserProfile`, matching `GroupUserProfile` from `types/user.ts`. */
 const defaultProfile = {

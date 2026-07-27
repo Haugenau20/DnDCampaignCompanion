@@ -35,7 +35,7 @@ jest.mock('features/storytelling/chapters/hooks/useChapterData', () => ({
   useChapterData: () => mockUseChapterData(),
 }));
 
-jest.mock('hooks/useFirebaseData', () => ({
+jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 
@@ -52,12 +52,12 @@ jest.mock('core/services/firebase', () => ({
 }));
 
 // Mock user utilities for proper testing
-jest.mock('utils/user-utils', () => ({
+jest.mock('shared/utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('shared/utils/user-utils');
 
 // Test component that uses the Story context
 const StoryTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {

@@ -10,11 +10,11 @@ import GlobalActionButton from '../GlobalActionButton';
 const mockNavigateToPage = jest.fn();
 const mockCreatePath = jest.fn((path: string) => path);
 
-jest.mock('../../../context/NavigationContext', () => ({
+jest.mock('../../context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
-const { useNavigation } = require('../../../context/NavigationContext');
+const { useNavigation } = require('../../context/NavigationContext');
 
 // ---------------------------------------------------------------------------
 // Mock NoteContext

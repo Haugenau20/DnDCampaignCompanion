@@ -39,17 +39,17 @@ jest.mock('../../hooks/useQuestData', () => ({
   useQuestData: () => mockUseQuestData(),
 }));
 
-jest.mock('../../../../../hooks/useFirebaseData', () => ({
+jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
 }));
 
 // Mock user utilities for proper testing
-jest.mock('../../../../../utils/user-utils', () => ({
+jest.mock('shared/utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('../../../../../utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('shared/utils/user-utils');
 
 // Test component that uses the Quest context
 const QuestTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {

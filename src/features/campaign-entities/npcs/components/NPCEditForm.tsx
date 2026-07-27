@@ -10,7 +10,7 @@ import { useQuests } from '../../quests/context/QuestContext';
 import { useNPCs } from '../context/NPCContext';
 import { useAuth, useUser } from 'features/user-management';
 import clsx from 'clsx';
-import { getUserName, getActiveCharacterName } from '../../../../utils/user-utils';
+import { getUserName, getActiveCharacterName } from 'shared/utils/user-utils';
 
 interface NPCEditFormProps {
   /** The NPC being edited */

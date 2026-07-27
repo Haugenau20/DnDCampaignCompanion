@@ -1,7 +1,7 @@
 // Updated src/features/collaboration/notes/types.ts
 
 // src/features/collaboration/notes/types.ts
-import { BaseContent } from "../../../types/common";
+import { BaseContent } from "shared/types/common";
 
 /**
  * Entity types that can be extracted from notes

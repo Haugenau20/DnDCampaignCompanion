@@ -1,7 +1,7 @@
 // Updated components/features/dashboard/GlobalActionButton.tsx
 
 import React, { useState } from 'react';
-import { useNavigation } from '../../context/NavigationContext';
+import { useNavigation } from '../context/NavigationContext';
 import { useNotes } from 'features/collaboration';
 import { Plus, BookOpen, User, Scroll, MessageSquare, MapPin, FileText, X } from 'lucide-react';
 import Button from 'core/components/Button';

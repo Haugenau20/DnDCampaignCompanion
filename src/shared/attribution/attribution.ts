@@ -3,8 +3,8 @@
 // Bare baseUrl-style imports, not the "@/" alias: react-scripts' webpack config
 // honours tsconfig `baseUrl` but ignores `paths`, so "@/..." resolves under tsc
 // and jest yet fails the production build with "Module not found".
-import type { ContentAttribution } from "types/common";
-import { getUserName, getActiveCharacterName } from "utils/user-utils";
+import type { ContentAttribution } from "../types/common";
+import { getUserName, getActiveCharacterName } from "../utils/user-utils";
 
 /**
  * Minimal shape the attribution helpers need.

@@ -2,7 +2,7 @@
 import { useCallback } from 'react';
 import { useFirebaseContext } from 'features/user-management/auth/context/FirebaseContext';
 import firebaseServices from 'core/services/firebase';
-import { UserProfile, GroupUserProfile, UsernameValidationResult } from 'types/user';
+import { UserProfile, GroupUserProfile, UsernameValidationResult } from 'shared/types/user';
 
 export function useUser() {
   const { 

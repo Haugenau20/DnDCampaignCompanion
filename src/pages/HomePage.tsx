@@ -7,7 +7,7 @@ import { useRumors } from 'features/campaign-entities';
 import { useNPCs } from 'features/campaign-entities';
 import { useLocations } from 'features/campaign-entities';
 import firebaseServices from 'core/services/firebase';
-import { determineAttributionActor, fetchAttributionUsernames } from '../utils/attribution-utils';
+import { determineAttributionActor, fetchAttributionUsernames } from 'shared/utils/attribution-utils';
 
 // Import layouts
 import DashboardLayout from '../components/features/layouts/dashboard/DashboardLayout';

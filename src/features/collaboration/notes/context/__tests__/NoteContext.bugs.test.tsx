@@ -39,12 +39,12 @@ jest.mock('core/services/firebase/data/DocumentService', () => ({
 }));
 
 // Mock user utilities - these should return proper values but consistently return empty/null
-jest.mock('../../../../../utils/user-utils', () => ({
+jest.mock('shared/utils/user-utils', () => ({
   getUserName: jest.fn(),
   getActiveCharacterName: jest.fn()
 }));
 
-const { getUserName, getActiveCharacterName } = require('../../../../../utils/user-utils');
+const { getUserName, getActiveCharacterName } = require('shared/utils/user-utils');
 
 describe('NoteContext Bug Tests', () => {
   // Test component to access context

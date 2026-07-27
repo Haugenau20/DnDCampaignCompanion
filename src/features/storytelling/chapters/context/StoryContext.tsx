@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useCallback, useState } from 'react';
 import { Chapter, ChapterProgress, StoryProgress } from '../types';
 import { useChapterData } from '../hooks/useChapterData';
-import { useFirebaseData } from 'hooks/useFirebaseData';
+import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser } from 'features/user-management';
 import firebaseServices from 'core/services/firebase';
 import { buildModificationAttribution } from 'shared/attribution';

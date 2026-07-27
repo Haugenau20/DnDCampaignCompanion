@@ -6,7 +6,7 @@ import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
 import { RumorForm, useRumors } from 'features/campaign-entities';
 import { useAuth } from 'features/user-management';
-import { useNavigation } from '../../hooks/useNavigation';
+import { useNavigation } from 'shared/hooks/useNavigation';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
 const RumorEditPage: React.FC = () => {

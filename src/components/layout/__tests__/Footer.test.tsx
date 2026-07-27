@@ -11,7 +11,7 @@ import Footer from "../Footer";
 // ---------------------------------------------------------------------------
 const mockNavigateToPage = jest.fn();
 
-jest.mock("../../../hooks/useNavigation", () => ({
+jest.mock("shared/hooks/useNavigation", () => ({
   useNavigation: jest.fn(),
 }));
 
@@ -33,7 +33,7 @@ jest.mock("react-router-dom", () => ({
   ),
 }));
 
-const { useNavigation } = require("../../../hooks/useNavigation");
+const { useNavigation } = require("shared/hooks/useNavigation");
 
 describe("Footer", () => {
   beforeEach(() => {
