@@ -213,6 +213,30 @@ Worth noting for the record: the bug report was written 2026-05-19 against pre-r
 and its proposed implementation was checked field-for-field against the real private one before use.
 They matched — but the check was the point, not the outcome.
 
+### Batch 3 — the audit's confirmed defects ✅
+
+Five fixes, landed after the audit established which entries were real.
+
+| Bug | What was actually wrong |
+|---|---|
+| **#150** | Filed as a testability limitation; **it was a production bug.** Dialog held its portal root in a ref and returned `null` until that ref was set — but the ref is assigned in an effect, and assigning a ref triggers no re-render. A Dialog **mounted already-open** rendered nothing, permanently. 19 of 20 consumers mask this by mounting the Dialog closed and flipping `open` later; `SessionTimeoutWarning` does not, and re-renders only every 60s — so the session-expiry warning could stay invisible for up to a minute of its five-minute window. Portal root moved to state. Also removed a latent StrictMode hazard: React 18's double-invoked effects made the ref version fail *harder*. |
+| **#018** | Reading progress was a frozen module constant. Both update paths spread it, wrote to Firestore, and discarded the result, so nothing accumulated and nothing was read back. **`StoryPage`'s "resume where you left off" was a dead branch** — a full feature outage, not the "medium priority tracking" the report described. Progress now lives in state, seeded from the persisted document. |
+| **#019** | `createChapter` accepted `order: 0` and negatives, because `??` only falls back on `null`/`undefined`. `updateChapter` had rejected `order < 1` all along; the sibling write path now agrees. |
+| **#010** | `getAllChildrenIds` collected descendants breadth-first and `Promise.all` discarded ordering, so a parent could be deleted before its children. Now post-order and sequential — a deliberate trade of batched throughput for the ordering guarantee that is the point of the fix. |
+| **#101** | The rare inverse: the **test** was wrong. `Card.tsx` emits `card`; the test asserted the retired `default-` prefix. `Button.test.tsx` and `Typography.test.tsx` were migrated when the convention was dropped and this file was missed. |
+
+#### A gap worth naming: two of these fixes proved nothing on landing
+
+The Dialog fix left the full suite **byte-identical** before and after, and #018's existing tests
+kept passing because their `useFirebaseData` mock never supplies a `data` array — so the load path
+the fix adds was never exercised. Both were verified by reasoning about the code, not by running it.
+
+In a project whose methodology treats tests as the specification, a production fix with no covering
+test is unfinished work, and "the suite is still green" is not evidence. Regression tests were added
+for both, each held to the standard that **it must fail against the reverted fix** — a test that
+passes both before and after a change does not cover that change, and would have quietly recorded
+these two bugs as fixed forever without ever checking.
+
 ### The 4 `enhanced-test-utils` failures — all harness, nothing filed ✅
 
 These were queued by Phase 3e as "genuinely new information," since the suite could never load before
