@@ -1,4 +1,4 @@
-// src/components/core/__tests__/Button.test.tsx
+// src/core/components/__tests__/Button.test.tsx
 // Fresh behavioral tests — no Tailwind class assertions.
 
 import React from "react";

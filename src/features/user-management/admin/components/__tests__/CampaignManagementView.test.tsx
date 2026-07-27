@@ -28,7 +28,7 @@ const { useCampaigns, useGroups, useAuth } = require('@/features/user-management
 // ---------------------------------------------------------------------------
 // Mock Dialog
 // ---------------------------------------------------------------------------
-jest.mock('@/components/core/Dialog', () => {
+jest.mock('@/core/components/Dialog', () => {
   const Dialog = ({ open, onClose, title, children }: any) => {
     if (!open) return null;
     return (

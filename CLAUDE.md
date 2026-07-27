@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `features/storytelling/` (chapters, stories, sagas) | ✅ migrated |
 | `features/campaign-entities/` (npcs, quests, locations, rumors) | ✅ migrated |
 | `features/collaboration/` (notes, AI entity extraction) | ✅ migrated |
-| `shared/` + `core/` infrastructure pass | ⬜ **next** |
+| `shared/` + `core/` infrastructure pass | 🚧 **in progress** (Phase 3e, branch `migration/shared-core`) |
 
 **What that means in practice**: migrated domains live in `src/features/<domain>/` and expose a
 barrel `index.ts` — import from the barrel, never reach into their internals. Everything not yet
@@ -31,27 +31,42 @@ it is `collaboration/entity-extraction/`. `useSessionManager` sounds like collab
 auth session activity via `useAuth`, so it is `user-management/auth/hooks/`. Both are now in their
 correct homes.
 
-**Two known deviations from the dependency rules below** — both audited 2026-07-27, both with a
-decision owed during the `shared`/`core` pass. Read Phase 3e in the roadmap before acting on either.
+**Both known deviations from the dependency rules below are now closed** — audited 2026-07-27, one
+resolved by decision and one resolved in code the same day. They are kept here because the reasoning
+matters when the same questions resurface.
 
-1. **`features/` → other `features/`**, stated as forbidden, happens 26 times (campaign-entities and
-   storytelling both depend on user-management; the four entity create/edit forms depend on
-   collaboration for `useNotes().markEntityAsConverted`). All go through the target domain's
-   **barrel**. Decision owed: introduce a decoupling seam, or amend the rule to match three domains
-   of actual practice.
-2. **`core/` → `features/`, which is a genuine inversion and blocks creating `core/` at all.**
-   `services/firebase/index.ts` imports four services from `features/user-management`, and
-   `services/firebase/campaign/CampaignService.ts` imports `UserService`. A further 9 imports reach
-   into user-management's internals from `App.tsx`, `components/layout/Header.tsx` and
-   `components/shared/ContextSwitcher.tsx`, because that domain's barrel exports only 8 symbols —
-   hooks plus `FirebaseProvider`, no components and no services. It migrated first, before the
-   pattern settled.
+1. **`features/` → other `features/`** happens 26 times (campaign-entities and storytelling both
+   depend on user-management; the four entity create/edit forms depend on collaboration for
+   `useNotes().markEntityAsConverted`). All go through the target domain's **barrel**; none reaches
+   into another feature's internals. **Resolved 2026-07-27**: the dependency rule below is amended
+   to match this practice instead of forcing a decoupling seam. Barrel-level coupling is acceptable —
+   it's the same public-API contract every consumer of a feature already goes through — because it
+   preserves the ability to refactor a domain's internals without breaking the domains that depend on
+   it. Internals coupling is the thing the original rule existed to prevent, and audit found none.
+2. **`core/` → `features/`, a genuine inversion that blocked creating `core/` at all.**
+   **Resolved 2026-07-27 in code.** `AuthService`, `UserService`, `GroupService` and
+   `InvitationService` moved back to `services/firebase/{auth,user,group}/` — each file's own header
+   comment still named that path, because they originated there and were carried into
+   `user-management` only because it migrated first. The four remaining consumers use `UserService`
+   purely as a **type** (instances come from `ServiceRegistry`), so those are now `import type` and
+   carry no runtime edge. The 9 imports that reached into user-management's internals are gone too:
+   its barrel now exports the 7 components external callers need, so `App.tsx`,
+   `components/layout/Header.tsx` and `components/shared/ContextSwitcher.tsx` go through it.
 
-**Related trap in the same file**: `services/firebase/index.ts` runs `initializeFirebaseServices()`
-— and therefore `getAnalytics()` — at module scope. Any barrel that re-exports something with a
-transitive path to it will eagerly initialize Firebase and crash jsdom tests. That is why
-`collaboration`'s barrel omits `notes/utils/note-relationships`, and why
-`test-utils/__tests__/enhanced-test-utils.test.tsx` has never been able to load.
+   **Adding components to that barrel first required removing 12 intra-domain self-barrel imports**,
+   which would otherwise have become real cycles (`index.ts` → `AdminPanel.tsx` → `index.ts`). The
+   three later-migrated domains have zero such imports; user-management was the pre-pattern outlier.
+   **Inside a domain, import siblings directly — never your own barrel.**
+
+**Related trap in the same file, also resolved**: `services/firebase/index.ts` used to run
+`initializeFirebaseServices()` — and therefore `getAnalytics()` — at module scope, so any barrel
+re-exporting something with a transitive path to it eagerly initialized Firebase and crashed jsdom
+tests. Initialization is now memoized behind `getFirebaseServices()`, with the exported services as
+lazy stand-ins, so importing the module is side-effect free and the
+`firebaseServices.auth.method()` shape is unchanged. This unblocked
+`test-utils/__tests__/enhanced-test-utils.test.tsx`, which had never been able to load.
+`collaboration`'s barrel still omits `notes/utils/note-relationships`; that omission is now
+belt-and-braces rather than load-bearing.
 
 **Key Documents** (note: `docs/backlog/` no longer exists — these moved):
 - `docs/testing/post-test-coverage-roadmap.md` — **start here**; the live status and execution order
@@ -106,7 +121,7 @@ baseline before assuming you broke something — never "fix" a red test by editi
 ### Post-Restructuring Standards (PLANNED)
 - **Feature Organization**: Each feature contains components/, hooks/, context/, services/, types/, pages/
 - **Public APIs**: Features export clean interfaces via index.ts barrel exports
-- **Import Restrictions**: Features can only import from shared/ and core/, never from other features
+- **Import Restrictions**: Features can import from shared/, core/, and other features' public barrels (index.ts) — never another feature's internals
 - **Domain Boundaries**: Campaign entities grouped together, clear separation from storytelling/collaboration
 - **Service Pattern**: All integrations extend BaseFirebaseService singleton pattern
 - **Testing Requirements**: All business logic requires tests before implementation
@@ -146,7 +161,7 @@ src/
 ### Dependency Rules (POST-RESTRUCTURING)
 - `app/` → `features/`, `shared/`, `core/`
 - `pages/` → `features/` (via public APIs), `shared/`, `core/`
-- `features/` → `shared/`, `core/` (NOT other features)
+- `features/` → `shared/`, `core/`, and other features' **public barrels** (NOT other features' internals)
 - `shared/` → `core/`
 - `core/` → (no internal dependencies)
 

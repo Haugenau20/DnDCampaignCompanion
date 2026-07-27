@@ -9,16 +9,16 @@ import ThemeSelector from '../ThemeSelector';
 // ---------------------------------------------------------------------------
 const mockSetTheme = jest.fn();
 
-jest.mock('../../../themes/ThemeContext', () => ({
+jest.mock('../../../core/themes/ThemeContext', () => ({
   useTheme: jest.fn(),
 }));
 
-const { useTheme } = require('../../../themes/ThemeContext');
+const { useTheme } = require('../../../core/themes/ThemeContext');
 
 // ---------------------------------------------------------------------------
 // Mock theme definitions — provide a minimal set for testing
 // ---------------------------------------------------------------------------
-jest.mock('../../../themes/definitions', () => ({
+jest.mock('../../../core/themes/definitions', () => ({
   themes: {
     light: {
       name: 'light',

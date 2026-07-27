@@ -1,9 +1,9 @@
 // src/pages/QuestsPage.tsx
 import React, { useState, useMemo } from 'react';
-import Typography from '../../components/core/Typography';
-import Card from '../../components/core/Card';
-import Input from '../../components/core/Input';
-import Button from '../../components/core/Button';
+import Typography from '../../core/components/Typography';
+import Card from '../../core/components/Card';
+import Input from '../../core/components/Input';
+import Button from '../../core/components/Button';
 import { QuestStatus, QuestCard } from 'features/campaign-entities';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 import { useQuests } from 'features/campaign-entities';

@@ -63,7 +63,7 @@ jest.mock("@/features/user-management", () => ({
 // Child component mocks
 // ---------------------------------------------------------------------------
 
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, color, variant }: any) => (
     <div
@@ -80,14 +80,14 @@ jest.mock("../../../components/core/Typography", () => ({
   ),
 }));
 
-jest.mock("../../../components/core/Button", () => ({
+jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick }: any) => (
     <button onClick={onClick}>{children}</button>
   ),
 }));
 
-jest.mock("../../../components/core/Card", () => {
+jest.mock("../../../core/components/Card", () => {
   const Card = ({ children }: any) => <div data-testid="card">{children}</div>;
   Card.Content = ({ children, className }: any) => (
     <div data-testid="card-content" className={className}>

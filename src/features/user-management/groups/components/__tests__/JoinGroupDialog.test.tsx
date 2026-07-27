@@ -8,7 +8,7 @@ import JoinGroupDialog from '../JoinGroupDialog';
 // ---------------------------------------------------------------------------
 // Mock Dialog to render children inline (bug #150 / #301 workaround)
 // ---------------------------------------------------------------------------
-jest.mock('@/components/core/Dialog', () => ({
+jest.mock('@/core/components/Dialog', () => ({
   __esModule: true,
   default: ({ open, title, children, onClose }: any) =>
     open ? (

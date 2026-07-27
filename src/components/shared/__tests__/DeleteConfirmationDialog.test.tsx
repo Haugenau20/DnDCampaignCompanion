@@ -13,7 +13,7 @@ import DeleteConfirmationDialog from '../DeleteConfirmationDialog';
 // ---------------------------------------------------------------------------
 // Mock Dialog to render inline instead of via createPortal
 // ---------------------------------------------------------------------------
-jest.mock('../../core/Dialog', () => {
+jest.mock('core/components/Dialog', () => {
   const MockDialog: React.FC<{
     open: boolean;
     onClose: () => void;

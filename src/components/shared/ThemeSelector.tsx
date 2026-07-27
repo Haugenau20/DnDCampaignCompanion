@@ -1,8 +1,8 @@
 // components/shared/ThemeSelector.tsx
-import { useTheme } from '../../themes/ThemeContext';
-import { themes } from '../../themes/definitions';
+import { useTheme } from '../../core/themes/ThemeContext';
+import { themes } from '../../core/themes/definitions';
 import { Palette } from 'lucide-react';
-import Button from '../core/Button';
+import Button from 'core/components/Button';
 import clsx from 'clsx';
 
 const ThemeSelector = () => {

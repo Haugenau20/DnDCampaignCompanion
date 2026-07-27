@@ -18,7 +18,7 @@ jest.mock(
 );
 
 // Mock core Typography
-jest.mock("../../../../../core/Typography", () => ({
+jest.mock("core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant, color, className }: any) => {
     const Tag = variant === "h2" ? "h2" : "p";

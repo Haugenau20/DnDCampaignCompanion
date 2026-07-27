@@ -1,4 +1,4 @@
-// src/components/core/__tests__/Dialog.test.tsx
+// src/core/components/__tests__/Dialog.test.tsx
 // Behavioral tests for Dialog component.
 //
 // KNOWN LIMITATION: Dialog renders via createPortal into a <div> that is

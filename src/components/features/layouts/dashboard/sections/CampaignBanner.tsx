@@ -1,6 +1,6 @@
 // components/features/dashboard/CampaignBanner.tsx
 import React from 'react';
-import Typography from '../../../../core/Typography';
+import Typography from 'core/components/Typography';
 import { useCampaignInfo } from '../../../layouts/common/hooks/useCampaignInfo';
 
 /**

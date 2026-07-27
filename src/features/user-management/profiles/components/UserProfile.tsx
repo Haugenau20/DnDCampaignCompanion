@@ -3,16 +3,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { useGroups } from '../../groups/hooks/useGroups';
 import { useUser } from '../hooks/useUser';
-import Typography from 'components/core/Typography';
-import Input from 'components/core/Input';
-import Button from 'components/core/Button';
-import Card from 'components/core/Card';
+import Typography from 'core/components/Typography';
+import Input from 'core/components/Input';
+import Button from 'core/components/Button';
+import Card from 'core/components/Card';
 import { Edit, Check, X, Loader2, AlertCircle, PlusCircle, Trash2, ChevronDown, Star, LogOut } from 'lucide-react';
 import { CharacterNameEntry } from 'types/user';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import Dialog from 'components/core/Dialog';
-import { useTheme } from 'themes/ThemeContext';
-import { themes } from 'themes/definitions';
+import Dialog from 'core/components/Dialog';
+import { useTheme } from 'core/themes/ThemeContext';
+import { themes } from 'core/themes/definitions';
 import clsx from 'clsx';
 
 interface UserProfileProps {

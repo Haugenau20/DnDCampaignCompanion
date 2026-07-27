@@ -60,7 +60,7 @@ jest.mock("../App", () => ({
 const MockThemeProvider = ({ children }: { children: React.ReactNode }) => (
   <div data-testid="theme-provider">{children}</div>
 );
-jest.mock("../themes/ThemeContext", () => ({
+jest.mock("../core/themes/ThemeContext", () => ({
   ThemeProvider: MockThemeProvider,
   useTheme: () => ({ theme: "default", setTheme: jest.fn() }),
 }));

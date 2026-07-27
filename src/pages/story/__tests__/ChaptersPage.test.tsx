@@ -79,7 +79,7 @@ jest.mock("@/features/user-management", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant, color }: any) => (
     <div
@@ -109,7 +109,7 @@ jest.mock("../../../components/layout/Breadcrumb", () => ({
   ),
 }));
 
-jest.mock("../../../components/core/Button", () => ({
+jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick, startIcon, variant }: any) => (
     <button data-testid={`button-${String(children).trim().replace(/\s+/g, "-").toLowerCase()}`} onClick={onClick}>

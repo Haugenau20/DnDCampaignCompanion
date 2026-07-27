@@ -1,4 +1,4 @@
-// src/themes/definitions/index.ts
+// src/core/themes/definitions/index.ts
 import { Theme } from '../types';
 import { darkTheme } from './darkTheme';
 import { medievalTheme } from './medievalTheme';

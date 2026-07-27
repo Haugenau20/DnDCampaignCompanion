@@ -59,7 +59,7 @@ jest.mock("../../../utils/export-utils", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, color, variant }: any) => (
     <div
@@ -89,7 +89,7 @@ jest.mock("../../../components/layout/Breadcrumb", () => ({
   ),
 }));
 
-jest.mock("../../../components/core/Button", () => ({
+jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick, type, isLoading }: any) => (
     <button
@@ -104,7 +104,7 @@ jest.mock("../../../components/core/Button", () => ({
   ),
 }));
 
-jest.mock("../../../components/core/Card", () => {
+jest.mock("../../../core/components/Card", () => {
   const Card = ({ children }: any) => (
     <div data-testid="card">{children}</div>
   );
@@ -122,7 +122,7 @@ jest.mock("../../../components/core/Card", () => {
 });
 
 // Input mock: renders a real <input> or <textarea> so we can change values
-jest.mock("../../../components/core/Input", () => ({
+jest.mock("../../../core/components/Input", () => ({
   __esModule: true,
   default: ({ label, value, onChange, isTextArea, required, fullWidth }: any) => {
     if (isTextArea) {
@@ -153,7 +153,7 @@ jest.mock("../../../components/core/Input", () => ({
 }));
 
 // Mock Dialog to render children inline (ref: bug #150)
-jest.mock("../../../components/core/Dialog", () => ({
+jest.mock("../../../core/components/Dialog", () => ({
   __esModule: true,
   default: ({ open, onClose, title, children }: any) =>
     open ? (

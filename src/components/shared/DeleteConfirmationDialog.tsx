@@ -1,8 +1,8 @@
 // components/shared/DeleteConfirmationDialog.tsx
 import React, { useState } from 'react';
-import Dialog from '../core/Dialog';
-import Typography from '../core/Typography';
-import Button from '../core/Button';
+import Dialog from 'core/components/Dialog';
+import Typography from 'core/components/Typography';
+import Button from 'core/components/Button';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 
 interface DeleteConfirmationDialogProps {

@@ -24,7 +24,7 @@ jest.mock("../../../../../../context/NavigationContext", () => ({
 }));
 
 // Mock core Typography
-jest.mock("../../../../../core/Typography", () => ({
+jest.mock("core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant, color, className }: any) => {
     const Tag =
@@ -42,7 +42,7 @@ jest.mock("../../../../../core/Typography", () => ({
 }));
 
 // Mock core Card
-jest.mock("../../../../../core/Card", () => {
+jest.mock("core/components/Card", () => {
   const Card: any = ({ children, hoverable, onClick, className }: any) => (
     <div
       data-testid="card"

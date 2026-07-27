@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { httpsCallable, Functions } from 'firebase/functions';
 import ServiceRegistry from '../../../services/firebase/core/ServiceRegistry';
-import Typography from '../../core/Typography';
-import Input from '../../core/Input';
-import Button from '../../core/Button';
+import Typography from 'core/components/Typography';
+import Input from 'core/components/Input';
+import Button from 'core/components/Button';
 import { Send, Check, AlertCircle } from 'lucide-react';
 
 interface ContactFormData {

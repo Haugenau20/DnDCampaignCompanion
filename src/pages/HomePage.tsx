@@ -12,7 +12,7 @@ import { determineAttributionActor, fetchAttributionUsernames } from '../utils/a
 // Import layouts
 import DashboardLayout from '../components/features/layouts/dashboard/DashboardLayout';
 import JournalLayout from '../components/features/layouts/journal/JournalLayout';
-import Button from '../components/core/Button';
+import Button from '../core/components/Button';
 import { Book, LayoutDashboard } from 'lucide-react';
 import useLayoutData from '../components/features/layouts/common/hooks/useLayoutData';
 

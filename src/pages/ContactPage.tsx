@@ -1,6 +1,6 @@
 // src/pages/ContactPage.tsx
 import React from 'react';
-import Typography from '../components/core/Typography';
+import Typography from '../core/components/Typography';
 import ContactForm from '../components/features/contact/ContactForm';
 import { Mail, Clock, Bug, PlusCircle } from 'lucide-react';
 

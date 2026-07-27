@@ -1,4 +1,4 @@
-/* src/themes/css/variables.css */
+/* src/core/themes/css/variables.css */
 /* 
   CSS variable declarations (without values).
   ThemeContext.tsx will dynamically set these values based on the active theme.

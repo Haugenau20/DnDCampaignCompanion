@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigation } from '../../../../../context/NavigationContext';
 import type { Chapter } from 'features/storytelling';
 import { BookOpen, Bookmark } from 'lucide-react';
-import Button from '../../../../core/Button';
+import Button from 'core/components/Button';
 
 interface StorySectionProps {
   chapters: Chapter[];

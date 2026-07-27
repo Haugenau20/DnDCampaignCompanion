@@ -8,7 +8,7 @@ import { Rumor, RumorStatus, SourceType } from '../../types';
 // ---------------------------------------------------------------------------
 // Mock Dialog to render inline (bug #150)
 // ---------------------------------------------------------------------------
-jest.mock('../../../../../components/core/Dialog', () => {
+jest.mock('../../../../../core/components/Dialog', () => {
   const MockDialog: React.FC<{
     open: boolean;
     onClose: () => void;

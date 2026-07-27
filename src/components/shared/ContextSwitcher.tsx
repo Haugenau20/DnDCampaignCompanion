@@ -1,8 +1,8 @@
 // components/shared/ContextSwitcher.tsx
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useGroups, useCampaigns, JoinGroupDialog } from 'features/user-management';
-import Button from '../core/Button';
-import Typography from '../core/Typography';
+import Button from 'core/components/Button';
+import Typography from 'core/components/Typography';
 import { 
   ChevronDown, 
   Settings, 

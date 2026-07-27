@@ -1,4 +1,4 @@
-/* src/themes/css/theme-effects.css */
+/* src/core/themes/css/theme-effects.css */
 /*
   Theme-specific styling that overrides or enhances the base components.
   Uses data-theme attribute to target specific themes.
@@ -9,7 +9,7 @@
 /* Medieval theme body */
 [data-theme="medieval"] body {
   /* Apply parchment texture to background */
-  background-image: url('../../../public/decorative/parchment-texture.svg');
+  background-image: url('../../../../public/decorative/parchment-texture.svg');
   background-repeat: repeat;
 }
 
@@ -25,7 +25,7 @@
   position: absolute;
   width: 2rem;
   height: 2rem;
-  background-image: url('../../../public/decorative/corner-dragon.svg');
+  background-image: url('../../../../public/decorative/corner-dragon.svg');
   background-size: contain;
   background-repeat: no-repeat;
   opacity: 0.8;
@@ -97,7 +97,7 @@
   position: absolute;
   height: 24px;
   width: 24px;
-  background-image: url('../../../public/decorative/scroll-end.svg');
+  background-image: url('../../../../public/decorative/scroll-end.svg');
   background-size: contain;
   background-repeat: no-repeat;
 }

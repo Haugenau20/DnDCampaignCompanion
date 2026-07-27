@@ -80,7 +80,7 @@ jest.mock("../../components/features/layouts/journal/JournalLayout", () => ({
   ),
 }));
 
-jest.mock("../../components/core/Button", () => ({
+jest.mock("../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick, startIcon }: any) => (
     <button

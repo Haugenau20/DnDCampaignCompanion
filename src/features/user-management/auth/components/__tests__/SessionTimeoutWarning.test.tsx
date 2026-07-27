@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import SessionTimeoutWarning from '../SessionTimeoutWarning';
-import { INACTIVITY_TIMEOUT, SESSION_WARNING_THRESHOLD } from '@/constants/time';
+import { INACTIVITY_TIMEOUT, SESSION_WARNING_THRESHOLD } from '@/core/constants/time';
 
 // ---------------------------------------------------------------------------
 // Mock context/firebase
@@ -26,7 +26,7 @@ const { useAuth } = require('@/features/user-management');
 // ---------------------------------------------------------------------------
 // Mock Dialog to avoid portal rendering issues
 // ---------------------------------------------------------------------------
-jest.mock('@/components/core/Dialog', () => {
+jest.mock('@/core/components/Dialog', () => {
   const Dialog = ({ open, children, title }: any) => {
     if (!open) return null;
     return (

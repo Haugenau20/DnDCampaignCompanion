@@ -1,8 +1,8 @@
 // src/pages/npcs/NPCsCreatePage.tsx
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Typography from '../../components/core/Typography';
-import Button from '../../components/core/Button';
+import Typography from '../../core/components/Typography';
+import Button from '../../core/components/Button';
 import { NPCForm, useNPCs } from 'features/campaign-entities';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { ArrowLeft } from 'lucide-react';

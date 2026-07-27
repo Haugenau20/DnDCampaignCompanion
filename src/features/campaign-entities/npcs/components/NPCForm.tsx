@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { NPC, NPCStatus, NPCRelationship } from '../types';
 import { AlertCircle, Save, X, Users, Scroll } from 'lucide-react';
-import Input from '../../../../components/core/Input';
-import Button from '../../../../components/core/Button';
-import Typography from '../../../../components/core/Typography';
-import Card from '../../../../components/core/Card';
-import Dialog from '../../../../components/core/Dialog';
+import Input from '../../../../core/components/Input';
+import Button from '../../../../core/components/Button';
+import Typography from '../../../../core/components/Typography';
+import Card from '../../../../core/components/Card';
+import Dialog from '../../../../core/components/Dialog';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useNPCs } from '../context/NPCContext';
 import { useNotes } from 'features/collaboration';

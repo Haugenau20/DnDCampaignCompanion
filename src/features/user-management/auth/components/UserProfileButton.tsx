@@ -2,9 +2,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useGroups } from '../../groups/hooks/useGroups';
-import { useTheme } from 'themes/ThemeContext';
-import Button from 'components/core/Button';
-import Dialog from 'components/core/Dialog';
+import { useTheme } from 'core/themes/ThemeContext';
+import Button from 'core/components/Button';
+import Dialog from 'core/components/Dialog';
 import { LogIn, User, ShieldAlert, UserPlus } from 'lucide-react';
 import SignInForm from './SignInForm';
 import UserProfile from 'features/user-management/profiles/components/UserProfile';

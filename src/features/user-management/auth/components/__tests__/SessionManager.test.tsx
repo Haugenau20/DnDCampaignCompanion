@@ -41,11 +41,11 @@ const { useGroups } = require('@/features/user-management');
 // ---------------------------------------------------------------------------
 // Mock ThemeContext
 // ---------------------------------------------------------------------------
-jest.mock('@/themes/ThemeContext', () => ({
+jest.mock('@/core/themes/ThemeContext', () => ({
   useTheme: jest.fn(),
 }));
 
-const { useTheme } = require('@/themes/ThemeContext');
+const { useTheme } = require('@/core/themes/ThemeContext');
 
 // ---------------------------------------------------------------------------
 // Helpers

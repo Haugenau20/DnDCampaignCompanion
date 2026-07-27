@@ -1,7 +1,7 @@
 // src/features/storytelling/stories/components/TableView.tsx
 import React from 'react';
-import Typography from 'components/core/Typography';
-import Button from 'components/core/Button';
+import Typography from 'core/components/Typography';
+import Button from 'core/components/Button';
 import { Chapter } from 'features/storytelling/chapters/types';
 import { Clock, ArrowUpDown } from 'lucide-react';
 import clsx from 'clsx';

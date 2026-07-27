@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { useGroups } from '../../groups/hooks/useGroups';
-import Typography from 'components/core/Typography';
-import Input from 'components/core/Input';
-import Button from 'components/core/Button';
-import Dialog from 'components/core/Dialog';
+import Typography from 'core/components/Typography';
+import Input from 'core/components/Input';
+import Button from 'core/components/Button';
+import Dialog from 'core/components/Dialog';
 import { formatDisplayDate } from 'utils/dateFormatter';
 import { 
   Search, 

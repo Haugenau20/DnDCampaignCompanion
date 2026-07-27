@@ -1,4 +1,4 @@
-// src/config/__tests__/buildConfig.test.ts
+// src/core/config/__tests__/buildConfig.test.ts
 //
 // Tests for the buildConfig module.
 // buildConfig is a plain `as const` object — it has no branching logic and does

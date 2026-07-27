@@ -9,7 +9,7 @@ import { Rumor, RumorStatus } from '../../types';
 // ---------------------------------------------------------------------------
 // Mock Dialog to render children inline (bug #150 — Dialog portal unreachable)
 // ---------------------------------------------------------------------------
-jest.mock('../../../../../components/core/Dialog', () => {
+jest.mock('../../../../../core/components/Dialog', () => {
   const MockDialog: React.FC<{
     open: boolean;
     onClose: () => void;

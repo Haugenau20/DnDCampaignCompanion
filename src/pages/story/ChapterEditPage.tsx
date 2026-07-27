@@ -1,7 +1,7 @@
 // pages/story/ChapterEditPage.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import Typography from '../../components/core/Typography';
+import Typography from '../../core/components/Typography';
 import { ChapterForm, useStory } from 'features/storytelling';
 import DeleteConfirmationDialog from '../../components/shared/DeleteConfirmationDialog';
 import Breadcrumb from '../../components/layout/Breadcrumb';

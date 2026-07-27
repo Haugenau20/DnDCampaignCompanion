@@ -1,4 +1,4 @@
-// src/themes/__tests__/theme-utils.test.ts
+// src/core/themes/__tests__/theme-utils.test.ts
 // Behavioral unit tests for theme-utils.ts — every exported function.
 
 import {

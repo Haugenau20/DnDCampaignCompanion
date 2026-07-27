@@ -1,7 +1,7 @@
 // components/shared/ErrorBoundary.tsx
 import React from 'react';
-import Typography from '../core/Typography';
-import Button from '../core/Button';
+import Typography from 'core/components/Typography';
+import Button from 'core/components/Button';
 import { AlertCircle } from 'lucide-react';
 
 interface Props {

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { LayoutProps } from '../dashboard/DashboardLayout';
 import { Book, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react';
-import Button from '../../../core/Button';
+import Button from 'core/components/Button';
 import JournalPages from './JournalPages';
 import JournalPage from './JournalPage';
 import CharacterGallery from './sections/CharacterGallery';

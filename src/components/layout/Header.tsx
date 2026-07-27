@@ -15,9 +15,9 @@ import {
 } from 'features/user-management';
 import { Menu, X, LogOut, ShieldAlert, UserPlus, User, Book, ChevronDown, Users, LogIn } from 'lucide-react';
 import ContextSwitcher from '../shared/ContextSwitcher';
-import Button from '../core/Button';
-import Typography from '../core/Typography';
-import Dialog from '../core/Dialog';
+import Button from 'core/components/Button';
+import Typography from 'core/components/Typography';
+import Dialog from 'core/components/Dialog';
 import { clsx } from 'clsx';
 
 /**

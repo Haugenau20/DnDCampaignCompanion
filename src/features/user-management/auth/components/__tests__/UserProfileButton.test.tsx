@@ -24,11 +24,11 @@ const { useAuth, useGroups } = require('@/features/user-management');
 // ---------------------------------------------------------------------------
 // Mock ThemeContext
 // ---------------------------------------------------------------------------
-jest.mock('@/themes/ThemeContext', () => ({
+jest.mock('@/core/themes/ThemeContext', () => ({
   useTheme: jest.fn(),
 }));
 
-const { useTheme } = require('@/themes/ThemeContext');
+const { useTheme } = require('@/core/themes/ThemeContext');
 
 // ---------------------------------------------------------------------------
 // Mock SignInForm, UserProfile, AdminPanel, JoinGroupDialog
@@ -76,7 +76,7 @@ jest.mock('@/features/user-management/groups/components/JoinGroupDialog', () => 
 // ---------------------------------------------------------------------------
 // Mock Dialog to avoid portal issues
 // ---------------------------------------------------------------------------
-jest.mock('@/components/core/Dialog', () => {
+jest.mock('@/core/components/Dialog', () => {
   const Dialog = ({ open, onClose, title, children }: any) => {
     if (!open) return null;
     return (

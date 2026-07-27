@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { NPC, NPCNote } from '../types';
-import Typography from '../../../../components/core/Typography';
-import Card from '../../../../components/core/Card';
-import Button from '../../../../components/core/Button';
-import Input from '../../../../components/core/Input';
+import Typography from '../../../../core/components/Typography';
+import Card from '../../../../core/components/Card';
+import Button from '../../../../core/components/Button';
+import Input from '../../../../core/components/Input';
 import DeleteConfirmationDialog from '../../../../components/shared/DeleteConfirmationDialog';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useAuth } from 'features/user-management';

@@ -1,6 +1,6 @@
 // components/features/layouts/common/components/EmptyState.tsx
 import React, { ReactNode } from 'react';
-import Button from '../../../../core/Button';
+import Button from 'core/components/Button';
 import clsx from 'clsx';
 
 interface EmptyStateProps {

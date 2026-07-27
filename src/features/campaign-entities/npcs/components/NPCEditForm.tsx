@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { NPC } from '../types';
-import Typography from '../../../../components/core/Typography';
-import Input from '../../../../components/core/Input';
-import Button from '../../../../components/core/Button';
-import Card from '../../../../components/core/Card';
-import Dialog from '../../../../components/core/Dialog';
+import Typography from '../../../../core/components/Typography';
+import Input from '../../../../core/components/Input';
+import Button from '../../../../core/components/Button';
+import Card from '../../../../core/components/Card';
+import Dialog from '../../../../core/components/Dialog';
 import { Save, X, Users, Scroll } from 'lucide-react';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useNPCs } from '../context/NPCContext';

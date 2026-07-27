@@ -144,7 +144,7 @@ jest.mock("features/collaboration", () => {
   };
 });
 
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant, color }: any) => {
     const testId = variant
@@ -156,7 +156,7 @@ jest.mock("../../../components/core/Typography", () => ({
   },
 }));
 
-jest.mock("../../../components/core/Button", () => ({
+jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick, disabled }: any) => (
     <button onClick={onClick} disabled={disabled}>

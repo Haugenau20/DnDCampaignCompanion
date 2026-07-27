@@ -1,10 +1,10 @@
 // components/layout/Navigation.tsx
 import React from 'react';
 import { useNavigation } from '../../hooks/useNavigation';
-import Typography from '../core/Typography';
+import Typography from 'core/components/Typography';
 import { Book, Scroll, Users, MapPin, MessageSquare, StickyNote } from 'lucide-react';
 import { clsx } from 'clsx';
-import Button from '../core/Button';
+import Button from 'core/components/Button';
 
 interface NavItem {
   label: string;

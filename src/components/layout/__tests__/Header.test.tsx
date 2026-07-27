@@ -108,7 +108,7 @@ jest.mock("@/features/user-management/auth/components/SignInForm", () => ({
 // ---------------------------------------------------------------------------
 // Mock core Dialog to avoid portal timing issues (bug #100)
 // ---------------------------------------------------------------------------
-jest.mock("../../core/Dialog", () => ({
+jest.mock("core/components/Dialog", () => ({
   __esModule: true,
   default: ({
     open,

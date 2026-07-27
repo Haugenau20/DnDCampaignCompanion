@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from "react";
 import { Note } from "../types";
-import Typography from "../../../../components/core/Typography";
-import Input from "../../../../components/core/Input";
-import Button from "../../../../components/core/Button";
+import Typography from "../../../../core/components/Typography";
+import Input from "../../../../core/components/Input";
+import Button from "../../../../core/components/Button";
 import { useNotes } from "../context/NoteContext";
 import { debounce } from "lodash";
 import { Loader2, Save, AlertCircle } from 'lucide-react';

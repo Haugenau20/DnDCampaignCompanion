@@ -1,4 +1,4 @@
-// src/themes/ThemeContext.tsx
+// src/core/themes/ThemeContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Theme, ThemeName, ThemeContextState } from './types';
 import { themes } from './definitions';

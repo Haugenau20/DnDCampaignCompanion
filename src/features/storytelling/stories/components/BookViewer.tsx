@@ -1,9 +1,9 @@
 // src/features/storytelling/stories/components/BookViewer.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, ArrowLeftCircle, ArrowRightCircle } from 'lucide-react';
-import Typography from 'components/core/Typography';
-import Card from 'components/core/Card';
-import Button from 'components/core/Button';
+import Typography from 'core/components/Typography';
+import Card from 'core/components/Card';
+import Button from 'core/components/Button';
 import clsx from 'clsx';
 
 interface BookViewerProps {

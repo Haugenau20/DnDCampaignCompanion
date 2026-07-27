@@ -2,11 +2,11 @@
 import { NPC } from '../../npcs/types';
 import React from 'react';
 import { Quest, QuestStatus } from '../types';
-import Typography from '../../../../components/core/Typography';
-import Input from '../../../../components/core/Input';
-import Button from '../../../../components/core/Button';
+import Typography from '../../../../core/components/Typography';
+import Input from '../../../../core/components/Input';
+import Button from '../../../../core/components/Button';
 import LocationCombobox from '../../locations/components/LocationCombobox';
-import Dialog from '../../../../components/core/Dialog';
+import Dialog from '../../../../core/components/Dialog';
 import clsx from 'clsx';
 import { PlusCircle, X, Target } from 'lucide-react';
 

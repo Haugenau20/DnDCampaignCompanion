@@ -1,4 +1,4 @@
-// src/themes/types.ts
+// src/core/themes/types.ts
 // Moved from src/types/theme.ts
 
 /**

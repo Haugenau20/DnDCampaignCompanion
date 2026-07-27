@@ -1,4 +1,4 @@
-// src/config/buildConfig.ts
+// src/core/config/buildConfig.ts
 const buildConfig = {
   features: {
     enableSidebar: false,

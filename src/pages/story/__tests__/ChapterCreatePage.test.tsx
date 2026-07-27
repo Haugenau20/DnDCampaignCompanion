@@ -62,7 +62,7 @@ jest.mock("../../../components/layout/Breadcrumb", () => ({
   ),
 }));
 
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant }: any) => (
     <div data-testid={`typography-${variant ?? "default"}`}>{children}</div>

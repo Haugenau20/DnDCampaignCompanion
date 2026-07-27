@@ -1,6 +1,6 @@
 // pages/story/ChapterCreatePage.tsx
 import React, { useEffect } from 'react';
-import Typography from '../../components/core/Typography';
+import Typography from '../../core/components/Typography';
 import { ChapterForm, useStory } from 'features/storytelling';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useNavigation } from '../../context/NavigationContext';

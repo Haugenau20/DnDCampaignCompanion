@@ -1,9 +1,9 @@
 // pages/story/SagaEditPage.tsx
 import React, { useState, useEffect } from 'react';
-import Typography from '../../components/core/Typography';
-import Input from '../../components/core/Input';
-import Button from '../../components/core/Button';
-import Card from '../../components/core/Card';
+import Typography from '../../core/components/Typography';
+import Input from '../../core/components/Input';
+import Button from '../../core/components/Button';
+import Card from '../../core/components/Card';
 import Breadcrumb from '../../components/layout/Breadcrumb';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from 'features/user-management';
@@ -11,7 +11,7 @@ import { useSagaData, useStory } from 'features/storytelling';
 import type { SagaContentInput } from 'features/storytelling';
 import { Book, Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
 import { exportChaptersAsText } from '../../utils/export-utils';
-import Dialog from '../../components/core/Dialog';
+import Dialog from '../../core/components/Dialog';
 
 // Constants for default content if none exists
 const SAGA_DEFAULT_OPENING = "In a realm where magic weaves through the fabric of reality and ancient powers stir from long slumber, a group of unlikely heroes finds their fates intertwined by destiny's unseen hand.";

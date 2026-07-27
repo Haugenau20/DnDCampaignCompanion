@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
-import Typography from '../core/Typography';
+import Typography from 'core/components/Typography';
 import clsx from 'clsx';
 
 interface BreadcrumbItem {

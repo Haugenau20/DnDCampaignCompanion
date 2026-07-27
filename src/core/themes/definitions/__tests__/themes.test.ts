@@ -1,4 +1,4 @@
-// src/themes/definitions/__tests__/themes.test.ts
+// src/core/themes/definitions/__tests__/themes.test.ts
 // Sanity tests for all three theme definition files.
 // Verifies that each theme exports a valid Theme object matching types.ts,
 // and that key nested color values are non-empty strings.

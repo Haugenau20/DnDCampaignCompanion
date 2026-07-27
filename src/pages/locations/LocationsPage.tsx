@@ -1,11 +1,11 @@
 // src/pages/locations/LocationsPage.tsx
 import React, { useState, useMemo } from 'react';
-import Typography from '../../components/core/Typography';
-import Card from '../../components/core/Card';
+import Typography from '../../core/components/Typography';
+import Card from '../../core/components/Card';
 import { useAuth } from 'features/user-management';
 import { useLocations, LocationDirectory } from 'features/campaign-entities';
 import { Map, MapPin, Eye, EyeOff, Plus } from 'lucide-react';
-import Button from '../../components/core/Button';
+import Button from '../../core/components/Button';
 import { useNavigation } from '../../context/NavigationContext';
 
 const LocationsPage: React.FC = () => {

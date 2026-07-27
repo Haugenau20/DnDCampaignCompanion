@@ -1,4 +1,4 @@
-// src/themes/__tests__/ThemeContext.test.tsx
+// src/core/themes/__tests__/ThemeContext.test.tsx
 // Behavioral tests for ThemeContext.tsx — focuses on:
 //   • ThemeProvider initial-state logic (localStorage, default fallback)
 //   • setTheme() success and error-catch branches (lines 188-193)

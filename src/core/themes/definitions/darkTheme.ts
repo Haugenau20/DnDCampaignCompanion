@@ -1,4 +1,4 @@
-// src/themes/darkTheme.ts
+// src/core/themes/darkTheme.ts
 import { Theme } from '../types';
 
 export const darkTheme: Theme = {

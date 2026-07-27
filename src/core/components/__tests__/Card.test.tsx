@@ -1,8 +1,8 @@
-// src/components/core/__tests__/Card.test.tsx
+// src/core/components/__tests__/Card.test.tsx
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeProvider } from '../../../themes/ThemeContext';
+import { ThemeProvider } from '../../themes/ThemeContext';
 import Card from '../Card';
 
 // Helper function to render Card with ThemeProvider

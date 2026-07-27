@@ -3,10 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { useInvitations } from '../hooks/useInvitations';
 import { useUser } from '../../profiles/hooks/useUser';
 import { useLocation } from 'react-router-dom';
-import Typography from 'components/core/Typography';
-import Input from 'components/core/Input';
-import Button from 'components/core/Button';
-import Dialog from 'components/core/Dialog';
+import Typography from 'core/components/Typography';
+import Input from 'core/components/Input';
+import Button from 'core/components/Button';
+import Dialog from 'core/components/Dialog';
 import { 
   LogIn, 
   AlertCircle, 

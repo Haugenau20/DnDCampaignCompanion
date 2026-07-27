@@ -1,7 +1,7 @@
 // components/features/dashboard/ActivityFeed.tsx
 import React, { useState } from 'react';
-import Typography from '../../../../core/Typography';
-import Card from '../../../../core/Card';
+import Typography from 'core/components/Typography';
+import Card from 'core/components/Card';
 import { Activity } from '../../../../../pages/HomePage';
 import { useActivityDisplay } from '../../../layouts/common/hooks/useActivityDisplay';
 import { getContentIcon } from '../../../layouts/common/utils/contentTypeUtils';

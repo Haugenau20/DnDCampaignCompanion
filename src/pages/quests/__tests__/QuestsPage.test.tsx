@@ -64,7 +64,7 @@ jest.mock("../../../hooks/useNavigation", () => ({
 // Child component mocks
 // ---------------------------------------------------------------------------
 
-jest.mock("../../../components/core/Typography", () => ({
+jest.mock("../../../core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant, color }: any) => {
     const testId = variant
@@ -76,14 +76,14 @@ jest.mock("../../../components/core/Typography", () => ({
   },
 }));
 
-jest.mock("../../../components/core/Button", () => ({
+jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick }: any) => (
     <button onClick={onClick}>{children}</button>
   ),
 }));
 
-jest.mock("../../../components/core/Card", () => {
+jest.mock("../../../core/components/Card", () => {
   const Card = ({ children, className }: any) => (
     <div data-testid="card" className={className}>
       {children}
@@ -97,7 +97,7 @@ jest.mock("../../../components/core/Card", () => {
   return { __esModule: true, default: Card };
 });
 
-jest.mock("../../../components/core/Input", () => ({
+jest.mock("../../../core/components/Input", () => ({
   __esModule: true,
   default: ({ placeholder, value, onChange }: any) => (
     <input

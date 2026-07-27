@@ -50,4 +50,4 @@ export {
   SESSION_DURATION,
   REMEMBER_ME_DURATION,
   INACTIVITY_TIMEOUT
-} from "../../../constants/time";
+} from "../../../core/constants/time";

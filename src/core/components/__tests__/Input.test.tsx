@@ -1,4 +1,4 @@
-// src/components/core/__tests__/Input.test.tsx
+// src/core/components/__tests__/Input.test.tsx
 // Behavioral tests for Input component.
 
 import React from "react";

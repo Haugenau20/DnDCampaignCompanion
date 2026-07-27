@@ -1,4 +1,4 @@
-// src/components/core/__tests__/Typography.test.tsx
+// src/core/components/__tests__/Typography.test.tsx
 // Behavioral tests — no Tailwind class assertions.
 
 import React from "react";

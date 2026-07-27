@@ -1,7 +1,7 @@
 // components/features/dashboard/CampaignStats.tsx
 import React from 'react';
-import Typography from '../../../../core/Typography';
-import Card from '../../../../core/Card';
+import Typography from 'core/components/Typography';
+import Card from 'core/components/Card';
 import { useNavigation } from '../../../../../context/NavigationContext';
 import { Users, Map, Scroll, BookOpen, MessageSquare, List } from 'lucide-react';
 import clsx from 'clsx';

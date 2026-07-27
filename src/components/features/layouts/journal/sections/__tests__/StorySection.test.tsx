@@ -18,7 +18,7 @@ jest.mock('lucide-react', () => ({
 }));
 
 // Mock the Button core component (it's a child; we test StorySection's behaviour)
-jest.mock('../../../../../core/Button', () => ({
+jest.mock('core/components/Button', () => ({
   __esModule: true,
   default: ({ children, onClick }: { children: React.ReactNode; onClick: () => void }) => (
     <button onClick={onClick}>{children}</button>
