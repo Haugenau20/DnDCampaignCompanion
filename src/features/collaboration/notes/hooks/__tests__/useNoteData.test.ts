@@ -9,7 +9,7 @@ import { Note } from '../../types';
 const mockGetCollection = jest.fn();
 const mockGetInstance = jest.fn();
 
-jest.mock('../../../../../services/firebase/data/DocumentService', () => ({
+jest.mock('core/services/firebase/data/DocumentService', () => ({
   __esModule: true,
   default: {
     getInstance: jest.fn(),
@@ -22,7 +22,7 @@ jest.mock('@/features/user-management', () => ({
   useCampaigns: jest.fn(),
 }));
 
-const DocumentService = require('../../../../../services/firebase/data/DocumentService').default;
+const DocumentService = require('core/services/firebase/data/DocumentService').default;
 const { useAuth, useGroups, useCampaigns } = require('@/features/user-management');
 
 const makeNote = (id: string, title: string, campaignId: string = 'campaign-1'): Note => ({

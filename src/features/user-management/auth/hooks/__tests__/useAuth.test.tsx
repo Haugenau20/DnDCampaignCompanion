@@ -24,7 +24,7 @@ const mockUpdateLastActivity = jest.fn();
 const mockRenewSession = jest.fn();
 const mockCheckSessionExpired = jest.fn();
 
-jest.mock("@/services/firebase", () => ({
+jest.mock("@/core/services/firebase", () => ({
   __esModule: true,
   default: {
     auth: {

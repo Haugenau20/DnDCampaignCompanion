@@ -1,7 +1,7 @@
 // src/context/firebase/hooks/useUser.ts
 import { useCallback } from 'react';
 import { useFirebaseContext } from 'features/user-management/auth/context/FirebaseContext';
-import firebaseServices from 'services/firebase';
+import firebaseServices from 'core/services/firebase';
 import { UserProfile, GroupUserProfile, UsernameValidationResult } from 'types/user';
 
 export function useUser() {

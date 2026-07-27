@@ -54,7 +54,7 @@ jest.mock("../../../hooks/useNavigation", () => ({
 // ---------------------------------------------------------------------------
 const mockGetDocument = jest.fn().mockResolvedValue(null);
 
-jest.mock("../../../services/firebase/data/DocumentService", () => ({
+jest.mock("core/services/firebase/data/DocumentService", () => ({
   __esModule: true,
   default: {
     getInstance: () => ({

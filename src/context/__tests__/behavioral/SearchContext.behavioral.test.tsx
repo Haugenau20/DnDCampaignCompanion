@@ -44,7 +44,7 @@ jest.mock("features/campaign-entities", () => ({
 const mockInitializeIndex = jest.fn();
 const mockSearch = jest.fn();
 
-jest.mock("../../../services/search/SearchService", () => ({
+jest.mock("core/services/search/SearchService", () => ({
   SearchService: jest.fn().mockImplementation(() => ({
     initializeIndex: mockInitializeIndex,
     search: mockSearch,

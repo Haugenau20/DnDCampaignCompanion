@@ -40,7 +40,7 @@ jest.mock('hooks/useFirebaseData', () => ({
 }));
 
 // Mock Firebase services
-jest.mock('services/firebase', () => ({
+jest.mock('core/services/firebase', () => ({
   __esModule: true,
   default: {
     document: {
@@ -94,7 +94,7 @@ describe('StoryContext Behavioral Testing', () => {
     mockRefreshChapters = jest.fn();
 
     // Get mocked Firebase services
-    mockFirebaseServices = require('services/firebase').default;
+    mockFirebaseServices = require('core/services/firebase').default;
 
     // Setup default mock returns
     mockUseAuth.mockReturnValue({

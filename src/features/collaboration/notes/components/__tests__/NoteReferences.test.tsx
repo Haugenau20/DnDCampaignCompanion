@@ -27,7 +27,7 @@ jest.mock('@/features/user-management', () => ({
 
 // DocumentService mock — must use factory that doesn't capture outer let/const
 // We expose __mockGetCollection so tests can control it via the module's own mock fn
-jest.mock('../../../../../services/firebase/data/DocumentService', () => {
+jest.mock('core/services/firebase/data/DocumentService', () => {
   const getCollectionMock = jest.fn();
   const instance = { getCollection: getCollectionMock };
   return {
@@ -42,7 +42,7 @@ jest.mock('../../../../../services/firebase/data/DocumentService', () => {
 const { useNavigation } = require('../../../../../hooks/useNavigation');
 const { useNotes } = require('../../context/NoteContext');
 const { useCampaigns } = require('@/features/user-management');
-const DocumentServiceModule = require('../../../../../services/firebase/data/DocumentService');
+const DocumentServiceModule = require('core/services/firebase/data/DocumentService');
 const getCollectionMock: jest.Mock = DocumentServiceModule.default.__getCollectionMock;
 
 function setupMocks({

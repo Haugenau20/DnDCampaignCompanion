@@ -69,7 +69,7 @@ jest.mock('../../../../../utils/attribution-utils', () => ({
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
 
-jest.mock('../../../../../services/firebase', () => ({ default: {} }));
+jest.mock('core/services/firebase', () => ({ default: {} }));
 
 const { useAuth } = require('@/features/user-management');
 const { useRumors } = require('../../context/RumorContext');

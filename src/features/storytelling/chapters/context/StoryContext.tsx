@@ -4,7 +4,7 @@ import { Chapter, ChapterProgress, StoryProgress } from '../types';
 import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from 'hooks/useFirebaseData';
 import { useAuth, useUser } from 'features/user-management';
-import firebaseServices from 'services/firebase';
+import firebaseServices from 'core/services/firebase';
 import { buildModificationAttribution } from 'shared/attribution';
 
 interface StoryContextState {

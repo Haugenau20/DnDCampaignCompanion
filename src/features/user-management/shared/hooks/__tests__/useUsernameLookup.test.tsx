@@ -20,7 +20,7 @@ import { useUsernameLookup } from "../useUsernameLookup";
 // ---------------------------------------------------------------------------
 // Mock firebaseServices
 // ---------------------------------------------------------------------------
-jest.mock("@/services/firebase", () => ({
+jest.mock("@/core/services/firebase", () => ({
   __esModule: true,
   default: {
     user: {

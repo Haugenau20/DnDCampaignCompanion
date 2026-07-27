@@ -7,7 +7,7 @@ import Button from "../../../../core/components/Button";
 import { useNavigation } from "../../../../hooks/useNavigation";
 import { useNotes } from "../context/NoteContext";
 import { useCampaigns } from "features/user-management";
-import DocumentService from "../../../../services/firebase/data/DocumentService";
+import DocumentService from "core/services/firebase/data/DocumentService";
 import { Loader2, Users, MapPin, Scroll, MessageSquare, ExternalLink } from 'lucide-react';
 
 export interface PotentialReference {

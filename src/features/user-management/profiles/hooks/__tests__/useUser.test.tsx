@@ -25,7 +25,7 @@ const mockChangeGroupUsername = jest.fn();
 const mockIsUsernameAvailableInGroup = jest.fn();
 const mockIsUserAdmin = jest.fn();
 
-jest.mock("@/services/firebase", () => ({
+jest.mock("@/core/services/firebase", () => ({
   __esModule: true,
   default: {
     user: {

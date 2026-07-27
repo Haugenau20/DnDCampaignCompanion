@@ -1,7 +1,7 @@
 // src/features/collaboration/notes/hooks/useNoteData.ts
 import { useState, useEffect, useCallback } from "react";
 import { Note } from "../types";
-import DocumentService from "../../../../services/firebase/data/DocumentService";
+import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns } from "features/user-management";
 
 /**

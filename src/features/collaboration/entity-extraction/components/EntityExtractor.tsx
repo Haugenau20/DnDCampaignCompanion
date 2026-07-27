@@ -11,7 +11,7 @@ import EntityCard from "./EntityCard";
 import { useEntityExtractor } from "../hooks/useEntityExtractor";
 import { useNavigation } from "../../../../hooks/useNavigation";
 import { Loader2, AlertCircle, Info, ExternalLink, Search } from 'lucide-react';
-import DocumentService from "../../../../services/firebase/data/DocumentService";
+import DocumentService from "core/services/firebase/data/DocumentService";
 
 interface EntityExtractorProps {
   /** ID of the note to extract entities from */

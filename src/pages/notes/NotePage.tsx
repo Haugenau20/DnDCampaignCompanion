@@ -7,7 +7,7 @@ import { useNavigation } from "../../hooks/useNavigation";
 import { useNotes, NoteEditor, NoteEditorRef, NoteReferences, PotentialReference, Note, EntityExtractor, FloatingUsageIndicator } from "features/collaboration";
 import { useCampaigns } from "features/user-management";
 import { ArrowLeft, Trash2, AlertCircle, ExternalLink } from 'lucide-react';
-import DocumentService from "../../services/firebase/data/DocumentService";
+import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups } from "features/user-management";
 
 /**

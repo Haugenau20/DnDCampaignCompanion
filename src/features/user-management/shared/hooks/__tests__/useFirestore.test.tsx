@@ -28,7 +28,7 @@ const mockDeleteDocument = jest.fn();
 const mockQueryDocuments = jest.fn();
 const mockBatchOperations = jest.fn();
 
-jest.mock("@/services/firebase", () => ({
+jest.mock("@/core/services/firebase", () => ({
   __esModule: true,
   default: {
     document: {

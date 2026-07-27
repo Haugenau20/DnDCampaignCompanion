@@ -3,7 +3,7 @@ import Typography from 'core/components/Typography';
 import { Scroll, Edit } from 'lucide-react';
 import { determineAttributionActor, fetchAttributionUsernames } from '../../utils/attribution-utils';
 import { useFirebase } from 'features/user-management';
-import firebaseServices from '../../services/firebase';
+import firebaseServices from 'core/services/firebase';
 
 interface AttributionInfoProps {
   /** Complete item object containing attribution data */

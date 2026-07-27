@@ -27,7 +27,7 @@ const { determineAttributionActor, fetchAttributionUsernames } =
 // ---------------------------------------------------------------------------
 // Mock firebase services
 // ---------------------------------------------------------------------------
-jest.mock('../../../services/firebase', () => ({
+jest.mock('core/services/firebase', () => ({
   default: {},
 }));
 

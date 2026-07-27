@@ -31,7 +31,7 @@ const mockDocumentService = {
   deleteDocument: jest.fn()
 };
 
-jest.mock('../../../../../services/firebase/data/DocumentService', () => ({
+jest.mock('core/services/firebase/data/DocumentService', () => ({
   __esModule: true,
   default: {
     getInstance: () => mockDocumentService

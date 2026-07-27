@@ -1,7 +1,7 @@
 // src/context/firebase/hooks/useCampaigns.ts
 import { useCallback, useMemo } from 'react';
 import { useFirebaseContext } from 'features/user-management/auth/context/FirebaseContext';
-import firebaseServices from 'services/firebase';
+import firebaseServices from 'core/services/firebase';
 import { Campaign } from 'types/user';
 
 export function useCampaigns() {

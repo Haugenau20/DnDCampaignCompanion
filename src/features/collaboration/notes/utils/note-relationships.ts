@@ -1,6 +1,6 @@
 // src/features/collaboration/notes/utils/note-relationships.ts
 import { EntityType } from "../types";
-import firebaseServices from "../../../../services/firebase";
+import firebaseServices from "core/services/firebase";
 
 /**
  * Entity reference interface for connecting notes and campaign elements

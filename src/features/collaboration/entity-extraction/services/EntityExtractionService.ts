@@ -1,10 +1,10 @@
 // src/features/collaboration/entity-extraction/services/EntityExtractionService.ts
 import { httpsCallable } from 'firebase/functions';
-import BaseFirebaseService from 'services/firebase/core/BaseFirebaseService';
-import ServiceRegistry from 'services/firebase/core/ServiceRegistry';
+import BaseFirebaseService from 'core/services/firebase/core/BaseFirebaseService';
+import ServiceRegistry from 'core/services/firebase/core/ServiceRegistry';
 import { ExtractedEntity, EntityType } from '../../notes/types';
 import { UsageStatus, UsageLimitError } from '../types';
-import { OpenAIEntityResponse, ExtractedEntityDetails } from 'services/openai/types';
+import { OpenAIEntityResponse, ExtractedEntityDetails } from 'core/services/openai/types';
 
 interface ExtractEntitiesResponse {
   success: boolean;

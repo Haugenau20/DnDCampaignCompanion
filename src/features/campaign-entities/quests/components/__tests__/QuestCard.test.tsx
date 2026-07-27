@@ -42,7 +42,7 @@ jest.mock('../../../../../utils/attribution-utils', () => ({
   determineAttributionActor: jest.fn(() => ''),
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
-jest.mock('../../../../../services/firebase', () => ({ default: {} }));
+jest.mock('core/services/firebase', () => ({ default: {} }));
 
 // ---------------------------------------------------------------------------
 // Hook setup helpers

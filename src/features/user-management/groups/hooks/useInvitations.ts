@@ -1,7 +1,7 @@
 // src/context/firebase/hooks/useInvitations.ts
 import { useCallback } from 'react';
 import { useFirebaseContext } from 'features/user-management/auth/context/FirebaseContext';
-import firebaseServices from 'services/firebase';
+import firebaseServices from 'core/services/firebase';
 
 export function useInvitations() {
   const { 

@@ -1,7 +1,7 @@
 // src/features/collaboration/entity-extraction/services/__tests__/entityMapper.test.ts
 
 import { mapOpenAIEntityToExtractedEntity, extractDetailsByType } from '../entityMapper';
-import { OpenAIEntityResponse } from 'services/openai/types';
+import { OpenAIEntityResponse } from 'core/services/openai/types';
 
 /**
  * Tests for entityMapper.ts

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { httpsCallable, Functions } from 'firebase/functions';
-import ServiceRegistry from '../../../services/firebase/core/ServiceRegistry';
+import ServiceRegistry from 'core/services/firebase/core/ServiceRegistry';
 import Typography from 'core/components/Typography';
 import Input from 'core/components/Input';
 import Button from 'core/components/Button';

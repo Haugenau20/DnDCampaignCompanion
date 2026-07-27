@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import { User } from 'firebase/auth';
 import { useFirebaseContext } from '../context/FirebaseContext';
-import firebaseServices from 'services/firebase';
+import firebaseServices from 'core/services/firebase';
 
 export function useAuth() {
   const { user, loading, error, setError, refreshUserProfile } = useFirebaseContext();

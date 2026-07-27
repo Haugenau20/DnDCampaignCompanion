@@ -44,7 +44,7 @@ jest.mock("features/campaign-entities", () => ({
 // ---------------------------------------------------------------------------
 // Service / utility mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../services/firebase", () => ({}));
+jest.mock("core/services/firebase", () => ({}));
 
 jest.mock("../../utils/attribution-utils", () => ({
   determineAttributionActor: (_item: any, _map: any) => "Unknown",

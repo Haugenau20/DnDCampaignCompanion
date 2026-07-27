@@ -14,7 +14,7 @@ const mockRegistryHas = jest.fn();
 const mockRegistryGet = jest.fn();
 
 // Mock ServiceRegistry singleton
-jest.mock('../../../../services/firebase/core/ServiceRegistry', () => {
+jest.mock('core/services/firebase/core/ServiceRegistry', () => {
   return {
     __esModule: true,
     default: {

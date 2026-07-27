@@ -6,7 +6,7 @@ import { useQuests } from 'features/campaign-entities';
 import { useRumors } from 'features/campaign-entities';
 import { useNPCs } from 'features/campaign-entities';
 import { useLocations } from 'features/campaign-entities';
-import firebaseServices from '../services/firebase';
+import firebaseServices from 'core/services/firebase';
 import { determineAttributionActor, fetchAttributionUsernames } from '../utils/attribution-utils';
 
 // Import layouts

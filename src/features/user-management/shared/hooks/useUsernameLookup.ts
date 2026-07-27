@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useFirebaseContext } from 'features/user-management/auth/context/FirebaseContext';
-import firebaseServices from 'services/firebase';
+import firebaseServices from 'core/services/firebase';
 import { fetchAttributionUsernames } from 'utils/attribution-utils';
 
 /**

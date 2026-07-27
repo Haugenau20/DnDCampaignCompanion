@@ -53,7 +53,7 @@ const mockGetGroupUserProfile = jest.fn();
 const mockGetGroups = jest.fn();
 const mockGetCampaigns = jest.fn();
 
-jest.mock("@/services/firebase", () => ({
+jest.mock("@/core/services/firebase", () => ({
   __esModule: true,
   default: {
     auth: {

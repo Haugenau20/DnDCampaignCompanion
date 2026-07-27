@@ -1,7 +1,7 @@
 // context/SearchContext.tsx
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import { SearchResult, SearchResultType, SearchDocument } from '../types/search';
-import { SearchService } from '../services/search/SearchService';
+import { SearchService } from 'core/services/search/SearchService';
 import { useChapterData } from 'features/storytelling';
 import type { Chapter } from 'features/storytelling';
 import { useNPCData } from 'features/campaign-entities';
