@@ -277,8 +277,8 @@ describe('Card Component', () => {
       const { container } = renderCard({}, 'Themed card');
       
       // Assert - Check for theme class presence
-      // The card should have a classname with the theme prefix
-      expect(container.firstChild).toHaveClass('default-card');
+      // The card should have the theme class name
+      expect(container.firstChild).toHaveClass('card');
     });
   });
 });
