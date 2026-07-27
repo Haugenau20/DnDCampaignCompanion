@@ -39,6 +39,34 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | ARCHITECTURE | Cross-cutting structural issues |
 | TESTABILITY | Issues that prevent or complicate testing |
 
+## Phase 4 audit (2026-07-27) — read this before trusting a row
+
+A full triage pass ran on `triage/phase4-bug-triage`. Verdicts and evidence:
+**`docs/testing/phase4-triage-findings.md`** (narrative) and
+**`docs/testing/phase4-audit-worksheet.md`** (per-bug, with quoted code).
+
+Three things that pass was set up to catch, and did:
+
+1. **A passing test does not mean fixed.** #251's tests pass only because they *work around* the
+   defect (`getByText` and index-based `getAllByRole` instead of `getByLabelText`). Every Phase 4
+   verdict comes from reading current production code, never from pass/fail.
+2. **Several entries were closed by the migration and nobody came back.** #007, #008, #011 and #015 —
+   including three rated High/High — were fixed by the PR #16 attribution consolidation. #1201 became
+   impossible. That is 5 rows that overstated what was open.
+3. **Some entries were understated.** #150 is a production bug, not a testability note (see its row).
+   #006's report described a silent no-op; `updateNPC` actually performed a phantom write. #018 breaks
+   StoryPage's "resume last chapter" entirely.
+
+**A stale premise to stop propagating**: `cross-context-patterns.md` names as its "highest priority
+systematic issue" that `getUserName`/`getActiveCharacterName` "consistently return empty/null."
+Against `src/core/utils/user-utils.ts` this is false — `getUserName` is `userProfile?.username || ''`.
+The original symptom was a mock shape in tests. That document's Pattern 1 should be struck.
+
+**Tracker defect**: `NoteContext.bugs.test.tsx:455` has a `describe('Bug #024: …')` block, but **no
+#024 row and no `024-*.md` file exist**. Its tests pass. Needs filing retroactively or renumbering.
+Two test comments also cite the wrong bug numbers: `Dialog.test.tsx` cites #100 for what is #150, and
+`GroupManagementView.test.tsx` cites #200 for what is #201.
+
 ## Bugs
 
 | Bug # | Status | Category | Title | Impact | Priority | Affected file(s) |
@@ -48,16 +76,16 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#003](./003-react-key-uniqueness-warning.md) | ⚠️ NEEDS DECISION | UI | React key uniqueness warning | Low | Low-Medium | NPCContext |
 | [#004](./004-quest-id-generation-collision.md) | ⚠️ NEEDS DECISION | DATA | Quest ID generation collision risk | Medium | Medium | QuestContext |
 | [#005](./005-validation-inconsistency-patterns.md) | 🔍 DISCOVERED | VALIDATION | Validation error precedence inconsistency | Medium | Medium | Cross-context |
-| [#006](./006-missing-existence-validation.md) | 🔍 DISCOVERED | VALIDATION | Missing entity existence validation | Medium | Medium | NPCContext |
-| [#007](./007-user-attribution-inconsistency.md) | 🔍 DISCOVERED | DATA | User attribution metadata inconsistency | Low | Low | Cross-context |
-| [#008](./008-location-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Location user attribution metadata issues | High | High | LocationContext |
+| [#006](./006-missing-existence-validation.md) | ✅ FIXED | VALIDATION | Missing entity existence validation. `updateNPC` had **no** check at all (phantom write, not a no-op); all three paths now throw `'NPC not found'`. Required correcting 4 tests that encoded the defect as spec — see `phase4-triage-findings.md` | Closed | Closed | NPCContext |
+| [#007](./007-user-attribution-inconsistency.md) | ✅ FIXED | DATA | User attribution metadata inconsistency — attribution moved to the form layer; creation now stamps `createdBy`/`dateAdded` too (Phase 4 audit) | Closed | Closed | Cross-context |
+| [#008](./008-location-user-attribution-metadata.md) | ✅ FIXED | DATA | Location user attribution — resolved by the PR #16 attribution consolidation. Both marker tests pass, asserting correct values (Phase 4 audit) | Closed | Closed | LocationContext |
 | [#009](./009-location-id-generation-collision.md) | 🔍 DISCOVERED | DATA | Location ID generation collision risk | Medium | Medium | LocationContext |
 | [#010](./010-location-deletion-order-logic.md) | 🔍 DISCOVERED | DATA | Location hierarchical deletion order logic | Medium | Medium | LocationContext |
-| [#011](./011-rumor-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Rumor user attribution metadata issues | High | High | RumorContext |
+| [#011](./011-rumor-user-attribution-metadata.md) | ✅ FIXED | DATA | Rumor user attribution — resolved by the PR #16 attribution consolidation; marker tests pass (Phase 4 audit) | Closed | Closed | RumorContext |
 | [#012](./012-rumor-id-generation-collision.md) | 🔍 DISCOVERED | DATA | Rumor ID generation collision risk | Medium | Medium | RumorContext |
 | [#013](./013-rumor-combine-function-logic.md) | ✅ FIXED | INTEGRATION | Rumor combine "logic issues" — actually the JSDOM `crypto.randomUUID` gap; tests aborted before asserting. Polyfilled, marker tests pass, no production change | Closed | Closed | Test environment |
 | [#014](./014-quest-conversion-integration.md) | ✅ FIXED | INTEGRATION | Quest conversion "integration issues" — same JSDOM `crypto.randomUUID` gap; the workflow was never executed under test. Polyfilled, marker tests pass | Closed | Closed | Test environment |
-| [#015](./015-story-user-attribution-metadata.md) | 🔍 DISCOVERED | DATA | Story user attribution metadata issues | High | High | StoryContext |
+| [#015](./015-story-user-attribution-metadata.md) | ✅ FIXED | DATA | Story user attribution — resolved by the PR #16 attribution consolidation; marker tests pass (Phase 4 audit) | Closed | Closed | StoryContext |
 | [#016](./016-story-chapter-id-generation-system.md) | 🔍 DISCOVERED | ARCHITECTURE | Story chapter ID generation system issues | Medium | Medium | StoryContext |
 | [#017](./017-story-chapter-reordering-complexity.md) | 🔍 DISCOVERED | ARCHITECTURE | Story chapter reordering complexity | Medium | Medium | StoryContext |
 | [#018](./018-story-progress-tracking-integration.md) | 🔍 DISCOVERED | INTEGRATION | Story progress tracking integration issues | Medium | Medium | StoryContext |
@@ -65,11 +93,11 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#020](./020-note-user-attribution-metadata.md) | ✅ FIXED | TESTABILITY | Note user attribution metadata (test issue, not implementation bug) | Closed | Closed | NoteContext tests |
 | [#021](./021-note-sequential-id-generation.md) | ✅ FIXED | TESTABILITY | Note sequential ID "implementation issues" — actually a missing post-render `waitFor`; tests read state before the mocked async `fetchNotes()` settled. Fixed in test files, no production change | Closed | Closed | NoteContext tests |
 | [#022](./022-note-context-state-management.md) | ✅ FIXED | TESTABILITY | Note context "state management issues" — actually two test-timing gaps: an unawaited initial fetch, and same-`act()` stale closures across chained calls. Fixed in test files, no production change | Closed | Closed | NoteContext tests |
-| [#023](./023-entity-mapper-extract-details-empty-body.md) | 🔍 DISCOVERED | DATA | `entityMapper.extractDetailsByType` has empty body — silent data loss | High | High | EntityExtractionService / entityMapper |
+| [#023](./023-entity-mapper-extract-details-empty-body.md) | ✅ FIXED | DATA | `entityMapper.extractDetailsByType` had an empty body — silent data loss. Implemented from the working private copy in `EntityExtractionService`, which now delegates to it (single source of truth); 8 marker tests green | Closed | Closed | EntityExtractionService / entityMapper |
 | [#050](./050-use-note-data-unreachable-catch-block.md) | 🔍 DISCOVERED | VALIDATION | `useNoteData.getNoteCountForCampaign` has unreachable catch block | Low | Low | useNoteData hook |
 | [#100](./100-navigation-missing-key-prop-mobile-layout.md) | 🔍 DISCOVERED | UI | Navigation missing React `key` prop on mobile layout wrapper divs | Low | Low | Navigation.tsx |
 | [#101](./101-card-test-stale-class-assertion.md) | 🔍 DISCOVERED | UI | Card.test.tsx stale assertion — `default-card` class no longer emitted | Low | Low | Card.test.tsx |
-| [#150](./150-dialog-portal-ref-testability.md) | 🔍 DISCOVERED | TESTABILITY | Dialog portal ref pattern prevents JSDOM testing | Medium | Medium | Dialog.tsx, DeleteConfirmationDialog.tsx |
+| [#150](./150-dialog-portal-ref-testability.md) | 🔍 DISCOVERED | **UI / TESTABILITY** | **Escalated by the Phase 4 audit — this is a production bug, not just a testing limitation.** `Dialog.tsx:113` returns `null` while `portalRootRef.current` is unset, but that ref is assigned in a `useEffect` and assigning a ref triggers no re-render. A Dialog **mounted already-open** therefore renders nothing until something else re-renders it. `SessionTimeoutWarning.tsx` does exactly that (`if (!showWarning) return null` then `open={showWarning}`) and only re-renders on a **60s** interval, so the session-expiry warning can be invisible for up to a minute of its 5-minute window | **High** | **High** | Dialog.tsx, SessionTimeoutWarning.tsx |
 | [#200](./200-user-profile-low-statement-coverage-debounce.md) | 🔍 DISCOVERED | TESTABILITY | UserProfile username debounce validation branch hard to test | Low | Low | UserProfile.tsx |
 | [#201](./201-group-management-view-error-not-displayed-in-dialog.md) | 🔍 DISCOVERED | UI | GroupManagementView error state not visible after createGroup failure | Low | Low | GroupManagementView.tsx |
 | [#250](./250-npccard-related-quests-header-renders-with-no-content.md) | 🔍 DISCOVERED | UI | NPCCard "Related Quests" header renders with no content | Low | Low | NPCCard.tsx |
@@ -98,7 +126,7 @@ Catalogue of bugs discovered during behavioral testing of the D&D Campaign Compa
 | [#1152](./1152-firebase-context-dead-code-no-profile-branch.md) | 🔍 DISCOVERED | ARCHITECTURE | FirebaseContext `if (profile)` else branch (lines 289-291) is unreachable dead code — `loadUserProfile` always returns a profile or throws | Low | Low | FirebaseContext.tsx |
 | [#1153](./1153-firebase-context-groups-loading-not-reset-on-error.md) | ✅ FIXED | CONTEXT | FirebaseContext `groupsLoading` not reset to `false` when `loadGroups` throws — `loading` stays `true` indefinitely after group-load error | High | High | FirebaseContext.tsx |
 | [#1200](./1200-chapter-form-dead-attribution-overwritten-by-storycontext.md) | 🔍 DISCOVERED | ARCHITECTURE | ChapterForm builds attribution from `user.displayName` that StoryContext unconditionally overwrites — wrong source, and inert | Low (latent) | Low | ChapterForm.tsx |
-| [#1201](./1201-location-context-update-stale-profile-missing-dep.md) | 🔍 DISCOVERED | DATA | `updateLocation` omits `activeGroupUserProfile` from its `useCallback` deps — location edits can be attributed to the previously-active character | Medium | Medium | LocationContext.tsx |
+| [#1201](./1201-location-context-update-stale-profile-missing-dep.md) | 🚫 OBSOLETE | DATA | `updateLocation` no longer reads `activeGroupUserProfile` at all — attribution is stamped downstream by `DocumentService`. A missing dep cannot stale-read a value the callback never reads (Phase 4 audit) | Closed | Closed | LocationContext.tsx |
 | [#1202](./1202-story-reorder-datemodified-date-object-not-iso-string.md) | ✅ FIXED | DATA | Chapter reorder wrote `dateModified` as a `Date` (→ Firestore Timestamp) where every other path writes an ISO string; blanks the modified date in the UI. Code fixed by Wave A; **existing documents still need a data normalization pass** | Medium | Medium | StoryContext.tsx |
 | [#1203](./1203-saga-edit-page-attribution-wrong-source-and-overwrites-creator.md) | ✅ FIXED | DATA | Saga saves write attribution from `user.displayName` with no character fields, and reset `createdBy`/`dateAdded` on every edit — original author is permanently lost | High | High | SagaEditPage.tsx, useSagaData.ts |
 | [#1204](./1204-component-layer-hand-rolled-attribution-discarded.md) | 🔍 DISCOVERED | ARCHITECTURE | NPCForm / NPCEditForm / QuestCreateForm / RumorCard build attribution their context discards — dead code, latent regression if spread order changes (same shape as #1200, #1203) | Low (latent) | Low | 4 form components |
