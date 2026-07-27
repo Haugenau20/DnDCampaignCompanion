@@ -1,5 +1,5 @@
 // components/core/Dialog.tsx
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import Typography from './Typography';
@@ -35,28 +35,36 @@ const Dialog: React.FC<DialogProps> = ({
   isNested = false
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const portalRootRef = useRef<HTMLDivElement | null>(null);
-  
+  // Portal root lives in state rather than a ref. Assigning a ref does not
+  // trigger a re-render, so a consumer that mounts Dialog with `open` already
+  // true (e.g. SessionTimeoutWarning, which gates the whole <Dialog> element
+  // behind the same boolean it passes as `open`) would render null forever on
+  // that first pass — the effect below populates the value, but nothing ever
+  // forces React to look at `if (!open || !portalRoot) return null` again.
+  // State makes the population itself trigger the follow-up render. See bug #150.
+  const [portalRoot, setPortalRoot] = useState<HTMLDivElement | null>(null);
+
   // Create a unique ID for this dialog instance to help with targeting
   const dialogId = useRef(`dialog-${Math.random().toString(36).substr(2, 9)}`);
-  
-  // Create portal container if it doesn't exist
+
+  // Create portal container on mount (and whenever isNested changes).
+  // Deliberately does NOT depend on `portalRoot` — depending on the value this
+  // effect itself sets would recreate the container (and reset the state)
+  // every time it runs, looping forever. `isNested` is the only thing that
+  // should ever cause the container to be torn down and rebuilt.
   useEffect(() => {
-    if (!portalRootRef.current) {
-      const div = document.createElement('div');
-      div.id = dialogId.current;
-      div.className = isNested ? 'nested-dialog-root' : 'root-dialog-root';
-      div.dataset.nested = isNested ? 'true' : 'false';
-      document.body.appendChild(div);
-      portalRootRef.current = div;
-    }
-    
+    const div = document.createElement('div');
+    div.id = dialogId.current;
+    div.className = isNested ? 'nested-dialog-root' : 'root-dialog-root';
+    div.dataset.nested = isNested ? 'true' : 'false';
+    document.body.appendChild(div);
+    setPortalRoot(div);
+
     // Cleanup function to remove the portal container when component unmounts
+    // (or before this effect re-runs for a new `isNested` value).
     return () => {
-      if (portalRootRef.current) {
-        document.body.removeChild(portalRootRef.current);
-        portalRootRef.current = null;
-      }
+      document.body.removeChild(div);
+      setPortalRoot(null);
     };
   }, [isNested]);
   
@@ -96,21 +104,21 @@ const Dialog: React.FC<DialogProps> = ({
       }
     };
 
-    if (open && portalRootRef.current) {
+    if (open && portalRoot) {
       document.addEventListener('keydown', handleEscape);
-      portalRootRef.current.dataset.open = 'true';
+      portalRoot.dataset.open = 'true';
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      if (portalRootRef.current) {
-        portalRootRef.current.dataset.open = 'false';
+      if (portalRoot) {
+        portalRoot.dataset.open = 'false';
       }
     };
-  }, [open, onClose]);
+  }, [open, onClose, portalRoot]);
 
   // Don't render anything if the dialog is closed or no portal root
-  if (!open || !portalRootRef.current) return null;
+  if (!open || !portalRoot) return null;
 
   // Set z-index based on whether this is a nested dialog
   const zIndex = isNested ? 60 : 50;
@@ -181,7 +189,7 @@ const Dialog: React.FC<DialogProps> = ({
   );
 
   // Use createPortal to render to our specific root div
-  return createPortal(dialogContent, portalRootRef.current);
+  return createPortal(dialogContent, portalRoot);
 };
 
 export default Dialog;

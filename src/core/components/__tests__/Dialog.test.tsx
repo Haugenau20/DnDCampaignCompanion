@@ -9,7 +9,7 @@
 // clean portals — the component's own useEffect cleanup handles removal on
 // unmount, which React Testing Library triggers via cleanup().
 //
-// Bug #100 documents the root cause: the portal ref pattern means content is
+// Bug #150 documents the root cause: the portal ref pattern means content is
 // invisible on first render even when open=true.
 
 import React, { useState } from "react";
