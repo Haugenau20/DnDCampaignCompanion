@@ -4,7 +4,7 @@ import { useParams, Navigate } from 'react-router-dom';
 import Typography from '../../core/components/Typography';
 import { ChapterForm, useStory } from 'features/storytelling';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
-import Breadcrumb from '../../components/layout/Breadcrumb';
+import Breadcrumb from 'app/layout/Breadcrumb';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { useAuth } from 'features/user-management';
 import { BookOpen } from 'lucide-react';

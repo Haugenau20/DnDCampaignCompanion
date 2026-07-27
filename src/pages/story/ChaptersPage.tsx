@@ -4,7 +4,7 @@ import { useStory, BookshelfView, TableView } from 'features/storytelling';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { useAuth } from 'features/user-management';
 import Typography from '../../core/components/Typography';
-import Breadcrumb from '../../components/layout/Breadcrumb';
+import Breadcrumb from 'app/layout/Breadcrumb';
 import Button from '../../core/components/Button';
 import { 
   Plus, 

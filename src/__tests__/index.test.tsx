@@ -49,7 +49,7 @@ jest.mock("firebase/app-check", () => ({
 // Mock App — simple stub
 // ---------------------------------------------------------------------------
 const MockApp = () => <div data-testid="app-stub" />;
-jest.mock("../App", () => ({
+jest.mock("app/App", () => ({
   __esModule: true,
   default: MockApp,
 }));

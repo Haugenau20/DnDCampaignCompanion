@@ -49,7 +49,7 @@ jest.mock("@/features/user-management", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../components/layout/Breadcrumb", () => ({
+jest.mock("app/layout/Breadcrumb", () => ({
   __esModule: true,
   default: (props: any) => (
     <nav data-testid="breadcrumb">

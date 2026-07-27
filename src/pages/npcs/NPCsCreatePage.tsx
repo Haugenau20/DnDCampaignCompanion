@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Typography from '../../core/components/Typography';
 import Button from '../../core/components/Button';
 import { NPCForm, useNPCs } from 'features/campaign-entities';
-import Breadcrumb from '../../components/layout/Breadcrumb';
+import Breadcrumb from 'app/layout/Breadcrumb';
 import { ArrowLeft } from 'lucide-react';
 
 const NPCsCreatePage: React.FC = () => {

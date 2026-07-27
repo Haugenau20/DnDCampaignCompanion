@@ -4,7 +4,7 @@ import Typography from '../../core/components/Typography';
 import Input from '../../core/components/Input';
 import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
-import Breadcrumb from '../../components/layout/Breadcrumb';
+import Breadcrumb from 'app/layout/Breadcrumb';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { useAuth } from 'features/user-management';
 import { useSagaData, useStory } from 'features/storytelling';

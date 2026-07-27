@@ -99,7 +99,7 @@ jest.mock("shared/components/ErrorBoundary", () => ({
   ),
 }));
 
-jest.mock("../components/layout/Layout", () => ({
+jest.mock("app/layout/Layout", () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="layout">{children}</div>
@@ -183,7 +183,7 @@ jest.mock("../pages/ContactPage", () => ({
 // ---------------------------------------------------------------------------
 // Import App after all mocks are registered
 // ---------------------------------------------------------------------------
-import App from "../App";
+import App from "app/App";
 
 // ---------------------------------------------------------------------------
 // Expected route paths declared in App.tsx

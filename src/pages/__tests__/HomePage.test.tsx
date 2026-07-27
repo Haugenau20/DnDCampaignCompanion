@@ -54,7 +54,7 @@ jest.mock("shared/utils/attribution-utils", () => ({
 // ---------------------------------------------------------------------------
 // Child component / layout mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../components/features/layouts/dashboard/DashboardLayout", () => ({
+jest.mock("pages/layouts/dashboard/DashboardLayout", () => ({
   __esModule: true,
   default: (props: any) => (
     <div
@@ -70,7 +70,7 @@ jest.mock("../../components/features/layouts/dashboard/DashboardLayout", () => (
   ),
 }));
 
-jest.mock("../../components/features/layouts/journal/JournalLayout", () => ({
+jest.mock("pages/layouts/journal/JournalLayout", () => ({
   __esModule: true,
   default: (props: any) => (
     <div
@@ -92,7 +92,7 @@ jest.mock("../../core/components/Button", () => ({
   ),
 }));
 
-jest.mock("../../components/features/layouts/common/hooks/useLayoutData", () => ({
+jest.mock("pages/layouts/common/hooks/useLayoutData", () => ({
   __esModule: true,
   default: (props: any) => ({
     loading:
