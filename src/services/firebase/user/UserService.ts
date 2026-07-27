@@ -6,7 +6,7 @@ import {
     setDoc, 
     runTransaction 
   } from 'firebase/firestore';
-  import BaseFirebaseService from 'services/firebase/core/BaseFirebaseService';
+  import BaseFirebaseService from '../core/BaseFirebaseService';
   import {
     UserProfile,
     GroupUserProfile,

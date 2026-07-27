@@ -16,9 +16,9 @@ import {
   import { 
     createUserWithEmailAndPassword 
   } from 'firebase/auth';
-  import BaseFirebaseService from 'services/firebase/core/BaseFirebaseService';
-  import ServiceRegistry from 'services/firebase/core/ServiceRegistry';
-  import UserService from 'features/user-management/profiles/services/UserService';
+  import BaseFirebaseService from '../core/BaseFirebaseService';
+  import ServiceRegistry from '../core/ServiceRegistry';
+  import type UserService from '../user/UserService';
   import GroupService from './GroupService';
   
   /**

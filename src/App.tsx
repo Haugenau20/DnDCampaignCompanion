@@ -5,14 +5,16 @@ import { NavigationProvider } from './context/NavigationContext';
 import { SearchProvider } from './context/SearchContext';
 import { NPCProvider, LocationProvider, RumorProvider } from 'features/campaign-entities';
 import { StoryProvider } from 'features/storytelling';
-import { FirebaseProvider } from 'features/user-management/auth/context/FirebaseContext';
+import {
+  FirebaseProvider,
+  SessionTimeoutWarning,
+  SessionManager,
+  PrivacyNotice
+} from 'features/user-management';
 import { QuestProvider } from './features/campaign-entities';
 import { NoteProvider, UsageProvider } from 'features/collaboration';
 import ErrorBoundary from './components/shared/ErrorBoundary';
 import Layout from './components/layout/Layout';
-import SessionTimeoutWarning from 'features/user-management/auth/components/SessionTimeoutWarning';
-import SessionManager from 'features/user-management/auth/components/SessionManager';
-import PrivacyNotice from 'features/user-management/auth/components/PrivacyNotice';
 
 // Import pages
 import HomePage from './pages/HomePage';

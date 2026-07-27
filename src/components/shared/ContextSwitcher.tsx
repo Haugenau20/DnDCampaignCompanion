@@ -1,6 +1,6 @@
 // components/shared/ContextSwitcher.tsx
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { useGroups, useCampaigns } from 'features/user-management';
+import { useGroups, useCampaigns, JoinGroupDialog } from 'features/user-management';
 import Button from '../core/Button';
 import Typography from '../core/Typography';
 import { 
@@ -12,7 +12,6 @@ import {
   Check 
 } from 'lucide-react';
 import clsx from 'clsx';
-import JoinGroupDialog from 'features/user-management/groups/components/JoinGroupDialog';
 
 interface ContextSwitcherProps {
   inDialog?: boolean;

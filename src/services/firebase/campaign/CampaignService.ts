@@ -9,7 +9,7 @@ import {
   } from 'firebase/firestore';
   import BaseFirebaseService from '../core/BaseFirebaseService';
   import ServiceRegistry from '../core/ServiceRegistry';
-  import UserService from 'features/user-management/profiles/services/UserService';
+  import type UserService from '../user/UserService';
   import { Campaign } from '../../../types/user';
   
   /**

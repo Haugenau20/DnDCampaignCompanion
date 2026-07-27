@@ -1,6 +1,6 @@
 // src/components/features/auth/adminPanel/AdminPanel.tsx
 import React, { useState, useEffect } from 'react';
-import { useGroups } from 'features/user-management';
+import { useGroups } from '../../groups/hooks/useGroups';
 import Typography from 'components/core/Typography';
 import Button from 'components/core/Button';
 import Card from 'components/core/Card';

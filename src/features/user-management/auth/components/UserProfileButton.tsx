@@ -1,6 +1,7 @@
 // src/components/features/auth/UserProfileButton.tsx
 import React, { useState } from 'react';
-import { useAuth, useGroups } from 'features/user-management';
+import { useAuth } from '../hooks/useAuth';
+import { useGroups } from '../../groups/hooks/useGroups';
 import { useTheme } from 'themes/ThemeContext';
 import Button from 'components/core/Button';
 import Dialog from 'components/core/Dialog';

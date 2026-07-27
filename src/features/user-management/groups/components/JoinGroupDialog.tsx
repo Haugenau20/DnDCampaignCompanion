@@ -1,6 +1,7 @@
 // src/components/features/groups/JoinGroupDialog.tsx
 import React, { useState, useEffect } from 'react';
-import { useInvitations, useUser } from 'features/user-management';
+import { useInvitations } from '../hooks/useInvitations';
+import { useUser } from '../../profiles/hooks/useUser';
 import { useLocation } from 'react-router-dom';
 import Typography from 'components/core/Typography';
 import Input from 'components/core/Input';

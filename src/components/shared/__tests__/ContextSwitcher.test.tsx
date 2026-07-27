@@ -10,9 +10,16 @@ import ContextSwitcher from '../ContextSwitcher';
 const mockSetActiveGroup = jest.fn();
 const mockSetActiveCampaign = jest.fn();
 
+// ContextSwitcher consumes JoinGroupDialog through the domain barrel, so the
+// barrel mock re-exports the component stub defined further down.
 jest.mock('@/features/user-management', () => ({
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
+  get JoinGroupDialog() {
+    // the stub below returns the component directly, not a { default } module
+    const mod = require('@/features/user-management/groups/components/JoinGroupDialog');
+    return mod.default || mod;
+  },
 }));
 
 const { useGroups, useCampaigns } = require('@/features/user-management');

@@ -94,7 +94,7 @@ jest.mock('@/services/firebase/core/ServiceRegistry', () => {
   };
 });
 
-jest.mock('@/features/user-management/profiles/services/UserService', () => ({
+jest.mock('@/services/firebase/user/UserService', () => ({
   __esModule: true,
   default: { getInstance: jest.fn(() => mockUserServiceInstance) },
 }));

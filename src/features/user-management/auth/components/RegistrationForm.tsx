@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useInvitations, useUser } from 'features/user-management';
+import { useInvitations } from '../../groups/hooks/useInvitations';
+import { useUser } from '../../profiles/hooks/useUser';
 import Typography from 'components/core/Typography';
 import Input from 'components/core/Input';
 import Button from 'components/core/Button';

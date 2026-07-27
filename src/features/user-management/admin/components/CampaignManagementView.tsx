@@ -1,7 +1,9 @@
 // src/components/features/auth/adminPanel/CampaignManagementView.tsx
 
 import React, { useState, useEffect } from 'react';
-import { useCampaigns, useGroups, useAuth } from 'features/user-management'
+import { useCampaigns } from '../../groups/hooks/useCampaigns';
+import { useGroups } from '../../groups/hooks/useGroups';
+import { useAuth } from '../../auth/hooks/useAuth';
 import Typography from 'components/core/Typography';
 import Input from 'components/core/Input';
 import Button from 'components/core/Button';

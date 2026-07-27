@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import useSessionManager from '../hooks/useSessionManager';
-import { useGroups } from 'features/user-management';
+import { useGroups } from '../../groups/hooks/useGroups';
 import { useTheme } from 'themes/ThemeContext';
 import { ThemeName } from 'themes/types';
 

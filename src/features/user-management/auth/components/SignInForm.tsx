@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from 'features/user-management';
+import { useAuth } from '../hooks/useAuth';
 import Typography from 'components/core/Typography';
 import Input from 'components/core/Input';
 import Button from 'components/core/Button';

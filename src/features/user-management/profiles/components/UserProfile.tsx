@@ -1,6 +1,8 @@
 // src/components/features/auth/UserProfile.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth, useGroups, useUser } from 'features/user-management';
+import { useAuth } from '../../auth/hooks/useAuth';
+import { useGroups } from '../../groups/hooks/useGroups';
+import { useUser } from '../hooks/useUser';
 import Typography from 'components/core/Typography';
 import Input from 'components/core/Input';
 import Button from 'components/core/Button';

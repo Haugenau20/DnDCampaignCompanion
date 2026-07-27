@@ -38,10 +38,24 @@ const { useNavigate } = require("react-router-dom");
 // ---------------------------------------------------------------------------
 const mockSignOut = jest.fn();
 
+// Header consumes these components through the domain barrel, so the barrel
+// mock re-exports the component stubs defined further down.
 jest.mock("@/features/user-management", () => ({
   useAuth: jest.fn(),
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
+  get JoinGroupDialog() {
+    return require("@/features/user-management/groups/components/JoinGroupDialog").default;
+  },
+  get AdminPanel() {
+    return require("@/features/user-management/admin/components/AdminPanel").default;
+  },
+  get UserProfile() {
+    return require("@/features/user-management/profiles/components/UserProfile").default;
+  },
+  get SignInForm() {
+    return require("@/features/user-management/auth/components/SignInForm").default;
+  },
 }));
 
 const {

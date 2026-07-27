@@ -4,18 +4,21 @@ import { Link } from 'react-router-dom';
 import { SearchBar } from '../shared/SearchBar';
 import ThemeSelector from '../shared/ThemeSelector';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from 'features/user-management';
-import { useGroups, useCampaigns } from 'features/user-management';
+import {
+  useAuth,
+  useGroups,
+  useCampaigns,
+  JoinGroupDialog,
+  AdminPanel,
+  UserProfile,
+  SignInForm
+} from 'features/user-management';
 import { Menu, X, LogOut, ShieldAlert, UserPlus, User, Book, ChevronDown, Users, LogIn } from 'lucide-react';
 import ContextSwitcher from '../shared/ContextSwitcher';
 import Button from '../core/Button';
 import Typography from '../core/Typography';
 import Dialog from '../core/Dialog';
 import { clsx } from 'clsx';
-import JoinGroupDialog from 'features/user-management/groups/components/JoinGroupDialog';
-import AdminPanel from 'features/user-management/admin/components/AdminPanel';
-import UserProfile from 'features/user-management/profiles/components/UserProfile';
-import SignInForm from 'features/user-management/auth/components/SignInForm';
 
 /**
  * Main application header with simplified layout

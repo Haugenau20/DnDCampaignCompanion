@@ -65,7 +65,7 @@ function makeDocSnapshot(exists: boolean, data: Record<string, any> = {}) {
 const mockGetGroupUserProfile = jest.fn();
 const mockUserServiceInstance = { getGroupUserProfile: mockGetGroupUserProfile };
 
-jest.mock('@/features/user-management/profiles/services/UserService', () => ({
+jest.mock('@/services/firebase/user/UserService', () => ({
   __esModule: true,
   default: {
     getInstance: jest.fn(() => mockUserServiceInstance),
@@ -136,7 +136,7 @@ describe('AuthService', () => {
       REMEMBER_ME_DURATION,
       INACTIVITY_TIMEOUT,
     }));
-    jest.doMock('@/features/user-management/profiles/services/UserService', () => ({
+    jest.doMock('@/services/firebase/user/UserService', () => ({
       __esModule: true,
       default: { getInstance: jest.fn(() => mockUserServiceInstance) },
     }));

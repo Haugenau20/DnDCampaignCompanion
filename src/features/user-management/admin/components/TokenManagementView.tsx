@@ -1,11 +1,11 @@
 // src/components/features/auth/adminPanel/TokenManagementView.tsx
 import React, { useState, useEffect } from 'react';
-import { useInvitations } from 'features/user-management';
+import { useInvitations } from '../../groups/hooks/useInvitations';
 import Typography from 'components/core/Typography';
 import Input from 'components/core/Input';
 import Button from 'components/core/Button';
 import Dialog from 'components/core/Dialog';
-import { useGroups } from 'features/user-management';
+import { useGroups } from '../../groups/hooks/useGroups';
 import { formatDisplayDate } from 'utils/dateFormatter';
 import { 
   Search, 

@@ -9,10 +9,10 @@ import {
     browserSessionPersistence
   } from 'firebase/auth';
   import { doc, updateDoc, getDoc } from 'firebase/firestore';
-  import BaseFirebaseService from 'services/firebase/core/BaseFirebaseService';
-  import ServiceRegistry from 'services/firebase/core/ServiceRegistry';
-  import UserService from 'features/user-management/profiles/services/UserService';
-  import { SESSION_DURATION, REMEMBER_ME_DURATION, INACTIVITY_TIMEOUT } from 'services/firebase/config/firebaseConfig';
+  import BaseFirebaseService from '../core/BaseFirebaseService';
+  import ServiceRegistry from '../core/ServiceRegistry';
+  import type UserService from '../user/UserService';
+  import { SESSION_DURATION, REMEMBER_ME_DURATION, INACTIVITY_TIMEOUT } from '../config/firebaseConfig';
   
   /**
    * AuthService handles all authentication-related operations
