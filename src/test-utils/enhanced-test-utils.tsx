@@ -15,6 +15,67 @@ import { RumorProvider } from 'features/campaign-entities';
 import { NoteProvider } from 'features/collaboration';
 import { createMockFirebaseContext } from './firebase-test-helpers';
 
+// `FirebaseProvider` (rendered unconditionally by `TestWrapper` below) calls
+// `firebaseServices.auth.getAuth()` from its mount effect, which exercises
+// `BaseFirebaseService`'s real constructor. Every other test file in this
+// codebase that lets that constructor run for real (e.g. `UserService.test.ts`,
+// `AuthService.test.ts`, `CampaignService.test.ts`) mocks all five Firebase
+// submodules it touches locally, for two reasons this file needs too:
+//
+// 1. `firebase/analytics` and `firebase/functions` aren't mocked anywhere in
+//    `setupTests.ts` at all, so without a local mock `getAnalytics(app)`
+//    reaches the real `@firebase/analytics` implementation and throws
+//    "No Firebase App '[DEFAULT]' has been created".
+// 2. `setupTests.ts`'s global mocks for `firebase/app`/`firebase/auth`/
+//    `firebase/firestore` return `undefined` from `initializeApp`/`getAuth`/
+//    `getFirestore` (adequate for tests that only assert on call arguments).
+//    `BaseFirebaseService` stores that return value in `ServiceRegistry`, and
+//    `ServiceRegistry.get()` uses a truthy check (`if (!service) throw`), so an
+//    `undefined` value reads as "never registered" even though `register()` was
+//    called — the constructor throws "Service 'app' not found in registry"
+//    before assigning `this.app`. Overriding these three locally to return a
+//    stub object, matching the shape every other Firebase-service test file
+//    already uses, avoids that.
+//
+// This module is the only consumer of these mocks (nothing outside this file's
+// own test imports `enhanced-test-utils`), so overriding them here can't affect
+// any other suite.
+jest.mock('firebase/app', () => ({
+  initializeApp: jest.fn(() => ({})),
+  getApps: jest.fn(() => []),
+  getApp: jest.fn(() => ({}))
+}));
+jest.mock('firebase/firestore', () => ({
+  getFirestore: jest.fn(() => ({})),
+  collection: jest.fn(),
+  doc: jest.fn(),
+  getDoc: jest.fn(),
+  getDocs: jest.fn(),
+  setDoc: jest.fn(),
+  updateDoc: jest.fn(),
+  deleteDoc: jest.fn(),
+  query: jest.fn(),
+  where: jest.fn(),
+  orderBy: jest.fn(),
+  limit: jest.fn(),
+  onSnapshot: jest.fn(),
+  writeBatch: jest.fn(),
+  connectFirestoreEmulator: jest.fn()
+}));
+jest.mock('firebase/auth', () => ({
+  getAuth: jest.fn(() => ({})),
+  signInWithEmailAndPassword: jest.fn(),
+  createUserWithEmailAndPassword: jest.fn(),
+  signOut: jest.fn(),
+  onAuthStateChanged: jest.fn(() => jest.fn()),
+  connectAuthEmulator: jest.fn()
+}));
+jest.mock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
+jest.mock('firebase/functions', () => ({
+  getFunctions: jest.fn(() => ({})),
+  connectFunctionsEmulator: jest.fn()
+}));
+
 interface TestWrapperProps {
   children: React.ReactNode;
   firebaseOverrides?: any;
@@ -35,6 +96,16 @@ const TestWrapper: FC<TestWrapperProps> = ({
     return <ProviderComponent>{children}</ProviderComponent>;
   };
 
+  // Provider nesting mirrors app/App.tsx: SearchProvider calls useChapterData,
+  // useNPCData, useLocationData, useQuests and useRumorData directly in its
+  // body, so it must be nested *inside* NPCProvider/LocationProvider/
+  // QuestProvider/RumorProvider/StoryProvider (i.e. rendered as their child,
+  // not their ancestor) — those providers must already be mounted and
+  // supplying context by the time SearchProvider's function body runs.
+  // Production puts SearchProvider innermost, just before the routed content;
+  // this wrapper must do the same or SearchProvider throws
+  // "useX must be used within a XProvider" before any of skipProviders even
+  // matters.
   return (
     <BrowserRouter
       future={{
@@ -44,25 +115,25 @@ const TestWrapper: FC<TestWrapperProps> = ({
     >
       <ThemeProvider>
         <FirebaseProvider>
-          {withProvider(NavigationProvider, 
-            withProvider(SearchProvider,
-              withProvider(NPCProvider,
-                withProvider(LocationProvider,
-                  withProvider(QuestProvider,
-                    withProvider(RumorProvider,
-                      withProvider(StoryProvider,
-                        withProvider(NoteProvider, children, 'NoteProvider'),
-                        'StoryProvider'
+          {withProvider(NavigationProvider,
+            withProvider(NPCProvider,
+              withProvider(LocationProvider,
+                withProvider(QuestProvider,
+                  withProvider(RumorProvider,
+                    withProvider(StoryProvider,
+                      withProvider(NoteProvider,
+                        withProvider(SearchProvider, children, 'SearchProvider'),
+                        'NoteProvider'
                       ),
-                      'RumorProvider'
+                      'StoryProvider'
                     ),
-                    'QuestProvider'
+                    'RumorProvider'
                   ),
-                  'LocationProvider'
+                  'QuestProvider'
                 ),
-                'NPCProvider'
+                'LocationProvider'
               ),
-              'SearchProvider'
+              'NPCProvider'
             ),
             'NavigationProvider'
           )}
@@ -98,7 +169,11 @@ const customRender = (
 export const renderWithMinimalProviders = (ui: ReactElement, options?: RenderOptions) => {
   return customRender(ui, {
     ...options,
-    skipProviders: ['NPCProvider', 'QuestProvider', 'RumorProvider', 'LocationProvider', 'StoryProvider', 'NoteProvider']
+    // SearchProvider reads useNPCData/useLocationData/useQuests/useRumorData/
+    // useChapterData directly, so it must be skipped alongside the providers
+    // that supply those — otherwise it throws even though it's not the
+    // provider under test here.
+    skipProviders: ['NPCProvider', 'QuestProvider', 'RumorProvider', 'LocationProvider', 'StoryProvider', 'NoteProvider', 'SearchProvider']
   });
 };
 
@@ -112,7 +187,10 @@ export const renderWithFirebaseOnly = (ui: ReactElement, options?: RenderOptions
 export const renderWithNPCContext = (ui: ReactElement, options?: RenderOptions) => {
   return customRender(ui, {
     ...options,
-    skipProviders: ['QuestProvider', 'RumorProvider', 'LocationProvider', 'StoryProvider', 'NoteProvider']
+    // Keeping NPCProvider doesn't help SearchProvider: it also needs
+    // Location/Quest/Rumor/Story context, all of which are skipped here, so
+    // SearchProvider must be skipped too (see renderWithMinimalProviders).
+    skipProviders: ['QuestProvider', 'RumorProvider', 'LocationProvider', 'StoryProvider', 'NoteProvider', 'SearchProvider']
   });
 };
 
