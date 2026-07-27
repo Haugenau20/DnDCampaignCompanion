@@ -172,22 +172,31 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('Location not found');
     }
 
-    // Recursively get all child location IDs
+    // Recursively get all child location IDs in depth-first post-order: for each
+    // direct child, its own descendants come first, then the child itself. This
+    // guarantees deepest-first ordering so referential integrity is preserved when
+    // the IDs are deleted in sequence below (parent is never removed before any of
+    // its descendants).
     const getAllChildrenIds = (parentId: string): string[] => {
       const directChildren = locations.filter(loc => loc.parentId === parentId);
-      return [
-        ...directChildren.map(child => child.id),
-        ...directChildren.flatMap(child => getAllChildrenIds(child.id))
-      ];
+      return directChildren.flatMap(child => [
+        ...getAllChildrenIds(child.id),
+        child.id
+      ]);
     };
 
     const childrenIds = getAllChildrenIds(locationId);
-    
-    // Delete all children first
-    if (childrenIds.length > 0) {
-      await Promise.all(childrenIds.map(id => deleteData(id)));
+
+    // Delete all children first, sequentially and in depth-first order. Sequential
+    // (rather than Promise.all) execution is required here: it is the only way to
+    // guarantee descendants are actually removed from the database before their
+    // ancestors. This trades throughput (N round trips instead of one batch) for
+    // that guarantee — for deep or wide location trees this is slower than the
+    // previous parallel deletion, but ordering is the point of the fix.
+    for (const id of childrenIds) {
+      await deleteData(id);
     }
-    
+
     // Then delete the parent location
     await deleteData(locationId);
     
