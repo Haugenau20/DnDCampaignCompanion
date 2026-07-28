@@ -111,7 +111,7 @@ belt-and-braces rather than load-bearing.
 
 ### Testing Commands
 - Run test suite: `npm test` (jest)
-- Coverage: `npm run test:coverage` — CI floor is set in `jest.config.ts` (85% statements/functions/lines, 81% branches)
+- Coverage: `npm run test:coverage` — CI floor is a uniform **80%** in `jest.config.ts` (lowered from 85/81 during Phase 4 batch 3, at the user's direction)
 - Behavioural suites only: `npm run test:behavioral`
 - HTML report: `npm run test:html`
 - Single file, fast: `npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="<pattern>"`
@@ -215,7 +215,7 @@ what the audit actually checked, and it held: zero cross-domain internals import
 the tree.
 
 ### Migration Status
-- **Phase**: All four feature domains are migrated **and** the `shared`/`core` infrastructure pass (Phase 3e) is complete. Next is post-migration bug triage (Phase 4).
+- **Phase**: Restructuring is **complete** (all four domains + the `shared`/`core` pass, Phase 3e). Post-migration bug triage (Phase 4) is **largely complete** — 54 of 61 tracker rows resolved as of 2026-07-28. See `docs/testing/post-test-coverage-roadmap.md` for what remains.
 - **Order**: user-management → storytelling → campaign-entities → collaboration. Deliberately sequential; each domain must be green before the next starts. Within collaboration, `notes` had to precede `entity-extraction` for the same reason — extraction imports notes' types and helpers.
 - **Per-domain exit criteria**: all tests pass except the documented bug markers, coverage on the migrated domain does not drop, no new bugs introduced by the move itself, and a `migration/<domain>-complete` tag on `main` at merge.
 - **Risk Level**: Low-Medium (incremental, with a behavioural test suite as the safety net)
@@ -239,9 +239,9 @@ the tree.
 - **Use test failures to improve code quality before major refactoring**
 
 ### Current State
-- **Testing Infrastructure**: Jest + React Testing Library, ~3,970 tests across ~180 suites
-- **Coverage**: ~89% statements / ~90% lines / ~86% functions / ~81% branches, with a CI floor in `jest.config.ts`
-- **Baseline**: the documented-bug-marker failures. Check `docs/testing/results/pre-migration-baseline.md` and the latest migration doc for the current number before treating any red test as a regression.
+- **Testing Infrastructure**: Jest + React Testing Library, **3,982 tests across 180 suites**
+- **Coverage**: **91.66% statements / 92.15% lines / 85.16% functions / 83.46% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-28 on `main`)
+- **Baseline**: **7 failed / 2 skipped / 3973 passed / 3982 total across 180 suites.** All 7 failures are the deferred ID-collision markers (#002 ×2, #004 ×3, #009, #012) in the four `*Context.bugs` suites; the 2 skips are #901's, closed as testability-only. **There are no unexplained reds — any new red is a regression.** To prove "the same suites failed", run the four marker suites alone and match counts against the full run; piping a full run through `tail` discards the earlier failures' names.
 - **Firebase Testing**: Emulator integration available but underutilized
 
 #### A failing test is not automatically a bug

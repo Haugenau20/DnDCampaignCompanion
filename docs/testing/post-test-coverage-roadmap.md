@@ -1,23 +1,46 @@
 # Post-Test-Coverage Roadmap
 
-*Last updated: 2026-07-27 — Phase 3e is complete. Six commits on `migration/shared-core`
-(`69d19c2`, `7c9811e`, `3705d27`, `5db0ed7`, `c187f05`, `0d9696d`) moved every remaining file into
-`shared/`/`core/`, closed the dependency violations a post-move audit found, and left the tree
-matching the target architecture end to end.*
+*Last updated: 2026-07-28, end of the third Phase 4 pass (PRs #22 and #24 on `main` @ `12bc2d4`).*
 
 This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
 
-**Phase 4's first pass is complete** (2026-07-27, on `triage/phase4-bug-triage`) — see
-[Phase 4](#phase-4--post-migration-bug-triage--first-pass-complete) for what landed, what is confirmed
-still live, and the suggested next order. The test baseline is now **7 failed / 3971 passed across 180
-suites**, and every one of those 7 is a deliberately deferred ID-collision marker. Detail lives in
-`docs/testing/phase4-triage-findings.md` and `docs/testing/phase4-audit-worksheet.md`.
+## ⇒ CURRENT STATE — read this block, then jump to [What to do next](#what-to-do-next)
 
-**A second pass ran 2026-07-28** on `fix/phase4-batch1` — 8 bugs fixed (one partially), 5 closed
-without a code change, #024 retired as never-a-bug, and `cross-context-patterns.md` Pattern 1
-struck. Baseline moves to **7 failed / 3 skipped / 3977 passed / 3987 total across 180 suites**;
-the 7 are still the deferred ID-collision markers, and are now the *only* red in the suite. See
-[Phase 4, second pass](#phase-4-second-pass--2026-07-28), below.
+**Restructuring: complete.** All four domains plus the `shared/`/`core/` pass. Five tags on `main`.
+No file-moving work left; do not start any.
+
+**Phase 4 bug triage: 54 of 61 tracker rows resolved (~89%).** Three passes have run.
+
+**Verified baseline on `main` @ `12bc2d4`, measured 2026-07-28:**
+
+| Metric | Value |
+|---|---|
+| Tests | **7 failed / 2 skipped / 3973 passed / 3982 total** |
+| Suites | **4 failed / 176 passed / 180 total** |
+| Coverage | **91.66 stmts / 83.46 branches / 85.16 funcs / 92.15 lines** (uniform 80% floor) |
+| `npx tsc --noEmit` | clean |
+| `npm run build` | succeeds |
+
+All 7 failures are the deferred ID-collision markers (#002 ×2, #004 ×3, #009, #012). The 2 skips are
+#901's, closed as testability-only. **There are no unexplained reds — any new red is a regression.**
+
+**Reproduce this before believing anything you change is a regression.** If it doesn't reproduce,
+resolve that first.
+
+> ### ⚠️ This header has been wrong before — a warning about this very document
+>
+> Before this update, the block you are reading claimed the baseline was `3977 passed / 3987 total`.
+> The real number was `3993 / 4003` — **it was 16 tests stale**, and had been through two sessions.
+> An orchestrator that trusted it would have read 16 extra passing tests as unexplained drift and
+> gone looking for a cause that did not exist.
+>
+> This is the same failure this project has already catalogued twice — *"a handoff's to-do list can
+> itself be stale"* (batch 2) and the year-long life of `cross-context-patterns.md` Pattern 1.
+> **Measure the baseline yourself at the start of every session; treat this table as a claim to be
+> checked, not a fact.** And when you finish, update it — a stale status document costs the next
+> session more than the work it describes.
+
+---
 
 Phase 3e's findings, corrections and audit result are kept below for reference — read them before
 touching `shared/`/`core/` again, since two of the lessons recurred across nearly every slice of that
@@ -26,7 +49,11 @@ should go to bug triage.
 
 ---
 
-## Where we are now
+## Where we were at the end of Phase 3e (historical — for current state see the block at the top)
+
+*Everything in this section, including its test-baseline and bug-tracker numbers, describes `main` as
+of 2026-07-27, before the three Phase 4 passes. It is kept because the findings and corrections are
+still useful; do not read its numbers as current.*
 
 **Restructuring: complete.** All four feature domains and the `shared/`/`core/` infrastructure pass
 are merged onto `migration/shared-core`, tagged, and ready to land on `main`.
@@ -39,7 +66,7 @@ are merged onto `migration/shared-core`, tagged, and ready to land on `main`.
 | collaboration (notes + AI extraction) | ✅ merged (PR #17), tagged `411d9c8` |
 | attribution consolidation (interleaved) | ✅ merged (PR #16) |
 | `shared/` + `core/` infrastructure pass | ✅ **complete** on `migration/shared-core` — six commits, `69d19c2` → `0d9696d` |
-| post-migration bug triage (Phase 4) | ⬜ **not started — next** |
+| post-migration bug triage (Phase 4) | 🟢 **54 of 61 tracker rows resolved** — three passes done, see [What to do next](#what-to-do-next) |
 
 **The final tree**: `src/` holds `app/`, `core/`, `features/`, `pages/`, `shared/`, plus
 `test-utils/`, `utils/__dev__/`, `styles/`, `index.tsx`, `setupTests.ts`. `src/components/`,
@@ -152,7 +179,8 @@ fetch, and stale closures from chaining dependent calls inside a single `act()`.
 test aborted or read stale state before exercising the behaviour it named, and the resulting red was
 filed as a production defect. Roughly **half the failing suite was measuring its own harness.**
 
-**Bug tracker: 59 filed, 17 fixed, 39 open, 3 needing a decision.** Unchanged by Phase 3e — no bugs
+**Bug tracker at the time: 59 filed, 17 fixed, 39 open, 3 needing a decision.** *(Now 61 filed, 46
+fixed, 54 resolved, 7 open — see the top of this document.)* Unchanged by Phase 3e — no bugs
 were filed or fixed while moving files. Two new candidates the audit surfaced are queued in Phase 4,
 not yet filed.
 
@@ -817,6 +845,172 @@ because changing ID derivation changes URL shape and stored document identity ac
 types. Nothing else in the suite fails. That makes the failing set a precise, self-maintaining
 signal: **any new red is now unambiguously a regression**, which was not true at the start of
 Phase 4 (25 failures spanning 9 tracker entries and 4 unfiled harness bugs).
+
+---
+
+### Phase 4, third pass — 2026-07-28 (PRs #22 and #24)
+
+*Two Sonnet workers in one batch on `fix/phase4-batch2`, plus an unplanned production hotfix on
+`fix/appcheck-init`, plus orchestrator-owned documentation. Baseline was re-verified before starting
+and reproduced exactly on all four gates — which is what made the stale header (see the warning at
+the top of this document) visible at all.*
+
+**Landed**: #1051, #600's remainder, #016 closed, #005's StoryContext half decided, and **#1300 —
+a live production defect that no test could have caught.**
+
+#### #1300 — App Check had been silently off in production
+
+Reported from the live site's console, not by a test:
+
+```
+Failed to initialize Firebase App Check: FirebaseError: Firebase: No Firebase App '[DEFAULT]'
+has been created - call initializeApp() first (app/no-app).   at index.tsx:40
+```
+
+`index.tsx` calls `initializeAppCheck(getApp(), …)` at module scope. `getApp()` throws unless
+`initializeApp()` has run, and `initializeApp()` lives in exactly one place —
+`BaseFirebaseService`'s constructor, reached only through `initializeFirebaseServices()`.
+
+**`index.tsx` never imports the Firebase barrel.** It was free-riding on an import side effect:
+`import App from 'app/App'` reaches the barrel transitively, and the barrel used to call
+`initializeFirebaseServices()` at module scope, so ES import evaluation guaranteed Firebase was up
+before line 40 ran. Nothing expressed that dependency.
+
+Phase 3e's `69d19c2` made initialization lazy — correctly, to stop the barrel crashing jsdom — and
+removed the free ride with it. App Check has not initialized since that merged. Fixed by calling
+`getFirebaseServices()` explicitly before `getApp()`; **confirmed working in production by the user.**
+
+**Four independent layers hid it, and the combination is the lesson:**
+
+1. `index.tsx` catches the error into a `console.error`. No crash.
+2. `index.test.tsx` mocks `app/App` — severing the very import chain that did the initializing. The
+   suite was blind to this **by construction, before and after the regression.**
+3. `setupTests.ts` mocks `firebase/app` globally with `getApp: jest.fn()`, which returns `undefined`
+   unconditionally and never throws. Running the index suite against the *unfixed* code printed
+   **"Firebase App Check initialized successfully"** — the exact opposite of production.
+4. `tsc` and `npm run build` cannot see a runtime ordering bug.
+
+**All three standard gates were green throughout.** The regression test needed a local `firebase/app`
+mock modelling the real contract, because the global one cannot distinguish an initialized app from a
+missing one.
+
+> **The generalisable rule: a scan for references to a module never finds the code that depends on
+> its side effects.** Phase 3e's import audits were exhaustive and correct; `index.tsx` was invisible
+> to every one of them, because it does not reference the barrel — it references something that does,
+> and depended on what that import *did*. Same family as the `user-utils.ts` trap, one level further
+> out. When removing a module-scope side effect, the question is not *"who imports this?"* but
+> **"what state did importing this establish, and who reads that state without asking for it?"**
+
+#### Three findings from the batch itself
+
+1. **A bug report's recommended fix can be actively wrong, and #1051 is the clearest case.** Its
+   "Recommended Fix" listed removing the re-throw *first*. But `EntityExtractor.handleExtract` awaits
+   `saveCurrentContent()` through the ref and depends on the rejection to abort AI extraction. Taking
+   the report's advice would have let extraction run silently against unsaved content. The fix keeps
+   the re-throw and wraps only the two fire-and-forget call sites.
+
+   **And the near-miss is the instructive part**: EntityExtractor *does* have two tests for that abort
+   path — but they drive it with a **mocked** rejecting save, so they would have stayed green if the
+   re-throw were deleted. Tests covering a path do not necessarily cover the *seam* that feeds it. The
+   guard that actually works is a test asserting the ref-exposed `saveCurrentContent` still rejects.
+
+2. **The `layoutUtils.ts` "triplicate" was never a design question.** This document had it queued as
+   *"decide whether `pages/layouts/` warrants a presentation-local copy"*. Nothing imported the
+   copies: of `layoutUtils.ts`'s four exports only `calculateCompletionPercentage` had a consumer, and
+   the live `getRelativeTime`/`formatJournalDate`/`getContentTypeLabel` live in
+   `shared/utils/dateFormatter.ts` and `contentTypeUtils.tsx`. Deleted, not reconciled. **Third time
+   this exact shape has appeared** (#600, and finding 5's two wrong readings) — *before framing a
+   duplication as a design decision, check that both implementations run.*
+
+3. **#005's remaining half resolved to "leave it", on evidence rather than taste.** `StoryContext`'s
+   three progress methods are declared `=> void`, and both live call sites are fire-and-forget —
+   `StoryPage` calls `updateCurrentChapter` from a `useEffect` and `updateChapterProgress` from
+   `onPageChange`, neither awaiting nor catching. **Making them throw would have manufactured a fresh
+   instance of #1051 in the same PR that fixed #1051.** `markChapterComplete` has no production caller
+   at all. The contract is now a block comment on `StoryContextValue`, so the next sweep that flags
+   "3 warn-and-return vs 4 throw" finds the answer beside the finding.
+
+   *Generalisable*: "N implementations of one rule, disagreeing" is a smell, not a verdict. Sometimes
+   the N implementations answer different questions — and the asymmetry lives in the call sites, which
+   the sweep that found it was not reading.
+
+#### Numbers
+
+| | Before | After |
+|---|---|---|
+| Tests | 7F / 3S / 3993P / 4003 | **7F / 2S / 3973P / 3982** |
+| Statements | 91.65% | 91.66% |
+| Branches | 83.56% | 83.46% |
+| Functions | 85.17% | 85.16% |
+| Lines | 92.14% | 92.15% |
+
+Reconciles exactly: −30 deleted dead-code tests, +5 for #1051, +4 for #1300, +1 marker un-skipped and
+now passing. **The total falling is the dead-code sweep, not lost coverage.** Branches −0.10 because
+the deleted code was *well* covered — the inverse of batch 2's lesson that deleting dead code buys
+coverage margin. Both are true: deleting *uncovered* code raises the ratio, deleting *covered* code
+lowers it. Neither is rot.
+
+---
+
+## What to do next
+
+Ordered by value. Items 1 and 2 are real work; 3 and 4 are cheap hygiene.
+
+### 1. #1200 / #1204 — the attribution type split *(the only substantial open code work)*
+
+Four form components (`NPCForm`, `NPCEditForm`, `QuestCreateForm`, `RumorCard`) plus `ChapterForm`
+build attribution their context discards. No user-visible bug today; a latent regression the day a
+context's spread order changes, since `NPCForm` and `QuestCreateForm` omit `createdByCharacterId`.
+
+**This is a design task, not a deletion, and that is why it has been deferred three times.** #1204
+explicitly forbids the easy path: several payloads are typed `Omit<Quest, 'id'>`, which is *why* the
+dead fields exist, and the report says do not work around it by keeping them. The clean fix is the
+`DomainData<T>` / `Entity<T>` split sketched in the salvage section below — a domain-data type that
+excludes system metadata, so the compiler stops demanding attribution from the presentation layer.
+
+Read `docs/architecture/migration/attribution-consolidation-findings.md` first: its RESOLVED section
+records two categories of write that must **never** be routed through `createDocument`, and the
+`// Do NOT switch this to createDocument` guards in `StoryContext` are load-bearing (#1203, #017).
+
+**Scope honestly before starting.** This touches types every entity form compiles against. It is
+plausibly a whole session. Consider doing the type introduction as one reviewable commit and the five
+components as a second.
+
+### 2. The ID-collision cluster (#002 / #004 / #009 / #012) — *only if you want the 7 reds gone*
+
+**Deferred by explicit decision. Do not reopen without asking the user.** Changing ID derivation
+changes URL shape and stored document identity across four entity types — it needs a data migration
+plan, not just a code fix.
+
+Two traps recorded for whoever picks it up:
+- The marker tests create two entities inside one `act()`, so a **lookup-based** fix may fail for
+  harness reasons rather than logic reasons. An approach needing no lookup sidesteps that entirely.
+- `NPCContext.behavioral.test.tsx:442` contains a **characterization test asserting the collision**.
+  It will go red when the cluster is fixed, and is labelled as such. Correcting it needs the same
+  explicit authorisation #006, #005, #750 and #017 each got.
+
+### 3. #1202 — production data pass *(operational, no code)*
+
+Chapters reordered before the attribution branch hold a Firestore `Timestamp` in `dateModified` where
+a string is expected, and render a blank modified date. The code is fixed; **existing documents are
+not.** Needs a one-off normalization script against production data — a different kind of task from
+everything else here, and the only item with a user-visible symptom still live.
+
+### 4. Cheap hygiene
+
+- **`useLayoutData`'s `locations` prop and `Location` import are now unused** by the hook body, since
+  the only consumer was the deleted `sortedLocations`. Left deliberately, because removing them
+  changes the hook's signature and its callers. Small, safe, worth doing.
+- **#005's cosmetic tail**: `LocationContext`/`QuestContext` inline
+  `if (!activeGroupId || !activeCampaignId)`; `NoteContext` uses `if (!user?.uid || !activeGroupId)`.
+  Three idioms, one precondition. **Nothing has been shown to misbehave** — do not file it as a bug
+  on a code-reading alone; that is what produced the five entries this project retracted.
+
+### What is genuinely finished
+
+Restructuring, in full. Dead-code sweeps (#050, #600, #1000, #1050, #1052, #1152 all closed). The
+consistency cluster (#100, #250, #700, #702, #850). Data integrity (#017, #750, #851, #852). The
+a11y/UI set (#150, #201, #251). Attribution consolidation, except the #1200/#1204 tail above.
 
 ---
 

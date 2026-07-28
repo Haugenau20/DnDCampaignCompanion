@@ -117,6 +117,34 @@ Two method notes from this pass:
    claiming to cover branches they had never reached. Assertions were left untouched; only the
    comments were corrected. Worth checking for routinely after any deletion.
 
+## Phase 4, third pass (2026-07-28) — PRs #22 and #24
+
+**Current tracker state: 61 filed, 54 resolved, 7 open.** Of the 7: four are the deferred
+ID-collision cluster (#002, #004, #009, #012), two are the attribution type-split task
+(#1200, #1204), and one is #005's cosmetic tail.
+
+**Fixed**: #1051, #600's remainder (the dead `sortedLocations`), and **#1300**.
+**Closed**: #016, overtaken by #019 and #017.
+**Decided**: #005's `StoryContext` half — the split stays, and is now documented in the code.
+
+**#1300 is the first entry in this tracker reported from production rather than found by a test**,
+and the reason is worth internalising: App Check had been silently off since Phase 3e merged, because
+`index.tsx` was free-riding on an import side effect that the lazy-init change removed. Four
+independent layers hid it — a swallowing `try`/`catch`, a test that mocks `app/App` and so severs the
+very import chain, a global `firebase/app` mock whose `getApp()` never throws, and the structural
+inability of `tsc`/`build` to see a runtime ordering bug. **All three standard gates were green
+throughout.** Full detail in the report.
+
+Two method notes:
+
+1. **A report's "Recommended Fix" can be actively wrong.** #1051 listed removing the re-throw first;
+   doing so would have broken `EntityExtractor`'s abort path. Worse, EntityExtractor's two tests for
+   that path use a *mocked* rejecting save, so they would have stayed green. **Tests covering a path
+   do not necessarily cover the seam that feeds it.**
+2. **Check that both implementations run before reconciling them.** The `layoutUtils.ts` "triplicate"
+   was carried as a design question for two sessions; nothing imported the copies. Third occurrence
+   of this exact shape (#600, and finding 5's two wrong readings in Phase 3e).
+
 ## Bugs
 
 | Bug # | Status | Category | Title | Impact | Priority | Affected file(s) |
