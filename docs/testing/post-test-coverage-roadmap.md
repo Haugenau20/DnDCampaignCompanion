@@ -635,6 +635,73 @@ report addendum so the next pass starts from measurement.
 were pointed at tells you nothing about whether the pattern it exemplified survived — and a bug
 filed as systemic, closed on one instance, is worse than one never opened.
 
+#### Batch 3 — the consistency cluster (2026-07-28)
+
+Seven bugs of one shape: *N implementations of one rule, disagreeing.* **Five landed** (#100, #250,
+#700, #702, #850); **two were blocked and correctly halted on** (#600, #750). The coverage floor was
+lowered to a uniform 80% in the same pass, at the user's direction.
+
+Three of the five turned out to have their direction settled by evidence rather than preference,
+which is worth noticing — *"pick one and make them match"* sounds like a coin flip and usually isn't:
+
+- **#850** — every `timestamp:` expression already read `dateModified || dateAdded`. The file's own
+  downstream code had assumed the looser rule all along; only the five guards disagreed. Unifying
+  *on the fallback* was the only choice consistent with code that already existed.
+- **#700** — validating inside the 3-arg branch (as first written) would have left the 2-arg form
+  still coercing `''`, **trading one asymmetry for another**. Hoisting the check past the
+  calling-convention branch makes one rule serve both. Caught in review, not by the tests.
+- **#250** — resolving before guarding also made the per-item `quest ? … : null` dead, since nothing
+  unresolved survives the filter. The first draft of the fix left that behind; shipping new dead
+  code in the same PR that deletes dead code defeats the point.
+
+**#600 dissolved on inspection, and my own initial call on it was wrong.** I told the agent the
+direction was "already decided: explored FIRST", on a 2:1 reading — `useLayoutData`'s code plus
+`LocationsMap`'s comment against `LocationsMap`'s code. That was wrong twice. It ignored
+`LocationsMap.test.tsx`, which asserts the current order and makes it 2:2; and, decisively,
+**`useLayoutData.sortedLocations` is read by nothing.** It is computed, memoised and exported, and
+its only non-test consumer (`HomePage`) uses just `layoutData.loading`. So there is no user-visible
+inconsistency, no UX decision, and nothing to flip — the live ordering already matches what the
+original report argued for. Only the comment was wrong, and it is fixed. Deleting the dead
+`sortedLocations` belongs to the dead-code phase.
+
+**The generalisable point**: before reconciling two implementations, check that both of them *run*.
+A dead implementation votes in a code-reading tally and counts for nothing in production. Had the
+agent followed my instruction without the halt, it would have changed real user-facing behaviour to
+match dead code.
+
+**#750 is blocked by the clearest characterization test found yet.** `LocationCreatePage.test.tsx`
+asserts `it("always passes an object (possibly with undefined fields) when no state")` under a
+comment block that **cites bug #750 by number** and describes the defect as expected behaviour. The
+fix is written and reverted; it needs the same authorisation #006 and #005 got.
+
+Running total of this family: **7 found** — four blocking #006, one blocking #005, one blocking
+#750, and one asserting the #002 ID collision (`NPCContext.behavioral.test.tsx:442`) that will
+ambush whoever picks up the deferred cluster.
+
+#### The `DISCOVERY:` sweep, finally run
+
+Phase 4's first pass recommended grepping the behavioural suites for `DISCOVERY:`/`BEHAVIOR:`
+comments, reasoning that characterization tests announce themselves that way. Run at last: **23
+hits, and the marker turned out to be a poor predictor of what it was meant to find — one genuine
+characterization test in 23.**
+
+It was, however, an excellent predictor of something else: **stale bug narrative.** Four blocks in
+`RumorContext.bugs.test.tsx` (:150, :205, :259) and `StoryContext.bugs.test.tsx` (:214) read
+
+```
+// BUG DISCOVERY: This test will FAIL until getUserName and getActiveCharacterName utilities are fixed
+// ACTUAL: getUserName returns "" and getActiveCharacterName returns null
+    createdByUsername: 'Test User',        // BUG: Currently receives ""
+```
+
+These tests **pass**. The assertions are correct; the narrative is false twice — it asserts a defect
+in `user-utils.ts` that never existed (the struck Pattern 1) and predicts a failure that does not
+happen. This is the **inverse** of a characterization test: right assertion, wrong story. It is
+still dangerous, because a reader hitting `// BUG: Currently receives ""` would go re-investigate a
+non-issue, which is exactly the misdirection Pattern 1 already caused for a year.
+
+The remaining ~18 are benign narration over reasonable assertions.
+
 #### Still open after this pass
 
 - **Confirmed live, unfixed**: #100, #250, #600, #700, #702, #750, #850 (logic/UI); #016, #017

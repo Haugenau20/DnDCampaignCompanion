@@ -147,15 +147,24 @@ describe('RumorContext Bug Discovery Tests', () => {
         await rumorContext.addRumor(rumorData);
       });
 
-      // BUG DISCOVERY: This test will FAIL until getUserName and getActiveCharacterName utilities are fixed
+      // Attribution values are built in core/attribution and applied by
+      // DocumentService. These assertions specify the correct values, and they
+      // currently pass.
+      //
+      // This note previously read "This test will FAIL until getUserName and
+      // getActiveCharacterName utilities are fixed", with "ACTUAL: getUserName
+      // returns '' and getActiveCharacterName returns null". That was never true:
+      // getUserName is `userProfile?.username || ''` and returns the username
+      // whenever one is present. The claim came from cross-context-patterns.md's
+      // Pattern 1, struck 2026-07-28 as a false premise that had misdirected
+      // priority for a year. Corrected so the narrative does not outlive it.
       // EXPECTED: Proper user attribution metadata should be included
-      // ACTUAL: getUserName returns "" and getActiveCharacterName returns null
       expect(mockAddData).toHaveBeenCalledWith(
         expect.objectContaining({
-          createdByUsername: 'Test User',        // BUG: Currently receives ""
-          createdByCharacterName: 'Test Character', // BUG: Currently receives null
-          modifiedByUsername: 'Test User',       // BUG: Currently receives ""
-          modifiedByCharacterName: 'Test Character' // BUG: Currently receives null
+          createdByUsername: 'Test User',
+          createdByCharacterName: 'Test Character',
+          modifiedByUsername: 'Test User',
+          modifiedByCharacterName: 'Test Character'
         }),
         'test-rumor-for-attribution'
       );
@@ -202,12 +211,14 @@ describe('RumorContext Bug Discovery Tests', () => {
         });
       });
 
-      // BUG DISCOVERY: This test will FAIL until attribution utilities are fixed
+      // Specifies the correct attribution values; currently passes. The former
+      // "will FAIL until attribution utilities are fixed" note referred to the
+      // Pattern 1 premise struck on 2026-07-28 — it was never a real defect.
       expect(mockUpdateData).toHaveBeenCalledWith(
         'test-rumor',
         expect.objectContaining({
-          modifiedByUsername: 'Test User',       // BUG: Currently receives ""
-          modifiedByCharacterName: 'Test Character' // BUG: Currently receives null
+          modifiedByUsername: 'Test User',
+          modifiedByCharacterName: 'Test Character'
         })
       );
     });
@@ -256,18 +267,20 @@ describe('RumorContext Bug Discovery Tests', () => {
         await rumorContext.updateRumorNote('test-rumor', note);
       });
 
-      // BUG DISCOVERY: This test will FAIL until attribution utilities are fixed
+      // Specifies the correct attribution values; currently passes. The former
+      // "will FAIL until attribution utilities are fixed" note referred to the
+      // Pattern 1 premise struck on 2026-07-28 — it was never a real defect.
       expect(mockUpdateData).toHaveBeenCalledWith(
         'test-rumor',
         expect.objectContaining({
           notes: [
             expect.objectContaining({
-              createdByUsername: 'Test User',        // BUG: Currently receives ""
-              createdByCharacterName: 'Test Character' // BUG: Currently receives null
+              createdByUsername: 'Test User',
+              createdByCharacterName: 'Test Character'
             })
           ],
-          modifiedByUsername: 'Test User',       // BUG: Currently receives ""
-          modifiedByCharacterName: 'Test Character' // BUG: Currently receives null
+          modifiedByUsername: 'Test User',
+          modifiedByCharacterName: 'Test Character'
         })
       );
     });

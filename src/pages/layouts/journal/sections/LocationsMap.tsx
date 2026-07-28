@@ -16,7 +16,14 @@ interface LocationsMapProps {
 const LocationsMap: React.FC<LocationsMapProps> = ({ locations, loading }) => {
   const { navigateToPage } = useNavigation();
 
-  // Sort locations by status (explored first) then by name
+  // Sort by status, explored LAST, then by name — fully-explored locations are
+  // de-emphasised in favour of the ones still worth visiting.
+  //
+  // This comment previously read "explored first", contradicting the code below.
+  // It matched useLayoutData's `sortedLocations`, which sorts the opposite way —
+  // but that value is computed, exported and never read by any production code,
+  // so this is the only ordering a user ever sees. The code is correct and the
+  // comment was the defect. See bug #600.
   const sortedLocations = [...locations].sort((a, b) => {
     // First, sort by exploration status
     if (a.status !== b.status) {

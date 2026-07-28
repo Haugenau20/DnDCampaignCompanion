@@ -444,11 +444,28 @@ describe('NPCContext Behavioral Testing', () => {
       const [firstNPCData] = mockAddData.mock.calls[0];
       const [secondNPCData] = mockAddData.mock.calls[1];
 
-      // DISCOVERY: This reveals if the ID generation creates collisions
+      // ⚠️ CHARACTERIZATION TEST — asserts the DEFECT, not the requirement.
+      //
+      // This locks in the bug #002 collision: two NPCs whose names differ only
+      // by case both derive the id 'thorin-oakenshield', and the second
+      // overwrites the first. That is the behaviour #002/#004/#009/#012 exist
+      // to describe, and it is deliberately deferred, not accepted.
+      //
+      // WHOEVER FIXES THE ID-COLLISION CLUSTER: this test will go red, and it
+      // will look like a regression. It is not — it is this assertion doing
+      // exactly what it was written to do. Correct it to expect distinct ids in
+      // the same change as the fix. Editing it needs explicit authorisation
+      // (the standing rule is never to edit a test to make it pass), which is
+      // why it is flagged here rather than pre-emptively changed.
+      //
+      // Found 2026-07-28 by the DISCOVERY: sweep. It is the seventh
+      // characterization test found in this codebase and the only one that
+      // ambushes a deferred bug rather than blocking an active one — the
+      // cluster's other known trap (two entities created inside one act(), so a
+      // lookup-based fix may not see the first) is recorded in the roadmap.
       expect(firstNPCData.id).toBe('thorin-oakenshield');
       expect(secondNPCData.id).toBe('thorin-oakenshield'); // Same ID - collision!
 
-      // This test documents the current behavior (collision exists)
       console.warn('NPC ID collision detected:', firstNPCData.id, '===', secondNPCData.id);
     });
   });
