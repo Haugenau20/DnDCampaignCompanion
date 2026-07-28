@@ -7,6 +7,7 @@ import App from 'app/App';
 import './styles/globals.css';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getApp } from 'firebase/app';
+import { getFirebaseServices } from 'core/services/firebase';
 
 // Initialize AppCheck for enhanced security
 // In development, we'll use debug tokens
@@ -36,6 +37,17 @@ if (process.env.NODE_ENV === 'development') {
       provider: new ReCaptchaV3Provider(siteKey),
       isTokenAutoRefreshEnabled: true
     };
+
+    // Initialize Firebase before reading the app back with getApp().
+    //
+    // This module does not import the Firebase barrel for its own sake, and it
+    // must not rely on someone else's import doing the work: initialization used
+    // to happen as a side effect of `import App from 'app/App'` (App transitively
+    // imports the barrel, which called initializeFirebaseServices() at module
+    // scope). Making that lazy so importing the barrel is side-effect free left
+    // getApp() with no app to return, and App Check silently stopped initializing
+    // because the catch below swallowed the resulting app/no-app error.
+    getFirebaseServices();
 
     initializeAppCheck(getApp(), appCheckConfig);
     console.log('Firebase App Check initialized successfully');
