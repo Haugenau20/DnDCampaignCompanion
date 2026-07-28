@@ -147,6 +147,57 @@ Two method notes:
    was carried as a design question for two sessions; nothing imported the copies. Third occurrence
    of this exact shape (#600, and finding 5's two wrong readings in Phase 3e).
 
+## Phase 4, fourth pass (2026-07-28)
+
+**Tracker state: 62 filed, 62 resolved, 0 open.** The test suite is **fully green for the first
+time**: 182 suites, 4043 passed, 2 skipped, **0 failed**. `tsc` clean, `npm run build` succeeds.
+
+**Fixed**: the ID-collision cluster (#002, #004, #009, #012), the attribution type split
+(#1200, #1204), and #303 — filed and fixed the same day.
+**Closed as no-defect**: #005's remaining third.
+**Filed**: #303, the only new entry, and it was proven by a failing test before it was written up.
+
+### The deferral was resting on a premise that wasn't true
+
+#002/#004/#009/#012 sat deferred for a year because "changing ID derivation changes URL shape and
+stored document identity across four entity types — it needs a data migration plan." Checked
+directly, that was wrong. **A fix that only changes ids at the point of collision touches no existing
+document, no existing URL, and none of the ten cross-document reference fields.** No migration, no
+backfill, no cutover. The deferral cost a year of a live data-loss path, on an assumption nobody had
+tested.
+
+The severity was also understated in the other direction. Filed as "collision risk, Medium," it was
+`setDoc` — a full overwrite — with no existence check on any of the four create paths. Creating "town
+guard" when "Town Guard" existed **destroyed the first document silently.** And the likeliest real
+trigger was never case variants at all: it was two entities genuinely sharing a name, which no slug
+scheme distinguishes.
+
+### Four things worth carrying forward
+
+1. **The suite already specified the fix.** The obvious approach — suffix every id — was ruled out
+   not by taste but by three existing tests: two markers assert the *first* id is still the clean
+   slug, and a passing test pins `convertToQuest`'s output. Collision-only disambiguation was the
+   only shape the existing specification permitted. **Read what the tests already require before
+   designing; they may have decided for you.**
+2. **A single-purpose sweep found one of two.** The `DISCOVERY:` sweep catalogued the collision-
+   asserting characterization test in `NPCContext` and reported it as the *only* ambush awaiting the
+   cluster's fixer. A second, in `QuestContext.behavioral.test.tsx:411`, surfaced only because a
+   **parallel** agent ran the full suite mid-flight and reported an unexplained red in a file it had
+   not touched. The Quest one is the clearest specimen yet — its own name and two of its comments
+   demand unique ids while its assertions demand a collision. A sweep looking for tests that assert
+   a defect found the one in the file it was reading, and not the one next door.
+3. **"Architecturally cleaner" needs checking against the other consumer.** #303's report proposed
+   making `LocationCombobox` emit ids instead of names, and called it the cleaner option. Reading
+   `QuestFormSections` disproved it: that consumer uses the same component for a free-text display
+   field and genuinely wants a name. The fix instead added an optional callback so the reference
+   consumer gets the entity and the display consumer is untouched. **The second consumer is where
+   the design question actually gets decided.**
+4. **The dead fields were load-bearing for the types.** #1204 read as a deletion. It wasn't: three
+   contexts annotated their local as the complete entity while supplying no attribution, and only
+   compiled because the forms passed it in. Deleting the form fields first would have broken the
+   build. The seam was `useFirebaseData.addData`, one level below the entry points — **the type
+   error surfaced two layers away from the code the bug report named.**
+
 ## Bugs
 
 | Bug # | Status | Category | Title | Impact | Priority | Affected file(s) |
@@ -207,11 +258,11 @@ Two method notes:
 | [#1151](./1151-notepage-fetch-error-refetch-loop.md) | ✅ FIXED | UI / ARCHITECTURE | NotePage catch block (line 79) does not set `crossCampaignNotFound`, causing infinite re-fetch on every Firestore error | High | High | NotePage.tsx |
 | [#1152](./1152-firebase-context-dead-code-no-profile-branch.md) | ✅ FIXED | ARCHITECTURE | The `else` after `if (profile)` removed — `loadUserProfile` leaves its retry loop only by `return profile` from inside `if (profile)` (so always truthy) or by throwing, and it has exactly one caller. The group-load path is now unconditional | Closed | Closed | FirebaseContext.tsx |
 | [#1153](./1153-firebase-context-groups-loading-not-reset-on-error.md) | ✅ FIXED | CONTEXT | FirebaseContext `groupsLoading` not reset to `false` when `loadGroups` throws — `loading` stays `true` indefinitely after group-load error | High | High | FirebaseContext.tsx |
-| [#1200](./1200-chapter-form-dead-attribution-overwritten-by-storycontext.md) | 🔍 DISCOVERED | ARCHITECTURE | ChapterForm builds attribution from `user.displayName` that StoryContext unconditionally overwrites — wrong source, and inert | Low (latent) | Low | ChapterForm.tsx |
+| [#1200](./1200-chapter-form-dead-attribution-overwritten-by-storycontext.md) | ✅ FIXED | ARCHITECTURE | ChapterForm built attribution from `user.displayName` — the Firebase Auth display name, where every other write site uses the *group-scoped* `getUserName(activeGroupUserProfile)`, because identity here is per-group. Wrong source **and** inert, since the write layer spreads its own attribution after the caller's. Deleted rather than corrected, exactly as the report insisted: correcting the source would have kept a presentation component owning write metadata it has no business owning. `useAuth` became unused and went with it. **The fix needed the type split first** — see [#1204](./1204-component-layer-hand-rolled-attribution-discarded.md) | Closed | Closed | ChapterForm.tsx ✅ |
 | [#1201](./1201-location-context-update-stale-profile-missing-dep.md) | 🚫 OBSOLETE | DATA | `updateLocation` no longer reads `activeGroupUserProfile` at all — attribution is stamped downstream by `DocumentService`. A missing dep cannot stale-read a value the callback never reads (Phase 4 audit) | Closed | Closed | LocationContext.tsx |
 | [#1202](./1202-story-reorder-datemodified-date-object-not-iso-string.md) | ✅ FIXED | DATA | Chapter reorder wrote `dateModified` as a `Date` (→ Firestore Timestamp) where every other path writes an ISO string; blanks the modified date in the UI. Code fixed by Wave A; **existing documents still need a data normalization pass** | Medium | Medium | StoryContext.tsx |
 | [#1203](./1203-saga-edit-page-attribution-wrong-source-and-overwrites-creator.md) | ✅ FIXED | DATA | Saga saves write attribution from `user.displayName` with no character fields, and reset `createdBy`/`dateAdded` on every edit — original author is permanently lost | High | High | SagaEditPage.tsx, useSagaData.ts |
-| [#1204](./1204-component-layer-hand-rolled-attribution-discarded.md) | 🔍 DISCOVERED | ARCHITECTURE | NPCForm / NPCEditForm / QuestCreateForm / RumorCard build attribution their context discards — dead code, latent regression if spread order changes (same shape as #1200, #1203) | Low (latent) | Low | 4 form components |
+| [#1204](./1204-component-layer-hand-rolled-attribution-discarded.md) | ✅ FIXED | ARCHITECTURE | All four components (plus #1200's `ChapterForm`) now send domain fields only. **The report's "type adjustment" was the whole task**, and it went deeper than expected: narrowing the entry points to `DomainData<T>` failed on three contexts, because `NPCContext`, `QuestContext` and `StoryContext` each annotated their local as the *complete* entity while supplying no attribution — they only compiled because the forms were smuggling it in. The real seam was one level further down: `useFirebaseData.addData` demanded a full `T` yet writes through `createDocument`, which stamps attribution itself. **Every component now has a test asserting what it sends** — none did before, which is exactly why the dead fields survived several passes over these files. Required correcting three characterization tests under explicit authorisation | Closed | Closed | NPCForm ✅, NPCEditForm ✅, QuestCreateForm ✅, RumorCard ✅, core/types/common.ts, shared/hooks/useFirebaseData.ts |
 | [#1300](./1300-app-check-never-initialized-lazy-firebase-init.md) | ✅ FIXED | ARCHITECTURE | **App Check never initialized in production.** `initializeAppCheck(getApp(), …)` threw `app/no-app`: `index.tsx` had been free-riding on `import App from 'app/App'` initializing Firebase as an import side effect, and Phase 3e's lazy init (`69d19c2`) removed it. The `try`/`catch` swallowed the error, so the site worked and all three gates stayed green. **The only bug in this tracker reported from production rather than found by a test** | High | High | index.tsx |
 
 ## Per-context testing summaries
