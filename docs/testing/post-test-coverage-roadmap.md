@@ -749,7 +749,7 @@ test asserting nothing is deleted when a write fails, which against the reverted
 `Expected number of calls: 0, Received number of calls: 3` — all three chapters already gone. When a
 fix and a test correction land together, check which one actually proves anything.
 
-#### #852 — filed while verifying #851, and a pattern worth naming
+#### #852 — filed AND fixed while verifying #851, and a pattern worth naming
 
 `updateChapterProgress` takes `Partial<ChapterProgress>` and replaces the whole per-chapter entry
 instead of merging, so `isComplete` resets to `false` on any call that doesn't pass `true` — and
@@ -765,10 +765,32 @@ Two things make it instructive:
    watching for generally: when a fix makes a dormant code path live, re-examine everything
    downstream of it that was previously unreachable.
 
+**Fixed the same day, deliberately, so it ships with #851.** #851 and #852 are a *compensating
+pair*: on `main` today, a page turn past the first already clears completion (#852), and navigating
+back to page 1 silently re-marked it complete (#851's bug), which papered over #852 much of the
+time. Fixing #851 alone would have removed the accidental repair and left the loss fully exposed.
+**When two bugs partially cancel, shipping one fix without the other can look like a regression to a
+user** — check for compensation before splitting a pair across deploys.
+
+**And the fix that doesn't work is the instructive part.** The obvious reading of #852 is "honour
+the `Partial` — merge instead of rebuild." That alone changes nothing, because `StoryPage` was
+sending an explicit `isComplete: false` on every page turn: **merging preserves fields a caller
+omits; it cannot rescue a field the caller actively overwrites.** The fix needed both ends — merge
+in the context, *and* stop the caller expressing an opinion it doesn't have. Worth generalising:
+when a "just merge the partial" fix is proposed, check what the callers actually send before
+believing it.
+
+Two `StoryPage` assertions moved with it. They were written hours earlier as #851 regression tests
+and pinned the exact payload `{ lastPosition, isComplete: false }` — correct at the time, and
+exactly the payload that causes #852. Their names stayed accurate; only the shape changed. The
+comment now records that **the absence of `isComplete` is the assertion**, and the #851 test also
+asserts its requirement independently of payload shape. A test written today can become a
+characterization test tomorrow, without anyone doing anything wrong.
+
 #### Still open after this pass
 
-- **Confirmed live, unfixed** (as of the end of batch 4): **#852** (chapter progress overwritten,
-  filed today, Medium); **#1051** (NoteEditor's `handleManualSave` re-throws into an `onClick` that
+- **Confirmed live, unfixed** (as of the end of batch 4): **#1051** (NoteEditor's
+  `handleManualSave` re-throws into an `onClick` that
   never awaits — unhandled rejection; its marker test is `.skip`ped, so un-skipping gives a natural
   red-on-landing); **#016** (narrowed by the audit to order validation, which #019 already fixed —
   re-verify before spending anything on it, it may be closeable); **#1200** and **#1204** (dead

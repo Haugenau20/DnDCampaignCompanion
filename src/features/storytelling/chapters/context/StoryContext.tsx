@@ -129,14 +129,26 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
       
+      // Bug #852: this used to rebuild the entry from scratch, defaulting every
+      // field the caller did not supply — so any call omitting `isComplete`
+      // silently cleared a stored `true`. The outer spreads preserved *other*
+      // chapters; nothing preserved this one. Merge over the existing entry so
+      // the body honours the Partial<ChapterProgress> the signature advertises.
+      const existing = storedProgress.chapterProgress[chapterId];
+
       const updatedProgress = {
         ...storedProgress,
         chapterProgress: {
           ...storedProgress.chapterProgress,
           [chapterId]: {
             chapterId,
-            lastPosition: progress.lastPosition || 0,
-            isComplete: progress.isComplete || false,
+            // Precedence, per field: what the caller explicitly supplied wins,
+            // then what is already stored, then the default. `??` not `||`, so
+            // an explicit `false`/`0` from the caller is honoured rather than
+            // falling through. A caller can still clear isComplete on purpose;
+            // what it can no longer do is clear it by staying silent.
+            lastPosition: progress.lastPosition ?? existing?.lastPosition ?? 0,
+            isComplete: progress.isComplete ?? existing?.isComplete ?? false,
             lastRead: new Date()
           }
         }

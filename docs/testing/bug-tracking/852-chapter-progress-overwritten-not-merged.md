@@ -1,6 +1,8 @@
 # Bug #852 — `updateChapterProgress` overwrites the chapter entry instead of merging, so re-reading a finished chapter un-completes it
 
-**Status**: 🔍 DISCOVERED
+**Status**: ✅ **FIXED 2026-07-28** — see "Resolution" at the foot of this document. Filed and fixed
+the same day, deliberately: it shares a deploy with [#851](./851-storypage-page1-always-marks-complete.md),
+whose fix removes the accident that was masking this one.
 **Category**: DATA
 **Priority**: Medium
 **Impact**: Medium — silently loses per-chapter completion state during ordinary reading
@@ -121,7 +123,63 @@ would be cleaner and halve the writes. Treat that as a separate question — it 
 
 ## Verification note
 
-Confirmed by reading all three files, not inferred from a failing test — no test currently covers
-re-opening a completed chapter, which is why this survived. Any fix needs a regression test that
-completes a chapter, re-opens it at page 1, and asserts `isComplete` is still `true`; it must be
-proven to fail against the unfixed code.
+Confirmed by reading all three files, not inferred from a failing test — no test covered re-opening
+a completed chapter, which is why this survived.
+
+---
+
+## Resolution — 2026-07-28
+
+**A merge alone would not have fixed this, which is the part worth remembering.** The obvious fix —
+spread the existing entry, honour the `Partial` — does nothing on its own, because `StoryPage` was
+passing `isComplete: !!isComplete`, an *explicit* `false`, on every page turn. Merging preserves
+fields the caller omits; it cannot rescue a field the caller actively overwrites. The fix had to
+change both ends:
+
+**1. `StoryContext.updateChapterProgress` — merge, with explicit precedence.**
+
+```ts
+const existing = storedProgress.chapterProgress[chapterId];
+...
+lastPosition: progress.lastPosition ?? existing?.lastPosition ?? 0,
+isComplete:   progress.isComplete   ?? existing?.isComplete   ?? false,
+```
+
+Caller wins, then stored value, then default. **`??` and not `||`**, so an explicit `false` or `0`
+from the caller is honoured rather than falling through to the stored value — the fix must not make
+completion permanently sticky. A spread-based version (`{...defaults, ...existing, ...progress}`)
+was written first and rejected: TypeScript flags it (TS2783, "specified more than once"), and the
+per-field form states the precedence rule where a reader will look for it.
+
+**2. `StoryPage.handlePageChange` — say nothing rather than say `false`.**
+
+```ts
+updateChapterProgress(
+  currentChapter.id,
+  isComplete ? { lastPosition: page, isComplete: true } : { lastPosition: page }
+);
+```
+
+An ordinary page turn knows only the position; it has no opinion about completion, and should not
+express one. Only `BookViewer`'s last-page/chapter-transition signal does.
+
+### Tests
+
+Two regression tests in `StoryContext.progress.test.tsx` — that file is the only one whose mock
+forwards the `collection` option, so it is the only place the real read-back path can be exercised
+at all:
+
+- *preserves isComplete when a later update supplies only lastPosition* — the bug itself.
+- *still allows a caller to clear isComplete explicitly* — guards against over-correcting into
+  permanent stickiness, and checks the untouched `lastPosition` survives too.
+
+Two `StoryPage` assertions were updated in the same change. They were written earlier the same day
+as #851 regression tests and asserted the exact payload `{ lastPosition, isComplete: false }` —
+correct then, and precisely the payload that causes this bug. Both test *names* remained accurate;
+only the payload shape moved. A comment now records that **the absence of `isComplete` is the
+assertion**, not an oversight, and the #851 test additionally asserts the requirement independently
+of payload shape (`not.toHaveBeenCalledWith(objectContaining({ isComplete: true }))`).
+
+**Proof by revert**: with both production files reverted and the tests kept, 4 tests fail —
+`Expected: true / Received: false` (completion cleared) and `Expected: 100 / Received: 0` (an
+unmentioned field defaulted away). Restored: 66/66 green across the four story suites.
