@@ -166,10 +166,6 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
 
   // Format last saved time
   const getLastSavedText = () => {
-    if (note?.isUnsaved || hasUnsavedChanges) {
-      return "Not saved";
-    }
-    
     if (!lastSaved) return "Never saved";
     
     const now = new Date();

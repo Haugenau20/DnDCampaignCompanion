@@ -38,20 +38,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note }) => {
     });
   };
   
-  /**
-   * Get the status badge class based on note status
-   */
-  const getStatusBadgeClass = (): string => {
-    switch (note.status) {
-      case "active":
-        return "status-active";
-      case "archived":
-        return "status-archived";
-      default:
-        return "";
-    }
-  };
-
   // Calculate entity counts
   const entityCounts = ['npc', 'location', 'quest', 'rumor'].reduce((acc, type) => {
     acc[type] = note.extractedEntities.filter(e => e.type === type).length;
@@ -74,7 +60,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note }) => {
               </Typography>
               
               {note.status === "archived" && (
-                <span className={`text-xs px-2 py-0.5 rounded ${getStatusBadgeClass()}`}>
+                <span className="text-xs px-2 py-0.5 rounded status-archived">
                   Archived
                 </span>
               )}

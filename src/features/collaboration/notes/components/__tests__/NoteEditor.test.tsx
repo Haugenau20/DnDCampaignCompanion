@@ -335,7 +335,13 @@ describe('NoteEditor', () => {
   });
 
   // -------------------------------------------------------------------------
-  // getLastSavedText — various time branches (lines 170, 181-182)
+  // getLastSavedText — various time branches.
+  //
+  // Line references removed: getLastSavedText's leading
+  // `if (note?.isUnsaved || hasUnsavedChanges) return "Not saved"` guard was
+  // deleted as dead code (bug #1050's sibling, #1052, 2026-07-28) — its only
+  // caller had already tested that same condition false before calling it, so
+  // the guard could never fire. Assertions below are unchanged.
   // -------------------------------------------------------------------------
   describe('last saved text', () => {
     test('should show "Never saved" when note has no dateModified and is not unsaved', () => {
