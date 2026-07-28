@@ -9,9 +9,9 @@ import Dialog from '../../../../core/components/Dialog';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useNPCs } from '../context/NPCContext';
 import { useNotes } from 'features/collaboration';
-import { useAuth, useUser } from 'features/user-management';
+import { useUser } from 'features/user-management';
 import clsx from 'clsx';
-import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
+import { DomainData } from 'core/types/common';
 
 interface NPCFormProps {
   /** Initial data for the form (e.g., from a converted entity) */
@@ -44,10 +44,9 @@ const NPCForm: React.FC<NPCFormProps> = ({
   // Get NPCs context for CRUD operations
   const { addNPC, isLoading, error } = useNPCs();
   const { markEntityAsConverted } = useNotes();
-  
+
   // Authentication and user data
-  const { user } = useAuth();
-  const { userProfile, activeGroupUserProfile } = useUser();
+  const { userProfile } = useUser();
 
   // Form state with initial data
   const [formData, setFormData] = useState<Partial<NPC>>({
@@ -159,10 +158,11 @@ const NPCForm: React.FC<NPCFormProps> = ({
     }
   
     try {
-      const now = new Date().toISOString();
-      
-      // Create NPC data with attribution metadata
-      const npcData: Omit<NPC, 'id'> = {
+      // Create NPC data. Attribution (createdBy/dateAdded/modifiedBy/etc.) is intentionally
+      // NOT computed here — it is stamped by DocumentService at the write layer
+      // (core/services/firebase/data/DocumentService.ts, via useFirebaseData.addData), which
+      // spreads its own server-derived attribution AFTER this data. See bug #1204.
+      const npcData: DomainData<NPC> = {
         name: formData.name,
         title: formData.title || '',
         status: formData.status as NPCStatus,
@@ -180,17 +180,8 @@ const NPCForm: React.FC<NPCFormProps> = ({
           relatedQuests: Array.from(selectedQuests)
         },
         notes: [],
-        // Add attribution data
-        createdBy: user?.uid || '',
-        createdByUsername: getUserName(activeGroupUserProfile),
-        createdByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-        dateAdded: now,
-        modifiedBy: user?.uid || '',
-        modifiedByUsername: getUserName(activeGroupUserProfile),
-        modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-        dateModified: now,
       };
-  
+
       // Use the context method to add NPC
       const npcId = await addNPC(npcData);
       

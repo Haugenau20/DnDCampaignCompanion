@@ -8,9 +8,8 @@ import Dialog from '../../../../core/components/Dialog';
 import { Save, X, Users, Scroll } from 'lucide-react';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useNPCs } from '../context/NPCContext';
-import { useAuth, useUser } from 'features/user-management';
+import { useUser } from 'features/user-management';
 import clsx from 'clsx';
-import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
 
 interface NPCEditFormProps {
   /** The NPC being edited */
@@ -31,10 +30,9 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
 }) => {
   // Use the NPCs context
   const { updateNPC, isLoading, error } = useNPCs();
-  
+
   // Authentication and user data
-  const { user } = useAuth();
-  const { userProfile, activeGroupUserProfile } = useUser();
+  const { userProfile } = useUser();
 
   // Form state initialized with existing NPC data
   const [formData, setFormData] = useState<NPC>(npc);
@@ -66,9 +64,12 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
     }
 
     try {
-      // Include attribution metadata
-      const now = new Date().toISOString();
-      
+      // Attribution (modifiedBy/modifiedByUsername/dateModified/etc.) is intentionally NOT
+      // recomputed here — it is stamped by DocumentService at the write layer
+      // (core/services/firebase/data/DocumentService.ts, via useFirebaseData.updateData), which
+      // spreads its own server-derived attribution AFTER this data. formData already carries the
+      // existing entity's attribution via the initial useState(npc), so this update just passes
+      // that through untouched. See bug #1204.
       const updatedNPC: NPC = {
         ...formData,
         connections: {
@@ -76,11 +77,6 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
           relatedNPCs: Array.from(selectedNPCs),
           relatedQuests: Array.from(selectedQuests)
         },
-        modifiedBy: user?.uid || '',
-        modifiedByUsername: getUserName(activeGroupUserProfile),
-        modifiedByCharacterId: activeGroupUserProfile?.activeCharacterId || null,
-        modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile),
-        dateModified: now
       };
 
       // Use context method to update the NPC

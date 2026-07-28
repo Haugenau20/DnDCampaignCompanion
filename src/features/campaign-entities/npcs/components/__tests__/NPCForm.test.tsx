@@ -444,17 +444,52 @@ describe('NPCForm', () => {
       expect(onCancel).toHaveBeenCalledTimes(1);
     });
 
-    test('should include attribution data in addNPC call', async () => {
+    // Guards #1204: NPCForm used to compute createdBy/createdByUsername/createdByCharacterName/
+    // dateAdded/modifiedBy/modifiedByUsername/modifiedByCharacterName/dateModified into the
+    // addNPC payload. Every one of those fields was discarded — DocumentService.createDocument
+    // (reached via useFirebaseData.addData) spreads its own server-derived attribution AFTER the
+    // caller's data, so whatever the form computed here never reached Firestore. That made this
+    // dead code AND a latent regression: NPCForm never even set createdByCharacterId, so the day
+    // the spread order changes it would start persisting incomplete attribution. Attribution
+    // belongs to the write layer; a form that starts computing it again is a regression even
+    // though nothing visible breaks today.
+    test('should send only domain fields to addNPC and omit attribution fields entirely (#1204)', async () => {
       render(<NPCForm existingNPCs={[]} />);
-      fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'Aldric' } });
+      fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'Aldric' } }); // Name
+      fireEvent.change(screen.getAllByRole('textbox')[2], { target: { value: 'Elf' } }); // Race
       fireEvent.submit(document.querySelector('form')!);
+
       await waitFor(() => {
-        expect(mockAddNPC).toHaveBeenCalledWith(
-          expect.objectContaining({
-            createdBy: 'user-1',
-            modifiedBy: 'user-1',
-          })
-        );
+        expect(mockAddNPC).toHaveBeenCalledTimes(1);
+      });
+
+      const payload = mockAddNPC.mock.calls[0][0];
+
+      // Domain fields are present and correct.
+      expect(payload).toEqual(
+        expect.objectContaining({
+          name: 'Aldric',
+          race: 'Elf',
+          status: 'alive',
+          relationship: 'neutral',
+        })
+      );
+
+      // Attribution fields must be absent — computing them here is exactly the bug #1204 fixed.
+      const attributionFields = [
+        'createdBy',
+        'createdByUsername',
+        'createdByCharacterId',
+        'createdByCharacterName',
+        'dateAdded',
+        'modifiedBy',
+        'modifiedByUsername',
+        'modifiedByCharacterId',
+        'modifiedByCharacterName',
+        'dateModified',
+      ];
+      attributionFields.forEach((field) => {
+        expect(payload).not.toHaveProperty(field);
       });
     });
 
