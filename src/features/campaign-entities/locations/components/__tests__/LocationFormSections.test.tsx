@@ -21,6 +21,8 @@ jest.mock('../../context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ locations: [] })),
 }));
 
+const { useLocations } = require('../../context/LocationContext');
+
 jest.mock('../../../quests/context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
@@ -155,6 +157,64 @@ describe('BasicInfoSection', () => {
     expect(screen.getByRole('option', { name: 'Landmark' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Building' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Point of Interest' })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BasicInfoSection - parentId resolution via combobox selection (Task 2 probe)
+// ---------------------------------------------------------------------------
+//
+// LocationCombobox only ever deals in location *names* (it lists
+// `locations.map(loc => loc.name)`), and BasicInfoSection turns the selected
+// name back into an id by re-slugifying it:
+//   onChange={(value) => handleInputChange('parentId', generateLocationId(value))}
+// That is only correct while `id === slugify(name)`. Location names are
+// editable after creation, so a location's stored id can drift away from
+// what slugifying its *current* name would produce (e.g. created as
+// "Stonebridge" -> id "stonebridge", then renamed to "New Stonebridge Docks"
+// without its id ever changing). Selecting such a location as a parent
+// re-derives an id from the new name instead of reading the location's
+// actual id.
+
+describe('BasicInfoSection - parentId resolution via combobox selection (Task 2 probe)', () => {
+  afterEach(() => {
+    (useLocations as jest.Mock).mockReturnValue({ locations: [] });
+  });
+
+  test('parentId set by selecting a renamed location should resolve to that location\'s actual id', () => {
+    // This location was created when its name was "Stonebridge" (its id was
+    // derived from that original name at creation time), then later renamed.
+    // Its id was never updated - ids are stable, names are editable.
+    const renamedLocation = {
+      id: 'stonebridge',
+      name: 'New Stonebridge Docks',
+    };
+    (useLocations as jest.Mock).mockReturnValue({ locations: [renamedLocation] });
+
+    const handleInputChange = jest.fn();
+    render(<BasicInfoSection formData={makeFormData()} handleInputChange={handleInputChange} />);
+
+    // Open the parent-location combobox and select the renamed location by
+    // its current display name - the only thing LocationCombobox exposes.
+    const comboboxInput = screen.getByPlaceholderText('Select parent location...');
+    fireEvent.focus(comboboxInput);
+    fireEvent.click(screen.getByText('New Stonebridge Docks'));
+
+    const parentIdCall = handleInputChange.mock.calls.find(call => call[0] === 'parentId');
+    expect(parentIdCall).toBeDefined();
+    const resolvedParentId = parentIdCall![1];
+
+    // PROVEN, UNFILED DEFECT - see Task 2 of the domain-data-types batch.
+    // Do NOT "fix" this by editing the test: fixing it means changing what
+    // LocationCombobox emits (a name) to instead emit an id, and
+    // LocationCombobox is also consumed by QuestFormSections, so that
+    // contract change is a design decision for the orchestrator, not this
+    // test. This assertion is expected to fail: generateLocationId('New
+    // Stonebridge Docks') derives 'new-stonebridge-docks', which does not
+    // match the location's real id 'stonebridge', so parentId resolves to no
+    // location at all.
+    const resolvesToRealLocation = [renamedLocation].some(loc => loc.id === resolvedParentId);
+    expect(resolvesToRealLocation).toBe(true);
   });
 });
 
