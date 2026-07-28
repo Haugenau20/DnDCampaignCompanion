@@ -1,6 +1,7 @@
 // src/features/storytelling/chapters/context/StoryContext.tsx
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
 import { Chapter, ChapterProgress, StoryProgress } from '../types';
+import { DomainData } from 'core/types/common';
 import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser } from 'features/user-management';
@@ -53,7 +54,7 @@ interface StoryContextValue extends StoryContextState {
   /** Get reading progress percentage */
   getReadingProgress: () => number;
   /** Create a new chapter */
-  createChapter: (chapterData: Omit<Chapter, 'id'>) => Promise<string>;
+  createChapter: (chapterData: DomainData<Chapter>) => Promise<string>;
   /** Update an existing chapter */
   updateChapter: (chapterId: string, updates: Partial<Chapter>) => Promise<void>;
   /** Delete a chapter */
@@ -400,7 +401,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [updateData, refreshChapters, chapters, getChapterById, user, deleteData, hasRequiredContext]);
 
   // Safer method for creating a new chapter with proper ordering
-  const createChapter = useCallback(async (chapterData: Omit<Chapter, 'id'>) => {
+  const createChapter = useCallback(async (chapterData: DomainData<Chapter>) => {
     if (!user) {
       throw new Error('You must be signed in to create chapters');
     }
@@ -466,8 +467,10 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Create consistent ID based on order
       const chapterId = generateChapterId(newOrder);
 
-      // Prepare chapter data with consistent ID and order
-      const newChapter: Chapter = {
+      // Prepare chapter data with consistent ID and order. Not a complete
+      // Chapter -- attribution is stamped by createDocument below, not supplied
+      // here. See DomainData's doc comment in core/types/common.ts.
+      const newChapter = {
         ...chapterData,
         id: chapterId,
         order: newOrder

@@ -224,6 +224,13 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
+    // `addData` itself no longer needs a full Location (see DomainData in
+    // core/types/common.ts), but this same object is also appended directly to
+    // this context's own `locations` state below, which IS what renders --
+    // unlike the dead `data` state inside useFirebaseData's addData. `Location[]`
+    // requires the full BaseContent attribution fields, which this optimistic
+    // entry genuinely does not have until the next refresh, so the cast stays
+    // load-bearing here (pre-existing behaviour, not introduced by this change).
     const newLocation = {
       ...locationData,
       id: locationId

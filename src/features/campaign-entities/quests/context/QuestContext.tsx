@@ -1,6 +1,7 @@
 // src/features/campaign-entities/quests/context/QuestContext.tsx
 import React, { createContext, useContext, useCallback } from 'react';
 import { Quest, QuestStatus } from '../types';
+import { DomainData } from 'core/types/common';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
@@ -17,7 +18,7 @@ interface QuestContextValue {
   getQuestsByNPC: (npcId: string) => Quest[];
   updateQuestStatus: (questId: string, status: QuestStatus) => Promise<void>;
   updateQuestObjective: (questId: string, objectiveId: string, completed: boolean) => Promise<void>;
-  addQuest: (quest: Omit<Quest, 'id'>) => Promise<string>;
+  addQuest: (quest: DomainData<Quest>) => Promise<string>;
   updateQuest: (quest: Quest) => Promise<void>;
   deleteQuest: (questId: string) => Promise<void>;
   markQuestCompleted: (questId: string, dateCompleted?: string) => Promise<void>;
@@ -143,20 +144,21 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, refreshQuests]);
 
   // Add quest
-  const addQuest = useCallback(async (questData: Omit<Quest, 'id'>) => {
+  const addQuest = useCallback(async (questData: DomainData<Quest>) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to add quests');
     }
-  
+
     if (!activeGroupId || !activeCampaignId) {
       throw new Error('Group and campaign context must be set to add quests');
     }
-  
+
     // Generate ID from title
     const id = generateQuestId(questData.title);
 
-    // Create the complete quest object including the id
-    const newQuest: Quest = {
+    // Not a complete Quest -- attribution is stamped by DocumentService.createDocument,
+    // not supplied here. See DomainData's doc comment in core/types/common.ts.
+    const newQuest = {
       id,
       ...questData,
       // Ensure arrays are properly initialized

@@ -1,6 +1,7 @@
 // src/features/campaign-entities/npcs/context/NPCContext.tsx
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { NPC, NPCContextValue, NPCRelationship, NPCNote } from '../types';
+import { DomainData } from 'core/types/common';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useGroups, useCampaigns, useAuth, useUser } from 'features/user-management';
@@ -101,7 +102,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // Add a new NPC
-  const addNPC = useCallback(async (npcData: Omit<NPC, 'id'>): Promise<string> => {
+  const addNPC = useCallback(async (npcData: DomainData<NPC>): Promise<string> => {
     if (!hasRequiredContext) {
       throw new Error('Cannot add NPC: No group or campaign selected');
     }
@@ -112,7 +113,9 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const id = generateNPCId(npcData.name);
 
-    const newNPC: NPC = {
+    // Not a complete NPC -- attribution is stamped by DocumentService.createDocument,
+    // not supplied here. See DomainData's doc comment in core/types/common.ts.
+    const newNPC = {
       ...npcData,
       id
     };

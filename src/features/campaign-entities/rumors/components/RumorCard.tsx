@@ -84,10 +84,7 @@ const RumorCard: React.FC<RumorCardProps> = ({
     try {
       await updateRumorNote(rumor.id, {
         id: crypto.randomUUID(),
-        content: noteInput.trim(),
-        dateAdded: '',  // Will be set in context
-        createdBy: '',    // Will be set in context
-        createdByUsername: '' // Will be set in context
+        content: noteInput.trim()
       });
       
       // Reset form
