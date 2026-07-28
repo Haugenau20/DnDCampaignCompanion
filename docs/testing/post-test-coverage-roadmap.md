@@ -702,10 +702,82 @@ non-issue, which is exactly the misdirection Pattern 1 already caused for a year
 
 The remaining ~18 are benign narration over reasonable assertions.
 
+#### Batch 4 — data integrity (2026-07-28)
+
+**#017, #851 and #750 all landed.** Both agents halted rather than ship, and both halts were correct;
+each was then unblocked by an explicit authorisation.
+
+**#017 — chapter reorder atomicity.** `updateChapter` deleted every affected chapter before creating
+any replacement, so a partial failure lost chapters with no rollback; its three siblings all
+create-and-verify first. Now writes and verifies every new position, then deletes only ids not reused
+in the same batch. The `// Do NOT switch this to createDocument` guards from #1203 were honoured.
+
+**#851 — chapter marked complete on any load of page 1.** Traced upstream rather than guessed:
+`BookViewer` owns `totalPages` internally and already computes completion, so the `isComplete` flag
+reaching `StoryPage` is authoritative and `page === 1` was never a stand-in for "last page".
+
+**#750 — `LocationCreatePage` initialData**, now matching its three sibling create pages.
+
+#### The eighth characterization test, and a second species of the problem
+
+#017's blocker was `expect(mockDeleteData).toHaveBeenCalled()`. **No correct implementation can
+satisfy it**, and the proof generalises:
+
+> A reorder shifts a contiguous range, and a chapter's id is derived from its order, so the affected
+> range is a **closed permutation with no fixed points.** Moving `chapter-01` to order 3 rotates
+> `{1,2,3} → {3,1,2}`, giving new ids `{chapter-03, chapter-01, chapter-02}` — the same set as the
+> old ids. Every id is reused, so a reorder that writes before deleting has nothing left to delete.
+
+**The seven previously catalogued characterization tests assert the wrong *outcome*** — their names
+state a requirement their assertions deny (#006's four, #005's one, #750's, and #002's marker). This
+eighth one asserts the ***mechanism***. Nothing about it was false as a description of the old
+algorithm; it was simply unsatisfiable by any correct one.
+
+**A test that asserts how something is done, rather than what results, is a characterization test
+whether or not its author intended one.** That is a harder species to spot, because it cannot be
+found by comparing a test's name against its assertions — the two agree. `toHaveBeenCalled()` on a
+mutation helper is the smell: it pins an implementation's choice of steps.
+
+It was replaced with an assertion on the ids and orders actually written — strictly stronger, since
+the old assertion never checked chapters landed anywhere in particular and would not have caught the
+atomicity defect.
+
+**And a distinction worth keeping honest**: that corrected outcome assertion passes against *both*
+implementations, because the old one also wrote the right ids on the happy path. It is a better
+specification but it is **not** evidence for the fix. The evidence is a separate partial-failure
+test asserting nothing is deleted when a write fails, which against the reverted fix reports
+`Expected number of calls: 0, Received number of calls: 3` — all three chapters already gone. When a
+fix and a test correction land together, check which one actually proves anything.
+
+#### #852 — filed while verifying #851, and a pattern worth naming
+
+`updateChapterProgress` takes `Partial<ChapterProgress>` and replaces the whole per-chapter entry
+instead of merging, so `isComplete` resets to `false` on any call that doesn't pass `true` — and
+`BookViewer` fires `onPageChange(page)` with no flag on every page turn. **Re-opening a finished
+chapter un-completes it.**
+
+Two things make it instructive:
+
+1. **It is not caused by #851's fix**, and reverting that would not help — it would only trade
+   "re-reading un-completes a chapter" for "loading page 1 completes one you never read."
+2. **It was inert until the same day.** Before #018 landed, progress was a frozen module constant
+   and none of these writes reached storage. **Fixing one bug activated its neighbour.** Worth
+   watching for generally: when a fix makes a dormant code path live, re-examine everything
+   downstream of it that was previously unreachable.
+
 #### Still open after this pass
 
-- **Confirmed live, unfixed**: #100, #250, #600, #700, #702, #750, #850 (logic/UI); #016, #017
-  (story); #851; #1051; #1200; #1204. Plus #005's cross-context half, above.
+- **Confirmed live, unfixed** (as of the end of batch 4): **#852** (chapter progress overwritten,
+  filed today, Medium); **#1051** (NoteEditor's `handleManualSave` re-throws into an `onClick` that
+  never awaits — unhandled rejection; its marker test is `.skip`ped, so un-skipping gives a natural
+  red-on-landing); **#016** (narrowed by the audit to order validation, which #019 already fixed —
+  re-verify before spending anything on it, it may be closeable); **#1200** and **#1204** (dead
+  hand-rolled attribution, which belong to the dead-code phase); and **#005's cross-context half** —
+  `StoryContext`'s three warn-and-return progress methods, a contract decision deferred until #017
+  landed, which it now has.
+- **The dead/duplicate-code phase has a concrete backlog now**: `useLayoutData.sortedLocations`
+  (dead, #600's remainder), the `layoutUtils.ts` `getRelativeTime`/`formatJournalDate` triplicate,
+  and #1200/#1204's discarded attribution.
 - **#024 is retired, not filed.** `NoteContext.bugs.test.tsx` carried `describe('Bug #024: …')`
   with no row, no file, and no other reference in the repo. Both its tests execute real work and
   assert *correct* behaviour — a failed fetch surfaces an error and leaves no stale notes; a failed
