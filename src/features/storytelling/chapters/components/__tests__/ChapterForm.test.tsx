@@ -266,7 +266,6 @@ describe('ChapterForm', () => {
       const payload = mockCreateChapter.mock.calls[0][0];
       expect(payload.title).toBe('New Chapter');
       expect(payload.content).toBe('New chapter content here');
-      expect(payload.createdBy).toBe('user-1');
     });
 
     test('generates auto-summary from content when summary is empty', async () => {
@@ -315,6 +314,42 @@ describe('ChapterForm', () => {
       await waitFor(() => {
         expect(screen.getByText('Firebase error')).toBeInTheDocument();
       });
+    });
+
+    // Guards bug #1200: ChapterForm's create path used to compute
+    // dateModified/createdBy/createdByUsername/dateAdded and hand them to createChapter.
+    // Every one of those fields is discarded at the write layer — DocumentService's
+    // createDocument spreads its own server-fetched attribution AFTER the caller's data — so
+    // the values never reached Firestore. Worse, createdBy/createdByUsername were sourced
+    // from user.displayName (the Firebase Auth display name), which is also the *wrong*
+    // source: every other write site in this codebase attributes via
+    // getUserName(activeGroupUserProfile) because identity here is per-group. Deleting the
+    // fields is the fix — not "correcting" the source — because the write layer already
+    // supplies the group-scoped attribution.
+    test('should NOT include attribution fields in the payload sent to createChapter (guards #1200)', async () => {
+      render(<ChapterForm mode="create" />);
+      const inputs = screen.getAllByRole('textbox');
+      fireEvent.change(inputs[0], { target: { value: 'New Chapter' } });
+      fireEvent.change(inputs[2], { target: { value: 'New chapter content here' } });
+
+      fireEvent.submit(
+        screen.getByRole('button', { name: /Create Chapter/i }).closest('form')!
+      );
+
+      await waitFor(() => {
+        expect(mockCreateChapter).toHaveBeenCalledTimes(1);
+      });
+
+      const payload = mockCreateChapter.mock.calls[0][0];
+      // Domain fields must still be present and correct.
+      expect(payload.title).toBe('New Chapter');
+      expect(payload.content).toBe('New chapter content here');
+      expect(payload.order).toBe(1);
+      // Attribution fields must be absent from what the component sends.
+      expect(payload).not.toHaveProperty('createdBy');
+      expect(payload).not.toHaveProperty('createdByUsername');
+      expect(payload).not.toHaveProperty('dateAdded');
+      expect(payload).not.toHaveProperty('dateModified');
     });
   });
 
@@ -373,6 +408,44 @@ describe('ChapterForm', () => {
       await waitFor(() => {
         expect(mockNavigateToPage).toHaveBeenCalledWith('/story/chapters');
       });
+    });
+
+    // Guards bug #1200: ChapterForm's edit path used to compute
+    // dateModified/modifiedBy/modifiedByUsername and hand them to updateChapter. Every one of
+    // those fields is discarded at the write layer — updateDocumentWithAttribution spreads its
+    // own server-fetched attribution AFTER the caller's data. Worse, modifiedBy/
+    // modifiedByUsername were sourced from user.displayName (the Firebase Auth display name),
+    // which is also the *wrong* source: every other write site attributes via
+    // getUserName(activeGroupUserProfile) because identity here is per-group. Deleting the
+    // fields is the fix — not "correcting" the source — because the write layer already
+    // supplies the group-scoped attribution.
+    test('should NOT include attribution fields in the updates sent to updateChapter (guards #1200)', async () => {
+      render(
+        <ChapterForm
+          mode="edit"
+          chapter={makeChapter({ id: 'ch-7', title: 'Old Title', content: 'Old content' })}
+        />
+      );
+      const titleInput = screen.getByDisplayValue('Old Title');
+      fireEvent.change(titleInput, { target: { value: 'Updated Title' } });
+
+      fireEvent.submit(
+        screen.getByRole('button', { name: /Save Changes/i }).closest('form')!
+      );
+
+      await waitFor(() => {
+        expect(mockUpdateChapter).toHaveBeenCalledTimes(1);
+      });
+
+      const [calledId, updates] = mockUpdateChapter.mock.calls[0];
+      // Domain fields must still be present and correct.
+      expect(calledId).toBe('ch-7');
+      expect(updates.title).toBe('Updated Title');
+      expect(updates.content).toBe('Old content');
+      // Attribution fields must be absent from what the component sends.
+      expect(updates).not.toHaveProperty('dateModified');
+      expect(updates).not.toHaveProperty('modifiedBy');
+      expect(updates).not.toHaveProperty('modifiedByUsername');
     });
   });
 

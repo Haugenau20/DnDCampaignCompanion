@@ -1,6 +1,7 @@
 // src/features/storytelling/chapters/components/ChapterForm.tsx
 import React, { useState, useEffect } from 'react';
 import { Chapter } from '../types';
+import { DomainData } from 'core/types/common';
 import Card from 'core/components/Card';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
@@ -8,7 +9,6 @@ import Input from 'core/components/Input';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { useStory } from '../context/StoryContext';
-import { useAuth } from 'features/user-management';
 
 interface ChapterFormProps {
   /** The chapter to edit, or undefined for create mode */
@@ -29,8 +29,7 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
 }) => {
   const { navigateToPage } = useNavigation();
   const { createChapter, updateChapter, chapters } = useStory();
-  const { user } = useAuth();
-  
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [summary, setSummary] = useState('');
@@ -109,15 +108,11 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
 
       // Create or update the chapter
       if (mode === 'create') {
-        const newChapter: Omit<Chapter, 'id'> = {
+        const newChapter: DomainData<Chapter> = {
           title,
           content,
           summary: finalSummary, // Use generated summary if empty
           order,
-          dateModified: new Date().toISOString(),
-          createdBy: user?.uid || '',
-          createdByUsername: user?.displayName || '',
-          dateAdded: new Date().toISOString(),
         };
         
         await createChapter(newChapter);
@@ -136,9 +131,6 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
           content,
           summary: finalSummary, // Use generated summary if empty
           order,
-          dateModified: new Date().toISOString(),
-          modifiedBy: user?.uid || '',
-          modifiedByUsername: user?.displayName || '',
         };
         
         await updateChapter(chapter.id, updates);
