@@ -69,9 +69,20 @@ without multiplying evidence.** Five contexts agreeing felt like five confirmati
 shared mock shape counted five times. Confirm a root cause against production source once,
 directly, before promoting it.
 
-**Tracker defect, still open**: `NoteContext.bugs.test.tsx:455` has a `describe('Bug #024: …')`
-block, but **no #024 row and no `024-*.md` file exist**. Its tests pass. Needs filing
-retroactively or renumbering — an open decision.
+**Tracker defect — resolved 2026-07-28. #024 never existed.** `NoteContext.bugs.test.tsx:455` had a
+`describe('Bug #024: …')` with no row, no `024-*.md`, and no other reference anywhere in the repo.
+
+Reading the two tests settles it: **both assert correct, desirable behaviour** — a failed fetch
+surfaces an error, resolves loading and leaves no stale notes; a failed save rejects and leaves the
+note still marked unsaved. Both execute real work (165 ms / 61 ms, reaching their assertions). The
+comments say `// BUG POTENTIAL:`, not `// BUG:`, and the names read `should reveal …` and
+`… correctly`. The block was written to go looking for a defect in error handling, found the
+behaviour correct, and nothing was ever filed — the speculative number just stayed in the title.
+
+**Resolved by renaming the block, not by filing the entry.** A tracker row marked FIXED for a
+defect that never existed is precisely how this project acquired the five entries it later had to
+retract (#013, #014, #300, #021, #022). An investigation that finds nothing is a real result and is
+now recorded as one, in a comment on the block itself. Numbers are not reused, so #024 stays unused.
 
 **Stale cross-references — resolved 2026-07-28.** `GroupManagementView.test.tsx` cited #200 for
 what is #201; corrected, and the substance with it — the comment claimed the error "may not be
