@@ -134,7 +134,6 @@ describe('useLayoutData', () => {
       expect(result.current).toHaveProperty('sortedChapters');
       expect(result.current).toHaveProperty('latestChapter');
       expect(result.current).toHaveProperty('sortedRumors');
-      expect(result.current).toHaveProperty('sortedLocations');
       expect(result.current).toHaveProperty('recentActivities');
     });
   });
@@ -334,56 +333,6 @@ describe('useLayoutData', () => {
     it('returns empty array when no rumors provided', () => {
       const { result } = renderHook(() => useLayoutData(defaultProps));
       expect(result.current.sortedRumors).toHaveLength(0);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // sortedLocations
-  // -------------------------------------------------------------------------
-  describe('sortedLocations', () => {
-    it('orders explored locations first (before visited and known)', () => {
-      const locations = [
-        makeLocation({ name: 'Known Place', status: 'known' }),
-        makeLocation({ name: 'Explored Place', status: 'explored' }),
-      ];
-      const { result } = renderHook(() => useLayoutData({ ...defaultProps, locations }));
-      expect(result.current.sortedLocations[0].name).toBe('Explored Place');
-    });
-
-    it('orders visited before known', () => {
-      const locations = [
-        makeLocation({ name: 'Known Place', status: 'known' }),
-        makeLocation({ name: 'Visited Place', status: 'visited' }),
-      ];
-      const { result } = renderHook(() => useLayoutData({ ...defaultProps, locations }));
-      expect(result.current.sortedLocations[0].name).toBe('Visited Place');
-    });
-
-    it('sorts alphabetically within the same status', () => {
-      const locations = [
-        makeLocation({ name: 'Zephyr Keep', status: 'visited' }),
-        makeLocation({ name: 'Amber Cove', status: 'visited' }),
-      ];
-      const { result } = renderHook(() => useLayoutData({ ...defaultProps, locations }));
-      expect(result.current.sortedLocations[0].name).toBe('Amber Cove');
-    });
-
-    it('returns empty array when no locations provided', () => {
-      const { result } = renderHook(() => useLayoutData(defaultProps));
-      expect(result.current.sortedLocations).toHaveLength(0);
-    });
-
-    it('note: useLayoutData sorts explored FIRST (opposite of LocationsMap component)', () => {
-      // DOCUMENTATION TEST: useLayoutData puts explored first (lines 106-107),
-      // while LocationsMap.tsx component sorts explored last (lines 24-27).
-      // This is an inconsistency in the codebase — documented here for visibility.
-      const locations = [
-        makeLocation({ name: 'Explored', status: 'explored' }),
-        makeLocation({ name: 'Known', status: 'known' }),
-      ];
-      const { result } = renderHook(() => useLayoutData({ ...defaultProps, locations }));
-      // In useLayoutData: explored comes first
-      expect(result.current.sortedLocations[0].status).toBe('explored');
     });
   });
 
