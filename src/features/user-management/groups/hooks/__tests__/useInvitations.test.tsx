@@ -157,6 +157,26 @@ describe("useInvitations Behavioral Testing", () => {
       ).rejects.toThrow("Only admins can generate registration tokens");
     });
 
+    // Regression test for bug #702: the admin check used to be case-sensitive
+    // (`role !== 'admin'`), disagreeing with useGroups.isAdmin's
+    // `role?.toLowerCase() === 'admin'`. A user with role 'Admin' was incorrectly
+    // rejected here even though useGroups considered them an admin.
+    test("should allow a mixed-case admin role, matching useGroups.isAdmin", async () => {
+      mockGenerateGroupRegistrationToken.mockResolvedValue("token-abc");
+      mockContextValue = makeContext({
+        activeGroupId: "g1",
+        activeGroupUserProfile: { role: "Admin", username: "alice" },
+      });
+
+      const { result } = renderHook(() => useInvitations());
+
+      await act(async () => {
+        await result.current.generateRegistrationToken();
+      });
+
+      expect(mockGenerateGroupRegistrationToken).toHaveBeenCalledWith("g1", "");
+    });
+
     test("should call invitation.generateGroupRegistrationToken with groupId and notes", async () => {
       mockGenerateGroupRegistrationToken.mockResolvedValue("token-abc");
       mockContextValue = makeContext({

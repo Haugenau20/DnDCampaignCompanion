@@ -43,14 +43,25 @@ export function useCampaigns() {
       if (optionalName !== undefined) {
         // Called with (groupId, name, description)
         groupId = nameOrGroupId;
-        name = description || '';
+        name = description ?? '';
         description = optionalName;
       } else {
         // Called with (name, description)
         name = nameOrGroupId;
         groupId = activeGroupId || '';
       }
-      
+
+      // Validated after the branch so BOTH calling conventions get the same
+      // rule (bug #700). The 3-arg form used to coerce a falsy name to '' via
+      // `description || ''`; guarding only inside that branch would have left
+      // the 2-arg form still accepting '', trading one asymmetry for another.
+      // CampaignService slugifies `name` into the Firestore document ID, so an
+      // empty name yields an empty path segment and an opaque low-level error
+      // far from the call site.
+      if (!name) {
+        throw new Error('Campaign name is required');
+      }
+
       if (!groupId) {
         throw new Error('No active group selected');
       }

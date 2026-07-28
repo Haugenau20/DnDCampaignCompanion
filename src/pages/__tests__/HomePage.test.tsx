@@ -407,6 +407,77 @@ describe("HomePage", () => {
       renderPage();
       expect(screen.getByTestId("dashboard-layout")).toBeInTheDocument();
     });
+
+    // Bug #850: chapters used a `dateModified || dateAdded` fallback while
+    // quests, rumors, npcs and locations required `dateModified` strictly —
+    // so a never-modified quest/rumor/npc/location was silently excluded
+    // from recent activity even though it was newly created. The fix unifies
+    // all five branches on the fallback.
+    it("includes a quest in activities when only dateAdded is set (dateModified || dateAdded fallback)", () => {
+      mockQuests = [
+        {
+          id: "q-no-datemod",
+          title: "Undated Quest",
+          description: "...",
+          dateAdded: "2024-01-02",
+        },
+      ];
+      renderPage();
+      const activityCount = parseInt(
+        screen.getByTestId("dashboard-layout").getAttribute("data-activity-count") || "0"
+      );
+      // Quest is included via dateAdded fallback, plus 4 others (chapter, rumor, npc, location) = 5
+      expect(activityCount).toBe(5);
+    });
+
+    it("includes a rumor in activities when only dateAdded is set (dateModified || dateAdded fallback)", () => {
+      mockRumors = [
+        {
+          id: "r-no-datemod",
+          title: "Undated Rumor",
+          content: "...",
+          dateAdded: "2024-01-03",
+        },
+      ];
+      renderPage();
+      const activityCount = parseInt(
+        screen.getByTestId("dashboard-layout").getAttribute("data-activity-count") || "0"
+      );
+      expect(activityCount).toBe(5);
+    });
+
+    it("includes an NPC in activities when only dateAdded is set (dateModified || dateAdded fallback)", () => {
+      mockNpcs = [
+        {
+          id: "npc-no-datemod",
+          name: "Undated NPC",
+          description: "...",
+          dateAdded: "2024-01-04",
+        },
+      ];
+      renderPage();
+      const activityCount = parseInt(
+        screen.getByTestId("dashboard-layout").getAttribute("data-activity-count") || "0"
+      );
+      expect(activityCount).toBe(5);
+    });
+
+    it("includes a location in activities when only dateAdded is set (dateModified || dateAdded fallback)", () => {
+      mockLocations = [
+        {
+          id: "loc-no-datemod",
+          name: "Undated Location",
+          description: "...",
+          dateModified: undefined,
+          dateAdded: "2024-01-05",
+        },
+      ];
+      renderPage();
+      const activityCount = parseInt(
+        screen.getByTestId("dashboard-layout").getAttribute("data-activity-count") || "0"
+      );
+      expect(activityCount).toBe(5);
+    });
   });
 
   // -------------------------------------------------------------------------

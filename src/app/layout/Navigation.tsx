@@ -63,6 +63,7 @@ const Navigation: React.FC = () => {
               
               return (
                 <Button
+                  key={item.path}
                   variant='ghost'
                   onClick={() => navigateToPage(item.path)}
                   startIcon={item.icon}
@@ -90,7 +91,7 @@ const Navigation: React.FC = () => {
               const isActive = shouldHighlightPath(item.path);
               
               return (
-                <div>
+                <div key={item.path}>
                   <Button
                     variant='ghost'
                     onClick={() => navigateToPage(item.path)}

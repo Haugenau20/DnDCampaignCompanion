@@ -22,8 +22,8 @@ export function useInvitations() {
         throw new Error('No active group selected');
       }
       
-      // Check if current user is admin
-      if (!activeGroupUserProfile || activeGroupUserProfile.role !== 'admin') {
+      // Check if current user is admin (case-insensitive, matching useGroups.isAdmin)
+      if (!activeGroupUserProfile || activeGroupUserProfile.role?.toLowerCase() !== 'admin') {
         throw new Error('Only admins can generate registration tokens');
       }
       

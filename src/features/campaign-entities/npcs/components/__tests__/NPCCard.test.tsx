@@ -270,9 +270,43 @@ describe('NPCCard', () => {
       fireEvent.click(screen.getByRole('button', { name: /expand/i }));
       // The quest title should not appear since the quest was not found
       expect(screen.queryByText('Ghost Quest Title')).not.toBeInTheDocument();
-      // NOTE: The "Related Quests" section header DOES still render even when quest resolves
-      // to null — this is a minor UI issue where the header shows with no content beneath it.
-      // See bug #250 for details.
+    });
+
+    // Bug #250: the "Related Quests" heading used to render whenever the
+    // connections array was non-empty, even if every id failed to resolve
+    // to an actual quest — leaving the heading floating over nothing.
+    test('should not render the "Related Quests" heading when no related quest ids resolve (bug #250)', () => {
+      const npc = makeNPC({
+        connections: {
+          relatedNPCs: [],
+          affiliations: [],
+          relatedQuests: ['quest-unknown'],
+        },
+      });
+      // getQuestById returns undefined for every id — nothing resolves
+      setupMocks({ quests: {} });
+      render(<NPCCard npc={npc} />);
+      fireEvent.click(screen.getByRole('button', { name: /expand/i }));
+      expect(screen.queryByText('Related Quests')).not.toBeInTheDocument();
+    });
+
+    test('should render the "Related Quests" heading when at least one related quest resolves', () => {
+      const npc = makeNPC({
+        connections: {
+          relatedNPCs: [],
+          affiliations: [],
+          relatedQuests: ['quest-1', 'quest-unknown'],
+        },
+      });
+      setupMocks({
+        quests: {
+          'quest-1': { id: 'quest-1', title: 'The Dark Forest', status: 'active' },
+        },
+      });
+      render(<NPCCard npc={npc} />);
+      fireEvent.click(screen.getByRole('button', { name: /expand/i }));
+      expect(screen.getByText('Related Quests')).toBeInTheDocument();
+      expect(screen.getByText('The Dark Forest')).toBeInTheDocument();
     });
 
     test('should call navigateToPage with quest highlight on quest click', () => {

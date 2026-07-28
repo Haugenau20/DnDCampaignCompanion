@@ -2,13 +2,13 @@
 
 **Title**: useInvitations.generateRegistrationToken uses case-sensitive role check, inconsistent with useGroups.isAdmin
 
-**Status**: 🔍 DISCOVERED
+**Status**: ✅ FIXED
 
 **Category**: VALIDATION
 
-**Discovered In**: `src/context/firebase/hooks/__tests__/useInvitations.test.tsx`
+**Discovered In**: `src/features/user-management/groups/hooks/__tests__/useInvitations.test.tsx`
 
-**Affected File**: `src/context/firebase/hooks/useInvitations.ts`
+**Affected File**: `src/features/user-management/groups/hooks/useInvitations.ts` (role check), `src/features/user-management/groups/hooks/useGroups.ts` (reference behavior, unchanged)
 
 ## Description
 
@@ -56,3 +56,19 @@ if (!activeGroupUserProfile || activeGroupUserProfile.role?.toLowerCase() !== 'a
 ```
 
 **Severity**: Low — only affects environments where role values are stored in non-lowercase, which may not occur in practice given current code paths. However, the inconsistency is a latent correctness hazard.
+
+## Resolution (2026-07-28)
+
+Applied the recommended fix exactly: `useInvitations.generateRegistrationToken`'s admin guard now
+reads `activeGroupUserProfile.role?.toLowerCase() !== 'admin'`, matching `useGroups.isAdmin`'s
+comparison. `useGroups.ts` was left untouched — it is already the established, permissive behavior.
+
+**Proof by revert**: added a regression test to
+`src/features/user-management/groups/hooks/__tests__/useInvitations.test.tsx`
+("should allow a mixed-case admin role, matching useGroups.isAdmin") using
+`activeGroupUserProfile: { role: "Admin", ... }` and asserting
+`generateRegistrationToken()` resolves and forwards to
+`invitation.generateGroupRegistrationToken`. Reverting the production fix (restoring
+`role !== 'admin'`) turned this test red with `Only admins can generate registration tokens` thrown
+from `useInvitations.ts:27`, and only this one new test failed (1 failed / 27 passed). Restoring the
+fix returned the suite to 28/28 passing.

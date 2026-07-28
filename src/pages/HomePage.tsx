@@ -138,7 +138,7 @@ useEffect(() => {
     
     // Add quests
     quests.forEach(quest => {
-      if (quest.dateModified) {
+      if (quest.dateModified || quest.dateAdded) {
         allActivities.push({
           id: quest.id,
           type: 'quest',
@@ -150,10 +150,10 @@ useEffect(() => {
         });
       }
     });
-    
+
     // Add rumors
     rumors.forEach(rumor => {
-      if (rumor.dateModified) {
+      if (rumor.dateModified || rumor.dateAdded) {
         allActivities.push({
           id: rumor.id,
           type: 'rumor',
@@ -165,10 +165,10 @@ useEffect(() => {
         });
       }
     });
-    
+
     // Add NPCs
     npcs.forEach(npc => {
-      if (npc.dateModified) {
+      if (npc.dateModified || npc.dateAdded) {
         allActivities.push({
           id: npc.id,
           type: 'npc',
@@ -180,10 +180,10 @@ useEffect(() => {
         });
       }
     });
-    
+
     // Add locations
     locations.forEach(location => {
-      if ('dateModified' in location && location.dateModified) {
+      if ('dateModified' in location && (location.dateModified || location.dateAdded)) {
         allActivities.push({
           id: location.id,
           type: 'location',
