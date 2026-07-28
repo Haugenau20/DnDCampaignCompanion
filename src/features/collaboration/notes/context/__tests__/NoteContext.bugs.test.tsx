@@ -452,7 +452,23 @@ describe('NoteContext Bug Tests', () => {
     });
   });
 
-  describe('Bug #024: Error Handling and State Management', () => {
+  // NoteContext error handling and state consistency.
+  //
+  // This block was previously titled "Bug #024". No such bug was ever filed —
+  // there is no 024-*.md and no tracker row, and this was the only reference to
+  // the number anywhere in the repo. The block was written to go looking for a
+  // defect in error handling and found the behaviour correct, so nothing was
+  // ever filed and the speculative number stayed behind in the title.
+  //
+  // Both tests below assert *desirable* behaviour, not a defect: a failed fetch
+  // surfaces an error, resolves loading and leaves no stale notes; a failed save
+  // rejects and leaves the note still marked unsaved. They are specification
+  // tests, not bug markers — do not read a red here as "#024 regressed".
+  //
+  // Renamed 2026-07-28 rather than filing #024 retroactively: a tracker row for
+  // a defect that never existed is how this project acquired five entries it
+  // later had to retract (#013, #014, #300, #021, #022).
+  describe('Error Handling and State Management', () => {
     test('should reveal error handling in fetch operations', async () => {
       mockDocumentService.getCollection.mockRejectedValue(new Error('Firebase connection failed'));
 

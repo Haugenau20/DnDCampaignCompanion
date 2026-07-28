@@ -280,16 +280,13 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             setProfileLoading(false);
             
             // Step 2: Load groups - using the profile returned from loadUserProfile
-            if (profile) {
-              setGroupsLoading(true);
-              // Pass the firebaseUser directly to loadGroups
-              await loadGroups(firebaseUser.uid, profile, firebaseUser);
-              setGroupsLoading(false);
-              setAuthLoading(false);
-            } else {
-              console.warn(`No profile loaded for user ${firebaseUser.uid}, cannot load groups`);
-              setAuthLoading(false);
-            }
+            // loadUserProfile above either resolves with a truthy profile or throws,
+            // so `profile` is always truthy here.
+            setGroupsLoading(true);
+            // Pass the firebaseUser directly to loadGroups
+            await loadGroups(firebaseUser.uid, profile, firebaseUser);
+            setGroupsLoading(false);
+            setAuthLoading(false);
           } catch (err) {
             console.error('Error in auth state change loading:', err);
             setError(err instanceof Error ? err.message : 'Failed to load user data');

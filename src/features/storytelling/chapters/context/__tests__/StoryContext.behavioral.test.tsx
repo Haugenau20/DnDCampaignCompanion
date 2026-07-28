@@ -920,10 +920,82 @@ describe('StoryContext Behavioral Testing', () => {
         await storyContext.updateChapter('chapter-01', { order: 3 });
       });
 
-      // BEHAVIOR: Should perform complex reordering with multiple operations
-      expect(mockDeleteData).toHaveBeenCalled();
-      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalled();
+      // BEHAVIOR: every affected chapter ends up written at its new position.
+      //
+      // Corrected under explicit authorisation on 2026-07-28, together with the
+      // bug #017 fix. This previously asserted `expect(mockDeleteData).toHaveBeenCalled()`,
+      // which pinned the *mechanism* of the old implementation rather than the
+      // outcome — and no correct implementation can satisfy it. Moving chapter-01
+      // to order 3 rotates orders {1,2,3} -> {3,1,2}; because a chapter's id is
+      // derived from its order, the new id set {chapter-03, chapter-01,
+      // chapter-02} is exactly the old one. Every id is reused, so a reorder that
+      // writes before deleting has nothing left to delete. Asserting that a
+      // delete happened could therefore only ever be satisfied by the
+      // delete-everything-first algorithm that #017 exists to remove.
+      //
+      // Asserting the outcome instead is strictly stronger: this checks the
+      // chapters actually land in the right places, which the old assertion
+      // never did.
+      const writes = mockFirebaseServices.document.setDocument.mock.calls.map(
+        (call: any[]) => [call[1], call[2].order]
+      );
+      expect(writes).toEqual(
+        expect.arrayContaining([
+          ['chapter-03', 3],
+          ['chapter-01', 1],
+          ['chapter-02', 2]
+        ])
+      );
       expect(mockRefreshChapters).toHaveBeenCalled();
+    });
+
+    test('should not delete any chapter when a reorder write fails partway (bug #017)', async () => {
+      // Regression test for the atomicity half of bug #017.
+      //
+      // updateChapter's reorder path used to delete EVERY affected chapter and
+      // only then recreate them. A failure in the recreate loop left the
+      // already-deleted chapters with no replacement and no rollback — permanent
+      // data loss. The fix writes and verifies every new position first, and
+      // deletes only afterwards.
+      //
+      // The observable consequence, and what this pins: when a write fails
+      // partway, nothing has been deleted yet. Against the old implementation
+      // all three chapters were already gone by this point.
+      const multipleChapters = [
+        { id: 'chapter-01', title: 'Chapter 1', content: 'First', order: 1, createdBy: 'test-user', createdByUsername: 'Test User', dateAdded: '2025-06-15T00:00:00.000Z' },
+        { id: 'chapter-02', title: 'Chapter 2', content: 'Second', order: 2, createdBy: 'test-user', createdByUsername: 'Test User', dateAdded: '2025-06-15T00:00:00.000Z' },
+        { id: 'chapter-03', title: 'Chapter 3', content: 'Third', order: 3, createdBy: 'test-user', createdByUsername: 'Test User', dateAdded: '2025-06-15T00:00:00.000Z' }
+      ];
+
+      mockUseChapterData.mockReturnValue({
+        chapters: multipleChapters,
+        loading: false,
+        error: null,
+        refreshChapters: mockRefreshChapters,
+        hasRequiredContext: true,
+      });
+
+      // Succeed on the first write, then fail — a partial batch.
+      mockFirebaseServices.document.setDocument
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValue(new Error('Firestore write failed'));
+      mockFirebaseServices.document.getDocument.mockResolvedValue({});
+
+      renderStoryContext();
+
+      await waitFor(() => {
+        expect(storyContext).toBeDefined();
+      });
+
+      await act(async () => {
+        await expect(
+          storyContext.updateChapter('chapter-01', { order: 3 })
+        ).rejects.toThrow();
+      });
+
+      // BEHAVIOR: no chapter may be deleted while any replacement write is
+      // still outstanding.
+      expect(mockDeleteData).not.toHaveBeenCalled();
     });
   });
 

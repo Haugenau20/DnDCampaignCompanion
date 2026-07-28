@@ -211,12 +211,14 @@ describe('StoryContext Bug Discovery Tests', () => {
         });
       });
 
-      // BUG DISCOVERY: This test will FAIL until attribution utilities are fixed
+      // Specifies the correct attribution values; currently passes. The former
+      // "will FAIL until attribution utilities are fixed" note referred to the
+      // Pattern 1 premise struck on 2026-07-28 — it was never a real defect.
       expect(mockUpdateData).toHaveBeenCalledWith(
         'chapter-01',
         expect.objectContaining({
-          modifiedByUsername: 'Test User',       // BUG: Currently receives ""
-          modifiedByCharacterName: 'Test Character' // BUG: Currently receives null
+          modifiedByUsername: 'Test User',
+          modifiedByCharacterName: 'Test Character'
         })
       );
     });

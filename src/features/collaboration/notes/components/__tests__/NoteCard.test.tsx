@@ -131,22 +131,29 @@ describe('NoteCard', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Status badge class coverage (lines 47, 51 — getStatusBadgeClass branches)
+  // Status badge rendering.
+  //
+  // These previously described themselves as covering getStatusBadgeClass's
+  // "active" and default branches. That function was removed as dead code
+  // (bug #1050, 2026-07-28): its only call site was already gated on
+  // note.status === "archived", so those two branches could never execute and
+  // the tests below were never reaching them. The class is now inlined.
+  //
+  // Both assertions were correct as written and are unchanged — they test the
+  // rendered output, which is the behaviour that actually matters here.
   // -------------------------------------------------------------------------
   describe('status badge styling', () => {
-    test('should render Archived badge element with badge class for archived notes (line 47)', () => {
+    test('should render Archived badge element with badge class for archived notes', () => {
       render(<NoteCard note={makeNote({ status: 'archived' })} />);
       const badge = screen.getByText('Archived');
       // The badge span should have the archived status class applied
       expect(badge.tagName.toLowerCase()).toBe('span');
-      // Class is applied via getStatusBadgeClass() returning "status-archived"
       expect(badge.className).toContain('status-archived');
     });
 
-    test('should render no badge for notes with unknown status (default branch, line 51)', () => {
-      // A status value not matching "active" or "archived" hits the default case
+    test('should render no badge for notes with a non-archived status', () => {
       render(<NoteCard note={makeNote({ status: 'unknown-status' as any })} />);
-      // "Archived" badge condition is: note.status === "archived" — does not match
+      // Badge condition is: note.status === "archived" — does not match
       expect(screen.queryByText('Archived')).not.toBeInTheDocument();
     });
   });

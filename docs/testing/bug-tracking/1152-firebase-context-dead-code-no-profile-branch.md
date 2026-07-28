@@ -4,16 +4,19 @@
 FirebaseContext `if (profile)` else branch (lines 289-291) is unreachable dead code — `loadUserProfile` always returns a profile or throws
 
 ## Status
-🔍 DISCOVERED
+✅ FIXED (2026-07-28)
 
 ## Category
 ARCHITECTURE
 
 ## Discovered In
-`src/context/firebase/__tests__/FirebaseContext.behavioral.test.tsx`
+`src/features/user-management/auth/context/__tests__/FirebaseContext.behavioral.test.tsx` (current path)
 
 ## Affected File
-`src/context/firebase/FirebaseContext.tsx`
+`src/features/user-management/auth/context/FirebaseContext.tsx` (current path; the file moved under
+`features/user-management/auth/context/` during the feature-first restructuring — note its own
+header comment still says `src/context/firebase/FirebaseContext.tsx`, a stale artifact carried over
+from before the move, same as documented for the service files in `CLAUDE.md`)
 
 ## Description
 In the `onAuthStateChanged` handler, after calling `loadUserProfile`, the code checks:
@@ -66,3 +69,34 @@ setAuthLoading(false);
 ```
 
 Alternatively, if there is a future requirement to allow `loadUserProfile` to return null, update it to do so and add test coverage for the null path.
+
+## Resolution (2026-07-28)
+
+Confirmed still live per the 2026-07-27 audit (`docs/testing/phase4-audit-worksheet.md`). Re-read
+`loadUserProfile` (current lines ~203-231) and its only caller (current lines ~279-292): the
+`while` loop either `return profile` from inside `if (profile)` — always truthy — or falls through
+to `throw new Error('Failed to load user profile after multiple attempts')` once retries are
+exhausted. So `await loadUserProfile(...)` in the caller either resolves with a truthy profile or
+rejects (caught by the surrounding try/catch at line ~293). Grepped for `loadUserProfile` across
+`src/`; its only caller is this one `onAuthStateChanged` handler.
+
+Removed the `else` branch and made the resolved path unconditional:
+
+```tsx
+const profile = await loadUserProfile(firebaseUser.uid);
+setProfileLoading(false);
+
+// loadUserProfile above either resolves with a truthy profile or throws,
+// so `profile` is always truthy here.
+setGroupsLoading(true);
+await loadGroups(firebaseUser.uid, profile, firebaseUser);
+setGroupsLoading(false);
+setAuthLoading(false);
+```
+
+The existing test suite already had a dedicated describe block, `'Dead code path —
+loadUserProfile always returns profile or throws (lines 289-291)'`, asserting the structural
+invariant rather than the `else` branch itself, so it needed no changes.
+
+Verified via `npx jest --testPathPattern="FirebaseContext"` (54 passed, 2 skipped [pre-existing,
+bugs #900/#901, unrelated], 0 failed) and `npx tsc --noEmit` (clean).

@@ -1,10 +1,31 @@
 # Bug #100: Navigation Component — Missing React Key Prop on Mobile Nav Wrapper Divs
 
-**Status**: 🔍 DISCOVERED  
+**Status**: ✅ FIXED (2026-07-28)
 **Category**: UI  
 **Priority**: Low  
-**Component**: Navigation.tsx  
+**Component**: `src/app/layout/Navigation.tsx` (moved here during the feature-first restructuring; was `src/components/layout/Navigation.tsx` when this report was written)
 **Discovered In**: Session — component unit tests (feature/unit-test-coverage)
+
+## Resolution
+
+Confirmed both the desktop (`<Button>` at ~line 65) and mobile (`<div>` at ~line 93) `.map()`
+callbacks were missing `key` on their outermost returned element — not just mobile, as this
+report's title implies. Added `key={item.path}` to both.
+
+Proof: added a test in `src/app/layout/__tests__/Navigation.test.tsx` ("should not emit a React
+'key' warning when rendering the desktop or mobile nav lists") that spies on `console.error` and
+asserts no `'key'` warning is emitted. Reverting the production fix and re-running just that test
+reproduced the exact warning this report documents:
+
+```
+expect(received).toBe(expected) // Object.is equality
+Expected: false
+Received: true
+```
+
+with the underlying `console.error` call containing `Warning: Each child in a list should have a
+unique "key" prop.` — confirming the test genuinely catches the regression. Restoring the fix
+turns it green again. Full `Navigation.test.tsx` suite: 77/77 passing after the fix.
 
 ## Description
 

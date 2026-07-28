@@ -257,6 +257,55 @@ describe("useCampaigns Behavioral Testing", () => {
       // BEHAVIOR: when 3 args provided, first arg is groupId
       expect(mockCreateCampaign).toHaveBeenCalledWith("g99", expect.any(String), "Description");
     });
+
+    // Regression test for bug #700: a falsy name in the 3-arg convention used to be
+    // silently coerced to '' via `name = description || ''`, creating an unnamed
+    // campaign with no error feedback. It must now throw instead.
+    test("should throw when name is an empty string in (groupId, name, description) form", async () => {
+      mockContextValue = makeContext({ activeGroupId: "g1" });
+
+      const { result } = renderHook(() => useCampaigns());
+
+      await expect(
+        act(async () => {
+          await result.current.createCampaign("g99", "", "Description");
+        })
+      ).rejects.toThrow("Campaign name is required");
+
+      expect(mockCreateCampaign).not.toHaveBeenCalled();
+    });
+
+    test("should throw when name is undefined in (groupId, name, description) form", async () => {
+      mockContextValue = makeContext({ activeGroupId: "g1" });
+
+      const { result } = renderHook(() => useCampaigns());
+
+      await expect(
+        act(async () => {
+          await result.current.createCampaign("g99", undefined as any, "Description");
+        })
+      ).rejects.toThrow("Campaign name is required");
+
+      expect(mockCreateCampaign).not.toHaveBeenCalled();
+    });
+
+    // The name rule must hold for BOTH calling conventions. #700 was reported
+    // against the 3-arg form only; validating just inside that branch would
+    // have left this 2-arg path still accepting '' — trading one asymmetry for
+    // another, which is the defect class #700 belongs to in the first place.
+    test("should throw on an empty name in the (name, description) form too", async () => {
+      mockContextValue = makeContext({ activeGroupId: "g1" });
+
+      const { result } = renderHook(() => useCampaigns());
+
+      await expect(
+        act(async () => {
+          await result.current.createCampaign("", "Description");
+        })
+      ).rejects.toThrow("Campaign name is required");
+
+      expect(mockCreateCampaign).not.toHaveBeenCalled();
+    });
   });
 
   // -------------------------------------------------------------------------

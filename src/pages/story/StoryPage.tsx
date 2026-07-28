@@ -80,10 +80,19 @@ const StoryPage: React.FC = () => {
   // For tracking reading progress
   const handlePageChange = (page: number, isComplete?: boolean) => {
     if (currentChapter) {
-      updateChapterProgress(currentChapter.id, {
-        lastPosition: page,
-        isComplete: isComplete || page === 1
-      });
+      // Only send isComplete when BookViewer actually signals completion.
+      //
+      // BookViewer calls onPageChange(page) on every page turn with no flag,
+      // and additionally onPageChange(page, true) on the last page. Forwarding
+      // `!!isComplete` turned that first call into an explicit `false`, which
+      // cleared a chapter's stored completion on any page turn (bug #852).
+      // Omitting the key instead lets the context preserve what it has.
+      updateChapterProgress(
+        currentChapter.id,
+        isComplete
+          ? { lastPosition: page, isComplete: true }
+          : { lastPosition: page }
+      );
     }
   };
 

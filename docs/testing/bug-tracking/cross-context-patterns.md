@@ -4,55 +4,61 @@
 **Analysis Scope**: NPCContext, QuestContext, LocationContext, RumorContext, StoryContext  
 **Discovery Method**: Behavioral Testing Methodology  
 
+> ⚠️ **Read this before using anything below. Revised 2026-07-28.**
+>
+> **Pattern 1 has been struck — it was never real**, and as this document's self-declared
+> "highest priority systematic issue" it misdirected priority for over a year. Its premise is
+> false against `src/core/utils/user-utils.ts`. The strike, the verified source, and what
+> actually caused the symptom are recorded in place, in section 1.
+>
+> The remaining patterns are **descriptive, not verified**. This document was written from test
+> output in June 2025, before the feature-first restructuring, and its file paths and line
+> numbers are stale throughout. Where it disagrees with
+> `docs/testing/phase4-audit-worksheet.md`, that worksheet wins — every verdict in it was
+> reached by reading current production code, with the code quoted.
+>
+> **The general caution this document earned**: a pattern synthesised from several contexts'
+> test output inherits every one of those tests' harness assumptions. Agreement across five
+> contexts felt like five independent confirmations; it was one shared mock shape, counted five
+> times. Confirm a root cause against production source directly before acting on it.
+
 ## 🔍 **Systematic Bug Patterns Discovered**
 
 Through comprehensive behavioral testing across 5 campaign entity contexts, we have identified **systematic bug patterns** that affect multiple or all contexts. These patterns represent architectural and implementation issues that require coordinated fixes across the entire codebase.
 
-## 1. User Attribution Metadata Failures (CRITICAL PATTERN)
+## 1. ~~User Attribution Metadata Failures (CRITICAL PATTERN)~~ — ❌ STRUCK 2026-07-28
 
-### **Affected Contexts**: ALL TESTED (5/5)
-- ✅ **NPCContext**: Mentioned in testing lessons learned
-- ✅ **QuestContext**: Mentioned in testing lessons learned  
-- ✅ **LocationContext**: Bug #008 - User Attribution Metadata Issues
-- ✅ **RumorContext**: Bug #011 - User Attribution Metadata Issues
-- ✅ **StoryContext**: Bug #015 - User Attribution Metadata Issues
-
-### **Pattern Description**
-```typescript
-// SYSTEMATIC FAILURE PATTERN across ALL contexts:
-modifiedByUsername: getUserName(activeGroupUserProfile),           // Returns: ""
-modifiedByCharacterName: getActiveCharacterName(activeGroupUserProfile), // Returns: null
-```
-
-### **Root Cause Analysis**
-- **Utility Functions**: `getUserName` and `getActiveCharacterName` utilities consistently return empty/null values
-- **Mock vs Production**: Issue appears in both testing and likely production environments
-- **Profile Structure**: Profile data structure may not match utility function expectations
-- **Error Handling**: No fallback logic when utilities fail
-
-### **Impact Assessment**
-- **Data Integrity**: ALL entity operations lack proper user attribution
-- **Audit Trail**: Complete loss of user tracking across entire application
-- **Collaboration**: Group features compromised by missing authorship data
-- **User Trust**: Critical issue affecting user confidence in data integrity
-
-### **Evidence Across Contexts**
-```typescript
-// LocationContext.tsx (lines 58, 80, 90, 125, 128, 152, 215, 229, 232, 264, 304, 316)
-// RumorContext.tsx (lines 58, 80, 90, 125, 128, 152, 215, 229, 232, 264, 304, 316)  
-// StoryContext.tsx (lines 208, 209, 270, 271, 365, 366, 369, 370)
-
-// IDENTICAL PATTERN:
-{
-  createdByUsername: "",      // EXPECTED: "Test User"
-  createdByCharacterName: null, // EXPECTED: "Test Character"
-  modifiedByUsername: "",     // EXPECTED: "Test User"
-  modifiedByCharacterName: null // EXPECTED: "Test Character"
-}
-```
-
-### **Resolution Priority**: HIGH (Immediate Attention)
-This is the **highest priority systematic issue** affecting all campaign entity operations.
+> **This pattern was never real. Its central claim is false, and it steered priority for over a
+> year.** Struck rather than deleted, because how it went wrong is the useful part.
+>
+> **The claim**: that `getUserName` and `getActiveCharacterName` "consistently return empty/null
+> values," making this "the highest priority systematic issue" in the codebase.
+>
+> **What the code actually says** (`src/core/utils/user-utils.ts`, verified 2026-07-28):
+> ```ts
+> export const getUserName = (userProfile: any): string => {
+>   return userProfile?.username || '';
+> };
+> ```
+> It returns the username whenever one is present. It returns `''` only when handed a profile that
+> has no `username` — which is correct behaviour, not a defect. `getActiveCharacterName` likewise
+> resolves the active character correctly and returns `null` only when there genuinely isn't one.
+>
+> **What actually produced the observed empties**: the shape of the mock profile in the tests. The
+> symptom was in the harness, never in production. This is the same failure mode that produced five
+> retracted tracker entries (#013, #014, #300, #021, #022) — a red or surprising test result was
+> read as a production defect without first confirming the production code could produce it.
+>
+> **What became of the three bugs cited as evidence**: #008, #011 and #015 are all ✅ FIXED — closed
+> by the PR #16 attribution consolidation, which made `src/core/attribution/` the single place
+> attribution values are built and `DocumentService` the single write path that applies them. Note
+> that the consolidation was worth doing on its own merits; it did not fix the defect this pattern
+> described, because there was no such defect.
+>
+> **Lesson**: a pattern assembled from several contexts' test output inherits every one of those
+> tests' harness assumptions. Cross-context analysis multiplies confidence, but it multiplies a
+> shared systematic error just as readily. Confirm the root cause against production source once,
+> directly, before promoting anything to "highest priority."
 
 ## 2. ID Generation Collision Vulnerabilities (ARCHITECTURAL PATTERN)
 
@@ -217,8 +223,8 @@ export const useContext = () => {
 ## 📊 **Pattern Analysis Summary**
 
 ### **Universal Patterns (5/5 Contexts)**
-1. **User Attribution Failures** - Critical systematic issue
-2. **ID Generation Issues** - Architectural vulnerability  
+1. ~~**User Attribution Failures**~~ — ❌ **struck 2026-07-28, never real** (see Pattern 1)
+2. **ID Generation Issues** - Architectural vulnerability
 3. **Validation Inconsistencies** - User experience issue
 4. **Error Boundary Integration** - Development experience issue
 
@@ -226,22 +232,34 @@ export const useContext = () => {
 5. **Complex Function Integration** - Feature reliability issue
 
 ### **Bug Distribution by Pattern**
+
+*Updated 2026-07-28 against the tracker. Four of the five rows below were materially wrong as
+originally written — the correction is larger than the original analysis.*
+
 ```
-User Attribution:     3 bugs (#008, #011, #015) - HIGH PRIORITY
-ID Generation:        5 bugs (#002, #004, #009, #012, #016) - MEDIUM PRIORITY
-Validation Issues:    3 bugs (#005, #006, #019) - MEDIUM PRIORITY
-Complex Functions:    4 bugs (#013, #014, #017, #018) - MEDIUM PRIORITY
-Error Boundaries:     5 documented issues - LOW PRIORITY
+User Attribution:  ✅ 0 bugs — pattern STRUCK; #008/#011/#015 all FIXED (PR #16)
+ID Generation:     ⏸️ 4 bugs (#002, #004, #009, #012) - DEFERRED by decision; 7 marker
+                      tests kept deliberately red. #016 belongs under Validation, not
+                      here — the audit found its live part is order validation, and its
+                      ID-collision framing is not reproducible against current code.
+Validation:        🔍 2 open (#005, #016-narrowed); #006 and #019 both FIXED
+Complex Functions: 🔍 1 open (#017, recharacterized); #013/#014 were harness artifacts
+                      (JSDOM `crypto.randomUUID`), #018 FIXED
+Error Boundaries:  ⬜ 5 "documented issues" - never filed, never substantiated
 ```
 
 ## 🔧 **Systematic Resolution Strategy**
 
-### **Phase 1: Critical Infrastructure (High Priority)**
-1. **Fix User Attribution Utilities**
-   - Investigate `getUserName` and `getActiveCharacterName` implementations
-   - Fix profile data structure or utility logic
-   - Test fix across all contexts
-   - Verify attribution metadata works correctly
+### ~~**Phase 1: Critical Infrastructure (High Priority)**~~ — ❌ WITHDRAWN 2026-07-28
+1. ~~**Fix User Attribution Utilities**~~
+   - Withdrawn with Pattern 1. There is nothing to fix in `getUserName` /
+     `getActiveCharacterName` — see the struck Pattern 1 above for the verified source.
+   - Attribution *was* consolidated (PR #16), on separate and better-founded grounds:
+     `src/core/attribution/` is now the single place attribution values are built and
+     `DocumentService` the single write path that applies them. Read
+     `docs/architecture/migration/attribution-consolidation-findings.md` before touching it —
+     its RESOLVED section records two categories of write that must **never** be routed
+     through `createDocument`.
 
 ### **Phase 2: Data Integrity (Medium Priority)**
 2. **Standardize ID Generation**
@@ -299,10 +317,14 @@ Error Boundaries:     5 documented issues - LOW PRIORITY
 
 ## 🚀 **Recommendations for Remaining Testing**
 
-### **For NoteContext Testing**
-1. **Expect Same Patterns**: Anticipate user attribution and ID generation issues
-2. **Pattern Validation**: Confirm systematic patterns continue
-3. **New Pattern Discovery**: Look for note-specific patterns
+### ~~**For NoteContext Testing**~~ — superseded 2026-07-28 (NoteContext testing is done)
+1. ~~**Expect Same Patterns**: Anticipate user attribution and ID generation issues~~ — this
+   advice is exactly how the error propagated. Told to *expect* attribution failures, the
+   NoteContext pass duly found them and filed #020, #021 and #022. **All three closed as test
+   issues, not implementation bugs.** Priming an investigation with the pattern it should find
+   is a good way to find it whether or not it is there.
+2. **Pattern Validation**: confirm a pattern against production source before extending it to a
+   new context — not against the new context's test output.
 
 ### **For Cross-Context Integration Testing**
 1. **Relationship Testing**: Test entity relationships across contexts
@@ -316,11 +338,24 @@ Error Boundaries:     5 documented issues - LOW PRIORITY
 
 ## 🏆 **Key Achievements**
 
-The cross-context pattern analysis has revealed:
-- **5 systematic bug patterns** affecting multiple contexts
-- **20+ total bugs** with clear priority guidance
-- **Root cause identification** for major architectural issues
-- **Strategic resolution approach** addressing causes, not just symptoms
-- **Prevention strategy** for future development
+*Rewritten 2026-07-28. The original read as a claim of vindication; the record does not support it.*
 
-This analysis demonstrates the **revolutionary value** of behavioral testing methodology in revealing not just individual bugs, but systematic architectural issues that require coordinated resolution across the entire codebase.
+What this analysis actually produced, scored against outcomes:
+
+- **4 patterns, not 5.** Pattern 1 is struck — false premise, and it was the one rated highest.
+- **Its strongest claim was its wrongest.** "Highest priority systematic issue," "complete loss of
+  user tracking across entire application," HIGH / Immediate Attention — all of it against a
+  utility that works. Confidence tracked the number of contexts agreeing, and every one of them
+  was reading the same mock.
+- **The surviving patterns are real but were overstated.** ID generation (Pattern 2) is a genuine
+  collision risk, deliberately deferred with its marker tests kept red. Validation inconsistency
+  (Pattern 3) is real and concrete — `NPCContext` handles one precondition two incompatible ways
+  in a single file. Both are narrower than described here.
+- **Roughly a third of the bugs cited as evidence were harness artifacts** — #013, #014, #300,
+  #021, #022 were filed as production defects and retracted.
+
+**The durable finding is methodological, and it is worth more than the patterns were.**
+Cross-context analysis multiplies apparent confidence without multiplying evidence: five contexts
+sharing one test harness produce one observation reported five times. Behavioral testing did find
+real defects across this codebase — but the value came from tests that failed against production
+code, not from synthesis across test output. Verify a root cause once, directly, in the source.

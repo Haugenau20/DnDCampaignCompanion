@@ -232,15 +232,25 @@ const NPCCard: React.FC<NPCCardProps> = ({
               )}
 
               {/* Related Quests */}
-              {npc.connections.relatedQuests.length > 0 && (
-                <div>
-                  <Typography variant="h4" className="mb-2">
-                    Related Quests
-                  </Typography>
-                  <div className="space-y-2">
-                    {npc.connections.relatedQuests.map((questId) => {
-                      const quest = getQuestById(questId);
-                      return quest ? (
+              {(() => {
+                // Resolve first, then guard on what actually resolved (bug #250).
+                // Guarding on relatedQuests.length alone rendered the heading over
+                // an empty list whenever none of the IDs resolved to a quest.
+                const resolvedQuests = npc.connections.relatedQuests
+                  .flatMap((questId) => {
+                    const quest = getQuestById(questId);
+                    return quest ? [{ questId, quest }] : [];
+                  });
+
+                if (resolvedQuests.length === 0) return null;
+
+                return (
+                  <div>
+                    <Typography variant="h4" className="mb-2">
+                      Related Quests
+                    </Typography>
+                    <div className="space-y-2">
+                      {resolvedQuests.map(({ questId, quest }) => (
                         <Button
                           key={questId}
                           variant="ghost"
@@ -250,8 +260,8 @@ const NPCCard: React.FC<NPCCardProps> = ({
                           centered={false}
                         >
                           <div className="flex items-start gap-2 text-left">
-                            <Users 
-                              size={16} 
+                            <Users
+                              size={16}
                               className="mt-1 quest-status-${quest.status}"
                             />
                             <div className="flex-1">
@@ -264,14 +274,12 @@ const NPCCard: React.FC<NPCCardProps> = ({
                             </div>
                           </div>
                         </Button>
-                      ) : null;
-                    })}
-
-                    
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-          
+                );
+              })()}
+
               {/* Notes */}
               {npc.notes && npc.notes.length > 0 && (
                 <div>

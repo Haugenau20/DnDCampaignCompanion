@@ -4,7 +4,24 @@
 `loadUserProfile` uses hardcoded 1-second `setTimeout` delays between retries, making the error/retry path untestable without real-time waiting
 
 ## Status
-🔍 DISCOVERED
+🚫 **CLOSED — no production defect** (2026-07-28)
+
+### Closing note — 2026-07-28
+
+**Closed as testability-only. The retry behaviour is correct and intentional.**
+
+Current path: `src/features/user-management/auth/context/FirebaseContext.tsx:203-231` (the path
+recorded below predates the feature-first restructuring).
+
+The Phase 4 audit read the loop — `maxRetries = 3`, `setTimeout(resolve, 1000)` between attempts —
+and found working production behaviour, not a defect. A user whose profile write is still
+propagating genuinely benefits from a real one-second backoff; shortening or removing it to suit
+the test would make the product worse. The complaint in this report is entirely about Jest
+fake-timer composition across `async`/`await` checkpoints.
+
+**If the retry path is worth covering later**, the report's own suggestion is the right shape:
+add a `retryDelayMs` parameter defaulting to `1000`, purely so tests can inject a smaller value.
+That is a testability affordance, not a bug fix, and it should not be tracked here as a defect.
 
 ## Category
 TESTABILITY

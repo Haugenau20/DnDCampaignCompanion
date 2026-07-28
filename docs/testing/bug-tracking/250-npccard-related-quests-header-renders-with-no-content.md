@@ -1,10 +1,29 @@
 # Bug #250 - NPCCard "Related Quests" Header Renders When All Quest IDs Are Unresolvable
 
-**Status**: 🔍 DISCOVERED  
+**Status**: ✅ FIXED (2026-07-28)
 **Category**: UI  
 **Priority**: Low  
 **Discovery Method**: Component unit testing  
-**Context**: `src/components/features/npcs/NPCCard.tsx`
+**Context**: `src/features/campaign-entities/npcs/components/NPCCard.tsx` (moved here during the feature-first restructuring; was `src/components/features/npcs/NPCCard.tsx` when this report was written)
+
+## Resolution
+
+Matched the report's suggested fix: the resolved-quests list is now computed first (mapping
+`relatedQuests` ids through `getQuestById` and filtering out unresolved entries with a type guard),
+and the heading + list block is guarded on `resolvedQuests.length > 0` instead of
+`npc.connections.relatedQuests.length > 0`.
+
+Proof: added two tests to `src/features/campaign-entities/npcs/components/__tests__/NPCCard.test.tsx`
+— one asserting the "Related Quests" heading is absent when no id resolves, one asserting it's
+present when at least one id resolves. Reverting the production fix and re-running the first test
+reproduced the exact defect this report describes:
+
+```
+expect(element).not.toBeInTheDocument()
+expected document not to contain element, found <h4 ...>Related Quests</h4> instead
+```
+
+Restoring the fix turns it green again. Full `NPCCard.test.tsx` suite: 36/36 passing after the fix.
 
 ---
 

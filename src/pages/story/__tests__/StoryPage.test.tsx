@@ -77,6 +77,18 @@ jest.mock("features/storytelling", () => ({
       >
         Page Change
       </button>
+      <button
+        data-testid="book-viewer-page-1"
+        onClick={() => props.onPageChange(1)}
+      >
+        Page 1 (initial load / back-navigation, no isComplete flag)
+      </button>
+      <button
+        data-testid="book-viewer-page-complete"
+        onClick={() => props.onPageChange(3, true)}
+      >
+        Last Page (BookViewer explicitly signals isComplete)
+      </button>
     </div>
   ),
   SlidingChapters: (props: any) => (
@@ -464,12 +476,44 @@ describe("StoryPage", () => {
   // Page change / progress tracking
   // -------------------------------------------------------------------------
   describe("reading progress tracking", () => {
+    // The ABSENCE of `isComplete` in these two payloads is the assertion, not
+    // an oversight (bug #852). An ordinary page turn knows only the position;
+    // it has no opinion about completion. Sending `isComplete: false` — which
+    // is what this did until 2026-07-28 — made every page turn an explicit
+    // instruction to clear the flag, wiping a chapter's stored completion.
+    // StoryContext merges partial updates, so omitting the key preserves it.
     it("calls updateChapterProgress when BookViewer fires onPageChange", () => {
       renderPage();
       fireEvent.click(screen.getByTestId("book-viewer-page-change"));
       expect(mockUpdateChapterProgress).toHaveBeenCalledWith("chapter-01", {
         lastPosition: 2,
-        isComplete: false,
+      });
+    });
+
+    // Regression test for bug #851: BookViewer fires onPageChange(1) with no
+    // isComplete flag on initial load and whenever the reader navigates back
+    // to page 1 (e.g. pressing Home). Neither should mark the chapter complete
+    // — only BookViewer's own last-page / chapter-transition signal should.
+    it("does NOT mark the chapter complete on page 1 when isComplete is not signaled", () => {
+      renderPage();
+      fireEvent.click(screen.getByTestId("book-viewer-page-1"));
+      expect(mockUpdateChapterProgress).toHaveBeenCalledWith("chapter-01", {
+        lastPosition: 1,
+      });
+      // The requirement, stated independently of the payload's exact shape:
+      // nothing about a page-1 navigation may assert completion.
+      expect(mockUpdateChapterProgress).not.toHaveBeenCalledWith(
+        "chapter-01",
+        expect.objectContaining({ isComplete: true })
+      );
+    });
+
+    it("marks the chapter complete when BookViewer explicitly signals isComplete", () => {
+      renderPage();
+      fireEvent.click(screen.getByTestId("book-viewer-page-complete"));
+      expect(mockUpdateChapterProgress).toHaveBeenCalledWith("chapter-01", {
+        lastPosition: 3,
+        isComplete: true,
       });
     });
   });

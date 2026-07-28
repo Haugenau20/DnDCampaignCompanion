@@ -240,10 +240,18 @@ describe('GroupManagementView', () => {
     });
 
     test('should call createGroup and handle error gracefully', async () => {
-      // This test verifies that createGroup is called; the error display
-      // depends on the dialog state which may be complex to assert in tests.
-      // BUG #200: Error display inside dialog form after createGroup failure
-      // may not be visible in tests due to dialog state management.
+      // This test verifies that createGroup is called; it deliberately does not
+      // assert on the error text. See BUG #201 for why.
+      //
+      // BUG #201: on a createGroup failure the error is rendered TWICE at once --
+      // once by the always-present block in the main view (GroupManagementView.tsx:72)
+      // and once inside the still-open create dialog (:183). A plain getByText
+      // throws on multiple matches, which reads as "not found" unless you inspect
+      // the thrown message. The original diagnosis here ("may not be visible") had
+      // it backwards: the error is duplicated, not absent.
+      //
+      // NOTE: this comment previously cited #200, which is an unrelated (and now
+      // closed) UserProfile debounce testability entry. Corrected 2026-07-28.
       mockCreateGroup.mockRejectedValue(new Error('Group creation failed'));
       render(<GroupManagementView />);
       fireEvent.click(screen.getByRole('button', { name: /create new group/i }));
@@ -264,6 +272,29 @@ describe('GroupManagementView', () => {
       // Verify the dialog remains open (error handling keeps it open)
       await waitFor(() => {
         expect(screen.queryByRole('dialog', { name: /create new group/i })).toBeInTheDocument();
+      });
+    });
+
+    test('should show the createGroup error message exactly once (BUG #201 regression)', async () => {
+      // BUG #201: the error used to render TWICE simultaneously -- once in the
+      // always-present outer block and once inside the still-open create dialog.
+      // This asserts a single rendering of the error text.
+      mockCreateGroup.mockRejectedValue(new Error('Group creation failed'));
+      render(<GroupManagementView />);
+      fireEvent.click(screen.getByRole('button', { name: /create new group/i }));
+
+      fireEvent.change(screen.getByPlaceholderText(/enter group name/i), {
+        target: { value: 'Failing Group' },
+      });
+
+      const dialog = screen.getByRole('dialog', { name: /create new group/i });
+      const createBtn = Array.from(dialog.querySelectorAll('button')).find(b =>
+        /create group/i.test(b.textContent || '')
+      );
+      fireEvent.click(createBtn!);
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/group creation failed/i)).toHaveLength(1);
       });
     });
   });

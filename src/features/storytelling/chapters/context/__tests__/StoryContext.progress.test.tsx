@@ -238,4 +238,96 @@ describe('StoryContext Reading Progress (bug #018)', () => {
       expect.objectContaining({ chapterId: 'chapter-01', isComplete: true })
     );
   });
+
+  test('preserves isComplete when a later update supplies only lastPosition (bug #852)', async () => {
+    // updateChapterProgress takes Partial<ChapterProgress>, but its body used
+    // to rebuild the entry from scratch and default every field the caller
+    // omitted -- so any position-only update silently cleared a stored
+    // completion. Combined with BookViewer firing onPageChange(page) with no
+    // flag on every page turn, re-reading a finished chapter un-completed it.
+    //
+    // This was inert until bug #018 was fixed: before that, progress lived in
+    // a frozen module constant and none of these writes were read back, so the
+    // overwrite had no observable effect. Fixing #018 made it live.
+    renderStoryContext();
+
+    await waitFor(() => {
+      expect(storyContext).toBeDefined();
+    });
+
+    // Finish the chapter.
+    await act(async () => {
+      await storyContext.updateChapterProgress('chapter-01', {
+        lastPosition: 100,
+        isComplete: true,
+      });
+    });
+
+    await waitFor(() => {
+      expect(
+        storyContext.storyProgress.chapterProgress['chapter-01'].isComplete
+      ).toBe(true);
+    });
+
+    // Re-read it: an ordinary page turn reports position only.
+    await act(async () => {
+      await storyContext.updateChapterProgress('chapter-01', {
+        lastPosition: 1,
+      });
+    });
+
+    await waitFor(() => {
+      expect(
+        storyContext.storyProgress.chapterProgress['chapter-01'].lastPosition
+      ).toBe(1);
+    });
+
+    // BEHAVIOR: the completion survives. Position moved; nothing said to
+    // un-complete the chapter, so nothing should have.
+    expect(
+      storyContext.storyProgress.chapterProgress['chapter-01'].isComplete
+    ).toBe(true);
+  });
+
+  test('still allows a caller to clear isComplete explicitly (bug #852)', async () => {
+    // The fix must not make completion permanently sticky -- an explicit
+    // `isComplete: false` has to win over the stored value. Only silence is
+    // treated as "leave it alone". `??` rather than `||` is what makes this
+    // hold for a deliberate `false`.
+    renderStoryContext();
+
+    await waitFor(() => {
+      expect(storyContext).toBeDefined();
+    });
+
+    await act(async () => {
+      await storyContext.updateChapterProgress('chapter-01', {
+        lastPosition: 100,
+        isComplete: true,
+      });
+    });
+
+    await waitFor(() => {
+      expect(
+        storyContext.storyProgress.chapterProgress['chapter-01'].isComplete
+      ).toBe(true);
+    });
+
+    await act(async () => {
+      await storyContext.updateChapterProgress('chapter-01', {
+        isComplete: false,
+      });
+    });
+
+    await waitFor(() => {
+      expect(
+        storyContext.storyProgress.chapterProgress['chapter-01'].isComplete
+      ).toBe(false);
+    });
+
+    // ...and the position it did not mention is still preserved.
+    expect(
+      storyContext.storyProgress.chapterProgress['chapter-01'].lastPosition
+    ).toBe(100);
+  });
 });

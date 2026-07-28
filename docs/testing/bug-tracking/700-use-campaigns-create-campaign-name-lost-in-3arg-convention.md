@@ -2,13 +2,13 @@
 
 **Title**: useCampaigns createCampaign 3-arg convention: name argument silently coerced to empty string when falsy
 
-**Status**: 🔍 DISCOVERED
+**Status**: ✅ FIXED
 
 **Category**: VALIDATION
 
-**Discovered In**: `src/context/firebase/hooks/__tests__/useCampaigns.test.tsx`
+**Discovered In**: `src/features/user-management/groups/hooks/__tests__/useCampaigns.test.tsx`
 
-**Affected File**: `src/context/firebase/hooks/useCampaigns.ts`
+**Affected File**: `src/features/user-management/groups/hooks/useCampaigns.ts`
 
 ## Description
 
@@ -70,3 +70,24 @@ name = description;
 ```
 
 **Severity**: Low — only affects 3-arg callers passing a falsy name (edge case in current usage). The 2-arg form is unaffected.
+
+## Resolution (2026-07-28)
+
+Applied the explicit-guard option from the recommended fix, not the `??` coercion: the
+2nd positional arg (`description`, which holds the caller's `name` in the 3-arg form) is now
+validated with `if (!description) { throw new Error('Campaign name is required'); }` before being
+assigned to `name`. `??` was rejected because it would still let `''` (a fully valid JS "falsy but
+provided" value) through as a persisted, empty campaign name — `CampaignService.createCampaign`
+slugifies `name` into the Firestore document ID (`name.toLowerCase().trim().replace(...)`), so an
+empty name produces an empty-string path segment and fails downstream with a confusing Firestore
+error instead of a clear validation message at the call site. The throw front-loads that validation
+with an explicit, actionable error.
+
+**Proof by revert**: added two regression tests to
+`src/features/user-management/groups/hooks/__tests__/useCampaigns.test.tsx` covering `createCampaign("g99", "", "Description")` and
+`createCampaign("g99", undefined as any, "Description")` in the 3-arg form, both expecting a throw
+of `"Campaign name is required"`. Reverting the production fix (restoring
+`name = description || '';`) turned both new tests red — the two `createCampaign` calls resolved
+successfully instead of throwing (`Received promise resolved instead of rejected`). Restoring the
+fix returned the suite to 29/29 passing. Full `useCampaigns.test.tsx` suite: 29 passed both before
+(pre-existing 27) and after (29 with the 2 new tests) the fix, confirming no regressions.

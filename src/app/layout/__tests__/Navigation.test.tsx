@@ -173,4 +173,24 @@ describe("Navigation", () => {
       expect(storyItems.length).toBeGreaterThanOrEqual(2);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Bug #100: missing key prop on mapped nav items (both layouts)
+  // -------------------------------------------------------------------------
+  describe("list key warnings (bug #100)", () => {
+    test("should not emit a React 'key' warning when rendering the desktop or mobile nav lists", () => {
+      const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+      render(<Navigation />);
+
+      const keyWarning = errorSpy.mock.calls.some((args) =>
+        args.some(
+          (arg) => typeof arg === "string" && arg.includes('unique "key" prop')
+        )
+      );
+      expect(keyWarning).toBe(false);
+
+      errorSpy.mockRestore();
+    });
+  });
 });

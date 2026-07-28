@@ -1,14 +1,33 @@
 # Bug #302: LocationFormSections and QuestFormSections dialog content unreachable in JSDOM
 
-**Status**: 🔍 DISCOVERED  
+**Status**: 🚫 **CLOSED — no production defect** (2026-07-28)  
 **Category**: UI / TESTABILITY  
-**Priority**: Low  
-**Affected Files**: 
-  - `src/components/features/locations/LocationFormSections.tsx`
-  - `src/components/features/quests/QuestFormSections.tsx`
+**Priority**: Closed  
+**Affected Files** *(current paths; those below predate the restructuring)*: 
+  - `src/features/campaign-entities/locations/components/LocationFormSections.tsx`
+  - `src/features/campaign-entities/quests/components/QuestFormSections.tsx`
 **Discovery Method**: Unit tests (LocationFormSections.test.tsx, QuestFormSections.test.tsx)  
 **Discovered**: 2026-05-20  
-**Extends**: Bug #150 (Dialog Portal Ref Pattern Prevents JSDOM Testing)
+**Extends**: Bug #150 (Dialog Portal Ref Pattern Prevents JSDOM Testing) — **now ✅ FIXED**
+
+---
+
+## Closing note — 2026-07-28
+
+**Closed for the same reason as #301, verified the same way.**
+
+The Phase 4 audit checked both files for an early return gating the `<Dialog>` element and found
+none — `LocationFormSections.tsx:220,314` and `QuestFormSections.tsx:88` all render their dialogs
+unconditionally in the parent's JSX with `open` starting `false`. That is the "always mounted,
+toggle later" pattern, which never triggers #150's mechanism.
+
+The audit went further than this report did and checked **all 20 files that render `<Dialog>`**.
+Exactly one gated the `<Dialog>` element itself behind the same boolean it passes as `open`:
+`SessionTimeoutWarning.tsx` — and that one turned out to be a genuine production bug, which is
+what escalated #150 from "testability limitation" to a real defect. These two files were not it.
+
+**#150 is now fixed** (portal root moved from a ref to state), so the JSDOM limitation this report
+describes no longer exists either.
 
 ---
 

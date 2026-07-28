@@ -1,9 +1,36 @@
 # Bug #003: React Key Uniqueness Warning
 
-**Status**: 🔍 **DISCOVERED** (testing revealed, likely exists in real code)  
+**Status**: 🚫 **CLOSED — duplicate of / dependent on [#002](./002-npc-id-generation-collision.md)** (decided 2026-07-28)  
 **Category**: UI  
 **Discovery Method**: CRUD testing console warnings  
 **Impact**: Low (user experience, no data loss)  
+
+---
+
+## Decision — 2026-07-28
+
+**Closed as a symptom of #002, deferred on the same terms. Do not fix independently.**
+
+This was the last `⚠️ NEEDS DECISION` row outside the deferred ID-collision cluster, and it sat
+there only because nobody had explicitly said "this rides with #002."
+
+**It is not a separate defect.** `generateNPCId`
+(`src/features/campaign-entities/npcs/context/NPCContext.tsx:98-103`) is purely name-derived and
+deterministic, with no uniqueness check, so two NPCs named "Guard" produce the same ID.
+`NPCDirectory.tsx:239` keys its list on `npc.id`. The React warning is the mechanical consequence
+of that single root cause — the same one #002, #004, #009 and #012 all describe.
+
+**Explicitly rejected: the "immediate fix" this report proposes** (`key={`${npc.id}-${index}`}`).
+It would silence the console warning without touching the duplicate-ID defect underneath — and
+that warning is currently **the only visible runtime signal that duplicate IDs exist at all**.
+Suppressing it would make #002 harder to notice in the wild, not easier to fix. A band-aid that
+removes the evidence is worse than the symptom.
+
+**Status of the root cause**: #002/#004/#009/#012 are deferred by explicit decision (2026-07-27),
+not unresolved. Changing ID derivation changes URL shape and stored document identity across four
+entity types, which needs its own phase with a data-migration story. Their 7 failing tests are
+kept deliberately red as markers. When that phase happens, this warning goes away with it — no
+separate work required here.
 
 ## Summary
 

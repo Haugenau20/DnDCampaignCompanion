@@ -29,6 +29,13 @@ const LocationCreatePage: React.FC = () => {
     }
   };
 
+  // Prepare initial data for LocationCreateForm
+  const formInitialData = initialData ? {
+    ...initialData,
+    noteId,
+    entityId
+  } : undefined;
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <Breadcrumb
@@ -54,7 +61,7 @@ const LocationCreatePage: React.FC = () => {
       </div>
 
       <LocationCreateForm
-        initialData={{ ...initialData, noteId, entityId }}
+        initialData={formInitialData}
         onSuccess={handleSuccess}
         onCancel={handleCancel}
       />

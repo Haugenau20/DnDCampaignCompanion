@@ -2,13 +2,14 @@
 
 **Title**: `setTheme` catch block (ThemeContext lines 188-194) is unreachable dead code
 
-**Status**: 🔍 DISCOVERED
+**Status**: ✅ FIXED (2026-07-28)
 
 **Category**: ARCHITECTURE
 
-**Discovered In**: `src/themes/__tests__/ThemeContext.test.tsx`
+**Discovered In**: `src/core/themes/__tests__/ThemeContext.test.tsx` (current path)
 
-**Affected File**: `src/themes/ThemeContext.tsx`
+**Affected File**: `src/core/themes/ThemeContext.tsx` (current path; the file moved under `core/`
+during the feature-first restructuring)
 
 ## Description
 
@@ -43,3 +44,27 @@ const setTheme = (themeName: ThemeName) => {
 ```
 
 If defensive error-catching is desired for future extensibility, add a code comment explaining the intent, but accept that branch coverage on a dead catch block will never reach 100%.
+
+## Resolution (2026-07-28)
+
+Confirmed still live per the 2026-07-27 audit (`docs/testing/phase4-audit-worksheet.md`). Read the
+current `setTheme` (then lines 188-195): `setCurrentTheme` is the `useState` setter and cannot
+throw, and `themes[themeName] || defaultTheme` already handles an unknown key without raising.
+Grepped for `setTheme` across `src/`; every call site passes a `ThemeName`, and the one test that
+deliberately exercises an invalid key (`'setTheme with an invalid theme name falls back to
+defaultTheme'`) asserts on the `||` fallback's result, not on the catch block itself.
+
+Removed the try/catch, keeping only the fallback:
+
+```typescript
+const setTheme = (themeName: ThemeName) => {
+  setCurrentTheme(themes[themeName] || defaultTheme);
+};
+```
+
+Note: a separate, unrelated try/catch in the same file (`applyThemeToDOM`, guarding
+`localStorage.setItem`) is genuinely reachable — it has its own dedicated tests — and was left
+untouched.
+
+Verified via `npx jest --testPathPattern="ThemeContext"` (23 passed, 0 failed) and
+`npx tsc --noEmit` (clean).

@@ -13,6 +13,12 @@ still live, and the suggested next order. The test baseline is now **7 failed / 
 suites**, and every one of those 7 is a deliberately deferred ID-collision marker. Detail lives in
 `docs/testing/phase4-triage-findings.md` and `docs/testing/phase4-audit-worksheet.md`.
 
+**A second pass ran 2026-07-28** on `fix/phase4-batch1` — 8 bugs fixed (one partially), 5 closed
+without a code change, #024 retired as never-a-bug, and `cross-context-patterns.md` Pattern 1
+struck. Baseline moves to **7 failed / 3 skipped / 3977 passed / 3987 total across 180 suites**;
+the 7 are still the deferred ID-collision markers, and are now the *only* red in the suite. See
+[Phase 4, second pass](#phase-4-second-pass--2026-07-28), below.
+
 Phase 3e's findings, corrections and audit result are kept below for reference — read them before
 touching `shared/`/`core/` again, since two of the lessons recurred across nearly every slice of that
 phase and are likely to recur again. There is no file-moving work left in this codebase; capacity
@@ -510,6 +516,307 @@ consolidation and never closed — three were rated High/High) and #1201 (became
   `shared/utils/dateFormatter.ts` the same way, or whether `pages/layouts/` warrants its own
   presentation-local copy — that's a real design question this time, not a rediscovery of finding 5,
   since `pages/` is already allowed to depend on `shared/`.
+
+---
+
+### Phase 4, second pass — 2026-07-28
+
+*On `fix/phase4-batch1`, branched from `main` at `7e69266` (the merge of PR #20). Two Sonnet
+workers, one batch, plus orchestrator-owned documentation work.*
+
+**Baseline re-verified before starting, and reproduced exactly** — 7 failed / 3 skipped / 3971
+passed of 3981 across 180 suites; coverage 91.56 / 92.05 / 85.16 / 83.37; `tsc --noEmit` clean;
+`npm run build` succeeds. Worth doing every time: an exact match is what makes any later movement
+attributable to this pass rather than to drift.
+
+**Result after the pass:**
+
+| | Before | After batch 1 | After batch 2 |
+|---|---|---|---|
+| Tests | 7F / 3S / 3971P / 3981 | 7F / 3S / 3975P / 3985 | 7F / 3S / **3977P** / **3987** |
+| Failing suites | 4 (ID-collision markers) | 4 — the same 4 | 4 — **the same 4** |
+| Statements | 91.56% (8195/8950) | 91.65% | **91.67%** (8190/8934) |
+| Branches | 83.37% (3963/4753) | 83.44% | **83.45%** (3960/4745) |
+| Lines | 92.05% (7600/8256) | 92.14% | **92.17%** (7595/8240) |
+| Functions | 85.16% (1751/2056) | 85.15% | 85.15% (1750/2055) |
+
+`tsc --noEmit` clean and `npm run build` succeeds at every checkpoint.
+
+The +6 tests are exactly the regression tests added (4 for #251, 1 for #201, 1 for #005). Coverage
+rose on three metrics because removing unreachable code removes *uncovered* statements and branches
+— **dead-code cleanup buys coverage margin rather than spending it.** Functions moved down one
+covered function (`getStatusBadgeClass`, deleted); that is a rounding artifact, not rot. **Function
+coverage remains the binding constraint at ~3 functions of slack against the 85% floor** — check it
+before landing anything that adds uncovered functions.
+
+**A note on how "the same 4" was actually established**, since it is the load-bearing claim: the
+full run reported 4 failed suites / 7 failed tests, and the four marker suites run alone report
+4 failed / 7 failed. Equal counts on both sides means the failing set is exactly those four, with
+no room for an unrelated suite hiding among them. Cheaper and stronger than reading a truncated
+log tail, which is what nearly went wrong here — piping a full run through `tail` discards the
+earlier failures' names entirely.
+
+**Fixed**: #251 (a11y), #201, #005 (partially — see below), and the five dead-code entries #1000,
+#1050, #1052, #1152, #050.
+**Closed without a code change**: #200, #301, #302, #901 (TEST-ONLY) and #003 (symptom of the
+deferred #002).
+**#024 retired**: it was never a bug — see below.
+
+#### Four things worth carrying forward
+
+1. **"Unreachable" is a claim, not a fact — re-verify before deleting.** All five dead-code
+   verdicts came from an audit a day old, and all five held under a fresh read (every call site
+   grepped, every exit path traced). The check still isn't optional: deleting a *live* error
+   handler on a stale audit's word is far worse than leaving dead code in place. One catch block in
+   the same file as #1000 (`applyThemeToDOM`, guarding `localStorage.setItem`) is genuinely
+   reachable and was correctly left alone — the file did not have a blanket verdict.
+2. **A bug's filed category can understate it, and #251 is the clearest case yet.** It sat as
+   `TESTABILITY / Priority: Low` for months. It is an accessibility defect: every labelled field in
+   the application rendered a `<label>` associated with nothing, so no screen reader could announce
+   any of them. The testability symptom was real but incidental. This is the same failure mode as
+   #150 (filed as a testability limitation, actually a production outage) and #018 (filed as
+   medium-priority tracking, actually a dead feature) — **three for three, all in the same
+   direction.** When a report's framing is "this makes testing hard," check what it means for a
+   user before accepting the priority.
+3. **Deleting code strands the comments that described it.** Three test files carried comments
+   naming functions, branches and line numbers that no longer existed after this pass — including
+   two tests in `NoteCard.test.tsx` claiming to cover `getStatusBadgeClass`'s "active" and default
+   branches, which they had never reached, because the only call site was already gated on
+   `archived`. The assertions were correct and untouched; only the comments were wrong. Worth a
+   routine sweep after any deletion.
+4. **A handoff's to-do list can itself be stale.** `Dialog.test.tsx` was listed as citing #100 for
+   what is #150. It already cited #150 correctly throughout — fixed when #150 landed, with the note
+   never updated. Verify a reported defect still exists before assigning it, including defects in
+   the tracker's own record-keeping.
+
+#### On striking `cross-context-patterns.md` Pattern 1
+
+Struck in place rather than deleted, because the failure mode generalises and the document is the
+only record of it. Its premise — that `getUserName`/`getActiveCharacterName` "consistently return
+empty/null" — is false against `src/core/utils/user-utils.ts`, where `getUserName` is
+`userProfile?.username || ''`. It was rated the codebase's "highest priority systematic issue" and
+steered priority for over a year.
+
+**The mechanism is what matters.** The pattern was synthesised from five contexts' *test output*,
+not from production source. Five contexts agreeing felt like five independent confirmations; it was
+one shared mock shape counted five times. **Cross-context analysis multiplies apparent confidence
+without multiplying evidence.**
+
+It also generated downstream work: the document's own advice for the then-upcoming NoteContext pass
+was "expect the same patterns — anticipate user attribution issues." That pass duly found them and
+filed #020, #021 and #022 — **all three later closed as test issues, not implementation bugs.**
+Priming an investigation with the pattern it should find is a reliable way to find it whether or
+not it is there. The strike, the verified source, and this chain are recorded in the document
+itself; the four downstream sections that propagated the claim were corrected with it.
+
+#### #005 is half-fixed, and the half that remains needs a decision, not a patch
+
+`NPCContext` is now unanimous — all five mutators throw on `!hasRequiredContext`. The two that
+didn't (`updateNPCNote`, `updateNPCRelationship`) were **writes silently reporting success**.
+Correcting the blocking characterization test at `NPCContext.notes.test.tsx` was authorised on the
+same terms #006 got; it was the fifth of that family found here.
+
+**But #005 was filed as a cross-context pattern, and that half is untouched.** A sweep run *after*
+the fix landed found the identical intra-file split still live in `StoryContext.tsx` — three
+progress methods `console.warn`-and-return (`:127`, `:156`, `:177`) against four mutators that
+throw (`:211`, `:335`, `:435`, `:511`). Two further idioms exist elsewhere: `LocationContext` and
+`QuestContext` inline `if (!activeGroupId || !activeCampaignId)`, `NoteContext` uses
+`if (!user?.uid || !activeGroupId)`. Three shapes, five contexts, one precondition.
+
+**Do not reflexively make StoryContext throw.** Its three outliers are all reading-progress
+operations, and fire-and-forget is a defensible contract there in a way it is not for a note write
+— a reader who has selected no campaign arguably should not get an exception for scrolling. Decide
+the contract, then make the file state it consistently. This is deliberately **not** filed as a new
+bug number: nothing in it has been shown to misbehave against running code, and filing unproven
+defects is what produced the five entries this project later retracted. Evidence is in #005's
+report addendum so the next pass starts from measurement.
+
+**Generalisable**: sweep the siblings *after* a fix, not only before it. Fixing the instance you
+were pointed at tells you nothing about whether the pattern it exemplified survived — and a bug
+filed as systemic, closed on one instance, is worse than one never opened.
+
+#### Batch 3 — the consistency cluster (2026-07-28)
+
+Seven bugs of one shape: *N implementations of one rule, disagreeing.* **Five landed** (#100, #250,
+#700, #702, #850); **two were blocked and correctly halted on** (#600, #750). The coverage floor was
+lowered to a uniform 80% in the same pass, at the user's direction.
+
+Three of the five turned out to have their direction settled by evidence rather than preference,
+which is worth noticing — *"pick one and make them match"* sounds like a coin flip and usually isn't:
+
+- **#850** — every `timestamp:` expression already read `dateModified || dateAdded`. The file's own
+  downstream code had assumed the looser rule all along; only the five guards disagreed. Unifying
+  *on the fallback* was the only choice consistent with code that already existed.
+- **#700** — validating inside the 3-arg branch (as first written) would have left the 2-arg form
+  still coercing `''`, **trading one asymmetry for another**. Hoisting the check past the
+  calling-convention branch makes one rule serve both. Caught in review, not by the tests.
+- **#250** — resolving before guarding also made the per-item `quest ? … : null` dead, since nothing
+  unresolved survives the filter. The first draft of the fix left that behind; shipping new dead
+  code in the same PR that deletes dead code defeats the point.
+
+**#600 dissolved on inspection, and my own initial call on it was wrong.** I told the agent the
+direction was "already decided: explored FIRST", on a 2:1 reading — `useLayoutData`'s code plus
+`LocationsMap`'s comment against `LocationsMap`'s code. That was wrong twice. It ignored
+`LocationsMap.test.tsx`, which asserts the current order and makes it 2:2; and, decisively,
+**`useLayoutData.sortedLocations` is read by nothing.** It is computed, memoised and exported, and
+its only non-test consumer (`HomePage`) uses just `layoutData.loading`. So there is no user-visible
+inconsistency, no UX decision, and nothing to flip — the live ordering already matches what the
+original report argued for. Only the comment was wrong, and it is fixed. Deleting the dead
+`sortedLocations` belongs to the dead-code phase.
+
+**The generalisable point**: before reconciling two implementations, check that both of them *run*.
+A dead implementation votes in a code-reading tally and counts for nothing in production. Had the
+agent followed my instruction without the halt, it would have changed real user-facing behaviour to
+match dead code.
+
+**#750 is blocked by the clearest characterization test found yet.** `LocationCreatePage.test.tsx`
+asserts `it("always passes an object (possibly with undefined fields) when no state")` under a
+comment block that **cites bug #750 by number** and describes the defect as expected behaviour. The
+fix is written and reverted; it needs the same authorisation #006 and #005 got.
+
+Running total of this family: **7 found** — four blocking #006, one blocking #005, one blocking
+#750, and one asserting the #002 ID collision (`NPCContext.behavioral.test.tsx:442`) that will
+ambush whoever picks up the deferred cluster.
+
+#### The `DISCOVERY:` sweep, finally run
+
+Phase 4's first pass recommended grepping the behavioural suites for `DISCOVERY:`/`BEHAVIOR:`
+comments, reasoning that characterization tests announce themselves that way. Run at last: **23
+hits, and the marker turned out to be a poor predictor of what it was meant to find — one genuine
+characterization test in 23.**
+
+It was, however, an excellent predictor of something else: **stale bug narrative.** Four blocks in
+`RumorContext.bugs.test.tsx` (:150, :205, :259) and `StoryContext.bugs.test.tsx` (:214) read
+
+```
+// BUG DISCOVERY: This test will FAIL until getUserName and getActiveCharacterName utilities are fixed
+// ACTUAL: getUserName returns "" and getActiveCharacterName returns null
+    createdByUsername: 'Test User',        // BUG: Currently receives ""
+```
+
+These tests **pass**. The assertions are correct; the narrative is false twice — it asserts a defect
+in `user-utils.ts` that never existed (the struck Pattern 1) and predicts a failure that does not
+happen. This is the **inverse** of a characterization test: right assertion, wrong story. It is
+still dangerous, because a reader hitting `// BUG: Currently receives ""` would go re-investigate a
+non-issue, which is exactly the misdirection Pattern 1 already caused for a year.
+
+The remaining ~18 are benign narration over reasonable assertions.
+
+#### Batch 4 — data integrity (2026-07-28)
+
+**#017, #851 and #750 all landed.** Both agents halted rather than ship, and both halts were correct;
+each was then unblocked by an explicit authorisation.
+
+**#017 — chapter reorder atomicity.** `updateChapter` deleted every affected chapter before creating
+any replacement, so a partial failure lost chapters with no rollback; its three siblings all
+create-and-verify first. Now writes and verifies every new position, then deletes only ids not reused
+in the same batch. The `// Do NOT switch this to createDocument` guards from #1203 were honoured.
+
+**#851 — chapter marked complete on any load of page 1.** Traced upstream rather than guessed:
+`BookViewer` owns `totalPages` internally and already computes completion, so the `isComplete` flag
+reaching `StoryPage` is authoritative and `page === 1` was never a stand-in for "last page".
+
+**#750 — `LocationCreatePage` initialData**, now matching its three sibling create pages.
+
+#### The eighth characterization test, and a second species of the problem
+
+#017's blocker was `expect(mockDeleteData).toHaveBeenCalled()`. **No correct implementation can
+satisfy it**, and the proof generalises:
+
+> A reorder shifts a contiguous range, and a chapter's id is derived from its order, so the affected
+> range is a **closed permutation with no fixed points.** Moving `chapter-01` to order 3 rotates
+> `{1,2,3} → {3,1,2}`, giving new ids `{chapter-03, chapter-01, chapter-02}` — the same set as the
+> old ids. Every id is reused, so a reorder that writes before deleting has nothing left to delete.
+
+**The seven previously catalogued characterization tests assert the wrong *outcome*** — their names
+state a requirement their assertions deny (#006's four, #005's one, #750's, and #002's marker). This
+eighth one asserts the ***mechanism***. Nothing about it was false as a description of the old
+algorithm; it was simply unsatisfiable by any correct one.
+
+**A test that asserts how something is done, rather than what results, is a characterization test
+whether or not its author intended one.** That is a harder species to spot, because it cannot be
+found by comparing a test's name against its assertions — the two agree. `toHaveBeenCalled()` on a
+mutation helper is the smell: it pins an implementation's choice of steps.
+
+It was replaced with an assertion on the ids and orders actually written — strictly stronger, since
+the old assertion never checked chapters landed anywhere in particular and would not have caught the
+atomicity defect.
+
+**And a distinction worth keeping honest**: that corrected outcome assertion passes against *both*
+implementations, because the old one also wrote the right ids on the happy path. It is a better
+specification but it is **not** evidence for the fix. The evidence is a separate partial-failure
+test asserting nothing is deleted when a write fails, which against the reverted fix reports
+`Expected number of calls: 0, Received number of calls: 3` — all three chapters already gone. When a
+fix and a test correction land together, check which one actually proves anything.
+
+#### #852 — filed AND fixed while verifying #851, and a pattern worth naming
+
+`updateChapterProgress` takes `Partial<ChapterProgress>` and replaces the whole per-chapter entry
+instead of merging, so `isComplete` resets to `false` on any call that doesn't pass `true` — and
+`BookViewer` fires `onPageChange(page)` with no flag on every page turn. **Re-opening a finished
+chapter un-completes it.**
+
+Two things make it instructive:
+
+1. **It is not caused by #851's fix**, and reverting that would not help — it would only trade
+   "re-reading un-completes a chapter" for "loading page 1 completes one you never read."
+2. **It was inert until the same day.** Before #018 landed, progress was a frozen module constant
+   and none of these writes reached storage. **Fixing one bug activated its neighbour.** Worth
+   watching for generally: when a fix makes a dormant code path live, re-examine everything
+   downstream of it that was previously unreachable.
+
+**Fixed the same day, deliberately, so it ships with #851.** #851 and #852 are a *compensating
+pair*: on `main` today, a page turn past the first already clears completion (#852), and navigating
+back to page 1 silently re-marked it complete (#851's bug), which papered over #852 much of the
+time. Fixing #851 alone would have removed the accidental repair and left the loss fully exposed.
+**When two bugs partially cancel, shipping one fix without the other can look like a regression to a
+user** — check for compensation before splitting a pair across deploys.
+
+**And the fix that doesn't work is the instructive part.** The obvious reading of #852 is "honour
+the `Partial` — merge instead of rebuild." That alone changes nothing, because `StoryPage` was
+sending an explicit `isComplete: false` on every page turn: **merging preserves fields a caller
+omits; it cannot rescue a field the caller actively overwrites.** The fix needed both ends — merge
+in the context, *and* stop the caller expressing an opinion it doesn't have. Worth generalising:
+when a "just merge the partial" fix is proposed, check what the callers actually send before
+believing it.
+
+Two `StoryPage` assertions moved with it. They were written hours earlier as #851 regression tests
+and pinned the exact payload `{ lastPosition, isComplete: false }` — correct at the time, and
+exactly the payload that causes #852. Their names stayed accurate; only the shape changed. The
+comment now records that **the absence of `isComplete` is the assertion**, and the #851 test also
+asserts its requirement independently of payload shape. A test written today can become a
+characterization test tomorrow, without anyone doing anything wrong.
+
+#### Still open after this pass
+
+- **Confirmed live, unfixed** (as of the end of batch 4): **#1051** (NoteEditor's
+  `handleManualSave` re-throws into an `onClick` that
+  never awaits — unhandled rejection; its marker test is `.skip`ped, so un-skipping gives a natural
+  red-on-landing); **#016** (narrowed by the audit to order validation, which #019 already fixed —
+  re-verify before spending anything on it, it may be closeable); **#1200** and **#1204** (dead
+  hand-rolled attribution, which belong to the dead-code phase); and **#005's cross-context half** —
+  `StoryContext`'s three warn-and-return progress methods, a contract decision deferred until #017
+  landed, which it now has.
+- **The dead/duplicate-code phase has a concrete backlog now**: `useLayoutData.sortedLocations`
+  (dead, #600's remainder), the `layoutUtils.ts` `getRelativeTime`/`formatJournalDate` triplicate,
+  and #1200/#1204's discarded attribution.
+- **#024 is retired, not filed.** `NoteContext.bugs.test.tsx` carried `describe('Bug #024: …')`
+  with no row, no file, and no other reference in the repo. Both its tests execute real work and
+  assert *correct* behaviour — a failed fetch surfaces an error and leaves no stale notes; a failed
+  save rejects and leaves the note still marked unsaved. Its comments say `BUG POTENTIAL:`, not
+  `BUG:`. The block went looking for a defect, found none, and the speculative number stayed in the
+  title. Renamed, with the reasoning recorded on the block. Filing it retroactively would have made
+  a sixth phantom entry; #024 stays unused, since numbers are not reused.
+- Unchanged from the first pass: #1202's production data pass, #1204, and the `layoutUtils.ts`
+  triplicate.
+
+#### The deferred ID-collision cluster is now the only source of red
+
+#002, #004, #009, #012 — 7 tests across 4 suites, deliberately red as markers, deferred by decision
+because changing ID derivation changes URL shape and stored document identity across four entity
+types. Nothing else in the suite fails. That makes the failing set a precise, self-maintaining
+signal: **any new red is now unambiguously a regression**, which was not true at the start of
+Phase 4 (25 failures spanning 9 tracker entries and 4 unfiled harness bugs).
 
 ---
 

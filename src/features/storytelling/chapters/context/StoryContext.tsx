@@ -129,14 +129,26 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
       
+      // Bug #852: this used to rebuild the entry from scratch, defaulting every
+      // field the caller did not supply — so any call omitting `isComplete`
+      // silently cleared a stored `true`. The outer spreads preserved *other*
+      // chapters; nothing preserved this one. Merge over the existing entry so
+      // the body honours the Partial<ChapterProgress> the signature advertises.
+      const existing = storedProgress.chapterProgress[chapterId];
+
       const updatedProgress = {
         ...storedProgress,
         chapterProgress: {
           ...storedProgress.chapterProgress,
           [chapterId]: {
             chapterId,
-            lastPosition: progress.lastPosition || 0,
-            isComplete: progress.isComplete || false,
+            // Precedence, per field: what the caller explicitly supplied wins,
+            // then what is already stored, then the default. `??` not `||`, so
+            // an explicit `false`/`0` from the caller is honoured rather than
+            // falling through. A caller can still clear isComplete on purpose;
+            // what it can no longer do is clear it by staying silent.
+            lastPosition: progress.lastPosition ?? existing?.lastPosition ?? 0,
+            isComplete: progress.isComplete ?? existing?.isComplete ?? false,
             lastRead: new Date()
           }
         }
@@ -296,13 +308,32 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       console.log(`New chapter order plan: ${updatedChapters.map(c => `${c.id} (${c.order})`).join(', ')}`);
       
-      // Delete all affected chapters
-      for (const chapter of affectedChapters) {
-        console.log(`Deleting chapter ${chapter.id}`);
-        await deleteData(chapter.id);
-      }
-      
-      // Create all chapters with their new IDs and orders
+      // Bug #017 fix: this used to delete every affected chapter BEFORE creating
+      // any of the replacements. If the create loop failed partway, the chapters
+      // already deleted above had no replacement and there was no rollback --
+      // permanent data loss. createChapter/deleteChapter/reorderChapters avoid
+      // this by creating-and-verifying the new position before deleting the old
+      // one; we match that here, adapted for one structural difference: a
+      // reorder permutes chapter IDs within the affected range (every "old" id
+      // in this batch is also one of the "new" ids, just carrying a different
+      // chapter's content) rather than freeing some ids and minting brand-new
+      // ones the way the chain shifts in createChapter/deleteChapter do. That
+      // means the naive per-chapter "create new position, then immediately
+      // delete this chapter's own old id" isn't safe here: the "old id" being
+      // vacated by one chapter's move is frequently the exact id another
+      // chapter in this same batch is about to be written to, so deleting it
+      // immediately can destroy a slot that hasn't received its replacement
+      // data yet if the batch fails on a later iteration. Instead:
+      //   1. Write and verify every chapter at its new position first. Nothing
+      //      is deleted while writes are still in flight, so if setDocument or
+      //      the verification throws partway through, this function rejects
+      //      before any deletion happens -- every pre-reorder chapter still has
+      //      a document (either its original one, or the correct new one).
+      //   2. Only afterwards, delete old documents whose id was NOT reused as
+      //      another chapter's new position in this batch. In practice a
+      //      reorder is a closed permutation of the same id range, so this
+      //      second loop is usually a no-op; it exists as a defensive cleanup
+      //      for ids that genuinely fall out of the affected range.
       for (const updatedChapter of updatedChapters) {
         console.log(`Creating chapter ${updatedChapter.id} (order ${updatedChapter.order})`);
         // Re-key: this rewrites an EXISTING chapter under a new id (the id encodes
@@ -312,8 +343,27 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // that stamps fresh creation attribution from whoever triggered the reorder,
         // overwriting the true original author/date (this is exactly bug #1203).
         await firebaseServices.document.setDocument('chapters', updatedChapter.id, updatedChapter);
+
+        // Verify it exists before this function ever considers deleting an old
+        // document, matching the create-and-verify-before-delete pattern used by
+        // createChapter/deleteChapter/reorderChapters.
+        const newExists = await firebaseServices.document.getDocument('chapters', updatedChapter.id);
+        if (!newExists) {
+          throw new Error(`Failed to move chapter to ${updatedChapter.id}`);
+        }
       }
-      
+
+      // Every replacement write above succeeded, so it is now safe to remove
+      // old documents -- but only the ones that were not themselves reused as
+      // another chapter's new position in this same batch.
+      const newChapterIds = new Set(updatedChapters.map(c => c.id));
+      for (const chapter of affectedChapters) {
+        if (!newChapterIds.has(chapter.id)) {
+          console.log(`Deleting vacated chapter ${chapter.id}`);
+          await deleteData(chapter.id);
+        }
+      }
+
       // Refresh chapters to get updated state
       await refreshChapters();
       

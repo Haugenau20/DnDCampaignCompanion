@@ -4,7 +4,7 @@
 HomePage chapter activity inclusion uses `dateModified || dateAdded` fallback while other entity types require `dateModified`
 
 ## Status
-🔍 DISCOVERED
+✅ FIXED (2026-07-28)
 
 ## Category
 DATA
@@ -13,7 +13,32 @@ DATA
 `src/pages/__tests__/HomePage.test.tsx` — "activity computation" describe block
 
 ## Affected File
-`src/pages/HomePage.tsx` (lines 125–132 vs 141–196)
+`src/pages/HomePage.tsx` (lines ~126–197 in the `activities` useMemo)
+
+## Resolution
+
+Unified all five branches on the chapter pattern, `dateModified || dateAdded`, per this report's
+recommended fix: quests, rumors, and NPCs now check `X.dateModified || X.dateAdded` instead of
+`X.dateModified` alone. Locations keep their `'dateModified' in location` type-narrowing check
+(needed because of the field's type) but now also fall through to `location.dateAdded`:
+`'dateModified' in location && (location.dateModified || location.dateAdded)`. The `timestamp:`
+expression after each guard (`new Date(X.dateModified || X.dateAdded)`) was already written this
+way for all five types, so no change was needed there.
+
+Proof: added one test per previously-strict type (quest, rumor, NPC, location) to
+`src/pages/__tests__/HomePage.test.tsx`, each creating an item with only `dateAdded` set and
+asserting it still appears in the activity feed (`data-activity-count` = 5, i.e. included alongside
+the other four fixture items). Reverting the production fix and re-running those four tests
+reproduced the reported inconsistency directly:
+
+```
+includes a quest in activities when only dateAdded is set (dateModified || dateAdded fallback)
+Expected: 5
+Received: 4
+```
+
+(same 5-vs-4 failure for rumor, NPC, and location). Restoring the fix turns all four green again.
+Full `HomePage.test.tsx` suite: 25/25 passing after the fix (21 pre-existing + 4 new).
 
 ## Description
 The `activities` useMemo in `HomePage` applies different inclusion logic across content types:

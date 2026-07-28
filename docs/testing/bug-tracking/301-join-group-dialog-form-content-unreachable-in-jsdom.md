@@ -1,12 +1,34 @@
 # Bug #301: JoinGroupDialog form content unreachable in JSDOM — Dialog portal limitation
 
-**Status**: 🔍 DISCOVERED  
+**Status**: 🚫 **CLOSED — no production defect** (2026-07-28)  
 **Category**: UI / TESTABILITY  
-**Priority**: Medium  
-**Affected File**: `src/components/features/groups/JoinGroupDialog.tsx`  
+**Priority**: Closed  
+**Affected File**: `src/features/user-management/groups/components/JoinGroupDialog.tsx`
+*(path below predates the feature-first restructuring)*  
 **Discovery Method**: Unit test (JoinGroupDialog.test.tsx)  
 **Discovered**: 2026-05-20  
-**Extends**: Bug #150 (Dialog Portal Ref Pattern Prevents JSDOM Testing)
+**Extends**: Bug #150 (Dialog Portal Ref Pattern Prevents JSDOM Testing) — **now ✅ FIXED**
+
+---
+
+## Closing note — 2026-07-28
+
+**Closed: this component never had the defect, and its parent bug is fixed anyway.**
+
+The Phase 4 audit checked the whole file for an early return keyed on `open` and found none, then
+checked all three real call sites — `Header.tsx:349`, `UserProfileButton.tsx:115-117`,
+`ContextSwitcher.tsx:153-155`. Every one renders `<JoinGroupDialog open={someState} …/>`
+unconditionally from its own first render, with `someState` starting `false`. That is the
+"always mounted, toggle later" pattern, which never trips #150's mechanism: the Dialog mounts
+closed, its effect populates the portal root, and only then does `open` flip.
+
+The only place `open={true}` reaches a fresh mount is the test file itself
+(`render(<JoinGroupDialog open={true} …/>)`). That is a test-authoring choice, not how the app
+uses the component — so what the test found was a property of the test.
+
+**And the underlying issue is gone regardless.** #150 was fixed in Phase 4: `Dialog`'s portal root
+moved from a ref to state, so a Dialog mounted already-open now renders. Nothing here is blocked
+any more, in production or in JSDOM.
 
 ---
 

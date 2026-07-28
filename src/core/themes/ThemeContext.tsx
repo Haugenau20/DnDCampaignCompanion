@@ -186,12 +186,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const setTheme = (themeName: ThemeName) => {
-    try {
-      setCurrentTheme(themes[themeName] || defaultTheme);
-    } catch (error) {
-      console.error('Error setting theme:', error);
-      setCurrentTheme(defaultTheme);
-    }
+    setCurrentTheme(themes[themeName] || defaultTheme);
   };
 
   // Create context value with guaranteed theme

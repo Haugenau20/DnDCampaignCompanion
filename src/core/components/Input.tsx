@@ -58,7 +58,12 @@ const sizeStyles = {
 };
 
 /**
- * Input component that supports both regular inputs and textareas
+ * Input component that supports both regular inputs and textareas.
+ *
+ * When a `label` is provided, it is associated with the rendered control via
+ * `htmlFor`/`id` (WCAG 1.3.1) so screen readers announce it and
+ * `getByLabelText()` queries resolve it. An explicitly-passed `id` prop is
+ * always honoured; otherwise a stable id is generated with `React.useId()`.
  */
 export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, InputProps>(
   (
@@ -75,10 +80,18 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
       className,
       isTextArea,
       rows = 3,
+      id,
       ...props
     },
     ref
   ) => {
+    // An explicitly-passed id always wins over the generated one. The
+    // generated id is only needed to associate a label with its control, so
+    // it's only applied when a label is actually rendered — otherwise the
+    // control gets whatever id (if any) the caller explicitly passed, same
+    // as before this fix.
+    const generatedId = React.useId();
+    const inputId = label ? (id ?? generatedId) : id;
 
     const inputStyles = twMerge(
       clsx(
@@ -108,10 +121,13 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
     return (
       <div className={containerStyles}>
         {label && (
-          <label className={clsx(
-            'mb-1.5 text-sm font-medium',
-            `form-label`
-          )}>
+          <label
+            htmlFor={inputId}
+            className={clsx(
+              'mb-1.5 text-sm font-medium',
+              `form-label`
+            )}
+          >
             {label}
           </label>
         )}
@@ -127,6 +143,7 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
           {isTextArea ? (
             <textarea
               ref={ref as React.Ref<HTMLTextAreaElement>}
+              id={inputId}
               className={inputStyles}
               rows={rows}
               {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
@@ -134,6 +151,7 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
           ) : (
             <input
               ref={ref as React.Ref<HTMLInputElement>}
+              id={inputId}
               className={inputStyles}
               {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
             />

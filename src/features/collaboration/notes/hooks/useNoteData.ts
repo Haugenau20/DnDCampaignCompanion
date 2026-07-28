@@ -108,13 +108,10 @@ export const useNoteData = () => {
    * @returns Promise resolving to note count
    */
   const getNoteCountForCampaign = useCallback(async (campaignId: string): Promise<number> => {
-    try {
-      const campaignNotes = await getNotesForCampaign(campaignId);
-      return campaignNotes.length;
-    } catch (err) {
-      console.error(`Error counting notes for campaign ${campaignId}:`, err);
-      return 0;
-    }
+    // getNotesForCampaign swallows every error and resolves [] — it never
+    // rejects, so there is nothing here for an outer try/catch to catch.
+    const campaignNotes = await getNotesForCampaign(campaignId);
+    return campaignNotes.length;
   }, [getNotesForCampaign]);
 
   return {
