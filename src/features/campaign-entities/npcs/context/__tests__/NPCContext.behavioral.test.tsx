@@ -407,7 +407,7 @@ describe('NPCContext Behavioral Testing', () => {
       expect(npcDataSent.id).toBe('thorin-oakenshield');
     });
 
-    test('should reveal ID collision behavior with similar names', async () => {
+    test('should generate distinct IDs for NPCs whose names differ only by case', async () => {
       renderNPCContext();
 
       await waitFor(() => {

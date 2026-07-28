@@ -379,7 +379,9 @@ describe('QuestContext Behavioral Testing', () => {
         expect(questContext).toBeDefined();
       });
 
-      // SPECIFICATION TEST: Similar titles should generate unique IDs
+      // SPECIFICATION TEST: Similar titles should generate unique IDs.
+      // (This comment was always correct; before 2026-07-28 the assertions at
+      // the bottom of this test denied it. See the note there.)
       const questData1 = {
         title: 'Save the Village',
         description: 'First quest',
@@ -405,10 +407,26 @@ describe('QuestContext Behavioral Testing', () => {
       const [firstQuestData] = mockAddData.mock.calls[0];
       const [secondQuestData] = mockAddData.mock.calls[1];
 
-      // BEHAVIOR: Similar titles should generate the same ID (case-insensitive normalization)
-      // This documents the expected behavior (collision is intentional for same quest)
+      // ✅ CORRECTED 2026-07-28, under explicit authorisation, alongside the fix
+      // for the #002/#004/#009/#012 ID-collision cluster.
+      //
+      // This was a CHARACTERIZATION TEST, and the clearest specimen found in
+      // this codebase: its name says "should generate unique IDs", line 382
+      // says "SPECIFICATION TEST: Similar titles should generate unique IDs",
+      // and line 391 says "should get unique ID" — then the assertions
+      // demanded the ids be IDENTICAL, with a comment rationalising the
+      // collision as "intentional". Name and assertions contradicted each
+      // other inside a single test body, and it passed only because the defect
+      // existed. It also contradicted QuestContext.bugs.test.tsx's #004
+      // markers, which demanded the opposite in the same codebase.
+      //
+      // Two quests whose titles differ only by case are two different quests.
+      // The second no longer silently overwrites the first via setDoc.
+      // Disambiguation is collision-only, so the first quest keeps the clean
+      // slug and only the colliding second one is suffixed.
       expect(firstQuestData.id).toBe('save-the-village');
-      expect(secondQuestData.id).toBe('save-the-village'); // Same ID - expected for case variants
+      expect(secondQuestData.id).not.toBe('save-the-village');
+      expect(secondQuestData.id).not.toBe(firstQuestData.id);
     });
   });
 
