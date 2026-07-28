@@ -103,11 +103,33 @@ belt-and-braces rather than load-bearing.
 ## Build Commands
 
 ### Current Environment Management
-- Run development: `.\scripts\manage-environment.ps1 -Environment dev -Action start`
-- Build production: `.\scripts\manage-environment.ps1 -Environment prod -Action start`
-- Stop environments: `.\scripts\manage-environment.ps1 -Environment dev|prod -Action stop`
+
+**This is how the project is actually run** (confirmed with the maintainer 2026-07-28):
+
+- Run development: **`.\scripts\start-dev.ps1 -Action start`** — starts the Firebase emulators and
+  then `npm start`, **both directly on the host. No Docker is involved.**
+- Stop / restart / status: `.\scripts\start-dev.ps1 -Action stop|restart|status` (`stop` exports
+  emulator data to `firebase/emulator-data` first, and `start` re-imports it if present)
 - Generate sample data: `.\scripts\manage-dev-data.ps1 -Action generate`
-- View logs: `.\scripts\manage-environment.ps1 -Environment dev|prod -Action logs [-Service frontend|emulators]`
+
+**`manage-environment.ps1` and `docker/docker-compose.*.yml` are Docker-based and appear to be
+unused.** This file previously documented them as *the* way to run the project, which cost real time
+during the 2026-07-28 session: a dev-server compile error was diagnosed against a container that was
+never running. Do not reach for them without checking with the maintainer first.
+
+#### If the dev server reports errors that `tsc` and `npm run build` do not
+
+Almost certainly a stale cache, not a source defect. `npm start` and `npm run build` keep
+**separate** webpack 5 filesystem caches, so the three gates below can all be green while the dev
+server compiles something else entirely. The signature is an error quoting a *new* line in one file
+while claiming a *stale* fact about another.
+
+```
+rm -rf node_modules/.cache        # default-development, babel-loader, tsconfig.tsbuildinfo
+```
+
+then restart the dev server. Confirm first that the export/symbol really is missing — check the file
+on disk and run `npx tsc --noEmit` — before assuming either answer.
 
 ### Testing Commands
 - Run test suite: `npm test` (jest)
@@ -129,6 +151,22 @@ baseline before assuming you broke something — never "fix" a red test by editi
   (`types/common`, `shared/attribution`) in anything that ships; `@/` is safe only in `__tests__/`
   and `test-utils/`, which are never bundled. Adding a new top-level `src/` directory also means
   adding it to the resolver allow-list in `jest.config.ts`.
+
+**Four resolvers disagree, and no single gate catches all of them.** Keep the whole table in mind
+before assuming green means green:
+
+| Resolver | `baseUrl` | `paths` (`@/…`) |
+|---|---|---|
+| `tsc --noEmit` | ✅ | ✅ |
+| jest | ✅ (via `moduleNameMapper`) | ✅ |
+| webpack (`npm run build`) | ✅ | ❌ |
+| **`ts-node`** | **❌** | **❌** |
+
+`ts-node` has no `tsconfig-paths` registration in this repo, so it resolves only relative and
+`node_modules` specifiers. **A bare `core/services/...` import passes all three standard gates and
+then fails at runtime under `ts-node`** — which matters for anything under `src/utils/__dev__/`,
+since that is operator tooling run via `npx ts-node` and never bundled. Use **relative** imports
+there, and verify by actually running the script; no gate will tell you.
 
 ## Code Style Guidelines
 
