@@ -1,11 +1,12 @@
 # Bug #010: Location Hierarchical Deletion Order Logic
 
-**Status**: 🔍 DISCOVERED  
+**Status**: ✅ FIXED  
 **Priority**: Medium  
 **Category**: DATA  
 **Context**: LocationContext  
 **Discovery Date**: June 15, 2025  
 **Discovery Method**: Behavioral Testing
+**Fix Date**: July 27, 2026
 
 ## Summary
 
@@ -161,6 +162,71 @@ const deleteLocationWithTransaction = async (locationId: string): Promise<void> 
   await batch.commit();
 };
 ```
+
+## Resolution
+
+**Fixed**: July 27, 2026, in `src/features/campaign-entities/locations/context/LocationContext.tsx`
+(`deleteLocation`, ~line 165 — the file moved during the feature-first restructuring; the paths
+above and in the code samples throughout this doc, `src/context/LocationContext.tsx`, are stale).
+
+Two changes, matching the two root causes identified above:
+
+### 1. `getAllChildrenIds` now returns depth-first post-order
+
+The old implementation built the list breadth-first (all direct children, then all their
+descendants via a second `flatMap` pass). It's replaced with a single `flatMap` where each direct
+child contributes its own descendants first, then itself:
+
+```typescript
+const getAllChildrenIds = (parentId: string): string[] => {
+  const directChildren = locations.filter(loc => loc.parentId === parentId);
+  return directChildren.flatMap(child => [
+    ...getAllChildrenIds(child.id),
+    child.id
+  ]);
+};
+```
+
+For the test fixture (`parent-location` → `child-location-1` → `grandchild-location`, plus sibling
+`child-location-2`), this produces `['grandchild-location', 'child-location-1',
+'child-location-2']` — every node's descendants precede the node itself, and the top-level parent
+is still appended after `childrenIds` by the existing `await deleteData(locationId)` call.
+
+### 2. Deletion is now sequential, not `Promise.all`
+
+Even with the list correctly ordered, `Promise.all(childrenIds.map(id => deleteData(id)))` fires
+all deletes concurrently and provides no ordering guarantee at all. Replaced with an ordered
+`for...of` loop:
+
+```typescript
+for (const id of childrenIds) {
+  await deleteData(id);
+}
+await deleteData(locationId);
+```
+
+### Trade-off (deliberate, not a follow-up item)
+
+Sequential deletion is slower than the previous parallel `Promise.all` for deep or wide location
+trees — N round trips instead of one batch. This is inherent to guaranteeing deletion order, and
+ordering is the entire point of this fix; it is not something to "optimize back" later without
+reintroducing the bug. In practice, player-authored location hierarchies in this app (region → city
+→ building, at most a handful of levels with a handful of children each) are small enough that the
+extra round trips are not user-visible. The transaction-safe/batched-write approach sketched above
+under "Recommended Resolution" would recover the single-round-trip cost while preserving order, but
+that's a genuine follow-up (it changes the write path to a Firestore batch/transaction) rather than
+part of this fix.
+
+### Verification
+
+- `LocationContext.bugs.test.tsx` › `Bug #010: Location Hierarchical Deletion Order Logic` › both
+  `should delete children in proper depth-first order` and `should handle sequential deletion
+  instead of parallel` now pass.
+- `Bug #009: Location ID Generation Collision Risk` (same file) is untouched and still fails by
+  design — it's a separate, explicitly deferred bug about ID slug collisions, unrelated to deletion
+  order.
+- No other test in `LocationContext.behavioral.test.tsx`, the wider `locations` test group, or the
+  wider `campaign-entities` test group changed status.
 
 ## Related Issues
 

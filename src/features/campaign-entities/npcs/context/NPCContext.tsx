@@ -58,14 +58,16 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const npc = getNPCById(npcId);
-    if (npc) {
-      const updatedNPC = {
-        ...npc,
-        notes: [...(npc.notes || []), note]
-      };
-      await updateData(npcId, updatedNPC);
-      refreshNPCs(); // Refresh to get updated data
+    if (!npc) {
+      throw new Error('NPC not found');
     }
+
+    const updatedNPC = {
+      ...npc,
+      notes: [...(npc.notes || []), note]
+    };
+    await updateData(npcId, updatedNPC);
+    refreshNPCs(); // Refresh to get updated data
   }, [getNPCById, updateData, refreshNPCs, hasRequiredContext, user, userProfile, activeGroupUserProfile]);
 
   // Update NPC relationship
@@ -80,14 +82,16 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const npc = getNPCById(npcId);
-    if (npc) {
-      const updatedNPC = {
-        ...npc,
-        relationship
-      };
-      await updateData(npcId, updatedNPC);
-      refreshNPCs(); // Refresh to get updated data
+    if (!npc) {
+      throw new Error('NPC not found');
     }
+
+    const updatedNPC = {
+      ...npc,
+      relationship
+    };
+    await updateData(npcId, updatedNPC);
+    refreshNPCs(); // Refresh to get updated data
   }, [getNPCById, updateData, refreshNPCs, hasRequiredContext, user, userProfile, activeGroupUserProfile]);
 
   // Generate NPC ID from name
@@ -130,13 +134,18 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('User must be authenticated to update an NPC');
     }
 
+    const existingNPC = getNPCById(npc.id);
+    if (!existingNPC) {
+      throw new Error('NPC not found');
+    }
+
     const updatedNPC = {
       ...npc
     };
 
     await updateData(npc.id, updatedNPC);
     await refreshNPCs();
-  }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, updateData, refreshNPCs]);
+  }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, getNPCById, updateData, refreshNPCs]);
 
   // Delete an NPC
   const deleteNPC = useCallback(async (npcId: string): Promise<void> => {

@@ -1,11 +1,12 @@
 # Bug #019: Story Chapter Order Validation Issues
 
-**Status**: 🔍 DISCOVERED  
+**Status**: ✅ FIXED  
 **Priority**: Low  
 **Category**: VALIDATION  
 **Context**: StoryContext  
 **Discovery Date**: June 15, 2025  
 **Discovery Method**: Behavioral Testing
+**Fix Date**: July 27, 2026
 
 ## Summary
 
@@ -341,3 +342,54 @@ const validateAndUpdateOrder = (order: number, context: string) => {
 - **User Experience Focus**: When enhancing user-facing error handling
 - **Code Quality Initiatives**: During code cleanup and standardization
 - **User Feedback**: If users report confusion with chapter ordering
+
+## Resolution
+
+**Fixed**: July 27, 2026, in
+`src/features/storytelling/chapters/context/StoryContext.tsx` (`createChapter`, ~line 320 — the
+file moved during the feature-first restructuring; the `src/context/StoryContext.tsx` paths above
+are stale).
+
+This was a narrow, surgical fix, not the broader "comprehensive validation function" sketched
+earlier in this doc. `createChapter` computes `newOrder` via `chapterData.order ?? (...)`, and `??`
+only falls back on `null`/`undefined` — an explicit `order: 0` or a negative order was passing
+straight through to `chaptersToShift` computation and ID generation, resolving successfully instead
+of rejecting. `updateChapter` already had the correct guard for its own order-change path
+(`if (newOrder < 1) { throw new Error('Chapter order must be at least 1'); }`, ~line 218); the fix
+adds the identical guard to `createChapter`, immediately after `newOrder` is computed and before
+`chaptersToShift`/ID generation run:
+
+```typescript
+const newOrder = chapterData.order ?? (chapters.length > 0
+  ? Math.max(...chapters.map(c => c.order)) + 1
+  : 1);
+
+// Simple validation - keep in sync with the identical guard in updateChapter
+if (newOrder < 1) {
+  throw new Error('Chapter order must be at least 1');
+}
+```
+
+Using the exact same error message as `updateChapter` was deliberate: the two write paths (create
+vs. update-with-reorder) now agree on both the rule and its wording, rather than one throwing a
+differently-worded error for what is the same underlying constraint.
+
+The upper-limit/type-checking/reasonableness validation discussed elsewhere in this doc (non-integer
+orders, orders above 1000, etc.) was **not** added — it was never demonstrated as a live defect by a
+failing test, and adding speculative validation beyond what the test suite specifies would be
+scope creep for this fix.
+
+### Verification
+
+- `StoryContext.bugs.test.tsx` › `Bug #019: Story Chapter Order Validation Issues` › `BUG: should
+  validate chapter order constraints properly` now passes — `createChapter` rejects both `order: 0`
+  and `order: -1`.
+- The sibling test in the same `describe` block, `BUG: should handle duplicate order assignments
+  correctly` (order `1` colliding with an existing chapter, expected to shift-and-succeed rather
+  than reject), was already passing and still passes — confirms the new guard only rejects
+  out-of-range orders, not valid orders that happen to collide with an existing chapter.
+- Full `StoryContext` test pattern: 33/33 passing (up from 32/33 before the fix).
+- Full `storytelling` test pattern: 205/205 passing (up from 204/205 before the fix).
+- `StoryPage` test pattern: unaffected, 26/26 passing both before and after (`createChapter` isn't
+  exercised from that page's test suite).
+- `npx tsc --noEmit`: clean, no new type errors.

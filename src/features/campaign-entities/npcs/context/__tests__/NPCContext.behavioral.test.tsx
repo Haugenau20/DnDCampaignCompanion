@@ -632,15 +632,13 @@ describe('NPCContext Behavioral Testing', () => {
         relationship: 'ally' as NPCRelationship
       };
 
-      // BEHAVIOR: NPC updateNPC doesn't validate NPC existence - resolves instead of rejecting
-      // DISCOVERY: This reveals that updateNPC doesn't check if NPC exists!
+      // BEHAVIOR: updateNPC validates NPC existence and rejects for a nonexistent NPC (bug #006)
       await act(async () => {
-        const result = await npcContext.updateNPC(updatedNPC);
-        expect(result).toBeUndefined(); // updateNPC resolves even for nonexistent NPC
+        await expect(npcContext.updateNPC(updatedNPC)).rejects.toThrow('NPC not found');
       });
 
-      // BEHAVIOR: Firebase IS called even for nonexistent NPC - this may be a bug!
-      expect(mockUpdateData).toHaveBeenCalledTimes(1);
+      // BEHAVIOR: Firebase is not called for nonexistent NPC
+      expect(mockUpdateData).not.toHaveBeenCalled();
     });
 
     test('should update NPC with proper metadata', async () => {
@@ -749,10 +747,9 @@ describe('NPCContext Behavioral Testing', () => {
         expect(npcContext).toBeDefined();
       });
 
-      // BEHAVIOR: updateNPCRelationship doesn't throw for nonexistent NPC - just returns
+      // BEHAVIOR: updateNPCRelationship validates NPC existence and rejects for a nonexistent NPC (bug #006)
       await act(async () => {
-        const result = await npcContext.updateNPCRelationship('nonexistent-npc', 'ally');
-        expect(result).toBeUndefined();
+        await expect(npcContext.updateNPCRelationship('nonexistent-npc', 'ally')).rejects.toThrow('NPC not found');
       });
 
       // BEHAVIOR: Firebase should not be called for nonexistent NPC

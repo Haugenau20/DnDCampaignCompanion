@@ -9,7 +9,7 @@
 // clean portals — the component's own useEffect cleanup handles removal on
 // unmount, which React Testing Library triggers via cleanup().
 //
-// Bug #100 documents the root cause: the portal ref pattern means content is
+// Bug #150 documents the root cause: the portal ref pattern means content is
 // invisible on first render even when open=true.
 
 import React, { useState } from "react";
@@ -227,6 +227,34 @@ describe("Dialog", () => {
       await user.keyboard("{Escape}");
 
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Mounted already open (bug #150)
+  // -------------------------------------------------------------------------
+  // Every test above (and almost every real consumer) mounts Dialog closed and
+  // flips `open` afterwards, which is exactly the sequence that masked bug
+  // #150: a Dialog whose *first ever render* already has open={true} (the
+  // scenario SessionTimeoutWarning produces, since it gates the whole
+  // <Dialog> element behind the same boolean it passes as `open`) used to
+  // render null forever, because the portal root lived in a useRef and
+  // assigning a ref does not trigger the follow-up render. This test renders
+  // <Dialog open={true}> directly, with open true from the very first render,
+  // and never toggles it.
+  describe("mounted already open (bug #150)", () => {
+    test("renders content when mounted with open already true (bug #150)", async () => {
+      const onClose = jest.fn();
+      render(
+        <Dialog open={true} onClose={onClose} title="Already Open">
+          <p data-testid="already-open-child">Already open content</p>
+        </Dialog>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("already-open-child")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Already Open")).toBeInTheDocument();
     });
   });
 

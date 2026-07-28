@@ -7,11 +7,16 @@ matching the target architecture end to end.*
 
 This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
 
-**Next session continues at [Phase 4](#phase-4--post-migration-bug-triage--start-here).** Phase 3e's
-findings, corrections and audit result are kept below for reference — read them before touching
-`shared/`/`core/` again, since two of the lessons recurred across nearly every slice of that phase and
-are likely to recur again. There is no file-moving work left in this codebase; capacity should go to
-bug triage.
+**Phase 4's first pass is complete** (2026-07-27, on `triage/phase4-bug-triage`) — see
+[Phase 4](#phase-4--post-migration-bug-triage--first-pass-complete) for what landed, what is confirmed
+still live, and the suggested next order. The test baseline is now **7 failed / 3971 passed across 180
+suites**, and every one of those 7 is a deliberately deferred ID-collision marker. Detail lives in
+`docs/testing/phase4-triage-findings.md` and `docs/testing/phase4-audit-worksheet.md`.
+
+Phase 3e's findings, corrections and audit result are kept below for reference — read them before
+touching `shared/`/`core/` again, since two of the lessons recurred across nearly every slice of that
+phase and are likely to recur again. There is no file-moving work left in this codebase; capacity
+should go to bug triage.
 
 ---
 
@@ -438,31 +443,67 @@ rather than the plan that produced the table: `shared/attribution/` → `core/at
 `shared/utils/user-utils.ts` → `core/utils/`, both in `0d9696d` — see "The dependency audit" and the
 `user-utils.ts` trap in "Where we are now," above.
 
-### Phase 4 — Post-migration bug triage ⬅ **START HERE**
+### Phase 4 — Post-migration bug triage 🟡 **FIRST PASS COMPLETE**
 
-All four domains and the `shared/`/`core/` pass have landed — this phase is fully unblocked and is
-where the next session's capacity should go.
+*Done on `triage/phase4-bug-triage` (branched from `main` at `7cf0f02`), 2026-07-27, across eight
+commits. Full detail: **`docs/testing/phase4-triage-findings.md`** (narrative and decisions) and
+**`docs/testing/phase4-audit-worksheet.md`** (per-bug verdicts with quoted code). Read those before
+continuing — the summary here is deliberately short.*
 
-**Walk the open tracker: 59 filed, 17 fixed, 39 open, 3 needing a decision.** Many will look different
-(or be moot) under the new structure — re-file, close as obsolete, or fix, whichever fits. Before
-believing any red test, confirm it reached an assertion: five tracker entries (#013, #014, #300,
-#021, #022) were filed as production defects and were harness problems instead.
+**Test baseline moved from 25 failed / 3950 passed (179 suites) to 7 failed / 3971 passed (180
+suites).** `tsc` clean, `npm run build` succeeds. **All 7 remaining failures are the deliberately
+deferred ID-collision markers** (#002 ×2, #004 ×3, #009, #012) — there are no unexplained reds left.
 
-**Items already queued, from before Phase 3e:**
+**Fixed**: #023, #006, #150, #018, #019, #010, #101, plus the 4 `enhanced-test-utils` failures.
+**Closed without a code change**: #007, #008, #011, #015 (all fixed by the PR #16 attribution
+consolidation and never closed — three were rated High/High) and #1201 (became impossible).
+
+#### The four things worth carrying forward
+
+1. **A passing test does not mean fixed.** #251's tests pass only because they *work around* the
+   defect. Every Phase 4 verdict came from reading production code, never from pass/fail. The
+   converse trap (#013/#014/#300) was already known; this is its mirror image and is less obvious.
+2. **A green suite is not evidence a fix works.** The #150 fix left the full suite byte-identical;
+   #018's tests kept passing because their mock never supplied the data the new path reads. Both had
+   zero covering tests. Regression tests were added, each **proven by failing against the reverted
+   fix** — that check is the whole point, and it is cheap.
+3. **Characterization tests wearing specification-test names.** #006 was blocked because three tests
+   named `should reject …` asserted that it *resolves*, with comments recording the defect as
+   expected. Such a test passes forever and silently blocks the fix it appears to demand. Corrected
+   under explicit authorisation. A fifth of the same family still sits at
+   `NPCContext.notes.test.tsx:361` and blocks #005 the same way.
+4. **Reports understate as often as they overstate.** #150 was filed as a testability limitation and
+   is a production bug; #018 was filed as medium-priority tracking and was a full feature outage;
+   #006 described a silent no-op that was actually a phantom write.
+
+#### What remains — suggested next order
+
+- **#005, and the intra-context inconsistency behind it.** `NPCContext` handles the same
+  `!hasRequiredContext` precondition by throwing in two methods and `console.error`-and-return in two
+  others, in one file. Blocked on the characterization test named above; needs the same authorisation
+  #006 got.
+- **Confirmed still live, from the audit**: #1000, #1050, #1052, #1152, #050 (dead code); #100, #250,
+  #600, #700, #702, #750, #850 (logic); #016, #017 (story); #201, #251 (UI/a11y — #251 is the
+  highest-impact of these). Each has a verdict and quoted evidence in the worksheet.
+- **Reclassified TEST-ONLY, not production defects**: #200, #301, #302, #901. Consider closing.
+- **#003** needs a decision; the audit recommends closing it as dependent on #002.
+- **The ID-collision cluster** (#002/#004/#009/#012) is deferred by decision, not unresolved. If it is
+  picked up: the marker tests create two entities inside one `act()`, so a lookup-based fix may fail
+  for harness reasons rather than logic reasons. An approach needing no lookup sidesteps that.
+- **Tracker hygiene**: bug **#024** is referenced by `NoteContext.bugs.test.tsx:455` but has no row
+  and no file. Two test comments cite wrong numbers (`Dialog.test.tsx` says #100 for #150;
+  `GroupManagementView.test.tsx` says #200 for #201).
+- **`cross-context-patterns.md` Pattern 1 should be struck.** Its "highest priority systematic issue"
+  — that `getUserName`/`getActiveCharacterName` return empty/null — is false against
+  `src/core/utils/user-utils.ts`. It has been steering priority for a year.
+
+**Still queued, untouched by this pass:**
 
 - **#1202 needs a production data pass** (not a code fix): chapters reordered before the attribution
   branch hold a Firestore `Timestamp` in `dateModified` where a string is expected, and render a
   blank modified date.
-- **#1201 and #1204** are unfixed by design — each needs its failing test written first.
-
-**New items the Phase 3e audit surfaced, not yet filed:**
-
-- **The 4 newly-visible `enhanced-test-utils.test.tsx` failures.** 3 are `SearchProvider` requiring a
-  `QuestProvider` that the shared test utility never composes; 1 is `firebase/analytics` going
-  unmocked in that suite, so the real `getApp()` runs. This is genuinely new information — the suite
-  could never load before `69d19c2` made Firebase init lazy — but confirm each one reaches its
-  assertion and is a real defect, not another harness artifact, before filing. Full context in the
-  test-baseline note in "Where we are now."
+- **#1204** remains unfixed by design — it needs its failing test written first. (#1201, previously
+  paired with it here, is now closed as obsolete.)
 - **The `layoutUtils.ts` triplicate.** `src/pages/layouts/common/utils/layoutUtils.ts` holds a third
   copy of `getRelativeTime`/`formatJournalDate`, alongside the two `dateFormatter` copies finding 5
   already reconciled. Its own test comment acknowledges the overlap. Decide whether to merge it into

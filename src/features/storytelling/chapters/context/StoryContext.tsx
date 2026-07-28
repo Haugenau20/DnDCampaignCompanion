@@ -1,5 +1,5 @@
 // src/features/storytelling/chapters/context/StoryContext.tsx
-import React, { createContext, useContext, useCallback, useState } from 'react';
+import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
 import { Chapter, ChapterProgress, StoryProgress } from '../types';
 import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
@@ -68,11 +68,33 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   } = useFirebaseData<Chapter>({ collection: 'chapters' });
   
   // Create a separate instance for story progress
-  const { updateData: updateProgressData } = useFirebaseData<StoryProgress>({ collection: 'story-progress' });
-  
+  const {
+    data: progressData = [],
+    updateData: updateProgressData
+  } = useFirebaseData<StoryProgress>({ collection: 'story-progress' });
+
   const { user } = useAuth();
   const { activeGroupUserProfile } = useUser();
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Real, held-in-state reading progress. `defaultProgress` remains only the
+  // initial/fallback value for a first-time reader who has no persisted document.
+  const [storedProgress, setStoredProgress] = useState<StoryProgress>(defaultProgress);
+
+  // Populate storedProgress from the persisted 'current-progress' document once
+  // useFirebaseData's own on-mount fetch resolves. Guarded so it only ever writes
+  // state when a persisted document is actually found -- an empty/absent collection
+  // (first-time reader) leaves storedProgress at its defaultProgress initial value,
+  // and this never fires on every render because progressData's identity is stable
+  // between fetches (it only changes when the underlying hook's fetch resolves).
+  useEffect(() => {
+    const persisted = progressData.find(
+      (doc) => (doc as StoryProgress & { id?: string }).id === 'current-progress'
+    );
+    if (persisted) {
+      setStoredProgress(persisted);
+    }
+  }, [progressData]);
 
   // Generate a consistent ID for a chapter based on its order
   const generateChapterId = (order: number) => {
@@ -108,9 +130,9 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       
       const updatedProgress = {
-        ...defaultProgress,
+        ...storedProgress,
         chapterProgress: {
-          ...defaultProgress.chapterProgress,
+          ...storedProgress.chapterProgress,
           [chapterId]: {
             chapterId,
             lastPosition: progress.lastPosition || 0,
@@ -119,13 +141,14 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           }
         }
       };
-      
+
       await updateProgressData('current-progress', updatedProgress);
+      setStoredProgress(updatedProgress);
       refreshChapters();
     } catch (error) {
       console.error('Failed to update chapter progress:', error);
     }
-  }, [updateProgressData, refreshChapters, hasRequiredContext]);
+  }, [storedProgress, updateProgressData, refreshChapters, hasRequiredContext]);
 
   // Update current chapter
   const updateCurrentChapter = useCallback(async (chapterId: string) => {
@@ -136,16 +159,17 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       
       const updatedProgress = {
-        ...defaultProgress,
+        ...storedProgress,
         currentChapter: chapterId,
         lastRead: new Date()
       };
-      
+
       await updateProgressData('current-progress', updatedProgress);
+      setStoredProgress(updatedProgress);
     } catch (error) {
       console.error('Failed to update current chapter:', error);
     }
-  }, [updateProgressData, hasRequiredContext]);
+  }, [storedProgress, updateProgressData, hasRequiredContext]);
 
   // Mark chapter as complete
   const markChapterComplete = useCallback(async (chapterId: string) => {
@@ -169,14 +193,14 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Calculate reading progress
   const getReadingProgress = useCallback(() => {
-    const completedChapters = Object.values(defaultProgress.chapterProgress)
+    const completedChapters = Object.values(storedProgress.chapterProgress)
       .filter(progress => progress.isComplete)
       .length;
-    
-    return chapters.length > 0 
-      ? (completedChapters / chapters.length) * 100 
+
+    return chapters.length > 0
+      ? (completedChapters / chapters.length) * 100
       : 0;
-  }, [chapters.length]);
+  }, [storedProgress, chapters.length]);
 
   // Update an existing chapter using the safe methodology
   const updateChapter = useCallback(async (chapterId: string, updates: Partial<Chapter>) => {
@@ -316,11 +340,16 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       // Refresh chapters to ensure we have latest data
       await refreshChapters();
-      
-      const newOrder = chapterData.order ?? (chapters.length > 0 
-        ? Math.max(...chapters.map(c => c.order)) + 1 
+
+      const newOrder = chapterData.order ?? (chapters.length > 0
+        ? Math.max(...chapters.map(c => c.order)) + 1
         : 1);
-      
+
+      // Simple validation - keep in sync with the identical guard in updateChapter
+      if (newOrder < 1) {
+        throw new Error('Chapter order must be at least 1');
+      }
+
       console.log(`Creating new chapter with order ${newOrder}`);
       
       // If inserting into the middle, we need to shift chapters
@@ -535,7 +564,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const value: StoryContextValue = {
     chapters,
-    storyProgress: defaultProgress,
+    storyProgress: storedProgress,
     isLoading,
     error: contextError,
     getChapterById,

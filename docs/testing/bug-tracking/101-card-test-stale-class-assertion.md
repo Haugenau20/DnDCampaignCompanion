@@ -1,9 +1,9 @@
 # Bug #101: Card.test.tsx — Stale CSS Class Assertion
 
-**Status**: 🔍 DISCOVERED  
+**Status**: ✅ FIXED  
 **Category**: UI (Testing)  
 **Priority**: Low  
-**Component**: src/components/core/__tests__/Card.test.tsx  
+**Component**: src/core/components/__tests__/Card.test.tsx  
 **Discovered In**: Session — component unit tests (feature/unit-test-coverage)
 
 ## Description
@@ -66,3 +66,28 @@ Since the theme CSS class system intentionally uses plain names like `card`, `bu
 
 - Button.test.tsx was deleted and rewritten fresh (was asserting `default-button-primary`)
 - Typography.test.tsx was deleted and rewritten fresh (similar stale class assertions)
+
+## Resolution
+
+Confirmed `Card.tsx:171` is correct: it applies the plain class `card` (no prefix), consistent with
+every other class the component family emits (`card-header`, `card-content`, `card-footer`).
+`Card.test.tsx` was the one file in this family that still encoded the retired `default-` prefix
+convention — `Button.test.tsx` (header comment: "Fresh behavioral tests — no Tailwind class
+assertions") and `Typography.test.tsx` (e.g. asserting unprefixed `typography-heading`) had already
+been migrated off it. Since the production code is correct and the test alone was stale, the fix
+went in the test, per the project's sanctioned exception for this exact situation.
+
+Changed `src/core/components/__tests__/Card.test.tsx` line ~281, test `Card Component > Simple
+Scenarios > renders with theme-specific styling`:
+
+```diff
+- expect(container.firstChild).toHaveClass('default-card');
++ expect(container.firstChild).toHaveClass('card');
+```
+
+This was the only `default-`-prefixed assertion in the file — no other stale assertions found.
+
+**Verification**:
+- `Card.test.tsx` alone: 1 failed / 178 passed / 179 total → 0 failed / 179 passed / 179 total
+- `core/components` suite: 5 suites / 124 tests, all passing (unchanged pass count, failure removed)
+- `npx tsc --noEmit`: clean, no errors

@@ -1,6 +1,6 @@
 # Bug #023: entityMapper.ts — extractDetailsByType has empty body
 
-**Status**: 🔍 DISCOVERED  
+**Status**: ✅ FIXED  
 **Priority**: High  
 **Category**: DATA  
 **Context**: EntityExtractionService / entityMapper  
@@ -181,3 +181,29 @@ export const extractDetailsByType = (
 ```
 
 After this fix, all 8 failing unit tests should turn green.
+
+## Resolution
+
+**Fixed 2026-07-27.** This report predates the Phase 3e restructuring, so its file paths are
+stale. The actual current paths at fix time:
+
+- **Broken file**: `src/features/collaboration/entity-extraction/services/entityMapper.ts`
+- **Reference implementation**: the private `extractDetailsByType` arrow function in
+  `src/features/collaboration/entity-extraction/services/EntityExtractionService.ts`
+- **Tests**: `src/features/collaboration/entity-extraction/services/__tests__/entityMapper.test.ts`
+
+Implemented the exported `extractDetailsByType` in `entityMapper.ts` with the same switch-case
+behaviour as the working private copy in `EntityExtractionService.ts` (npc/location/quest/rumor
+field subsets, `relationship` defaulting to `'unknown'`, `objectives`/`NPCsInvolved` defaulting to
+`[]`, and the `default` case returning `details` unchanged). No behavioural difference was found
+between the bug report's proposed implementation and the real one in `EntityExtractionService.ts`
+— they matched field-for-field.
+
+As a secondary DRY improvement (per CLAUDE.md), the private `extractDetailsByType` in
+`EntityExtractionService.ts` now delegates to the exported `extractDetailsByType` from
+`entityMapper.ts` instead of duplicating the switch-case, so there is a single implementation.
+This did not break any tests.
+
+All 8 previously-failing tests in `entityMapper.test.ts` now pass (20/20 in that file overall),
+and all 22 tests in `EntityExtractionService.test.ts` continue to pass after the delegation change.
+`npx tsc --noEmit` is clean.
