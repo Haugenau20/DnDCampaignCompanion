@@ -141,20 +141,23 @@ describe("LocationCreatePage", () => {
 
   // -------------------------------------------------------------------------
   // initialData derivation
-  // Bug note: LocationCreatePage always passes an object (never undefined) —
-  // even with empty state it passes `{ noteId: undefined, entityId: undefined }`
-  // This differs from NPC/Quest/Rumor CreatePages which conditionally pass initialData.
-  // See bug #750 for details.
+  // Bug #750 was fixed and this characterization test corrected under
+  // explicit authorization on 2026-07-28 (same terms as #005/#006): it used
+  // to assert the buggy behavior (always passing an object, never undefined)
+  // by name. LocationCreatePage now matches NPCsCreatePage / QuestCreatePage
+  // / RumorCreatePage's `initialData ? {...} : undefined` pattern.
   // -------------------------------------------------------------------------
   describe("initialData derivation", () => {
-    it("always passes an object (possibly with undefined fields) when no state", () => {
+    it("passes undefined initialData when no state is present (matches NPC/Quest/Rumor CreatePages)", () => {
       mockLocationState = {};
       renderPage();
-      const raw = screen.getByTestId("location-form-initial-data").textContent!;
-      // The component spreads `{ ...initialData, noteId, entityId }` unconditionally
-      // so the form always receives an object (not undefined)
-      const parsed = JSON.parse(raw);
-      expect(typeof parsed).toBe("object");
+      const raw = screen.getByTestId("location-form-initial-data").textContent;
+      // Fixed behavior: with no location.state, formInitialData is undefined,
+      // so LocationCreateForm receives undefined rather than `{}`. The mock
+      // renders `{JSON.stringify(props.initialData)}`, and JSON.stringify(undefined)
+      // is the value `undefined` (not a string), so React renders no text at all —
+      // hence asserting emptiness here rather than JSON.parse-ing it.
+      expect(raw).toBe("");
     });
 
     it("spreads initialData and attaches noteId and entityId", () => {

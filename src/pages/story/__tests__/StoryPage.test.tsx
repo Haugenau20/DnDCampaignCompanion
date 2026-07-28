@@ -77,6 +77,18 @@ jest.mock("features/storytelling", () => ({
       >
         Page Change
       </button>
+      <button
+        data-testid="book-viewer-page-1"
+        onClick={() => props.onPageChange(1)}
+      >
+        Page 1 (initial load / back-navigation, no isComplete flag)
+      </button>
+      <button
+        data-testid="book-viewer-page-complete"
+        onClick={() => props.onPageChange(3, true)}
+      >
+        Last Page (BookViewer explicitly signals isComplete)
+      </button>
     </div>
   ),
   SlidingChapters: (props: any) => (
@@ -470,6 +482,28 @@ describe("StoryPage", () => {
       expect(mockUpdateChapterProgress).toHaveBeenCalledWith("chapter-01", {
         lastPosition: 2,
         isComplete: false,
+      });
+    });
+
+    // Regression test for bug #851: BookViewer fires onPageChange(1) with no
+    // isComplete flag on initial load and whenever the reader navigates back
+    // to page 1 (e.g. pressing Home). Neither should mark the chapter complete
+    // — only BookViewer's own last-page / chapter-transition signal should.
+    it("does NOT mark the chapter complete on page 1 when isComplete is not signaled", () => {
+      renderPage();
+      fireEvent.click(screen.getByTestId("book-viewer-page-1"));
+      expect(mockUpdateChapterProgress).toHaveBeenCalledWith("chapter-01", {
+        lastPosition: 1,
+        isComplete: false,
+      });
+    });
+
+    it("marks the chapter complete when BookViewer explicitly signals isComplete", () => {
+      renderPage();
+      fireEvent.click(screen.getByTestId("book-viewer-page-complete"));
+      expect(mockUpdateChapterProgress).toHaveBeenCalledWith("chapter-01", {
+        lastPosition: 3,
+        isComplete: true,
       });
     });
   });

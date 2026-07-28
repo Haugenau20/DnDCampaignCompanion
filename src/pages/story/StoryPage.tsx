@@ -82,7 +82,7 @@ const StoryPage: React.FC = () => {
     if (currentChapter) {
       updateChapterProgress(currentChapter.id, {
         lastPosition: page,
-        isComplete: isComplete || page === 1
+        isComplete: !!isComplete
       });
     }
   };
