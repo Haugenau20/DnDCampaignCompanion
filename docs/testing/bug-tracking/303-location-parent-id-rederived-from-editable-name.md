@@ -6,7 +6,8 @@ ids are fixed at creation and names are editable — so selecting a renamed loca
 matches no location
 
 ## Status
-🔍 DISCOVERED — **proven by a failing test, not by a code reading**
+✅ FIXED — 2026-07-28, same day it was filed. **Proven by a failing test before it was filed, and
+fixed only after that.** The marker test is now a passing regression test.
 
 ## Category
 DATA
@@ -84,20 +85,46 @@ The failing test performs steps 1–4 against the real `LocationCombobox`.
 **Actual:** it stores `slugify(currentName)`, which equals the real id only for locations that have
 never been renamed.
 
-## Recommended Fix — needs a decision
+## Fix
 
-Two options, and the cheap one is probably right:
+**Neither of the two options originally written here, and the reason is worth recording.**
 
-1. **Resolve the name to a real id locally in `LocationFormSections`** — call `useLocations()`, find
-   the location whose `name` matches the selected value, and store its `id`, falling back to the
-   slug only if no match is found. **No contract change**, contained to one file, and `strictMode`
-   already guarantees the value is an existing name in the normal path. Ambiguity if two locations
-   share a name; taking the first match is still strictly better than today's guaranteed miss.
-2. **Change `LocationCombobox` to emit ids rather than names.** Architecturally cleaner, but the
-   component is also consumed by `QuestFormSections`, so it is a wider contract change and touches a
-   second feature.
+The report first proposed either a local name→id lookup in `LocationFormSections`, or "the
+architecturally cleaner" change of making `LocationCombobox` emit ids instead of names. **Checking
+the second consumer disproved the second option.** `QuestFormSections:174` uses the same combobox
+in non-strict mode for a quest's free-text `location` field — a display string, not a reference. It
+*wants* a name. Making the combobox emit ids would have broken it. "Cleaner" was wrong, and only
+reading the other consumer showed that.
 
-Option 1 is recommended. Do **not** fix this by editing the marker test.
+So the combobox stays name-valued, and instead gains an **optional `onSelectLocation` callback**
+handing back the actual `Location` it matched:
+
+```tsx
+onSelectLocation?: (location: Location | undefined) => void;
+```
+
+`LocationFormSections` stores `location?.id`; `QuestFormSections` ignores it and is untouched. This
+removes the lossy round-trip at the one place that has the information, rather than making every
+future consumer re-implement the resolution — and reimplementing it is exactly what produced the
+defect.
+
+**A second half of the bug, found while fixing the first.** `value={formData.parentId || ''}` was
+passing an **id** into a prop the combobox compares against **names**. It appeared to work only
+because an unrenamed location's id is its lowercased name and the comparison is case-insensitive.
+For a renamed location — or any id disambiguated with a `-2` suffix by the #002/#004/#009/#012 fix —
+the field would display a raw id and fail strict-mode validation on blur. Now resolved to the
+parent's real name for display. The label changed from "Parent Location ID" to "Parent Location",
+which is what the field always actually was: the user picks a location, never types an id.
+
+The duplicated `generateLocationId` in `LocationFormSections` is deleted — the fix removed its only
+call site. An identical copy remains in `LocationCreateForm.tsx`; see the note below.
+
+### Still outstanding
+
+`LocationCreateForm.tsx:38` holds another copy of the same slug helper. The #002/#004/#009/#012 fix
+consolidated the four *context* copies into `core/utils/entity-id.ts`, but the component-level copies
+were out of that batch's scope. Worth folding in, and worth checking whether that one has the same
+reconstruction problem.
 
 ## Related
 - [#002](./002-npc-id-generation-collision.md) / [#004](./004-quest-id-generation-collision.md) /

@@ -204,15 +204,23 @@ describe('BasicInfoSection - parentId resolution via combobox selection (Task 2 
     expect(parentIdCall).toBeDefined();
     const resolvedParentId = parentIdCall![1];
 
-    // PROVEN, UNFILED DEFECT - see Task 2 of the domain-data-types batch.
-    // Do NOT "fix" this by editing the test: fixing it means changing what
-    // LocationCombobox emits (a name) to instead emit an id, and
-    // LocationCombobox is also consumed by QuestFormSections, so that
-    // contract change is a design decision for the orchestrator, not this
-    // test. This assertion is expected to fail: generateLocationId('New
-    // Stonebridge Docks') derives 'new-stonebridge-docks', which does not
-    // match the location's real id 'stonebridge', so parentId resolves to no
-    // location at all.
+    // REGRESSION TEST for bug #303, which this test originally proved.
+    //
+    // It was written to fail, and it did: BasicInfoSection used to derive
+    // parentId as generateLocationId(selectedName), so a location renamed
+    // after creation yielded 'new-stonebridge-docks' while its real id was
+    // still 'stonebridge' — a parentId matching no location, which silently
+    // broke the hierarchy and could hand deleteLocation's cascade the wrong
+    // descendant set.
+    //
+    // Fixed by removing the round-trip rather than patching it: LocationCombobox
+    // now offers an optional onSelectLocation callback handing back the actual
+    // Location it matched, so the consumer that needs a reference never has to
+    // reconstruct one from a display string. Consumers that genuinely want the
+    // display text (QuestFormSections' free-text `location` field) keep using
+    // onChange and are unaffected.
+    //
+    // If this goes red again, the round-trip has been reintroduced somewhere.
     const resolvesToRealLocation = [renamedLocation].some(loc => loc.id === resolvedParentId);
     expect(resolvesToRealLocation).toBe(true);
   });
