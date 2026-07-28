@@ -366,11 +366,14 @@ describe('NPCContext Note Management Behavior', () => {
         text: 'Note without context'
       };
 
-      // BEHAVIOR: updateNPCNote doesn't throw for missing context - logs error and returns
-      // DISCOVERY: This reveals that updateNPCNote logs but doesn't throw!
+      // Corrected under authorisation on 2026-07-28: this assertion previously expected
+      // updateNPCNote to log-and-return on missing context, contradicting its own test
+      // name ("should require ... context") and bug #005's fix, which makes this method
+      // throw like addNPC/updateNPC/deleteNPC already do.
       await act(async () => {
-        const result = await npcContext.updateNPCNote('test-npc', noteData);
-        expect(result).toBeUndefined();
+        await expect(
+          npcContext.updateNPCNote('test-npc', noteData)
+        ).rejects.toThrow('Cannot update NPC note: No group or campaign selected');
       });
 
       // BEHAVIOR: Firebase should not be called without context

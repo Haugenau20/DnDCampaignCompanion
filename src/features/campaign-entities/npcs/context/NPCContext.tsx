@@ -49,8 +49,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Update NPC note
   const updateNPCNote = useCallback(async (npcId: string, note: NPCNote) => {
     if (!hasRequiredContext) {
-      console.error('Cannot update NPC note: No group or campaign selected');
-      return;
+      throw new Error('Cannot update NPC note: No group or campaign selected');
     }
 
     if (!user || !userProfile) {
@@ -73,8 +72,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Update NPC relationship
   const updateNPCRelationship = useCallback(async (npcId: string, relationship: NPCRelationship) => {
     if (!hasRequiredContext) {
-      console.error('Cannot update NPC relationship: No group or campaign selected');
-      return;
+      throw new Error('Cannot update NPC relationship: No group or campaign selected');
     }
 
     if (!user || !userProfile) {

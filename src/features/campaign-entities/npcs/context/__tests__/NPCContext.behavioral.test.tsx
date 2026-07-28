@@ -755,6 +755,35 @@ describe('NPCContext Behavioral Testing', () => {
       // BEHAVIOR: Firebase should not be called for nonexistent NPC
       expect(mockUpdateData).not.toHaveBeenCalled();
     });
+
+    test('should reject relationship update when group or campaign context is missing (bug #005)', async () => {
+      mockUseGroups.mockReturnValue({ activeGroupId: null });
+      mockUseNPCData.mockReturnValue({
+        npcs: [],
+        loading: false,
+        error: null,
+        getNPCById: jest.fn(),
+        refreshNPCs: mockRefreshNPCs,
+        hasRequiredContext: false,
+      });
+
+      renderNPCContext();
+
+      await waitFor(() => {
+        expect(npcContext).toBeDefined();
+      });
+
+      // BEHAVIOR: updateNPCRelationship must throw on missing context, matching the
+      // established contract shared by addNPC/updateNPC/deleteNPC (bug #005).
+      await act(async () => {
+        await expect(
+          npcContext.updateNPCRelationship('test-npc', 'ally')
+        ).rejects.toThrow('Cannot update NPC relationship: No group or campaign selected');
+      });
+
+      // BEHAVIOR: Firebase should not be called without context
+      expect(mockUpdateData).not.toHaveBeenCalled();
+    });
   });
 
   describe('NPC Deletion Behavior', () => {

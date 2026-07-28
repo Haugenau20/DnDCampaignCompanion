@@ -1,10 +1,103 @@
 # Bug #005: Validation Error Precedence Inconsistency
 
-**Status**: 🔍 DISCOVERED  
+**Status**: ✅ FIXED for `NPCContext` — ⚠️ **the same defect is live in `StoryContext`** (see the
+orchestrator's note immediately below, added 2026-07-28 after the fix landed)  
 **Category**: VALIDATION  
 **Priority**: Medium  
 **Discovery Method**: Behavioral Testing  
 **Impact**: Medium - Inconsistent user experience across contexts
+
+---
+
+## ⚠️ Orchestrator's addendum, 2026-07-28 — do not close this outright
+
+The fix below is correct and complete **for `NPCContext`**, which is now unanimous: all five
+mutators throw on `!hasRequiredContext`. But a sweep of the sibling contexts, run after the fix
+landed, found the identical intra-file split still present in `StoryContext.tsx`:
+
+| `src/features/storytelling/chapters/context/StoryContext.tsx` | Line | On missing group/campaign |
+|---|---|---|
+| `updateChapterProgress` | 127 | `console.warn(…)` then `return` — **caller sees success** |
+| `updateCurrentChapter` | 156 | `console.warn(…)` then `return` — **caller sees success** |
+| `markChapterComplete` | 177 | `console.warn(…)` then `return` — **caller sees success** |
+| (four other mutators) | 211, 335, 435, 511 | `throw new Error('No active group or campaign selected')` |
+
+Three warn-and-return against four throw, in one file — structurally the same defect that was just
+fixed in `NPCContext`, and it survived the fix because the fix was correctly scoped to one bug.
+
+**This one is not obviously a defect, and that is why it needs a decision rather than a patch.** All
+three log-and-return methods are reading-progress operations. Progress tracking is plausibly
+fire-and-forget: a reader who has selected no campaign arguably should not get an exception thrown
+at them for scrolling. That is a defensible *deliberate* difference, unlike NPCContext's, where two
+note/relationship **writes** silently reported success. Whoever picks this up should decide the
+contract first and then make the file state it consistently — not assume "throw" is right because
+NPCContext ended there.
+
+**A third idiom also exists**, so the cross-context half of this bug is genuinely still open:
+`LocationContext`, `QuestContext` and `NoteContext` do not use a `hasRequiredContext` flag at all —
+they inline `if (!user || !activeGroupId || !activeCampaignId)` (Location), `if (!activeGroupId ||
+!activeCampaignId)` (Quest), or `if (!user?.uid || !activeGroupId)` (Note). Three shapes for one
+precondition, across five contexts. That is what this bug was originally filed about, and it is not
+resolved — only its single most actionable instance is.
+
+Deliberately **not** filed as a new bug number: nothing here has been confirmed to misbehave against
+running code yet, and filing unproven defects is what produced the five tracker entries this project
+later had to retract (#013, #014, #300, #021, #022). Recorded here instead, with the evidence, so
+the next pass starts from measurement rather than from a fresh assumption.
+
+## Resolution Summary (2026-07-28)
+
+The bug as originally filed (below) framed this as **NPCContext vs. QuestContext** disagreeing on
+whether context or authentication is checked first. On investigation, that cross-context framing
+was not the actionable defect: `QuestContext.tsx` consistently checks `!user || !userProfile`
+first in every mutator, and `NPCContext.tsx`'s three throwing methods (`addNPC`, `updateNPC`,
+`deleteNPC`) already check `!hasRequiredContext` first, then auth — internally consistent with each
+other, just ordered opposite to Quest's convention. Standardizing that cross-context ordering choice
+(Option 1 vs Option 2 in the original writeup) is a design decision with no behavioral defect behind
+it, and was left alone.
+
+**The actionable defect was inside `NPCContext.tsx` itself**: `updateNPCNote` and
+`updateNPCRelationship` handled the *identical* `!hasRequiredContext` precondition a different way
+than the other three mutators in the same file — `console.error(...)` followed by a bare `return`,
+instead of `throw new Error(...)`. A caller awaiting `updateNPCNote()` or `updateNPCRelationship()`
+with no group/campaign selected got a silently resolved `undefined`, indistinguishable from success,
+while `addNPC`/`updateNPC`/`deleteNPC` on the same missing-context precondition correctly reject.
+Four methods, one file, two incompatible contracts.
+
+**Fix**: `updateNPCNote` and `updateNPCRelationship` now `throw new Error(...)` on
+`!hasRequiredContext`, matching the majority (and now unanimous) contract in
+`src/features/campaign-entities/npcs/context/NPCContext.tsx`:
+- `updateNPCNote`: `throw new Error('Cannot update NPC note: No group or campaign selected')`
+- `updateNPCRelationship`: `throw new Error('Cannot update NPC relationship: No group or campaign selected')`
+
+Both methods already threw for their other two preconditions (`!user || !userProfile`, and
+NPC-not-found), so this also makes each method internally consistent, not just consistent with its
+siblings.
+
+**Test correction required explicit authorization.** A characterization test,
+`src/features/campaign-entities/npcs/context/__tests__/NPCContext.notes.test.tsx` →
+`'should require group and campaign context for note addition'`, asserted the buggy log-and-return
+behavior (`expect(result).toBeUndefined()`) even though its own name states the requirement the
+assertion contradicted. It was confirmed to genuinely execute `updateNPCNote` (not an environment
+error — see the project's `crypto.randomUUID`/JSDOM history) before being corrected under
+user authorization granted 2026-07-28 to expect rejection instead. A new regression test,
+`'should reject relationship update when group or campaign context is missing (bug #005)'` in
+`NPCContext.behavioral.test.tsx`, was added for `updateNPCRelationship`'s missing-context path, since
+no prior test covered it. Both were proven to fail against the reverted production fix before the
+fix was restored.
+
+**Files actually changed**:
+- `src/features/campaign-entities/npcs/context/NPCContext.tsx` — `updateNPCNote` and
+  `updateNPCRelationship` now throw instead of log-and-return
+- `src/features/campaign-entities/npcs/context/__tests__/NPCContext.notes.test.tsx` — corrected
+  characterization test assertion
+- `src/features/campaign-entities/npcs/context/__tests__/NPCContext.behavioral.test.tsx` — added
+  regression test for `updateNPCRelationship`
+
+The rest of this document is preserved as originally filed for historical context; paths below refer
+to the pre-migration tree (`src/context/...`) and are stale relative to the current
+`src/features/campaign-entities/npcs/context/...` / `src/features/campaign-entities/quests/context/...`
+layout.
 
 ## Summary
 
