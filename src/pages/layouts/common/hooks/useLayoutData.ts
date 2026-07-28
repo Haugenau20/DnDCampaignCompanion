@@ -98,22 +98,6 @@ export const useLayoutData = ({
     });
   }, [rumors]);
 
-  // Sort locations by status
-  const sortedLocations = useMemo(() => {
-    return [...locations].sort((firstLocation, secondLocation) => {
-      // Sort by exploration status
-      if (firstLocation.status !== secondLocation.status) {
-        if (firstLocation.status === 'explored') return -1;
-        if (secondLocation.status === 'explored') return 1;
-        if (firstLocation.status === 'visited') return -1;
-        if (secondLocation.status === 'visited') return 1;
-      }
-      
-      // Then by name
-      return firstLocation.name.localeCompare(secondLocation.name);
-    });
-  }, [locations]);
-
   // Filter recent activities
   const recentActivities = useMemo(() => {
     return [...activities].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 4);
@@ -125,7 +109,6 @@ export const useLayoutData = ({
     sortedChapters,
     latestChapter,
     sortedRumors,
-    sortedLocations,
     recentActivities
   };
 };

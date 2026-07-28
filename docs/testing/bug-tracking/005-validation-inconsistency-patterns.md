@@ -304,3 +304,55 @@ After fix implementation:
 2. Test all CRUD operations across all contexts
 3. Verify error messages follow consistent patterns
 4. Update all behavioral tests to expect the standardized error precedence
+---
+
+## Addendum — 2026-07-28: the `StoryContext` half is decided, and the answer is "leave it"
+
+The second pass fixed `NPCContext` and left this open as *"needs a decision, not a patch"*, noting
+that `StoryContext` has the identical 3-warn-and-return vs. 4-throw split. That decision is now
+made: **the split is the contract. It stays, and it is documented in the code.**
+
+### The evidence, which turned out not to be a judgement call
+
+1. **The interface already says so.** `updateChapterProgress`, `updateCurrentChapter` and
+   `markChapterComplete` are declared `=> void`, not `=> Promise<void>`. They are `async` in
+   implementation but their advertised contract is already fire-and-forget. Making them throw would
+   put the implementation at odds with the type every consumer compiles against.
+
+2. **Both live call sites are fire-and-forget.** `StoryPage` calls `updateCurrentChapter` inside a
+   `useEffect` and `updateChapterProgress` inside `BookViewer`'s `onPageChange`. Neither awaits;
+   neither catches.
+
+3. **Therefore making them throw would create a fresh instance of [#1051](./1051-noteeditor-manualsave-rethrows-unhandled.md)** —
+   an unhandled promise rejection from an effect and from a page-turn handler, with nothing surfaced
+   to the user. #1051 was being fixed in the same pass. Shipping its cause in another file, in the
+   name of consistency, would have been a poor trade.
+
+4. **`markChapterComplete` has no production caller at all** — only two tests asserting it is a
+   function. Its error contract is unobservable.
+
+5. The four chapter mutators throw for the opposite reason: they are user-initiated writes reached
+   from forms with UI that can catch and report. **A write that silently reports success is the
+   actual defect this bug fixed in `NPCContext`** — and none of the three progress methods is a
+   write of that kind.
+
+### What changed
+
+No behaviour. A block comment above `StoryContextValue` now states both contracts and why they
+differ, so the next sweep that flags "3 warn-and-return vs 4 throw in one file" finds the answer
+next to the finding. That is the whole deliverable for this half.
+
+### What is still open
+
+`LocationContext` and `QuestContext` inline `if (!activeGroupId || !activeCampaignId)`; `NoteContext`
+uses `if (!user?.uid || !activeGroupId)`. Three idioms for one precondition. This is **cosmetic** —
+no behaviour has been shown to differ, and per the lesson that produced five retracted tracker
+entries, it is not being filed as a defect on the strength of a code-reading alone.
+
+### The generalisable point
+
+*"N implementations of one rule, disagreeing"* is a strong smell, and this project has fixed five
+bugs of exactly that shape. But it is a smell, not a verdict: **sometimes the N implementations are
+answering different questions.** Before unifying, establish that the callers want the same thing.
+Here they demonstrably did not — and the sweep that found the asymmetry could not have known that,
+because the asymmetry is in the call sites, not in the file the sweep was reading.

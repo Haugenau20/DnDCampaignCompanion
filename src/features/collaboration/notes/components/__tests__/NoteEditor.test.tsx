@@ -279,14 +279,17 @@ describe('NoteEditor', () => {
   });
 
   // -------------------------------------------------------------------------
-  // handleManualSave error re-throw (lines 125-126)
+  // handleManualSave error re-throw (lines 132-134)
   // -------------------------------------------------------------------------
   describe('handleManualSave error propagation', () => {
-    // Bug #1051: handleManualSave re-throws on line 126, but the Save button
-    // click handler and Ctrl+S handler both call it without .catch(), producing
-    // an unhandled rejection that propagates to the test runner.
-    // The button's onClick does not display the error to the user.
-    test.skip('should show error state indicator when save fails — skipped: bug #1051 (re-throw causes unhandled rejection)', async () => {
+    // Bug #1051 (fixed): handleManualSave still re-throws (that contract is
+    // relied on by the ref-exposed saveCurrentContent -- see the
+    // "imperative ref methods" describe block below, and EntityExtractor's
+    // own suite). The Save button and Ctrl+S handler no longer call it
+    // directly though -- they go through triggerManualSave, which catches
+    // the rejection and surfaces it via the saveError state instead of
+    // producing an unhandled promise rejection.
+    test('should show error state indicator when save fails', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       mockSaveNote.mockRejectedValue(new Error('Save failed'));
 
@@ -301,6 +304,92 @@ describe('NoteEditor', () => {
         // The save button should be re-enabled after the error
         expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled();
       });
+
+      consoleSpy.mockRestore();
+    });
+
+    test('should display the error message when the Save button click fails, with no unhandled rejection', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockSaveNote.mockRejectedValue(new Error('Save failed'));
+
+      render(<NoteEditor noteId="note-1" />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /save/i }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Save failed')).toBeInTheDocument();
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    test('should display the error message when Ctrl+S fails, with no unhandled rejection', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockSaveNote.mockRejectedValue(new Error('Ctrl+S save failed'));
+
+      render(<NoteEditor noteId="note-1" />);
+
+      await act(async () => {
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true })
+        );
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Ctrl+S save failed')).toBeInTheDocument();
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    test('should clear a prior save error once a subsequent save succeeds', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockSaveNote.mockRejectedValueOnce(new Error('Save failed'));
+
+      render(<NoteEditor noteId="note-1" />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /save/i }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Save failed')).toBeInTheDocument();
+      });
+
+      mockSaveNote.mockResolvedValueOnce(undefined);
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /save/i }));
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Save failed')).not.toBeInTheDocument();
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    test('should clear a prior save error when the user edits the content', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockSaveNote.mockRejectedValue(new Error('Save failed'));
+
+      render(<NoteEditor noteId="note-1" />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /save/i }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Save failed')).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByPlaceholderText('Write your note here...'), {
+        target: { value: 'Editing after failure.' },
+      });
+
+      expect(screen.queryByText('Save failed')).not.toBeInTheDocument();
 
       consoleSpy.mockRestore();
     });
@@ -331,6 +420,31 @@ describe('NoteEditor', () => {
       });
 
       expect(mockSaveNote).toHaveBeenCalled();
+    });
+
+    // Bug #1051: the report's "Recommended Fix" option 1 (remove `throw error`
+    // from handleManualSave) would break this contract. EntityExtractor's
+    // handleExtract calls saveCurrentContent (via NotePage's
+    // saveCurrentEditorContent) and depends on the rejection to abort AI
+    // extraction against unsaved content -- see
+    // src/features/collaboration/entity-extraction/components/EntityExtractor.tsx
+    // (the pre-extraction save's catch block). This test guards against a
+    // future "simplification" that swallows the error inside NoteEditor
+    // instead of rejecting.
+    test('should reject saveCurrentContent (via ref) when saveNote fails, so callers like EntityExtractor can abort', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockSaveNote.mockRejectedValue(new Error('Save failed'));
+
+      const ref = React.createRef<any>();
+      render(<NoteEditor noteId="note-1" ref={ref} />);
+
+      await expect(
+        act(async () => {
+          await ref.current.saveCurrentContent();
+        })
+      ).rejects.toThrow('Save failed');
+
+      consoleSpy.mockRestore();
     });
   });
 

@@ -45,6 +45,14 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  /**
+   * Error message from the most recent manual save attempt, surfaced to the
+   * user via {@link getStatusIndicator}. Only set by {@link triggerManualSave}
+   * (the Save button / Ctrl+S call sites) — the ref-exposed
+   * `saveCurrentContent` still rejects directly so EntityExtractor can abort
+   * AI extraction on a failed pre-extraction save (bug #1051).
+   */
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Autosave interval configuration
   const AUTOSAVE_DELAY_MS = 45000; // 45 seconds - optimized for D&D sessions
@@ -129,25 +137,43 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     }
   }, [note, readOnly, title, content, saveNote, onSave]);
 
+  /**
+   * Fire-and-forget wrapper around `handleManualSave` for the Save button and
+   * Ctrl+S shortcut. Neither call site awaits the promise, so
+   * `handleManualSave`'s re-thrown error (needed by the imperative
+   * `saveCurrentContent` ref contract — see bug #1051) would otherwise become
+   * an unhandled promise rejection with nothing shown to the user. This
+   * wrapper catches it and surfaces it via `saveError` instead.
+   */
+  const triggerManualSave = useCallback(() => {
+    handleManualSave()
+      .then(() => setSaveError(null))
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "Failed to save note.";
+        setSaveError(message);
+      });
+  }, [handleManualSave]);
+
   // Add keyboard shortcut for manual save
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 's') {
         e.preventDefault();
-        handleManualSave();
+        triggerManualSave();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleManualSave]);
+  }, [triggerManualSave]);
 
   // Handle title changes
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
     setTitle(newTitle);
     setHasUnsavedChanges(true);
-    
+    setSaveError(null);
+
     if (!readOnly && note) {
       debouncedSave(note.id, "title", newTitle);
     }
@@ -158,7 +184,8 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     const newContent = e.target.value;
     setContent(newContent);
     setHasUnsavedChanges(true);
-    
+    setSaveError(null);
+
     if (!readOnly && note) {
       debouncedSave(note.id, "content", newContent);
     }
@@ -189,6 +216,17 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
         <div className="flex items-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin primary" />
           <Typography variant="body-sm" color="secondary">Saving...</Typography>
+        </div>
+      );
+    }
+
+    if (saveError) {
+      return (
+        <div className="flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 typography-error" />
+          <Typography variant="body-sm" color="error">
+            {saveError}
+          </Typography>
         </div>
       );
     }
@@ -256,7 +294,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
           <Button
             variant="primary"
             size="sm"
-            onClick={handleManualSave}
+            onClick={triggerManualSave}
             disabled={readOnly || isSaving}
             startIcon={<Save className="w-4 h-4" />}
             className="save-manually-button"

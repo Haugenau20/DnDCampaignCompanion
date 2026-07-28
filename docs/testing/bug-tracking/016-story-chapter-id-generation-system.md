@@ -1,6 +1,26 @@
 # Bug #016: Story Chapter ID Generation System Issues
 
-**Status**: 🔍 DISCOVERED  
+> ## ⚠️ CLOSED 2026-07-28 — read this before acting on anything below
+>
+> Re-verified against `src/features/storytelling/chapters/context/StoryContext.tsx`. Every
+> substantive claim in this report has been addressed by other work, and the remainder was never
+> demonstrated against running code.
+>
+> | This report's claim | Current state |
+> |---|---|
+> | No validation for zero / negative orders | **Fixed by #019.** `if (newOrder < 1) throw new Error('Chapter order must be at least 1')` now guards *both* `createChapter` (:399) and `updateChapter` (:254) |
+> | Conflicts during complex reordering | **Fixed by #017.** Reorder is now atomic: it writes and verifies every new position first, then deletes only ids not reused in the same batch |
+> | Partial failure leaves inconsistent state | **Fixed by #017**, same change — this was that bug's entire substance |
+> | No upper limit on order values | Not a defect. This report's own test evidence shows `chapter-999` generating correctly; `padStart(2, '0')` pads short values and leaves long ones alone |
+> | Non-integer order (`1.5` → `chapter-1.5`) | The only live residue. **No caller can produce one** — order arrives from a numeric form field or a computed `max + 1`. Filing it would be filing an unproven defect, which is what produced the five tracker entries this project later retracted |
+>
+> **Closed as no remaining defect, not as fixed.** Nothing here was ever reproduced against running
+> code: the report's own "Test Evidence" section says `PASSES` three times and then argues from what
+> *might* happen. That framing — a passing test described as evidence of a bug because the
+> implementation looks fragile — is worth recognising, since it kept this entry open at Medium
+> priority for over a year.
+
+**Status**: 🚫 CLOSED — overtaken by #019 and #017 (2026-07-28)  
 **Priority**: Medium  
 **Category**: ARCHITECTURE  
 **Context**: StoryContext  

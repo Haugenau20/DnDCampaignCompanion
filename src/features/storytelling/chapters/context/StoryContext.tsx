@@ -14,6 +14,29 @@ interface StoryContextState {
   error: string | null;
 }
 
+/**
+ * Two deliberately different contracts live in this interface, and the split is
+ * intentional — see bug #005.
+ *
+ * **Reading-progress operations** (`updateChapterProgress`, `updateCurrentChapter`,
+ * `markChapterComplete`) return `void` and are fire-and-forget. On a missing
+ * group/campaign they `console.warn` and return rather than throwing. Their call
+ * sites are ambient — `StoryPage` calls `updateCurrentChapter` from a `useEffect`
+ * and `updateChapterProgress` from `BookViewer`'s `onPageChange` — and neither
+ * awaits or catches. Making these throw would produce an unhandled promise
+ * rejection from an effect and a page-turn handler, which is precisely bug #1051
+ * in a new location. A reader who has selected no campaign should not get an
+ * exception for scrolling.
+ *
+ * **Chapter mutations** (`createChapter`, `updateChapter`, `deleteChapter`,
+ * `reorderChapters`) return `Promise` and throw. They are user-initiated writes
+ * with UI that can catch and report, and a write that silently reports success is
+ * the defect #005 fixed in `NPCContext`.
+ *
+ * So the asymmetry below is the contract, not an inconsistency to unify. If you
+ * are here because a sweep flagged "3 warn-and-return vs 4 throw in one file",
+ * that is the finding, and this comment is the answer.
+ */
 interface StoryContextValue extends StoryContextState {
   /** Get a specific chapter by ID */
   getChapterById: (id: string) => Chapter | undefined;
