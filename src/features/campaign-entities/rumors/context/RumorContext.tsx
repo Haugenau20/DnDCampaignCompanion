@@ -1,11 +1,12 @@
 // src/features/campaign-entities/rumors/context/RumorContext.tsx - updating rumor context to use character names
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types';
 import { DomainData, IdentifiableContent } from 'core/types/common';
 import { useRumorData } from '../hooks/useRumorData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useFirestore } from 'features/user-management';
 import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
+import { generateUniqueEntityId } from 'core/utils/entity-id';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 
@@ -92,23 +93,31 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     refreshRumors();
   }, [user, userProfile, getRumorById, updateData, refreshRumors]);
 
-  // Generate rumor ID from title
-  const generateRumorId = useCallback((title: string): string => {
-    return title
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with hyphens
-      .replace(/^-+|-+$/g, '');    // Remove leading/trailing hyphens
-  }, []);
-  
+  // Ids issued during this session but not yet reflected in `rumors` (loaded
+  // state). Two rumors can be created back-to-back within a single `act()` /
+  // event handler before the first create's write has round-tripped through
+  // `refreshRumors()` and re-rendered this provider -- a collision check
+  // against `getRumorById` alone would miss that first id and silently let
+  // the second create overwrite it. This ref is the second source of truth
+  // `isTaken` below consults, alongside already-loaded data. Shared across
+  // addRumor and combineRumors since both write into the same `rumors`
+  // collection/id-space.
+  const issuedIds = useRef<Set<string>>(new Set());
+
+  const isRumorIdTaken = useCallback(
+    (candidateId: string) => issuedIds.current.has(candidateId) || Boolean(getRumorById(candidateId)),
+    [getRumorById]
+  );
+
   // Add rumor
   const addRumor = useCallback(async (rumorData: DomainData<Rumor>) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to add rumors');
     }
-  
-    // Generate ID from title
-    const id = generateRumorId(rumorData.title);
+
+    // Generate ID from title, disambiguating only on collision
+    const id = generateUniqueEntityId(rumorData.title, isRumorIdTaken);
+    issuedIds.current.add(id);
 
     const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
 
@@ -127,7 +136,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await addData(newRumor, id);
     refreshRumors();
     return id;
-  }, [user, userProfile, addData, refreshRumors, generateRumorId]);
+  }, [user, userProfile, addData, refreshRumors, isRumorIdTaken]);
 
   // Update existing rumor
   const updateRumor = useCallback(async (rumor: Rumor) => {
@@ -189,8 +198,9 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Use the provided title or generate one
     const title = newRumorData.title || `Combined Rumor (${new Date().toLocaleDateString()})`;
 
-    // Generate ID from title
-    const id = generateRumorId(title);
+    // Generate ID from title, disambiguating only on collision
+    const id = generateUniqueEntityId(title, isRumorIdTaken);
+    issuedIds.current.add(id);
 
     // Compute attribution once and reuse across the new rumor, its initial
     // note, and every original rumor updated below so the whole combine
@@ -249,7 +259,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     refreshRumors();
     return id;
-  }, [user, userProfile, getRumorById, addData, updateData, refreshRumors, generateRumorId]);
+  }, [user, userProfile, getRumorById, addData, updateData, refreshRumors, isRumorIdTaken]);
 
   // Convert rumors to quest
   const convertToQuest = useCallback(async (rumorIds: string[], questData: any) => {
@@ -262,10 +272,13 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('One or more rumors not found');
     }
 
-    // Generate a proper quest ID from the title
-    const questId = questData.title
-      ? questData.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-      : crypto.randomUUID();
+    // Generate a proper quest ID from the title. This writes into the
+    // `quests` collection, a different id-space than this context tracks, so
+    // there is no `isTaken` lookup available here (never was); this call
+    // preserves the pre-existing behaviour exactly -- a title that slugifies
+    // to a non-empty string keeps that slug, and an empty/missing title falls
+    // back to a random id, matching the fallback this replaced.
+    const questId = generateUniqueEntityId(questData.title || '', () => false);
 
     // Compute attribution once and reuse across the new quest document and
     // every original rumor updated below so the whole conversion operation
