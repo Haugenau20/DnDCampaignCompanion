@@ -274,6 +274,29 @@ describe('GroupManagementView', () => {
         expect(screen.queryByRole('dialog', { name: /create new group/i })).toBeInTheDocument();
       });
     });
+
+    test('should show the createGroup error message exactly once (BUG #201 regression)', async () => {
+      // BUG #201: the error used to render TWICE simultaneously -- once in the
+      // always-present outer block and once inside the still-open create dialog.
+      // This asserts a single rendering of the error text.
+      mockCreateGroup.mockRejectedValue(new Error('Group creation failed'));
+      render(<GroupManagementView />);
+      fireEvent.click(screen.getByRole('button', { name: /create new group/i }));
+
+      fireEvent.change(screen.getByPlaceholderText(/enter group name/i), {
+        target: { value: 'Failing Group' },
+      });
+
+      const dialog = screen.getByRole('dialog', { name: /create new group/i });
+      const createBtn = Array.from(dialog.querySelectorAll('button')).find(b =>
+        /create group/i.test(b.textContent || '')
+      );
+      fireEvent.click(createBtn!);
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/group creation failed/i)).toHaveLength(1);
+      });
+    });
   });
 
   // -------------------------------------------------------------------------

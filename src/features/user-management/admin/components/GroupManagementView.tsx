@@ -8,10 +8,9 @@ import Button from 'core/components/Button';
 import Card from 'core/components/Card';
 import Dialog from 'core/components/Dialog';
 import { formatDisplayDate } from 'shared/utils/dateFormatter';
-import { 
-  AlertCircle, 
-  Users, 
-  Edit, 
+import {
+  Users,
+  Edit,
   Calendar,
   User,
   Plus,
@@ -68,14 +67,6 @@ const GroupManagementView: React.FC = () => {
           Create New Group
         </Button>
       </div>
-
-      {/* Error message */}
-      {error && (
-        <div className="flex items-center gap-2 p-3 rounded-lg mb-4 typography-error">
-          <AlertCircle size={16} />
-          <Typography color="error">{error}</Typography>
-        </div>
-      )}
 
       {!currentGroup ? (
         <div className="text-center py-8 rounded-lg card">
