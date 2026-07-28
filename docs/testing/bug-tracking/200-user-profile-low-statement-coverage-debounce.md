@@ -1,10 +1,30 @@
 # Bug #200 - UserProfile Username Debounce Validation Branch Untestable Without Timer Mocking
 
-**Status**: 🔍 DISCOVERED  
+**Status**: 🚫 **CLOSED — no production defect** (2026-07-28)  
 **Category**: UI / TESTABILITY  
-**Priority**: Low  
+**Priority**: Closed  
 **Discovery Method**: Component unit testing coverage analysis  
-**Context**: `src/components/features/auth/UserProfile.tsx` lines 247-275
+**Context**: `src/features/user-management/profiles/components/UserProfile.tsx` lines 91-128  
+*(the path recorded below, `src/components/features/auth/UserProfile.tsx`, predates the
+feature-first restructuring and no longer exists)*
+
+---
+
+## Closing note — 2026-07-28
+
+**Closed as testability-only. There is nothing to fix in `UserProfile.tsx`.**
+
+The Phase 4 audit read the current code (`docs/testing/phase4-audit-worksheet.md`) and found a
+textbook debounce: a `setTimeout(…, 500)` inside a `useEffect`, with `clearTimeout` returned as
+cleanup, and correct guard clauses ahead of it. Correct, idiomatic, and doing what it should.
+
+The report itself never claimed a functional defect — only that `userEvent` (real timers) and
+`jest.useFakeTimers()` compose badly in this one test file, leaving lines uncovered. That is a
+statement about the test, not the component, and this tracker is for production defects.
+
+**If the coverage gap is worth closing later**, the fix belongs in the test:
+`fireEvent.change` instead of `userEvent`, then `jest.advanceTimersByTime(500)`, then flush the
+pending promise. Filing that as a bug against the component would be miscategorising it.
 
 ---
 

@@ -13,6 +13,10 @@ still live, and the suggested next order. The test baseline is now **7 failed / 
 suites**, and every one of those 7 is a deliberately deferred ID-collision marker. Detail lives in
 `docs/testing/phase4-triage-findings.md` and `docs/testing/phase4-audit-worksheet.md`.
 
+**A second pass ran 2026-07-28** on `fix/phase4-batch1` — 6 bugs fixed, 5 closed without a code
+change, and `cross-context-patterns.md` Pattern 1 struck. See
+[Phase 4, second pass](#phase-4-second-pass--2026-07-28), below.
+
 Phase 3e's findings, corrections and audit result are kept below for reference — read them before
 touching `shared/`/`core/` again, since two of the lessons recurred across nearly every slice of that
 phase and are likely to recur again. There is no file-moving work left in this codebase; capacity
@@ -510,6 +514,99 @@ consolidation and never closed — three were rated High/High) and #1201 (became
   `shared/utils/dateFormatter.ts` the same way, or whether `pages/layouts/` warrants its own
   presentation-local copy — that's a real design question this time, not a rediscovery of finding 5,
   since `pages/` is already allowed to depend on `shared/`.
+
+---
+
+### Phase 4, second pass — 2026-07-28
+
+*On `fix/phase4-batch1`, branched from `main` at `7e69266` (the merge of PR #20). Two Sonnet
+workers, one batch, plus orchestrator-owned documentation work.*
+
+**Baseline re-verified before starting, and reproduced exactly** — 7 failed / 3 skipped / 3971
+passed of 3981 across 180 suites; coverage 91.56 / 92.05 / 85.16 / 83.37; `tsc --noEmit` clean;
+`npm run build` succeeds. Worth doing every time: an exact match is what makes any later movement
+attributable to this pass rather than to drift.
+
+**Result after the pass:**
+
+| | Before | After |
+|---|---|---|
+| Tests | 7 failed / 3 skipped / 3971 passed / 3981 | 7 failed / 3 skipped / **3975** passed / **3985** |
+| Failing suites | 4 (the ID-collision markers) | 4 — **the same 4**, verified by name |
+| Statements | 91.56% (8195/8950) | **91.65%** (8190/8936) |
+| Branches | 83.37% (3963/4753) | **83.44%** (3961/4747) |
+| Lines | 92.05% (7600/8256) | **92.14%** (7595/8242) |
+| Functions | 85.16% (1751/2056) | 85.15% (1750/2055) |
+
+The +4 tests are exactly the #251 regression tests. Coverage rose on three metrics because removing
+unreachable code removes *uncovered* statements and branches — dead-code cleanup buys coverage
+margin rather than spending it. Functions moved down one covered function (`getStatusBadgeClass`,
+deleted), which is a rounding artifact, not rot. **Function coverage remains the binding
+constraint at ~3 functions of slack against the 85% floor** — check it before landing anything
+that adds uncovered functions.
+
+**Fixed**: #251 (a11y) and the five dead-code entries #1000, #1050, #1052, #1152, #050.
+**Closed without a code change**: #200, #301, #302, #901 (TEST-ONLY) and #003 (symptom of the
+deferred #002).
+
+#### Four things worth carrying forward
+
+1. **"Unreachable" is a claim, not a fact — re-verify before deleting.** All five dead-code
+   verdicts came from an audit a day old, and all five held under a fresh read (every call site
+   grepped, every exit path traced). The check still isn't optional: deleting a *live* error
+   handler on a stale audit's word is far worse than leaving dead code in place. One catch block in
+   the same file as #1000 (`applyThemeToDOM`, guarding `localStorage.setItem`) is genuinely
+   reachable and was correctly left alone — the file did not have a blanket verdict.
+2. **A bug's filed category can understate it, and #251 is the clearest case yet.** It sat as
+   `TESTABILITY / Priority: Low` for months. It is an accessibility defect: every labelled field in
+   the application rendered a `<label>` associated with nothing, so no screen reader could announce
+   any of them. The testability symptom was real but incidental. This is the same failure mode as
+   #150 (filed as a testability limitation, actually a production outage) and #018 (filed as
+   medium-priority tracking, actually a dead feature) — **three for three, all in the same
+   direction.** When a report's framing is "this makes testing hard," check what it means for a
+   user before accepting the priority.
+3. **Deleting code strands the comments that described it.** Three test files carried comments
+   naming functions, branches and line numbers that no longer existed after this pass — including
+   two tests in `NoteCard.test.tsx` claiming to cover `getStatusBadgeClass`'s "active" and default
+   branches, which they had never reached, because the only call site was already gated on
+   `archived`. The assertions were correct and untouched; only the comments were wrong. Worth a
+   routine sweep after any deletion.
+4. **A handoff's to-do list can itself be stale.** `Dialog.test.tsx` was listed as citing #100 for
+   what is #150. It already cited #150 correctly throughout — fixed when #150 landed, with the note
+   never updated. Verify a reported defect still exists before assigning it, including defects in
+   the tracker's own record-keeping.
+
+#### On striking `cross-context-patterns.md` Pattern 1
+
+Struck in place rather than deleted, because the failure mode generalises and the document is the
+only record of it. Its premise — that `getUserName`/`getActiveCharacterName` "consistently return
+empty/null" — is false against `src/core/utils/user-utils.ts`, where `getUserName` is
+`userProfile?.username || ''`. It was rated the codebase's "highest priority systematic issue" and
+steered priority for over a year.
+
+**The mechanism is what matters.** The pattern was synthesised from five contexts' *test output*,
+not from production source. Five contexts agreeing felt like five independent confirmations; it was
+one shared mock shape counted five times. **Cross-context analysis multiplies apparent confidence
+without multiplying evidence.**
+
+It also generated downstream work: the document's own advice for the then-upcoming NoteContext pass
+was "expect the same patterns — anticipate user attribution issues." That pass duly found them and
+filed #020, #021 and #022 — **all three later closed as test issues, not implementation bugs.**
+Priming an investigation with the pattern it should find is a reliable way to find it whether or
+not it is there. The strike, the verified source, and this chain are recorded in the document
+itself; the four downstream sections that propagated the claim were corrected with it.
+
+#### Still open after this pass
+
+- **#005** — authorised 2026-07-28 to correct the blocking characterization test at
+  `NPCContext.notes.test.tsx:361` (same terms as #006: one named test, in the same change as the
+  production fix, after confirming the disagreement is real). Not yet done.
+- **Confirmed live, unfixed**: #100, #250, #600, #700, #702, #750, #850 (logic/UI); #016, #017
+  (story); #201; #851; #1051; #1200; #1204.
+- **#024 still needs a decision** — `NoteContext.bugs.test.tsx:455` has a `describe('Bug #024: …')`
+  with no row and no file. File retroactively, or renumber.
+- Unchanged from the first pass: #1202's production data pass, #1204, and the `layoutUtils.ts`
+  triplicate.
 
 ---
 

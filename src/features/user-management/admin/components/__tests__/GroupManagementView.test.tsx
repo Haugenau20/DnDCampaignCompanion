@@ -240,10 +240,18 @@ describe('GroupManagementView', () => {
     });
 
     test('should call createGroup and handle error gracefully', async () => {
-      // This test verifies that createGroup is called; the error display
-      // depends on the dialog state which may be complex to assert in tests.
-      // BUG #200: Error display inside dialog form after createGroup failure
-      // may not be visible in tests due to dialog state management.
+      // This test verifies that createGroup is called; it deliberately does not
+      // assert on the error text. See BUG #201 for why.
+      //
+      // BUG #201: on a createGroup failure the error is rendered TWICE at once --
+      // once by the always-present block in the main view (GroupManagementView.tsx:72)
+      // and once inside the still-open create dialog (:183). A plain getByText
+      // throws on multiple matches, which reads as "not found" unless you inspect
+      // the thrown message. The original diagnosis here ("may not be visible") had
+      // it backwards: the error is duplicated, not absent.
+      //
+      // NOTE: this comment previously cited #200, which is an unrelated (and now
+      // closed) UserProfile debounce testability entry. Corrected 2026-07-28.
       mockCreateGroup.mockRejectedValue(new Error('Group creation failed'));
       render(<GroupManagementView />);
       fireEvent.click(screen.getByRole('button', { name: /create new group/i }));
