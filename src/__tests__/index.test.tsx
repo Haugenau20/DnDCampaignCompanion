@@ -38,10 +38,70 @@ jest.mock("react-dom/client", () => ({
 // ---------------------------------------------------------------------------
 // Mock firebase/app-check — prevents real reCAPTCHA initialization
 // ---------------------------------------------------------------------------
+// NOTE: index.tsx is loaded inside jest.isolateModules(), which builds a fresh
+// module registry and therefore re-runs every mock factory. Assertions must read
+// module-scoped capture variables (which survive), never the jest.fn instances
+// returned by require() out here — those are different objects from the ones
+// index.tsx actually called. This is the same capture pattern the react-dom mock
+// above already uses.
+let mockAppCheckCalls: unknown[][] = [];
+
 jest.mock("firebase/app-check", () => ({
-  initializeAppCheck: jest.fn(),
+  initializeAppCheck: jest.fn((...args: unknown[]) => {
+    mockAppCheckCalls.push(args);
+  }),
   ReCaptchaV3Provider: jest.fn().mockImplementation(function (siteKey: string) {
     return { siteKey };
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock firebase/app — models the REAL contract, unlike the global mock
+//
+// setupTests.ts mocks firebase/app with `getApp: jest.fn()`, which returns
+// undefined unconditionally and never throws. That mock cannot tell an
+// initialized app apart from a missing one, so no test using it could ever
+// detect App Check initializing before Firebase — which is exactly what
+// happened in production once Firebase init became lazy (commit 69d19c2).
+// index.tsx had been free-riding on `import App from 'app/App'` initializing
+// Firebase as an import side effect; this suite mocks app/App, so it severed
+// that chain too and stayed green either way.
+//
+// This local mock makes getApp() throw app/no-app until initializeApp() has
+// run, so the ordering contract is actually asserted.
+// ---------------------------------------------------------------------------
+let mockFirebaseAppInitialized = false;
+
+jest.mock("firebase/app", () => ({
+  initializeApp: jest.fn(() => {
+    mockFirebaseAppInitialized = true;
+    return {};
+  }),
+  getApps: jest.fn(() => (mockFirebaseAppInitialized ? [{}] : [])),
+  getApp: jest.fn(() => {
+    if (!mockFirebaseAppInitialized) {
+      const error: Error & { code?: string } = new Error(
+        "Firebase: No Firebase App '[DEFAULT]' has been created - call initializeApp() first (app/no-app)"
+      );
+      error.code = "app/no-app";
+      throw error;
+    }
+    return {};
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// Mock the Firebase service barrel — stands in for the real
+// getFirebaseServices(), whose first call constructs BaseFirebaseService and
+// therefore calls initializeApp().
+// ---------------------------------------------------------------------------
+let mockGetFirebaseServicesCallCount = 0;
+
+jest.mock("core/services/firebase", () => ({
+  getFirebaseServices: jest.fn(() => {
+    mockGetFirebaseServicesCallCount += 1;
+    mockFirebaseAppInitialized = true;
+    return {};
   }),
 }));
 
@@ -140,6 +200,9 @@ function findInTree(
 // Load index.tsx once per suite (top-level side effects run at import time)
 // ---------------------------------------------------------------------------
 
+/** console.error calls captured while index.tsx's module body ran. */
+let capturedConsoleErrors: unknown[][] = [];
+
 beforeAll(() => {
   // Ensure #root exists in jsdom
   if (!document.getElementById("root")) {
@@ -154,11 +217,25 @@ beforeAll(() => {
   // Reset captured values in case of module re-use
   capturedContainer = null;
   capturedRootElement = null;
+  capturedConsoleErrors = [];
+  mockFirebaseAppInitialized = false;
+  mockGetFirebaseServicesCallCount = 0;
+  mockAppCheckCalls = [];
+
+  // index.tsx swallows App Check failures into console.error, so capture them
+  // rather than let a silent failure look like a pass.
+  const consoleErrorSpy = jest
+    .spyOn(console, "error")
+    .mockImplementation((...args: unknown[]) => {
+      capturedConsoleErrors.push(args);
+    });
 
   // Load index.tsx — fires createRoot + render at module top level
   jest.isolateModules(() => {
     require("../index");
   });
+
+  consoleErrorSpy.mockRestore();
 });
 
 afterAll(() => {
@@ -170,6 +247,42 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe("index.tsx entry point", () => {
+  // -------------------------------------------------------------------------
+  // Firebase App Check initialization ordering
+  //
+  // Regression guard: App Check requires an initialized Firebase app. index.tsx
+  // does not import the Firebase barrel for its own sake, so it must trigger
+  // initialization explicitly rather than depend on another module's import
+  // side effect — that dependency was invisible, and disappeared the moment
+  // Firebase init was made lazy, leaving App Check off in production.
+  // -------------------------------------------------------------------------
+  describe("Firebase App Check", () => {
+    test("initializes Firebase before reading the app back with getApp()", () => {
+      expect(mockGetFirebaseServicesCallCount).toBeGreaterThanOrEqual(1);
+    });
+
+    test("calls initializeAppCheck — getApp() did not throw app/no-app", () => {
+      expect(mockAppCheckCalls).toHaveLength(1);
+    });
+
+    test("passes the reCAPTCHA site key and auto-refresh to initializeAppCheck", () => {
+      const [, config] = mockAppCheckCalls[0];
+      expect(config).toEqual(
+        expect.objectContaining({
+          provider: expect.objectContaining({ siteKey: "test-recaptcha-key" }),
+          isTokenAutoRefreshEnabled: true,
+        })
+      );
+    });
+
+    test("does not log an App Check initialization failure", () => {
+      const appCheckFailures = capturedConsoleErrors.filter(([first]) =>
+        String(first).includes("Failed to initialize Firebase App Check")
+      );
+      expect(appCheckFailures).toEqual([]);
+    });
+  });
+
   // -------------------------------------------------------------------------
   // createRoot
   // -------------------------------------------------------------------------
