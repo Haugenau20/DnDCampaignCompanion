@@ -13,8 +13,10 @@ still live, and the suggested next order. The test baseline is now **7 failed / 
 suites**, and every one of those 7 is a deliberately deferred ID-collision marker. Detail lives in
 `docs/testing/phase4-triage-findings.md` and `docs/testing/phase4-audit-worksheet.md`.
 
-**A second pass ran 2026-07-28** on `fix/phase4-batch1` — 6 bugs fixed, 5 closed without a code
-change, and `cross-context-patterns.md` Pattern 1 struck. See
+**A second pass ran 2026-07-28** on `fix/phase4-batch1` — 8 bugs fixed (one partially), 5 closed
+without a code change, #024 retired as never-a-bug, and `cross-context-patterns.md` Pattern 1
+struck. Baseline moves to **7 failed / 3 skipped / 3977 passed / 3987 total across 180 suites**;
+the 7 are still the deferred ID-collision markers, and are now the *only* red in the suite. See
 [Phase 4, second pass](#phase-4-second-pass--2026-07-28), below.
 
 Phase 3e's findings, corrections and audit result are kept below for reference — read them before
@@ -529,25 +531,36 @@ attributable to this pass rather than to drift.
 
 **Result after the pass:**
 
-| | Before | After |
-|---|---|---|
-| Tests | 7 failed / 3 skipped / 3971 passed / 3981 | 7 failed / 3 skipped / **3975** passed / **3985** |
-| Failing suites | 4 (the ID-collision markers) | 4 — **the same 4**, verified by name |
-| Statements | 91.56% (8195/8950) | **91.65%** (8190/8936) |
-| Branches | 83.37% (3963/4753) | **83.44%** (3961/4747) |
-| Lines | 92.05% (7600/8256) | **92.14%** (7595/8242) |
-| Functions | 85.16% (1751/2056) | 85.15% (1750/2055) |
+| | Before | After batch 1 | After batch 2 |
+|---|---|---|---|
+| Tests | 7F / 3S / 3971P / 3981 | 7F / 3S / 3975P / 3985 | 7F / 3S / **3977P** / **3987** |
+| Failing suites | 4 (ID-collision markers) | 4 — the same 4 | 4 — **the same 4** |
+| Statements | 91.56% (8195/8950) | 91.65% | **91.67%** (8190/8934) |
+| Branches | 83.37% (3963/4753) | 83.44% | **83.45%** (3960/4745) |
+| Lines | 92.05% (7600/8256) | 92.14% | **92.17%** (7595/8240) |
+| Functions | 85.16% (1751/2056) | 85.15% | 85.15% (1750/2055) |
 
-The +4 tests are exactly the #251 regression tests. Coverage rose on three metrics because removing
-unreachable code removes *uncovered* statements and branches — dead-code cleanup buys coverage
-margin rather than spending it. Functions moved down one covered function (`getStatusBadgeClass`,
-deleted), which is a rounding artifact, not rot. **Function coverage remains the binding
-constraint at ~3 functions of slack against the 85% floor** — check it before landing anything
-that adds uncovered functions.
+`tsc --noEmit` clean and `npm run build` succeeds at every checkpoint.
 
-**Fixed**: #251 (a11y) and the five dead-code entries #1000, #1050, #1052, #1152, #050.
+The +6 tests are exactly the regression tests added (4 for #251, 1 for #201, 1 for #005). Coverage
+rose on three metrics because removing unreachable code removes *uncovered* statements and branches
+— **dead-code cleanup buys coverage margin rather than spending it.** Functions moved down one
+covered function (`getStatusBadgeClass`, deleted); that is a rounding artifact, not rot. **Function
+coverage remains the binding constraint at ~3 functions of slack against the 85% floor** — check it
+before landing anything that adds uncovered functions.
+
+**A note on how "the same 4" was actually established**, since it is the load-bearing claim: the
+full run reported 4 failed suites / 7 failed tests, and the four marker suites run alone report
+4 failed / 7 failed. Equal counts on both sides means the failing set is exactly those four, with
+no room for an unrelated suite hiding among them. Cheaper and stronger than reading a truncated
+log tail, which is what nearly went wrong here — piping a full run through `tail` discards the
+earlier failures' names entirely.
+
+**Fixed**: #251 (a11y), #201, #005 (partially — see below), and the five dead-code entries #1000,
+#1050, #1052, #1152, #050.
 **Closed without a code change**: #200, #301, #302, #901 (TEST-ONLY) and #003 (symptom of the
 deferred #002).
+**#024 retired**: it was never a bug — see below.
 
 #### Four things worth carrying forward
 
@@ -596,17 +609,53 @@ Priming an investigation with the pattern it should find is a reliable way to fi
 not it is there. The strike, the verified source, and this chain are recorded in the document
 itself; the four downstream sections that propagated the claim were corrected with it.
 
+#### #005 is half-fixed, and the half that remains needs a decision, not a patch
+
+`NPCContext` is now unanimous — all five mutators throw on `!hasRequiredContext`. The two that
+didn't (`updateNPCNote`, `updateNPCRelationship`) were **writes silently reporting success**.
+Correcting the blocking characterization test at `NPCContext.notes.test.tsx` was authorised on the
+same terms #006 got; it was the fifth of that family found here.
+
+**But #005 was filed as a cross-context pattern, and that half is untouched.** A sweep run *after*
+the fix landed found the identical intra-file split still live in `StoryContext.tsx` — three
+progress methods `console.warn`-and-return (`:127`, `:156`, `:177`) against four mutators that
+throw (`:211`, `:335`, `:435`, `:511`). Two further idioms exist elsewhere: `LocationContext` and
+`QuestContext` inline `if (!activeGroupId || !activeCampaignId)`, `NoteContext` uses
+`if (!user?.uid || !activeGroupId)`. Three shapes, five contexts, one precondition.
+
+**Do not reflexively make StoryContext throw.** Its three outliers are all reading-progress
+operations, and fire-and-forget is a defensible contract there in a way it is not for a note write
+— a reader who has selected no campaign arguably should not get an exception for scrolling. Decide
+the contract, then make the file state it consistently. This is deliberately **not** filed as a new
+bug number: nothing in it has been shown to misbehave against running code, and filing unproven
+defects is what produced the five entries this project later retracted. Evidence is in #005's
+report addendum so the next pass starts from measurement.
+
+**Generalisable**: sweep the siblings *after* a fix, not only before it. Fixing the instance you
+were pointed at tells you nothing about whether the pattern it exemplified survived — and a bug
+filed as systemic, closed on one instance, is worse than one never opened.
+
 #### Still open after this pass
 
-- **#005** — authorised 2026-07-28 to correct the blocking characterization test at
-  `NPCContext.notes.test.tsx:361` (same terms as #006: one named test, in the same change as the
-  production fix, after confirming the disagreement is real). Not yet done.
 - **Confirmed live, unfixed**: #100, #250, #600, #700, #702, #750, #850 (logic/UI); #016, #017
-  (story); #201; #851; #1051; #1200; #1204.
-- **#024 still needs a decision** — `NoteContext.bugs.test.tsx:455` has a `describe('Bug #024: …')`
-  with no row and no file. File retroactively, or renumber.
+  (story); #851; #1051; #1200; #1204. Plus #005's cross-context half, above.
+- **#024 is retired, not filed.** `NoteContext.bugs.test.tsx` carried `describe('Bug #024: …')`
+  with no row, no file, and no other reference in the repo. Both its tests execute real work and
+  assert *correct* behaviour — a failed fetch surfaces an error and leaves no stale notes; a failed
+  save rejects and leaves the note still marked unsaved. Its comments say `BUG POTENTIAL:`, not
+  `BUG:`. The block went looking for a defect, found none, and the speculative number stayed in the
+  title. Renamed, with the reasoning recorded on the block. Filing it retroactively would have made
+  a sixth phantom entry; #024 stays unused, since numbers are not reused.
 - Unchanged from the first pass: #1202's production data pass, #1204, and the `layoutUtils.ts`
   triplicate.
+
+#### The deferred ID-collision cluster is now the only source of red
+
+#002, #004, #009, #012 — 7 tests across 4 suites, deliberately red as markers, deferred by decision
+because changing ID derivation changes URL shape and stored document identity across four entity
+types. Nothing else in the suite fails. That makes the failing set a precise, self-maintaining
+signal: **any new red is now unambiguously a regression**, which was not true at the start of
+Phase 4 (25 failures spanning 9 tracker entries and 4 unfiled harness bugs).
 
 ---
 
