@@ -1,6 +1,7 @@
 // src/features/campaign-entities/rumors/context/RumorContext.tsx - updating rumor context to use character names
 import React, { createContext, useContext, useCallback } from 'react';
 import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types';
+import { DomainData } from 'core/types/common';
 import { useRumorData } from '../hooks/useRumorData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useFirestore } from 'features/user-management';
@@ -101,7 +102,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
   
   // Add rumor
-  const addRumor = useCallback(async (rumorData: Omit<Rumor, 'id'>) => {
+  const addRumor = useCallback(async (rumorData: DomainData<Rumor>) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to add rumors');
     }

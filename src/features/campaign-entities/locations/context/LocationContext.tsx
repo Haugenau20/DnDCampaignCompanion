@@ -1,6 +1,7 @@
 // src/features/campaign-entities/locations/context/LocationContext.tsx
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
 import { Location, LocationStatus, LocationContextValue, LocationNote } from '../types';
+import { DomainData } from 'core/types/common';
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
@@ -212,7 +213,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [user, activeGroupId, activeCampaignId, getLocationById, locations, deleteData, dispatchLocationChangedEvent]);
 
   // Create a new location
-  const createLocation = useCallback(async (locationData: Omit<Location, 'id'>): Promise<string> => {
+  const createLocation = useCallback(async (locationData: DomainData<Location>): Promise<string> => {
     if (!user || !activeGroupId || !activeCampaignId) {
       throw new Error('User must be authenticated and group/campaign context must be set to create a location');
     }
