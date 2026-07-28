@@ -44,6 +44,52 @@ describe("Input", () => {
       const label = document.querySelector("label");
       expect(label).toBeInTheDocument();
     });
+
+    // Regression test for bug #251: the <label> must be associated with its
+    // control via htmlFor/id so screen readers announce it and
+    // getByLabelText() can find it.
+    test("should associate the label with the input via htmlFor/id (bug #251)", () => {
+      render(<Input label="Name" />);
+      const input = screen.getByLabelText("Name");
+      expect(input).toBeInTheDocument();
+      expect(input.tagName).toBe("INPUT");
+
+      const label = document.querySelector("label") as HTMLLabelElement;
+      expect(label.htmlFor).toBeTruthy();
+      expect(label.htmlFor).toBe(input.id);
+    });
+
+    test("should associate the label with the textarea via htmlFor/id (bug #251)", () => {
+      render(<Input isTextArea label="Description" />);
+      const textarea = screen.getByLabelText("Description");
+      expect(textarea).toBeInTheDocument();
+      expect(textarea.tagName).toBe("TEXTAREA");
+
+      const label = document.querySelector("label") as HTMLLabelElement;
+      expect(label.htmlFor).toBeTruthy();
+      expect(label.htmlFor).toBe(textarea.id);
+    });
+
+    test("should honour an explicitly-passed id and point the label at it (bug #251)", () => {
+      render(<Input label="Email" id="custom-email-id" />);
+      const input = screen.getByLabelText("Email");
+      expect(input.id).toBe("custom-email-id");
+
+      const label = document.querySelector("label") as HTMLLabelElement;
+      expect(label.htmlFor).toBe("custom-email-id");
+    });
+
+    test("should generate distinct ids for multiple labelled inputs", () => {
+      render(
+        <>
+          <Input label="First" />
+          <Input label="Second" />
+        </>
+      );
+      const first = screen.getByLabelText("First");
+      const second = screen.getByLabelText("Second");
+      expect(first.id).not.toBe(second.id);
+    });
   });
 
   // -------------------------------------------------------------------------
