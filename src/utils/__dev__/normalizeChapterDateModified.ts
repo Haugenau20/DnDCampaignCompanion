@@ -844,6 +844,28 @@ async function main(): Promise<void> {
     // Report the failure without ever echoing the password back.
     const code = (error as { code?: string }).code ?? "unknown";
     console.error(`Sign-in failed for ${email} (${code}).`);
+
+    if (code.includes("invalid-credential") || code.includes("user-not-found") || code.includes("wrong-password")) {
+      console.error(
+        "\nNote: Firebase returns a deliberately vague error here (email-enumeration\n" +
+          "protection), so this means one of: no such user, wrong password, or the user\n" +
+          "exists but has no email/password credential.\n" +
+          "\n" +
+          "The most common cause is signing in with the WRONG DIRECTORY. This must be an\n" +
+          "account from this project's Firebase Authentication user pool -- the same one\n" +
+          "the app's own login form uses -- listed under Firebase Console > Authentication\n" +
+          "> Users. The Google account you log into the Firebase CONSOLE with is a\n" +
+          "different thing entirely and will not work here."
+      );
+    } else if (code.includes("app-check")) {
+      console.error(
+        "\nApp Check is enforced for Authentication on this project, and a Node script\n" +
+          "cannot produce an attestation token (the app uses ReCaptchaV3, which is\n" +
+          "browser-only). Temporarily disable App Check enforcement for Authentication\n" +
+          "while running this, or run the pass through the Admin SDK instead."
+      );
+    }
+
     process.exit(1);
     return;
   }
