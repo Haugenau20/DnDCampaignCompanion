@@ -29,7 +29,8 @@ const CampaignManagementView: React.FC = () => {
     createCampaign,
     campaigns: contextCampaigns,
     getCampaigns,
-    deleteCampaign
+    deleteCampaign,
+    updateCampaign
   } = useCampaigns();
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
@@ -56,6 +57,21 @@ const CampaignManagementView: React.FC = () => {
   // Scoped to the delete dialog rather than reusing the shared `error` state -- see
   // the comment in handleConfirmDeleteCampaign.
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Edit dialog state -- also doubles as the editable form fields, same as the
+  // New Campaign form above stores its own name/description separately from
+  // the shared `error` state.
+  const [editDialog, setEditDialog] = useState({
+    isOpen: false,
+    campaignId: '',
+    name: '',
+    description: ''
+  });
+  const [editingCampaign, setEditingCampaign] = useState(false);
+  // Scoped to the edit dialog for the same reason as `deleteError`: the shared
+  // `error` state renders in the main view, behind this modal, where the user
+  // cannot see it (bug #201's failure mode).
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Use campaigns from context if available, otherwise use local state
   const campaigns = contextCampaigns.length > 0 ? contextCampaigns : localCampaigns;
@@ -159,6 +175,51 @@ const CampaignManagementView: React.FC = () => {
     }
   };
 
+  // Handle campaign edit
+  const handleEditCampaign = (campaign: Campaign) => {
+    setEditDialog({
+      isOpen: true,
+      campaignId: campaign.id,
+      name: campaign.name,
+      description: campaign.description || ''
+    });
+  };
+
+  const closeEditDialog = () => {
+    setEditError(null);
+    setEditDialog({ isOpen: false, campaignId: '', name: '', description: '' });
+  };
+
+  const handleConfirmEditCampaign = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!editDialog.name.trim()) return;
+
+    setEditingCampaign(true);
+    setEditError(null);
+
+    try {
+      await updateCampaign(editDialog.campaignId, {
+        name: editDialog.name,
+        description: editDialog.description
+      });
+
+      // Refresh the campaign list
+      if (activeGroupId) {
+        const updatedCampaigns = await getCampaigns(activeGroupId);
+        setLocalCampaigns(updatedCampaigns);
+      }
+
+      setEditDialog({ isOpen: false, campaignId: '', name: '', description: '' });
+    } catch (err) {
+      // Deliberately NOT the shared `error` state -- see the comment on
+      // `editError`'s declaration and handleConfirmDeleteCampaign above.
+      setEditError(err instanceof Error ? err.message : 'Failed to update campaign');
+    } finally {
+      setEditingCampaign(false);
+    }
+  };
+
   // Filter campaigns by search query
   const filteredCampaigns = campaigns.filter(campaign => {
     const searchString = `${campaign.name} ${campaign.description || ''}`.toLowerCase();
@@ -251,6 +312,7 @@ const CampaignManagementView: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       startIcon={<Edit size={16} />}
+                      onClick={() => handleEditCampaign(campaign)}
                     >
                       Edit
                     </Button>
@@ -340,6 +402,65 @@ const CampaignManagementView: React.FC = () => {
                 isLoading={creatingCampaign}
               >
                 Create Campaign
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Edit Campaign Dialog */}
+      <Dialog
+        open={editDialog.isOpen}
+        onClose={closeEditDialog}
+        title="Edit Campaign"
+        maxWidth="max-w-md"
+        isNested={true}
+      >
+        <form onSubmit={handleConfirmEditCampaign}>
+          <div className="space-y-4">
+            <Input
+              label="Campaign Name *"
+              value={editDialog.name}
+              onChange={(e) => setEditDialog(prev => ({ ...prev, name: e.target.value }))}
+              required
+              placeholder="Enter campaign name"
+            />
+
+            <Input
+              label="Description (optional)"
+              value={editDialog.description}
+              onChange={(e) => setEditDialog(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Brief description of the campaign"
+              isTextArea={true}
+              rows={3}
+            />
+
+            {/* Rendered inside the dialog, where the user is actually looking when the
+                update fails. See bug #201 for the sibling component that got this wrong. */}
+            {editError && (
+              <div className="flex items-center gap-2">
+                <AlertCircle size={16} className="typography-error" />
+                <Typography color="error">{editError}</Typography>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="ghost"
+                onClick={closeEditDialog}
+                type="button"
+                startIcon={<X size={16} />}
+                disabled={editingCampaign}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                startIcon={<Edit size={16} />}
+                disabled={!editDialog.name.trim() || editingCampaign}
+                isLoading={editingCampaign}
+              >
+                Save Changes
               </Button>
             </div>
           </div>
