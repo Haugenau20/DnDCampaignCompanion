@@ -1072,10 +1072,18 @@ npx ts-node ./src/utils/__dev__/normalizeChapterDateModified.ts revert --journal
 ```
 
 **Start with `audit`** — it writes nothing and answers the question nobody can answer from the
-repository: how many documents are actually affected. Needs the `REACT_APP_*` config plus
-`CHAPTER_NORMALIZE_ADMIN_EMAIL` / `CHAPTER_NORMALIZE_ADMIN_PASSWORD` for a **group-admin** account
-(the production rule is `createdBy == uid || isGroupAdmin`, so a plain member would silently repair
-only its own rows).
+repository: how many documents are actually affected. It **prompts for an email and password**
+(password hidden), so no credentials go in the environment or your shell history;
+`CHAPTER_NORMALIZE_ADMIN_EMAIL` / `CHAPTER_NORMALIZE_ADMIN_PASSWORD` still work for non-interactive
+use. `audit` only reads, so any group member can run it. **`migrate` needs a group admin**, because
+the production rule is `createdBy == uid || isGroupAdmin` — a plain member would silently repair only
+its own rows.
+
+**It always targets the real cloud project**, whichever `.env` is loaded: the script deliberately
+never calls `connectFirestoreEmulator`, and all three env files here name the same project
+(`dnd-campaign-companion`), differing only in `REACT_APP_USE_EMULATORS` — which this script ignores.
+So there is no env file that makes `migrate` hit the emulator instead of production. Harmless for
+`audit`; worth knowing before `migrate`.
 
 **Its Firestore-touching half has never executed** — not against production, not against the
 emulator. The 41 tests cover the pure predicate, the Timestamp conversion, idempotence and the

@@ -58,11 +58,22 @@
 //     PRODUCTION, e.g. by copying `.env.production` to `.env` the same way
 //     `scripts/manage-dev-data.ps1` copies `.env.development` for the
 //     emulator equivalent of this script.
-//   CHAPTER_NORMALIZE_ADMIN_EMAIL, CHAPTER_NORMALIZE_ADMIN_PASSWORD
-//     — credentials of a real user account that is a group admin (or global
-//     admin) in the group(s) whose chapters need repair. Never written to
-//     disk by this script; the journal file records only {path, oldValue,
-//     newValue}, never credentials.
+// Credentials are PROMPTED FOR INTERACTIVELY when the script runs — you are
+// asked for an email and then a password, and the password is not echoed to
+// the terminal as you type it. Use a real user account that is a group admin
+// (or global admin) in the group(s) whose chapters need repair. `audit` only
+// reads, so any group member can run it; only `migrate` needs admin rights,
+// because the production rule for content updates is
+// `createdBy == request.auth.uid || isGroupAdmin(groupId) || isGlobalAdmin()`.
+//
+// Credentials are never written to disk by this script, and the journal file
+// records only {path, oldValue, newValue} — never credentials.
+//
+// CHAPTER_NORMALIZE_ADMIN_EMAIL / CHAPTER_NORMALIZE_ADMIN_PASSWORD are still
+// honoured if set, so the script stays usable non-interactively (CI, a wrapper
+// script, a pipe). Prefer the prompts when running by hand: a password passed
+// through the environment is visible to `Get-ChildItem env:`, is inherited by
+// child processes, and tends to end up in shell history.
 //
 // This script deliberately never calls connectFirestoreEmulator /
 // connectAuthEmulator — it always targets whatever project the REACT_APP_*
@@ -72,6 +83,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import * as readline from "readline";
 import * as dotenv from "dotenv";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, getDoc, getDocs, updateDoc, Timestamp, Firestore } from "firebase/firestore";
@@ -563,7 +575,7 @@ function refuseWithoutConfirmation(mode: ScriptMode): never {
       `This mode writes to Firestore. Re-run with --confirm once you have:\n` +
       `  1. Taken a Firestore export/backup of the project.\n` +
       `  2. Verified REACT_APP_PROJECT_ID resolves to the project you intend to change.\n` +
-      `  3. Verified the signed-in account (CHAPTER_NORMALIZE_ADMIN_EMAIL) is a group admin\n` +
+      `  3. Verified the account you will sign in as is a group admin\n` +
       `     or global admin for the group(s) whose chapters need repair.\n`
   );
   process.exit(1);
@@ -688,6 +700,118 @@ async function runRevert(db: Firestore, journalPath: string | null): Promise<voi
   console.log(`Done. Restored: ${restored}. Skipped: ${skipped}.`);
 }
 
+/**
+ * Ask a question on the terminal and resolve with the typed answer.
+ *
+ * @param question - Text shown to the operator, including any trailing space.
+ * @returns The trimmed answer.
+ */
+function promptVisible(question: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise<string>((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
+/**
+ * Ask for a secret without echoing it to the terminal.
+ *
+ * `readline` echoes every keystroke through its private `_writeToOutput` hook.
+ * Replacing that hook lets the prompt itself print normally while the typed
+ * characters are swallowed — nothing is shown, not even asterisks, which is
+ * the same behaviour `ssh` and `sudo` use. Muting is switched on only AFTER
+ * `rl.question` has synchronously written the prompt, otherwise the prompt
+ * would be swallowed too.
+ *
+ * The answer is deliberately NOT trimmed: leading and trailing whitespace can
+ * be part of a password, and silently stripping it would turn a correct
+ * password into an authentication failure the operator cannot see.
+ *
+ * @param question - Text shown to the operator, including any trailing space.
+ * @returns The password exactly as typed.
+ */
+function promptHidden(question: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: true,
+  });
+
+  let muted = false;
+  const rlInternals = rl as unknown as {
+    _writeToOutput: (text: string) => void;
+    output: NodeJS.WritableStream;
+  };
+  const writeToOutput = rlInternals._writeToOutput.bind(rl);
+  rlInternals._writeToOutput = (text: string) => {
+    if (!muted) {
+      writeToOutput(text);
+    }
+  };
+
+  return new Promise<string>((resolve) => {
+    rl.question(question, (answer) => {
+      muted = false;
+      // The newline the operator typed was swallowed with everything else, so
+      // emit one to stop the next line of output landing on the prompt.
+      rlInternals.output.write("\n");
+      rl.close();
+      resolve(answer);
+    });
+    // Only now: rl.question has already written the prompt text.
+    muted = true;
+  });
+}
+
+/**
+ * Resolve the credentials to sign in with.
+ *
+ * Environment variables win when both are present, so the script stays usable
+ * non-interactively. Otherwise the operator is prompted, with the password
+ * hidden. Prompting is only possible on a TTY — piping input in without
+ * setting the env vars is an error rather than a silent hang.
+ */
+async function resolveCredentials(): Promise<{ email: string; password: string }> {
+  const envEmail = process.env.CHAPTER_NORMALIZE_ADMIN_EMAIL;
+  const envPassword = process.env.CHAPTER_NORMALIZE_ADMIN_PASSWORD;
+
+  if (envEmail && envPassword) {
+    console.log(`Using credentials from the environment (${envEmail}).`);
+    return { email: envEmail, password: envPassword };
+  }
+
+  if (!process.stdin.isTTY) {
+    console.error(
+      "No terminal available to prompt for credentials.\n" +
+        "Set CHAPTER_NORMALIZE_ADMIN_EMAIL and CHAPTER_NORMALIZE_ADMIN_PASSWORD, " +
+        "or run this script from an interactive terminal."
+    );
+    process.exit(1);
+  }
+
+  console.log(
+    "Sign in with a real user account. `audit` only reads, so any group member\n" +
+      "can run it; `migrate` needs a group admin. Nothing is written to disk.\n"
+  );
+
+  const email = envEmail ?? (await promptVisible("Email: "));
+  const password = envPassword ?? (await promptHidden("Password: "));
+
+  if (!email || !password) {
+    console.error("Both an email and a password are required.");
+    process.exit(1);
+  }
+
+  return { email, password };
+}
+
 async function main(): Promise<void> {
   const args = parseCliArgs(process.argv.slice(2));
 
@@ -710,18 +834,19 @@ async function main(): Promise<void> {
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  const email = process.env.CHAPTER_NORMALIZE_ADMIN_EMAIL;
-  const password = process.env.CHAPTER_NORMALIZE_ADMIN_PASSWORD;
-  if (!email || !password) {
-    console.error(
-      "CHAPTER_NORMALIZE_ADMIN_EMAIL and CHAPTER_NORMALIZE_ADMIN_PASSWORD must both be set in the environment."
-    );
+  const { email, password } = await resolveCredentials();
+
+  const auth = getAuth(app);
+  let credential;
+  try {
+    credential = await signInWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    // Report the failure without ever echoing the password back.
+    const code = (error as { code?: string }).code ?? "unknown";
+    console.error(`Sign-in failed for ${email} (${code}).`);
     process.exit(1);
     return;
   }
-
-  const auth = getAuth(app);
-  const credential = await signInWithEmailAndPassword(auth, email, password);
   const uid = credential.user.uid;
   console.log(`Signed in as ${credential.user.email ?? uid} (uid: ${uid})`);
 
