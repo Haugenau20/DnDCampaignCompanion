@@ -66,10 +66,48 @@ through the helper, so the path can no longer disagree with itself.
 No test asserted the old `Date`-object shape, so nothing had to change on the test side — which is
 also why the inconsistency survived this long.
 
-## Follow-up still outstanding
+## Follow-up — CLOSED 2026-07-29. There was nothing to migrate.
 
-**Existing documents were not migrated.** Any chapter reordered before this fix still holds a
-Timestamp in `dateModified`, and will keep rendering a blank modification date. A one-off data
-normalization pass — read every chapter, convert Timestamp `dateModified` to an ISO string — is
-needed to clear the existing corruption. Filed here rather than done inline: it is a data migration,
-not a code change, and it should be run deliberately against production with a backup in hand.
+This entry carried an outstanding production data pass across **four** Phase 4 passes, on the
+assumption that chapters reordered before the fix still held Timestamps. Tooling was written
+(`src/utils/__dev__/normalizeChapterDateModified.ts`, audit/migrate/revert) and the audit was run
+against production by the maintainer. **The assumption was false.**
+
+```
+Signed in as soeren@haug.dk (uid: 6M4gxuYv6tQ3SXF5MDDzWqtX3fz1)
+Auditing chapters reachable from users/6M4gxuYv6tQ3SXF5MDDzWqtX3fz1
+  on project 'dnd-campaign-companion'...
+Chapters scanned: 39
+Chapters needing dateModified repair: 0
+  dateModified: { string: 39, timestamp: 0, other: 0, absent: 0 }
+  dateAdded:    { string: 39, timestamp: 0, other: 0, absent: 0 }
+```
+
+**No document needs repair.** `migrate` was never run and is not needed for this incident.
+
+### What this does and does not prove
+
+It proves **no surviving document is affected today**. It does **not** prove the defect never
+occurred: the reorder path really did write a `Date`, and any chapter edited or reordered *after*
+Wave A landed would have had `dateModified` rewritten as a string, erasing the evidence. Either the
+reorder path was never exercised in production before the fix, or later writes cleaned up after it.
+
+**Scope caveat**: the audit walks groups reachable from the signed-in user's `users/{uid}.groups`.
+Groups that account does not belong to were not scanned.
+
+### A measurement worth keeping: story-progress documents
+
+The audit also histogrammed `lastRead`, which is declared `Date` in `chapters/types.ts` but
+round-trips through Firestore as a Timestamp. **It found zero story-progress documents at all** —
+not documents with the field absent, but no documents. Consistent with #018/#851/#852 having only
+recently made progress persist. So the suspicion about `lastRead` remains untested rather than
+cleared, and there is currently no data to test it against. Deliberately still not filed.
+
+### The lesson, which is this project's recurring one
+
+**A remediation task can outlive the problem it was written for.** This one was carried as "the only
+live user-visible symptom left" — including in this session's own plan — for four passes, and cost
+real effort to plan around, on a premise nobody had measured. One read-only query settled it.
+
+The tooling is kept: it is a working, tested template for the next data pass, and its `audit` mode is
+the cheap way to check a claim like this before treating it as fact.

@@ -1058,37 +1058,39 @@ because nothing in the app imports Firebase Storage.
 **Everything previously listed here is done.** The bug tracker is empty and the suite is green. What
 follows is the work that surfaced *during* the fourth pass, plus the one item that needs a human.
 
-### 1. Run the #1202 data normalization — needs you, not an agent
+### 1. #1202 — done, and there was nothing to migrate
 
-`src/utils/__dev__/normalizeChapterDateModified.ts` is written, unit-tested and **never run**.
-Chapters reordered before the attribution branch still hold a Firestore `Timestamp` in
-`dateModified` where a string is expected, and render a blank modified date. This is the last live
-user-visible symptom anywhere in the tracker.
+**Closed 2026-07-29 by measurement.** The audit ran against production and found **39 chapters
+scanned, 0 needing repair** — `dateModified` and `dateAdded` are 39/39 strings. `migrate` was never
+run and is not needed.
 
-```
-npx ts-node ./src/utils/__dev__/normalizeChapterDateModified.ts audit
-npx ts-node ./src/utils/__dev__/normalizeChapterDateModified.ts migrate --confirm
-npx ts-node ./src/utils/__dev__/normalizeChapterDateModified.ts revert --journal=<path> --confirm
-```
+This entry sat as "the only live user-visible symptom left" across **four** Phase 4 passes, including
+in this session's own opening plan, on the assumption that pre-fix reorders had left Timestamps in
+production. One read-only query disproved it. **A remediation task can outlive the problem it was
+written for** — the same shape as this pass's ID-cluster deferral, and as `cross-context-patterns.md`
+Pattern 1 before it.
 
-**Start with `audit`** — it writes nothing and answers the question nobody can answer from the
-repository: how many documents are actually affected. It **prompts for an email and password**
-(password hidden), so no credentials go in the environment or your shell history;
-`CHAPTER_NORMALIZE_ADMIN_EMAIL` / `CHAPTER_NORMALIZE_ADMIN_PASSWORD` still work for non-interactive
-use. `audit` only reads, so any group member can run it. **`migrate` needs a group admin**, because
-the production rule is `createdBy == uid || isGroupAdmin` — a plain member would silently repair only
-its own rows.
+It proves no *surviving* document is affected, not that the defect never occurred: any chapter edited
+after Wave A landed would have had the field rewritten as a string. Scope is groups reachable from
+the signed-in account.
 
-**It always targets the real cloud project**, whichever `.env` is loaded: the script deliberately
-never calls `connectFirestoreEmulator`, and all three env files here name the same project
-(`dnd-campaign-companion`), differing only in `REACT_APP_USE_EMULATORS` — which this script ignores.
-So there is no env file that makes `migrate` hit the emulator instead of production. Harmless for
-`audit`; worth knowing before `migrate`.
+**The tooling is kept** (`src/utils/__dev__/normalizeChapterDateModified.ts`) as a working, tested
+template for the next data pass — audit / migrate / revert, journal-before-write, idempotent by
+construction, interactive credential prompts. Its `audit` mode is the cheap way to check a claim like
+this before treating it as fact.
 
-**Its Firestore-touching half has never executed** — not against production, not against the
-emulator. The 41 tests cover the pure predicate, the Timestamp conversion, idempotence and the
-journal round-trip. Driving it against an emulator with a deliberately corrupted seed document is
-the obvious next task, and would close that gap properly.
+Two things learned running it, both recorded in the script's own error output:
+
+- **App Check enforcement blocks it.** A Node script cannot produce an attestation token, because the
+  app attests with `ReCaptchaV3Provider`, which is browser-only. Enforcement has to be disabled for
+  Authentication for the duration, or the pass has to go through the Admin SDK.
+- **`signInWithEmailAndPassword` uses the app\'s Firebase Authentication user pool**, not the Google
+  account that logs into the Firebase Console. `auth/invalid-credential` is deliberately vague
+  (email-enumeration protection) and will not tell you which mistake you made.
+
+**Still untested, and now known to be untestable:** the audit found **zero story-progress documents**,
+so the `lastRead` question (declared `Date`, round-trips as a Timestamp) has no data to test against.
+Still deliberately not filed.
 
 ### 2. Loose ends left deliberately, each small
 

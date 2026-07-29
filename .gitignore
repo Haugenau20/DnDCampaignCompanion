@@ -45,3 +45,9 @@ coverage
 /test-reports/
 
 /scripts/*
+# One-off data-migration artefacts written into the repo root by
+# src/utils/__dev__/normalizeChapterDateModified.ts. Audit reports list document
+# paths; migrate journals contain the before/after values used for rollback.
+# Keep them locally while a pass is in flight -- never commit them.
+chapter-dateModified-audit-*.json
+chapter-dateModified-journal-*.ndjson
