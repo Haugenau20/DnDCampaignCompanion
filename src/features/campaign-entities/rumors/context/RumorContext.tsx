@@ -12,7 +12,11 @@ const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 
 export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { rumors, loading, error, refreshRumors } = useRumorData();
-  const { addData, updateData, deleteData } = useFirebaseData<Rumor>({
+  // This second `useFirebaseData` instance is the one whose writes (addData/updateData/
+  // deleteData) can actually fail; its `error` is renamed on destructure (`writeError`)
+  // because the read instance above already binds the name `error`. Previously this
+  // instance's error was never read anywhere, so write failures were invisible (bug #1401).
+  const { addData, updateData, deleteData, error: writeError } = useFirebaseData<Rumor>({
     collection: 'rumors'
   });
   const { user } = useAuth();
@@ -321,7 +325,13 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const value: RumorContextValue = {
     rumors,
     isLoading: loading,
-    error,
+    // Trailing `|| null` normalizes the type. The real `useFirebaseData` declares
+    // `useState<string | null>(null)`, so `writeError` is never `undefined` in
+    // production -- but suites that mock the hook return an object with no `error`
+    // key at all, which makes this expression `undefined` and violates the
+    // `string | null` contract consumers rely on. Cheap to keep, and it means the
+    // contract holds regardless of how the hook is supplied.
+    error: error || writeError || null,
     getRumorById,
     getRumorsByStatus,
     getRumorsByLocation,

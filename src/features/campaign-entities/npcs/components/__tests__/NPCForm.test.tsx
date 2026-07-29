@@ -542,6 +542,27 @@ describe('NPCForm', () => {
       render(<NPCForm existingNPCs={[]} />);
       expect(screen.getByText('Failed to create NPC')).toBeInTheDocument();
     });
+
+    // Bug #1400: NPCForm used to catch a rejecting addNPC with only console.error --
+    // no setError, no re-throw -- so the user saw nothing at all: not an error, not
+    // success, just a form that silently did nothing. This is independent of bug #1401
+    // (the context error was reading the wrong hook instance): even with #1401 fixed,
+    // this specific failure path (addNPC itself rejecting) needs the form's own local
+    // error state to surface it, since useNPCs().error is mocked as null here.
+    test('should display an error message when addNPC rejects, and not call onSuccess (#1400)', async () => {
+      const onSuccess = jest.fn();
+      mockAddNPC.mockRejectedValueOnce(new Error('id-collision-simulated'));
+      render(<NPCForm existingNPCs={[]} onSuccess={onSuccess} />);
+
+      fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'Aldric' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(screen.getByText('id-collision-simulated')).toBeInTheDocument();
+      });
+
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
   });
 
   // -------------------------------------------------------------------------

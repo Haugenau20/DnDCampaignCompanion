@@ -34,7 +34,11 @@ const QuestContext = createContext<QuestContextValue | undefined>(undefined);
 export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use the useQuestData hook to handle data fetching
   const { quests, loading, error, getQuestById, refreshQuests: fetchQuests, hasRequiredContext } = useQuestData();
-  const { addData, updateData, deleteData } = useFirebaseData<Quest>({
+  // This second `useFirebaseData` instance is the one whose writes (addData/updateData/
+  // deleteData) can actually fail; its `error` is renamed on destructure (`writeError`)
+  // because the read instance above already binds the name `error`. Previously this
+  // instance's error was never read anywhere, so write failures were invisible (bug #1401).
+  const { addData, updateData, deleteData, error: writeError } = useFirebaseData<Quest>({
     collection: 'quests'
   });
   const { user } = useAuth();
@@ -277,7 +281,13 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     quests,
     isLoading: loading, // Keep isLoading for newer components
     loading, // Add loading as an alias for backward compatibility
-    error,
+    // Trailing `|| null` normalizes the type. The real `useFirebaseData` declares
+    // `useState<string | null>(null)`, so `writeError` is never `undefined` in
+    // production -- but suites that mock the hook return an object with no `error`
+    // key at all, which makes this expression `undefined` and violates the
+    // `string | null` contract consumers rely on. Cheap to keep, and it means the
+    // contract holds regardless of how the hook is supplied.
+    error: error || writeError || null,
     getQuestById,
     getQuestsByStatus,
     getQuestsByLocation,

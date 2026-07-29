@@ -253,6 +253,63 @@ describe('QuestContext Known Bugs (FAILING TESTS)', () => {
       expect(firstQuestData.id).not.toBe(secondQuestData.id);
     });
   });
+
+  // BUG #1401: Write errors must surface through useQuests().error
+  describe('Bug #1401: Write instance error was never exposed', () => {
+    test('a rejecting addData makes useQuests().error non-null', async () => {
+      // Faithful stand-in for the real useFirebaseData: addData rejects AND
+      // sets its own `error` state (exactly what useFirebaseData.ts:101-104 does),
+      // triggering a real re-render via useState so the fix has something to pick up.
+      mockUseFirebaseData.mockImplementation(() => {
+        const [writeError, setWriteError] = React.useState<string | null>(null);
+        const addData = async (...args: any[]) => {
+          try {
+            return await mockAddData(...args);
+          } catch (err) {
+            setWriteError(err instanceof Error ? err.message : 'Failed to add data');
+            throw err;
+          }
+        };
+        return {
+          addData,
+          updateData: mockUpdateData,
+          deleteData: jest.fn(),
+          error: writeError,
+        };
+      });
+
+      mockAddData.mockRejectedValue(new Error('Simulated write failure'));
+
+      renderQuestContext();
+
+      await waitFor(() => {
+        expect(questContext).toBeDefined();
+      });
+
+      const questData = {
+        title: 'Doomed Quest',
+        description: 'Will fail to save',
+        status: 'active' as QuestStatus,
+        objectives: [],
+        connections: {
+          relatedNPCs: [],
+          relatedLocations: [],
+          relatedQuests: []
+        }
+      };
+
+      await act(async () => {
+        await expect(questContext.addQuest(questData)).rejects.toThrow('Simulated write failure');
+      });
+
+      // EXPECTED (bug #1401): the write instance's error reaches useQuests().error.
+      // BEFORE THE FIX: QuestContext only exposed the *read* instance's error
+      // (always null here), so this assertion failed with `error` stuck at null.
+      await waitFor(() => {
+        expect(questContext.error).toBe('Simulated write failure');
+      });
+    });
+  });
 });
 
 /**

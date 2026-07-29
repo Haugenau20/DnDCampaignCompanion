@@ -7,6 +7,7 @@ import {
     setDoc,
     updateDoc
   } from 'firebase/firestore';
+  import { getFunctions, httpsCallable } from 'firebase/functions';
   import BaseFirebaseService from '../core/BaseFirebaseService';
   import ServiceRegistry from '../core/ServiceRegistry';
   import type UserService from '../user/UserService';
@@ -164,6 +165,39 @@ import {
         throw error;
       }
     }
+
+    /**
+     * Delete a campaign and everything that belongs to it.
+     *
+     * Firestore does not cascade-delete subcollections, and the client SDK
+     * cannot enumerate them at all, so this delegates to the `deleteCampaign`
+     * Cloud Function: it uses the Admin SDK's `recursiveDelete` to remove the
+     * campaign document and all of its subcollections (npcs, locations,
+     * quests, rumors, chapters, story-progress, saga), deletes every group
+     * member's notes for this campaign (notes live outside the campaign
+     * subtree, keyed by a campaignId field), and clears `activeCampaignId`
+     * on any profile that pointed at it.
+     * @param groupId ID of the group that owns the campaign
+     * @param campaignId ID of the campaign to delete
+     */
+    public async deleteCampaign(groupId: string, campaignId: string): Promise<void> {
+      const userId = this.getCurrentUser()?.uid;
+      if (!userId) {
+        throw new Error('Not authenticated');
+      }
+
+      try {
+        // Call the Cloud Function instead of attempting to modify data directly
+        const functions = getFunctions();
+        const deleteCampaignFn = httpsCallable(functions, 'deleteCampaign');
+
+        const result = await deleteCampaignFn({ groupId, campaignId });
+        console.log('Campaign deletion result:', result.data);
+      } catch (err) {
+        console.error('Error deleting campaign:', err);
+        throw err;
+      }
+    }
   }
-  
+
   export default CampaignService;

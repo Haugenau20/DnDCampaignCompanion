@@ -6,3 +6,4 @@ admin.initializeApp();
 export { extractEntities, getUsageStatus } from "./entityExtraction";
 export { sendContactEmail } from "./contact";
 export { deleteUser, removeUserFromGroup } from "./userManagement";
+export { deleteCampaign } from "./campaignManagement";

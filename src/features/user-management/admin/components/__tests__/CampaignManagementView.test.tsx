@@ -1,7 +1,7 @@
 ﻿// src/components/features/auth/adminPanel/__tests__/CampaignManagementView.test.tsx
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import CampaignManagementView from '../CampaignManagementView';
 
 // ---------------------------------------------------------------------------
@@ -9,6 +9,7 @@ import CampaignManagementView from '../CampaignManagementView';
 // ---------------------------------------------------------------------------
 const mockCreateCampaign = jest.fn();
 const mockGetCampaigns = jest.fn();
+const mockDeleteCampaign = jest.fn();
 
 jest.mock('@/features/user-management', () => ({
   useCampaigns: jest.fn(),
@@ -65,6 +66,7 @@ function setupMocks(campaigns: any[] = [], groupId = 'group-1') {
     createCampaign: mockCreateCampaign,
     campaigns: [], // empty context campaigns — forces local state
     getCampaigns: mockGetCampaigns,
+    deleteCampaign: mockDeleteCampaign,
   });
   useGroups.mockReturnValue({
     activeGroupId: groupId,
@@ -81,6 +83,7 @@ describe('CampaignManagementView', () => {
     jest.clearAllMocks();
     setupMocks();
     mockCreateCampaign.mockResolvedValue(undefined);
+    mockDeleteCampaign.mockResolvedValue(undefined);
   });
 
   // -------------------------------------------------------------------------
@@ -339,6 +342,121 @@ describe('CampaignManagementView', () => {
       fireEvent.click(cancelBtn!);
 
       expect(screen.queryByRole('dialog', { name: /confirm campaign deletion/i })).not.toBeInTheDocument();
+    });
+
+    test('should mention notes in the confirmation warning', async () => {
+      setupMocks([makeCampaign()]);
+      render(<CampaignManagementView />);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+      const dialog = screen.getByRole('dialog', { name: /confirm campaign deletion/i });
+      expect(dialog.textContent).toMatch(/notes/i);
+    });
+
+    test('should call deleteCampaign with the campaign id when confirmed', async () => {
+      setupMocks([makeCampaign({ id: 'campaign-42' })]);
+      render(<CampaignManagementView />);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+
+      const dialog = screen.getByRole('dialog', { name: /confirm campaign deletion/i });
+      const confirmBtn = Array.from(dialog.querySelectorAll('button')).find(b =>
+        /delete campaign/i.test(b.textContent || '')
+      );
+      fireEvent.click(confirmBtn!);
+
+      await waitFor(() => {
+        expect(mockDeleteCampaign).toHaveBeenCalledWith('campaign-42');
+      });
+    });
+
+    test('should refresh the campaign list and close the dialog after successful deletion', async () => {
+      setupMocks([makeCampaign()]);
+      render(<CampaignManagementView />);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+      });
+      mockGetCampaigns.mockClear();
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+
+      const dialog = screen.getByRole('dialog', { name: /confirm campaign deletion/i });
+      const confirmBtn = Array.from(dialog.querySelectorAll('button')).find(b =>
+        /delete campaign/i.test(b.textContent || '')
+      );
+      fireEvent.click(confirmBtn!);
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog', { name: /confirm campaign deletion/i })).not.toBeInTheDocument();
+      });
+      expect(mockGetCampaigns).toHaveBeenCalledWith('group-1');
+    });
+
+    test('should show an error and keep the dialog open when deleteCampaign fails', async () => {
+      mockDeleteCampaign.mockRejectedValue(new Error('Deletion failed'));
+      setupMocks([makeCampaign()]);
+      render(<CampaignManagementView />);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+
+      const dialog = screen.getByRole('dialog', { name: /confirm campaign deletion/i });
+      const confirmBtn = Array.from(dialog.querySelectorAll('button')).find(b =>
+        /delete campaign/i.test(b.textContent || '')
+      );
+      fireEvent.click(confirmBtn!);
+
+      await waitFor(() => {
+        expect(screen.getByText(/deletion failed/i)).toBeInTheDocument();
+      });
+      const openDialog = screen.getByRole('dialog', { name: /confirm campaign deletion/i });
+      expect(openDialog).toBeInTheDocument();
+
+      // The error must render INSIDE the dialog. A plain `getByText` passes just as
+      // happily when the message is rendered in the main view behind the modal, where
+      // the user cannot see it -- which is bug #201's exact failure mode in the sibling
+      // GroupManagementView. Scope the assertion to the dialog so a regression to the
+      // shared `error` state fails here.
+      expect(within(openDialog).getByText(/deletion failed/i)).toBeInTheDocument();
+    });
+
+    test('should disable the confirm and cancel buttons while deletion is in progress', async () => {
+      let resolveDelete: () => void;
+      mockDeleteCampaign.mockReturnValue(
+        new Promise<void>(resolve => {
+          resolveDelete = resolve;
+        })
+      );
+      setupMocks([makeCampaign()]);
+      render(<CampaignManagementView />);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+
+      const dialog = screen.getByRole('dialog', { name: /confirm campaign deletion/i });
+      const confirmBtn = Array.from(dialog.querySelectorAll('button')).find(b =>
+        /delete campaign/i.test(b.textContent || '')
+      ) as HTMLButtonElement;
+      const cancelBtn = Array.from(dialog.querySelectorAll('button')).find(b =>
+        /cancel/i.test(b.textContent || '')
+      ) as HTMLButtonElement;
+
+      fireEvent.click(confirmBtn);
+
+      await waitFor(() => {
+        expect(confirmBtn).toBeDisabled();
+      });
+      expect(cancelBtn).toBeDisabled();
+
+      resolveDelete!();
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog', { name: /confirm campaign deletion/i })).not.toBeInTheDocument();
+      });
     });
   });
 

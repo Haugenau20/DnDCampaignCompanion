@@ -17,8 +17,12 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();
   
-  // Additional Firebase hook for specific updates
-  const { updateData, deleteData, addData } = useFirebaseData<NPC>({
+  // Additional Firebase hook for specific updates. Its `error` is renamed on
+  // destructure (`writeError`) because the read instance above already binds
+  // the name `error` -- this second instance is the one whose writes
+  // (addData/updateData/deleteData) can actually fail, and its error was
+  // previously dropped entirely (bug #1401).
+  const { updateData, deleteData, addData, error: writeError } = useFirebaseData<NPC>({
     collection: 'npcs'
   });
 
@@ -178,7 +182,13 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const value: NPCContextValue = {
     npcs,
     isLoading: loading,
-    error: contextError || error,
+    // Trailing `|| null` normalizes the type. The real `useFirebaseData` declares
+    // `useState<string | null>(null)`, so `writeError` is never `undefined` in
+    // production -- but suites that mock the hook return an object with no `error`
+    // key at all, which makes this expression `undefined` and violates the
+    // `string | null` contract consumers rely on. Cheap to keep, and it means the
+    // contract holds regardless of how the hook is supplied.
+    error: contextError || error || writeError || null,
     getNPCById,
     getNPCsByQuest,
     getNPCsByLocation,

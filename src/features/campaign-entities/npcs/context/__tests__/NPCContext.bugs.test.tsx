@@ -287,6 +287,60 @@ describe('NPCContext Known Bugs (FAILING TESTS)', () => {
       ).rejects.toThrow('NPC not found');
     });
   });
+
+  // BUG #1401: Write errors must surface through useNPCs().error
+  describe('Bug #1401: Write instance error was never exposed', () => {
+    test('a rejecting addData makes useNPCs().error non-null', async () => {
+      // Faithful stand-in for the real useFirebaseData: addData rejects AND
+      // sets its own `error` state (exactly what useFirebaseData.ts:101-104 does),
+      // triggering a real re-render via useState so the fix has something to pick up.
+      mockUseFirebaseData.mockImplementation(() => {
+        const [writeError, setWriteError] = React.useState<string | null>(null);
+        const addData = async (...args: any[]) => {
+          try {
+            return await mockAddData(...args);
+          } catch (err) {
+            setWriteError(err instanceof Error ? err.message : 'Failed to add data');
+            throw err;
+          }
+        };
+        return {
+          addData,
+          updateData: mockUpdateData,
+          deleteData: jest.fn(),
+          error: writeError,
+        };
+      });
+
+      mockAddData.mockRejectedValue(new Error('Simulated write failure'));
+
+      renderNPCContext();
+
+      await waitFor(() => {
+        expect(npcContext).toBeDefined();
+      });
+
+      const npcData = {
+        name: 'Doomed NPC',
+        description: 'Will fail to save',
+        status: 'alive' as NPCStatus,
+        relationship: 'neutral' as NPCRelationship,
+        connections: { relatedNPCs: [], affiliations: [], relatedQuests: [] },
+        notes: [],
+      };
+
+      await act(async () => {
+        await expect(npcContext.addNPC(npcData)).rejects.toThrow('Simulated write failure');
+      });
+
+      // EXPECTED (bug #1401): the write instance's error reaches useNPCs().error.
+      // BEFORE THE FIX: NPCContext only exposed the *read* instance's error
+      // (always null here), so this assertion failed with `error` stuck at null.
+      await waitFor(() => {
+        expect(npcContext.error).toBe('Simulated write failure');
+      });
+    });
+  });
 });
 
 /**

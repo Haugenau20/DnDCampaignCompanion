@@ -464,6 +464,25 @@ describe('NPCEditForm', () => {
       render(<NPCEditForm npc={makeNPC()} existingNPCs={[]} />);
       expect(screen.getByText('Update failed')).toBeInTheDocument();
     });
+
+    // Bug #1400: NPCEditForm used to catch a rejecting updateNPC with only console.error --
+    // no setError, no re-throw -- so the user saw nothing at all. This is independent of
+    // bug #1401 (the context error was reading the wrong hook instance): even with #1401
+    // fixed, this specific failure path (updateNPC itself rejecting) needs the form's own
+    // local error state to surface it, since useNPCs().error is mocked as null here.
+    test('should display an error message when updateNPC rejects, and not call onSuccess (#1400)', async () => {
+      const onSuccess = jest.fn();
+      mockUpdateNPC.mockRejectedValueOnce(new Error('id-collision-simulated'));
+      render(<NPCEditForm npc={makeNPC()} existingNPCs={[]} onSuccess={onSuccess} />);
+
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(screen.getByText('id-collision-simulated')).toBeInTheDocument();
+      });
+
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
   });
 
   // -------------------------------------------------------------------------
