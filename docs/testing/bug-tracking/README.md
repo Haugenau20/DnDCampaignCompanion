@@ -149,15 +149,23 @@ Two method notes:
 
 ## Phase 5, first emulator walkthrough (2026-07-29)
 
-**Tracker state: 68 filed, 62 resolved, 6 open** (#1400–#1405). Baseline re-measured and unchanged:
+**Tracker state: 69 filed, 62 resolved, 7 open** (#1400–#1406). Baseline re-measured and unchanged:
 182 suites, 4043 passed, 2 skipped, **0 failed**; `tsc` clean; `npm run build` succeeds.
 
 **This is the first session that exercised running code rather than reading it**, and every one of
-the six entries came out of that. Four are user-visible defects nobody had seen because no test
-covers the seam they sit on. The pattern across #1400, #1403 and #1404 is worth naming: **three
-separate affordances that look live and silently do nothing** — a Create button, a Delete
-confirmation, and an Edit button. A suite at 91.7% statement coverage found none of them, because
-each one's failure *is* its tested behaviour.
+the seven entries came out of that. Five are user-visible defects nobody had seen because no test
+covers the seam they sit on. The pattern across #1400, #1403, #1404 and #1406 is worth naming: **four
+separate affordances that look live and cannot succeed** — a Create button, a Delete confirmation, an
+Edit button, and Edit on anyone else's content. A suite at 91.7% statement coverage found none of
+them, because each one's failure *is* its tested behaviour.
+
+**#1406 is the one to learn from.** It was carried in the handoff as an *"unverified"* contract
+question and took one probe to settle — and settling it turned a footnote into the joint-highest
+severity item in this batch. It also exposes a structural blind spot: **the production ruleset is
+exercised by no test at all**, and the emulator's permissive dev ruleset means every rules-dependent
+failure is invisible locally by construction. That is the same shape as
+[#1300](./1300-app-check-never-initialized-lazy-firebase-init.md) — a production-only defect that all
+three green gates were incapable of seeing.
 
 **One result deliberately not filed as a bug**: the [#002](./002-npc-id-generation-collision.md)
 family's collision fix was verified against the live emulator and **works correctly** — same-session
@@ -288,6 +296,7 @@ scheme distinguishes.
 | [#1402](./1402-cross-session-id-collision-surfaces-developer-error.md) | 🔍 DISCOVERED | UI | **A cross-session name collision shows the player an internal developer message.** `isTaken` consults only `issuedIds` (session ref) and `getNPCById` (locally loaded array), so a second session's identical name skips disambiguation and trips `createDocument`'s guard. **Proven against the running emulator**: same-session "Gandalf"/"Gandalf" and "Gandalf"/"gandalf" both correctly yield `gandalf` + `gandalf-2`, but across two sessions the second **throws** — and the message names `updateDocumentWithAttribution` and `setDocument`. **No data is lost**; server state was checked directly and session A's document is intact. A `refresh()` immediately before the create disambiguates correctly, so the gap is a missing refresh-and-retry, not a flaw in the [#002](./002-npc-id-generation-collision.md) scheme | Medium | Medium | NPCContext:116-120 + Quest/Location/Rumor equivalents |
 | [#1403](./1403-campaign-delete-confirmed-but-never-performed.md) | 🔄 IN PROGRESS | CRUD | **Admin confirms a destructive action and nothing happens.** `handleConfirmDeleteCampaign` runs `console.log` and closes the dialog; `CampaignService` has no delete method. The dialog promises permanent deletion of all campaign data. **The naive fix is worse than the no-op**: Firestore does not delete subcollections with their parent, so a plain `deleteDoc` would orphan all **seven** (`npcs`, `locations`, `quests`, `rumors`, `chapters`, `story-progress`, `saga`) permanently, and the client SDK cannot enumerate subcollections at all. Two things also sit *outside* the campaign subtree: **notes** (`groups/{g}/users/{uid}/notes`, joined by a `campaignId` field) and **`activeCampaignId`** on every member's group profile. Approved 2026-07-29: Admin SDK `recursiveDelete` in a callable function, plus explicit passes for both | High | High | CampaignManagementView.tsx:131-135, CampaignService.ts |
 | [#1404](./1404-campaign-edit-button-has-no-onclick.md) | 🔍 DISCOVERED | UI | **The campaign Edit button has no `onClick` at all** — it renders, focuses, hovers and does nothing. `CampaignService.updateCampaign` already exists and works, so only the wiring is missing; there is also no edit dialog in the component to open. Third instance of the same failure mode in this session's findings, alongside #1400 and #1403. Needs a product call: implement the dialog, or remove the button — but an inert button that looks operable is the worst of the three states | Medium | Medium | CampaignManagementView.tsx:225-231 |
+| [#1406](./1406-member-cannot-edit-another-members-content-but-ui-offers-it.md) | ⚠️ NEEDS DECISION | VALIDATION | **Every member is offered Edit on content they are forbidden to save.** Production rules allow update only when `createdBy == uid \|\| isGroupAdmin \|\| isGlobalAdmin` — **proven** by loading the real `firestore.rules.prod` into the running emulator: member→another's NPC **DENIED**, while read/create-own/update-own/admin-updates-any all ALLOWED, and the target document was verified untouched. Meanwhile **no creator check exists anywhere in `src/`** — an exhaustive search for `canEdit`/`isOwner`/`isCreator`/`isGroupAdmin` and for any `createdBy` vs current-user comparison returns zero hits in application code. So the Edit control is offered to everyone and fails for non-creators. **This cannot reproduce locally** — the emulator ruleset is `allow read, write: if true` — which is why it has never been seen. In a typical 5-player group, 4 of 5 players cannot correct anyone else's entry, and for NPCs [#1400](./1400-npc-forms-swallow-write-failures-silently.md) means they are told **nothing at all**. ⚠️ Contains a contract decision (the creator restriction) — three resolutions in the report; **do not fix unilaterally**. Note the production ruleset is currently exercised by no test at all | High | High | Production rules + every entity edit affordance |
 | [#1405](./1405-delete-user-orphans-notes-subcollection.md) | 🔍 DISCOVERED | DATA | **Deleting a user permanently orphans that user's notes.** `deleteUser` does `batch.delete(groupUserRef)` on `groups/{g}/users/{uid}` — and notes live *underneath* it. Firestore does not cascade to subcollections, so they survive and become unreachable: the app reaches notes only via the signed-in user's own uid, and that user no longer exists. `removeUserFromGroup:111` has the identical gap. **Pre-existing and already deployed.** ⚠️ **Filed from a code reading, not yet reproduced** — the mechanism is documented Firestore behaviour and is the same fact motivating #1403, but per this project's methodology that makes it a prediction until the emulator check in the report is run | Medium | Medium | functions/userManagement/deleteUser.ts:92, removeUserFromGroup.ts:111 |
 
 ## Per-context testing summaries
