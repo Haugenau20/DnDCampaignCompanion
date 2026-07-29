@@ -1,5 +1,5 @@
 // src/features/campaign-entities/rumors/types.ts
-import { BaseContent } from 'core/types/common';
+import { BaseContent, DomainData, IdentifiableContent } from 'core/types/common';
 
 export type RumorStatus = 'confirmed' | 'unconfirmed' | 'false';
 export type SourceType = 'npc' | 'tavern' | 'notice' | 'traveler' | 'other';
@@ -43,8 +43,8 @@ export interface RumorContextValue extends RumorContextState {
   getRumorsByLocation: (locationId: string) => Rumor[];
   getRumorsByNPC: (npcId: string) => Rumor[];
   updateRumorStatus: (rumorId: string, status: RumorStatus) => Promise<void>;
-  updateRumorNote: (rumorId: string, note: RumorNote) => Promise<void>;
-  addRumor: (rumor: Omit<Rumor, 'id'>) => Promise<string>;
+  updateRumorNote: (rumorId: string, note: DomainData<RumorNote> & IdentifiableContent) => Promise<void>;
+  addRumor: (rumor: DomainData<Rumor>) => Promise<string>;
   updateRumor: (rumor: Rumor) => Promise<void>;
   deleteRumor: (rumorId: string) => Promise<void>;
   combineRumors: (rumorIds: string[], newRumor: Partial<Rumor>) => Promise<string>;

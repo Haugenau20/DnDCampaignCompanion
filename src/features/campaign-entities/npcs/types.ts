@@ -1,5 +1,5 @@
 // src/features/campaign-entities/npcs/types.ts
-import { BaseContent } from 'core/types/common';
+import { BaseContent, DomainData } from 'core/types/common';
 
 export type NPCStatus = 'alive' | 'deceased' | 'missing' | 'unknown';
 export type NPCRelationship = 'friendly' | 'neutral' | 'hostile' | 'unknown';
@@ -48,7 +48,7 @@ export interface NPCContextValue extends NPCContextState {
   getNPCsByRelationship: (relationship: NPCRelationship) => NPC[];
   updateNPCNote: (npcId: string, note: NPCNote) => void;
   updateNPCRelationship: (npcId: string, relationship: NPCRelationship) => void;
-  addNPC: (npc: Omit<NPC, 'id'>) => Promise<string>;
+  addNPC: (npc: DomainData<NPC>) => Promise<string>;
   updateNPC: (npc: NPC) => Promise<void>;
   deleteNPC: (npcId: string) => Promise<void>;
 }

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Quest, QuestStatus } from '../types';
 import { QuestObjective } from '../types';
+import { DomainData } from 'core/types/common';
 import { useQuests } from '../context/QuestContext'; // Import useQuests from context
 import { useNotes } from 'features/collaboration';
 import Typography from '../../../../core/components/Typography';
@@ -125,7 +126,7 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
     try {
       setIsSubmitting(true);
       
-      const questData = {
+      const questData: DomainData<Quest> = {
         title: formData.title,
         description: formData.description,
         status: formData.status as QuestStatus,
@@ -139,9 +140,6 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
         rewards: formData.rewards || [],
         location: formData.location || '',
         levelRange: formData.levelRange || '',
-        createdBy: formData.createdBy || '',
-        createdByUsername: formData.createdByUsername || '',
-        dateAdded: new Date().toISOString(),
       };
 
       const questId = await addQuest(questData);

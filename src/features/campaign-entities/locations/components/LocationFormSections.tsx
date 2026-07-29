@@ -7,6 +7,7 @@ import Input from '../../../../core/components/Input';
 import Button from '../../../../core/components/Button';
 import Dialog from '../../../../core/components/Dialog';
 import { useQuests } from '../../quests/context/QuestContext';
+import { useLocations } from '../context/LocationContext';
 import LocationCombobox from './LocationCombobox';
 import { 
   PlusCircle, 
@@ -36,17 +37,16 @@ interface RelatedQuestsSectionProps extends SectionProps {
   setIsQuestDialogOpen: (isOpen: boolean) => void;
 }
 
-// Generate location ID from name
-const generateLocationId = (name: string): string => {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-};
-
 export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInputChange }) => {
-  
+  const { locations } = useLocations();
+
+  // The combobox displays location NAMES, but parentId stores a reference.
+  // Resolve the stored id back to a name for display rather than showing the
+  // raw id: they are only ever the same string for a location that has never
+  // been renamed and never needed a disambiguating suffix. See #303.
+  const parentLocationName =
+    locations.find(loc => loc.id === formData.parentId)?.name ?? '';
+
   return (
     <div className="space-y-4">
       <Typography variant="h4">Basic Information</Typography>
@@ -101,9 +101,13 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
       </div>
 
       <LocationCombobox
-        label="Parent Location ID"
-        value={formData.parentId || ''}
-        onChange={(value) => handleInputChange('parentId', generateLocationId(value))}
+        label="Parent Location"
+        value={parentLocationName}
+        // Display text is deliberately not stored. parentId is a reference,
+        // and it comes from onSelectLocation below, which hands back the
+        // actual Location rather than a name to re-slugify. See #303.
+        onChange={() => undefined}
+        onSelectLocation={(location) => handleInputChange('parentId', location?.id ?? '')}
         strictMode={true}
         placeholder="Select parent location..."
       />

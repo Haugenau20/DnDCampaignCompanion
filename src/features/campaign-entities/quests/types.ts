@@ -1,5 +1,5 @@
 // src/features/campaign-entities/quests/types.ts
-import { BaseContent } from 'core/types/common';
+import { BaseContent, DomainData } from 'core/types/common';
 
 export type QuestStatus = 'active' | 'completed' | 'failed';
 
@@ -52,7 +52,7 @@ export interface QuestContextValue extends QuestContextState {
   getQuestsByLocation: (location: string) => Quest[];
   updateQuestStatus: (questId: string, status: QuestStatus) => Promise<void>;
   updateQuestObjective: (questId: string, objectiveId: string, completed: boolean) => Promise<void>;
-  addQuest: (quest: Omit<Quest, 'id'>) => Promise<string>;
+  addQuest: (quest: DomainData<Quest>) => Promise<string>;
   updateQuest: (quest: Quest) => Promise<void>;
   deleteQuest: (questId: string) => Promise<void>;
 }

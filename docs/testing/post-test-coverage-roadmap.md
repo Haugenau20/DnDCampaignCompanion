@@ -1,6 +1,7 @@
 # Post-Test-Coverage Roadmap
 
-*Last updated: 2026-07-28, end of the third Phase 4 pass (PRs #22 and #24 on `main` @ `12bc2d4`).*
+*Last updated: 2026-07-28, end of the **fourth** Phase 4 pass (branch `fix/phase4-domain-data-types`,
+14 commits, not yet merged).*
 
 This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
 
@@ -9,20 +10,26 @@ This guide is the starting point for the next session. Point your orchestrator (
 **Restructuring: complete.** All four domains plus the `shared/`/`core/` pass. Five tags on `main`.
 No file-moving work left; do not start any.
 
-**Phase 4 bug triage: 54 of 61 tracker rows resolved (~89%).** Three passes have run.
+**Phase 4 bug triage: 62 of 62 tracker rows resolved. The tracker is empty.** Four passes have run.
 
-**Verified baseline on `main` @ `12bc2d4`, measured 2026-07-28:**
+**Verified baseline on `fix/phase4-domain-data-types`, measured 2026-07-28:**
 
 | Metric | Value |
 |---|---|
-| Tests | **7 failed / 2 skipped / 3973 passed / 3982 total** |
-| Suites | **4 failed / 176 passed / 180 total** |
-| Coverage | **91.66 stmts / 83.46 branches / 85.16 funcs / 92.15 lines** (uniform 80% floor) |
+| Tests | **0 failed / 2 skipped / 4043 passed / 4045 total** |
+| Suites | **0 failed / 182 passed / 182 total** |
 | `npx tsc --noEmit` | clean |
 | `npm run build` | succeeds |
 
-All 7 failures are the deferred ID-collision markers (#002 ×2, #004 ×3, #009, #012). The 2 skips are
-#901's, closed as testability-only. **There are no unexplained reds — any new red is a regression.**
+**The suite is fully green for the first time in this project's history.** The 7 ID-collision markers
+that were the last source of red are fixed, not silenced. The 2 skips are #901's, closed as
+testability-only.
+
+> **What this costs you, and it is not nothing.** For the last three passes the failing set was a
+> precise, self-maintaining signal: exactly 7 known reds meant any new red was unambiguously a
+> regression. That signal is now *stronger* — **zero reds, so any red at all is a regression** — but
+> it is also more fragile, because there is no longer a nonzero number to notice drifting. Do not
+> let a red become "expected" without a tracker row and a reason.
 
 **Reproduce this before believing anything you change is a regression.** If it doesn't reproduce,
 resolve that first.
@@ -952,65 +959,178 @@ lowers it. Neither is rot.
 
 ---
 
+### Phase 4, fourth pass — 2026-07-28 (branch `fix/phase4-domain-data-types`)
+
+*Six Sonnet workers across four batches, two at a time, plus orchestrator-owned work. Baseline
+re-verified before starting and reproduced exactly on all four gates.*
+
+**The tracker went from 6 open rows to 0, and the suite from 7 failures to none.**
+
+| | Before | After |
+|---|---|---|
+| Tests | 7F / 2S / 3973P / 3982 | **0F** / 2S / 4043P / 4045 |
+| Suites | 4F / 180 | **0F** / 182 |
+| Tracker | 61 filed, 55 resolved, 6 open | **62 filed, 62 resolved, 0 open** |
+
+**Landed**: the ID-collision cluster (#002/#004/#009/#012), the attribution type split
+(#1200/#1204), #303 filed and fixed the same day, #005 closed as no-defect, the #1202 migration
+tooling written, and the production Firestore ruleset put under version control.
+
+#### The deferral was resting on an untested premise
+
+The ID cluster was deferred for a year because "changing ID derivation changes URL shape and stored
+document identity across four entity types — it needs a data migration plan, not just a code fix."
+**That is false for a fix that only changes ids at the point of collision.** No existing document
+changes, no existing URL changes, and none of the ten cross-document reference fields
+(`Quest.relatedNPCIds`, `NPC.connections.*`, `Rumor.relatedNPCs`/`relatedLocations`/`locationId`/
+`convertedToQuestId`, `Location.parentId`/`relatedQuests`, notes' `convertedToId`) needs remapping.
+
+Meanwhile the severity was understated in the other direction: filed as "collision risk, Medium," it
+was `setDoc` — a full overwrite — with no existence check on any create path. **Creating "town guard"
+when "Town Guard" existed destroyed the first document silently**, and the likeliest real trigger was
+never case variants but two entities sharing a name outright.
+
+*Generalisable*: **a deferral is a claim with a shelf life.** This one was recorded as settled fact
+and re-inherited by four passes. Re-derive the premise before re-deferring — it costs an hour, and
+here it was hiding live data loss.
+
+#### Five findings
+
+1. **The suite had already specified the fix.** The obvious approach — suffix every id — was ruled
+   out by three *existing* tests: two markers assert the *first* id is still the clean slug, and a
+   passing test pins `convertToQuest`'s output. Collision-only disambiguation was the only shape the
+   existing specification allowed. **Read what the tests already require before designing.**
+2. **The harness trap had a synchronous way out.** The markers create two entities inside one
+   `act()`, so loaded state cannot see the first id — which is why the roadmap warned a lookup-based
+   fix might fail for harness reasons. A `useRef<Set<string>>` of ids issued this session is
+   synchronous, survives across calls in one render, and needs no await. **"Needs a lookup" and
+   "needs an async lookup" are not the same constraint.**
+3. **A single-purpose sweep found one of two.** The `DISCOVERY:` sweep catalogued the
+   collision-asserting characterization test in `NPCContext` and called it the *only* ambush. A
+   second, in `QuestContext.behavioral.test.tsx:411`, surfaced only because a **parallel** agent ran
+   the full suite mid-flight and reported an unexplained red in a file it had not touched. That one
+   is the clearest specimen yet: its own name and two of its comments demand unique ids while its
+   assertions demand a collision. **Running two agents on adjacent ground caught what a sweep
+   dedicated to finding exactly this missed.** Running total of the family: **twelve.**
+4. **"Architecturally cleaner" is a claim about consumers you have not read.** #303's report called
+   "make `LocationCombobox` emit ids" the cleaner fix. `QuestFormSections` uses the same component
+   for a free-text display field and genuinely wants a name — emitting ids would have broken it. The
+   fix added an optional callback instead, so the reference consumer gets the entity and the display
+   consumer is untouched. Third time this shape has appeared (#600, `layoutUtils`, now this).
+5. **The dead fields were load-bearing for the types.** #1204 read as a deletion and was not:
+   `NPCContext`, `QuestContext` and `StoryContext` each annotated their local as the *complete*
+   entity while supplying no attribution, compiling only because the forms passed it in. The real
+   seam was `useFirebaseData.addData`, one level below the entry points the bug report named — **the
+   type error surfaced two layers away from the code the report pointed at.**
+
+#### Two compile paths this project's verification does not cover
+
+Both found the hard way, both now in `CLAUDE.md`:
+
+- **`ts-node` honours neither `baseUrl` nor `paths`.** A bare `core/...` import passes `tsc`, jest
+  *and* `npm run build`, then fails at runtime under `ts-node` — which matters for `src/utils/__dev__`
+  operator tooling. Use relative imports there.
+- **`npm start` and `npm run build` keep separate webpack caches.** All three gates can be green while
+  the dev server compiles something stale; the symptom is an error quoting a *new* line in one file
+  while asserting a *stale* fact about another. `rm -rf node_modules/.cache` and restart.
+
+`CLAUDE.md` also documented the Docker-based `manage-environment.ps1` as the way to run this project.
+It is not — the maintainer uses `start-dev.ps1`, which runs everything on the host, and the Docker
+compose files appear unused. **A dev-server error was diagnosed against a container that was never
+running**, on the strength of that stale documentation. Corrected.
+
+#### Security posture, checked and corrected
+
+The committed `firestore.rules` is a permissive emulator ruleset (`allow read, write: if true`), which
+reads alarmingly like production and **is not**. Production rules are authored in the Firebase
+console, are deny-by-default and properly group-scoped. A transcribed review copy now lives at
+`firebase/firestore.rules.prod`, deliberately *not* wired into `firebase.json`, so the live policy
+finally has review, diff and history. `firestore.rules` gained a header saying what it is.
+
+Two things checked rather than assumed, both fine: `registrationTokens`' `allow get: if true` is
+sound, because tokens are 128 bits from `crypto.getRandomValues`; and `storage.rules` is moot,
+because nothing in the app imports Firebase Storage.
+
+---
+
 ## What to do next
 
-Ordered by value. Items 1 and 2 are real work; 3 and 4 are cheap hygiene.
+**Everything previously listed here is done.** The bug tracker is empty and the suite is green. What
+follows is the work that surfaced *during* the fourth pass, plus the one item that needs a human.
 
-### 1. #1200 / #1204 — the attribution type split *(the only substantial open code work)*
+### 1. #1202 — done, and there was nothing to migrate
 
-Four form components (`NPCForm`, `NPCEditForm`, `QuestCreateForm`, `RumorCard`) plus `ChapterForm`
-build attribution their context discards. No user-visible bug today; a latent regression the day a
-context's spread order changes, since `NPCForm` and `QuestCreateForm` omit `createdByCharacterId`.
+**Closed 2026-07-29 by measurement.** The audit ran against production and found **39 chapters
+scanned, 0 needing repair** — `dateModified` and `dateAdded` are 39/39 strings. `migrate` was never
+run and is not needed.
 
-**This is a design task, not a deletion, and that is why it has been deferred three times.** #1204
-explicitly forbids the easy path: several payloads are typed `Omit<Quest, 'id'>`, which is *why* the
-dead fields exist, and the report says do not work around it by keeping them. The clean fix is the
-`DomainData<T>` / `Entity<T>` split sketched in the salvage section below — a domain-data type that
-excludes system metadata, so the compiler stops demanding attribution from the presentation layer.
+This entry sat as "the only live user-visible symptom left" across **four** Phase 4 passes, including
+in this session's own opening plan, on the assumption that pre-fix reorders had left Timestamps in
+production. One read-only query disproved it. **A remediation task can outlive the problem it was
+written for** — the same shape as this pass's ID-cluster deferral, and as `cross-context-patterns.md`
+Pattern 1 before it.
 
-Read `docs/architecture/migration/attribution-consolidation-findings.md` first: its RESOLVED section
-records two categories of write that must **never** be routed through `createDocument`, and the
-`// Do NOT switch this to createDocument` guards in `StoryContext` are load-bearing (#1203, #017).
+It proves no *surviving* document is affected, not that the defect never occurred: any chapter edited
+after Wave A landed would have had the field rewritten as a string. Scope is groups reachable from
+the signed-in account.
 
-**Scope honestly before starting.** This touches types every entity form compiles against. It is
-plausibly a whole session. Consider doing the type introduction as one reviewable commit and the five
-components as a second.
+**The tooling is kept** (`src/utils/__dev__/normalizeChapterDateModified.ts`) as a working, tested
+template for the next data pass — audit / migrate / revert, journal-before-write, idempotent by
+construction, interactive credential prompts. Its `audit` mode is the cheap way to check a claim like
+this before treating it as fact.
 
-### 2. The ID-collision cluster (#002 / #004 / #009 / #012) — *only if you want the 7 reds gone*
+Two things learned running it, both recorded in the script's own error output:
 
-**Deferred by explicit decision. Do not reopen without asking the user.** Changing ID derivation
-changes URL shape and stored document identity across four entity types — it needs a data migration
-plan, not just a code fix.
+- **App Check enforcement blocks it.** A Node script cannot produce an attestation token, because the
+  app attests with `ReCaptchaV3Provider`, which is browser-only. Enforcement has to be disabled for
+  Authentication for the duration, or the pass has to go through the Admin SDK.
+- **`signInWithEmailAndPassword` uses the app\'s Firebase Authentication user pool**, not the Google
+  account that logs into the Firebase Console. `auth/invalid-credential` is deliberately vague
+  (email-enumeration protection) and will not tell you which mistake you made.
 
-Two traps recorded for whoever picks it up:
-- The marker tests create two entities inside one `act()`, so a **lookup-based** fix may fail for
-  harness reasons rather than logic reasons. An approach needing no lookup sidesteps that entirely.
-- `NPCContext.behavioral.test.tsx:442` contains a **characterization test asserting the collision**.
-  It will go red when the cluster is fixed, and is labelled as such. Correcting it needs the same
-  explicit authorisation #006, #005, #750 and #017 each got.
+**Still untested, and now known to be untestable:** the audit found **zero story-progress documents**,
+so the `lastRead` question (declared `Date`, round-trips as a Timestamp) has no data to test against.
+Still deliberately not filed.
 
-### 3. #1202 — production data pass *(operational, no code)*
+### 2. Loose ends left deliberately, each small
 
-Chapters reordered before the attribution branch hold a Firestore `Timestamp` in `dateModified` where
-a string is expected, and render a blank modified date. The code is fixed; **existing documents are
-not.** Needs a one-off normalization script against production data — a different kind of task from
-everything else here, and the only item with a user-visible symptom still live.
+- **`LocationCreateForm.tsx:38`** still holds a copy of the slug helper. The four *context* copies
+  were consolidated into `core/utils/entity-id.ts`; the component copies were outside that batch's
+  scope. Worth folding in — and worth checking whether it has #303's reconstruction problem too.
+- **`QuestCreateForm`'s `formData.createdBy` / `createdByUsername` are now vestigial** — read
+  nowhere, never initialised in the `Partial<Quest>` state shape. Left alone because removing form
+  state was outside #1204's scope.
+- **`useFirebaseData`'s own `data` state is written and never read.** All four entity contexts
+  destructure only `{addData, updateData, deleteData}` and render from a *separate* instance owned
+  by their `use*Data()` hook. The hook maintains an optimistic array no consumer has ever looked at.
+  Verified across every call site while relaxing `addData`'s type — not filed, because nothing
+  misbehaves, but it is dead weight in a hook every context depends on.
+- **A pre-existing unused `userProfile`** in `NPCForm.tsx:49` and `NPCEditForm.tsx:35`, predating
+  this work.
 
-### 4. Cheap hygiene
+### 3. Two contract questions nobody has answered
 
-- **`useLayoutData`'s `locations` prop and `Location` import are now unused** by the hook body, since
-  the only consumer was the deleted `sortedLocations`. Left deliberately, because removing them
-  changes the hook's signature and its callers. Small, safe, worth doing.
-- **#005's cosmetic tail**: `LocationContext`/`QuestContext` inline
-  `if (!activeGroupId || !activeCampaignId)`; `NoteContext` uses `if (!user?.uid || !activeGroupId)`.
-  Three idioms, one precondition. **Nothing has been shown to misbehave** — do not file it as a bug
-  on a code-reading alone; that is what produced the five entries this project retracted.
+Neither is a defect. Both are places where the code is currently right by accident rather than by
+decision, and both will resurface.
+
+- **Chapter ids are `chapter-{order}`, so reordering re-keys documents.** Four tracker entries trace
+  to that one design choice: #017 (reorder lost chapters on partial failure), #1202 (the reorder
+  path corrupted `dateModified`), #016, and the eighth characterization test. It also means
+  `/story/chapters/chapter-03` addresses *a position, not a document* — after a reorder that URL
+  shows different content. **That is arguably correct for a book**, which is exactly why it needs a
+  decision rather than a reflex. Do not "fix" it without one.
+- **A plain group member cannot update content another member created** — the production rule is
+  `createdBy == request.auth.uid || isGroupAdmin(groupId) || isGlobalAdmin()`. The edit forms do not
+  appear to gate on creator, so a member editing someone else's NPC would take a `permission-denied`
+  at write time. **Unverified** — it is a rules reading, and this project has five retracted entries
+  from filing on exactly that basis. Cheap to settle with a test.
 
 ### What is genuinely finished
 
-Restructuring, in full. Dead-code sweeps (#050, #600, #1000, #1050, #1052, #1152 all closed). The
-consistency cluster (#100, #250, #700, #702, #850). Data integrity (#017, #750, #851, #852). The
-a11y/UI set (#150, #201, #251). Attribution consolidation, except the #1200/#1204 tail above.
+Restructuring, in full. Dead-code sweeps (#050, #600, #1000, #1050, #1052, #1152). The consistency
+cluster (#100, #250, #700, #702, #850). Data integrity (#017, #750, #851, #852). The a11y/UI set
+(#150, #201, #251). Attribution consolidation **including** the #1200/#1204 tail. The ID-collision
+cluster (#002, #004, #009, #012) and #303. **The bug tracker has no open rows.**
 
 ---
 

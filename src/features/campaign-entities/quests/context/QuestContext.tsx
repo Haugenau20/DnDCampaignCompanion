@@ -1,9 +1,11 @@
 // src/features/campaign-entities/quests/context/QuestContext.tsx
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { Quest, QuestStatus } from '../types';
+import { DomainData } from 'core/types/common';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
+import { generateUniqueEntityId } from 'core/utils/entity-id';
 
 // Context interface
 interface QuestContextValue {
@@ -17,7 +19,7 @@ interface QuestContextValue {
   getQuestsByNPC: (npcId: string) => Quest[];
   updateQuestStatus: (questId: string, status: QuestStatus) => Promise<void>;
   updateQuestObjective: (questId: string, objectiveId: string, completed: boolean) => Promise<void>;
-  addQuest: (quest: Omit<Quest, 'id'>) => Promise<string>;
+  addQuest: (quest: DomainData<Quest>) => Promise<string>;
   updateQuest: (quest: Quest) => Promise<void>;
   deleteQuest: (questId: string) => Promise<void>;
   markQuestCompleted: (questId: string, dateCompleted?: string) => Promise<void>;
@@ -66,14 +68,14 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   }, [quests]);
 
-  // Generate quest ID from title
-  const generateQuestId = useCallback((title: string): string => {
-    return title
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with hyphens
-      .replace(/^-+|-+$/g, '');    // Remove leading/trailing hyphens
-  }, []);
+  // Ids issued during this session but not yet reflected in `quests` (loaded
+  // state). Two quests can be created back-to-back within a single `act()` /
+  // event handler before the first create's write has round-tripped through
+  // `refreshQuests()` and re-rendered this provider -- a collision check
+  // against `getQuestById` alone would miss that first id and silently let
+  // the second create overwrite it. This ref is the second source of truth
+  // `isTaken` below consults, alongside already-loaded data.
+  const issuedIds = useRef<Set<string>>(new Set());
 
   // Update quest status
   const updateQuestStatus = useCallback(async (questId: string, status: QuestStatus) => {
@@ -143,20 +145,25 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, refreshQuests]);
 
   // Add quest
-  const addQuest = useCallback(async (questData: Omit<Quest, 'id'>) => {
+  const addQuest = useCallback(async (questData: DomainData<Quest>) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to add quests');
     }
-  
+
     if (!activeGroupId || !activeCampaignId) {
       throw new Error('Group and campaign context must be set to add quests');
     }
-  
-    // Generate ID from title
-    const id = generateQuestId(questData.title);
 
-    // Create the complete quest object including the id
-    const newQuest: Quest = {
+    // Generate ID from title, disambiguating only on collision
+    const isTaken = (candidateId: string) =>
+      issuedIds.current.has(candidateId) || Boolean(getQuestById(candidateId));
+
+    const id = generateUniqueEntityId(questData.title, isTaken);
+    issuedIds.current.add(id);
+
+    // Not a complete Quest -- attribution is stamped by DocumentService.createDocument,
+    // not supplied here. See DomainData's doc comment in core/types/common.ts.
+    const newQuest = {
       id,
       ...questData,
       // Ensure arrays are properly initialized
@@ -173,7 +180,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await addData(newQuest, id);
     await refreshQuests();
     return id;
-  }, [user, userProfile, activeGroupId, activeCampaignId, addData, refreshQuests, generateQuestId]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, addData, refreshQuests]);
 
   // Update existing quest
   const updateQuest = useCallback(async (quest: Quest) => {

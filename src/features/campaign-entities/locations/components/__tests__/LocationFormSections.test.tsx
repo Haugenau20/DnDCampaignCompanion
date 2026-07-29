@@ -21,6 +21,8 @@ jest.mock('../../context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ locations: [] })),
 }));
 
+const { useLocations } = require('../../context/LocationContext');
+
 jest.mock('../../../quests/context/QuestContext', () => ({
   useQuests: jest.fn(),
 }));
@@ -155,6 +157,72 @@ describe('BasicInfoSection', () => {
     expect(screen.getByRole('option', { name: 'Landmark' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Building' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Point of Interest' })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BasicInfoSection - parentId resolution via combobox selection (Task 2 probe)
+// ---------------------------------------------------------------------------
+//
+// LocationCombobox only ever deals in location *names* (it lists
+// `locations.map(loc => loc.name)`), and BasicInfoSection turns the selected
+// name back into an id by re-slugifying it:
+//   onChange={(value) => handleInputChange('parentId', generateLocationId(value))}
+// That is only correct while `id === slugify(name)`. Location names are
+// editable after creation, so a location's stored id can drift away from
+// what slugifying its *current* name would produce (e.g. created as
+// "Stonebridge" -> id "stonebridge", then renamed to "New Stonebridge Docks"
+// without its id ever changing). Selecting such a location as a parent
+// re-derives an id from the new name instead of reading the location's
+// actual id.
+
+describe('BasicInfoSection - parentId resolution via combobox selection (Task 2 probe)', () => {
+  afterEach(() => {
+    (useLocations as jest.Mock).mockReturnValue({ locations: [] });
+  });
+
+  test('parentId set by selecting a renamed location should resolve to that location\'s actual id', () => {
+    // This location was created when its name was "Stonebridge" (its id was
+    // derived from that original name at creation time), then later renamed.
+    // Its id was never updated - ids are stable, names are editable.
+    const renamedLocation = {
+      id: 'stonebridge',
+      name: 'New Stonebridge Docks',
+    };
+    (useLocations as jest.Mock).mockReturnValue({ locations: [renamedLocation] });
+
+    const handleInputChange = jest.fn();
+    render(<BasicInfoSection formData={makeFormData()} handleInputChange={handleInputChange} />);
+
+    // Open the parent-location combobox and select the renamed location by
+    // its current display name - the only thing LocationCombobox exposes.
+    const comboboxInput = screen.getByPlaceholderText('Select parent location...');
+    fireEvent.focus(comboboxInput);
+    fireEvent.click(screen.getByText('New Stonebridge Docks'));
+
+    const parentIdCall = handleInputChange.mock.calls.find(call => call[0] === 'parentId');
+    expect(parentIdCall).toBeDefined();
+    const resolvedParentId = parentIdCall![1];
+
+    // REGRESSION TEST for bug #303, which this test originally proved.
+    //
+    // It was written to fail, and it did: BasicInfoSection used to derive
+    // parentId as generateLocationId(selectedName), so a location renamed
+    // after creation yielded 'new-stonebridge-docks' while its real id was
+    // still 'stonebridge' — a parentId matching no location, which silently
+    // broke the hierarchy and could hand deleteLocation's cascade the wrong
+    // descendant set.
+    //
+    // Fixed by removing the round-trip rather than patching it: LocationCombobox
+    // now offers an optional onSelectLocation callback handing back the actual
+    // Location it matched, so the consumer that needs a reference never has to
+    // reconstruct one from a display string. Consumers that genuinely want the
+    // display text (QuestFormSections' free-text `location` field) keep using
+    // onChange and are unaffected.
+    //
+    // If this goes red again, the round-trip has been reintroduced somewhere.
+    const resolvesToRealLocation = [renamedLocation].some(loc => loc.id === resolvedParentId);
+    expect(resolvesToRealLocation).toBe(true);
   });
 });
 

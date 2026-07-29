@@ -44,6 +44,20 @@ export interface BaseContent extends IdentifiableContent, ContentAttribution {
 }
 
 /**
+ * The caller-supplied half of an entity: domain fields only.
+ *
+ * System metadata — `id` and every `ContentAttribution` field — is excluded,
+ * because attribution is stamped centrally by `DocumentService`
+ * (`createDocument` / `updateDocumentWithAttribution` in
+ * `core/services/firebase/data/DocumentService.ts`, reached via
+ * `shared/hooks/useFirebaseData.ts`), which spreads its own attribution AFTER
+ * the caller's data. Whatever attribution a caller supplies is discarded at
+ * the write layer, so requiring it in a create/update payload's type is a
+ * false requirement on the presentation layer — this type removes it.
+ */
+export type DomainData<T> = Omit<T, keyof ContentAttribution | 'id'>;
+
+/**
  * Generic context state structure for content types
  */
 export interface ContentContextState<T> {

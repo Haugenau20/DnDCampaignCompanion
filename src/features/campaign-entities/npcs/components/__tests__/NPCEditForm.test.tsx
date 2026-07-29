@@ -376,14 +376,48 @@ describe('NPCEditForm', () => {
       expect(onCancel).toHaveBeenCalledTimes(1);
     });
 
-    test('should include modifiedBy in updateNPC call', async () => {
-      render(<NPCEditForm npc={makeNPC()} existingNPCs={[]} />);
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(mockUpdateNPC).toHaveBeenCalledWith(
-          expect.objectContaining({ modifiedBy: 'user-1' })
-        );
+    // Guards #1204: NPCEditForm used to recompute modifiedBy/modifiedByUsername/
+    // modifiedByCharacterId/modifiedByCharacterName/dateModified fresh on every submit. Every one
+    // of those fields was discarded — DocumentService.updateDocumentWithAttribution (reached via
+    // useFirebaseData.updateData) spreads its own server-derived attribution AFTER the caller's
+    // data, so whatever the form recomputed here never reached Firestore. Attribution belongs to
+    // the write layer; a form that starts computing it again is a regression even though nothing
+    // visible breaks today. The payload spreads ...formData, which is seeded from the incoming
+    // `npc` prop, so the correct behavior is for modified* fields to pass through untouched — not
+    // to reflect a freshly-derived current-session value.
+    test('should NOT recompute modified* attribution — updateNPC payload passes through what initialData carried (#1204)', async () => {
+      const originalNpc = makeNPC({
+        modifiedBy: 'previous-user',
+        modifiedByUsername: 'PreviousUser',
+        modifiedByCharacterId: 'char-9',
+        modifiedByCharacterName: 'Old Character',
+        dateModified: '2020-01-01T00:00:00.000Z',
       });
+      // setupMocks() (in beforeEach) makes the *current* session user 'user-1' — if the component
+      // recomputed attribution, these values would be overwritten with 'user-1'-derived data.
+      render(<NPCEditForm npc={originalNpc} existingNPCs={[]} />);
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockUpdateNPC).toHaveBeenCalledTimes(1);
+      });
+
+      const payload = mockUpdateNPC.mock.calls[0][0];
+
+      // Domain fields still present/correct.
+      expect(payload).toEqual(
+        expect.objectContaining({
+          id: 'npc-1',
+          name: originalNpc.name,
+        })
+      );
+
+      // modified* attribution must be exactly what came in via initialData, untouched.
+      expect(payload.modifiedBy).toBe('previous-user');
+      expect(payload.modifiedByUsername).toBe('PreviousUser');
+      expect(payload.modifiedByCharacterId).toBe('char-9');
+      expect(payload.modifiedByCharacterName).toBe('Old Character');
+      expect(payload.dateModified).toBe('2020-01-01T00:00:00.000Z');
     });
 
     test('should include updated connections in updateNPC call', async () => {

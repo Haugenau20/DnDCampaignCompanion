@@ -262,6 +262,19 @@ describe('DocumentService', () => {
         'No active group selected'
       );
     });
+
+    test('should overwrite an existing document without any existence check (the deliberate re-key path StoryContext relies on)', async () => {
+      mockSetDoc.mockResolvedValue(undefined);
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+
+      await svc.setDocument('chapters', 'chapter-1', { title: 'First' });
+      await svc.setDocument('chapters', 'chapter-1', { title: 'Second' });
+
+      expect(mockSetDoc).toHaveBeenCalledTimes(2);
+      // The collision guard added to createDocument must not apply here.
+      expect(mockGetDoc).not.toHaveBeenCalled();
+    });
   });
 
   // ─── updateDocument ─────────────────────────────────────────────────────────
@@ -402,7 +415,9 @@ describe('DocumentService', () => {
     });
 
     test('should call setDoc when creating with an explicit id', async () => {
-      // Attribution getDoc for user profile
+      // 1st getDoc: collision-guard existence check -> not found
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(false));
+      // 2nd getDoc: attribution getDoc for user profile
       mockGetDoc.mockResolvedValueOnce(
         makeDocSnapshot(true, { username: 'Bilbo', activeCharacterId: null, characters: [] })
       );
@@ -428,6 +443,9 @@ describe('DocumentService', () => {
     // ─── attribution content ────────────────────────────────────────────────
 
     test('should write full creation attribution onto the document, preserving caller data', async () => {
+      // 1st getDoc: collision-guard existence check -> not found
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(false));
+      // 2nd getDoc: attribution getDoc for user profile
       mockGetDoc.mockResolvedValueOnce(
         makeDocSnapshot(true, {
           username: 'Bilbo',
@@ -518,6 +536,73 @@ describe('DocumentService', () => {
       const [, data] = mockSetDoc.mock.calls[0];
       expect(data.createdByUsername).toBe('');
       expect(data.modifiedByUsername).toBe('');
+    });
+  });
+
+  // ─── createDocument collision guard ─────────────────────────────────────────
+  // setDoc is a full overwrite. When an explicit id is supplied and it already
+  // names a document, createDocument must refuse rather than silently destroy
+  // the existing document (the mechanism behind bugs #002/#004/#009/#012).
+
+  describe('createDocument collision guard', () => {
+    test('should create successfully when the explicit id is free', async () => {
+      // 1st getDoc: existence check -> not found
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(false));
+      // 2nd getDoc: attribution profile fetch
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, { username: 'Bilbo', activeCharacterId: null, characters: [] })
+      );
+      mockSetDoc.mockResolvedValueOnce(undefined);
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      const id = await svc.createDocument('npcs', { name: 'Gandalf' }, 'free-id');
+
+      expect(id).toBe('free-id');
+      expect(mockGetDoc).toHaveBeenCalledTimes(2);
+      expect(mockSetDoc).toHaveBeenCalledTimes(1);
+    });
+
+    test('should throw a clear, actionable error naming the collection and id, and never call setDoc, when the explicit id is already taken', async () => {
+      // Existence check finds a document already there. Since the guard
+      // short-circuits before fetching attribution, only one getDoc call
+      // should ever happen.
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, { name: 'Existing NPC' }, 'taken-id')
+      );
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+
+      let caughtError: Error | null = null;
+      try {
+        await svc.createDocument('npcs', { name: 'Gandalf' }, 'taken-id');
+      } catch (e) {
+        caughtError = e as Error;
+      }
+
+      expect(caughtError).not.toBeNull();
+      expect(caughtError!.message).toContain('taken-id');
+      expect(caughtError!.message).toContain('npcs');
+      expect(mockSetDoc).not.toHaveBeenCalled();
+      expect(mockGetDoc).toHaveBeenCalledTimes(1);
+    });
+
+    test('should leave the auto-generated-id path unaffected: no existence check runs when id is omitted', async () => {
+      // Only one getDoc call expected: the attribution profile fetch. If the
+      // guard incorrectly ran for the auto-id path, this would be 2.
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, { username: 'Bilbo', activeCharacterId: null, characters: [] })
+      );
+      mockSetDoc.mockResolvedValueOnce(undefined);
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      const id = await svc.createDocument('npcs', { name: 'Gandalf' });
+
+      expect(id).toBeDefined();
+      expect(mockGetDoc).toHaveBeenCalledTimes(1);
+      expect(mockSetDoc).toHaveBeenCalledTimes(1);
     });
   });
 

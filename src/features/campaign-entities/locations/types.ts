@@ -1,5 +1,5 @@
 // src/features/campaign-entities/locations/types.ts
-import { BaseContent } from 'core/types/common';
+import { BaseContent, DomainData } from 'core/types/common';
 
 /**
  * Types of locations that can exist in the game world
@@ -80,7 +80,7 @@ export interface LocationContextValue extends LocationContextState {
   updateLocationNote: (locationId: string, note: LocationNote) => Promise<void>;
   updateLocationStatus: (locationId: string, status: LocationStatus) => Promise<void>;
   deleteLocation: (locationId: string) => Promise<void>;
-  createLocation: (locationData: Omit<Location, 'id'>) => Promise<string>;
+  createLocation: (locationData: DomainData<Location>) => Promise<string>;
   refreshLocations: () => Promise<Location[]>;
   hasRequiredContext: boolean;
 }

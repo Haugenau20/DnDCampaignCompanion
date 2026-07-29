@@ -1,9 +1,11 @@
 // src/features/campaign-entities/locations/context/LocationContext.tsx
-import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react';
 import { Location, LocationStatus, LocationContextValue, LocationNote } from '../types';
+import { DomainData } from 'core/types/common';
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
+import { generateUniqueEntityId } from 'core/utils/entity-id';
 
 // Custom event for location changes (deletion, update, etc.)
 export const LOCATION_CHANGED_EVENT = 'location-data-changed';
@@ -211,18 +213,35 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     dispatchLocationChangedEvent();
   }, [user, activeGroupId, activeCampaignId, getLocationById, locations, deleteData, dispatchLocationChangedEvent]);
 
+  // Ids issued during this session but not yet reflected in `locations`
+  // (local state). Two locations can be created back-to-back within a single
+  // `act()` / event handler before the first create's `setLocations` update
+  // has committed and re-rendered this provider -- a collision check against
+  // `getLocationById` alone would miss that first id and silently let the
+  // second create overwrite it. This ref is the second source of truth
+  // `isTaken` below consults, alongside already-loaded/local state.
+  const issuedIds = useRef<Set<string>>(new Set());
+
   // Create a new location
-  const createLocation = useCallback(async (locationData: Omit<Location, 'id'>): Promise<string> => {
+  const createLocation = useCallback(async (locationData: DomainData<Location>): Promise<string> => {
     if (!user || !activeGroupId || !activeCampaignId) {
       throw new Error('User must be authenticated and group/campaign context must be set to create a location');
     }
 
-    // Generate a location ID from the name
-    const locationId = locationData.name.toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+    // Generate a location ID from the name, disambiguating only on collision
+    const isTaken = (candidateId: string) =>
+      issuedIds.current.has(candidateId) || Boolean(getLocationById(candidateId));
 
+    const locationId = generateUniqueEntityId(locationData.name, isTaken);
+    issuedIds.current.add(locationId);
+
+    // `addData` itself no longer needs a full Location (see DomainData in
+    // core/types/common.ts), but this same object is also appended directly to
+    // this context's own `locations` state below, which IS what renders --
+    // unlike the dead `data` state inside useFirebaseData's addData. `Location[]`
+    // requires the full BaseContent attribution fields, which this optimistic
+    // entry genuinely does not have until the next refresh, so the cast stays
+    // load-bearing here (pre-existing behaviour, not introduced by this change).
     const newLocation = {
       ...locationData,
       id: locationId
@@ -235,7 +254,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     dispatchLocationChangedEvent();
 
     return locationId;
-  }, [user, activeGroupId, activeCampaignId, activeGroupUserProfile, addData, dispatchLocationChangedEvent]);
+  }, [user, activeGroupId, activeCampaignId, activeGroupUserProfile, getLocationById, addData, dispatchLocationChangedEvent]);
 
   const value: LocationContextValue = {
     locations,

@@ -407,7 +407,7 @@ describe('NPCContext Behavioral Testing', () => {
       expect(npcDataSent.id).toBe('thorin-oakenshield');
     });
 
-    test('should reveal ID collision behavior with similar names', async () => {
+    test('should generate distinct IDs for NPCs whose names differ only by case', async () => {
       renderNPCContext();
 
       await waitFor(() => {
@@ -444,29 +444,30 @@ describe('NPCContext Behavioral Testing', () => {
       const [firstNPCData] = mockAddData.mock.calls[0];
       const [secondNPCData] = mockAddData.mock.calls[1];
 
-      // ⚠️ CHARACTERIZATION TEST — asserts the DEFECT, not the requirement.
+      // ✅ CORRECTED 2026-07-28 — the #002/#004/#009/#012 ID-collision cluster
+      // has been fixed, and this correction was explicitly authorised as part
+      // of that fix (task: fix/phase4-domain-data-types).
       //
-      // This locks in the bug #002 collision: two NPCs whose names differ only
-      // by case both derive the id 'thorin-oakenshield', and the second
-      // overwrites the first. That is the behaviour #002/#004/#009/#012 exist
-      // to describe, and it is deliberately deferred, not accepted.
+      // This test used to be a CHARACTERIZATION TEST that asserted the DEFECT:
+      // two NPCs whose names differ only by case both derived the id
+      // 'thorin-oakenshield', and the second silently overwrote the first via
+      // `setDoc`. That collision is now prevented by
+      // `core/utils/entity-id.ts`'s `generateUniqueEntityId`, wired into
+      // `NPCContext.addNPC` via an `isTaken` predicate that checks both
+      // `getNPCById` and an `issuedIds` ref (the latter needed because this
+      // very test creates both NPCs inside one `act()`, before the first
+      // create's data has round-tripped through loaded state).
       //
-      // WHOEVER FIXES THE ID-COLLISION CLUSTER: this test will go red, and it
-      // will look like a regression. It is not — it is this assertion doing
-      // exactly what it was written to do. Correct it to expect distinct ids in
-      // the same change as the fix. Editing it needs explicit authorisation
-      // (the standing rule is never to edit a test to make it pass), which is
-      // why it is flagged here rather than pre-emptively changed.
-      //
-      // Found 2026-07-28 by the DISCOVERY: sweep. It is the seventh
-      // characterization test found in this codebase and the only one that
-      // ambushes a deferred bug rather than blocking an active one — the
-      // cluster's other known trap (two entities created inside one act(), so a
-      // lookup-based fix may not see the first) is recorded in the roadmap.
+      // The first NPC still gets the clean slug ('thorin-oakenshield') --
+      // disambiguation only happens on an actual collision, so an entity
+      // whose slug is free is never renamed. The second NPC, colliding on the
+      // same base, now gets 'thorin-oakenshield-2' instead of overwriting the
+      // first.
       expect(firstNPCData.id).toBe('thorin-oakenshield');
-      expect(secondNPCData.id).toBe('thorin-oakenshield'); // Same ID - collision!
+      expect(secondNPCData.id).not.toBe('thorin-oakenshield');
+      expect(secondNPCData.id).not.toBe(firstNPCData.id);
 
-      console.warn('NPC ID collision detected:', firstNPCData.id, '===', secondNPCData.id);
+      console.warn('NPC ID collision test: ids are now distinct:', firstNPCData.id, '!==', secondNPCData.id);
     });
   });
 

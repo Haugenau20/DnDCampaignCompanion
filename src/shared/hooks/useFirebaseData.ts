@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useFirestore } from 'features/user-management';
 import { AUTH_STATE_CHANGED_EVENT } from 'features/user-management';
+import { DomainData } from 'core/types/common';
 
 interface UseFirebaseDataOptions<T> {
   collection: string;
@@ -64,15 +65,38 @@ export function useFirebaseData<T extends Record<string, any>>(
     };
   }, [getData]);
 
-  const addData = useCallback(async (newData: T, documentId?: string) => {
+  /**
+   * Add a new document to the collection.
+   *
+   * `newData` only needs to be `DomainData<T> & { id?: string }` (domain fields,
+   * no attribution) rather than a complete `T`: the write goes through
+   * `createDocument`, whose implementation (`DocumentService.createDocument`)
+   * spreads its own server-fetched attribution metadata AFTER the caller's data
+   * (`{ ...data, ...attributionMetadata }`), so any `ContentAttribution` fields
+   * a caller supplied here would be overwritten anyway. Requiring them in the
+   * type was a false requirement this hook never actually needed enforced.
+   *
+   * The optimistic `setData` append below is genuinely incomplete: it lacks the
+   * server-stamped attribution (`createdBy`, `dateAdded`, etc.) until the next
+   * fetch replaces it. That is safe here specifically because nothing renders
+   * off this hook's own `data` array at any of its current call sites — each of
+   * the four entity contexts (NPC/Quest/Rumor/Location) gets the list it
+   * actually renders from a *separate* `useFirebaseData<T>` instance owned by
+   * its own `use*Data()` hook (or, for Location, from its own hand-rolled
+   * `locations` state), and never destructures `data` from the instance it
+   * calls `addData` on. This `data` array is written here but not read by any
+   * current consumer, so the cast below never surfaces incomplete attribution
+   * in a render.
+   */
+  const addData = useCallback(async (newData: DomainData<T> & { id?: string }, documentId?: string) => {
     setLoading(true);
     setError(null);
     try {
       const id = documentId ||
-                (options.idField ? newData[options.idField] as string : crypto.randomUUID());
+                (options.idField ? (newData as unknown as T)[options.idField] as string : crypto.randomUUID());
 
       await createDocument(options.collection, newData, id);
-      setData(prevData => [...prevData, { ...newData, id }]);
+      setData(prevData => [...prevData, { ...newData, id } as unknown as T]);
       return id;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add data';

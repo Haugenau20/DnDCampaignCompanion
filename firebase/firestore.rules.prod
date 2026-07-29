@@ -1,0 +1,208 @@
+// firebase/firestore.rules.prod
+//
+// ============================================================================
+// THIS FILE IS A REVIEW COPY. IT IS NOT DEPLOYED FROM HERE. EDITING IT CHANGES
+// NOTHING IN PRODUCTION.
+// ============================================================================
+//
+// The production Firestore ruleset is authored and deployed through the
+// Firebase console. `firebase.json` points its `firestore.rules` key at
+// `firestore.rules` -- the permissive DEVELOPMENT ruleset used against the
+// emulators and the dev project -- and that file is deliberately NOT the
+// production policy. Do not "reconcile" the two: they describe different
+// environments, and `firestore.rules`'s blanket `allow read, write: if true`
+// is correct for an emulator and would be catastrophic in production.
+//
+// WHY THIS COPY EXISTS
+// The live policy previously had no representation in version control at all,
+// which meant it had no review, no diff, no history and no rollback, and
+// nothing stopped it silently drifting from what the repository implies. A
+// reader of this repo would reasonably have concluded from `firestore.rules`
+// that production was wide open. It is not. This file exists so that changes
+// to the real policy are reviewable alongside the code that depends on them.
+//
+// KEEPING IT HONEST
+// This is a snapshot, transcribed from the console on 2026-07-28 and confirmed
+// current by the repository owner. It can go stale. When you change the
+// production rules in the console, update this file in the same PR as whatever
+// motivated the change. If you are relying on these rules for a decision,
+// re-read them in the console first -- treat this copy as a claim to check,
+// not as the source of truth.
+//
+// ONE TRANSCRIPTION NOTE
+// The pasted source ended one closing brace short -- the `service
+// cloud.firestore` block was left unclosed, which cannot be what is deployed
+// (it would not compile). The final `}` below was added to make this file
+// syntactically valid. Nothing else was altered. If you diff this against the
+// console and find any other difference, trust the console.
+//
+// WHAT THE POLICY ACTUALLY DOES, IN ONE PARAGRAPH
+// Everything is deny-by-default (the trailing `match /{document=**}` rule).
+// Campaign content under a group is readable by that group's members and
+// writable by members, but a member may only UPDATE content they created
+// unless they are a group admin -- `resource.data.createdBy == request.auth.uid
+// || isGroupAdmin(groupId) || isGlobalAdmin()`. That clause is load-bearing for
+// any operational script that repairs stored documents: it must run as a group
+// admin, or it will silently only be able to repair its own rows. See
+// `src/utils/__dev__/normalizeChapterDateModified.ts`, which depends on it.
+// Note also that the rules are path-scoped, so a `collectionGroup` query has no
+// matching rule and WILL be denied.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Basic helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isGlobalAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isGroupMember(groupId) {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isSignedIn() && userDoc != null && userDoc.data.groups != null &&
+             userDoc.data.groups.hasAny([groupId]);
+    }
+
+    function isGroupAdmin(groupId) {
+      let userProfileDoc = get(/databases/$(database)/documents/groups/$(groupId)/users/$(request.auth.uid));
+      return isSignedIn() && userProfileDoc != null && userProfileDoc.data.role == "admin";
+    }
+
+    // Admin collection for system-wide settings
+    // Only the global admin can access this
+    match /admin/{document=**} {
+      allow read, write: if isGlobalAdmin();
+    }
+
+    // Global user profiles - strict email protection
+    match /users/{userId} {
+      // Users can ONLY read their own complete profile (including email)
+      allow read: if isSignedIn() && request.auth.uid == userId;
+
+      // EVERYONE ELSE (including global admin) cannot see emails
+      allow read: if isSignedIn() && request.auth.uid != userId &&
+                   !("email" in resource.data);
+
+      // Users can create their own profile during registration
+      allow create: if isSignedIn() && request.auth.uid == userId;
+
+      // Users can update their own profile but not the isAdmin field
+      allow update: if isSignedIn() && request.auth.uid == userId &&
+                     !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin']);
+
+      // Only global admin can assign admin privileges, but cannot modify emails
+      allow update: if isGlobalAdmin() &&
+                     !request.resource.data.diff(resource.data).affectedKeys().hasAny(['email']);
+
+      // Only global admin can delete users (but not themselves)
+      allow delete: if isGlobalAdmin() && request.auth.uid != userId;
+    }
+
+    // Group-level access
+    match /groups/{groupId} {
+      // Group data is readable by its members and global admin
+      allow read: if isGroupMember(groupId) || isGlobalAdmin();
+
+      // Anyone signed in can create a group (they become the admin)
+      allow create: if isSignedIn();
+
+      // Group admins can update, global admin can do anything
+      allow update: if isGroupAdmin(groupId) || isGlobalAdmin();
+
+      // Only group admins or global admin can delete a group
+      allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
+
+      // Group user profiles
+      match /users/{userId} {
+        // Group members can see other group members' profiles
+        allow read: if isGroupMember(groupId) || isGlobalAdmin();
+
+        // Users can create/update their own group profile
+        allow create, update: if isSignedIn() && request.auth.uid == userId;
+
+        // Group admins and global admin can update user profiles
+        allow update: if isGroupAdmin(groupId) || isGlobalAdmin();
+
+        // Regular users can delete their own profiles (leave group)
+        allow delete: if isSignedIn() && request.auth.uid == userId && !isGroupAdmin(groupId);
+
+        // Group admins or global admin can delete OTHER user profiles
+        allow delete: if (isGroupAdmin(groupId) || isGlobalAdmin()) && request.auth.uid != userId;
+      }
+
+      // Username reservations in group
+      match /usernames/{username} {
+        // Allow username availability check for all (needed for registration)
+        allow get: if true;
+
+        // Allow signed-in users to create their own username
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+
+        // Group members and global admin can list all usernames
+        allow list: if isGroupMember(groupId) || isGlobalAdmin();
+
+        // Only global admin can update/delete usernames
+        allow update, delete: if isGlobalAdmin();
+      }
+
+      // Group registration tokens
+      match /registrationTokens/{token} {
+        // Allow token validation for everyone (needed for registration)
+        allow get: if true;
+
+        // Only group admins or global admin can list or create tokens
+        allow list, create: if isGroupAdmin(groupId) || isGlobalAdmin();
+
+        // Allow a signed-in user to mark their own token as used
+        allow update: if isSignedIn() &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used', 'usedAt', 'usedBy']) &&
+                      request.resource.data.usedBy == request.auth.uid;
+
+        // Group admins and global admin can also update tokens
+        allow update: if isGroupAdmin(groupId) || isGlobalAdmin();
+
+        // Only group admins or global admin can delete tokens
+        allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
+      }
+
+      // Campaigns and other nested collections
+      match /{collection}/{docId} {
+        // Group members can read content
+        allow read: if isGroupMember(groupId) || isGlobalAdmin();
+
+        // Group members can create content
+        allow create: if isGroupMember(groupId);
+
+        // Content creators can update their own content
+        allow update: if isGroupMember(groupId) &&
+                      (resource.data.createdBy == request.auth.uid ||
+                       isGroupAdmin(groupId) ||
+                       isGlobalAdmin());
+
+        // Group admins and global admin can delete content
+        allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
+
+        // Nested documents follow the same rules
+        match /{nestedCollection}/{nestedDocId} {
+          allow read: if isGroupMember(groupId) || isGlobalAdmin();
+          allow create: if isGroupMember(groupId);
+          allow update: if isGroupMember(groupId) &&
+                         (resource.data.createdBy == request.auth.uid ||
+                          isGroupAdmin(groupId) ||
+                          isGlobalAdmin());
+          allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
+        }
+      }
+    }
+
+    // Default deny rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

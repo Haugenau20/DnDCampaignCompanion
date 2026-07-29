@@ -328,6 +328,37 @@ describe('QuestCreateForm', () => {
         );
       });
     });
+
+    // Guards bug #1204: QuestCreateForm used to compute createdBy/createdByUsername/dateAdded
+    // and include them in the payload handed to addQuest. Every one of those fields is
+    // discarded at the write layer — DocumentService.createDocument spreads its own
+    // server-fetched attribution AFTER the caller's data — so the values the form computed
+    // never reached Firestore. Attribution belongs to the write layer, not the form; a form
+    // that starts computing it again is a regression even though nothing visible breaks.
+    test('should NOT include attribution fields in the payload sent to addQuest (guards #1204)', async () => {
+      render(<QuestCreateForm />);
+      const textboxes = screen.getAllByRole('textbox');
+      fireEvent.change(textboxes[0], { target: { value: 'New Quest' } });
+      const descLabel = screen.getByText('Description *');
+      const descTextarea = descLabel.parentElement?.querySelector('textarea');
+      fireEvent.change(descTextarea!, { target: { value: 'Quest description' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockAddQuest).toHaveBeenCalledTimes(1);
+      });
+
+      const payload = mockAddQuest.mock.calls[0][0];
+      // Domain fields must still be present and correct.
+      expect(payload.title).toBe('New Quest');
+      expect(payload.description).toBe('Quest description');
+      expect(payload.status).toBe('active');
+      expect(payload.relatedNPCIds).toEqual([]);
+      // Attribution fields must be absent from what the component sends.
+      expect(payload).not.toHaveProperty('createdBy');
+      expect(payload).not.toHaveProperty('createdByUsername');
+      expect(payload).not.toHaveProperty('dateAdded');
+    });
   });
 
   // -------------------------------------------------------------------------

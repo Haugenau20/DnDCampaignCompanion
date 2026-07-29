@@ -1,9 +1,11 @@
 // src/features/campaign-entities/npcs/context/NPCContext.tsx
-import React, { createContext, useContext, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useCallback, useMemo, useRef } from 'react';
 import { NPC, NPCContextValue, NPCRelationship, NPCNote } from '../types';
+import { DomainData } from 'core/types/common';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useGroups, useCampaigns, useAuth, useUser } from 'features/user-management';
+import { generateUniqueEntityId } from 'core/utils/entity-id';
 
 const NPCContext = createContext<NPCContextValue | undefined>(undefined);
 
@@ -92,16 +94,17 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshNPCs(); // Refresh to get updated data
   }, [getNPCById, updateData, refreshNPCs, hasRequiredContext, user, userProfile, activeGroupUserProfile]);
 
-  // Generate NPC ID from name
-  const generateNPCId = useCallback((name: string): string => {
-    return name.toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with hyphens
-      .replace(/^-+|-+$/g, '');    // Remove leading/trailing hyphens
-  }, []);
+  // Ids issued during this session but not yet reflected in `npcs` (loaded
+  // state). Two NPCs can be created back-to-back within a single `act()` /
+  // event handler before the first create's write has round-tripped through
+  // `refreshNPCs()` and re-rendered this provider -- a collision check
+  // against `npcs`/`getNPCById` alone would miss that first id and silently
+  // let the second create overwrite it. This ref is the second source of
+  // truth `isTaken` below consults, alongside already-loaded data.
+  const issuedIds = useRef<Set<string>>(new Set());
 
   // Add a new NPC
-  const addNPC = useCallback(async (npcData: Omit<NPC, 'id'>): Promise<string> => {
+  const addNPC = useCallback(async (npcData: DomainData<NPC>): Promise<string> => {
     if (!hasRequiredContext) {
       throw new Error('Cannot add NPC: No group or campaign selected');
     }
@@ -110,9 +113,15 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('User must be authenticated to add an NPC');
     }
 
-    const id = generateNPCId(npcData.name);
+    const isTaken = (candidateId: string) =>
+      issuedIds.current.has(candidateId) || Boolean(getNPCById(candidateId));
 
-    const newNPC: NPC = {
+    const id = generateUniqueEntityId(npcData.name, isTaken);
+    issuedIds.current.add(id);
+
+    // Not a complete NPC -- attribution is stamped by DocumentService.createDocument,
+    // not supplied here. See DomainData's doc comment in core/types/common.ts.
+    const newNPC = {
       ...npcData,
       id
     };
@@ -120,7 +129,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await addData(newNPC, id);
     await refreshNPCs();
     return id;
-  }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, generateNPCId, addData, refreshNPCs]);
+  }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, getNPCById, addData, refreshNPCs]);
 
   // Update an existing NPC
   const updateNPC = useCallback(async (npc: NPC): Promise<void> => {

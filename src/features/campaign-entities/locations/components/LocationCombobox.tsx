@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Location } from '../types';
 import { useLocations } from '../context/LocationContext';
 import { MapPin, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import Typography from '../../../../core/components/Typography';
@@ -15,6 +16,23 @@ interface LocationComboboxProps {
    * If false, allows custom location names to be entered
    */
   strictMode?: boolean;
+  /**
+   * Fired alongside `onChange` with the actual `Location` the selected name
+   * resolves to, or `undefined` when the text matches no existing location
+   * (free-text entry, or an empty selection).
+   *
+   * Use this whenever you need to store a *reference* to a location rather
+   * than display text. Do NOT re-derive an id from the name this component
+   * emits: ids are fixed when a location is created and names are editable,
+   * so `slugify(name)` stops matching the real id the moment anyone renames
+   * a location — and it never matches for an id that was disambiguated with
+   * a numeric suffix. That was bug #303, and this callback exists so the
+   * lossy round-trip through a display string is not necessary at all.
+   *
+   * Consumers that genuinely want the display text (e.g. a quest's free-text
+   * `location` field) should keep using `onChange` and ignore this.
+   */
+  onSelectLocation?: (location: Location | undefined) => void;
 }
 
 const LocationCombobox: React.FC<LocationComboboxProps> = ({
@@ -23,9 +41,22 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
   label,
   placeholder = "Select location...",
   className = "",
-  strictMode = false
+  strictMode = false,
+  onSelectLocation
 }) => {
   const { locations } = useLocations();
+
+  /**
+   * Resolve a display name back to the location it names.
+   *
+   * Names are not guaranteed unique, so this takes the first match. That is
+   * still strictly better than deriving an id from the name, which for a
+   * renamed location matches nothing at all.
+   */
+  const findLocationByName = (name: string): Location | undefined =>
+    name === ''
+      ? undefined
+      : locations.find(loc => loc.name.toLowerCase() === name.toLowerCase());
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
@@ -59,8 +90,9 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
     // If not in strict mode, update value as user types
     if (!strictMode) {
       onChange(e.target.value);
+      onSelectLocation?.(findLocationByName(e.target.value));
     }
-    
+
     setError(null);
   };
 
@@ -68,6 +100,7 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
   const handleLocationSelect = (location: string) => {
     setInputValue(location);
     onChange(location);
+    onSelectLocation?.(findLocationByName(location));
     setIsOpen(false);
     setError(null);
   };
@@ -82,6 +115,7 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
     // Allow empty value (no parent location)
     if (inputValue === '') {
       onChange('');
+      onSelectLocation?.(undefined);
       setError(null);
       return;
     }
@@ -103,6 +137,7 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
       // Update with correctly cased value
       setInputValue(matchedLocation);
       onChange(matchedLocation);
+      onSelectLocation?.(findLocationByName(matchedLocation));
     }
   };
 

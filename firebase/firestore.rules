@@ -1,3 +1,24 @@
+// firebase/firestore.rules
+//
+// ============================================================================
+// DEVELOPMENT RULESET ONLY -- emulators and the dev project. NOT PRODUCTION.
+// ============================================================================
+//
+// The blanket `allow read, write: if true` below is intentional for local
+// emulator work and is NOT what protects the production database. Production
+// rules are authored in the Firebase console; a transcribed review copy lives
+// beside this file as `firestore.rules.prod` (deny-by-default, group-scoped,
+// with per-document creator checks).
+//
+// Do not "harden" this file to match production, and do not read it as
+// evidence about production's posture -- a reader who did exactly that during
+// the 2026-07-28 session raised a false alarm about the live database being
+// world-writable. It is not.
+//
+// Note that Firestore ORs across matching rules, so the permissive
+// `/{document=**}` rule below grants everything and the narrower `notes` rule
+// after it adds nothing. That is fine here, and would not be anywhere else.
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {

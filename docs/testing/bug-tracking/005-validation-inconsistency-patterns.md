@@ -342,12 +342,43 @@ No behaviour. A block comment above `StoryContextValue` now states both contract
 differ, so the next sweep that flags "3 warn-and-return vs 4 throw in one file" finds the answer
 next to the finding. That is the whole deliverable for this half.
 
-### What is still open
+### What was still open — now closed, 2026-07-28
 
 `LocationContext` and `QuestContext` inline `if (!activeGroupId || !activeCampaignId)`; `NoteContext`
-uses `if (!user?.uid || !activeGroupId)`. Three idioms for one precondition. This is **cosmetic** —
-no behaviour has been shown to differ, and per the lesson that produced five retracted tracker
-entries, it is not being filed as a defect on the strength of a code-reading alone.
+uses `if (!user?.uid || !activeGroupId)`. Three idioms for one precondition. This was carried as
+**cosmetic** — no behaviour shown to differ, and per the lesson that produced five retracted tracker
+entries, not filed as a defect on the strength of a code-reading alone.
+
+**Closed as no-defect after measuring it, and the framing turned out to be wrong: they are not three
+idioms for one precondition. `NoteContext`'s is a genuinely different precondition.**
+
+Notes are stored at `groups/{groupId}/users/{uid}/notes` (`NoteContext.tsx:43`, `:165`, `:393`) — a
+**user-scoped, group-level path with no campaign segment.** So `!user?.uid || !activeGroupId` is
+exactly the precondition its collection path requires; there is no campaign in the path to guard.
+Campaign is applied afterwards as a *filter* on already-fetched documents
+(`note.campaignId === activeCampaignId`, `:53`), and `createNote` separately requires a campaign
+with its own distinct message (`:116`, *"No active campaign selected. Please select a campaign before
+creating notes."*). Unifying `NoteContext` onto the campaign-scoped guard would be **actively
+wrong** — it would refuse to list a user's notes whenever no campaign happened to be selected.
+
+That leaves `LocationContext`/`QuestContext`'s inline `!activeGroupId || !activeCampaignId` against
+`NPCContext`'s `hasRequiredContext` memo. Those two genuinely are one precondition in two spellings,
+and the difference is that `NPCContext` also feeds the memo into `contextError` for its empty-state
+message. Identical behaviour, no reachable difference, nothing to fix.
+
+**Closed rather than unified.** Extracting a memo into two more contexts would be churn on a file
+set that four separate passes have already rewritten, in exchange for no behaviour change and no
+defect closed.
+
+### A second instance of this entry's own generalisable point
+
+The closing evidence is the *same lesson* the `StoryContext` half produced, one level further out.
+That half found "N implementations, disagreeing" was really "N implementations answering different
+questions" — with the asymmetry living in the **call sites**. This half found the same thing living
+in the **storage paths**: `NoteContext` guards differently because it writes somewhere structurally
+different. Both times the sweep that flagged the inconsistency was reading only the files that
+contained it, and the explanation was outside them. **When a consistency sweep flags N
+implementations, the deciding evidence is usually not in the N files.**
 
 ### The generalisable point
 

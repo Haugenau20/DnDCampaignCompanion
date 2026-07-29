@@ -152,6 +152,18 @@ class DocumentService extends BaseFirebaseService {
 
   /**
    * Create a new document with attribution metadata including character information
+   *
+   * `setDoc` (used below) is a full overwrite: if `id` names a document that
+   * already exists, that document is silently destroyed. When no `id` is
+   * supplied, a fresh Firestore-generated id is used and collision is
+   * impossible, so no check is needed. When the caller *does* supply an
+   * explicit `id` (e.g. one derived by slugifying a name), this method reads
+   * the document first and refuses to proceed if it already exists — this is
+   * the write-layer guard against the class of bugs where two different
+   * inputs slugify to the same id and the second create quietly overwrites
+   * the first (#002/#004/#009/#012). Re-keying an *existing* document under a
+   * new id on purpose must keep going through `setDocument`, not this method.
+   *
    * @param collectionName Collection name or full path
    * @param data Document data
    * @param id Optional document ID (generated if not provided)
@@ -162,29 +174,41 @@ class DocumentService extends BaseFirebaseService {
     data: T,
     id?: string
   ): Promise<string> {
-    // Get attribution metadata with character information
-    const attributionMetadata = await this.getCreationAttribution();
-    
     // Create document reference
     const collectionRef = this.getCollectionRef(collectionName);
     let docId = id;
-    
+
     if (!docId) {
       // Generate a new document ID
       docId = doc(collectionRef).id;
+    } else {
+      // An explicit id was supplied - guard against silently overwriting an
+      // existing document. Checked before fetching attribution so a
+      // collision fails fast without requiring a valid user profile.
+      const existingSnap = await getDoc(doc(collectionRef, docId));
+      if (existingSnap.exists()) {
+        throw new Error(
+          `Cannot create document: a document with id "${docId}" already exists in collection "${collectionName}". ` +
+          `createDocument never overwrites an existing document - use updateDocumentWithAttribution to modify it, ` +
+          `or setDocument if this is a deliberate re-key.`
+        );
+      }
     }
-    
+
+    // Get attribution metadata with character information
+    const attributionMetadata = await this.getCreationAttribution();
+
     const docRef = doc(collectionRef, docId);
-    
+
     // Combine data with attribution metadata
     const fullData = {
       ...data,
       ...attributionMetadata
     };
-    
+
     // Save document
     await setDoc(docRef, fullData as DocumentData);
-    
+
     return docId;
   }
 
