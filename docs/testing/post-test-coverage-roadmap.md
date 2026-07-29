@@ -1,7 +1,7 @@
 # Post-Test-Coverage Roadmap
 
-*Last updated: 2026-07-28, end of the **fourth** Phase 4 pass (branch `fix/phase4-domain-data-types`,
-14 commits, not yet merged).*
+*Last updated: 2026-07-29, end of the **first emulator walkthrough** (branch
+`fix/campaign-delete-and-write-error-surfacing`, 3 commits, not yet merged).*
 
 This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
 
@@ -10,20 +10,36 @@ This guide is the starting point for the next session. Point your orchestrator (
 **Restructuring: complete.** All four domains plus the `shared/`/`core/` pass. Five tags on `main`.
 No file-moving work left; do not start any.
 
-**Phase 4 bug triage: 62 of 62 tracker rows resolved. The tracker is empty.** Four passes have run.
+**Bug tracker: 70 filed, 65 resolved, 5 open.** The tracker was empty at the start of 2026-07-29;
+eight new entries (#1400–#1407) came out of the first session to *run* the app rather than read it.
+Three were fixed the same day.
 
-**Verified baseline on `fix/phase4-domain-data-types`, measured 2026-07-28:**
+**Verified baseline on `fix/campaign-delete-and-write-error-surfacing`, measured 2026-07-29:**
 
 | Metric | Value |
 |---|---|
-| Tests | **0 failed / 2 skipped / 4043 passed / 4045 total** |
+| Tests | **0 failed / 2 skipped / 4057 passed / 4059 total** |
 | Suites | **0 failed / 182 passed / 182 total** |
-| `npx tsc --noEmit` | clean |
+| Coverage | **91.69 stmts / 83.57 branches / 85.33 funcs / 92.18 lines** (uniform 80% CI floor) |
+| `npx tsc --noEmit` | clean (root **and** `firebase/functions`) |
 | `npm run build` | succeeds |
 
-**The suite is fully green for the first time in this project's history.** The 7 ID-collision markers
-that were the last source of red are fixed, not silenced. The 2 skips are #901's, closed as
-testability-only.
+*(The `main` baseline this session started from was 4043 passed / 4045 total and reproduced exactly.
+The +14 are new regression tests added with the #1400/#1401/#1403 fixes.)*
+
+**The suite is fully green.** The 2 skips are #901's, closed as testability-only.
+
+> ### The lesson of 2026-07-29, and it is the biggest one in this document
+>
+> **Every gate above was green while four separate user-facing affordances silently did nothing** —
+> the campaign Delete confirmation (#1403), the campaign Edit button (#1404), NPC create/edit
+> (#1400), and Edit on any content you did not author (#1406). A suite at 91.7% statement coverage
+> found none of them, because in each case *the failure is the tested behaviour*: a `console.log`
+> stub, a missing `onClick`, a bare `catch`, a rule that only exists in production.
+>
+> **Coverage measures which lines ran, not whether the app works.** The single highest-value thing
+> the next session can do is keep exercising the running application. Reading found none of this in
+> four prior passes; one afternoon of running it found eight entries.
 
 > **What this costs you, and it is not nothing.** For the last three passes the failing set was a
 > precise, self-maintaining signal: exactly 7 known reds meant any new red was unambiguously a
@@ -1055,8 +1071,45 @@ because nothing in the app imports Firebase Storage.
 
 ## What to do next
 
-**Everything previously listed here is done.** The bug tracker is empty and the suite is green. What
-follows is the work that surfaced *during* the fourth pass, plus the one item that needs a human.
+### 0. Read this first — the 2026-07-29 session (first emulator walkthrough)
+
+**Three things need a human before anything else:**
+
+1. **Deploy Firebase Functions.** `#1403`'s fix adds a new callable `deleteCampaign`. It is committed
+   but **not deployed**. Merging to `main` without deploying functions leaves the Delete button
+   failing at call time instead of silently no-opping — arguably worse than before. `firebase deploy
+   --only functions` (region `europe-west1`).
+2. **#1406 needs a product decision** — a group member cannot edit another member's content
+   (production rule), but the app offers them the Edit control anyway and no creator check exists
+   anywhere in `src/`. Three resolutions are laid out in the report; the *mismatch* is a defect
+   whichever is chosen. **Do not resolve unilaterally.**
+3. **#1404 needs a product call** — implement the campaign Edit dialog, or remove the inert button.
+
+**Open tracker rows:** #1402, #1404, #1405, #1406, #1407. All have full reports.
+
+**Still unexercised, and this is where the next findings are.** The walkthrough covered entity
+creation, ID collisions and the permission contract. It did **not** get to: chapter create →
+reorder → date rendering; location rename → parent reselection (#303's path, fixed but unverified in
+the running app); notes → AI entity extraction → convert to NPC/Quest; group/campaign switching;
+attribution rendering. Start there.
+
+**A tooling note that cost real time:** `scripts/start-dev.ps1 -Action status` reports "Not running"
+when everything *is* running. `Test-EmulatorsRunning` calls `Invoke-WebRequest` without
+`-UseBasicParsing`, which throws in a non-interactive shell, and the `try`/`catch` swallows it into
+`return $false`. Check the ports directly (`netstat`, or curl `127.0.0.1:4000`) before believing it.
+`scripts/` is gitignored, so this cannot be fixed in the repo.
+
+**Two probe scripts worth rebuilding if you need them** (they lived in a scratchpad, not the repo):
+one drove the real `generateUniqueEntityId` against the live emulator under an isolated project ID;
+the other loaded `firestore.rules.prod` into the emulator via
+`PUT /emulator/v1/projects/{projectId}:securityRules` and settled #1406 in a single run. **Loading
+the production ruleset into a scratch project is the cheap way to test rules** and touches nothing —
+and the production ruleset is currently covered by no test at all, which is what let #1406 sit.
+
+---
+
+**Everything from the fourth pass and earlier is done.** What follows is the work that surfaced
+*during* that pass, plus the one item that needs a human.
 
 ### 1. #1202 — done, and there was nothing to migrate
 
