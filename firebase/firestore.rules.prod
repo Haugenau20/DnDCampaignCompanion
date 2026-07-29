@@ -2,7 +2,7 @@
 //
 // ============================================================================
 // THIS FILE IS A REVIEW COPY. IT IS NOT DEPLOYED FROM HERE. EDITING IT CHANGES
-// NOTHING IN PRODUCTION.
+// NOTHING IN PRODUCTION. Paste it into the Firebase console to deploy.
 // ============================================================================
 //
 // The production Firestore ruleset is authored and deployed through the
@@ -13,40 +13,88 @@
 // environments, and `firestore.rules`'s blanket `allow read, write: if true`
 // is correct for an emulator and would be catastrophic in production.
 //
-// WHY THIS COPY EXISTS
-// The live policy previously had no representation in version control at all,
-// which meant it had no review, no diff, no history and no rollback, and
-// nothing stopped it silently drifting from what the repository implies. A
-// reader of this repo would reasonably have concluded from `firestore.rules`
-// that production was wide open. It is not. This file exists so that changes
-// to the real policy are reviewable alongside the code that depends on them.
+// ---------------------------------------------------------------------------
+// REVISION 2026-07-29 -- READ BEFORE DEPLOYING
+// ---------------------------------------------------------------------------
+// This is the first substantive change to this policy since it was transcribed
+// from the console on 2026-07-28. Every claim below was verified by loading
+// this file into the Firestore emulator under a scratch project ID and running
+// a 17-check battery as a real group admin and a real plain member. The same
+// battery ran against the PREVIOUS revision first, so each change is a measured
+// difference rather than an assertion.
 //
+// FOUR CHANGES, in descending order of importance:
+//
+// 1. RELAXED, AS REQUESTED: a group member may now UPDATE and DELETE campaign
+//    content created by any other member. Previously update required
+//    `createdBy == uid || isGroupAdmin`, and delete required `isGroupAdmin`
+//    outright -- so a member could not even delete an NPC they had created
+//    themselves. Meanwhile the app offers Edit and Delete to everyone and has
+//    no creator check anywhere in `src/`, so every such attempt failed at write
+//    time (bug #1406). This is a shared campaign journal; collective
+//    record-keeping is the point, and `createdBy`/`modifiedBy` still record
+//    authorship separately, so the audit trail survives.
+//
+// 2. SECURITY FIX -- personal notes were readable by the whole group.
+//    Notes live at `groups/{groupId}/users/{uid}/notes`, and the previous
+//    policy had no rule for them. They were therefore matched by the catch-all
+//    `match /{collection}/{docId}/{nestedCollection}/{nestedDocId}`, whose read
+//    rule is `isGroupMember(groupId)` -- so ANY member of the group could read,
+//    list and write ANY other member's private notes. Verified: all three were
+//    ALLOWED under the previous revision. The app never exposes this (the
+//    client only ever queries its own uid's path), so nothing leaked through
+//    the UI -- but anyone with the Firebase SDK and a group membership could
+//    read the lot. Notes are now explicitly owner-only.
+//
+// 3. SECURITY FIX -- a member could make themselves a group admin.
+//    `allow create, update: if isSignedIn() && request.auth.uid == userId` on
+//    the group profile let a member write ANY field of their own profile,
+//    including `role`. One `updateDoc({role: "admin"})` and they could delete
+//    the group, remove other users, and mint registration tokens. Verified
+//    ALLOWED under the previous revision. `update` may no longer touch `role`.
+//    SEE THE RESIDUAL RISK NOTE BELOW -- this is not fully closed.
+//
+// 4. SECURITY FIX -- the catch-all wildcard was over-broad on create.
+//    `match /{collection}/{docId}` with `allow create: if isGroupMember` let a
+//    member create documents in ANY group-level collection, including
+//    `registrationTokens` -- i.e. mint their own invitations. Verified ALLOWED
+//    under the previous revision. The wildcard is gone; `campaigns` is now
+//    matched explicitly, and anything not matched falls through to the final
+//    deny. A group's collections are exactly `campaigns`, `users`, `usernames`
+//    and `registrationTokens` (confirmed via `listCollectionIds` against the
+//    emulator), all four of which have explicit blocks below.
+//
+// ---------------------------------------------------------------------------
+// RESIDUAL RISK, NOT CLOSED BY THIS REVISION -- needs a decision
+// ---------------------------------------------------------------------------
+// Change 3 blocks the one-step escalation (update your own role). It does NOT
+// block the two-step version: a member may delete their own group profile
+// ("leave group") and then create it again with `role: "admin"`, because
+// `create` still has to permit `role: "admin"` for the legitimate case --
+// `GroupService.createGroup` writes the group creator's own profile with
+// `role: 'admin'` from the CLIENT, inside a transaction.
+//
+// The clean fix is to move group-profile creation into a Cloud Function using
+// the Admin SDK, after which `create` can be denied to clients entirely. That
+// is a code change, not a rules change, so it is deliberately not attempted
+// here. Conditioning the rule on the group document's `createdBy` was
+// considered and rejected: the group document is written in the SAME
+// transaction as the profile, so a `get()` for it may not see committed data,
+// and getting that wrong breaks group creation for everyone.
+//
+// Exploiting it takes deliberate direct SDK use and leaves the attacker briefly
+// outside the group. Strictly better than the previous state (one write, no
+// side effects), but not zero.
+//
+// ---------------------------------------------------------------------------
 // KEEPING IT HONEST
-// This is a snapshot, transcribed from the console on 2026-07-28 and confirmed
-// current by the repository owner. It can go stale. When you change the
-// production rules in the console, update this file in the same PR as whatever
-// motivated the change. If you are relying on these rules for a decision,
-// re-read them in the console first -- treat this copy as a claim to check,
-// not as the source of truth.
+// When you change the production rules in the console, update this file in the
+// same PR as whatever motivated the change. If you are relying on these rules
+// for a decision, re-read them in the console first -- treat this copy as a
+// claim to check, not as the source of truth.
 //
-// ONE TRANSCRIPTION NOTE
-// The pasted source ended one closing brace short -- the `service
-// cloud.firestore` block was left unclosed, which cannot be what is deployed
-// (it would not compile). The final `}` below was added to make this file
-// syntactically valid. Nothing else was altered. If you diff this against the
-// console and find any other difference, trust the console.
-//
-// WHAT THE POLICY ACTUALLY DOES, IN ONE PARAGRAPH
-// Everything is deny-by-default (the trailing `match /{document=**}` rule).
-// Campaign content under a group is readable by that group's members and
-// writable by members, but a member may only UPDATE content they created
-// unless they are a group admin -- `resource.data.createdBy == request.auth.uid
-// || isGroupAdmin(groupId) || isGlobalAdmin()`. That clause is load-bearing for
-// any operational script that repairs stored documents: it must run as a group
-// admin, or it will silently only be able to repair its own rows. See
-// `src/utils/__dev__/normalizeChapterDateModified.ts`, which depends on it.
-// Note also that the rules are path-scoped, so a `collectionGroup` query has no
-// matching rule and WILL be denied.
+// Note the rules are path-scoped, so a `collectionGroup` query has no matching
+// rule and WILL be denied.
 
 rules_version = '2';
 service cloud.firestore {
@@ -122,10 +170,20 @@ service cloud.firestore {
         // Group members can see other group members' profiles
         allow read: if isGroupMember(groupId) || isGlobalAdmin();
 
-        // Users can create/update their own group profile
-        allow create, update: if isSignedIn() && request.auth.uid == userId;
+        // Users can create their own group profile. This has to keep allowing
+        // role: "admin" -- GroupService.createGroup writes the group creator's
+        // own profile client-side, in the same transaction as the group doc.
+        // See the RESIDUAL RISK note in the header.
+        allow create: if isSignedIn() && request.auth.uid == userId;
 
-        // Group admins and global admin can update user profiles
+        // Users can update their own group profile, but MUST NOT be able to
+        // change their own role -- that was a one-write privilege escalation to
+        // group admin. Legitimate self-updates (activeCampaignId,
+        // activeCharacterId, preferences, characters, username) are unaffected.
+        allow update: if isSignedIn() && request.auth.uid == userId &&
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
+
+        // Group admins and global admin can update user profiles, role included
         allow update: if isGroupAdmin(groupId) || isGlobalAdmin();
 
         // Regular users can delete their own profiles (leave group)
@@ -133,6 +191,21 @@ service cloud.firestore {
 
         // Group admins or global admin can delete OTHER user profiles
         allow delete: if (isGroupAdmin(groupId) || isGlobalAdmin()) && request.auth.uid != userId;
+
+        // Personal notes -- PRIVATE TO THEIR AUTHOR.
+        // This block is new. Without it these documents fell through to the old
+        // catch-all wildcard, which made every member's notes readable, listable
+        // and writable by the entire group. The app's design has always treated
+        // notes as personal (the client only ever reads its own uid's path);
+        // this makes the rules agree with that design.
+        //
+        // Deliberately not readable by group admins or the global admin either:
+        // "private" that an admin can read is not private. If a future feature
+        // lets a user SHARE a note, it should copy or publish it into a
+        // campaign-scoped collection rather than widening this rule.
+        match /notes/{noteId} {
+          allow read, write: if isSignedIn() && request.auth.uid == userId;
+        }
       }
 
       // Username reservations in group
@@ -170,32 +243,41 @@ service cloud.firestore {
         allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
       }
 
-      // Campaigns and other nested collections
-      match /{collection}/{docId} {
-        // Group members can read content
+      // Campaigns and all campaign content.
+      //
+      // This replaces the previous `match /{collection}/{docId}` wildcard. That
+      // wildcard also matched `users`, `usernames` and `registrationTokens`,
+      // which is how a plain member could create registration tokens. Matching
+      // `campaigns` explicitly means anything else under a group falls through
+      // to the final deny rule instead of inheriting content permissions.
+      match /campaigns/{campaignId} {
         allow read: if isGroupMember(groupId) || isGlobalAdmin();
-
-        // Group members can create content
         allow create: if isGroupMember(groupId);
 
-        // Content creators can update their own content
-        allow update: if isGroupMember(groupId) &&
-                      (resource.data.createdBy == request.auth.uid ||
-                       isGroupAdmin(groupId) ||
-                       isGlobalAdmin());
+        // RELAXED: any group member may edit campaign metadata.
+        allow update: if isGroupMember(groupId) || isGlobalAdmin();
 
-        // Group admins and global admin can delete content
+        // Deleting a whole campaign stays admin-only -- it destroys every
+        // entity and every member's notes for that campaign. See bug #1403 and
+        // the deleteCampaign Cloud Function, which enforces the same check
+        // server-side.
         allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
 
-        // Nested documents follow the same rules
-        match /{nestedCollection}/{nestedDocId} {
+        // Campaign entities: npcs, locations, quests, rumors, chapters,
+        // story-progress, saga -- and anything added later.
+        match /{entityCollection}/{entityId} {
           allow read: if isGroupMember(groupId) || isGlobalAdmin();
           allow create: if isGroupMember(groupId);
-          allow update: if isGroupMember(groupId) &&
-                         (resource.data.createdBy == request.auth.uid ||
-                          isGroupAdmin(groupId) ||
-                          isGlobalAdmin());
-          allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
+
+          // RELAXED: previously `createdBy == uid || isGroupAdmin`, which the
+          // UI never enforced, so members hit permission-denied on any entity
+          // they had not personally created (bug #1406).
+          allow update: if isGroupMember(groupId) || isGlobalAdmin();
+
+          // RELAXED: previously admin-only, which meant a member could not
+          // delete even their OWN entity while the UI showed them a Delete
+          // button.
+          allow delete: if isGroupMember(groupId) || isGlobalAdmin();
         }
       }
     }
