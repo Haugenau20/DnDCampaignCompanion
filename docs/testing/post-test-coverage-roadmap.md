@@ -1,7 +1,10 @@
 # Post-Test-Coverage Roadmap
 
-*Last updated: 2026-07-30, end of the **first emulator + browser walkthrough** (branch
-`fix/campaign-delete-and-write-error-surfacing`, 8 commits, not yet merged).*
+*Last updated: 2026-07-30, end of the **first emulator + browser walkthrough** — 13 commits, merged
+to `main` via PR and the branch deleted. If you are reading this in a fresh session, this work is on
+`main`; **but check the ordered deploy in [What to do next](#what-to-do-next) before assuming it is
+live** — Cloud Functions and the production Firestore rules deploy separately from the frontend and
+neither is carried by the merge.*
 
 This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
 
