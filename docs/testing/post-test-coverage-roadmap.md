@@ -1085,20 +1085,35 @@ because nothing in the app imports Firebase Storage.
 
 ### 0. Read this first — the 2026-07-29/30 session (first emulator + browser walkthrough)
 
-**TWO DEPLOYS ARE OUTSTANDING. Neither is in the repo, and until both happen the fixes are not real.**
+**THE DEPLOY IS ORDERED AND NONE OF IT IS IN THE REPO. Out of order breaks group creation in
+production.**
 
-1. **Paste `firebase/firestore.rules.prod` into the Firebase console.** #1406, #1408, #1409 and #1410
-   are fixed in that file only, and **that file deploys nothing**. Three of them are *live security
-   exposures* until it is deployed: every member's private notes readable group-wide (#1408),
-   one-write self-promotion to group admin (#1409), and any member able to mint registration tokens
-   (#1410). The file's header documents every change and the one residual risk.
-2. **`firebase deploy --only functions`** (region `europe-west1`) for #1403's new `deleteCampaign`
-   callable. Merging without it leaves the Delete button failing at call time rather than silently
-   no-opping.
+| # | Step | Why this position |
+|---|---|---|
+| 1 | **`firebase deploy --only functions`** (`europe-west1`) | Adds `createGroup` (#1409) and `deleteCampaign` (#1403). Harmless alone — nothing calls them yet. `firebase.json` now auto-builds first, so `lib/` can no longer go out stale. |
+| 2 | **Merge the PR** → CI deploys the frontend | The new frontend calls `createGroup` instead of writing an admin profile client-side. Must be live **before** the rules forbid the old path. |
+| 3 | **Paste `firebase/firestore.rules.prod` into the console** | Now safe: no client writes `role: "admin"` any more. |
 
-**Open tracker rows:** #1402, #1405, #1407, #1412, #1413, plus #1409's residual two-step escalation.
-All have full reports. #1407 (`deleteUser`/`removeUserFromGroup` collapsing their own error codes into
-`internal`) is a two-line fix that needs a Functions deploy, so it pairs naturally with (2).
+Step 3 before step 2 rejects the currently-deployed frontend's group-creation transaction. A user on a
+cached old bundle can still hit that briefly after step 3; it affects only *creating a new group*, and
+resolves on reload.
+
+Until step 3, **three live security exposures remain**: every member's private notes readable
+group-wide (#1408), self-promotion to group admin (#1409), and any member able to mint registration
+tokens (#1410). The rules file's header documents every change and how each was verified.
+
+**Never `firebase deploy` bare or `--only firestore`.** The `firestore.rules` key was removed from
+`firebase.json` (`9fa897b`) so that mistake can no longer push the permissive emulator ruleset —
+`allow read, write: if true` — to production. Expect a new emulator warning about a missing rules file;
+that is intended and behaviourally identical to before.
+
+**Open tracker rows:** #1402, #1405, #1407, #1412, #1413. All have full reports. #1407
+(`deleteUser`/`removeUserFromGroup` collapsing their own error codes into `internal`) is a two-line
+fix that needs a Functions deploy, so it pairs naturally with step 1 above.
+
+**New local-dev dependency:** creating a group now requires the **Functions emulator**, not just
+Firestore+Auth. `start-dev.ps1` starts it, so the normal workflow is fine — but a Firestore-only
+session will fail on group creation.
 
 **Still unexercised, and this is where the next findings are.** Two sessions of walkthrough covered
 entity create/read, ID collisions, attribution, the permission contract, and the admin panel. Not yet
