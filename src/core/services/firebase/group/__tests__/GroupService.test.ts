@@ -205,39 +205,89 @@ describe('GroupService', () => {
       await expect(GS.getInstance().createGroup('My Group')).rejects.toThrow('Not authenticated');
     });
 
-    test('should call runTransaction and return a group ID', async () => {
-      mockRunTransaction.mockImplementationOnce(async (_db: any, cb: (tx: any) => any) => {
-        const tx = {
-          set: jest.fn(),
-          update: jest.fn(),
-          get: jest.fn().mockResolvedValue(
-            makeDocSnapshot(true, { username: 'TestAdmin', groups: [] })
-          ),
-        };
-        await cb(tx);
+    // These two tests were written against the client-side `runTransaction`
+    // implementation and were retargeted -- not deleted -- when group creation
+    // moved into the `createGroup` Cloud Function for bug #1409. Edited under the
+    // repository owner's explicit authorisation (2026-07-30).
+    //
+    // Why each changed, recorded because "a test was updated to pass" is exactly
+    // the shape this project treats as suspicious:
+    //
+    //  - The first asserted `mockRunTransaction).toHaveBeenCalledTimes(1)`. That
+    //    is a MECHANISM assertion on a helper deliberately removed from the path,
+    //    and its old name ("should call runTransaction") encoded the mechanism
+    //    too. Retargeted to the mechanism that replaced it; the behavioural half
+    //    of the test -- that an id comes back -- is unchanged.
+    //  - The second asserted `getActiveGroupId()).not.toBeNull()`, which is still
+    //    correct and is left BYTE-IDENTICAL. Only its arrangement was stale: it
+    //    mocked `runTransaction` rather than the callable. That is a fixture
+    //    repair, not a specification change.
+    //
+    // Neither assertion was weakened to accommodate the new code.
+
+    test('should call the createGroup Cloud Function and return a group ID', async () => {
+      const mockCallable = jest.fn().mockResolvedValueOnce({
+        data: { success: true, groupId: 'my-group-id' },
       });
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
 
       const svc = GroupService.getInstance();
       const groupId = await svc.createGroup('My Group', 'A test group');
       expect(typeof groupId).toBe('string');
-      expect(mockRunTransaction).toHaveBeenCalledTimes(1);
+      expect(mockCallable).toHaveBeenCalledTimes(1);
     });
 
     test('should set the active group after creation', async () => {
-      mockRunTransaction.mockImplementationOnce(async (_db: any, cb: (tx: any) => any) => {
-        const tx = {
-          set: jest.fn(),
-          update: jest.fn(),
-          get: jest.fn().mockResolvedValue(
-            makeDocSnapshot(true, { username: 'Admin', groups: [] })
-          ),
-        };
-        await cb(tx);
+      const mockCallable = jest.fn().mockResolvedValueOnce({
+        data: { success: true, groupId: 'my-group-id' },
       });
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
 
       const svc = GroupService.getInstance();
       await svc.createGroup('My Group');
       expect(svc.getActiveGroupId()).not.toBeNull();
+    });
+
+    // Bug #1409: group-profile creation moved server-side (the `createGroup`
+    // Cloud Function) so production Firestore rules can deny clients that
+    // write to `groups/{groupId}/users/{userId}` on create entirely -- a
+    // member could otherwise delete their own group profile (permitted, as
+    // "leave group") and recreate it with an escalated role. These tests
+    // cover the callable-based contract; see docs/testing/bug-tracking/
+    // 1409-member-can-escalate-to-group-admin.md.
+
+    test('should call the createGroup Cloud Function with name and description', async () => {
+      const mockCallable = jest.fn().mockResolvedValueOnce({
+        data: { success: true, groupId: 'new-group-id' },
+      });
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      const svc = GroupService.getInstance();
+      const groupId = await svc.createGroup('My Group', 'A test group');
+
+      expect(mockHttpsCallable).toHaveBeenCalledWith(expect.anything(), 'createGroup');
+      expect(mockCallable).toHaveBeenCalledWith({ name: 'My Group', description: 'A test group' });
+      expect(groupId).toBe('new-group-id');
+    });
+
+    test('should set the active group to the ID returned by the Cloud Function', async () => {
+      const mockCallable = jest.fn().mockResolvedValueOnce({
+        data: { success: true, groupId: 'returned-group-id' },
+      });
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      const svc = GroupService.getInstance();
+      await svc.createGroup('My Group');
+
+      expect(svc.getActiveGroupId()).toBe('returned-group-id');
+    });
+
+    test('should throw when the cloud function throws', async () => {
+      const mockCallable = jest.fn().mockRejectedValueOnce(new Error('invalid-argument'));
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      const svc = GroupService.getInstance();
+      await expect(svc.createGroup('')).rejects.toThrow('invalid-argument');
     });
   });
 

@@ -38,6 +38,12 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
   
     /**
      * Create a new group
+     *
+     * Delegates to the `createGroup` Cloud Function: the group creator's own
+     * profile is written with `role: 'admin'`, and production Firestore rules
+     * deny clients that write entirely (bug #1409 -- a member could otherwise
+     * delete their own group profile, permitted as "leave group", and
+     * recreate it with an escalated role).
      * @param name Name of the group
      * @param description Optional description of the group
      * @returns The ID of the newly created group
@@ -47,81 +53,23 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
       if (!userId) {
         throw new Error('Not authenticated');
       }
-      
-      // Generate a unique ID for the group
-      const groupId = doc(collection(this.db, 'groups')).id;
-      
-      // Use a transaction to create all necessary documents
-      await runTransaction(this.db, async (transaction) => {
-        const now = new Date();
-        
-        // Create the group document
-        const groupDocRef = doc(this.db, 'groups', groupId);
-        transaction.set(groupDocRef, {
-          name,
-          description: description || '',
-          createdAt: now,
-          createdBy: userId
-        });
-        
-        // Add the group to the user's global profile
-        const userDocRef = doc(this.db, 'users', userId);
-        const userDoc = await transaction.get(userDocRef);
-        
-        // Default username to use if we can't find one
-        let usernameToUse = 'Admin';
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const updatedGroups = [...(userData.groups || []), groupId];
-          
-          transaction.update(userDocRef, {
-            groups: updatedGroups,
-            activeGroupId: groupId // Set as the active group
-          });
-          
-          // If the user has a username in their global profile, use it
-          if (userData.username) {
-            usernameToUse = userData.username;
-          }
-        } else {
-          // If user document doesn't exist (shouldn't happen), create it
-          transaction.set(userDocRef, {
-            id: userId,
-            email: this.getCurrentUser()?.email,
-            groups: [groupId],
-            activeGroupId: groupId,
-            lastLogin: now,
-            createdAt: now
-          });
-        }
-        
-        // Create the user's group profile as an admin
-        const groupUserDocRef = doc(this.db, 'groups', groupId, 'users', userId);
-        transaction.set(groupUserDocRef, {
-          userId,
-          username: usernameToUse, // Use the username we determined above
-          role: 'admin',
-          joinedAt: now,
-          preferences: {
-            theme: 'default'
-          }
-        });
-        
-        // Reserve the username
-        const usernameLower = usernameToUse.toLowerCase();
-        const usernameDocRef = doc(this.db, 'groups', groupId, 'usernames', usernameLower);
-        transaction.set(usernameDocRef, {
-          userId,
-          originalUsername: usernameToUse,
-          createdAt: now
-        });
-      });
-      
-      // Set the active group context
-      this.setActiveGroup(groupId);
-      
-      return groupId;
+
+      try {
+        // Call the Cloud Function instead of attempting to modify data directly
+        const functions = getFunctions();
+        const createGroupFn = httpsCallable(functions, 'createGroup');
+
+        const result = await createGroupFn({ name, description });
+        const { groupId } = result.data as { success: boolean; groupId: string };
+
+        // Set the active group context
+        this.setActiveGroup(groupId);
+
+        return groupId;
+      } catch (err) {
+        console.error('Error creating group:', err);
+        throw err;
+      }
     }
   
     /**

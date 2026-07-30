@@ -28,14 +28,23 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
   onCancel,
   existingNPCs
 }) => {
-  // Use the NPCs context
-  const { updateNPC, isLoading, error } = useNPCs();
+  // Use the NPCs context. Renamed on destructure: this context error only ever reported
+  // read failures until bug #1401 was fixed, and even after that fix it still can't cover
+  // validation guards updateNPC throws before reaching useFirebaseData -- that's what the
+  // local `error` state below is for. See bug #1400.
+  const { updateNPC, isLoading, error: npcError } = useNPCs();
 
   // Authentication and user data
   const { userProfile } = useUser();
 
   // Form state initialized with existing NPC data
   const [formData, setFormData] = useState<NPC>(npc);
+
+  // Local submit-error state -- mirrors the pattern already established by
+  // QuestCreateForm/QuestEditForm/LocationCreateForm/LocationEditForm/RumorForm. Combined
+  // with npcError (above) in the single error block below so there is exactly one banner,
+  // never two stacked.
+  const [error, setError] = useState<string | null>(null);
   
   // State for managing connections
   const [affiliationInput, setAffiliationInput] = useState('');
@@ -84,6 +93,7 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
       onSuccess?.();
     } catch (err) {
       console.error('Failed to update NPC:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update NPC');
     }
   };
 
@@ -332,9 +342,9 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
             </div>
 
             {/* Error Message */}
-            {error && (
+            {(error || npcError) && (
               <Typography color="error" className="mt-2">
-                {error}
+                {error || npcError}
               </Typography>
             )}
 

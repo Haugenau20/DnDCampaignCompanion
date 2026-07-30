@@ -1,7 +1,10 @@
 # Post-Test-Coverage Roadmap
 
-*Last updated: 2026-07-28, end of the **fourth** Phase 4 pass (branch `fix/phase4-domain-data-types`,
-14 commits, not yet merged).*
+*Last updated: 2026-07-30, end of the **first emulator + browser walkthrough** — 13 commits, merged
+to `main` via PR and the branch deleted. If you are reading this in a fresh session, this work is on
+`main`; **but check the ordered deploy in [What to do next](#what-to-do-next) before assuming it is
+live** — Cloud Functions and the production Firestore rules deploy separately from the frontend and
+neither is carried by the merge.*
 
 This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
 
@@ -10,20 +13,48 @@ This guide is the starting point for the next session. Point your orchestrator (
 **Restructuring: complete.** All four domains plus the `shared/`/`core/` pass. Five tags on `main`.
 No file-moving work left; do not start any.
 
-**Phase 4 bug triage: 62 of 62 tracker rows resolved. The tracker is empty.** Four passes have run.
+**Bug tracker: 76 filed, 70 resolved, 6 open.** The tracker was **empty** at the start of
+2026-07-29. Fourteen new entries (#1400–#1413) came out of the first session to *run* the app rather
+than read it — eight of them fixed in the same session.
 
-**Verified baseline on `fix/phase4-domain-data-types`, measured 2026-07-28:**
+**Verified baseline on `fix/campaign-delete-and-write-error-surfacing`, measured 2026-07-29:**
 
 | Metric | Value |
 |---|---|
-| Tests | **0 failed / 2 skipped / 4043 passed / 4045 total** |
+| Tests | **0 failed / 2 skipped / 4068 passed / 4070 total** |
 | Suites | **0 failed / 182 passed / 182 total** |
-| `npx tsc --noEmit` | clean |
+| Coverage | **91.70 stmts / 83.54 branches / 85.39 funcs / 92.21 lines** (uniform 80% CI floor) |
+| `npx tsc --noEmit` | clean (root **and** `firebase/functions`) |
 | `npm run build` | succeeds |
 
-**The suite is fully green for the first time in this project's history.** The 7 ID-collision markers
-that were the last source of red are fixed, not silenced. The 2 skips are #901's, closed as
-testability-only.
+*(The `main` baseline this session started from was 4043 passed / 4045 total and reproduced exactly.
+The +25 are new regression tests added with the fixes below.)*
+
+**The suite is fully green.** The 2 skips are #901's, closed as testability-only.
+
+> ### The lesson of 2026-07-29, and it is the biggest one in this document
+>
+> **Every gate above was green while four separate user-facing affordances silently did nothing** —
+> the campaign Delete confirmation (#1403), the campaign Edit button (#1404), NPC create/edit
+> (#1400), and Edit on any content you did not author (#1406). A suite at 91.7% statement coverage
+> found none of them, because in each case *the failure is the tested behaviour*: a `console.log`
+> stub, a missing `onClick`, a bare `catch`, a rule that only exists in production.
+>
+> **Coverage measures which lines ran, not whether the app works.** The single highest-value thing
+> the next session can do is keep exercising the running application. Reading found none of this in
+> four prior passes; one afternoon of running it found fourteen entries.
+>
+> **The sharpest example is #1411, and it was not even reachable by reading.** Nobody could sign in
+> to the app locally at all — App Check attests against the real Google backend even with every
+> other service on localhost, so an unregistered debug token 403'd and took every sign-in with it.
+> All three gates were green throughout, because no test signs in to a real Firebase. Worse, it was
+> *caused* by fixing #1300: before that, App Check silently never initialized anywhere and local
+> login worked **by accident**. The repository owner had been living with it and assumed it was a
+> Chrome quirk.
+>
+> Two lessons worth carrying: **a green suite says nothing about whether the app starts**, and
+> **fixing a bug can activate a dormant neighbour** (#018 → #852, now #1300 → #1411 — the second
+> confirmed instance of that pattern in this codebase).
 
 > **What this costs you, and it is not nothing.** For the last three passes the failing set was a
 > precise, self-maintaining signal: exactly 7 known reds meant any new red was unambiguously a
@@ -1055,8 +1086,77 @@ because nothing in the app imports Firebase Storage.
 
 ## What to do next
 
-**Everything previously listed here is done.** The bug tracker is empty and the suite is green. What
-follows is the work that surfaced *during* the fourth pass, plus the one item that needs a human.
+### 0. Read this first — the 2026-07-29/30 session (first emulator + browser walkthrough)
+
+**THE DEPLOY IS ORDERED AND NONE OF IT IS IN THE REPO. Out of order breaks group creation in
+production.**
+
+| # | Step | Why this position |
+|---|---|---|
+| 1 | **`firebase deploy --only functions`** (`europe-west1`) | Adds `createGroup` (#1409) and `deleteCampaign` (#1403). Harmless alone — nothing calls them yet. `firebase.json` now auto-builds first, so `lib/` can no longer go out stale. |
+| 2 | **Merge the PR** → CI deploys the frontend | The new frontend calls `createGroup` instead of writing an admin profile client-side. Must be live **before** the rules forbid the old path. |
+| 3 | **Paste `firebase/firestore.rules.prod` into the console** | Now safe: no client writes `role: "admin"` any more. |
+
+Step 3 before step 2 rejects the currently-deployed frontend's group-creation transaction. A user on a
+cached old bundle can still hit that briefly after step 3; it affects only *creating a new group*, and
+resolves on reload.
+
+Until step 3, **three live security exposures remain**: every member's private notes readable
+group-wide (#1408), self-promotion to group admin (#1409), and any member able to mint registration
+tokens (#1410). The rules file's header documents every change and how each was verified.
+
+**Never `firebase deploy` bare or `--only firestore`.** The `firestore.rules` key was removed from
+`firebase.json` (`9fa897b`) so that mistake can no longer push the permissive emulator ruleset —
+`allow read, write: if true` — to production. Expect a new emulator warning about a missing rules file;
+that is intended and behaviourally identical to before.
+
+**Open tracker rows:** #1402, #1405, #1407, #1412, #1413. All have full reports. #1407
+(`deleteUser`/`removeUserFromGroup` collapsing their own error codes into `internal`) is a two-line
+fix that needs a Functions deploy, so it pairs naturally with step 1 above.
+
+**New local-dev dependency:** creating a group now requires the **Functions emulator**, not just
+Firestore+Auth. `start-dev.ps1` starts it, so the normal workflow is fine — but a Firestore-only
+session will fail on group creation.
+
+**Still unexercised, and this is where the next findings are.** Two sessions of walkthrough covered
+entity create/read, ID collisions, attribution, the permission contract, and the admin panel. Not yet
+reached: **chapter create → reorder → date rendering** (the `chapter-{order}` re-keying, four tracker
+entries trace to it); **location rename → parent reselection** (#303's path, fixed but never verified
+in the running app); **notes → AI entity extraction → convert** (the owner asked for this to be
+exercised *lightly* — it bills OpenAI per token); **group/campaign switching**. Start there.
+
+**Browser automation is available** via the Chrome skill, and it is what found #1411/#1412/#1413.
+Use it — three of this session's findings were invisible to every other method.
+
+**Two probe harnesses worth rebuilding** (they lived in a scratchpad, not the repo): one drove the
+real `generateUniqueEntityId` against the live emulator under an isolated project ID; the other
+loaded a ruleset via `PUT /emulator/v1/projects/{projectId}:securityRules` and ran a 17-check
+security battery plus a 16-check app-flow battery. **Running the battery against the OLD ruleset
+first is what made every rules change a measured difference rather than a claim** — do that again
+before touching the rules.
+
+**Sample-data gotcha that nearly cost a false bug report:** the DM account's active character is named
+`gandlaf` — a typo of "gandalf" in the generator. An activity feed reading "By: gandlaf" looks like
+an attribution bug until you read the document and find `modifiedByCharacterName='gandlaf'`.
+Attribution is correct. Read the document before filing.
+
+**A tooling note that cost real time:** `scripts/start-dev.ps1 -Action status` reports "Not running"
+when everything *is* running. `Test-EmulatorsRunning` calls `Invoke-WebRequest` without
+`-UseBasicParsing`, which throws in a non-interactive shell, and the `try`/`catch` swallows it into
+`return $false`. Check the ports directly (`netstat`, or curl `127.0.0.1:4000`) before believing it.
+`scripts/` is gitignored, so this cannot be fixed in the repo.
+
+**Two probe scripts worth rebuilding if you need them** (they lived in a scratchpad, not the repo):
+one drove the real `generateUniqueEntityId` against the live emulator under an isolated project ID;
+the other loaded `firestore.rules.prod` into the emulator via
+`PUT /emulator/v1/projects/{projectId}:securityRules` and settled #1406 in a single run. **Loading
+the production ruleset into a scratch project is the cheap way to test rules** and touches nothing —
+and the production ruleset is currently covered by no test at all, which is what let #1406 sit.
+
+---
+
+**Everything from the fourth pass and earlier is done.** What follows is the work that surfaced
+*during* that pass, plus the one item that needs a human.
 
 ### 1. #1202 — done, and there was nothing to migrate
 

@@ -8,6 +8,7 @@ import './styles/globals.css';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getApp } from 'firebase/app';
 import { getFirebaseServices } from 'core/services/firebase';
+import { useEmulators } from 'core/services/firebase/config/firebaseConfig';
 
 // Initialize AppCheck for enhanced security
 // In development, we'll use debug tokens
@@ -25,34 +26,57 @@ if (process.env.NODE_ENV === 'development') {
 // Initialize Firebase App Check to prevent abuse of our Cloud Functions
   // This requires a reCAPTCHA v3 site key from Google Console
   // https://console.cloud.google.com/security/recaptcha
-  try {
-    // Make sure we have a valid site key
-    const siteKey = process.env.REACT_APP_RECAPTCHA_SITE_KEY;
-    if (!siteKey) {
-      console.error('Missing REACT_APP_RECAPTCHA_SITE_KEY environment variable');
-      throw new Error('Missing reCAPTCHA site key');
+  //
+  // NOT initialized when running against the emulators (bug #1411). App Check
+  // attests against the real Google backend even when every other Firebase
+  // service is pointed at localhost, and the debug token the SDK generates for
+  // development has to be registered by hand in the Firebase console for that
+  // exchange to succeed. Unregistered, the exchange returns 403, and because
+  // Auth attaches an App Check token to its requests, EVERY SIGN-IN FAILS with
+  // `appCheck/fetch-status-error` before the credentials are ever checked.
+  //
+  // This was invisible until bug #1300 was fixed. Before that, getApp() threw
+  // `app/no-app` here and the catch below swallowed it, so App Check never
+  // actually initialized -- anywhere. Local sign-in worked by accident, and
+  // making App Check work in production is what broke it.
+  //
+  // The emulators do not verify App Check tokens, so skipping it locally costs
+  // no protection. Production behaviour is unchanged.
+  if (!useEmulators) {
+    try {
+      // Make sure we have a valid site key
+      const siteKey = process.env.REACT_APP_RECAPTCHA_SITE_KEY;
+      if (!siteKey) {
+        console.error('Missing REACT_APP_RECAPTCHA_SITE_KEY environment variable');
+        throw new Error('Missing reCAPTCHA site key');
+      }
+
+      const appCheckConfig = {
+        provider: new ReCaptchaV3Provider(siteKey),
+        isTokenAutoRefreshEnabled: true
+      };
+
+      // Initialize Firebase before reading the app back with getApp().
+      //
+      // This module does not import the Firebase barrel for its own sake, and it
+      // must not rely on someone else's import doing the work: initialization used
+      // to happen as a side effect of `import App from 'app/App'` (App transitively
+      // imports the barrel, which called initializeFirebaseServices() at module
+      // scope). Making that lazy so importing the barrel is side-effect free left
+      // getApp() with no app to return, and App Check silently stopped initializing
+      // because the catch below swallowed the resulting app/no-app error.
+      getFirebaseServices();
+
+      initializeAppCheck(getApp(), appCheckConfig);
+      console.log('Firebase App Check initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize Firebase App Check:', error);
     }
-
-    const appCheckConfig = {
-      provider: new ReCaptchaV3Provider(siteKey),
-      isTokenAutoRefreshEnabled: true
-    };
-
-    // Initialize Firebase before reading the app back with getApp().
-    //
-    // This module does not import the Firebase barrel for its own sake, and it
-    // must not rely on someone else's import doing the work: initialization used
-    // to happen as a side effect of `import App from 'app/App'` (App transitively
-    // imports the barrel, which called initializeFirebaseServices() at module
-    // scope). Making that lazy so importing the barrel is side-effect free left
-    // getApp() with no app to return, and App Check silently stopped initializing
-    // because the catch below swallowed the resulting app/no-app error.
+  } else {
+    // Still needed: #1300's point was that nothing else initializes Firebase
+    // eagerly any more, and the rest of the app calls getApp() expecting it.
     getFirebaseServices();
-
-    initializeAppCheck(getApp(), appCheckConfig);
-    console.log('Firebase App Check initialized successfully');
-  } catch (error) {
-    console.error('Failed to initialize Firebase App Check:', error);
+    console.log('Firebase App Check skipped (using emulators) - see bug #1411');
   }
 
 // Router wrapper component to handle redirects

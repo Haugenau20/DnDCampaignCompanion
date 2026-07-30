@@ -139,14 +139,33 @@ export function useCampaigns() {
     }
   }, [activeGroupId, setError, refreshCampaigns]);
 
+  // Delete a campaign and everything that belongs to it (subcollections,
+  // every member's notes for it, and any activeCampaignId pointing at it)
+  const deleteCampaign = useCallback(async (campaignId: string): Promise<void> => {
+    try {
+      setError(null);
+
+      if (!activeGroupId) {
+        throw new Error('No active group selected');
+      }
+
+      await firebaseServices.campaign.deleteCampaign(activeGroupId, campaignId);
+      await refreshCampaigns();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete campaign');
+      throw err;
+    }
+  }, [activeGroupId, setError, refreshCampaigns]);
+
   return {
     campaigns,
     activeCampaignId,
-    activeCampaign,    
+    activeCampaign,
     createCampaign,
     setActiveCampaign,
     refreshCampaigns,
     getCampaigns,
-    updateCampaign
+    updateCampaign,
+    deleteCampaign
   };
 }

@@ -1,10 +1,15 @@
 
 {
   "functions": {
-    "source": "functions"
+    "source": "functions",
+    "predeploy": [
+      "npm --prefix \"$RESOURCE_DIR\" run build"
+    ]
   },
+  "//": "DELIBERATELY NO `firestore.rules` KEY. It used to point at firestore.rules -- the PERMISSIVE EMULATOR ruleset (`allow read, write: if true`) -- so a bare `firebase deploy`, or `--only firestore`, would have deployed a WIDE OPEN database to production. Production rules are authored and deployed through the Firebase console; the review copy is firestore.rules.prod. Removing the key makes that mistake impossible: deploy can no longer touch Firestore rules at all.",
+  "//2": "EXPECTED SIDE EFFECT, verified not assumed: the emulator now prints `Did not find a Cloud Firestore rules file` on every start and defaults to allowing all reads and writes. That is the SAME effective behaviour as before, because the file it used to load was itself `allow read, write: if true` -- the warning is noise, not a regression. firestore.rules is kept in the repo as documentation of dev intent, and because restoring the key is the way to make the emulator enforce rules if that is ever wanted.",
+  "//3": "To test rules against the emulator WITHOUT this key, load a ruleset per scratch project id: PUT http://127.0.0.1:8080/emulator/v1/projects/{projectId}:securityRules. That is how firestore.rules.prod was verified, and it leaves real sample data untouched.",
   "firestore": {
-    "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
   "hosting": {

@@ -12,6 +12,7 @@ const mockGetDoc = jest.fn();
 const mockGetDocs = jest.fn();
 const mockSetDoc = jest.fn();
 const mockUpdateDoc = jest.fn();
+const mockHttpsCallable = jest.fn();
 const mockCollection = jest.fn((_db: any, ...segs: string[]) => ({ path: segs.join('/') }));
 const mockDoc = jest.fn((_db_or_ref: any, ...segs: string[]) => ({
   path: segs.join('/'),
@@ -45,6 +46,7 @@ jest.mock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
 jest.mock('firebase/functions', () => ({
   getFunctions: jest.fn(() => ({})),
   connectFunctionsEmulator: jest.fn(),
+  httpsCallable: function() { return (mockHttpsCallable as Function).apply(null, arguments); },
 }));
 
 jest.mock('../../config/firebaseConfig', () => ({
@@ -123,6 +125,7 @@ describe('CampaignService', () => {
     jest.doMock('firebase/functions', () => ({
       getFunctions: jest.fn(() => ({})),
       connectFunctionsEmulator: jest.fn(),
+      httpsCallable: function() { return (mockHttpsCallable as Function).apply(null, arguments); },
     }));
     jest.doMock('../../config/firebaseConfig', () => ({
       firebaseConfig: { apiKey: 'test', projectId: 'test' },
@@ -131,7 +134,7 @@ describe('CampaignService', () => {
       emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001' },
     }));
 
-    [mockGetDoc, mockGetDocs, mockSetDoc, mockUpdateDoc,
+    [mockGetDoc, mockGetDocs, mockSetDoc, mockUpdateDoc, mockHttpsCallable,
      mockGetGroupUserProfile, mockUpdateGroupUserProfile].forEach(m => m.mockReset());
 
     CampaignService = require('../CampaignService').default;
@@ -173,6 +176,7 @@ describe('CampaignService', () => {
       jest.doMock('firebase/functions', () => ({
         getFunctions: jest.fn(() => ({})),
         connectFunctionsEmulator: jest.fn(),
+        httpsCallable: function() { return (mockHttpsCallable as Function).apply(null, arguments); },
       }));
       jest.doMock('../../config/firebaseConfig', () => ({
         firebaseConfig: { apiKey: 'test', projectId: 'test' },
@@ -280,6 +284,7 @@ describe('CampaignService', () => {
       jest.doMock('firebase/functions', () => ({
         getFunctions: jest.fn(() => ({})),
         connectFunctionsEmulator: jest.fn(),
+        httpsCallable: function() { return (mockHttpsCallable as Function).apply(null, arguments); },
       }));
       jest.doMock('../../config/firebaseConfig', () => ({
         firebaseConfig: { apiKey: 'test', projectId: 'test' },
@@ -359,6 +364,72 @@ describe('CampaignService', () => {
       mockUpdateDoc.mockRejectedValueOnce(new Error('update failed'));
       const svc = CampaignService.getInstance();
       await expect(svc.updateCampaign('g1', 'c1', { name: 'x' })).rejects.toThrow('update failed');
+    });
+  });
+
+  // ─── deleteCampaign ─────────────────────────────────────────────────────────
+
+  describe('deleteCampaign', () => {
+    test('should throw when user is not authenticated', async () => {
+      jest.resetModules();
+      jest.doMock('firebase/auth', () => ({
+        getAuth: jest.fn(() => ({ currentUser: null })),
+        connectAuthEmulator: jest.fn(),
+      }));
+      jest.doMock('firebase/firestore', () => ({
+        getFirestore: jest.fn(() => ({})),
+        connectFirestoreEmulator: jest.fn(),
+        collection: function() { return (mockCollection as Function).apply(null, arguments); },
+        doc: function() { return (mockDoc as Function).apply(null, arguments); },
+        getDoc: function() { return (mockGetDoc as Function).apply(null, arguments); },
+        getDocs: function() { return (mockGetDocs as Function).apply(null, arguments); },
+        setDoc: function() { return (mockSetDoc as Function).apply(null, arguments); },
+        updateDoc: function() { return (mockUpdateDoc as Function).apply(null, arguments); },
+      }));
+      jest.doMock('firebase/app', () => ({ initializeApp: jest.fn(() => ({})) }));
+      jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
+      jest.doMock('firebase/functions', () => ({
+        getFunctions: jest.fn(() => ({})),
+        connectFunctionsEmulator: jest.fn(),
+        httpsCallable: function() { return (mockHttpsCallable as Function).apply(null, arguments); },
+      }));
+      jest.doMock('../../config/firebaseConfig', () => ({
+        firebaseConfig: { apiKey: 'test', projectId: 'test' },
+        useEmulators: false, emulatorHost: 'localhost',
+        emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001' },
+      }));
+      const reg = new Map<string, any>([['userService', mockUserServiceInstance]]);
+      jest.doMock('../../core/ServiceRegistry', () => ({
+        __esModule: true,
+        default: { getInstance: jest.fn(() => ({
+          get: (n: string) => { if (!reg.has(n)) throw new Error(`Service '${n}' not found`); return reg.get(n); },
+          register: (n: string, s: any) => reg.set(n, s),
+          has: (n: string) => reg.has(n),
+        })) },
+      }));
+      const CS = require('../CampaignService').default;
+      await expect(CS.getInstance().deleteCampaign('g1', 'c1')).rejects.toThrow(
+        'Not authenticated'
+      );
+    });
+
+    test('should call the Cloud Function httpsCallable with groupId and campaignId', async () => {
+      const mockCallable = jest.fn().mockResolvedValueOnce({ data: { success: true } });
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      const svc = CampaignService.getInstance();
+      await svc.deleteCampaign('g1', 'c1');
+
+      expect(mockHttpsCallable).toHaveBeenCalledWith(expect.anything(), 'deleteCampaign');
+      expect(mockCallable).toHaveBeenCalledWith({ groupId: 'g1', campaignId: 'c1' });
+    });
+
+    test('should throw when the cloud function throws', async () => {
+      const mockCallable = jest.fn().mockRejectedValueOnce(new Error('permission-denied'));
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      const svc = CampaignService.getInstance();
+      await expect(svc.deleteCampaign('g1', 'c1')).rejects.toThrow('permission-denied');
     });
   });
 });

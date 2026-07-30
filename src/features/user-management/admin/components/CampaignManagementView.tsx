@@ -25,10 +25,12 @@ import {
 import clsx from 'clsx';
 
 const CampaignManagementView: React.FC = () => {
-  const { 
+  const {
     createCampaign,
     campaigns: contextCampaigns,
-    getCampaigns
+    getCampaigns,
+    deleteCampaign,
+    updateCampaign
   } = useCampaigns();
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
@@ -51,6 +53,25 @@ const CampaignManagementView: React.FC = () => {
     campaignId: '',
     campaignName: ''
   });
+  const [deletingCampaign, setDeletingCampaign] = useState(false);
+  // Scoped to the delete dialog rather than reusing the shared `error` state -- see
+  // the comment in handleConfirmDeleteCampaign.
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Edit dialog state -- also doubles as the editable form fields, same as the
+  // New Campaign form above stores its own name/description separately from
+  // the shared `error` state.
+  const [editDialog, setEditDialog] = useState({
+    isOpen: false,
+    campaignId: '',
+    name: '',
+    description: ''
+  });
+  const [editingCampaign, setEditingCampaign] = useState(false);
+  // Scoped to the edit dialog for the same reason as `deleteError`: the shared
+  // `error` state renders in the main view, behind this modal, where the user
+  // cannot see it (bug #201's failure mode).
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Use campaigns from context if available, otherwise use local state
   const campaigns = contextCampaigns.length > 0 ? contextCampaigns : localCampaigns;
@@ -129,9 +150,74 @@ const CampaignManagementView: React.FC = () => {
   };
 
   const handleConfirmDeleteCampaign = async () => {
-    // TODO: Implement campaign deletion functionality
-    console.log('Delete campaign:', confirmDeleteDialog.campaignId);
-    setConfirmDeleteDialog({ isOpen: false, campaignId: '', campaignName: '' });
+    setDeletingCampaign(true);
+    setDeleteError(null);
+
+    try {
+      await deleteCampaign(confirmDeleteDialog.campaignId);
+
+      // Refresh the campaign list
+      if (activeGroupId) {
+        const updatedCampaigns = await getCampaigns(activeGroupId);
+        setLocalCampaigns(updatedCampaigns);
+      }
+
+      setConfirmDeleteDialog({ isOpen: false, campaignId: '', campaignName: '' });
+    } catch (err) {
+      // Deliberately NOT the shared `error` state: that renders in the main view,
+      // which sits behind this modal, so the user would be left staring at an open
+      // dialog with no explanation. Keeping a dialog-scoped state also avoids the
+      // opposite failure -- bug #201, where a shared state rendered the same error
+      // twice at once because both the main view and an open dialog read it.
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete campaign');
+    } finally {
+      setDeletingCampaign(false);
+    }
+  };
+
+  // Handle campaign edit
+  const handleEditCampaign = (campaign: Campaign) => {
+    setEditDialog({
+      isOpen: true,
+      campaignId: campaign.id,
+      name: campaign.name,
+      description: campaign.description || ''
+    });
+  };
+
+  const closeEditDialog = () => {
+    setEditError(null);
+    setEditDialog({ isOpen: false, campaignId: '', name: '', description: '' });
+  };
+
+  const handleConfirmEditCampaign = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!editDialog.name.trim()) return;
+
+    setEditingCampaign(true);
+    setEditError(null);
+
+    try {
+      await updateCampaign(editDialog.campaignId, {
+        name: editDialog.name,
+        description: editDialog.description
+      });
+
+      // Refresh the campaign list
+      if (activeGroupId) {
+        const updatedCampaigns = await getCampaigns(activeGroupId);
+        setLocalCampaigns(updatedCampaigns);
+      }
+
+      setEditDialog({ isOpen: false, campaignId: '', name: '', description: '' });
+    } catch (err) {
+      // Deliberately NOT the shared `error` state -- see the comment on
+      // `editError`'s declaration and handleConfirmDeleteCampaign above.
+      setEditError(err instanceof Error ? err.message : 'Failed to update campaign');
+    } finally {
+      setEditingCampaign(false);
+    }
   };
 
   // Filter campaigns by search query
@@ -226,6 +312,7 @@ const CampaignManagementView: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       startIcon={<Edit size={16} />}
+                      onClick={() => handleEditCampaign(campaign)}
                     >
                       Edit
                     </Button>
@@ -321,10 +408,72 @@ const CampaignManagementView: React.FC = () => {
         </form>
       </Dialog>
 
+      {/* Edit Campaign Dialog */}
+      <Dialog
+        open={editDialog.isOpen}
+        onClose={closeEditDialog}
+        title="Edit Campaign"
+        maxWidth="max-w-md"
+        isNested={true}
+      >
+        <form onSubmit={handleConfirmEditCampaign}>
+          <div className="space-y-4">
+            <Input
+              label="Campaign Name *"
+              value={editDialog.name}
+              onChange={(e) => setEditDialog(prev => ({ ...prev, name: e.target.value }))}
+              required
+              placeholder="Enter campaign name"
+            />
+
+            <Input
+              label="Description (optional)"
+              value={editDialog.description}
+              onChange={(e) => setEditDialog(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Brief description of the campaign"
+              isTextArea={true}
+              rows={3}
+            />
+
+            {/* Rendered inside the dialog, where the user is actually looking when the
+                update fails. See bug #201 for the sibling component that got this wrong. */}
+            {editError && (
+              <div className="flex items-center gap-2">
+                <AlertCircle size={16} className="typography-error" />
+                <Typography color="error">{editError}</Typography>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="ghost"
+                onClick={closeEditDialog}
+                type="button"
+                startIcon={<X size={16} />}
+                disabled={editingCampaign}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                startIcon={<Edit size={16} />}
+                disabled={!editDialog.name.trim() || editingCampaign}
+                isLoading={editingCampaign}
+              >
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Dialog>
+
       {/* Confirm Delete Dialog */}
       <Dialog
         open={confirmDeleteDialog.isOpen}
-        onClose={() => setConfirmDeleteDialog({ isOpen: false, campaignId: '', campaignName: '' })}
+        onClose={() => {
+          setDeleteError(null);
+          setConfirmDeleteDialog({ isOpen: false, campaignId: '', campaignName: '' });
+        }}
         title="Confirm Campaign Deletion"
         maxWidth="max-w-md"
         isNested={true}
@@ -334,19 +483,36 @@ const CampaignManagementView: React.FC = () => {
             Are you sure you want to delete the campaign <strong>"{confirmDeleteDialog.campaignName}"</strong>?
           </Typography>
           <Typography color="error">
-            This will permanently delete all campaign data including NPCs, locations, quests, and story chapters. This action cannot be undone.
+            This will permanently delete the campaign, its NPCs, locations, quests, rumors, chapters
+            and sagas, and every member's notes for this campaign. This action cannot be undone.
           </Typography>
+
+          {/* Rendered inside the dialog, where the user is actually looking when the
+              delete fails. See bug #201 for the sibling component that got this wrong. */}
+          {deleteError && (
+            <div className="flex items-center gap-2">
+              <AlertCircle size={16} className="typography-error" />
+              <Typography color="error">{deleteError}</Typography>
+            </div>
+          )}
+
           <div className="flex justify-end gap-4 mt-6">
             <Button
               variant="ghost"
-              onClick={() => setConfirmDeleteDialog({ isOpen: false, campaignId: '', campaignName: '' })}
+              onClick={() => {
+                setDeleteError(null);
+                setConfirmDeleteDialog({ isOpen: false, campaignId: '', campaignName: '' });
+              }}
               startIcon={<X size={16} />}
+              disabled={deletingCampaign}
             >
               Cancel
             </Button>
             <Button
               onClick={handleConfirmDeleteCampaign}
               startIcon={<Trash size={16} />}
+              disabled={deletingCampaign}
+              isLoading={deletingCampaign}
             >
               Delete Campaign
             </Button>

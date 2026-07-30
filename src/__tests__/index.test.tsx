@@ -214,6 +214,18 @@ beforeAll(() => {
   // Provide env var required by AppCheck initialization in index.tsx
   process.env.REACT_APP_RECAPTCHA_SITE_KEY = "test-recaptcha-key";
 
+  // Load index.tsx as PRODUCTION loads it — not against the emulators.
+  //
+  // setupTests.ts sets REACT_APP_USE_EMULATORS='true' globally, and index.tsx
+  // now skips App Check entirely in that case (bug #1411: App Check attests
+  // against the real Google backend even when every other Firebase service is
+  // on localhost, so an unregistered debug token 403s and takes every local
+  // sign-in down with it). The App Check assertions below are #1300's
+  // regression guard and describe the PRODUCTION contract, so this block has to
+  // load index.tsx the way production does. The emulator path is asserted
+  // separately, in its own describe below, so both directions are covered.
+  process.env.REACT_APP_USE_EMULATORS = "false";
+
   // Reset captured values in case of module re-use
   capturedContainer = null;
   capturedRootElement = null;
@@ -240,6 +252,8 @@ beforeAll(() => {
 
 afterAll(() => {
   delete process.env.REACT_APP_RECAPTCHA_SITE_KEY;
+  // setupTests.ts's global default, restored so suite order cannot matter.
+  process.env.REACT_APP_USE_EMULATORS = "true";
 });
 
 // ---------------------------------------------------------------------------
@@ -280,6 +294,70 @@ describe("index.tsx entry point", () => {
         String(first).includes("Failed to initialize Firebase App Check")
       );
       expect(appCheckFailures).toEqual([]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Firebase App Check — the emulator path (bug #1411)
+  //
+  // The other half of the contract. App Check has no emulator: it attests
+  // against the real Google backend even when Auth, Firestore and Functions are
+  // all pointed at localhost. The development debug token has to be registered
+  // by hand in the Firebase console, and unregistered it returns 403 — which
+  // Auth then fails on, because it attaches an App Check token to every
+  // request. The result was that NO ONE could sign in locally.
+  //
+  // These assertions are deliberately paired with the production ones above:
+  // together they say "App Check initializes in production, and only there".
+  // Asserting only the skip would let a regression turn App Check off
+  // everywhere — which is exactly what #1300 was.
+  // -------------------------------------------------------------------------
+  describe("Firebase App Check — against the emulators", () => {
+    let emulatorAppCheckCallCount = 0;
+    let emulatorGetServicesCallCount = 0;
+    let emulatorConsoleErrors: unknown[][] = [];
+
+    beforeAll(() => {
+      const appCheckCallsBefore = mockAppCheckCalls.length;
+      const getServicesBefore = mockGetFirebaseServicesCallCount;
+
+      process.env.REACT_APP_USE_EMULATORS = "true";
+      process.env.REACT_APP_RECAPTCHA_SITE_KEY = "test-recaptcha-key";
+
+      const consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation((...args: unknown[]) => {
+          emulatorConsoleErrors.push(args);
+        });
+
+      jest.isolateModules(() => {
+        require("../index");
+      });
+
+      consoleErrorSpy.mockRestore();
+
+      emulatorAppCheckCallCount = mockAppCheckCalls.length - appCheckCallsBefore;
+      emulatorGetServicesCallCount =
+        mockGetFirebaseServicesCallCount - getServicesBefore;
+
+      process.env.REACT_APP_USE_EMULATORS = "false";
+    });
+
+    test("does NOT call initializeAppCheck when running against the emulators", () => {
+      expect(emulatorAppCheckCallCount).toBe(0);
+    });
+
+    test("still initializes Firebase, so getApp() has an app to return", () => {
+      // #1300's guarantee is independent of App Check and must survive the skip.
+      expect(emulatorGetServicesCallCount).toBeGreaterThanOrEqual(1);
+    });
+
+    test("does not log an App Check initialization failure", () => {
+      // Skipping is not the same as failing — nothing should be reported.
+      const failures = emulatorConsoleErrors.filter(([first]) =>
+        String(first).includes("Failed to initialize Firebase App Check")
+      );
+      expect(failures).toEqual([]);
     });
   });
 

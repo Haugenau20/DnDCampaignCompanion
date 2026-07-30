@@ -41,9 +41,19 @@ const NPCForm: React.FC<NPCFormProps> = ({
   onCancel,
   existingNPCs
 }) => {
-  // Get NPCs context for CRUD operations
-  const { addNPC, isLoading, error } = useNPCs();
+  // Get NPCs context for CRUD operations. Renamed on destructure: this context error
+  // only ever reported read failures until bug #1401 was fixed, and even after that fix
+  // it still can't cover validation guards addNPC throws before reaching useFirebaseData
+  // (e.g. "Cannot add NPC: No group or campaign selected") -- that's what the local
+  // `error` state below is for. See bug #1400.
+  const { addNPC, isLoading, error: npcError } = useNPCs();
   const { markEntityAsConverted } = useNotes();
+
+  // Local submit-error state -- mirrors the pattern already established by
+  // QuestCreateForm/QuestEditForm/LocationCreateForm/LocationEditForm/RumorForm. Combined
+  // with npcError (above) in the single error block below so there is exactly one banner,
+  // never two stacked.
+  const [error, setError] = useState<string | null>(null);
 
   // Authentication and user data
   const { userProfile } = useUser();
@@ -193,6 +203,7 @@ const NPCForm: React.FC<NPCFormProps> = ({
       onSuccess?.();
     } catch (err) {
       console.error('Failed to create NPC:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create NPC');
     }
   };
 
@@ -430,11 +441,11 @@ const NPCForm: React.FC<NPCFormProps> = ({
           </div>
 
             {/* Error Message */}
-            {error && (
+            {(error || npcError) && (
               <div className="flex items-center gap-2">
                 <AlertCircle size={16} className="typography-error" />
                 <Typography color="error">
-                  {error}
+                  {error || npcError}
                 </Typography>
               </div>
             )}

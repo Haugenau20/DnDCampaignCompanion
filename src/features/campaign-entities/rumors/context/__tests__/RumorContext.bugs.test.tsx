@@ -642,6 +642,64 @@ describe('RumorContext Bug Discovery Tests', () => {
     });
   });
 
+  describe('Bug #1401: Write instance error was never exposed', () => {
+    test('a rejecting addData makes useRumors().error non-null', async () => {
+      // Faithful stand-in for the real useFirebaseData: addData rejects AND
+      // sets its own `error` state (exactly what useFirebaseData.ts:101-104 does),
+      // triggering a real re-render via useState so the fix has something to pick up.
+      mockUseFirebaseData.mockImplementation(() => {
+        const [writeError, setWriteError] = React.useState<string | null>(null);
+        const addData = async (...args: any[]) => {
+          try {
+            return await mockAddData(...args);
+          } catch (err) {
+            setWriteError(err instanceof Error ? err.message : 'Failed to add data');
+            throw err;
+          }
+        };
+        return {
+          addData,
+          updateData: mockUpdateData,
+          deleteData: mockDeleteData,
+          error: writeError,
+        };
+      });
+
+      mockAddData.mockRejectedValue(new Error('Simulated write failure'));
+
+      renderRumorContext();
+
+      await waitFor(() => {
+        expect(rumorContext).toBeDefined();
+      });
+
+      const rumorData: Omit<Rumor, 'id'> = {
+        title: 'Doomed Rumor',
+        content: 'Will fail to save',
+        status: 'unconfirmed' as RumorStatus,
+        sourceType: 'other' as SourceType,
+        sourceName: 'Test Source',
+        relatedNPCs: [],
+        relatedLocations: [],
+        notes: [],
+        createdBy: 'test-user',
+        createdByUsername: 'Test User',
+        dateAdded: '2025-06-15T00:00:00.000Z'
+      };
+
+      await act(async () => {
+        await expect(rumorContext.addRumor(rumorData)).rejects.toThrow('Simulated write failure');
+      });
+
+      // EXPECTED (bug #1401): the write instance's error reaches useRumors().error.
+      // BEFORE THE FIX: RumorContext only exposed the *read* instance's error
+      // (always null here), so this assertion failed with `error` stuck at null.
+      await waitFor(() => {
+        expect(rumorContext.error).toBe('Simulated write failure');
+      });
+    });
+  });
+
   describe('Bug Documentation: Error Boundary Integration', () => {
     test('BUG: useRumors hook error should integrate properly with React error boundaries', () => {
       // This test documents the React error boundary integration issue
