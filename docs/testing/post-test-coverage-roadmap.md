@@ -1,7 +1,7 @@
 # Post-Test-Coverage Roadmap
 
-*Last updated: 2026-07-29, end of the **first emulator walkthrough** (branch
-`fix/campaign-delete-and-write-error-surfacing`, 3 commits, not yet merged).*
+*Last updated: 2026-07-30, end of the **first emulator + browser walkthrough** (branch
+`fix/campaign-delete-and-write-error-surfacing`, 8 commits, not yet merged).*
 
 This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
 
@@ -10,22 +10,22 @@ This guide is the starting point for the next session. Point your orchestrator (
 **Restructuring: complete.** All four domains plus the `shared/`/`core/` pass. Five tags on `main`.
 No file-moving work left; do not start any.
 
-**Bug tracker: 70 filed, 65 resolved, 5 open.** The tracker was empty at the start of 2026-07-29;
-eight new entries (#1400–#1407) came out of the first session to *run* the app rather than read it.
-Three were fixed the same day.
+**Bug tracker: 76 filed, 70 resolved, 6 open.** The tracker was **empty** at the start of
+2026-07-29. Fourteen new entries (#1400–#1413) came out of the first session to *run* the app rather
+than read it — eight of them fixed in the same session.
 
 **Verified baseline on `fix/campaign-delete-and-write-error-surfacing`, measured 2026-07-29:**
 
 | Metric | Value |
 |---|---|
-| Tests | **0 failed / 2 skipped / 4057 passed / 4059 total** |
+| Tests | **0 failed / 2 skipped / 4068 passed / 4070 total** |
 | Suites | **0 failed / 182 passed / 182 total** |
-| Coverage | **91.69 stmts / 83.57 branches / 85.33 funcs / 92.18 lines** (uniform 80% CI floor) |
+| Coverage | **91.70 stmts / 83.54 branches / 85.39 funcs / 92.21 lines** (uniform 80% CI floor) |
 | `npx tsc --noEmit` | clean (root **and** `firebase/functions`) |
 | `npm run build` | succeeds |
 
 *(The `main` baseline this session started from was 4043 passed / 4045 total and reproduced exactly.
-The +14 are new regression tests added with the #1400/#1401/#1403 fixes.)*
+The +25 are new regression tests added with the fixes below.)*
 
 **The suite is fully green.** The 2 skips are #901's, closed as testability-only.
 
@@ -39,7 +39,19 @@ The +14 are new regression tests added with the #1400/#1401/#1403 fixes.)*
 >
 > **Coverage measures which lines ran, not whether the app works.** The single highest-value thing
 > the next session can do is keep exercising the running application. Reading found none of this in
-> four prior passes; one afternoon of running it found eight entries.
+> four prior passes; one afternoon of running it found fourteen entries.
+>
+> **The sharpest example is #1411, and it was not even reachable by reading.** Nobody could sign in
+> to the app locally at all — App Check attests against the real Google backend even with every
+> other service on localhost, so an unregistered debug token 403'd and took every sign-in with it.
+> All three gates were green throughout, because no test signs in to a real Firebase. Worse, it was
+> *caused* by fixing #1300: before that, App Check silently never initialized anywhere and local
+> login worked **by accident**. The repository owner had been living with it and assumed it was a
+> Chrome quirk.
+>
+> Two lessons worth carrying: **a green suite says nothing about whether the app starts**, and
+> **fixing a bug can activate a dormant neighbour** (#018 → #852, now #1300 → #1411 — the second
+> confirmed instance of that pattern in this codebase).
 
 > **What this costs you, and it is not nothing.** For the last three passes the failing set was a
 > precise, self-maintaining signal: exactly 7 known reds meant any new red was unambiguously a
@@ -1071,27 +1083,44 @@ because nothing in the app imports Firebase Storage.
 
 ## What to do next
 
-### 0. Read this first — the 2026-07-29 session (first emulator walkthrough)
+### 0. Read this first — the 2026-07-29/30 session (first emulator + browser walkthrough)
 
-**Three things need a human before anything else:**
+**TWO DEPLOYS ARE OUTSTANDING. Neither is in the repo, and until both happen the fixes are not real.**
 
-1. **Deploy Firebase Functions.** `#1403`'s fix adds a new callable `deleteCampaign`. It is committed
-   but **not deployed**. Merging to `main` without deploying functions leaves the Delete button
-   failing at call time instead of silently no-opping — arguably worse than before. `firebase deploy
-   --only functions` (region `europe-west1`).
-2. **#1406 needs a product decision** — a group member cannot edit another member's content
-   (production rule), but the app offers them the Edit control anyway and no creator check exists
-   anywhere in `src/`. Three resolutions are laid out in the report; the *mismatch* is a defect
-   whichever is chosen. **Do not resolve unilaterally.**
-3. **#1404 needs a product call** — implement the campaign Edit dialog, or remove the inert button.
+1. **Paste `firebase/firestore.rules.prod` into the Firebase console.** #1406, #1408, #1409 and #1410
+   are fixed in that file only, and **that file deploys nothing**. Three of them are *live security
+   exposures* until it is deployed: every member's private notes readable group-wide (#1408),
+   one-write self-promotion to group admin (#1409), and any member able to mint registration tokens
+   (#1410). The file's header documents every change and the one residual risk.
+2. **`firebase deploy --only functions`** (region `europe-west1`) for #1403's new `deleteCampaign`
+   callable. Merging without it leaves the Delete button failing at call time rather than silently
+   no-opping.
 
-**Open tracker rows:** #1402, #1404, #1405, #1406, #1407. All have full reports.
+**Open tracker rows:** #1402, #1405, #1407, #1412, #1413, plus #1409's residual two-step escalation.
+All have full reports. #1407 (`deleteUser`/`removeUserFromGroup` collapsing their own error codes into
+`internal`) is a two-line fix that needs a Functions deploy, so it pairs naturally with (2).
 
-**Still unexercised, and this is where the next findings are.** The walkthrough covered entity
-creation, ID collisions and the permission contract. It did **not** get to: chapter create →
-reorder → date rendering; location rename → parent reselection (#303's path, fixed but unverified in
-the running app); notes → AI entity extraction → convert to NPC/Quest; group/campaign switching;
-attribution rendering. Start there.
+**Still unexercised, and this is where the next findings are.** Two sessions of walkthrough covered
+entity create/read, ID collisions, attribution, the permission contract, and the admin panel. Not yet
+reached: **chapter create → reorder → date rendering** (the `chapter-{order}` re-keying, four tracker
+entries trace to it); **location rename → parent reselection** (#303's path, fixed but never verified
+in the running app); **notes → AI entity extraction → convert** (the owner asked for this to be
+exercised *lightly* — it bills OpenAI per token); **group/campaign switching**. Start there.
+
+**Browser automation is available** via the Chrome skill, and it is what found #1411/#1412/#1413.
+Use it — three of this session's findings were invisible to every other method.
+
+**Two probe harnesses worth rebuilding** (they lived in a scratchpad, not the repo): one drove the
+real `generateUniqueEntityId` against the live emulator under an isolated project ID; the other
+loaded a ruleset via `PUT /emulator/v1/projects/{projectId}:securityRules` and ran a 17-check
+security battery plus a 16-check app-flow battery. **Running the battery against the OLD ruleset
+first is what made every rules change a measured difference rather than a claim** — do that again
+before touching the rules.
+
+**Sample-data gotcha that nearly cost a false bug report:** the DM account's active character is named
+`gandlaf` — a typo of "gandalf" in the generator. An activity feed reading "By: gandlaf" looks like
+an attribution bug until you read the document and find `modifiedByCharacterName='gandlaf'`.
+Attribution is correct. Read the document before filing.
 
 **A tooling note that cost real time:** `scripts/start-dev.ps1 -Action status` reports "Not running"
 when everything *is* running. `Test-EmulatorsRunning` calls `Invoke-WebRequest` without
