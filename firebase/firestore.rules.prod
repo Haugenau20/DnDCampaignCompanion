@@ -46,13 +46,15 @@
 //    the UI -- but anyone with the Firebase SDK and a group membership could
 //    read the lot. Notes are now explicitly owner-only.
 //
-// 3. SECURITY FIX -- a member could make themselves a group admin.
+// 3. SECURITY FIX -- a member could make themselves a group admin. FULLY CLOSED.
 //    `allow create, update: if isSignedIn() && request.auth.uid == userId` on
 //    the group profile let a member write ANY field of their own profile,
 //    including `role`. One `updateDoc({role: "admin"})` and they could delete
 //    the group, remove other users, and mint registration tokens. Verified
-//    ALLOWED under the previous revision. `update` may no longer touch `role`.
-//    SEE THE RESIDUAL RISK NOTE BELOW -- this is not fully closed.
+//    ALLOWED under the previous revision.
+//    Now closed on BOTH paths: `update` may no longer touch `role`, and `create`
+//    may only ever write `role: "member"`. The second half is possible because
+//    group creation moved into the `createGroup` Cloud Function -- see change 5.
 //
 // 4. SECURITY FIX -- the catch-all wildcard was over-broad on create.
 //    `match /{collection}/{docId}` with `allow create: if isGroupMember` let a
@@ -64,27 +66,29 @@
 //    and `registrationTokens` (confirmed via `listCollectionIds` against the
 //    emulator), all four of which have explicit blocks below.
 //
-// ---------------------------------------------------------------------------
-// RESIDUAL RISK, NOT CLOSED BY THIS REVISION -- needs a decision
-// ---------------------------------------------------------------------------
-// Change 3 blocks the one-step escalation (update your own role). It does NOT
-// block the two-step version: a member may delete their own group profile
-// ("leave group") and then create it again with `role: "admin"`, because
-// `create` still has to permit `role: "admin"` for the legitimate case --
-// `GroupService.createGroup` writes the group creator's own profile with
-// `role: 'admin'` from the CLIENT, inside a transaction.
+// 5. GROUP CREATION MOVED SERVER-SIDE, which is what makes change 3 complete.
+//    `GroupService.createGroup` used to run a client-side `runTransaction` that
+//    wrote the group document, the caller's global user document, their group
+//    profile with `role: 'admin'`, and their username reservation. Because a
+//    client had to be allowed to write `role: "admin"` for that to work, the
+//    `create` rule could not restrict the role at all -- which left the two-step
+//    escalation open however tightly `update` was guarded.
 //
-// The clean fix is to move group-profile creation into a Cloud Function using
-// the Admin SDK, after which `create` can be denied to clients entirely. That
-// is a code change, not a rules change, so it is deliberately not attempted
-// here. Conditioning the rule on the group document's `createdBy` was
-// considered and rejected: the group document is written in the SAME
-// transaction as the profile, so a `get()` for it may not see committed data,
-// and getting that wrong breaks group creation for everyone.
+//    It now runs in the `createGroup` Cloud Function (`onCall`,
+//    `europe-west1`), in an Admin SDK transaction that writes the same four
+//    documents with the same field shapes. The Admin SDK bypasses rules, so the
+//    creator still becomes an admin while no client is ever permitted to write
+//    that value.
 //
-// Exploiting it takes deliberate direct SDK use and leaves the attacker briefly
-// outside the group. Strictly better than the previous state (one write, no
-// side effects), but not zero.
+//    Conditioning the rule on the group document's `createdBy` was considered
+//    and rejected instead: the group doc is written in the SAME transaction as
+//    the profile, so a rules `get()` may not see committed data, and getting
+//    that wrong breaks group creation for everyone.
+//
+//    ⚠️ DEPLOY ORDER MATTERS. The Cloud Function must be deployed BEFORE this
+//    ruleset. Deploying the rules first would reject the old client-side
+//    create path and break group creation for anyone on the currently-deployed
+//    frontend. Deploy functions, then the frontend, then these rules.
 //
 // ---------------------------------------------------------------------------
 // KEEPING IT HONEST
@@ -170,11 +174,22 @@ service cloud.firestore {
         // Group members can see other group members' profiles
         allow read: if isGroupMember(groupId) || isGlobalAdmin();
 
-        // Users can create their own group profile. This has to keep allowing
-        // role: "admin" -- GroupService.createGroup writes the group creator's
-        // own profile client-side, in the same transaction as the group doc.
-        // See the RESIDUAL RISK note in the header.
-        allow create: if isSignedIn() && request.auth.uid == userId;
+        // Users can create their own group profile, but ONLY as a member.
+        //
+        // This is the line that closes #1409 completely. It used to permit any
+        // role, which meant a member could delete their own profile ("leave
+        // group") and create it again with role: "admin" -- a two-step
+        // privilege escalation that the field-level update guard below could
+        // not reach.
+        //
+        // It is only possible because group creation now runs server-side, in
+        // the `createGroup` Cloud Function: the Admin SDK bypasses rules, so the
+        // group creator still gets role: "admin" without any client ever being
+        // permitted to write that value. The two remaining client-side profile
+        // creations -- GroupService.joinGroup and InvitationService's acceptance
+        // path -- both write role: "member" and are unaffected.
+        allow create: if isSignedIn() && request.auth.uid == userId &&
+                       request.resource.data.role == "member";
 
         // Users can update their own group profile, but MUST NOT be able to
         // change their own role -- that was a one-write privilege escalation to
