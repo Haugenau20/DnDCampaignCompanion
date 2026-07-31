@@ -41,36 +41,6 @@ jest.mock("core/components/Typography", () => ({
   },
 }));
 
-// Mock core Card
-jest.mock("core/components/Card", () => {
-  const Card: any = ({ children, hoverable, onClick, className }: any) => (
-    <div
-      data-testid="card"
-      data-hoverable={hoverable ? "true" : undefined}
-      className={className}
-      onClick={onClick}
-    >
-      {children}
-    </div>
-  );
-  Card.Content = ({ children, className }: any) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  );
-  return { __esModule: true, default: Card };
-});
-
-// Mock lucide-react icons so they render identifiably
-jest.mock("lucide-react", () => ({
-  Users: () => <svg data-testid="icon-users" />,
-  Map: () => <svg data-testid="icon-map" />,
-  Scroll: () => <svg data-testid="icon-scroll" />,
-  BookOpen: () => <svg data-testid="icon-bookopen" />,
-  MessageSquare: () => <svg data-testid="icon-messagesquare" />,
-  List: () => <svg data-testid="icon-list" />,
-}));
-
 // ---------------------------------------------------------------------------
 // Test data helpers
 // ---------------------------------------------------------------------------
@@ -81,6 +51,9 @@ const makeChapter = (id: string) => ({ id } as any);
 const makeRumor = (id: string) => ({ id } as any);
 const makeQuest = (id: string, status: "active" | "completed" | "failed" = "active") =>
   ({ id, status } as any);
+
+/** The strip renders each count as a button, so find it via its label. */
+const statButton = (label: string) => screen.getByText(label).closest("button")!;
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -96,354 +69,187 @@ describe("CampaignStats", () => {
   // -------------------------------------------------------------------------
   describe("loading state", () => {
     it("renders without crashing when loading=true", () => {
-      const { container } = render(<CampaignStats loading={true} />);
+      const { container } = render(<CampaignStats loading />);
       expect(container).toBeInTheDocument();
     });
 
-    it("shows the 'Campaign Stats' heading while loading", () => {
-      render(<CampaignStats loading={true} />);
-      expect(screen.getByText("Campaign Stats")).toBeInTheDocument();
-    });
-
-    it("renders 7 loading skeleton cards (6 stat + 1 progress)", () => {
-      render(<CampaignStats loading={true} />);
-      // 7 animated cards (6 stats + 1 full-width progress card)
-      const cards = screen.getAllByTestId("card");
-      expect(cards).toHaveLength(7);
+    it("renders the strip container while loading", () => {
+      render(<CampaignStats loading />);
+      expect(screen.getByTestId("campaign-stats-strip")).toBeInTheDocument();
     });
 
     it("does not render clickable stat counts when loading", () => {
-      render(
-        <CampaignStats
-          loading={true}
-          npcs={[makeNPC("n1"), makeNPC("n2")]}
-        />
-      );
-      // The count "2" should not appear as a stat value
-      expect(screen.queryByText("2")).not.toBeInTheDocument();
+      render(<CampaignStats loading />);
+      expect(screen.queryByText("Chapters")).not.toBeInTheDocument();
+      expect(screen.queryAllByRole("button")).toHaveLength(0);
     });
   });
 
   // -------------------------------------------------------------------------
-  // Default props / empty state
+  // Structure — one strip, not six cards
   // -------------------------------------------------------------------------
-  describe("default props (all arrays empty)", () => {
-    it("renders without crashing with no props", () => {
-      const { container } = render(<CampaignStats />);
-      expect(container).toBeInTheDocument();
-    });
-
-    it("shows the 'Campaign Stats' heading", () => {
+  describe("structure", () => {
+    it("renders the four counts plus the quest fraction as five controls", () => {
       render(<CampaignStats />);
-      expect(screen.getByText("Campaign Stats")).toBeInTheDocument();
+      // Previously six equal cards plus a seventh full-width progress card.
+      expect(screen.getAllByRole("button")).toHaveLength(5);
     });
 
-    it("displays 0 for NPCs", () => {
-      render(<CampaignStats npcs={[]} />);
-      // Counts are displayed but we need to find the one associated with NPCs
-      const npcCard = screen.getByText("NPCs").closest("[data-testid='card']");
-      expect(npcCard).toBeInTheDocument();
-      // The h4 in the NPC card should show 0
-      const h4 = npcCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("0");
+    it("keeps an accessible name for the region without a visible heading", () => {
+      render(<CampaignStats />);
+      const heading = screen.getByText("Campaign Stats");
+      expect(heading).toBeInTheDocument();
+      expect(heading).toHaveClass("sr-only");
     });
 
-    it("displays 0 for Locations", () => {
-      render(<CampaignStats locations={[]} />);
-      const locCard = screen
-        .getByText("Locations")
-        .closest("[data-testid='card']");
-      const h4 = locCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("0");
-    });
-
-    it("displays 0 for Story Chapters", () => {
-      render(<CampaignStats chapters={[]} />);
-      const chCard = screen
-        .getByText("Story Chapters")
-        .closest("[data-testid='card']");
-      const h4 = chCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("0");
-    });
-
-    it("displays 0 for Rumors", () => {
-      render(<CampaignStats rumors={[]} />);
-      const rumCard = screen
-        .getByText("Rumors")
-        .closest("[data-testid='card']");
-      const h4 = rumCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("0");
-    });
-
-    it("displays 0 for Active Quests", () => {
-      render(<CampaignStats quests={[]} />);
-      const aqCard = screen
-        .getByText("Active Quests")
-        .closest("[data-testid='card']");
-      const h4 = aqCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("0");
-    });
-
-    it("displays 0 for Total Quests", () => {
-      render(<CampaignStats quests={[]} />);
-      const tqCard = screen
-        .getByText("Total Quests")
-        .closest("[data-testid='card']");
-      const h4 = tqCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("0");
+    it("labels the counts by entity, dropping the redundant quest counters", () => {
+      render(<CampaignStats />);
+      expect(screen.getByText("Chapters")).toBeInTheDocument();
+      expect(screen.getByText("NPCs")).toBeInTheDocument();
+      expect(screen.getByText("Locations")).toBeInTheDocument();
+      expect(screen.getByText("Rumors")).toBeInTheDocument();
+      // "Active Quests" and "Total Quests" were a breakdown of each other, now
+      // stated once as a fraction.
+      expect(screen.queryByText("Active Quests")).not.toBeInTheDocument();
+      expect(screen.queryByText("Total Quests")).not.toBeInTheDocument();
+      expect(screen.queryByText("Quest Completion")).not.toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Count display
+  // Counts
   // -------------------------------------------------------------------------
   describe("stat counts reflect prop values", () => {
-    it("shows correct NPC count", () => {
-      render(<CampaignStats npcs={[makeNPC("a"), makeNPC("b"), makeNPC("c")]} />);
-      const npcCard = screen.getByText("NPCs").closest("[data-testid='card']");
-      const h4 = npcCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("3");
+    it("defaults every count to 0 with no props", () => {
+      render(<CampaignStats />);
+      for (const label of ["Chapters", "NPCs", "Locations", "Rumors"]) {
+        expect(statButton(label)).toHaveTextContent("0");
+      }
     });
 
-    it("shows correct Location count", () => {
-      render(
-        <CampaignStats locations={[makeLocation("l1"), makeLocation("l2")]} />
-      );
-      const locCard = screen
-        .getByText("Locations")
-        .closest("[data-testid='card']");
-      const h4 = locCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("2");
-    });
-
-    it("shows correct Chapter count", () => {
+    it("shows the correct counts", () => {
       render(
         <CampaignStats
-          chapters={[makeChapter("ch1"), makeChapter("ch2"), makeChapter("ch3")]}
+          npcs={[makeNPC("n1"), makeNPC("n2")]}
+          locations={[makeLocation("l1")]}
+          chapters={[makeChapter("c1"), makeChapter("c2"), makeChapter("c3")]}
+          rumors={[makeRumor("r1")]}
         />
       );
-      const chCard = screen
-        .getByText("Story Chapters")
-        .closest("[data-testid='card']");
-      const h4 = chCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("3");
+      expect(statButton("Chapters")).toHaveTextContent("3");
+      expect(statButton("NPCs")).toHaveTextContent("2");
+      expect(statButton("Locations")).toHaveTextContent("1");
+      expect(statButton("Rumors")).toHaveTextContent("1");
     });
 
-    it("shows correct Rumor count", () => {
-      render(<CampaignStats rumors={[makeRumor("r1")]} />);
-      const rumCard = screen
-        .getByText("Rumors")
-        .closest("[data-testid='card']");
-      const h4 = rumCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("1");
-    });
-  });
+    it("dims a zero count instead of hiding it", () => {
+      render(<CampaignStats chapters={[makeChapter("c1")]} />);
+      // An empty campaign is information; it just should not compete visually.
+      const rumorsValue = statButton("Rumors").querySelector("h4");
+      expect(rumorsValue).toHaveTextContent("0");
+      expect(rumorsValue?.className).toContain("opacity-40");
 
-  // -------------------------------------------------------------------------
-  // Quest stats calculation
-  // -------------------------------------------------------------------------
-  describe("quest stat calculations", () => {
-    it("counts only active quests for Active Quests stat", () => {
-      const quests = [
-        makeQuest("q1", "active"),
-        makeQuest("q2", "active"),
-        makeQuest("q3", "completed"),
-        makeQuest("q4", "failed"),
-      ];
-      render(<CampaignStats quests={quests} />);
-      const aqCard = screen
-        .getByText("Active Quests")
-        .closest("[data-testid='card']");
-      const h4 = aqCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("2");
-    });
-
-    it("shows the total number of quests (all statuses)", () => {
-      const quests = [
-        makeQuest("q1", "active"),
-        makeQuest("q2", "completed"),
-        makeQuest("q3", "failed"),
-      ];
-      render(<CampaignStats quests={quests} />);
-      const tqCard = screen
-        .getByText("Total Quests")
-        .closest("[data-testid='card']");
-      const h4 = tqCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("3");
-    });
-
-    it("handles all completed quests — active count is 0", () => {
-      const quests = [makeQuest("q1", "completed"), makeQuest("q2", "completed")];
-      render(<CampaignStats quests={quests} />);
-      const aqCard = screen
-        .getByText("Active Quests")
-        .closest("[data-testid='card']");
-      const h4 = aqCard?.querySelector("[data-testid='typography-h4']");
-      expect(h4?.textContent).toBe("0");
+      const chaptersValue = statButton("Chapters").querySelector("h4");
+      expect(chaptersValue?.className).not.toContain("opacity-40");
     });
   });
 
   // -------------------------------------------------------------------------
-  // Quest completion progress bar
+  // Quest fraction — the bar now states its own number
   // -------------------------------------------------------------------------
-  describe("quest completion progress bar", () => {
-    it("renders the 'Quest Completion' heading", () => {
-      render(<CampaignStats />);
-      expect(screen.getByText("Quest Completion")).toBeInTheDocument();
+  describe("quest fraction", () => {
+    it("spells out the completed-of-total fraction", () => {
+      render(
+        <CampaignStats
+          quests={[
+            makeQuest("q1", "completed"),
+            makeQuest("q2", "active"),
+            makeQuest("q3", "active"),
+          ]}
+        />
+      );
+      // The progress bar previously carried no number at all.
+      expect(screen.getByText("of 3 quests complete")).toBeInTheDocument();
+      expect(screen.getByText("2 active")).toBeInTheDocument();
     });
 
-    it("renders the progress bar container", () => {
-      const { container } = render(<CampaignStats />);
-      const progressContainer = container.querySelector(".progress-container");
-      expect(progressContainer).toBeInTheDocument();
+    it("uses the singular for a single quest", () => {
+      render(<CampaignStats quests={[makeQuest("q1", "active")]} />);
+      expect(screen.getByText("of 1 quest complete")).toBeInTheDocument();
     });
 
-    it("shows 0% width when no quests exist", () => {
-      const { container } = render(<CampaignStats quests={[]} />);
-      const progressBar = container.querySelector(".progress-bar") as HTMLElement;
-      expect(progressBar?.style.width).toBe("0%");
+    it("exposes completion as a progressbar with a percentage", () => {
+      render(
+        <CampaignStats
+          quests={[makeQuest("q1", "completed"), makeQuest("q2", "active")]}
+        />
+      );
+      const bar = screen.getByRole("progressbar", { name: "Quest completion" });
+      expect(bar).toHaveAttribute("aria-valuenow", "50");
+      expect(bar).toHaveAttribute("aria-valuemin", "0");
+      expect(bar).toHaveAttribute("aria-valuemax", "100");
     });
 
-    it("shows 100% width when all quests are completed", () => {
-      const quests = [
-        makeQuest("q1", "completed"),
-        makeQuest("q2", "completed"),
-      ];
-      const { container } = render(<CampaignStats quests={quests} />);
-      const progressBar = container.querySelector(".progress-bar") as HTMLElement;
-      expect(progressBar?.style.width).toBe("100%");
+    it("reports 0% with no quests rather than dividing by zero", () => {
+      render(<CampaignStats quests={[]} />);
+      expect(
+        screen.getByRole("progressbar", { name: "Quest completion" })
+      ).toHaveAttribute("aria-valuenow", "0");
+      expect(screen.getByText("of 0 quests complete")).toBeInTheDocument();
     });
 
-    it("shows 50% width when half the quests are completed", () => {
-      const quests = [
-        makeQuest("q1", "active"),
-        makeQuest("q2", "completed"),
-      ];
-      const { container } = render(<CampaignStats quests={quests} />);
-      const progressBar = container.querySelector(".progress-bar") as HTMLElement;
-      expect(progressBar?.style.width).toBe("50%");
+    it("names the unfinished remainder when nothing is active", () => {
+      // 'failed' is a third QuestStatus, so active + completed need not equal total.
+      render(
+        <CampaignStats
+          quests={[makeQuest("q1", "completed"), makeQuest("q2", "failed")]}
+        />
+      );
+      expect(screen.getByText("1 unfinished")).toBeInTheDocument();
     });
 
-    it("shows 0% width when no quests are completed (but some exist)", () => {
-      const quests = [makeQuest("q1", "active"), makeQuest("q2", "active")];
-      const { container } = render(<CampaignStats quests={quests} />);
-      const progressBar = container.querySelector(".progress-bar") as HTMLElement;
-      expect(progressBar?.style.width).toBe("0%");
-    });
-
-    it("avoids division by zero when quests array is empty", () => {
-      // Should render 0% without throwing
-      const { container } = render(<CampaignStats quests={[]} />);
-      const progressBar = container.querySelector(".progress-bar") as HTMLElement;
-      expect(progressBar?.style.width).toBe("0%");
+    it("counts only completed quests as complete", () => {
+      render(
+        <CampaignStats
+          quests={[
+            makeQuest("q1", "active"),
+            makeQuest("q2", "failed"),
+            makeQuest("q3", "completed"),
+          ]}
+        />
+      );
+      expect(
+        screen.getByRole("progressbar", { name: "Quest completion" })
+      ).toHaveAttribute("aria-valuenow", "33");
     });
   });
 
   // -------------------------------------------------------------------------
-  // Navigation on card clicks
+  // Navigation
   // -------------------------------------------------------------------------
-  describe("navigation on stat card click", () => {
-    it("navigates to /npcs when the NPCs card is clicked", async () => {
-      const user = userEvent.setup();
+  describe("navigation", () => {
+    it.each([
+      ["Chapters", "/story/chapters"],
+      ["NPCs", "/npcs"],
+      ["Locations", "/locations"],
+      ["Rumors", "/rumors"],
+    ])("clicking %s navigates to %s", async (label, path) => {
       render(<CampaignStats />);
-      const npcCard = screen.getByText("NPCs").closest("[data-testid='card']");
-      await user.click(npcCard!);
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/npcs");
+      await userEvent.click(statButton(label));
+      expect(mockNavigateToPage).toHaveBeenCalledWith(path);
     });
 
-    it("navigates to /locations when the Locations card is clicked", async () => {
-      const user = userEvent.setup();
-      render(<CampaignStats />);
-      const locCard = screen
-        .getByText("Locations")
-        .closest("[data-testid='card']");
-      await user.click(locCard!);
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/locations");
-    });
-
-    it("navigates to /story/chapters when the Story Chapters card is clicked", async () => {
-      const user = userEvent.setup();
-      render(<CampaignStats />);
-      const chCard = screen
-        .getByText("Story Chapters")
-        .closest("[data-testid='card']");
-      await user.click(chCard!);
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/story/chapters");
-    });
-
-    it("navigates to /rumors when the Rumors card is clicked", async () => {
-      const user = userEvent.setup();
-      render(<CampaignStats />);
-      const rumCard = screen
-        .getByText("Rumors")
-        .closest("[data-testid='card']");
-      await user.click(rumCard!);
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/rumors");
-    });
-
-    it("navigates to /quests when the Active Quests card is clicked", async () => {
-      const user = userEvent.setup();
-      render(<CampaignStats />);
-      const aqCard = screen
-        .getByText("Active Quests")
-        .closest("[data-testid='card']");
-      await user.click(aqCard!);
+    it("clicking the quest fraction navigates to /quests", async () => {
+      render(<CampaignStats quests={[makeQuest("q1")]} />);
+      await userEvent.click(screen.getByText("of 1 quest complete").closest("button")!);
       expect(mockNavigateToPage).toHaveBeenCalledWith("/quests");
     });
 
-    it("navigates to /quests when the Total Quests card is clicked", async () => {
-      const user = userEvent.setup();
+    it("counts are reachable as buttons, not click-handled divs", () => {
       render(<CampaignStats />);
-      const tqCard = screen
-        .getByText("Total Quests")
-        .closest("[data-testid='card']");
-      await user.click(tqCard!);
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/quests");
-    });
-
-    it("navigates to /quests when the Quest Completion card is clicked", async () => {
-      const user = userEvent.setup();
-      render(<CampaignStats />);
-      const qcCard = screen
-        .getByText("Quest Completion")
-        .closest("[data-testid='card']");
-      await user.click(qcCard!);
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/quests");
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Icons rendering
-  // -------------------------------------------------------------------------
-  describe("icon rendering", () => {
-    it("renders the Users icon for NPCs", () => {
-      render(<CampaignStats />);
-      expect(screen.getByTestId("icon-users")).toBeInTheDocument();
-    });
-
-    it("renders the Map icon for Locations", () => {
-      render(<CampaignStats />);
-      expect(screen.getByTestId("icon-map")).toBeInTheDocument();
-    });
-
-    it("renders the BookOpen icon for Story Chapters", () => {
-      render(<CampaignStats />);
-      expect(screen.getByTestId("icon-bookopen")).toBeInTheDocument();
-    });
-
-    it("renders the MessageSquare icon for Rumors", () => {
-      render(<CampaignStats />);
-      expect(screen.getByTestId("icon-messagesquare")).toBeInTheDocument();
-    });
-
-    it("renders the Scroll icon for Active Quests", () => {
-      render(<CampaignStats />);
-      expect(screen.getByTestId("icon-scroll")).toBeInTheDocument();
-    });
-
-    it("renders the List icon for Total Quests", () => {
-      render(<CampaignStats />);
-      expect(screen.getByTestId("icon-list")).toBeInTheDocument();
+      // The stats used to be non-interactive Cards with onClick, so they were not
+      // keyboard reachable.
+      expect(statButton("NPCs").tagName).toBe("BUTTON");
     });
   });
 });

@@ -10,7 +10,12 @@
     />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>D&D Campaign Companion</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=MedievalSharp&family=Crimson+Text:wght@400;600&family=Share+Tech+Mono&family=Fondamento&family=Gentium+Book+Basic:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Newsreader carries the heading scale for the light and dark themes, so the
+         --font-heading token differs from --font-primary instead of duplicating it.
+         Share Tech Mono and Fondamento were requested but referenced nowhere in src. -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=MedievalSharp&family=Crimson+Text:wght@400;600&family=Gentium+Book+Basic:wght@400;700&display=swap" rel="stylesheet">
     <script>
       // Redirect script for client-side routing
       (function() {

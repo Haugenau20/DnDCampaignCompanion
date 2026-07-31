@@ -2,10 +2,10 @@
 import React, { useState } from 'react';
 import Typography from 'core/components/Typography';
 import Card from 'core/components/Card';
+import clsx from 'clsx';
 import { Activity } from 'pages/HomePage';
 import { useActivityDisplay } from '../../../layouts/common/hooks/useActivityDisplay';
 import { getContentIcon } from '../../../layouts/common/utils/contentTypeUtils';
-import LoadingState from '../../../layouts/common/components/LoadingState';
 import EmptyState from '../../../layouts/common/components/EmptyState';
 
 interface ActivityFeedProps {
@@ -13,65 +13,109 @@ interface ActivityFeedProps {
   loading: boolean;
 }
 
+/** The filter options, in the order the design lists them. `null` means "All". */
+const FILTERS: Array<{ value: string | null; label: string }> = [
+  { value: null, label: 'All' },
+  { value: 'chapter', label: 'Story' },
+  { value: 'quest', label: 'Quests' },
+  { value: 'npc', label: 'NPCs' },
+  { value: 'location', label: 'Locations' },
+  { value: 'rumor', label: 'Rumors' },
+];
+
 /**
- * ActivityFeed component that displays recent activity across content types
- * Combines larger content size with fixed one-line header
+ * ActivityFeed component that displays recent activity across content types.
+ *
+ * This answers "what happened since we last played", which is the question the
+ * dashboard exists to answer, so it now occupies the wide column rather than a
+ * third-width sidebar. Each entry is a row in one bordered list instead of its own
+ * card: the date leads, the type is a small eyebrow, and the title carries the
+ * heading serif, so the rows have hierarchy instead of being four identical blocks.
+ * The filter is a visible pill row rather than a <select> that hid five of its six
+ * options behind a click.
  */
 const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
-  
+
   // State for filtering activities
   const [filter, setFilter] = useState<string | null>(null);
-  
+
   // Use the activity display hook
-  const { 
-    activities: filteredActivities, 
+  const {
+    activities: filteredActivities,
     formatDate,
     handleActivityClick,
     getTypeLabel
-  } = useActivityDisplay({ 
-    activities, 
-    filter, 
+  } = useActivityDisplay({
+    activities,
+    filter,
     limit: 4,
     journalStyle: false
   });
-  
+
+  const heading = (
+    <Typography variant="h2" className="text-xl sm:text-2xl whitespace-nowrap">
+      Since you last played
+    </Typography>
+  );
+
   if (loading) {
     return (
-      <div>
-        <div className="flex justify-between items-center mb-3 sm:mb-4 flex-nowrap">
-          <Typography variant="h3" className="text-lg sm:text-xl md:text-2xl whitespace-nowrap">Recent Activity</Typography>
+      <div data-testid="activity-feed">
+        <div className="flex justify-between items-center mb-4 flex-nowrap">
+          {heading}
         </div>
-        <LoadingState type="card" count={4} height="h-20" />
+        {/* LoadingState's `type="card"` has no branch and silently falls through to a
+            spinner, ignoring count/height — so the skeleton is inlined here to
+            actually match the shape of the list it stands in for. */}
+        <div className={clsx('rounded-lg overflow-hidden card animate-pulse')}>
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className={clsx('px-5 py-5 h-[92px]', i > 1 && 'border-t border-card')}
+            >
+              <div className={clsx('w-full h-full rounded-lg', `journal-loading`)}></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
-  
+
   return (
-    <div>
-      <div className="flex justify-between items-center gap-2 mb-3 sm:mb-4 flex-nowrap">
-        <Typography variant="h3" className="text-lg sm:text-xl md:text-2xl whitespace-nowrap">Recent Activity</Typography>
-        
-        <select 
-          className="text-sm rounded-md px-2 py-1 border min-w-fit input card"
-          value={filter || 'all'}
-          onChange={(e) => setFilter(e.target.value === 'all' ? null : e.target.value)}
-        >
-          <option value="all">All</option>
-          <option value="chapter">Story</option>
-          <option value="npc">NPCs</option>
-          <option value="quest">Quests</option>
-          <option value="location">Locations</option>
-          <option value="rumor">Rumors</option>
-        </select>
+    <div data-testid="activity-feed">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        {heading}
+
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter activity by type">
+          {FILTERS.map(({ value, label }) => {
+            const isActive = filter === value;
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setFilter(value)}
+                aria-pressed={isActive}
+                className={clsx(
+                  'px-3 py-1.5 rounded-full text-xs font-semibold transition-colors',
+                  isActive
+                    ? 'bg-status-general text-status-text'
+                    : 'bg-secondary typography-secondary selectable-item'
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
-      
+
       {filteredActivities.length === 0 ? (
         <Card>
           <Card.Content className="text-center py-12">
-            <EmptyState 
+            <EmptyState
               icon={getContentIcon('chapter', 28)}
               title="No Recent Activity"
-              message={filter 
+              message={filter
                 ? `No ${getTypeLabel(filter)} activity found. Try a different filter.`
                 : 'Start creating content to see activity here'
               }
@@ -81,40 +125,53 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
           </Card.Content>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {filteredActivities.map(activity => (
-            <Card 
+        <div className={clsx('rounded-lg overflow-hidden card')}>
+          {filteredActivities.map((activity, index) => (
+            <button
               key={`${activity.type}-${activity.id}`}
-              hoverable
+              type="button"
               onClick={() => handleActivityClick(activity)}
-              className="transition-all hover:shadow-md"
+              className={clsx(
+                'w-full text-left px-5 py-4 grid gap-4 items-baseline transition-colors',
+                'grid-cols-[1fr_auto] sm:grid-cols-[88px_1fr_auto]',
+                'selectable-item',
+                index > 0 && 'border-t border-card'
+              )}
             >
-              <Card.Content className="p-4">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full mr-4 h-12 w-12 flex items-center justify-center icon-bg">
-                    {getContentIcon(activity.type, 24)}
-                  </div>
-                  <div className="flex-1 flex flex-col overflow-hidden">
-                    <div className="flex items-center justify-between">
-                      <Typography variant="body-sm" color="secondary" className="text-sm">
-                        {getTypeLabel(activity.type)}
-                      </Typography>
-                      <Typography variant="body-sm" color="secondary" className="text-sm whitespace-nowrap ml-2">
-                        {formatDate(activity.timestamp)}
-                      </Typography>
-                    </div>
-                    <Typography variant="h4" className="truncate text-base sm:text-lg font-medium">
-                      {activity.title}
-                    </Typography>
-                    {activity.actor && (
-                      <Typography variant="body-sm" color="secondary" className="text-sm mt-0.5">
-                        By: {activity.actor}
-                      </Typography>
-                    )}
-                  </div>
-                </div>
-              </Card.Content>
-            </Card>
+              <Typography
+                variant="body-sm"
+                color="muted"
+                className="text-xs font-medium col-start-1 row-start-2 sm:row-start-1 whitespace-nowrap"
+              >
+                {formatDate(activity.timestamp)}
+              </Typography>
+
+              <div className="flex flex-col gap-1 min-w-0 col-start-1 row-start-1 sm:col-start-2">
+                <Typography
+                  variant="body-sm"
+                  color="primary"
+                  className="text-[11px] font-semibold uppercase tracking-wider"
+                >
+                  {getTypeLabel(activity.type)}
+                </Typography>
+                <Typography variant="h4" className="text-base sm:text-lg truncate">
+                  {activity.title}
+                </Typography>
+                {activity.actor && (
+                  <Typography variant="body-sm" color="muted" className="text-xs">
+                    {activity.actor}
+                  </Typography>
+                )}
+              </div>
+
+              <Typography
+                variant="body-sm"
+                color="primary"
+                className="text-sm font-medium whitespace-nowrap row-start-1 col-start-2 sm:col-start-3"
+              >
+                {activity.type === 'chapter' ? 'Read' : 'Open'}
+              </Typography>
+            </button>
           ))}
         </div>
       )}

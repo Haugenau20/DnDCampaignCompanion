@@ -156,11 +156,14 @@ describe("CampaignBanner", () => {
       });
     });
 
-    it("shows the campaign-specific welcome heading", () => {
+    it("shows the campaign name as the page title", () => {
       render(<CampaignBanner />);
+      // The title is the campaign, not a greeting — "Welcome to" spent the largest
+      // type on the page saying nothing about the campaign.
+      expect(screen.getByText("Curse of Strahd")).toBeInTheDocument();
       expect(
-        screen.getByText("Welcome to Curse of Strahd")
-      ).toBeInTheDocument();
+        screen.queryByText("Welcome to Curse of Strahd")
+      ).not.toBeInTheDocument();
     });
 
     it("does not show the generic welcome heading", () => {
@@ -175,9 +178,25 @@ describe("CampaignBanner", () => {
       expect(screen.getByText("Brave Adventurers")).toBeInTheDocument();
     });
 
-    it("shows the 'Group:' label", () => {
+    it("states the group without a 'Group:' label", () => {
       render(<CampaignBanner />);
-      expect(screen.getByText("Group:")).toBeInTheDocument();
+      // One quiet meta line of facts; the label was longer than the value.
+      expect(screen.queryByText("Group:")).not.toBeInTheDocument();
+    });
+
+    it("renders the view toggle passed as `action`", () => {
+      render(<CampaignBanner action={<button type="button">Journal</button>} />);
+      expect(screen.getByRole("button", { name: "Journal" })).toBeInTheDocument();
+    });
+
+    it("shows the chapter count in the meta line when given one", () => {
+      render(<CampaignBanner chapterCount={39} />);
+      expect(screen.getByText("Chapter 39")).toBeInTheDocument();
+    });
+
+    it("omits the chapter count when there are no chapters", () => {
+      render(<CampaignBanner chapterCount={0} />);
+      expect(screen.queryByText(/^Chapter /)).not.toBeInTheDocument();
     });
   });
 
@@ -222,10 +241,11 @@ describe("CampaignBanner", () => {
         hasCampaign: true,
       });
       render(<CampaignBanner />);
-      expect(screen.getByText("January 1, 2024")).toBeInTheDocument();
+      // "Started <date>" reads as a sentence, so it needs no separate label.
+      expect(screen.getByText("Started January 1, 2024")).toBeInTheDocument();
     });
 
-    it("shows the 'Created:' label when date is available", () => {
+    it("does not use a separate 'Created:' label", () => {
       setupHook({
         activeGroup: makeGroup(),
         activeCampaign: makeCampaign("Campaign"),
@@ -234,10 +254,11 @@ describe("CampaignBanner", () => {
         hasCampaign: true,
       });
       render(<CampaignBanner />);
-      expect(screen.getByText("Created:")).toBeInTheDocument();
+      expect(screen.queryByText("Created:")).not.toBeInTheDocument();
+      expect(screen.getByText("Started March 5, 2023")).toBeInTheDocument();
     });
 
-    it("does not render the 'Created:' label when date is null", () => {
+    it("omits the start date entirely when it is null", () => {
       setupHook({
         activeGroup: makeGroup(),
         activeCampaign: makeCampaign("Campaign"),
@@ -246,7 +267,7 @@ describe("CampaignBanner", () => {
         hasCampaign: true,
       });
       render(<CampaignBanner />);
-      expect(screen.queryByText("Created:")).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Started /)).not.toBeInTheDocument();
     });
   });
 

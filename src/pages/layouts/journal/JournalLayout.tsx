@@ -24,6 +24,7 @@ const JournalLayout: React.FC<LayoutProps> = ({
   rumors,
   activities,
   loading,
+  viewToggle,
 }) => {
   const [pageView, setPageView] = useState<'overview' | 'story'>('overview');
 
@@ -42,8 +43,13 @@ const JournalLayout: React.FC<LayoutProps> = ({
   return (
     <div className="relative w-full">
 
-      {/* View toggle */}
-      <div className="mb-4 flex justify-end">
+      {/* View toggle. `viewToggle` switches layout (journal vs dashboard) and is
+          owned by HomePage; the Overview/Story pair below switches page within the
+          journal. They sit on one row so the two levels read as one control group
+          instead of two stacked navigation bars. */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        {viewToggle ?? <span />}
+
         <div className="inline-flex rounded-md shadow-sm card-border">
           <Button
             variant={pageView === 'overview' ? 'primary' : 'ghost'}

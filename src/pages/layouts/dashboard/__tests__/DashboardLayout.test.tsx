@@ -9,7 +9,34 @@ import DashboardLayout from "../DashboardLayout";
 
 jest.mock("../sections/CampaignBanner", () => ({
   __esModule: true,
-  default: () => <div data-testid="campaign-banner">CampaignBanner</div>,
+  default: (props: any) => (
+    <div data-testid="campaign-banner" data-chapter-count={props.chapterCount}>
+      CampaignBanner
+      {props.action}
+    </div>
+  ),
+}));
+
+jest.mock("../sections/OpenQuests", () => ({
+  __esModule: true,
+  default: (props: any) => (
+    <div
+      data-testid="open-quests"
+      data-quests={props.quests?.length}
+      data-loading={String(props.loading)}
+    >
+      OpenQuests
+    </div>
+  ),
+}));
+
+jest.mock("../sections/RumorPrompt", () => ({
+  __esModule: true,
+  default: (props: any) => (
+    <div data-testid="rumor-prompt" data-rumor-count={props.rumorCount}>
+      RumorPrompt
+    </div>
+  ),
 }));
 
 jest.mock("../sections/CampaignStats", () => ({
@@ -216,13 +243,81 @@ describe("DashboardLayout", () => {
       expect(grid?.contains(banner)).toBe(false);
     });
 
-    it("CampaignStats and ActivityFeed are inside the grid wrapper", () => {
+    it("CampaignStats spans the full width, outside the grid", () => {
       const { container } = render(<DashboardLayout {...makeProps()} />);
       const grid = container.querySelector(".lg\\:grid");
       const stats = screen.getByTestId("campaign-stats");
+      // The counts are one strip across the top rather than a column of cards
+      // occupying two thirds of the content grid.
+      expect(stats).toBeInTheDocument();
+      expect(grid?.contains(stats)).toBe(false);
+    });
+
+    it("ActivityFeed and the aside sections are inside the grid wrapper", () => {
+      const { container } = render(<DashboardLayout {...makeProps()} />);
+      const grid = container.querySelector(".lg\\:grid");
+      expect(grid?.contains(screen.getByTestId("activity-feed"))).toBe(true);
+      expect(grid?.contains(screen.getByTestId("open-quests"))).toBe(true);
+    });
+
+    it("gives ActivityFeed the wide column", () => {
+      const { container } = render(<DashboardLayout {...makeProps()} />);
+      // Activity answers "what happened since we last played", so it gets the
+      // larger track; it previously sat in the narrow third.
+      const grid = container.querySelector(".lg\\:grid");
+      expect(grid?.className).toContain("lg:grid-cols-[1.6fr_1fr]");
+
       const feed = screen.getByTestId("activity-feed");
-      expect(grid?.contains(stats)).toBe(true);
-      expect(grid?.contains(feed)).toBe(true);
+      const quests = screen.getByTestId("open-quests");
+      const children = Array.from(grid?.children ?? []);
+      expect(children.findIndex(c => c.contains(feed))).toBe(0);
+      expect(children.findIndex(c => c.contains(quests))).toBe(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Aside sections
+  // -------------------------------------------------------------------------
+  describe("aside sections", () => {
+    it("forwards quests to OpenQuests", () => {
+      render(
+        <DashboardLayout {...makeProps({ quests: [{ id: "q1" }, { id: "q2" }] })} />
+      );
+      expect(screen.getByTestId("open-quests")).toHaveAttribute("data-quests", "2");
+    });
+
+    it("forwards the rumor count to RumorPrompt", () => {
+      render(<DashboardLayout {...makeProps({ rumors: [{ id: "r1" }] })} />);
+      expect(screen.getByTestId("rumor-prompt")).toHaveAttribute(
+        "data-rumor-count",
+        "1"
+      );
+    });
+
+    it("does not render RumorPrompt while loading", () => {
+      render(<DashboardLayout {...makeProps({ loading: true })} />);
+      // A prompt to add the first rumor is misleading before the data arrives.
+      expect(screen.queryByTestId("rumor-prompt")).not.toBeInTheDocument();
+    });
+
+    it("passes the chapter count to the banner meta line", () => {
+      render(
+        <DashboardLayout {...makeProps({ chapters: [{ id: "c1" }, { id: "c2" }] })} />
+      );
+      expect(screen.getByTestId("campaign-banner")).toHaveAttribute(
+        "data-chapter-count",
+        "2"
+      );
+    });
+
+    it("renders the view toggle inside the banner", () => {
+      render(
+        <DashboardLayout
+          {...makeProps({ viewToggle: <button type="button">Journal</button> })}
+        />
+      );
+      const banner = screen.getByTestId("campaign-banner");
+      expect(banner).toContainElement(screen.getByRole("button", { name: "Journal" }));
     });
   });
 });
