@@ -1,7 +1,8 @@
-// src/features/campaign-entities/shared/components/Roster.tsx
+// src/core/components/Roster.tsx
 import React from 'react';
-import Typography from 'core/components/Typography';
-import { ChevronDown } from 'lucide-react';
+import Typography from './Typography';
+import Input from './Input';
+import { ChevronDown, Search } from 'lucide-react';
 import clsx from 'clsx';
 
 /**
@@ -12,6 +13,13 @@ import clsx from 'clsx';
  * layout is built once here. Each directory previously repeated a card grid whose
  * `lg:grid-cols-3` sat *inside* each group, meaning a group with one entry burned a
  * full three-column row and the page was mostly whitespace.
+ *
+ * These live in `core/` rather than under a feature because not one of them knows
+ * anything about a campaign entity — they take strings, counts and callbacks. Two
+ * consumers outside campaign-entities already need them (the dashboard's
+ * ActivityFeed filter row, and QuestsPage before its directory was extracted), and
+ * reaching into `features/campaign-entities/shared/` for a generic pill row was
+ * both an internals import and the wrong dependency direction.
  */
 
 // ---------------------------------------------------------------------------
@@ -129,23 +137,50 @@ export interface RosterFilterOption {
   label: string;
 }
 
+/**
+ * `md` is the entity directories' filter row; `sm` is the more compact chip used
+ * where the row shares a line with a heading, as on the dashboard. The two differ
+ * only in geometry and weight, so they stay one component rather than two
+ * near-identical pill rows drifting apart.
+ */
+export type RosterFilterSize = 'sm' | 'md';
+
+const PILL_BASE: Record<RosterFilterSize, string> = {
+  sm: 'px-3 py-1.5 rounded-full text-xs font-semibold transition-colors',
+  md: 'px-3 py-1.5 rounded-md text-sm transition-colors',
+};
+
+const PILL_ACTIVE: Record<RosterFilterSize, string> = {
+  sm: 'bg-status-general text-status-text',
+  md: 'bg-status-general text-status-text font-semibold',
+};
+
+const PILL_IDLE: Record<RosterFilterSize, string> = {
+  sm: 'bg-secondary typography-secondary selectable-item',
+  md: 'card typography-secondary selectable-item',
+};
+
 export interface RosterFilterPillsProps {
   options: RosterFilterOption[];
   value: string;
   onChange: (value: string) => void;
   /** Accessible name for the group, e.g. "Filter by relationship". */
   label: string;
+  size?: RosterFilterSize;
 }
 
 /**
  * Filter options as visible pills. A <select> hides every option but one behind a
- * click, which is the wrong trade when there are only four.
+ * click, which is the wrong trade when there are only four. When the option set is
+ * open-ended — anything derived from the data, such as a location list — use
+ * RosterFilterSelect instead; that is the case pills genuinely cannot serve.
  */
 export const RosterFilterPills: React.FC<RosterFilterPillsProps> = ({
   options,
   value,
   onChange,
   label,
+  size = 'md',
 }) => (
   <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
     {options.map(option => {
@@ -157,16 +192,106 @@ export const RosterFilterPills: React.FC<RosterFilterPillsProps> = ({
           onClick={() => onChange(option.value)}
           aria-pressed={isActive}
           className={clsx(
-            'px-3 py-1.5 rounded-md text-sm transition-colors',
-            isActive
-              ? 'bg-status-general text-status-text font-semibold'
-              : 'card typography-secondary selectable-item'
+            PILL_BASE[size],
+            isActive ? PILL_ACTIVE[size] : PILL_IDLE[size]
           )}
         >
           {option.label}
         </button>
       );
     })}
+  </div>
+);
+
+export interface RosterFilterSelectProps {
+  /** The "no filter" option is supplied by the caller, like the pills' "All". */
+  options: RosterFilterOption[];
+  value: string;
+  onChange: (value: string) => void;
+  /** Accessible name, e.g. "Filter by location". */
+  label: string;
+  /** Value meaning "no filter"; the control styles itself as idle while on it. */
+  allValue?: string;
+  size?: RosterFilterSize;
+}
+
+/**
+ * The unbounded counterpart to RosterFilterPills.
+ *
+ * Pills are right for a fixed enum of four to nine, and wrong for an option set
+ * derived from the data — a campaign can have forty locations, and forty pills is
+ * not a filter row. So this stays a native <select>, but wears the pills' geometry
+ * and its active/idle treatment so a filter row mixing the two reads as one
+ * control set. It previously wore `rounded border p-1 input` with a MapPin and a
+ * visible "Location:" label, and so sat at a different height from everything
+ * beside it; the label is now the accessible name, matching the pills.
+ */
+export const RosterFilterSelect: React.FC<RosterFilterSelectProps> = ({
+  options,
+  value,
+  onChange,
+  label,
+  allValue = 'all',
+  size = 'md',
+}) => {
+  const isActive = value !== allValue;
+
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={event => onChange(event.target.value)}
+      className={clsx(
+        PILL_BASE[size],
+        isActive ? PILL_ACTIVE[size] : PILL_IDLE[size]
+      )}
+    >
+      {options.map(option => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Filter bar
+// ---------------------------------------------------------------------------
+
+export interface RosterFilterBarProps {
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+  /** Filter controls rendered beside the search field — pills, a select, a button. */
+  children?: React.ReactNode;
+}
+
+/**
+ * The search field plus whatever filters a directory needs, on one row.
+ *
+ * Four copies of this row existed and had already drifted three ways — `gap-3` vs
+ * `gap-4`, an `lg:` vs an `md:` breakpoint (so they reflowed at different widths),
+ * and Quests alone wrapped in a `<Card>`, giving it a raised panel its siblings
+ * did not have. One component means one answer to all three.
+ */
+export const RosterFilterBar: React.FC<RosterFilterBarProps> = ({
+  placeholder,
+  value,
+  onChange,
+  children,
+}) => (
+  <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+    <div className="flex-1 min-w-0">
+      <Input
+        placeholder={placeholder}
+        value={value}
+        onChange={event => onChange(event.target.value)}
+        startIcon={<Search className="typography-secondary" />}
+        fullWidth
+      />
+    </div>
+    {children}
   </div>
 );
 

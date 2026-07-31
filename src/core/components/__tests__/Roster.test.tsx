@@ -1,16 +1,18 @@
-// src/features/campaign-entities/shared/components/__tests__/Roster.test.tsx
+// src/core/components/__tests__/Roster.test.tsx
 import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import {
   RosterStatusBar,
+  RosterFilterBar,
   RosterFilterPills,
+  RosterFilterSelect,
   RosterGroup,
   RosterRow,
   RosterField,
   type RosterSegment,
 } from '../Roster';
 
-jest.mock('core/components/Typography', () => ({
+jest.mock('../Typography', () => ({
   __esModule: true,
   default: ({ children, variant, className }: any) => {
     const Tag = variant === 'h3' ? 'h3' : variant === 'h4' ? 'h4' : 'span';
@@ -179,6 +181,132 @@ describe('RosterFilterPills', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Friendly' }));
     expect(onChange).toHaveBeenCalledWith('friendly');
+  });
+
+  test('the sm size is the same control, only more compact', () => {
+    const onChange = jest.fn();
+    render(
+      <RosterFilterPills
+        options={options}
+        value="all"
+        onChange={onChange}
+        label="Filter activity by type"
+        size="sm"
+      />
+    );
+
+    // Same roles, same accessible names, same pressed semantics as the default
+    // size — the dashboard's row differs in geometry, not in behaviour.
+    const all = screen.getByRole('button', { name: 'All' });
+    expect(all).toHaveAttribute('aria-pressed', 'true');
+    expect(all.className).toContain('text-xs');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Friendly' }));
+    expect(onChange).toHaveBeenCalledWith('friendly');
+  });
+});
+
+describe('RosterFilterSelect', () => {
+  const options = [
+    { value: 'all', label: 'All Locations' },
+    { value: 'Dungeon', label: 'Dungeon' },
+    { value: 'Forest', label: 'Forest' },
+  ];
+
+  test('exposes its label as the accessible name, with no visible label text', () => {
+    render(
+      <RosterFilterSelect
+        options={options}
+        value="all"
+        onChange={jest.fn()}
+        label="Filter by location"
+      />
+    );
+    expect(
+      screen.getByRole('combobox', { name: 'Filter by location' })
+    ).toBeInTheDocument();
+    // The old markup carried a visible "Location:" label the pills never had.
+    expect(screen.queryByText('Location:')).not.toBeInTheDocument();
+  });
+
+  test('offers every option, unlike pills which would need one control each', () => {
+    render(
+      <RosterFilterSelect
+        options={options}
+        value="all"
+        onChange={jest.fn()}
+        label="Filter by location"
+      />
+    );
+    expect(screen.getAllByRole('option')).toHaveLength(3);
+  });
+
+  test('reports the chosen value', () => {
+    const onChange = jest.fn();
+    render(
+      <RosterFilterSelect
+        options={options}
+        value="all"
+        onChange={onChange}
+        label="Filter by location"
+      />
+    );
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Forest' } });
+    expect(onChange).toHaveBeenCalledWith('Forest');
+  });
+
+  test('wears the pills\' active treatment once it is actually filtering', () => {
+    const { rerender } = render(
+      <RosterFilterSelect
+        options={options}
+        value="all"
+        onChange={jest.fn()}
+        label="Filter by location"
+      />
+    );
+    // Idle on the "all" value, so a filter row reads as unfiltered at a glance.
+    expect(screen.getByRole('combobox').className).not.toContain('bg-status-general');
+
+    rerender(
+      <RosterFilterSelect
+        options={options}
+        value="Forest"
+        onChange={jest.fn()}
+        label="Filter by location"
+      />
+    );
+    expect(screen.getByRole('combobox').className).toContain('bg-status-general');
+  });
+});
+
+describe('RosterFilterBar', () => {
+  test('renders the search field with its placeholder and reports typing', () => {
+    const onChange = jest.fn();
+    render(
+      <RosterFilterBar placeholder="Search quests..." value="" onChange={onChange} />
+    );
+
+    const search = screen.getByPlaceholderText('Search quests...');
+    fireEvent.change(search, { target: { value: 'dragon' } });
+    expect(onChange).toHaveBeenCalledWith('dragon');
+  });
+
+  test('renders filter controls beside the search field', () => {
+    render(
+      <RosterFilterBar placeholder="Search quests..." value="" onChange={jest.fn()}>
+        <button type="button">Select Rumors</button>
+      </RosterFilterBar>
+    );
+    expect(screen.getByRole('button', { name: 'Select Rumors' })).toBeInTheDocument();
+  });
+
+  test('is not wrapped in a card, so every directory\'s row sits flat on the page', () => {
+    // Quests alone used to wrap this row in a Card, giving it a raised panel its
+    // three siblings did not have. One component, one answer.
+    const { container } = render(
+      <RosterFilterBar placeholder="Search quests..." value="" onChange={jest.fn()} />
+    );
+    expect(container.querySelector('.card')).toBeNull();
   });
 });
 

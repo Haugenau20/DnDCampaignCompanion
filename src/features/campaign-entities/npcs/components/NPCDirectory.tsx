@@ -3,18 +3,18 @@ import { NPC } from '../types';
 import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
-import Input from '../../../../core/components/Input';
-import { Search, Users, AlertCircle } from 'lucide-react';
+import { Users, AlertCircle } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
 import clsx from 'clsx';
 import {
   RosterStatusBar,
+  RosterFilterBar,
   RosterFilterPills,
   RosterGroup,
   RosterRow,
   RosterField,
   type RosterSegment,
-} from '../../shared/components/Roster';
+} from 'core/components/Roster';
 
 interface NPCDirectoryProps {
   npcs: NPC[];
@@ -54,7 +54,6 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all');
-  const [locationFilter, setLocationFilter] = useState<string>('all');
   const [highlightedNpcId, setHighlightedNpcId] = useState<string | null>(null);
   const [expandedNpcId, setExpandedNpcId] = useState<string | null>(null);
   const { navigateToPage, createPath } = useNavigation();
@@ -88,15 +87,19 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   useEffect(() => {
     if (highlightId) {
       setHighlightedNpcId(highlightId);
-      // Open the highlighted entry, so arriving from a link shows its detail
+      // Open the highlighted entry, so arriving from a link shows its detail.
       setExpandedNpcId(highlightId);
-      // Find the NPC and set relevant filters
+
+      // Deliberately no location filtering here. Arriving from a link used to
+      // set locationFilter to the target's location, which silently hid every
+      // other group and explained itself only through a small "Clear location:"
+      // ghost button. The roster already groups by location, so the target's
+      // group is visually separated anyway — highlighting, expanding and
+      // scrolling is the whole job. RumorDirectory reaches the same conclusion
+      // for the same reason ("Location is deliberately not part of this filter
+      // set — see the grouping rationale below").
       const highlightedNpc = npcs.find(npc => npc.id === highlightId);
       if (highlightedNpc) {
-        if (highlightedNpc.location) {
-          setLocationFilter(highlightedNpc.location);
-        }
-        // Scroll to the highlighted NPC row
         setTimeout(() => {
           const element = document.getElementById(`npc-${highlightId}`);
           if (element) {
@@ -134,12 +137,10 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
       const relationshipMatch = relationshipFilter === 'all' ||
         npc.relationship === relationshipFilter;
 
-      // Location filter
-      const locationMatch = locationFilter === 'all' || npc.location === locationFilter;
-
-      return searchMatch && statusMatch && relationshipMatch && locationMatch;
+      // Location is the grouping, not a filter — see the highlight effect above.
+      return searchMatch && statusMatch && relationshipMatch;
     });
-  }, [npcs, searchQuery, statusFilter, relationshipFilter, locationFilter]);
+  }, [npcs, searchQuery, statusFilter, relationshipFilter]);
 
   // Group NPCs by location for display
   const groupedNPCs = useMemo(() => {
@@ -182,30 +183,18 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
       />
 
       {/* Search and filters, on one row rather than four stacked dropdowns */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <Input
-            placeholder="Search name, title or description"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            startIcon={<Search className="typography-secondary" />}
-            fullWidth
-          />
-        </div>
-
+      <RosterFilterBar
+        placeholder="Search name, title or description"
+        value={searchQuery}
+        onChange={setSearchQuery}
+      >
         <RosterFilterPills
           options={RELATIONSHIP_FILTERS}
           value={relationshipFilter}
           onChange={setRelationshipFilter}
           label="Filter by relationship"
         />
-
-        {locationFilter !== 'all' && (
-          <Button variant="ghost" size="sm" onClick={() => setLocationFilter('all')}>
-            Clear location: {locationFilter}
-          </Button>
-        )}
-      </div>
+      </RosterFilterBar>
 
       {/* NPC roster by location */}
       {groups.length > 0 ? (

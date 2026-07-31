@@ -7,20 +7,20 @@ import { useAuth } from 'features/user-management';
 import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
-import Input from '../../../../core/components/Input';
-import { Search, MapPin, Mountain, Building, Home, Landmark, Users, Scroll, Tag } from 'lucide-react';
+import { MapPin, Mountain, Building, Home, Landmark, Users, Scroll, Tag } from 'lucide-react';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useNavigation } from 'shared/context/NavigationContext';
 import clsx from 'clsx';
 import {
   RosterStatusBar,
+  RosterFilterBar,
   RosterFilterPills,
   RosterGroup,
   RosterRow,
   RosterField,
   type RosterSegment,
   type RosterFilterOption,
-} from '../../shared/components/Roster';
+} from 'core/components/Roster';
 
 interface LocationDirectoryProps {
   locations: Location[];
@@ -606,24 +606,18 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
       />
 
       {/* Search and type filter, on one row rather than two stacked dropdowns */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <Input
-            placeholder="Search locations..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            startIcon={<Search className="typography-secondary" />}
-            fullWidth
-          />
-        </div>
-
+      <RosterFilterBar
+        placeholder="Search locations..."
+        value={searchQuery}
+        onChange={setSearchQuery}
+      >
         <RosterFilterPills
           options={TYPE_FILTERS}
           value={typeFilter}
           onChange={setTypeFilter}
           label="Filter by location type"
         />
-      </div>
+      </RosterFilterBar>
 
       {/* Location hierarchy */}
       {rootRows.length === 0 && orphanRows.length === 0 ? (

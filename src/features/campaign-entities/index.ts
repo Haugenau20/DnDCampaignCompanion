@@ -14,6 +14,7 @@ export type { NPC, NPCStatus, NPCRelationship, NPCNote, NPCConnections, NPCConte
 export { QuestProvider, useQuests } from './quests/context/QuestContext';
 export { useQuestData } from './quests/hooks/useQuestData';
 // Components consumed by pages/quests/* and other external consumers
+export { default as QuestDirectory } from './quests/components/QuestDirectory';
 export { default as QuestCreateForm } from './quests/components/QuestCreateForm';
 export { default as QuestEditForm } from './quests/components/QuestEditForm';
 export { BasicInfoSection, ObjectivesSection, LeadsSection, KeyLocationsSection, ComplicationsSection, RewardsSection, RelatedNPCsSection } from './quests/components/QuestFormSections';

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Typography from 'core/components/Typography';
 import Card from 'core/components/Card';
+import { RosterFilterPills, type RosterFilterOption } from 'core/components/Roster';
 import clsx from 'clsx';
 import { Activity } from 'pages/HomePage';
 import { useActivityDisplay } from '../../../layouts/common/hooks/useActivityDisplay';
@@ -13,9 +14,18 @@ interface ActivityFeedProps {
   loading: boolean;
 }
 
-/** The filter options, in the order the design lists them. `null` means "All". */
-const FILTERS: Array<{ value: string | null; label: string }> = [
-  { value: null, label: 'All' },
+/**
+ * The filter options, in the order the design lists them.
+ *
+ * `useActivityDisplay` takes `null` for "no filter" while RosterFilterPills, like
+ * every other filter row in the app, uses the string `'all'` — so ALL_TYPES is the
+ * single place that mapping happens, rather than a nullable value leaking into the
+ * shared control's API for one caller's benefit.
+ */
+const ALL_TYPES = 'all';
+
+const FILTERS: RosterFilterOption[] = [
+  { value: ALL_TYPES, label: 'All' },
   { value: 'chapter', label: 'Story' },
   { value: 'quest', label: 'Quests' },
   { value: 'npc', label: 'NPCs' },
@@ -86,27 +96,13 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         {heading}
 
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter activity by type">
-          {FILTERS.map(({ value, label }) => {
-            const isActive = filter === value;
-            return (
-              <button
-                key={label}
-                type="button"
-                onClick={() => setFilter(value)}
-                aria-pressed={isActive}
-                className={clsx(
-                  'px-3 py-1.5 rounded-full text-xs font-semibold transition-colors',
-                  isActive
-                    ? 'bg-status-general text-status-text'
-                    : 'bg-secondary typography-secondary selectable-item'
-                )}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+        <RosterFilterPills
+          options={FILTERS}
+          value={filter ?? ALL_TYPES}
+          onChange={value => setFilter(value === ALL_TYPES ? null : value)}
+          label="Filter activity by type"
+          size="sm"
+        />
       </div>
 
       {filteredActivities.length === 0 ? (

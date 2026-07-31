@@ -416,18 +416,23 @@ describe('NPCDirectory', () => {
   // -------------------------------------------------------------------------
   // Location filter — driven by the ?highlight= deep link
   // -------------------------------------------------------------------------
-  describe('location filter', () => {
-    test('scopes to the highlighted NPC\'s location and offers a way out', () => {
+  // Location is the grouping here, not a filter. Arriving from a deep link used
+  // to set a location filter to the target's location, silently hiding every
+  // other group behind a small "Clear location:" ghost button. RumorDirectory,
+  // which groups by location the same way, deliberately has no location filter
+  // at all; NPCDirectory now matches it.
+  describe('deep link by ?highlight=', () => {
+    test('leaves every other location group visible', () => {
       setupMocks({ uid: 'user-1' }, { highlight: 'npc-2' });
       render(<NPCDirectory npcs={[aldric, mira, rolf]} />);
 
+      // Mira is the target, in Ironhold; Aldric and Rolf are in Silverkeep and
+      // must not vanish just because a link pointed at someone else.
       expect(screen.getByText('Mira')).toBeInTheDocument();
-      expect(screen.queryByText('Aldric')).not.toBeInTheDocument();
-
-      fireEvent.click(
-        screen.getByRole('button', { name: /Clear location: Ironhold/ })
-      );
       expect(screen.getByText('Aldric')).toBeInTheDocument();
+      expect(screen.getByText('Rolf')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Ironhold' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Silverkeep' })).toBeInTheDocument();
     });
 
     test('expands the highlighted NPC so a deep link lands on its detail', () => {
@@ -439,8 +444,10 @@ describe('NPCDirectory', () => {
       ).toHaveAttribute('aria-expanded', 'true');
     });
 
-    test('shows no location-clearing control when nothing is scoped', () => {
-      render(<NPCDirectory npcs={[aldric]} />);
+    test('offers no location-clearing control, because nothing is ever scoped away', () => {
+      setupMocks({ uid: 'user-1' }, { highlight: 'npc-2' });
+      render(<NPCDirectory npcs={[aldric, mira, rolf]} />);
+
       expect(
         screen.queryByRole('button', { name: /Clear location:/ })
       ).not.toBeInTheDocument();

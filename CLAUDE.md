@@ -223,7 +223,7 @@ src/
 │   ├── hooks/                #   useFirebaseData, useNavigation, useSearch
 │   └── utils/
 ├── core/                     # Infrastructure — depends on nothing internal
-│   ├── components/           #   UI primitives: Button, Card, Dialog, Input, Typography
+│   ├── components/           #   UI primitives: Button, Card, Dialog, Input, Typography, Roster
 │   ├── services/             #   Firebase (auth/user/group/campaign/data), search, openai
 │   ├── types/                #   common, search, user
 │   ├── attribution/          #   the single place attribution values are built

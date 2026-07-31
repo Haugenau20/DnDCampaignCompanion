@@ -8,20 +8,20 @@ import { useAuth } from 'features/user-management';
 import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
-import Input from '../../../../core/components/Input';
 import RumorBatchActions from './RumorBatchActions';
 import { useNavigation } from 'shared/hooks/useNavigation';
 import clsx from 'clsx';
-import { Search, HelpCircle, RotateCw, Users, MapPin, Scroll } from 'lucide-react';
+import { HelpCircle, RotateCw, Users, MapPin, Scroll } from 'lucide-react';
 import {
   RosterStatusBar,
+  RosterFilterBar,
   RosterFilterPills,
   RosterGroup,
   RosterRow,
   RosterField,
   type RosterSegment,
   type RosterFilterOption,
-} from '../../shared/components/Roster';
+} from 'core/components/Roster';
 
 interface RumorDirectoryProps {
   rumors: Rumor[];
@@ -234,17 +234,11 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
       />
 
       {/* Search and source filter, on one row rather than three stacked dropdowns */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <Input
-            placeholder="Search rumors..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            startIcon={<Search className="typography-secondary" />}
-            fullWidth
-          />
-        </div>
-
+      <RosterFilterBar
+        placeholder="Search rumors..."
+        value={searchQuery}
+        onChange={setSearchQuery}
+      >
         <RosterFilterPills
           options={SOURCE_FILTERS}
           value={sourceFilter}
@@ -259,7 +253,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
         >
           {selectionMode ? 'Exit Selection' : 'Select Rumors'}
         </Button>
-      </div>
+      </RosterFilterBar>
 
       {/* Batch actions bar — only visible in selection mode, once something is selected */}
       {selectionMode && (
