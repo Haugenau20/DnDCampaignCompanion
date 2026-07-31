@@ -155,7 +155,7 @@ const NPCCard: React.FC<NPCCardProps> = ({
                 </Typography>
                 <Typography 
                   variant="body-sm" 
-                  className="font-medium npc-status-${npc.status}"
+                  className={clsx('font-medium', `npc-status-${npc.status}`)}
                 >
                   {npc.status.charAt(0).toUpperCase() + npc.status.slice(1)}
                 </Typography>
@@ -262,7 +262,7 @@ const NPCCard: React.FC<NPCCardProps> = ({
                           <div className="flex items-start gap-2 text-left">
                             <Users
                               size={16}
-                              className="mt-1 quest-status-${quest.status}"
+                              className={clsx('mt-1', `quest-status-${quest.status}`)}
                             />
                             <div className="flex-1">
                               <Typography variant="body-sm" className="font-medium">

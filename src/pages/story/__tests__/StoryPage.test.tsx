@@ -422,18 +422,25 @@ describe("StoryPage", () => {
   // -------------------------------------------------------------------------
   // Back to selection
   // -------------------------------------------------------------------------
-  describe("back to selection", () => {
-    it("renders 'Back to Selection' button", () => {
+  describe("back to chapters", () => {
+    it("renders 'Back to Chapters' button", () => {
       renderPage();
       expect(
-        screen.getByTestId("button-back-to-selection")
+        screen.getByTestId("button-back-to-chapters")
       ).toBeInTheDocument();
     });
 
-    it("navigates to /story/chapters when Back to Selection is clicked", () => {
+    it("navigates to /story/chapters when Back to Chapters is clicked", () => {
       renderPage();
-      fireEvent.click(screen.getByTestId("button-back-to-selection"));
+      fireEvent.click(screen.getByTestId("button-back-to-chapters"));
       expect(mockNavigateToPage).toHaveBeenCalledWith("/story/chapters");
+    });
+
+    it("does not reuse the 'Back to Selection' label, which points at /story elsewhere", () => {
+      renderPage();
+      expect(
+        screen.queryByTestId("button-back-to-selection")
+      ).not.toBeInTheDocument();
     });
   });
 

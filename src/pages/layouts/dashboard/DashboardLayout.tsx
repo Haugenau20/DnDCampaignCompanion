@@ -34,7 +34,7 @@ const DashboardLayout: React.FC<LayoutProps> = ({
       <CampaignBanner />
       
       {/* Responsive Layout - Side by side on large screens, stacked on smaller screens */}
-      <div className="w-full lg:grid lg:grid-cols-3 lg:gap-4 lg:gap-6">
+      <div className="w-full lg:grid lg:grid-cols-3 lg:gap-6">
         {/* Campaign Stats - Full width on mobile, 2/3 width on desktop */}
         <div className="mt-4 lg:col-span-2">
           <CampaignStats 

@@ -74,12 +74,16 @@ const BookViewer: React.FC<BookViewerProps> = ({
   const handlePageChange = useCallback((newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
-      onPageChange?.(newPage);
-      
-      // Mark as complete if we're on the last page
-      const isComplete = newPage === totalPages;
-      if (isComplete) {
+
+      // Emit exactly once per page turn. This previously fired twice on the last
+      // page — once bare, then again with `true` — which cost two writes per
+      // completing turn and forced consumers to guard against the bare call
+      // clearing stored completion (bug #852). Non-final pages still omit the flag
+      // entirely rather than passing `false`, so the context preserves what it has.
+      if (newPage === totalPages) {
         onPageChange?.(newPage, true);
+      } else {
+        onPageChange?.(newPage);
       }
     } else if (newPage > totalPages && hasNextChapter) {
       // Mark current chapter as complete before moving to next
@@ -133,13 +137,20 @@ const BookViewer: React.FC<BookViewerProps> = ({
   // Render newlines properly
   const renderContent = (text: string) => {
     if (!text) return null;
-    
-    // Split the text by newlines and map each paragraph
-    return text.split('\n').map((paragraph, index) => (
-      <p key={index} className="mb-4">
-        {paragraph}
-      </p>
-    ));
+
+    // Split on newlines and drop blank lines. Emitting a <p class="mb-4"> for every
+    // line meant each blank line in a chapter produced an empty paragraph carrying a
+    // 1rem margin — invisible, uneven gaps between paragraphs, plus empty nodes in
+    // the accessibility tree.
+    return text
+      .split('\n')
+      .map(paragraph => paragraph.trim())
+      .filter(paragraph => paragraph.length > 0)
+      .map((paragraph, index) => (
+        <p key={index} className="mb-4">
+          {paragraph}
+        </p>
+      ));
   };
 
   if (!content) {

@@ -81,7 +81,6 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
         <Card 
           hoverable
           onClick={() => navigateToPage('/npcs')}
-          className="transform transition-transform hover:scale-102"
         >
             <Card.Content className="flex flex-col items-center text-center p-4">
               <div className={clsx(
@@ -99,7 +98,6 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
         <Card 
           hoverable
           onClick={() => navigateToPage('/locations')}
-          className="transform transition-transform hover:scale-102"
         >
           <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
@@ -117,7 +115,6 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
         <Card 
           hoverable
           onClick={() => navigateToPage('/story/chapters')}
-          className="transform transition-transform hover:scale-102"
         >
           <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
@@ -135,7 +132,6 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
         <Card 
           hoverable
           onClick={() => navigateToPage('/rumors')}
-          className="transform transition-transform hover:scale-102"
         >
           <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
@@ -153,7 +149,6 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
         <Card 
           hoverable
           onClick={() => navigateToPage('/quests')}
-          className="transform transition-transform hover:scale-102"
         >
           <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
@@ -171,7 +166,6 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
         <Card 
           hoverable
           onClick={() => navigateToPage('/quests')}
-          className="transform transition-transform hover:scale-102"
         >
           <Card.Content className="flex flex-col items-center text-center p-4">
             <div className={clsx(
@@ -189,7 +183,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
         <Card 
           hoverable
           onClick={() => navigateToPage('/quests')}
-          className="sm:col-span-2 transform transition-transform hover:scale-102"
+          className="sm:col-span-2"
         >
           <Card.Content className="p-4 flex items-center justify-center">
             <div className="flex flex-col items-center text-center w-full max-w-md">

@@ -12,7 +12,7 @@ const CampaignBanner: React.FC = () => {
   // If no active campaign or group, show a default message
   if (!hasGroup || !hasCampaign) {
     return (
-      <div className="p-6 mb-4 text-center typograhpy">
+      <div className="p-6 mb-4 text-center typography">
         <Typography variant="h2" className="mb-2">
           Welcome to D&D Campaign Companion
         </Typography>
@@ -27,7 +27,7 @@ const CampaignBanner: React.FC = () => {
   }
   
   return (
-    <div className="p-6 mb-4 relative overflow-hidden text-center typograhpy">
+    <div className="p-6 mb-4 relative overflow-hidden text-center typography">
       <div className="relative z-10">
         <Typography variant="h2" className="mb-1">
           Welcome to {activeCampaign?.name}

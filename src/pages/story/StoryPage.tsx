@@ -188,12 +188,16 @@ const StoryPage: React.FC = () => {
               </div>
             )}
             
+            {/* Labelled for where it actually goes. ChaptersPage and SagaPage both
+                send "Back to Selection" to /story (StorySelectionPage); this button
+                goes up one level to the chapter list, so it said "Selection" while
+                landing somewhere else. */}
             <Button
               variant="ghost"
               onClick={() => navigateToPage('/story/chapters')}
               startIcon={<Book />}
             >
-              Back to Selection
+              Back to Chapters
             </Button>
           </div>
         </div>

@@ -87,7 +87,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
               key={`${activity.type}-${activity.id}`}
               hoverable
               onClick={() => handleActivityClick(activity)}
-              className="transition-all hover:shadow-md transform hover:scale-102"
+              className="transition-all hover:shadow-md"
             >
               <Card.Content className="p-4">
                 <div className="flex items-center">

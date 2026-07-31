@@ -390,6 +390,18 @@
   border-left: 4px solid var(--status-failed);
 }
 
+.quest-status-active {
+  color: var(--status-active);
+}
+
+.quest-status-completed {
+  color: var(--status-completed);
+}
+
+.quest-status-failed {
+  color: var(--status-failed);
+}
+
 .progress-container {
   background-color: var(--bg-secondary);
 }
