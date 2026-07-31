@@ -288,6 +288,36 @@ describe('RosterRow', () => {
     ).toContain('grid-cols-2');
   });
 
+  test('renders a leadingControl outside the expand button, not nested in it', () => {
+    renderRow({
+      leadingControl: <input type="checkbox" aria-label="Select Acar" />,
+    });
+
+    const checkbox = screen.getByRole('checkbox', { name: 'Select Acar' });
+    const toggle = screen.getByRole('button', { name: /Expand Acar/ });
+
+    expect(checkbox).toBeInTheDocument();
+    // Interactive elements nested inside a <button> are invalid HTML and the inner
+    // control's clicks get swallowed, so the slot must sit beside the button.
+    expect(toggle).not.toContainElement(checkbox);
+  });
+
+  test('a leadingControl click does not toggle the row', () => {
+    const onToggle = jest.fn();
+    renderRow({
+      onToggle,
+      leadingControl: <input type="checkbox" aria-label="Select Acar" />,
+    });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Acar' }));
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  test('renders no leading slot when none is given', () => {
+    renderRow();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
   test('omits the top border on the first row only', () => {
     const { container, unmount } = renderRow({ isFirst: true });
     expect(container.firstElementChild!.className).not.toContain('border-t');

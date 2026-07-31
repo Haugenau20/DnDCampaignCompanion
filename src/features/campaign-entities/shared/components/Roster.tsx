@@ -243,6 +243,13 @@ export interface RosterRowProps {
   expandedContent?: React.ReactNode;
   /** Accessible name for the expand control, e.g. the entry's name. */
   toggleLabel: string;
+  /**
+   * A control rendered beside the row, OUTSIDE the expand button — a selection
+   * checkbox, for instance. It cannot go in `children`, because those render inside
+   * the button and nesting interactive elements in a button is invalid HTML and
+   * swallows the inner control's clicks.
+   */
+  leadingControl?: React.ReactNode;
   isFirst?: boolean;
   highlighted?: boolean;
   id?: string;
@@ -262,6 +269,7 @@ export const RosterRow: React.FC<RosterRowProps> = ({
   onToggle,
   expandedContent,
   toggleLabel,
+  leadingControl,
   isFirst = false,
   highlighted = false,
   id,
@@ -275,26 +283,32 @@ export const RosterRow: React.FC<RosterRowProps> = ({
       expanded && 'bg-secondary'
     )}
   >
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={expanded}
-      aria-label={`${expanded ? 'Collapse' : 'Expand'} ${toggleLabel}`}
-      className={clsx(
-        'w-full text-left px-5 py-3.5 items-center gap-4 grid selectable-item',
-        gridClassName
+    <div className="flex items-stretch">
+      {leadingControl && (
+        <div className="flex items-center pl-5 shrink-0">{leadingControl}</div>
       )}
-    >
-      {children}
-      <ChevronDown
-        size={16}
-        aria-hidden="true"
+
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        aria-label={`${expanded ? 'Collapse' : 'Expand'} ${toggleLabel}`}
         className={clsx(
-          'justify-self-end transition-transform typography-secondary',
-          expanded && 'rotate-180'
+          'flex-1 min-w-0 text-left px-5 py-3.5 items-center gap-4 grid selectable-item',
+          gridClassName
         )}
-      />
-    </button>
+      >
+        {children}
+        <ChevronDown
+          size={16}
+          aria-hidden="true"
+          className={clsx(
+            'justify-self-end transition-transform typography-secondary',
+            expanded && 'rotate-180'
+          )}
+        />
+      </button>
+    </div>
 
     {expanded && expandedContent && (
       <div className="px-5 pb-5 pt-1 border-t border-card">{expandedContent}</div>

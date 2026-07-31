@@ -1,523 +1,837 @@
-﻿// src/pages/quests/__tests__/QuestsPage.test.tsx
-import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-import QuestsPage from "../QuestsPage";
-
-// ---------------------------------------------------------------------------
-// react-router-dom mocks
-// ---------------------------------------------------------------------------
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-  useLocation: () => ({ pathname: "/quests", search: "", hash: "" }),
-}));
+// src/pages/quests/__tests__/QuestsPage.test.tsx
+import React from 'react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import QuestsPage from '../QuestsPage';
+import type { Quest, QuestObjective } from 'features/campaign-entities';
+import type { NPC } from 'features/campaign-entities';
+import type { Location } from 'features/campaign-entities';
 
 // ---------------------------------------------------------------------------
 // Context mocks
+//
+// QuestsPage talks to Firebase-backed hooks exclusively through the
+// `features/campaign-entities` and `features/user-management` barrels, plus
+// `shared/hooks/useNavigation`. None of those, once mocked, touch
+// react-router or any provider tree, so no router/provider wrapper is needed.
 // ---------------------------------------------------------------------------
-let mockUser: any = { uid: "user-1" };
-let mockActiveGroupId: string | null = "group-1";
-let mockActiveCampaignId: string | null = "campaign-1";
 
-jest.mock("@/features/user-management", () => ({
+let mockUser: { uid: string } | null = { uid: 'user-1' };
+let mockActiveGroupId: string | null = 'group-1';
+let mockActiveCampaignId: string | null = 'campaign-1';
+
+jest.mock('features/user-management', () => ({
   useAuth: () => ({ user: mockUser }),
   useGroups: () => ({ activeGroupId: mockActiveGroupId }),
   useCampaigns: () => ({ activeCampaignId: mockActiveCampaignId }),
 }));
 
 interface QuestContextMock {
-  quests: any[];
+  quests: Quest[];
   loading: boolean;
   error: string | null;
-  hasRequiredContext: boolean;
+  deleteQuest: jest.Mock;
 }
+
+const mockDeleteQuest = jest.fn().mockResolvedValue(undefined);
 
 let mockQuestContext: QuestContextMock = {
   quests: [],
   loading: false,
   error: null,
-  hasRequiredContext: true,
+  deleteQuest: mockDeleteQuest,
 };
 
-jest.mock("features/campaign-entities", () => ({
+let mockGetNPCById: (id: string) => NPC | undefined = () => undefined;
+let mockLocations: Location[] = [];
+
+jest.mock('features/campaign-entities', () => ({
   useQuests: () => mockQuestContext,
-  QuestCard: (props: any) => (
-    <div data-testid={`quest-card-${props.quest?.id}`}>
-      <span data-testid={`quest-card-title-${props.quest?.id}`}>
-        {props.quest?.title}
-      </span>
-    </div>
-  ),
+  useNPCs: () => ({ getNPCById: mockGetNPCById }),
+  useLocations: () => ({ locations: mockLocations }),
 }));
 
 const mockNavigateToPage = jest.fn();
-const mockGetCurrentQueryParams = jest.fn(() => ({ highlight: undefined }));
+const mockCreatePath = jest.fn(
+  (path: string, _params?: Record<string, string>, query?: Record<string, string>) =>
+    query && Object.keys(query).length
+      ? `${path}?${new URLSearchParams(query).toString()}`
+      : path
+);
+const mockGetCurrentQueryParams = jest.fn(() => ({} as Record<string, string>));
 
-jest.mock("shared/hooks/useNavigation", () => ({
+jest.mock('shared/hooks/useNavigation', () => ({
   useNavigation: () => ({
     navigateToPage: mockNavigateToPage,
+    createPath: mockCreatePath,
     getCurrentQueryParams: mockGetCurrentQueryParams,
-    state: {},
   }),
 }));
 
 // ---------------------------------------------------------------------------
-// Child component mocks
+// Fixture helpers
 // ---------------------------------------------------------------------------
 
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, variant, color }: any) => {
-    const testId = variant
-      ? `typography-${variant}`
-      : color
-      ? `typography-${color}`
-      : "typography";
-    return <div data-testid={testId}>{children}</div>;
-  },
-}));
+function makeQuest(overrides: Partial<Quest> = {}): Quest {
+  return {
+    id: `quest-${Math.random().toString(36).slice(2)}`,
+    title: 'Test Quest',
+    description: 'A test quest',
+    status: 'active',
+    objectives: [],
+    createdBy: 'user-1',
+    createdByUsername: 'TestUser',
+    dateAdded: '2024-01-15T10:00:00.000Z',
+    ...overrides,
+  };
+}
 
-jest.mock("../../../core/components/Button", () => ({
-  __esModule: true,
-  default: ({ children, onClick }: any) => (
-    <button onClick={onClick}>{children}</button>
-  ),
-}));
+function makeObjective(overrides: Partial<QuestObjective> = {}): QuestObjective {
+  return {
+    id: `obj-${Math.random().toString(36).slice(2)}`,
+    description: 'Do a thing',
+    completed: false,
+    ...overrides,
+  };
+}
 
-jest.mock("../../../core/components/Card", () => {
-  const Card = ({ children, className }: any) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  );
-  Card.Content = ({ children, className }: any) => (
-    <div data-testid="card-content" className={className}>
-      {children}
-    </div>
-  );
-  return { __esModule: true, default: Card };
+function makeNPC(overrides: Partial<NPC> = {}): NPC {
+  return {
+    id: 'npc-1',
+    name: 'Elder Willow',
+    status: 'alive',
+    relationship: 'friendly',
+    description: 'A wise elder',
+    connections: { relatedNPCs: [], affiliations: [], relatedQuests: [] },
+    notes: [],
+    createdBy: 'user-1',
+    createdByUsername: 'TestUser',
+    dateAdded: '2024-01-15T10:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function makeLocation(overrides: Partial<Location> = {}): Location {
+  return {
+    id: 'loc-1',
+    name: 'Forest Clearing',
+    type: 'landmark',
+    status: 'known',
+    description: 'A quiet clearing',
+    createdBy: 'user-1',
+    createdByUsername: 'TestUser',
+    dateAdded: '2024-01-15T10:00:00.000Z',
+    ...overrides,
+  };
+}
+
+const questActiveDragon = makeQuest({
+  id: 'q1',
+  title: 'Find the Dragon',
+  description: 'A quest about a red dragon terrorizing the valley',
+  status: 'active',
+  location: 'Dungeon',
+  levelRange: '3-5',
+  background: 'The dragon arrived three winters ago.',
+  objectives: [
+    makeObjective({ id: 'o1', description: 'Scout the lair entrance', completed: true }),
+    makeObjective({ id: 'o2', description: 'Slay the dragon', completed: false }),
+  ],
+  leads: ['Ask the blacksmith about dragon scales'],
+  complications: ['The lair is full of traps'],
+  rewards: ['500 gold', 'Dragon scale armor'],
+  keyLocations: [{ name: "Dragon's Lair", description: 'A cave in the mountains' }],
+  importantNPCs: [{ name: 'Old Hunter', description: "Knows the dragon's habits" }],
+  relatedNPCIds: ['npc-1'],
 });
 
-jest.mock("../../../core/components/Input", () => ({
-  __esModule: true,
-  default: ({ placeholder, value, onChange }: any) => (
-    <input
-      data-testid="search-input"
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-    />
-  ),
-}));
+const questCompletedLich = makeQuest({
+  id: 'q2',
+  title: 'Slay the Lich',
+  description: 'A necromantic affair threatens the kingdom',
+  status: 'completed',
+  location: 'Crypt',
+  dateCompleted: '1492-03-10',
+  levelRange: '5-8',
+  objectives: [makeObjective({ id: 'o3', description: 'Retrieve the phylactery', completed: true })],
+  relatedNPCIds: [],
+});
 
-jest.mock("lucide-react", () => ({
-  Scroll: () => <span data-testid="scroll-icon" />,
-  CheckCircle2: () => <span data-testid="check-circle-icon" />,
-  XCircle: () => <span data-testid="x-circle-icon" />,
-  Filter: () => <span data-testid="filter-icon" />,
-  Search: () => <span data-testid="search-icon" />,
-  MapPin: () => <span data-testid="map-pin-icon" />,
-  Loader2: () => <span data-testid="loader-icon" />,
-  Plus: () => <span data-testid="plus-icon" />,
-  AlertCircle: () => <span data-testid="alert-circle-icon" />,
-}));
+const questFailedPrincess = makeQuest({
+  id: 'q3',
+  title: 'Rescue the Princess',
+  description: 'A classic adventure gone wrong',
+  status: 'failed',
+  location: 'Dungeon',
+  objectives: [],
+});
 
-// ---------------------------------------------------------------------------
-// Sample quest data
-// ---------------------------------------------------------------------------
-const sampleQuests = [
-  {
-    id: "q1",
-    title: "Find the Dragon",
-    description: "A quest about dragons",
-    status: "active",
-    location: "Dungeon",
-    objectives: [{ description: "Slay the dragon" }],
-    relatedNPCIds: [],
-  },
-  {
-    id: "q2",
-    title: "Slay the Lich",
-    description: "A necromantic affair",
-    status: "completed",
-    location: "Crypt",
-    objectives: [{ description: "Find the phylactery" }],
-    relatedNPCIds: [],
-  },
-  {
-    id: "q3",
-    title: "Rescue the Princess",
-    description: "Classic adventure",
-    status: "failed",
-    location: "Dungeon",
-    objectives: [{ description: "Enter the tower" }],
-    relatedNPCIds: [],
-  },
-  {
-    id: "q4",
-    title: "Collect Herbs",
-    description: "A mundane errand",
-    status: "active",
-    location: "Forest",
-    objectives: [{ description: "Gather 10 herbs" }],
-    relatedNPCIds: ["Herbalist"],
-  },
-];
+const questActiveHerbs = makeQuest({
+  id: 'q4',
+  title: 'Collect Herbs',
+  description: 'A mundane errand for the herbalist',
+  status: 'active',
+  location: 'Forest',
+  objectives: [
+    makeObjective({ id: 'o4', description: 'Gather 10 herbs', completed: false }),
+    makeObjective({ id: 'o5', description: 'Return to herbalist', completed: false }),
+    makeObjective({ id: 'o6', description: 'Report findings', completed: true }),
+  ],
+  relatedNPCIds: ['npc-1', 'npc-missing'],
+  keyLocations: [
+    { name: 'Forest Clearing', description: 'A quiet clearing' },
+    { name: 'Unknown Ruins', description: 'Ancient, unmapped ruins' },
+  ],
+});
+
+const sampleQuests = [questActiveDragon, questCompletedLich, questFailedPrincess, questActiveHerbs];
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
 function renderPage() {
   return render(<QuestsPage />);
 }
 
+const expandButton = (title: string | RegExp) =>
+  screen.getByRole('button', { name: typeof title === 'string' ? new RegExp(`Expand ${title}`) : title });
+
+const collapseButton = (title: string) =>
+  screen.getByRole('button', { name: new RegExp(`Collapse ${title}`) });
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-describe("QuestsPage", () => {
+describe('QuestsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUser = { uid: "user-1" };
-    mockActiveGroupId = "group-1";
-    mockActiveCampaignId = "campaign-1";
+    mockDeleteQuest.mockResolvedValue(undefined);
+    mockUser = { uid: 'user-1' };
+    mockActiveGroupId = 'group-1';
+    mockActiveCampaignId = 'campaign-1';
     mockQuestContext = {
       quests: [...sampleQuests],
       loading: false,
       error: null,
-      hasRequiredContext: true,
+      deleteQuest: mockDeleteQuest,
     };
-    mockGetCurrentQueryParams.mockReturnValue({ highlight: undefined });
+    mockGetNPCById = (id: string) => (id === 'npc-1' ? makeNPC() : undefined);
+    mockLocations = [makeLocation({ name: 'Forest Clearing' })];
+    mockGetCurrentQueryParams.mockReturnValue({});
   });
 
   // -------------------------------------------------------------------------
-  // Context guard — no group
+  // Context guards
   // -------------------------------------------------------------------------
-  describe("when no group is selected", () => {
-    beforeEach(() => {
+  describe('when no group is selected', () => {
+    it('renders "No Group Selected"', () => {
       mockActiveGroupId = null;
-    });
-
-    it("renders 'No Group Selected' message", () => {
       renderPage();
-      expect(screen.getByText("No Group Selected")).toBeInTheDocument();
-    });
-
-    it("does NOT render QuestCard entries", () => {
-      renderPage();
-      expect(screen.queryByTestId("quest-card-q1")).not.toBeInTheDocument();
+      expect(screen.getByText('No Group Selected')).toBeInTheDocument();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Context guard — no campaign
-  // -------------------------------------------------------------------------
-  describe("when no campaign is selected", () => {
-    beforeEach(() => {
+  describe('when no campaign is selected', () => {
+    it('renders "No Campaign Selected"', () => {
       mockActiveCampaignId = null;
-    });
-
-    it("renders 'No Campaign Selected' message", () => {
       renderPage();
-      expect(screen.getByText("No Campaign Selected")).toBeInTheDocument();
+      expect(screen.getByText('No Campaign Selected')).toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Loading state
+  // Loading / error states
   // -------------------------------------------------------------------------
-  describe("loading state", () => {
-    beforeEach(() => {
+  describe('loading state', () => {
+    it('renders a loading indicator and no rows', () => {
       mockQuestContext = { ...mockQuestContext, loading: true, quests: [] };
-    });
-
-    it("renders loading indicator", () => {
       renderPage();
-      expect(screen.getByText("Loading quests...")).toBeInTheDocument();
-    });
-
-    it("does NOT render quest cards", () => {
-      renderPage();
-      expect(screen.queryByTestId("quest-card-q1")).not.toBeInTheDocument();
+      expect(screen.getByText('Loading quests...')).toBeInTheDocument();
+      expect(screen.queryByText('Find the Dragon')).not.toBeInTheDocument();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Error state
-  // -------------------------------------------------------------------------
-  describe("error state", () => {
-    beforeEach(() => {
-      mockQuestContext = {
-        ...mockQuestContext,
-        error: "Firebase error",
-        quests: [],
-      };
-    });
-
-    it("renders error message", () => {
+  describe('error state', () => {
+    it('renders the error message', () => {
+      mockQuestContext = { ...mockQuestContext, error: 'Firebase error', quests: [] };
       renderPage();
       expect(
-        screen.getByText("Error Loading Quests. Sign in to view content.")
+        screen.getByText('Error Loading Quests. Sign in to view content.')
       ).toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Loaded state
+  // Page header / create action
   // -------------------------------------------------------------------------
-  describe("loaded state", () => {
-    it("renders without crashing", () => {
-      const { container } = renderPage();
-      expect(container).toBeInTheDocument();
+  describe('page header', () => {
+    it('renders the heading and subtitle', () => {
+      renderPage();
+      expect(screen.getByText('Campaign Quests')).toBeInTheDocument();
+      expect(
+        screen.getByText("Track your party's epic adventures and missions")
+      ).toBeInTheDocument();
     });
 
-    it("renders the page heading 'Campaign Quests'", () => {
+    it('shows "Create Quest" for an authenticated user and navigates on click', () => {
       renderPage();
-      expect(screen.getByTestId("typography-h1")).toHaveTextContent(
-        "Campaign Quests"
+      const createButton = screen.getByText('Create Quest');
+      fireEvent.click(createButton);
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/quests/create');
+    });
+
+    it('hides "Create Quest" when there is no user', () => {
+      mockUser = null;
+      renderPage();
+      expect(screen.queryByText('Create Quest')).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Status bar — one bar that replaced three stat cards
+  // -------------------------------------------------------------------------
+  describe('status bar', () => {
+    it('shows the true total, unaffected by filters', () => {
+      renderPage();
+      expect(screen.getByText('4')).toBeInTheDocument();
+      expect(screen.getByText('sworn so far')).toBeInTheDocument();
+    });
+
+    it('labels every one of the three statuses, each with a word', () => {
+      renderPage();
+      // active=2, completed=1, failed=1
+      expect(screen.getByRole('button', { name: '2 active' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '1 completed' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '1 failed' })).toBeInTheDocument();
+    });
+
+    it('keeps a zero-count status band visible, with reduced opacity', () => {
+      mockQuestContext.quests = [questActiveDragon, questActiveHerbs];
+      renderPage();
+      const failedBand = screen.getByRole('button', { name: '0 failed' });
+      expect(failedBand).toBeInTheDocument();
+      expect(failedBand.className).toContain('opacity-50');
+    });
+
+    it('is honest that active + completed does not equal the total once a failed quest exists', () => {
+      renderPage();
+      // active(2) + completed(1) = 3, but total is 4 because of the 1 failed quest.
+      // All three bands together (2 + 1 + 1) do sum to the total of 4.
+      const active = screen.getByRole('button', { name: '2 active' });
+      const completed = screen.getByRole('button', { name: '1 completed' });
+      const failed = screen.getByRole('button', { name: '1 failed' });
+      expect(active).toBeInTheDocument();
+      expect(completed).toBeInTheDocument();
+      expect(failed).toBeInTheDocument();
+      expect(screen.getByText('4')).toBeInTheDocument();
+    });
+
+    it('filters rows by clicking a band', () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: '1 failed' }));
+      expect(screen.getByText('Rescue the Princess')).toBeInTheDocument();
+      expect(screen.queryByText('Find the Dragon')).not.toBeInTheDocument();
+      expect(screen.queryByText('Slay the Lich')).not.toBeInTheDocument();
+    });
+
+    it('clicking the active band a second time clears the filter back to all', () => {
+      renderPage();
+      const failedBand = () => screen.getByRole('button', { name: '1 failed' });
+
+      fireEvent.click(failedBand());
+      expect(failedBand()).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByText('Find the Dragon')).not.toBeInTheDocument();
+
+      fireEvent.click(failedBand());
+      expect(failedBand()).toHaveAttribute('aria-pressed', 'false');
+      expect(screen.getByText('Find the Dragon')).toBeInTheDocument();
+    });
+
+    it('does not change the bar counts when a text search narrows the visible rows', () => {
+      renderPage();
+      fireEvent.change(screen.getByPlaceholderText('Search quests...'), {
+        target: { value: 'dragon' },
+      });
+      expect(screen.getByRole('button', { name: '2 active' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '1 completed' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '1 failed' })).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Grouping — fixed status order, empty groups skipped
+  // -------------------------------------------------------------------------
+  describe('grouping by status', () => {
+    it('renders one group per non-empty status, in Active/Completed/Failed order', () => {
+      renderPage();
+      const headings = screen.getAllByRole('heading', { level: 3 }).map(h => h.textContent);
+      expect(headings).toEqual(['Active Quests', 'Completed Quests', 'Failed Quests']);
+    });
+
+    it('labels each group heading with its own count', () => {
+      renderPage();
+      const activeHeading = screen.getByRole('heading', { name: 'Active Quests' });
+      expect(activeHeading.parentElement).toHaveTextContent('2');
+      const completedHeading = screen.getByRole('heading', { name: 'Completed Quests' });
+      expect(completedHeading.parentElement).toHaveTextContent('1');
+    });
+
+    it('omits a group entirely once filtering leaves it empty', () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: '2 active' }));
+      const headings = screen.getAllByRole('heading', { level: 3 }).map(h => h.textContent);
+      expect(headings).toEqual(['Active Quests']);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Empty states
+  // -------------------------------------------------------------------------
+  describe('empty states', () => {
+    it('shows a generic message when there are no quests at all', () => {
+      mockQuestContext.quests = [];
+      renderPage();
+      expect(screen.getByText('No Quests Found')).toBeInTheDocument();
+      expect(screen.getByText('There are no quests to display')).toBeInTheDocument();
+    });
+
+    it('shows a status-specific message when a status filter yields nothing', () => {
+      mockQuestContext.quests = [questActiveDragon];
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: '0 failed' }));
+      expect(screen.getByText('No Quests Found')).toBeInTheDocument();
+      expect(screen.getByText('No failed quests found')).toBeInTheDocument();
+    });
+
+    it('shows a search-specific message when a search yields nothing', () => {
+      renderPage();
+      fireEvent.change(screen.getByPlaceholderText('Search quests...'), {
+        target: { value: 'zzznomatch' },
+      });
+      expect(screen.getByText('No Quests Found')).toBeInTheDocument();
+      expect(screen.getByText('No quests match your search criteria')).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Row rendering — collapsed
+  // -------------------------------------------------------------------------
+  describe('collapsed row', () => {
+    it('shows title, status word and location', () => {
+      renderPage();
+      const row = within(expandButton('Find the Dragon'));
+      expect(row.getByText('Find the Dragon')).toBeInTheDocument();
+      expect(row.getByText('Active')).toBeInTheDocument();
+      expect(row.getByText('Dungeon')).toBeInTheDocument();
+    });
+
+    it('shows a dash when the quest has no location', () => {
+      mockQuestContext.quests = [makeQuest({ id: 'q-no-loc', title: 'No Location Quest' })];
+      renderPage();
+      const row = within(expandButton('No Location Quest'));
+      expect(row.getByText('—')).toBeInTheDocument();
+    });
+
+    it('shows objective progress as "<completed> of <total> objectives"', () => {
+      renderPage();
+      const row = within(expandButton('Find the Dragon'));
+      expect(row.getByText('1 of 2 objectives')).toBeInTheDocument();
+    });
+
+    it('renders a proportional progress bar sized to the completion ratio', () => {
+      renderPage();
+      const row = expandButton('Find the Dragon');
+      const bar = row.querySelector('.progress-bar-active') as HTMLElement;
+      expect(bar).toBeTruthy();
+      expect(bar.style.width).toBe('50%');
+    });
+
+    it('says "No objectives" and omits the progress bar when there are none', () => {
+      renderPage();
+      const row = expandButton('Rescue the Princess');
+      expect(within(row).getByText('No objectives')).toBeInTheDocument();
+      expect(row.querySelector('.progress-bar-failed')).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Row expansion
+  // -------------------------------------------------------------------------
+  describe('row expansion', () => {
+    it('starts collapsed', () => {
+      renderPage();
+      expect(expandButton('Find the Dragon')).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('expands in place on activation and shows expanded fields', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      expect(collapseButton('Find the Dragon')).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText('Description')).toBeInTheDocument();
+      expect(screen.getByText('Objectives')).toBeInTheDocument();
+    });
+
+    it('collapses again on a second activation', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      fireEvent.click(collapseButton('Find the Dragon'));
+      expect(screen.queryByText('Description')).not.toBeInTheDocument();
+    });
+
+    it('only expands one row at a time', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      fireEvent.click(expandButton('Slay the Lich'));
+
+      expect(expandButton('Find the Dragon')).toHaveAttribute('aria-expanded', 'false');
+      expect(collapseButton('Slay the Lich')).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('highlights the row matching the ?highlight= query param', () => {
+      mockGetCurrentQueryParams.mockReturnValue({ highlight: 'q1' });
+      const { container } = renderPage();
+      const highlighted = container.querySelector('#quest-q1');
+      expect(highlighted?.className).toContain('highlighted-item');
+      const notHighlighted = container.querySelector('#quest-q2');
+      expect(notHighlighted?.className).not.toContain('highlighted-item');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Expanded content — the richest part of the quest model
+  // -------------------------------------------------------------------------
+  describe('expanded content — objectives', () => {
+    it('lists every objective with a completed/pending marker and description', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+
+      const completedText = screen.getByText('Scout the lair entrance');
+      const pendingText = screen.getByText('Slay the dragon');
+
+      expect(completedText.closest('div')?.querySelector('.objective-completed')).toBeTruthy();
+      expect(pendingText.closest('div')?.querySelector('.objective-pending')).toBeTruthy();
+    });
+
+    it('shows completed objectives struck through and muted, pending ones plain', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+
+      const completedText = screen.getByText('Scout the lair entrance');
+      const pendingText = screen.getByText('Slay the dragon');
+
+      expect(completedText.className).toContain('line-through');
+      expect(completedText.className).toContain('typography-secondary');
+      expect(pendingText.className).not.toContain('line-through');
+    });
+
+    it('states "No objectives recorded" honestly instead of hiding the field', () => {
+      renderPage();
+      fireEvent.click(expandButton('Rescue the Princess'));
+      expect(screen.getByText('No objectives recorded')).toBeInTheDocument();
+    });
+  });
+
+  describe('expanded content — description and background', () => {
+    it('always shows the description', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      expect(
+        screen.getByText('A quest about a red dragon terrorizing the valley')
+      ).toBeInTheDocument();
+    });
+
+    it('shows background text when present', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      expect(screen.getByText('The dragon arrived three winters ago.')).toBeInTheDocument();
+    });
+
+    it('states "No background written yet" when absent', () => {
+      renderPage();
+      fireEvent.click(expandButton('Rescue the Princess'));
+      expect(screen.getByText('No background written yet')).toBeInTheDocument();
+    });
+  });
+
+  describe('expanded content — leads, complications, rewards', () => {
+    it('lists leads, complications and rewards when present', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      expect(screen.getByText('Ask the blacksmith about dragon scales')).toBeInTheDocument();
+      expect(screen.getByText('The lair is full of traps')).toBeInTheDocument();
+      expect(screen.getByText('500 gold')).toBeInTheDocument();
+      expect(screen.getByText('Dragon scale armor')).toBeInTheDocument();
+    });
+
+    it('states emptiness honestly for leads, complications and rewards', () => {
+      renderPage();
+      fireEvent.click(expandButton('Rescue the Princess'));
+      expect(screen.getByText('No leads recorded')).toBeInTheDocument();
+      expect(screen.getByText('No complications recorded')).toBeInTheDocument();
+      expect(screen.getByText('No rewards recorded')).toBeInTheDocument();
+    });
+  });
+
+  describe('expanded content — level range and completion date', () => {
+    it('shows the level range when present, and "Not recorded" when absent', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      expect(screen.getByText('3-5')).toBeInTheDocument();
+      fireEvent.click(collapseButton('Find the Dragon'));
+
+      fireEvent.click(expandButton('Rescue the Princess'));
+      expect(screen.getByText('Not recorded')).toBeInTheDocument();
+    });
+
+    it('shows "Not yet completed" for an active quest', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      expect(screen.getByText('Not yet completed')).toBeInTheDocument();
+    });
+
+    it('shows the recorded date for a completed quest that has one', () => {
+      renderPage();
+      fireEvent.click(expandButton('Slay the Lich'));
+      expect(screen.getByText('1492-03-10')).toBeInTheDocument();
+    });
+
+    it('shows "Date not recorded" for a completed quest with no date', () => {
+      mockQuestContext.quests = [
+        makeQuest({ id: 'q-nodate', title: 'Undated Victory', status: 'completed' }),
+      ];
+      renderPage();
+      fireEvent.click(expandButton('Undated Victory'));
+      expect(screen.getByText('Date not recorded')).toBeInTheDocument();
+    });
+  });
+
+  describe('expanded content — key locations', () => {
+    it('renders a known location as a clickable button that navigates to it', () => {
+      renderPage();
+      fireEvent.click(expandButton('Collect Herbs'));
+      fireEvent.click(screen.getByRole('button', { name: /Forest Clearing/ }));
+      expect(mockNavigateToPage).toHaveBeenCalledWith(
+        '/locations?highlight=Forest+Clearing'
       );
     });
 
-    it("renders a QuestCard for each quest", () => {
+    it('renders an unknown location as plain, non-interactive text', () => {
       renderPage();
-      expect(screen.getByTestId("quest-card-q1")).toBeInTheDocument();
-      expect(screen.getByTestId("quest-card-q2")).toBeInTheDocument();
-      expect(screen.getByTestId("quest-card-q3")).toBeInTheDocument();
-      expect(screen.getByTestId("quest-card-q4")).toBeInTheDocument();
+      fireEvent.click(expandButton('Collect Herbs'));
+      expect(screen.getByText('Unknown Ruins')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /Unknown Ruins/ })
+      ).not.toBeInTheDocument();
+    });
+
+    it('states "No key locations recorded" when there are none', () => {
+      renderPage();
+      fireEvent.click(expandButton('Rescue the Princess'));
+      expect(screen.getByText('No key locations recorded')).toBeInTheDocument();
+    });
+  });
+
+  describe('expanded content — related and important NPCs', () => {
+    it('renders a resolvable related NPC as a clickable button that navigates to it', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      fireEvent.click(screen.getByRole('button', { name: /Elder Willow/ }));
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/npcs?highlight=npc-1');
+    });
+
+    it('flags a related NPC id that does not resolve, instead of silently dropping it', () => {
+      renderPage();
+      fireEvent.click(expandButton('Collect Herbs'));
+      expect(
+        screen.getByText('npc-missing (not found in NPC directory)')
+      ).toBeInTheDocument();
+    });
+
+    it('renders important NPCs (name + description) when present', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      expect(screen.getByText('Old Hunter')).toBeInTheDocument();
+      expect(screen.getByText("Knows the dragon's habits")).toBeInTheDocument();
+    });
+
+    it('states emptiness honestly for related and important NPCs', () => {
+      renderPage();
+      fireEvent.click(expandButton('Rescue the Princess'));
+      expect(screen.getByText('No related NPCs recorded')).toBeInTheDocument();
+      expect(screen.getByText('No important NPCs recorded')).toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Statistics
+  // Edit / delete actions — auth gated
   // -------------------------------------------------------------------------
-  describe("statistics", () => {
-    it("counts active quests correctly", () => {
+  describe('edit and delete actions', () => {
+    it('shows Edit and Delete for an authenticated user, hides them otherwise', () => {
       renderPage();
-      const h2s = screen.getAllByTestId("typography-h2");
-      // active=2, completed=1, failed=1
-      expect(h2s[0]).toHaveTextContent("2"); // active
-      expect(h2s[1]).toHaveTextContent("1"); // completed
-      expect(h2s[2]).toHaveTextContent("1"); // failed
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Create Quest button
-  // -------------------------------------------------------------------------
-  describe("Create Quest button", () => {
-    it("shows 'Create Quest' button when user is authenticated", () => {
-      renderPage();
-      expect(screen.getByText("Create Quest")).toBeInTheDocument();
+      fireEvent.click(expandButton('Find the Dragon'));
+      expect(screen.getByRole('button', { name: /Edit/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     });
 
-    it("navigates to /quests/create on click", () => {
-      renderPage();
-      fireEvent.click(screen.getByText("Create Quest"));
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/quests/create");
-    });
-
-    it("does NOT render Create Quest button when no user", () => {
+    it('hides Edit and Delete when there is no user', () => {
       mockUser = null;
       renderPage();
-      expect(screen.queryByText("Create Quest")).not.toBeInTheDocument();
+      fireEvent.click(expandButton('Find the Dragon'));
+      expect(screen.queryByRole('button', { name: /Edit/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    });
+
+    it('navigates to the edit page when Edit is clicked', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      fireEvent.click(screen.getByRole('button', { name: /Edit/ }));
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/quests/edit/q1');
+    });
+
+    it('opens a confirmation dialog naming the quest when Delete is clicked', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      expect(
+        screen.getByText('Are you sure you want to delete Quest "Find the Dragon"? This action cannot be undone.')
+      ).toBeInTheDocument();
+    });
+
+    it('does not delete when the confirmation is cancelled', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(mockDeleteQuest).not.toHaveBeenCalled();
+    });
+
+    it('calls deleteQuest with the quest id when the deletion is confirmed', async () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+      const confirmButtons = screen.getAllByRole('button', { name: 'Delete' });
+      // The row's own Delete button plus the dialog's confirm button both read
+      // "Delete" while the dialog is open; the dialog is portalled after the
+      // row in document order, so it is the last match.
+      fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+
+      await waitFor(() => expect(mockDeleteQuest).toHaveBeenCalledWith('q1'));
     });
   });
 
   // -------------------------------------------------------------------------
   // Search filter
   // -------------------------------------------------------------------------
-  describe("search filter", () => {
-    it("renders a search input", () => {
+  describe('search filter', () => {
+    it('filters by title', () => {
       renderPage();
-      expect(screen.getByTestId("search-input")).toBeInTheDocument();
+      fireEvent.change(screen.getByPlaceholderText('Search quests...'), {
+        target: { value: 'dragon' },
+      });
+      expect(screen.getByText('Find the Dragon')).toBeInTheDocument();
+      expect(screen.queryByText('Slay the Lich')).not.toBeInTheDocument();
     });
 
-    it("filters quests by title", () => {
+    it('filters by description', () => {
       renderPage();
-      fireEvent.change(screen.getByTestId("search-input"), {
-        target: { value: "dragon" },
+      fireEvent.change(screen.getByPlaceholderText('Search quests...'), {
+        target: { value: 'necromantic' },
       });
-      expect(screen.getByTestId("quest-card-q1")).toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q2")).not.toBeInTheDocument();
+      expect(screen.getByText('Slay the Lich')).toBeInTheDocument();
+      expect(screen.queryByText('Find the Dragon')).not.toBeInTheDocument();
     });
 
-    it("filters quests by description", () => {
+    it('also searches objective descriptions, not just title and description', () => {
       renderPage();
-      fireEvent.change(screen.getByTestId("search-input"), {
-        target: { value: "necromantic" },
+      fireEvent.change(screen.getByPlaceholderText('Search quests...'), {
+        target: { value: 'phylactery' },
       });
-      expect(screen.getByTestId("quest-card-q2")).toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q1")).not.toBeInTheDocument();
+      expect(screen.getByText('Slay the Lich')).toBeInTheDocument();
+      expect(screen.queryByText('Find the Dragon')).not.toBeInTheDocument();
+      expect(screen.queryByText('Collect Herbs')).not.toBeInTheDocument();
     });
 
-    it("filters quests by objective description", () => {
+    it('is case-insensitive', () => {
       renderPage();
-      fireEvent.change(screen.getByTestId("search-input"), {
-        target: { value: "phylactery" },
+      fireEvent.change(screen.getByPlaceholderText('Search quests...'), {
+        target: { value: 'DRAGON' },
       });
-      expect(screen.getByTestId("quest-card-q2")).toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q1")).not.toBeInTheDocument();
+      expect(screen.getByText('Find the Dragon')).toBeInTheDocument();
     });
 
-    it("shows empty state when no quests match the search", () => {
+    it('clears back to the full list when the search is cleared', () => {
       renderPage();
-      fireEvent.change(screen.getByTestId("search-input"), {
-        target: { value: "zzzyyyxxx" },
-      });
-      expect(screen.getByText("No Quests Found")).toBeInTheDocument();
-      expect(
-        screen.getByText("No quests match your search criteria")
-      ).toBeInTheDocument();
+      const search = screen.getByPlaceholderText('Search quests...');
+      fireEvent.change(search, { target: { value: 'dragon' } });
+      fireEvent.change(search, { target: { value: '' } });
+      expect(screen.getByText('Find the Dragon')).toBeInTheDocument();
+      expect(screen.getByText('Slay the Lich')).toBeInTheDocument();
     });
 
-    it("shows all quests when search is cleared", () => {
+    // Documents current behaviour rather than asserting it is desirable: the
+    // filter matches the raw relatedNPCIds strings themselves, not the NPC's
+    // resolved display name. See final report.
+    it('matches search text against the raw relatedNPCIds values', () => {
       renderPage();
-      fireEvent.change(screen.getByTestId("search-input"), {
-        target: { value: "dragon" },
+      fireEvent.change(screen.getByPlaceholderText('Search quests...'), {
+        target: { value: 'npc-missing' },
       });
-      fireEvent.change(screen.getByTestId("search-input"), {
-        target: { value: "" },
-      });
-      expect(screen.getByTestId("quest-card-q1")).toBeInTheDocument();
-      expect(screen.getByTestId("quest-card-q2")).toBeInTheDocument();
+      expect(screen.getByText('Collect Herbs')).toBeInTheDocument();
+      expect(screen.queryByText('Find the Dragon')).not.toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Status filter
+  // Location filter — stays a <select>, unbounded set of values
   // -------------------------------------------------------------------------
-  describe("status filter", () => {
-    it("renders status filter select", () => {
+  describe('location filter', () => {
+    it('renders a location select with every unique location, when any quest has one', () => {
       renderPage();
-      // The status filter is a native <select>
-      const selects = screen.getAllByRole("combobox");
-      expect(selects.length).toBeGreaterThanOrEqual(1);
+      const select = screen.getByRole('combobox');
+      const optionLabels = within(select)
+        .getAllByRole('option')
+        .map(o => o.textContent);
+      expect(optionLabels).toEqual(['All Locations', 'Crypt', 'Dungeon', 'Forest']);
     });
 
-    it("shows all quests when filter is 'all'", () => {
+    it('omits the location select entirely when no quest has a location', () => {
+      mockQuestContext.quests = [makeQuest({ id: 'q-x', title: 'No Location' })];
       renderPage();
-      expect(screen.getByTestId("quest-card-q1")).toBeInTheDocument();
-      expect(screen.getByTestId("quest-card-q2")).toBeInTheDocument();
-      expect(screen.getByTestId("quest-card-q3")).toBeInTheDocument();
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     });
 
-    it("shows only active quests when filtering by 'active'", () => {
+    it('filters rows by the selected location', () => {
       renderPage();
-      const selects = screen.getAllByRole("combobox");
-      fireEvent.change(selects[0], { target: { value: "active" } });
-      expect(screen.getByTestId("quest-card-q1")).toBeInTheDocument();
-      expect(screen.getByTestId("quest-card-q4")).toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q2")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q3")).not.toBeInTheDocument();
-    });
-
-    it("shows only completed quests when filtering by 'completed'", () => {
-      renderPage();
-      const selects = screen.getAllByRole("combobox");
-      fireEvent.change(selects[0], { target: { value: "completed" } });
-      expect(screen.getByTestId("quest-card-q2")).toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q1")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q3")).not.toBeInTheDocument();
-    });
-
-    it("shows only failed quests when filtering by 'failed'", () => {
-      renderPage();
-      const selects = screen.getAllByRole("combobox");
-      fireEvent.change(selects[0], { target: { value: "failed" } });
-      expect(screen.getByTestId("quest-card-q3")).toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q1")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q2")).not.toBeInTheDocument();
-    });
-
-    it("shows empty state message for status with no results", () => {
-      mockQuestContext = {
-        ...mockQuestContext,
-        quests: [{ ...sampleQuests[0] }], // only active quest
-      };
-      renderPage();
-      const selects = screen.getAllByRole("combobox");
-      fireEvent.change(selects[0], { target: { value: "completed" } });
-      expect(screen.getByText("No Quests Found")).toBeInTheDocument();
-      expect(screen.getByText("No completed quests found")).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Location filter
-  // -------------------------------------------------------------------------
-  describe("location filter", () => {
-    it("renders location filter when quests have locations", () => {
-      renderPage();
-      const selects = screen.getAllByRole("combobox");
-      // There should be status filter + location filter
-      expect(selects.length).toBeGreaterThanOrEqual(2);
-    });
-
-    it("does NOT render location filter when quests have no locations", () => {
-      mockQuestContext = {
-        ...mockQuestContext,
-        quests: [
-          {
-            id: "q1",
-            title: "No Location",
-            description: "d",
-            status: "active",
-            location: null,
-            objectives: [],
-            relatedNPCIds: [],
-          },
-        ],
-      };
-      renderPage();
-      const selects = screen.getAllByRole("combobox");
-      // Only the status filter, no location filter
-      expect(selects.length).toBe(1);
-    });
-
-    it("filters quests by location", () => {
-      renderPage();
-      const selects = screen.getAllByRole("combobox");
-      const locationSelect = selects[1]; // 2nd select is location
-      fireEvent.change(locationSelect, { target: { value: "Dungeon" } });
-      expect(screen.getByTestId("quest-card-q1")).toBeInTheDocument();
-      expect(screen.getByTestId("quest-card-q3")).toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q2")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q4")).not.toBeInTheDocument();
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Dungeon' } });
+      expect(screen.getByText('Find the Dragon')).toBeInTheDocument();
+      expect(screen.getByText('Rescue the Princess')).toBeInTheDocument();
+      expect(screen.queryByText('Slay the Lich')).not.toBeInTheDocument();
+      expect(screen.queryByText('Collect Herbs')).not.toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
   // Combined filters
   // -------------------------------------------------------------------------
-  describe("combined status + location filter", () => {
-    it("applies both status and location filters simultaneously", () => {
+  describe('combined filters', () => {
+    it('applies status and location filters together', () => {
       renderPage();
-      const selects = screen.getAllByRole("combobox");
-      // Filter to active only
-      fireEvent.change(selects[0], { target: { value: "active" } });
-      // Then filter to Dungeon only
-      fireEvent.change(selects[1], { target: { value: "Dungeon" } });
-      // Only q1 is active + Dungeon; q4 is active + Forest; q3 is failed + Dungeon
-      expect(screen.getByTestId("quest-card-q1")).toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q4")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("quest-card-q3")).not.toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Empty state
-  // -------------------------------------------------------------------------
-  describe("empty state", () => {
-    it("shows 'No Quests Found' when quest list is empty", () => {
-      mockQuestContext = { ...mockQuestContext, quests: [] };
-      renderPage();
-      expect(screen.getByText("No Quests Found")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: '2 active' }));
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Dungeon' } });
+      expect(screen.getByText('Find the Dragon')).toBeInTheDocument();
+      expect(screen.queryByText('Collect Herbs')).not.toBeInTheDocument();
+      expect(screen.queryByText('Rescue the Princess')).not.toBeInTheDocument();
     });
 
-    it("shows generic empty message when no quests and no filter", () => {
-      mockQuestContext = { ...mockQuestContext, quests: [] };
+    it('applies search and status filters together', () => {
       renderPage();
-      expect(
-        screen.getByText("There are no quests to display")
-      ).toBeInTheDocument();
+      fireEvent.change(screen.getByPlaceholderText('Search quests...'), {
+        target: { value: 'herbs' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: '2 active' }));
+      expect(screen.getByText('Collect Herbs')).toBeInTheDocument();
+      expect(screen.queryByText('Find the Dragon')).not.toBeInTheDocument();
     });
   });
 });
