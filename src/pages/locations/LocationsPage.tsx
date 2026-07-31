@@ -1,32 +1,24 @@
 // src/pages/locations/LocationsPage.tsx
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import Typography from '../../core/components/Typography';
 import Card from '../../core/components/Card';
 import { useAuth } from 'features/user-management';
 import { useLocations, LocationDirectory } from 'features/campaign-entities';
-import { Map, MapPin, Eye, EyeOff, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import Button from '../../core/components/Button';
 import { useNavigation } from 'shared/context/NavigationContext';
 
 const LocationsPage: React.FC = () => {
   // Auth state
   const { user } = useAuth();
-  const { 
-    locations, 
-    isLoading, 
-    error, 
-    hasRequiredContext 
+  const {
+    locations,
+    isLoading,
+    error,
+    hasRequiredContext
   } = useLocations();
 
   const { navigateToPage } = useNavigation();
-  
-  // Calculate statistics
-  const stats = useMemo(() => ({
-    total: locations.length,
-    visited: locations.filter(loc => loc.status === 'visited').length,
-    explored: locations.filter(loc => loc.status === 'explored').length,
-    known: locations.filter(loc => loc.status === 'known').length
-  }), [locations]);
 
   // Handle create new location
   const handleCreateLocation = () => {
@@ -106,65 +98,6 @@ const LocationsPage: React.FC = () => {
             </Button>
           )}
         </div>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <Map className="w-8 h-8 mr-4 location-type-region" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.total}
-              </Typography>
-              <Typography color="secondary">
-                Total Locations
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <Eye className="w-8 h-8 mr-4 location-status-explored" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.explored}
-              </Typography>
-              <Typography color="secondary">
-                Explored
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <MapPin className="w-8 h-8 mr-4 location-status-visited" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.visited}
-              </Typography>
-              <Typography color="secondary">
-                Visited
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <EyeOff className="w-8 h-8 mr-4 location-status-known" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.known}
-              </Typography>
-              <Typography color="secondary">
-                Known
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
       </div>
 
       {/* Location Directory */}

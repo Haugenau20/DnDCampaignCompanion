@@ -5,7 +5,7 @@ import Card from '../../core/components/Card';
 import { NPCDirectory, useNPCData, NPC } from 'features/campaign-entities';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 import { useNavigation } from 'shared/context/NavigationContext';
-import { Plus, Users, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Loader2, AlertCircle } from 'lucide-react';
 
 const NPCsPage: React.FC = () => {
   // Hooks
@@ -21,14 +21,6 @@ const NPCsPage: React.FC = () => {
     if (!activeCampaignId) return "Please select a campaign to view NPCs";
     return null;
   }, [activeGroupId, activeCampaignId]);
-
-  // Calculate stats for display
-  const stats = useMemo(() => ({
-    total: npcs.length,
-    alive: npcs.filter(npc => npc.status === 'alive').length,
-    deceased: npcs.filter(npc => npc.status === 'deceased').length,
-    missing: npcs.filter(npc => npc.status === 'missing').length
-  }), [npcs]);
 
   // Handle NPC update
   const handleNPCUpdate = async () => {
@@ -108,65 +100,6 @@ const NPCsPage: React.FC = () => {
             </Button>
           </div>
         )}
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <Users className="w-8 h-8 mr-4 status-general" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.total}
-              </Typography>
-              <Typography color="secondary">
-                Total NPCs
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <Users className="w-8 h-8 mr-4 npc-status-alive" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.alive}
-              </Typography>
-              <Typography color="secondary">
-                Alive
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <Users className="w-8 h-8 mr-4 npc-status-missing" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.missing}
-              </Typography>
-              <Typography color="secondary">
-                Missing
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <Users className="w-8 h-8 mr-4 npc-status-deceased" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.deceased}
-              </Typography>
-              <Typography color="secondary">
-                Deceased
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
       </div>
 
       {/* NPC Directory */}

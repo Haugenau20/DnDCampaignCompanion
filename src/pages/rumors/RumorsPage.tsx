@@ -1,5 +1,5 @@
 // src/pages/rumors/RumorsPage.tsx
-import React, { useMemo } from 'react';
+import React from 'react';
 import Typography from '../../core/components/Typography';
 import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
@@ -7,12 +7,8 @@ import { RumorDirectory, useRumors } from 'features/campaign-entities';
 import { useAuth } from 'features/user-management';
 import { useNavigation } from 'shared/hooks/useNavigation';
 import {
-  MessageSquare,
-  XCircle,
-  HelpCircle,
   Loader2,
-  Plus,
-  CheckCircle2
+  Plus
 } from 'lucide-react';
 
 const RumorsPage: React.FC = () => {
@@ -20,14 +16,6 @@ const RumorsPage: React.FC = () => {
   const { user } = useAuth();
   const { rumors, isLoading, error } = useRumors();
   const { navigateToPage } = useNavigation();
-
-  // Calculate statistics
-  const stats = useMemo(() => ({
-    total: rumors.length,
-    confirmed: rumors.filter(rumor => rumor.status === 'confirmed').length,
-    unconfirmed: rumors.filter(rumor => rumor.status === 'unconfirmed').length,
-    false: rumors.filter(rumor => rumor.status === 'false').length
-  }), [rumors]);
 
   // Handle create new rumor
   const handleCreateRumor = () => {
@@ -83,65 +71,6 @@ const RumorsPage: React.FC = () => {
             </Button>
           )}
         </div>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <MessageSquare className="w-8 h-8 mr-4 status-general" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.total}
-              </Typography>
-              <Typography color="secondary">
-                Total Rumors
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <CheckCircle2 className="w-8 h-8 mr-4 rumor-status-confirmed" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.confirmed}
-              </Typography>
-              <Typography color="secondary">
-                Confirmed
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <HelpCircle className="w-8 h-8 mr-4 rumor-status-unconfirmed" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.unconfirmed}
-              </Typography>
-              <Typography color="secondary">
-                Unconfirmed
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <XCircle className="w-8 h-8 mr-4 rumor-status-false" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.false}
-              </Typography>
-              <Typography color="secondary">
-                False
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
       </div>
 
       {/* Rumor Directory */}
