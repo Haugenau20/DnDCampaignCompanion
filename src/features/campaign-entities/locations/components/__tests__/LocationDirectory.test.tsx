@@ -726,6 +726,63 @@ describe('LocationDirectory', () => {
         screen.getByRole('button', { name: /Collapse Silverkeep/ })
       ).toHaveAttribute('aria-expanded', 'true');
     });
+
+    // ------------------------------------------------------------------
+    // Unresolvable parentId ("orphans") — a dangling parentId (e.g. #303,
+    // a parent renamed or deleted out from under a child) used to leave
+    // the location bucketed under a hierarchy key nobody ever visits: it
+    // rendered nowhere, wasn't counted in any group, and didn't trigger
+    // the empty state, while still counting toward the status bar's total.
+    // ------------------------------------------------------------------
+    test('a location whose parentId is unresolvable renders under "Unplaced"', () => {
+      const orphan = makeLocation('orphan-1', 'Lost Outpost', { parentId: 'nonexistent-parent' });
+      render(<LocationDirectory locations={[orphan]} />);
+
+      expect(screen.getByRole('heading', { name: 'Unplaced' })).toBeInTheDocument();
+      expect(screen.getByText('Lost Outpost')).toBeInTheDocument();
+    });
+
+    test('an orphan\'s own children still nest under it when it is expanded', () => {
+      const orphan = makeLocation('orphan-1', 'Lost Outpost', { parentId: 'nonexistent-parent' });
+      const child = makeLocation('child-1', 'Cellar', { parentId: 'orphan-1' });
+      render(<LocationDirectory locations={[orphan, child]} />);
+
+      expect(screen.queryByText('Cellar')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Expand Lost Outpost/ }));
+
+      expect(screen.getByText('Cellar')).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: 'Locations in Lost Outpost' })
+      ).toBeInTheDocument();
+    });
+
+    test('root rows and unplaced rows together account for every location', () => {
+      const rootLoc = makeLocation('root-1', 'Silverkeep');
+      const orphan = makeLocation('orphan-1', 'Lost Outpost', { parentId: 'nonexistent-parent' });
+      render(<LocationDirectory locations={[rootLoc, orphan]} />);
+
+      expect(screen.getByRole('heading', { name: 'Locations' })).toBeInTheDocument();
+      const locationsGroup = screen.getByRole('heading', { name: 'Locations' }).closest('section');
+      expect(within(locationsGroup as HTMLElement).getByText('1')).toBeInTheDocument();
+
+      const unplacedGroup = screen.getByRole('heading', { name: 'Unplaced' }).closest('section');
+      expect(within(unplacedGroup as HTMLElement).getByText('1')).toBeInTheDocument();
+
+      // Every location supplied is visible somewhere — none silently dropped.
+      expect(screen.getByText('Silverkeep')).toBeInTheDocument();
+      expect(screen.getByText('Lost Outpost')).toBeInTheDocument();
+
+      // The status bar's total still reflects both locations combined.
+      expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('2');
+    });
+
+    test('the empty state still appears when there are genuinely no locations', () => {
+      render(<LocationDirectory locations={[]} />);
+      expect(screen.getByText('No Locations Found')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Unplaced' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Locations' })).not.toBeInTheDocument();
+    });
   });
 
   // -------------------------------------------------------------------------

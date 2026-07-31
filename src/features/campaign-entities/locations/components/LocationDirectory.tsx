@@ -131,6 +131,19 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
     }, {} as Record<string, Location[]>);
   }, [locations]);
 
+  // A `parentId` that names no loaded location leaves its bucket in
+  // locationHierarchy keyed by that dangling id — a key `renderRows` never
+  // visits, since it only ever recurses into 'root' or the id of a row it is
+  // already rendering. Collect those buckets' contents here so they get a
+  // home ("Unplaced") instead of silently vanishing from the tree, the group
+  // count, and the empty state while still counting toward the status bar's
+  // total.
+  const orphanLocations = useMemo(() => {
+    return Object.keys(locationHierarchy)
+      .filter(key => key !== 'root' && !locations.some(loc => loc.id === key))
+      .flatMap(key => locationHierarchy[key]);
+  }, [locationHierarchy, locations]);
+
   // Helper function to get parent location IDs
   const getParentLocationIds = useCallback((locationId: string): string[] => {
     const parentIds: string[] = [];
@@ -291,23 +304,20 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
     }
   };
 
-  // Renders one level of the hierarchy — the direct children of `parentId` — as
-  // RosterRows. A location with its own children nests a further RosterGroup of
-  // them inside its expandedContent (built by recursing into this same function),
-  // so the parent/child structure survives as nested groups rather than getting
-  // flattened into one list.
-  const renderRows = (parentId: string): React.ReactNode[] => {
-    const childLocations = locationHierarchy[parentId] || [];
-
-    const filteredChildLocations = childLocations.filter(location => {
-      const parentLocation = locations.find(loc => loc.id === parentId);
-      if (parentLocation && (typeFilter === 'all' || parentLocation.type === typeFilter)) {
-        return locationMatchesFilters(location, locationHierarchy, statusFilter, typeFilter, searchQuery, true);
-      }
-      return locationMatchesFilters(location, locationHierarchy, statusFilter, typeFilter, searchQuery, false);
-    });
-
-    return filteredChildLocations.map((location, index) => {
+  // Renders a pre-resolved, pre-filtered list of locations as RosterRows. This
+  // is the ~230-line row body shared by every caller that has already worked
+  // out *which* locations belong in this list — `renderRows` below (the
+  // hierarchy-driven path) and the "Unplaced" group (locations whose
+  // `parentId` doesn't resolve to anything loaded, so there is no hierarchy
+  // bucket for `renderRows` to walk into). A location with its own children
+  // nests a further RosterGroup of them inside its expandedContent (built by
+  // recursing into `renderRows`, which resolves that child list from
+  // `locationHierarchy` the normal way), so the parent/child structure
+  // survives as nested groups rather than getting flattened into one list —
+  // this holds for an orphan's descendants too, since they sit in
+  // `locationHierarchy` keyed by the orphan's own (perfectly valid) id.
+  const renderLocationRows = (locationsToRender: Location[]): React.ReactNode[] => {
+    return locationsToRender.map((location, index) => {
       const childIds = locationHierarchy[location.id] || [];
       const hasChildren = childIds.length > 0;
       const isExpanded = expandedLocations.has(location.id);
@@ -540,6 +550,28 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
     });
   };
 
+  // Resolves the direct children of `parentId` out of `locationHierarchy`,
+  // applies the existing filter semantics, and delegates the actual row JSX
+  // to `renderLocationRows`. Only ever called with 'root' or the id of a row
+  // that is itself already being rendered (the recursive call inside
+  // `renderLocationRows`'s expandedContent) — never with an unresolvable
+  // parentId, since nothing walks into those buckets this way. That's exactly
+  // why orphans need a separate path: see `orphanLocations` above and its use
+  // below.
+  const renderRows = (parentId: string): React.ReactNode[] => {
+    const childLocations = locationHierarchy[parentId] || [];
+
+    const filteredChildLocations = childLocations.filter(location => {
+      const parentLocation = locations.find(loc => loc.id === parentId);
+      if (parentLocation && (typeFilter === 'all' || parentLocation.type === typeFilter)) {
+        return locationMatchesFilters(location, locationHierarchy, statusFilter, typeFilter, searchQuery, true);
+      }
+      return locationMatchesFilters(location, locationHierarchy, statusFilter, typeFilter, searchQuery, false);
+    });
+
+    return renderLocationRows(filteredChildLocations);
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -551,6 +583,16 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
   }
 
   const rootRows = renderRows('root');
+
+  // Orphans have no resolvable parent, so the parentLocation-based type-filter
+  // exemption `renderRows` applies to ordinary children can't apply to them
+  // either — treat them like root-level nodes (isChild=false), same as the
+  // 'root' path above (whose own `parentLocation` lookup already resolves to
+  // undefined and falls into this same branch).
+  const filteredOrphanLocations = orphanLocations.filter(location =>
+    locationMatchesFilters(location, locationHierarchy, statusFilter, typeFilter, searchQuery, false)
+  );
+  const orphanRows = renderLocationRows(filteredOrphanLocations);
 
   return (
     <div className="space-y-6">
@@ -584,11 +626,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
       </div>
 
       {/* Location hierarchy */}
-      {rootRows.length > 0 ? (
-        <RosterGroup title="Locations" count={rootRows.length}>
-          {rootRows}
-        </RosterGroup>
-      ) : (
+      {rootRows.length === 0 && orphanRows.length === 0 ? (
         <Card>
           <Card.Content className="text-center py-8">
             <MapPin className="w-12 h-12 mx-auto mb-4 typography-secondary" />
@@ -602,6 +640,24 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
             </Typography>
           </Card.Content>
         </Card>
+      ) : (
+        <>
+          {rootRows.length > 0 && (
+            <RosterGroup title="Locations" count={rootRows.length}>
+              {rootRows}
+            </RosterGroup>
+          )}
+
+          {/* Locations whose parentId names an id that isn't in the loaded
+              set — dangling references from a deleted or renamed parent (see
+              #303). Kept visible and reconciled against the status bar's
+              total instead of silently vanishing. */}
+          {orphanRows.length > 0 && (
+            <RosterGroup title="Unplaced" count={orphanRows.length} muted>
+              {orphanRows}
+            </RosterGroup>
+          )}
+        </>
       )}
     </div>
   );

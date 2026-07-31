@@ -169,6 +169,28 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
 const getHobbitLocations = (dmUid: string, formattedDate: string) => {
   return [
     {
+      id: 'hobbiton',
+      name: 'Hobbiton',
+      type: 'village' as LocationType,
+      status: 'explored' as LocationStatus,
+      description: 'A peaceful village of hobbit-holes in the Shire, home to Bag End and the Baggins family.',
+      parentId: null,
+      features: ['Party Tree', 'The Water', 'Hobbit-holes', 'The Hill'],
+      connectedNPCs: ['bilbo'],
+      relatedQuests: ['unexpected-journey'],
+      notes: [
+        { date: formattedDate, text: 'Where the company gathered before setting off on their journey.' }
+      ],
+      tags: ['shire', 'hobbit village', 'peaceful'],
+      lastVisited: formattedDate,
+      createdBy: dmUid,
+      createdByUsername: 'DungeonMaster',
+      dateAdded: formattedDate,
+      modifiedBy: dmUid,
+      modifiedByUsername: 'DungeonMaster',
+      dateModified: formattedDate
+    },
+    {
       id: 'bag-end',
       name: 'Bag End',
       type: 'building' as LocationType,
