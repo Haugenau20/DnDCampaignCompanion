@@ -126,13 +126,28 @@ const QuestsPage: React.FC = () => {
           quest.title.toLowerCase().includes(search) ||
           quest.description.toLowerCase().includes(search) ||
           quest.objectives.some(obj => obj.description.toLowerCase().includes(search)) ||
-          quest.relatedNPCIds?.some(npc => npc.toLowerCase().includes(search))
+          quest.relatedNPCIds?.some(id => {
+            // Resolve the id to its NPC's display name -- the same lookup the
+            // expanded row below uses -- so a user typing a person's name
+            // actually finds the quest. The raw id is still matched as a
+            // fallback (`||`, never replacing the name check) so deep links
+            // and copy-pasted ids keep working. An id that doesn't resolve
+            // (deleted NPC) is never silently dropped: it still matches on
+            // its raw text, mirroring the expanded row, which surfaces an
+            // unresolvable id as "<id> (not found in NPC directory)" rather
+            // than hiding it.
+            const npc = getNPCById(id);
+            return (
+              npc?.name.toLowerCase().includes(search) ||
+              id.toLowerCase().includes(search)
+            );
+          })
         );
       }
 
       return true;
     });
-  }, [quests, statusFilter, locationFilter, searchQuery]);
+  }, [quests, statusFilter, locationFilter, searchQuery, getNPCById]);
 
   // Grouped by status, in the fixed order above, skipping groups with nothing
   // left after filtering.

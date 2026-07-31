@@ -200,21 +200,35 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
       loc.description.toLowerCase().includes(search.toLowerCase()) ||
       loc.type.toLowerCase().includes(search.toLowerCase());
 
-    // If this is a child location whose parent already satisfies the type filter,
-    // only check status and search — a Building under a City you filtered to
-    // shouldn't disappear just because "Building" isn't the selected type.
-    if (isChild) {
-      return matchesStatus && matchesSearch;
-    }
-
-    // Check if the location itself matches all criteria
-    if (matchesStatus && matchesType && matchesSearch) {
+    // A child location whose parent already satisfies the type filter is exempt
+    // from the type check on itself — a Building under a City you filtered to
+    // shouldn't disappear just because "Building" isn't the selected type. But
+    // (fix for #1414) that exemption must still fall through to the descendant
+    // check below when the node doesn't match on its own, exactly like a
+    // non-child node does — it must never return early and suppress descendant
+    // matching, or a match nested two or more levels deep becomes unreachable:
+    // renderRows calls this with isChild=true for essentially every child (since
+    // typeFilter defaults to 'all'), so an early return here silently dropped the
+    // connecting ancestor from its own parent's render even though the
+    // auto-expand effect (which always calls with isChild=false) had correctly
+    // decided that ancestor should be expanded.
+    if (matchesStatus && matchesSearch && (isChild || matchesType)) {
       return true;
     }
 
     // Otherwise, a parent location still qualifies if any descendant matches —
     // this is what lets an ancestor stay visible (and gets auto-expanded below)
-    // purely to reveal a matching descendant.
+    // purely to reveal a matching descendant. Deliberately always recurse with
+    // isChild=false here, NOT with the current node's isChild propagated down:
+    // the type-filter exemption is re-decided by renderRows fresh at every level
+    // of the hierarchy (based on whichever node is the *immediate* parent being
+    // rendered at that level), so it must not cascade through this function's
+    // own recursion into grandchildren it was never granted for. Propagating it
+    // would let a mismatched-type grandchild several levels down count as a
+    // "match" here while the auto-expand effect — which always recurses with
+    // isChild=false — disagreed about that same grandchild, reintroducing the
+    // exact expander/renderer split this bug was about, just one level further
+    // down.
     const children = hierarchy[loc.id] || [];
     return children.some(child =>
       locationMatchesFilters(child, hierarchy, status, type, search, false)

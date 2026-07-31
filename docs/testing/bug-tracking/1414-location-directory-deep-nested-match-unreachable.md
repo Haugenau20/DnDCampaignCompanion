@@ -1,10 +1,50 @@
 # Bug #1414: Location Directory — A Match Nested Two Or More Levels Deep Is Unreachable
 
-**Status**: 🔍 DISCOVERED
+**Status**: ✅ FIXED (2026-07-31)
 **Category**: UI
 **Priority**: Medium
 **Component**: `src/features/campaign-entities/locations/components/LocationDirectory.tsx`
 **Discovered In**: Session 2026-07-31 — while rewriting `LocationDirectory.test.tsx` for the roster redesign
+
+## Resolution
+
+```ts
+if (matchesStatus && matchesSearch && (isChild || matchesType)) {
+  return true;
+}
+const children = hierarchy[loc.id] || [];
+return children.some(child =>
+  locationMatchesFilters(child, hierarchy, status, type, search, false)
+);
+```
+
+The `isChild` exemption now falls through to the descendant check instead of returning early, so the
+renderer reaches the same conclusion as the expander.
+
+**The recursion deliberately resets `isChild` to `false` rather than propagating it** — this diverges
+from the suggested fix sketched below, and the divergence is the interesting part. `renderRows`
+re-decides the exemption fresh at every level, based on whichever node is the *immediate* parent being
+rendered at that moment; it is not a durable, inheritable grant. Propagating `true` into the descendant
+search would let a grandchild whose type doesn't match count as a match here, while the auto-expand
+effect — which always walks with `isChild = false` — disagreed about that same grandchild. That is the
+identical expander/renderer split this bug was about, reintroduced one level deeper. Resetting keeps
+the exemption scoped to exactly the level it was granted for, and keeps this function's recursion
+aligned with the effect's.
+
+**Proven load-bearing.** With the fix in place all three tests pass; reverting just the predicate makes
+all three fail on `getByRole('button', { name: /Collapse Silverkeep/ })` not being found — so they
+exercise the real defect rather than passing vacuously.
+
+Test coverage:
+- `a search match nested two levels deep is reachable — the connecting ancestor renders and auto-expands`
+  — the inverted pinning test, and #1414's regression guard
+- `a search match nested three levels deep is reachable through every connecting ancestor`
+  (Region → City → District → Building)
+- `every location auto-expanded by a filter is actually rendered in the DOM (expander and renderer agree)`
+  — guards the underlying invariant, not just this symptom
+
+Verified: `src/features/campaign-entities/locations` 9 suites / 239 tests green, `tsc` clean, and the
+full repo at 184 suites / 4202 passed / 0 failed with a clean production build.
 
 ## Description
 

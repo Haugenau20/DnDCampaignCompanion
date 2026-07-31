@@ -575,20 +575,23 @@ describe('LocationDirectory', () => {
       expect(screen.getByText('The Rusty Anchor')).toBeInTheDocument();
     });
 
-    // BUG (pre-existing in LocationDirectory.tsx, not introduced by this test pass):
-    // `locationMatchesFilters`'s `isChild` branch (used by `renderRows` for every
-    // nested level whenever the parent's own type already satisfies the type
-    // filter — i.e. almost always, since typeFilter defaults to 'all') returns
-    // `matchesStatus && matchesSearch` for that node ALONE, without ever falling
-    // through to the descendant-match check the non-child branch has. The
-    // auto-expand `useEffect`, by contrast, always calls with `isChild=false`, so
-    // it correctly marks a two-level-deep match's ancestors for expansion. The
-    // result: a middle ancestor gets flagged as "should be expanded" in state,
-    // but `renderRows` filters that same ancestor OUT of the list it's rendering
-    // for its own parent — so the row never appears, and the deep match it was
-    // meant to reveal is unreachable. This test pins the current (broken)
-    // behaviour; see the final report for the fix this exposes.
-    test('a search match nested two levels deep is unreachable — the connecting ancestor is filtered out of its own parent\'s render', () => {
+    // REGRESSION TEST for #1414 (previously pinned the defective behaviour;
+    // inverted once the bug was fixed — see the tracker entry for history).
+    //
+    // Root cause was that `locationMatchesFilters`'s `isChild` branch (used by
+    // `renderRows` for every nested level whenever the parent's own type already
+    // satisfies the type filter — i.e. almost always, since typeFilter defaults
+    // to 'all') returned `matchesStatus && matchesSearch` for that node ALONE,
+    // without ever falling through to the descendant-match check the non-child
+    // branch had. The auto-expand `useEffect`, by contrast, always calls with
+    // `isChild=false`, so it correctly marked a two-level-deep match's ancestors
+    // for expansion. The result: a middle ancestor was flagged "should be
+    // expanded" in state, but `renderRows` filtered that same ancestor OUT of
+    // the list it was rendering for its own parent — so the row never appeared,
+    // and the deep match it was meant to reveal was unreachable. The fix lets
+    // the `isChild` branch fall through to the same descendant check the
+    // non-child branch uses, so the two callers agree again.
+    test('a search match nested two levels deep is reachable — the connecting ancestor renders and auto-expands', () => {
       const region = makeLocation('region-1', 'Kingdom of Valor');
       const city = makeLocation('city-1', 'Silverkeep', { parentId: 'region-1' });
       const building = makeLocation('building-1', 'The Rusty Anchor', {
@@ -599,16 +602,85 @@ describe('LocationDirectory', () => {
 
       fireEvent.change(searchInput(), { target: { value: 'Rusty Anchor' } });
 
-      // The top-level ancestor is found (root-level filtering does check
-      // descendants) and auto-expands.
+      // The top-level ancestor is found and auto-expands.
       expect(
         screen.getByRole('button', { name: /Collapse Kingdom of Valor/ })
       ).toHaveAttribute('aria-expanded', 'true');
 
-      // But the next level down never renders at all, so the match it was
-      // supposed to expose is invisible.
-      expect(screen.queryByText('Silverkeep')).not.toBeInTheDocument();
-      expect(screen.queryByText('The Rusty Anchor')).not.toBeInTheDocument();
+      // The connecting middle ancestor now renders (rather than being filtered
+      // out of its own parent's list) and is itself auto-expanded...
+      expect(
+        screen.getByRole('button', { name: /Collapse Silverkeep/ })
+      ).toHaveAttribute('aria-expanded', 'true');
+
+      // ...which reveals the actual match.
+      expect(screen.getByText('The Rusty Anchor')).toBeInTheDocument();
+    });
+
+    test('a search match nested three levels deep is reachable through every connecting ancestor', () => {
+      const region = makeLocation('region-1', 'Kingdom of Valor');
+      const city = makeLocation('city-1', 'Silverkeep', { parentId: 'region-1' });
+      const district = makeLocation('district-1', 'Old Town', {
+        parentId: 'city-1',
+        type: 'landmark',
+      });
+      const building = makeLocation('building-1', 'The Rusty Anchor', {
+        parentId: 'district-1',
+        type: 'building',
+      });
+      render(
+        <LocationDirectory locations={[region, city, district, building]} />
+      );
+
+      fireEvent.change(searchInput(), { target: { value: 'Rusty Anchor' } });
+
+      // Every connecting ancestor down the three-level chain auto-expands...
+      expect(
+        screen.getByRole('button', { name: /Collapse Kingdom of Valor/ })
+      ).toHaveAttribute('aria-expanded', 'true');
+      expect(
+        screen.getByRole('button', { name: /Collapse Silverkeep/ })
+      ).toHaveAttribute('aria-expanded', 'true');
+      expect(
+        screen.getByRole('button', { name: /Collapse Old Town/ })
+      ).toHaveAttribute('aria-expanded', 'true');
+
+      // ...all the way down to the actual match.
+      expect(screen.getByText('The Rusty Anchor')).toBeInTheDocument();
+    });
+
+    test('every location auto-expanded by a filter is actually rendered in the DOM (expander and renderer agree)', () => {
+      // A 3-level chain where only the leaf matches the status filter, mirroring
+      // the #1414 reproduction but asserting the general invariant: whatever
+      // the auto-expand effect decides to expand must be a row that renderRows
+      // actually drew, not one that was filtered out of its own parent's list.
+      const region = makeLocation('region-1', 'Kingdom of Valor', { status: 'known' });
+      const city = makeLocation('city-1', 'Silverkeep', {
+        parentId: 'region-1',
+        status: 'known',
+      });
+      const building = makeLocation('building-1', 'The Rusty Anchor', {
+        parentId: 'city-1',
+        type: 'building',
+        status: 'visited',
+      });
+      render(<LocationDirectory locations={[region, city, building]} />);
+
+      fireEvent.click(screen.getByRole('button', { name: '1 visited' }));
+
+      // Every ancestor that ends up expanded must have a corresponding
+      // "Collapse <name>" toggle actually present in the DOM — i.e. it was
+      // rendered by renderRows, not merely flagged in expandedLocations state
+      // with nothing to show for it.
+      expect(
+        screen.getByRole('button', { name: /Collapse Kingdom of Valor/ })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Collapse Silverkeep/ })
+      ).toBeInTheDocument();
+
+      // And the leaf match that motivated the expansion is itself visible.
+      expect(screen.getByText('The Rusty Anchor')).toBeInTheDocument();
     });
 
     test('a status match nested under a parent keeps the parent visible via descendant match', () => {

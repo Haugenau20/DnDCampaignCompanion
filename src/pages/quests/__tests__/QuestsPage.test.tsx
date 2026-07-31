@@ -769,10 +769,40 @@ describe('QuestsPage', () => {
       expect(screen.getByText('Slay the Lich')).toBeInTheDocument();
     });
 
-    // Documents current behaviour rather than asserting it is desirable: the
-    // filter matches the raw relatedNPCIds strings themselves, not the NPC's
-    // resolved display name. See final report.
-    it('matches search text against the raw relatedNPCIds values', () => {
+    // Bug #1415's regression test. It used to pin the defective behaviour
+    // (matching only the raw relatedNPCIds string, never the NPC's resolved
+    // name). Inverted here to assert the fix: searching a related NPC's
+    // *name* finds every quest that NPC is related to.
+    it('matches search text against the related NPC\'s resolved name, not just its raw id', () => {
+      renderPage();
+      fireEvent.change(screen.getByPlaceholderText('Search quests...'), {
+        target: { value: 'willow' },
+      });
+      // Both quests relate to npc-1, which mockGetNPCById resolves to "Elder Willow".
+      expect(screen.getByText('Find the Dragon')).toBeInTheDocument();
+      expect(screen.getByText('Collect Herbs')).toBeInTheDocument();
+      // Unrelated to that NPC, and no other clause matches "willow".
+      expect(screen.queryByText('Slay the Lich')).not.toBeInTheDocument();
+      expect(screen.queryByText('Rescue the Princess')).not.toBeInTheDocument();
+    });
+
+    // The id check is kept as a fallback (`||`), not replaced, so a deep
+    // link or a copy-pasted id still finds the quest even though the typed
+    // text isn't the NPC's name.
+    it('also matches a raw NPC id typed verbatim, as a fallback for deep links and copy-pasted ids', () => {
+      renderPage();
+      fireEvent.change(screen.getByPlaceholderText('Search quests...'), {
+        target: { value: 'npc-1' },
+      });
+      expect(screen.getByText('Find the Dragon')).toBeInTheDocument();
+      expect(screen.getByText('Collect Herbs')).toBeInTheDocument();
+    });
+
+    // An id that no longer resolves to an NPC (e.g. the NPC was deleted)
+    // must not be silently dropped from search -- it still matches on its
+    // raw text via the same fallback, mirroring the expanded "Related NPCs"
+    // row, which surfaces an unresolvable id instead of hiding it.
+    it('still matches an unresolvable (deleted) NPC id via the raw-id fallback', () => {
       renderPage();
       fireEvent.change(screen.getByPlaceholderText('Search quests...'), {
         target: { value: 'npc-missing' },

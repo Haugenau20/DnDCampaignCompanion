@@ -1,10 +1,50 @@
 # Bug #1415: Quests Search Matches Raw NPC Ids, Not NPC Names
 
-**Status**: 🔍 DISCOVERED
+**Status**: ✅ FIXED (2026-07-31)
 **Category**: UI
 **Priority**: Low
 **Component**: `src/pages/quests/QuestsPage.tsx`
 **Discovered In**: Session 2026-07-31 — while rewriting `QuestsPage.test.tsx` for the roster redesign
+
+## Resolution
+
+The predicate now resolves each id to its NPC's display name before matching, keeping the raw-id
+match as a fallback:
+
+```ts
+quest.relatedNPCIds?.some(id => {
+  const npc = getNPCById(id);
+  return npc?.name.toLowerCase().includes(search) || id.toLowerCase().includes(search);
+})
+```
+
+Three decisions worth recording:
+
+- **Reused `getNPCById` rather than building a `npcNameById` map.** The suggested fix below proposed
+  memoising a map over `npcs`, but `getNPCById` is already destructured from `useNPCs()` and already
+  performs exactly this resolution for the expanded row. Sharing it avoids a second lookup path that
+  could drift from the display path. It also happens to be the only workable option against the
+  existing test mock, which supplies `getNPCById` but no `npcs` array — a map built by mapping over
+  `npcs` would have thrown. `getNPCById` was added to the `filteredQuests` `useMemo` deps.
+- **The id fallback is kept**, `||`-ed and never replacing the name check, so deep links and
+  copy-pasted ids still match.
+- **Unresolvable ids stay searchable**, which matches the display path: the expanded row renders
+  `"{npcId} (not found in NPC directory)"` rather than hiding a deleted NPC, so the id remains
+  visible text and therefore ought to remain findable. Filter and display now agree — the original
+  defect was in part that they didn't.
+
+**Proven load-bearing, not vacuously green.** The fix was temporarily reverted and the inverted test
+re-run: it failed with `Find the Dragon` not found when searching `"willow"`, then passed once the fix
+was restored. The id-fallback and unresolvable-id tests pass either way, as expected — raw-id matching
+existed before too.
+
+Test coverage, in `describe('search filter')`:
+- `matches search text against the related NPC's resolved name, not just its raw id` — the inverted
+  pinning test, and #1415's regression guard
+- `also matches a raw NPC id typed verbatim, as a fallback for deep links and copy-pasted ids`
+- `still matches an unresolvable (deleted) NPC id via the raw-id fallback`
+
+Verified: `src/pages/quests` 3 suites / 97 tests green, `tsc` clean.
 
 ## Description
 

@@ -261,23 +261,26 @@ describe("RumorsPage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Dialogs initial state
+  // Dialogs: RumorsPage no longer owns a batch-actions flow. The working
+  // combine/convert flow lives in RumorDirectory -> RumorBatchActions, which
+  // renders its own CombineRumorsDialog/ConvertToQuestDialog instances. The
+  // copies formerly rendered directly by RumorsPage were unreachable dead
+  // code (none of their controlling setters was ever called) and were
+  // removed; assert they are gone rather than present.
   // -------------------------------------------------------------------------
   describe("dialogs", () => {
-    it("renders CombineRumorsDialog as closed by default", () => {
+    it("does NOT render its own CombineRumorsDialog", () => {
       renderPage();
-      expect(screen.getByTestId("combine-rumors-dialog")).toHaveAttribute(
-        "data-open",
-        "false"
-      );
+      expect(
+        screen.queryByTestId("combine-rumors-dialog")
+      ).not.toBeInTheDocument();
     });
 
-    it("renders ConvertToQuestDialog as closed by default", () => {
+    it("does NOT render its own ConvertToQuestDialog", () => {
       renderPage();
-      expect(screen.getByTestId("convert-quest-dialog")).toHaveAttribute(
-        "data-open",
-        "false"
-      );
+      expect(
+        screen.queryByTestId("convert-quest-dialog")
+      ).not.toBeInTheDocument();
     });
   });
 });

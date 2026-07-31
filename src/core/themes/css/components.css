@@ -377,21 +377,12 @@
 }
 
 /* ====== QUEST CARD ====== */
-.quest-card {
-  border-left: 4px solid var(--status-active);
-}
-
-.quest-card-active {
-  border-left: 4px solid var(--status-active);
-}
-
-.quest-card-completed {
-  border-left: 4px solid var(--status-completed);
-}
-
-.quest-card-failed {
-  border-left: 4px solid var(--status-failed);
-}
+/* The .quest-card / .quest-card-{active,completed,failed} rules that stood here were
+   dead once QuestCard was deleted — the quests page renders a roster now, and those
+   four classes had no remaining consumer, static or dynamic. Removing dead styles is
+   what this branch opened by doing (hover:scale-102, hoverColors, hover:typography),
+   so leaving four more behind would have been inconsistent.
+   The .quest-status-* rules below are live: NPCCard and LocationCard both use them. */
 
 .quest-status-active {
   color: var(--status-active);

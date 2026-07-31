@@ -1,14 +1,14 @@
 // src/pages/rumors/RumorsPage.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import Typography from '../../core/components/Typography';
 import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
-import { RumorDirectory, CombineRumorsDialog, ConvertToQuestDialog, useRumors } from 'features/campaign-entities';
+import { RumorDirectory, useRumors } from 'features/campaign-entities';
 import { useAuth } from 'features/user-management';
 import { useNavigation } from 'shared/hooks/useNavigation';
-import { 
-  MessageSquare, 
-  XCircle, 
+import {
+  MessageSquare,
+  XCircle,
   HelpCircle,
   Loader2,
   Plus,
@@ -18,13 +18,8 @@ import {
 const RumorsPage: React.FC = () => {
   // Auth state
   const { user } = useAuth();
-  const { rumors, isLoading, error, combineRumors, convertToQuest } = useRumors();
+  const { rumors, isLoading, error } = useRumors();
   const { navigateToPage } = useNavigation();
-  
-  // Dialog state
-  const [showCombineDialog, setShowCombineDialog] = useState(false);
-  const [showConvertDialog, setShowConvertDialog] = useState(false);
-  const [selectedRumorIds, setSelectedRumorIds] = useState<string[]>([]);
 
   // Calculate statistics
   const stats = useMemo(() => ({
@@ -37,16 +32,6 @@ const RumorsPage: React.FC = () => {
   // Handle create new rumor
   const handleCreateRumor = () => {
     navigateToPage('/rumors/create');
-  };
-
-  // Handle combine rumors submission
-  const handleCombineSubmit = async (rumorIds: string[], newRumor: Partial<any>) => {
-    return await combineRumors(rumorIds, newRumor);
-  };
-
-  // Handle convert to quest submission
-  const handleConvertSubmit = async (rumorIds: string[], questData: Partial<any>) => {
-    return await convertToQuest(rumorIds, questData);
   };
 
   if (isLoading) {
@@ -160,26 +145,9 @@ const RumorsPage: React.FC = () => {
       </div>
 
       {/* Rumor Directory */}
-      <RumorDirectory 
-        rumors={rumors} 
-        isLoading={isLoading} 
-      />
-
-      {/* Dialogs */}
-      <CombineRumorsDialog
-        open={showCombineDialog}
-        onClose={() => setShowCombineDialog(false)}
-        rumorIds={selectedRumorIds}
+      <RumorDirectory
         rumors={rumors}
-        onCombine={handleCombineSubmit}
-      />
-      
-      <ConvertToQuestDialog
-        open={showConvertDialog}
-        onClose={() => setShowConvertDialog(false)}
-        rumorIds={selectedRumorIds}
-        rumors={rumors}
-        onConvert={handleConvertSubmit}
+        isLoading={isLoading}
       />
     </div>
   );
