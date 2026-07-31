@@ -61,8 +61,11 @@ export const lightTheme: Theme = {
       statusFailed: '#DC2626', // Bold red for errors
       statusUnknown: '#e1b737', // Golden yellow for unknown status
       statusText: '#FFFFFF', // White text for status indicators
-      headerBackground: '#3B82F6', // Stronger, more vibrant blue header
-      footerBackground: '#E5EDF8', // Soft blue-gray footer for balance
+      // The header now carries navigation, campaign context and search in one bar.
+      // A saturated blue field behind all of that fought with the primary actions
+      // inside it, so the bar is a surface and the accent is reserved for actions.
+      headerBackground: '#FFFFFF', // Neutral surface for the single app bar
+      footerBackground: '#EBF0F7', // Soft blue-gray footer for balance
       hoverLight: '#D6E4F5', // Light blue for hover effects
       hoverMedium: '#93C5FD', // Stronger blue hover effect
       iconBackground: '#D6E4F5', // Soft blue for icons

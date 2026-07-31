@@ -14,8 +14,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Header carries the desktop navigation inline; only the mobile strip is a
+          row of its own, because one bar cannot hold seven destinations plus
+          search at phone widths. */}
       <Header />
-      <Navigation />
+      <Navigation variant="mobile" />
         <main className="flex-1 p-4 content">
           {children}
         </main>

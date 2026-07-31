@@ -240,7 +240,10 @@
 /* ====== LAYOUT COMPONENTS ====== */
 .header {
   background-color: var(--header-bg);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  /* A hairline separates the bar from the page. The drop shadow was doing that job
+     for a coloured field; on a neutral surface a border is quieter and does not
+     imply the bar is floating above the content. */
+  border-bottom: var(--border-width-sm) solid var(--card-border);
 }
 
 .header-title {
