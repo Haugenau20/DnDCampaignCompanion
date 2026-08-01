@@ -175,6 +175,7 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
           label="Location"
           value={formData.location || ''}
           onChange={(value) => handleInputChange('location', value)}
+          onSelectLocation={(loc) => handleInputChange('locationId', loc?.id ?? '')}
         />
       </div>
 

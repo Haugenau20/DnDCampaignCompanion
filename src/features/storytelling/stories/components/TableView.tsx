@@ -3,16 +3,18 @@ import React from 'react';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
 import { Chapter } from 'features/storytelling/chapters/types';
-import { Clock, ArrowUpDown } from 'lucide-react';
+import { Clock, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import clsx from 'clsx';
+
+type SortField = 'order' | 'title' | 'lastModified';
 
 interface TableViewProps {
   chapters: Chapter[];
   currentChapterId?: string;
   onChapterSelect: (chapterId: string) => void;
-  sortField: 'order' | 'title' | 'lastModified';
+  sortField: SortField;
   sortDirection: 'asc' | 'desc';
-  onSort: (field: 'order' | 'title' | 'lastModified') => void;
+  onSort: (field: SortField) => void;
   onEditChapter?: (chapterId: string) => void;
   isAdmin?: boolean;
 }
@@ -22,10 +24,42 @@ const TableView: React.FC<TableViewProps> = ({
   currentChapterId,
   onChapterSelect,
   sortField,
+  sortDirection,
   onSort,
   onEditChapter,
   isAdmin = false
 }) => {
+  /**
+   * Sortable column header. Sorting lives on a real <button> so it is reachable by
+   * keyboard, and aria-sort exposes the direction to screen readers. The arrow shows
+   * on every sortable column — dimmed when inactive — so the other columns don't
+   * look inert, and it points the way the sort actually runs.
+   */
+  const SortableHeader: React.FC<{
+    field: SortField;
+    label: string;
+    className?: string;
+  }> = ({ field, label, className }) => {
+    const isActive = sortField === field;
+    const Arrow = isActive ? (sortDirection === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
+
+    return (
+      <th
+        scope="col"
+        className={clsx('px-6 py-3 text-left', className)}
+        aria-sort={isActive ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+      >
+        <button
+          type="button"
+          onClick={() => onSort(field)}
+          className="flex items-center gap-1 cursor-pointer"
+        >
+          <span className={clsx(isActive && 'font-semibold')}>{label}</span>
+          <Arrow className={clsx('w-4 h-4', !isActive && 'opacity-40')} aria-hidden="true" />
+        </button>
+      </th>
+    );
+  };
 
   return (
     <div className="rounded-lg overflow-hidden card">
@@ -33,46 +67,14 @@ const TableView: React.FC<TableViewProps> = ({
         <table className="w-full">
           <thead>
             <tr className="bg-secondary border-b card-border">
-              <th 
-                className={clsx("px-6 py-3 text-left cursor-pointer", 
-                  sortField === 'order' ? `typography` : ''
-                )}
-                onClick={() => onSort('order')}
-              >
-                <div className="flex items-center gap-1">
-                  <span>Ch #</span>
-                  {sortField === 'order' && (
-                    <ArrowUpDown className="w-4 h-4" />
-                  )}
-                </div>
-              </th>
-              <th 
-                className={clsx("px-6 py-3 text-left cursor-pointer",
-                  sortField === 'title' ? `typography` : ''
-                )}
-                onClick={() => onSort('title')}
-              >
-                <div className="flex items-center gap-1">
-                  <span>Title</span>
-                  {sortField === 'title' && (
-                    <ArrowUpDown className="w-4 h-4" />
-                  )}
-                </div>
-              </th>
-              <th 
-                className={clsx("px-6 py-3 text-left cursor-pointer hidden md:table-cell",
-                  sortField === 'lastModified' ? `typography` : ''
-                )}
-                onClick={() => onSort('lastModified')}
-              >
-                <div className="flex items-center gap-1">
-                  <span>Last Updated</span>
-                  {sortField === 'lastModified' && (
-                    <ArrowUpDown className="w-4 h-4" />
-                  )}
-                </div>
-              </th>
-              <th className="px-6 py-3 text-right">Action</th>
+              <SortableHeader field="order" label="Ch #" />
+              <SortableHeader field="title" label="Title" />
+              <SortableHeader
+                field="lastModified"
+                label="Last Updated"
+                className="hidden md:table-cell"
+              />
+              <th scope="col" className="px-6 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -83,8 +85,12 @@ const TableView: React.FC<TableViewProps> = ({
                 <tr 
                   key={chapter.id}
                   className={clsx(
-                    "border-b last:border-b-0 hover:bg-opacity-50 transition-colors",
-                    `card-border`, 
+                    // `selectable-item` supplies the actual hover paint
+                    // (background-color: var(--bg-accent)). The previous
+                    // hover:bg-opacity-50 had no hover:bg-* to modulate, so rows
+                    // had no hover feedback at all despite transition-colors.
+                    "border-b last:border-b-0 transition-colors selectable-item",
+                    `card-border`,
                     index % 2 ? `bg-secondary` : ''
                   )}
                 >
@@ -92,15 +98,18 @@ const TableView: React.FC<TableViewProps> = ({
                     <Typography variant="body">{chapter.order}</Typography>
                   </td>
                   {/* Make title clickable */}
-                  <td 
-                    className="px-6 py-4 cursor-pointer"
+                  <td
+                    className="px-6 py-4 cursor-pointer group"
                     onClick={() => onChapterSelect(chapter.id)}
                   >
-                    <Typography 
-                      variant="body" 
+                    <Typography
+                      variant="body"
                       className={clsx(
                         isCurrentChapter ? 'font-semibold' : '',
-                        `hover:typography`
+                        // `.typography` is hand-written CSS, not a Tailwind utility,
+                        // so `hover:typography` never generated a rule. Underline on
+                        // row hover is a real affordance for a clickable title.
+                        'group-hover:underline hover:underline'
                       )}
                     >
                       {chapter.title}

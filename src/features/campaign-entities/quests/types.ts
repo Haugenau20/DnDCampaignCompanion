@@ -1,5 +1,6 @@
 // src/features/campaign-entities/quests/types.ts
 import { BaseContent, DomainData } from 'core/types/common';
+import { Location } from '../locations/types';
 
 export type QuestStatus = 'active' | 'completed' | 'failed';
 
@@ -34,7 +35,13 @@ export interface Quest extends BaseContent {
   relatedNPCIds?: string[];  // References to NPCs in the NPC directory
   complications?: string[];
   rewards?: string[];
+  /**
+   * See the `location`/`locationId` contract documented on `NPC.location` in
+   * `features/campaign-entities/npcs/types.ts` -- shared verbatim here.
+   */
   location?: string;
+  /** See the `location`/`locationId` contract documented on `NPC.location`. */
+  locationId?: string;
   levelRange?: string;
   dateCompleted?: string;
 }
@@ -49,7 +56,7 @@ export interface QuestContextState {
 export interface QuestContextValue extends QuestContextState {
   getQuestById: (id: string) => Quest | undefined;
   getQuestsByStatus: (status: QuestStatus) => Quest[];
-  getQuestsByLocation: (location: string) => Quest[];
+  getQuestsByLocation: (location: Location) => Quest[];
   updateQuestStatus: (questId: string, status: QuestStatus) => Promise<void>;
   updateQuestObjective: (questId: string, objectiveId: string, completed: boolean) => Promise<void>;
   addQuest: (quest: DomainData<Quest>) => Promise<string>;

@@ -1,6 +1,6 @@
 // pages/HomePage.tsx
 import React, { useState, useEffect } from 'react';
-import { useAuth, useGroups, useCampaigns } from 'features/user-management';
+import { useGroups } from 'features/user-management';
 import { useStory } from 'features/storytelling';
 import { useQuests } from 'features/campaign-entities';
 import { useRumors } from 'features/campaign-entities';
@@ -12,8 +12,8 @@ import { determineAttributionActor, fetchAttributionUsernames } from 'shared/uti
 // Import layouts
 import DashboardLayout from 'pages/layouts/dashboard/DashboardLayout';
 import JournalLayout from 'pages/layouts/journal/JournalLayout';
-import Button from '../core/components/Button';
 import { Book, LayoutDashboard } from 'lucide-react';
+import clsx from 'clsx';
 import useLayoutData from 'pages/layouts/common/hooks/useLayoutData';
 
 // Combined activity type from all content types
@@ -29,9 +29,6 @@ export interface Activity {
 
 // Layout type options
 type LayoutType = 'dashboard' | 'journal';
-
-// Helper type to check if a property exists
-type WithOptionalProperty<T, K extends string> = T & { [P in K]?: string };
 
 /**
  * HomePage component serving as the container for the selected layout
@@ -215,29 +212,50 @@ useEffect(() => {
     locationsLoading
   });
   
-  // Handle layout toggle
-  const toggleLayout = () => {
-    setLayoutType(layoutType === 'dashboard' ? 'journal' : 'dashboard');
-  };
-  
+  /**
+   * Dashboard/Journal switch as a segmented control: it shows both destinations and
+   * marks which one is current, where the previous "Switch to Journal View" button
+   * named only the place you weren't. Passed into the layout so it can sit in the
+   * page header rather than on a navigation row of its own.
+   */
+  const viewToggle = (
+    <div
+      className="inline-flex p-0.5 rounded-lg bg-secondary"
+      role="group"
+      aria-label="Choose a view"
+    >
+      {([
+        { type: 'dashboard' as LayoutType, label: 'Dashboard', Icon: LayoutDashboard },
+        { type: 'journal' as LayoutType, label: 'Journal', Icon: Book },
+      ]).map(({ type, label, Icon }) => {
+        const isActive = layoutType === type;
+        return (
+          <button
+            key={type}
+            type="button"
+            onClick={() => setLayoutType(type)}
+            aria-pressed={isActive}
+            className={clsx(
+              'flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-sm transition-colors',
+              isActive
+                ? 'bg-card font-semibold shadow-sm'
+                : 'typography-secondary selectable-item'
+            )}
+          >
+            <Icon size={15} aria-hidden="true" />
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className='max-w-7xl mx-auto'>
       <div className="container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden content">
-        {/* Layout Toggle Button */}
-        <div className="flex justify-end mb-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleLayout}
-            startIcon={layoutType === 'dashboard' ? <Book size={16} /> : <LayoutDashboard size={16} />}
-          >
-            {layoutType === 'dashboard' ? 'Switch to Journal View' : 'Switch to Dashboard View'}
-          </Button>
-        </div>
-        
         {/* Render selected layout with common processed data */}
         {layoutType === 'dashboard' ? (
-          <DashboardLayout 
+          <DashboardLayout
             npcs={npcs}
             locations={locations}
             quests={quests}
@@ -245,9 +263,10 @@ useEffect(() => {
             rumors={rumors}
             activities={activities}
             loading={layoutData.loading}
+            viewToggle={viewToggle}
           />
         ) : (
-          <JournalLayout 
+          <JournalLayout
             npcs={npcs}
             locations={locations}
             quests={quests}
@@ -255,6 +274,7 @@ useEffect(() => {
             rumors={rumors}
             activities={activities}
             loading={layoutData.loading}
+            viewToggle={viewToggle}
           />
         )}
       </div>

@@ -112,9 +112,20 @@ describe('NoteCard', () => {
     });
 
     test('should not render tags section when tags array is empty', () => {
-      render(<NoteCard note={makeNote({ tags: [] })} />);
-      // No comma-separated tags text
-      expect(screen.queryByText(/,/)).not.toBeInTheDocument();
+      const { container } = render(<NoteCard note={makeNote({ tags: [] })} />);
+      // Assert on the tags block itself, identified by its Tag icon. A previous
+      // `queryByText(/,/)` matched any comma on the card, so it was tripped by the
+      // "Updated: January 15, 2024 at 10:00 AM" date rather than by any tag.
+      expect(container.querySelector('.lucide-tag')).toBeNull();
+      // The date, commas and all, is still expected to be there.
+      expect(container.querySelector('.lucide-calendar')).not.toBeNull();
+    });
+
+    test('should render the tags section when tags are present', () => {
+      const { container } = render(
+        <NoteCard note={makeNote({ tags: ['combat'] })} />
+      );
+      expect(container.querySelector('.lucide-tag')).not.toBeNull();
     });
   });
 

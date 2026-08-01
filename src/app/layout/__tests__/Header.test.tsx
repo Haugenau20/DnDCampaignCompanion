@@ -81,6 +81,15 @@ jest.mock("shared/components/ContextSwitcher", () => ({
   default: () => <div data-testid="context-switcher" />,
 }));
 
+// Header now hosts the desktop navigation inline, replacing the second
+// full-height nav row. Navigation has its own suite; mock it here.
+jest.mock("../Navigation", () => ({
+  __esModule: true,
+  default: ({ variant }: any) => (
+    <div data-testid="navigation" data-variant={variant} />
+  ),
+}));
+
 // ---------------------------------------------------------------------------
 // Mock feature components rendered inside Header dialogs
 // ---------------------------------------------------------------------------
@@ -392,7 +401,65 @@ describe("Header", () => {
 
       await user.click(screen.getByRole("button", { name: /menu/i }));
 
-      expect(screen.getByText("The Dark Campaign")).toBeInTheDocument();
+      // The name now appears twice: in the always-visible header chip and in the
+      // menu's Campaign section.
+      expect(screen.getAllByText("The Dark Campaign")).toHaveLength(2);
+    });
+
+    test("shows the active campaign in the bar without opening the menu", () => {
+      setupMocks({
+        user: { uid: "u1" },
+        activeCampaignId: "camp-1",
+        campaigns: [{ id: "camp-1", name: "The Dark Campaign" }],
+      });
+      render(<Header />);
+
+      // Which campaign you are in was previously only discoverable by opening the
+      // hamburger menu.
+      expect(
+        screen.getByRole("button", { name: /Active campaign: The Dark Campaign/ })
+      ).toBeInTheDocument();
+    });
+
+    test("omits the campaign chip when there is no active campaign", () => {
+      setupMocks({ user: { uid: "u1" }, activeCampaignId: null, campaigns: [] });
+      render(<Header />);
+
+      expect(
+        screen.queryByRole("button", { name: /Active campaign:/ })
+      ).not.toBeInTheDocument();
+    });
+
+    test("opens the context switcher from the campaign chip", async () => {
+      const user = userEvent.setup();
+      setupMocks({
+        user: { uid: "u1" },
+        activeCampaignId: "camp-1",
+        campaigns: [{ id: "camp-1", name: "The Dark Campaign" }],
+      });
+      render(<Header />);
+
+      await user.click(
+        screen.getByRole("button", { name: /Active campaign: The Dark Campaign/ })
+      );
+
+      expect(screen.getByTestId("context-switcher")).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Navigation consolidation
+  // -------------------------------------------------------------------------
+  describe("navigation", () => {
+    test("hosts the desktop navigation inline in the bar", () => {
+      setupMocks({ user: { uid: "u1" } });
+      render(<Header />);
+
+      // The nav used to be a second full-height row rendered by Layout.
+      expect(screen.getByTestId("navigation")).toHaveAttribute(
+        "data-variant",
+        "inline"
+      );
     });
   });
 });

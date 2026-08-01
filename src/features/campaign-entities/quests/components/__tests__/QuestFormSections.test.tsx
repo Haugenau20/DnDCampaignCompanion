@@ -23,6 +23,8 @@ jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(() => ({ locations: [] })),
 }));
 
+const { useLocations } = require('../../../locations/context/LocationContext');
+
 // ---------------------------------------------------------------------------
 // Fixture helpers
 // ---------------------------------------------------------------------------
@@ -126,6 +128,38 @@ describe('BasicInfoSection', () => {
   test('should render title with prefilled value', () => {
     render(<BasicInfoSection formData={makeFormData({ title: 'Prefilled Quest' })} handleInputChange={handleInputChange} />);
     expect(screen.getByDisplayValue('Prefilled Quest')).toBeInTheDocument();
+  });
+
+  describe('locationId capture (LocationCombobox wiring)', () => {
+    beforeEach(() => {
+      (useLocations as jest.Mock).mockReturnValue({
+        locations: [
+          { id: 'loc-1', name: 'Ironhold' },
+          { id: 'loc-2', name: 'Shadowfen' },
+        ],
+      });
+    });
+
+    afterEach(() => {
+      (useLocations as jest.Mock).mockReturnValue({ locations: [] });
+    });
+
+    test('should call handleInputChange with locationId when a real Location is selected', () => {
+      render(<BasicInfoSection formData={makeFormData()} handleInputChange={handleInputChange} />);
+      // Textbox order: Title(0), Description(1), Location/LocationCombobox(2), Level Range(3), Background(4).
+      const locationInput = screen.getAllByRole('textbox')[2];
+      fireEvent.change(locationInput, { target: { value: 'Ironhold' } });
+      expect(handleInputChange).toHaveBeenCalledWith('location', 'Ironhold');
+      expect(handleInputChange).toHaveBeenCalledWith('locationId', 'loc-1');
+    });
+
+    test('should call handleInputChange with an empty locationId when text matches no Location', () => {
+      render(<BasicInfoSection formData={makeFormData()} handleInputChange={handleInputChange} />);
+      const locationInput = screen.getAllByRole('textbox')[2];
+      fireEvent.change(locationInput, { target: { value: 'Nowhere Real' } });
+      expect(handleInputChange).toHaveBeenCalledWith('location', 'Nowhere Real');
+      expect(handleInputChange).toHaveBeenCalledWith('locationId', '');
+    });
   });
 });
 

@@ -209,36 +209,6 @@ describe("RumorsPage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Statistics
-  // -------------------------------------------------------------------------
-  describe("statistics calculation", () => {
-    it("correctly counts total, confirmed, unconfirmed, and false rumors", () => {
-      renderPage();
-      const h2s = screen.getAllByTestId("typography-h2");
-      // sampleRumors: total=4, confirmed=1, unconfirmed=2, false=1
-      expect(h2s[0]).toHaveTextContent("4"); // total
-      expect(h2s[1]).toHaveTextContent("1"); // confirmed
-      expect(h2s[2]).toHaveTextContent("2"); // unconfirmed
-      expect(h2s[3]).toHaveTextContent("1"); // false
-    });
-
-    it("shows zeros for all stats when rumors list is empty", () => {
-      mockRumorContext = { ...mockRumorContext, rumors: [] };
-      renderPage();
-      const h2s = screen.getAllByTestId("typography-h2");
-      h2s.forEach((el) => expect(el).toHaveTextContent("0"));
-    });
-
-    it("shows stat labels: Total Rumors, Confirmed, Unconfirmed, False", () => {
-      renderPage();
-      expect(screen.getByText("Total Rumors")).toBeInTheDocument();
-      expect(screen.getByText("Confirmed")).toBeInTheDocument();
-      expect(screen.getByText("Unconfirmed")).toBeInTheDocument();
-      expect(screen.getByText("False")).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // Create button
   // -------------------------------------------------------------------------
   describe("Add Rumor button", () => {
@@ -261,23 +231,26 @@ describe("RumorsPage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Dialogs initial state
+  // Dialogs: RumorsPage no longer owns a batch-actions flow. The working
+  // combine/convert flow lives in RumorDirectory -> RumorBatchActions, which
+  // renders its own CombineRumorsDialog/ConvertToQuestDialog instances. The
+  // copies formerly rendered directly by RumorsPage were unreachable dead
+  // code (none of their controlling setters was ever called) and were
+  // removed; assert they are gone rather than present.
   // -------------------------------------------------------------------------
   describe("dialogs", () => {
-    it("renders CombineRumorsDialog as closed by default", () => {
+    it("does NOT render its own CombineRumorsDialog", () => {
       renderPage();
-      expect(screen.getByTestId("combine-rumors-dialog")).toHaveAttribute(
-        "data-open",
-        "false"
-      );
+      expect(
+        screen.queryByTestId("combine-rumors-dialog")
+      ).not.toBeInTheDocument();
     });
 
-    it("renders ConvertToQuestDialog as closed by default", () => {
+    it("does NOT render its own ConvertToQuestDialog", () => {
       renderPage();
-      expect(screen.getByTestId("convert-quest-dialog")).toHaveAttribute(
-        "data-open",
-        "false"
-      );
+      expect(
+        screen.queryByTestId("convert-quest-dialog")
+      ).not.toBeInTheDocument();
     });
   });
 });

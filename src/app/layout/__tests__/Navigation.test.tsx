@@ -4,7 +4,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import Navigation from "../Navigation";
+import Navigation, { navItems } from "../Navigation";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -157,20 +157,82 @@ describe("Navigation", () => {
 
       render(<Navigation />);
 
-      // 6 nav items × 2 layouts = 12 calls
-      expect(shouldHighlight).toHaveBeenCalledTimes(12);
+      // One call per nav item. Each variant renders a single layout now, so the
+      // count is no longer doubled.
+      expect(shouldHighlight).toHaveBeenCalledTimes(navItems.length);
+    });
+
+    test("marks the active item with aria-current", () => {
+      (useNavigation as jest.Mock).mockReturnValue({
+        navigateToPage: mockNavigateToPage,
+        shouldHighlightPath: (path: string) => path === "/story",
+      });
+
+      render(<Navigation />);
+
+      expect(
+        screen.getByRole("button", { name: /story/i })
+      ).toHaveAttribute("aria-current", "page");
+      expect(
+        screen.getByRole("button", { name: /quests/i })
+      ).not.toHaveAttribute("aria-current");
     });
   });
 
   // -------------------------------------------------------------------------
-  // Both desktop and mobile layouts
+  // Variants — the inline variant is what removes the second nav row
   // -------------------------------------------------------------------------
-  describe("dual layout (desktop + mobile)", () => {
-    test("should render each nav label at least twice (one per layout)", () => {
+  describe("variants", () => {
+    test("renders each label once per variant, not twice in one render", () => {
+      render(<Navigation variant="inline" />);
+      // Both layouts used to render together and be hidden with breakpoint classes.
+      expect(screen.getAllByText("Story")).toHaveLength(1);
+    });
+
+    test("defaults to the inline variant", () => {
+      const { container } = render(<Navigation />);
+      const nav = container.querySelector("nav")!;
+      expect(nav.className).toContain("md:flex");
+      expect(nav.className).not.toContain("navigation");
+    });
+
+    test("the inline variant is hidden below md, where it cannot fit the bar", () => {
+      const { container } = render(<Navigation variant="inline" />);
+      expect(container.querySelector("nav")!.className).toContain("hidden");
+    });
+
+    test("the mobile variant keeps its own strip and hides from md up", () => {
+      const { container } = render(<Navigation variant="mobile" />);
+      const nav = container.querySelector("nav")!;
+      expect(nav.className).toContain("navigation");
+      expect(nav.className).toContain("md:hidden");
+    });
+
+    test("both variants expose the same destinations", () => {
+      const { unmount } = render(<Navigation variant="inline" />);
+      const inline = navItems.map((i) => i.label);
+      inline.forEach((label) => {
+        expect(screen.getByText(label)).toBeInTheDocument();
+      });
+      unmount();
+
+      render(<Navigation variant="mobile" />);
+      inline.forEach((label) => {
+        expect(screen.getByText(label)).toBeInTheDocument();
+      });
+    });
+
+    test("includes Home as an explicit destination", () => {
       render(<Navigation />);
-      // Each label appears in both the desktop hidden-md:flex section and the md:hidden section
-      const storyItems = screen.getAllByText("Story");
-      expect(storyItems.length).toBeGreaterThanOrEqual(2);
+      // The logo was the only route home.
+      expect(screen.getByText("Home")).toBeInTheDocument();
+    });
+
+    test("navigates to / from Home", async () => {
+      const user = userEvent.setup();
+      render(<Navigation />);
+      await user.click(screen.getByRole("button", { name: /home/i }));
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/");
     });
   });
 

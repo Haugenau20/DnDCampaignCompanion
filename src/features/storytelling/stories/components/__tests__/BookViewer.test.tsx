@@ -198,17 +198,21 @@ describe('BookViewer', () => {
   // onPageChange callback
   // -------------------------------------------------------------------------
   describe('onPageChange callback', () => {
-    test('calls onPageChange with page number when navigating forward', () => {
+    test('calls onPageChange with page number when navigating to a non-final page', () => {
       const onPageChange = jest.fn();
       render(
         <BookViewer
-          content={makeWords(500)}
+          // 750 words => 3 pages, so page 2 is not the last page
+          content={makeWords(750)}
           title="Ch1"
           onPageChange={onPageChange}
         />
       );
       fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
       expect(onPageChange).toHaveBeenCalledWith(2);
+      // The completion flag is omitted entirely rather than passed as `false`, so the
+      // consumer leaves any stored `isComplete` untouched (bug #852).
+      expect(onPageChange.mock.calls[0]).toHaveLength(1);
     });
 
     test('calls onPageChange with isComplete=true on reaching last page', () => {
@@ -222,11 +226,23 @@ describe('BookViewer', () => {
       );
       // Navigate to last page (page 2 of 2)
       fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-      // onPageChange should be called first with (2) then with (2, true)
-      const calls = onPageChange.mock.calls;
-      const completeCall = calls.find((c) => c[1] === true);
-      expect(completeCall).toBeDefined();
-      expect(completeCall![0]).toBe(2);
+      expect(onPageChange).toHaveBeenCalledWith(2, true);
+    });
+
+    test('emits exactly one call per page turn, including the last page', () => {
+      const onPageChange = jest.fn();
+      render(
+        <BookViewer
+          content={makeWords(500)}
+          title="Ch1"
+          onPageChange={onPageChange}
+        />
+      );
+      // Reaching the last page used to fire twice — once bare, once with `true` —
+      // costing two writes per completing turn and forcing the consumer-side guard
+      // that bug #852 documents.
+      fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+      expect(onPageChange).toHaveBeenCalledTimes(1);
     });
   });
 

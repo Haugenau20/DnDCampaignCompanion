@@ -59,13 +59,17 @@ const BookshelfView: React.FC<BookshelfViewProps> = ({
     return groups;
   }, [chapters]);
 
-  // Function to determine which book component to use
-  const getBookComponent = (chapterOrder: number) => {
+  // Function to determine which book component to use.
+  // Takes the chapter itself rather than its order: callers already hold the object,
+  // so the previous `chapters.find(c => c.order === chapterOrder)` re-scanned the
+  // whole list once per rendered book (O(n²) across a 39-chapter shelf) to recover
+  // a chapter it had been handed. The lookup also silently picked the first match
+  // when two chapters shared an `order`.
+  const getBookComponent = (chapter: Chapter) => {
     // Use a deterministic but varied selection based on chapter order
     // and title length (if available)
-    const chapter = chapters.find(c => c.order === chapterOrder);
-    const titleFactor = chapter?.title.length || 0;
-    const index = (chapterOrder + titleFactor) % BookComponents.length;
+    const titleFactor = chapter.title?.length || 0;
+    const index = (chapter.order + titleFactor) % BookComponents.length;
     return BookComponents[index];
   };
 
@@ -99,7 +103,7 @@ const BookshelfView: React.FC<BookshelfViewProps> = ({
               else if (contentLength > 100) bookHeight = 110;
               
               // Get the book component for this chapter
-              const BookComponent = getBookComponent(chapter.order);
+              const BookComponent = getBookComponent(chapter);
               
               return (
                 <div 

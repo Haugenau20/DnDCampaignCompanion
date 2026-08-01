@@ -9,6 +9,7 @@ import { Save, X, Users, Scroll } from 'lucide-react';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useNPCs } from '../context/NPCContext';
 import { useUser } from 'features/user-management';
+import LocationCombobox from '../../locations/components/LocationCombobox';
 import clsx from 'clsx';
 
 interface NPCEditFormProps {
@@ -162,10 +163,13 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                 onChange={(e) => handleInputChange('occupation', e.target.value)}
               />
 
-              <Input
+              <LocationCombobox
                 label="Location"
                 value={formData.location || ''}
-                onChange={(e) => handleInputChange('location', e.target.value)}
+                onChange={(value) => handleInputChange('location', value)}
+                onSelectLocation={(loc) =>
+                  setFormData(prev => ({ ...prev, locationId: loc?.id ?? '' }))
+                }
               />
             </div>
 

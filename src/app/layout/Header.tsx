@@ -18,7 +18,7 @@ import ContextSwitcher from 'shared/components/ContextSwitcher';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import Dialog from 'core/components/Dialog';
-import { clsx } from 'clsx';
+import Navigation from './Navigation';
 
 /**
  * Main application header with simplified layout
@@ -122,29 +122,56 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="p-4 relative header">
+    <header className="px-4 py-3 relative header">
       <div className='max-w-7xl mx-auto'>
         <div className="container mx-auto">
-          {/* Main Header - Both Desktop and Mobile */}
-          <div className="flex items-center justify-center gap-2">
+          {/* One bar carries branding, campaign context, navigation, search and
+              account. This was three stacked layers — a header, a full-height
+              navigation row, and a page-level view toggle — before any content. */}
+          <div className="flex items-center gap-3">
             {/* Left side - Logo */}
-            <Link 
-              to="/" 
+            <Link
+              to="/"
               onClick={(e) => {
               e.preventDefault();
               navigate('/');
               }}
               className="text-xl font-bold whitespace-nowrap header-title"
             >
-              <span className="md:inline hidden">D&D Campaign Companion</span>
-              <span className="md:hidden">D&D Companion</span>
+              <span className="lg:inline hidden">D&D Campaign Companion</span>
+              <span className="lg:hidden">D&D Companion</span>
             </Link>
-            
+
+            {/* Campaign context — the active campaign was previously only visible
+                after opening the hamburger menu. */}
+            {user && activeCampaign && (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="hidden md:block w-px h-6 self-center opacity-40 bg-secondary"
+                ></span>
+                <button
+                  type="button"
+                  onClick={handleContextSwitcherClick}
+                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md button-ghost max-w-[14rem]"
+                  aria-label={`Active campaign: ${activeCampaign.name}. Change group or campaign`}
+                >
+                  <Typography variant="body-sm" className="truncate font-semibold">
+                    {activeCampaign.name}
+                  </Typography>
+                  <ChevronDown size={14} className="flex-shrink-0" />
+                </button>
+              </>
+            )}
+
+            {/* Desktop navigation, inline rather than a second full-height row */}
+            <Navigation variant="inline" />
+
             {/* Middle - Search */}
-            <div className="flex-1 max-w-xl px-2 md:px-4">
+            <div className="flex-1 min-w-0 max-w-xs ml-auto px-1">
               <SearchBar />
             </div>
-            
+
             {/* Right side - Menu Button + Sign In/Out */}
             <div className="flex items-center justify-center gap-2">
               {/* Menu Button */}

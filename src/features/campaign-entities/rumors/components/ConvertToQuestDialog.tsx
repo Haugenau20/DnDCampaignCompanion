@@ -185,7 +185,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
               {selectedRumors.map(rumor => (
                 <div
                   key={rumor.id}
-                  className="p-2 rounded-lg hover:bg-opacity-50 selectable-item"
+                  className="p-2 rounded-lg selectable-item"
                 >
                   <Typography variant="body-sm" className="font-medium">
                     {rumor.title}

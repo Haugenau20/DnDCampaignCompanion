@@ -138,9 +138,13 @@ on disk and run `npx tsc --noEmit` — before assuming either answer.
 - HTML report: `npm run test:html`
 - Single file, fast: `npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="<pattern>"`
 
-**A non-zero failure count is expected.** The behavioural suites intentionally contain failing
-tests that mark catalogued bugs (`docs/testing/bug-tracking/`). Compare against the current
-baseline before assuming you broke something — never "fix" a red test by editing it.
+**The suite is expected to be fully green — any red is a regression.** This reverses long-standing
+advice in this file, which said a non-zero failure count was normal because the behavioural suites
+carried failing bug markers. That stopped being true on 2026-07-28, when the ID-collision cluster
+(#002/#004/#009/#012) was fixed; see the Phase 4 fourth pass in `docs/testing/bug-tracking/README.md`.
+Two catalogued defects are currently pinned by tests that assert the **defective** behaviour
+(#1414, #1415), so they are green too. Never "fix" a red test by editing it — but equally, don't
+dismiss one as an expected marker without checking the tracker first.
 
 ### Verifying a change before proposing a merge
 - `npx tsc --noEmit` — type errors block the deploy, since `react-scripts build` type-checks all of `src/`
@@ -219,7 +223,7 @@ src/
 │   ├── hooks/                #   useFirebaseData, useNavigation, useSearch
 │   └── utils/
 ├── core/                     # Infrastructure — depends on nothing internal
-│   ├── components/           #   UI primitives: Button, Card, Dialog, Input, Typography
+│   ├── components/           #   UI primitives: Button, Card, Dialog, Input, Typography, Roster
 │   ├── services/             #   Firebase (auth/user/group/campaign/data), search, openai
 │   ├── types/                #   common, search, user
 │   ├── attribution/          #   the single place attribution values are built
@@ -277,9 +281,12 @@ the tree.
 - **Use test failures to improve code quality before major refactoring**
 
 ### Current State
-- **Testing Infrastructure**: Jest + React Testing Library, **3,982 tests across 180 suites**
-- **Coverage**: **91.66% statements / 92.15% lines / 85.16% functions / 83.46% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-28 on `main`)
-- **Baseline**: **7 failed / 2 skipped / 3973 passed / 3982 total across 180 suites.** All 7 failures are the deferred ID-collision markers (#002 ×2, #004 ×3, #009, #012) in the four `*Context.bugs` suites; the 2 skips are #901's, closed as testability-only. **There are no unexplained reds — any new red is a regression.** To prove "the same suites failed", run the four marker suites alone and match counts against the full run; piping a full run through `tail` discards the earlier failures' names.
+- **Testing Infrastructure**: Jest + React Testing Library, **4,229 tests across 185 suites**
+- **Coverage**: **91.96% statements / 92.42% lines / 85.77% functions / 84.05% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-31 on `design-handoff/dashboard-1a`)
+- **Baseline**: **0 failed / 2 skipped / 4227 passed / 4229 total across 185 suites.** The 2 skips are #901's, closed as testability-only. **Any red is a regression.**
+  - The previously recorded baseline of 7 failures — the ID-collision markers #002/#004/#009/#012 in the four `*Context.bugs` suites — is **obsolete**: that cluster was fixed 2026-07-28 and those four suites now pass 29/29. If you find advice anywhere telling you to tolerate reds, check `docs/testing/bug-tracking/README.md` before believing it.
+  - Measured on the `design-handoff/dashboard-1a` branch, which is ahead of `main`. On `main` expect roughly 182 suites / 4043 tests, also fully green.
+  - To prove "the same suites failed", run the suspect suites alone and match counts against the full run; piping a full run through `tail` discards the earlier failures' names.
 - **Firebase Testing**: Emulator integration available but underutilized
 
 #### A failing test is not automatically a bug
@@ -297,7 +304,7 @@ real defect.
 4. **Data Integrity**: Referential consistency, concurrent modifications, error handling
 5. **Performance Testing**: Large dataset handling, search functionality, load times
 
-### Testing Priorities (See docs/backlog/test-design-strategy.md)
+### Testing Priorities (See `docs/testing/methodology/test-design-strategy.md`)
 - **Priority 1**: Campaign entity CRUD operations and relationships
 - **Priority 2**: Note-taking and AI entity extraction workflows  
 - **Priority 3**: User management and group system functionality
@@ -319,7 +326,7 @@ real defect.
 - **Development**: Jest + React Testing Library, ESLint, PowerShell automation scripts
 - **Icons**: Lucide React (91+ usages throughout application)
 
-### Planned Advanced Features (Roadmap - See docs/backlog/deep-dive-feature-enhancements.md)
+### Planned Advanced Features (Roadmap - See `docs/architecture/migration/deep-dive-feature-enhancements.md`)
 
 #### Rich Content & Editing
 - **TipTap Editor**: Replace basic textareas with collaborative rich text editing
@@ -337,7 +344,7 @@ real defect.
 - **Semantic Search**: AI-powered content discovery and plot consistency analysis
 - **Advanced Filtering**: Cross-entity search with relevance ranking
 
-#### Third-Party Integrations (See docs/backlog/third-party-integration-analysis.md)
+#### Third-Party Integrations (See `docs/architecture/migration/third-party-integration-analysis.md`)
 - **D&D 5e SRD API**: Official spells, monsters, equipment integration
 - **Discord API**: Campaign coordination via webhooks and bot commands  
 - **Enhanced AI Services**: Multiple AI models for diverse content generation
@@ -352,7 +359,7 @@ real defect.
 ## Development Workflow (UPDATED)
 
 ### Pre-Development Requirements
-1. **Review Architecture Docs**: Study `docs/backlog/` before starting new features
+1. **Review Architecture Docs**: Study `docs/architecture/` and `docs/testing/` before starting new features
 2. **Check Migration Status**: Verify which domains have been migrated in restructuring strategy
 3. **Run Test Suite**: Ensure all tests pass before making changes
 4. **Validate Environment**: Confirm Firebase emulators and dependencies are working

@@ -1,34 +1,47 @@
 # Post-Test-Coverage Roadmap
 
-*Last updated: 2026-07-30, end of the **first emulator + browser walkthrough** — 13 commits, merged
-to `main` via PR and the branch deleted. If you are reading this in a fresh session, this work is on
-`main`; **but check the ordered deploy in [What to do next](#what-to-do-next) before assuming it is
-live** — Cloud Functions and the production Firestore rules deploy separately from the frontend and
-neither is carried by the merge.*
+*Last updated: 2026-08-01, end of the **UI-optimisation pass** on
+`claude/ui-optimization-missing-locations-nv7zph`, pushed to **`design/new-ui`** (not `main`).*
+
+> ### ⚠️ FIRST: the ordered deploy from 2026-07-30 may still be outstanding
+>
+> Section 0 of [What to do next](#what-to-do-next) describes a **three-step ordered deploy** —
+> Functions, then frontend, then production Firestore rules. Steps 1 and 3 are manual and cannot be
+> verified from inside a session. **Until step 3 is done, three live security exposures remain**:
+> private notes readable group-wide (#1408), self-promotion to group admin (#1409), and any member
+> able to mint registration tokens (#1410).
+>
+> **Confirm with the repository owner whether that deploy happened before starting anything else.**
+> No amount of UI work outranks it. The 2026-08-01 session did not touch it.
 
 This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
 
 ## ⇒ CURRENT STATE — read this block, then jump to [What to do next](#what-to-do-next)
 
-**Restructuring: complete.** All four domains plus the `shared/`/`core/` pass. Five tags on `main`.
+**Restructuring: complete.** All four domains plus the `shared`/`core` pass. Five tags on `main`.
 No file-moving work left; do not start any.
 
-**Bug tracker: 76 filed, 70 resolved, 6 open.** The tracker was **empty** at the start of
-2026-07-29. Fourteen new entries (#1400–#1413) came out of the first session to *run* the app rather
-than read it — eight of them fixed in the same session.
+**Bug tracker: 84 filed, 77 resolved, 7 open.** Open: #1402, #1405, #1407, #1413, #1420, #1421 — and
+see the deploy warning above, which is not a tracker row.
 
-**Verified baseline on `fix/campaign-delete-and-write-error-surfacing`, measured 2026-07-29:**
+**Branch state, 2026-08-01.** The last three sessions' work is on **`design/new-ui`**, which is
+**ahead of `main`**. `main` has not seen the roster redesign, the `locationId` contract, or any of
+#1414–#1421. Do not measure a baseline against `main` and conclude something regressed.
+
+**Verified baseline on `design/new-ui`, measured 2026-08-01:**
 
 | Metric | Value |
 |---|---|
-| Tests | **0 failed / 2 skipped / 4068 passed / 4070 total** |
-| Suites | **0 failed / 182 passed / 182 total** |
-| Coverage | **91.70 stmts / 83.54 branches / 85.39 funcs / 92.21 lines** (uniform 80% CI floor) |
-| `npx tsc --noEmit` | clean (root **and** `firebase/functions`) |
-| `npm run build` | succeeds |
+| Tests | **0 failed / 2 skipped / 4255 passed / 4257 total** |
+| Suites | **0 failed / 186 passed / 186 total** |
+| `./node_modules/.bin/tsc --noEmit` | clean |
+| `npm run build` | succeeds, warnings all pre-existing |
 
-*(The `main` baseline this session started from was 4043 passed / 4045 total and reproduced exactly.
-The +25 are new regression tests added with the fixes below.)*
+*(Use the **project-local** `tsc`. A bare `npx tsc` resolves a different TypeScript in this
+environment and fails on unrelated tsconfig deprecation options — it looks like a real error and is
+not one. This cost time in two separate sessions.)*
+
+*(The 2026-07-29 baseline recorded below — 4068/4070 on 182 suites — is that branch's, not this one's.)*
 
 **The suite is fully green.** The 2 skips are #901's, closed as testability-only.
 
@@ -1085,6 +1098,56 @@ because nothing in the app imports Firebase Storage.
 ---
 
 ## What to do next
+
+### 0a. Where the 2026-08-01 session left off — start here for feature work
+
+*(Section 0 below still outranks this. Check the deploy first.)*
+
+Work sits on **`design/new-ui`**. In priority order:
+
+**1. Look at it in a browser.** Nothing in the 2026-08-01 session was verified visually — gates only.
+Two changes most deserve eyes:
+  - **`RosterFilterSelect`** (`core/components/Roster.tsx`) is a native `<select>` wearing the filter
+    pills' classes. The closed control matches the pills; the **open dropdown list is browser-rendered
+    and will not**. If that reads badly, give it the `.input` token instead and accept a different
+    height. This is a known unknown, not a defect.
+  - **The two NPC forms** now use `LocationCombobox` where they had a free-text input. That changes a
+    field users type into, on both create and edit.
+
+Run it with `.\scripts\start-dev.ps1 -Action start` and regenerate data with
+`.\scripts\manage-dev-data.ps1 -Action generate`. **Do not reach for `manage-environment.ps1` or
+the Docker compose files** — see CLAUDE.md; they appear unused and cost a session real time once.
+
+**2. [#1421](bug-tracking/1421-quest-key-locations-are-free-text-not-references.md) — finish the
+location-reference work.** `Quest.keyLocations` is the last place an entity refers to a location by
+free text alone. The pattern is already established and documented; this is the natural continuation,
+and it is the largest remaining correctness item. Feature-sized because it changes an editing UX.
+
+**3. Step 2 of the `locationId` contract — the backfill, if it is even needed.** Step 1 (commit
+`d6d9847`) deliberately shipped **without** a migration: documents with no `locationId` render
+correctly through the legacy fallback and gain an id the next time anyone edits them, so the
+un-migrated population drains on its own. **Decide this with numbers, not guesses** — count how many
+production documents still lack `locationId` before considering a bulk write. It may never be worth
+the risk.
+
+**4. [#1420](bug-tracking/1420-location-card-is-dead-code.md) — delete `LocationCard`.** Trivial, but
+it moves coverage against a uniform 80% floor, so it is the owner's call rather than a drive-by.
+
+**5. [#1413](bug-tracking/1413-entity-pages-show-error-state-while-campaign-context-restores.md)** —
+still open and still the most user-visible of the remaining tracker rows: a normal reload reports
+itself as a failure for ~10 seconds. Needs a third "still resolving" state across all four entity
+contexts at once.
+
+#### Two process notes from that session, both of which changed an outcome
+
+- **Re-derive a ticket's scope before fixing it.** #1412 was filed as an NPC display bug. It was
+  actually an NPC *and* Quest bug, and Rumors was one data-entry change from breaking — the field
+  holds an id on two entities and a name on the third. The title was accurate; the blast radius was
+  not.
+- **Review what subagents produce, do not just collect their reports.** #1418's first implementation
+  matched legacy documents storing an id but not those storing a name — half the population, silently.
+  The agent's own tests passed and its report was accurate about what it had done. The gap was only
+  visible by reading the predicate against the data model.
 
 ### 0. Read this first — the 2026-07-29/30 session (first emulator + browser walkthrough)
 

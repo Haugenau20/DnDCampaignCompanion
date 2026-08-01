@@ -1,52 +1,25 @@
 // src/pages/rumors/RumorsPage.tsx
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import Typography from '../../core/components/Typography';
 import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
-import { RumorDirectory, CombineRumorsDialog, ConvertToQuestDialog, useRumors } from 'features/campaign-entities';
+import { RumorDirectory, useRumors } from 'features/campaign-entities';
 import { useAuth } from 'features/user-management';
 import { useNavigation } from 'shared/hooks/useNavigation';
-import { 
-  MessageSquare, 
-  XCircle, 
-  HelpCircle,
+import {
   Loader2,
-  Plus,
-  CheckCircle2
+  Plus
 } from 'lucide-react';
 
 const RumorsPage: React.FC = () => {
   // Auth state
   const { user } = useAuth();
-  const { rumors, isLoading, error, combineRumors, convertToQuest } = useRumors();
+  const { rumors, isLoading, error } = useRumors();
   const { navigateToPage } = useNavigation();
-  
-  // Dialog state
-  const [showCombineDialog, setShowCombineDialog] = useState(false);
-  const [showConvertDialog, setShowConvertDialog] = useState(false);
-  const [selectedRumorIds, setSelectedRumorIds] = useState<string[]>([]);
-
-  // Calculate statistics
-  const stats = useMemo(() => ({
-    total: rumors.length,
-    confirmed: rumors.filter(rumor => rumor.status === 'confirmed').length,
-    unconfirmed: rumors.filter(rumor => rumor.status === 'unconfirmed').length,
-    false: rumors.filter(rumor => rumor.status === 'false').length
-  }), [rumors]);
 
   // Handle create new rumor
   const handleCreateRumor = () => {
     navigateToPage('/rumors/create');
-  };
-
-  // Handle combine rumors submission
-  const handleCombineSubmit = async (rumorIds: string[], newRumor: Partial<any>) => {
-    return await combineRumors(rumorIds, newRumor);
-  };
-
-  // Handle convert to quest submission
-  const handleConvertSubmit = async (rumorIds: string[], questData: Partial<any>) => {
-    return await convertToQuest(rumorIds, questData);
   };
 
   if (isLoading) {
@@ -100,86 +73,10 @@ const RumorsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <MessageSquare className="w-8 h-8 mr-4 status-general" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.total}
-              </Typography>
-              <Typography color="secondary">
-                Total Rumors
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <CheckCircle2 className="w-8 h-8 mr-4 rumor-status-confirmed" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.confirmed}
-              </Typography>
-              <Typography color="secondary">
-                Confirmed
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <HelpCircle className="w-8 h-8 mr-4 rumor-status-unconfirmed" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.unconfirmed}
-              </Typography>
-              <Typography color="secondary">
-                Unconfirmed
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Content className="flex items-center justify-center p-6">
-            <XCircle className="w-8 h-8 mr-4 rumor-status-false" />
-            <div>
-              <Typography variant="h2" className="mb-1">
-                {stats.false}
-              </Typography>
-              <Typography color="secondary">
-                False
-              </Typography>
-            </div>
-          </Card.Content>
-        </Card>
-      </div>
-
       {/* Rumor Directory */}
-      <RumorDirectory 
-        rumors={rumors} 
-        isLoading={isLoading} 
-      />
-
-      {/* Dialogs */}
-      <CombineRumorsDialog
-        open={showCombineDialog}
-        onClose={() => setShowCombineDialog(false)}
-        rumorIds={selectedRumorIds}
+      <RumorDirectory
         rumors={rumors}
-        onCombine={handleCombineSubmit}
-      />
-      
-      <ConvertToQuestDialog
-        open={showConvertDialog}
-        onClose={() => setShowConvertDialog(false)}
-        rumorIds={selectedRumorIds}
-        rumors={rumors}
-        onConvert={handleConvertSubmit}
+        isLoading={isLoading}
       />
     </div>
   );

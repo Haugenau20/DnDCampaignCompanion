@@ -104,17 +104,10 @@ module.exports = {
       outlineColor: {
         focus: 'var(--input-border-focus)',
       },
-      // Add hover colors
-      hoverColors: {
-        light: 'var(--hover-light)',
-        medium: 'var(--hover-medium)',
-        'button-primary': 'var(--button-primary-hover)',
-        'button-secondary': 'var(--button-secondary-hover)',
-        'button-link': 'var(--button-link-hover)',
-        'button-outline': 'var(--button-outline-hover)',
-        'button-ghost': 'var(--button-ghost-hover)',
-        'delete-button': 'var(--delete-button-hover)',
-      },
+      // NOTE: hover is a Tailwind *variant*, not a colour namespace, so there is
+      // no `hoverColors` theme key — a block here generated zero utilities and had
+      // zero consumers. The --hover-* / --*-hover variables it listed are alive and
+      // applied directly in themes/css/components.css (e.g. .button-primary:hover).
     },
   },
   plugins: [

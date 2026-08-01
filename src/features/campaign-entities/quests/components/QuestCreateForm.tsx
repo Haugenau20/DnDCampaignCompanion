@@ -63,6 +63,7 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
       title: initialData.title || '',
       description: initialData.description || '',
       location: initialData.location || '',
+      locationId: initialData.locationId || '',
     } : {}
   });
 
@@ -139,6 +140,7 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
         complications: formData.complications || [],
         rewards: formData.rewards || [],
         location: formData.location || '',
+        locationId: formData.locationId || '',
         levelRange: formData.levelRange || '',
       };
 

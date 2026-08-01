@@ -6,6 +6,8 @@ import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { generateUniqueEntityId } from 'core/utils/entity-id';
+import { referencesLocation } from '../../locations/utils/location-display';
+import { Location } from '../../locations/types';
 
 // Context interface
 interface QuestContextValue {
@@ -15,7 +17,7 @@ interface QuestContextValue {
   error: string | null;
   getQuestById: (id: string) => Quest | undefined;
   getQuestsByStatus: (status: QuestStatus) => Quest[];
-  getQuestsByLocation: (locationId: string) => Quest[];
+  getQuestsByLocation: (location: Location) => Quest[];
   getQuestsByNPC: (npcId: string) => Quest[];
   updateQuestStatus: (questId: string, status: QuestStatus) => Promise<void>;
   updateQuestObjective: (questId: string, objectiveId: string, completed: boolean) => Promise<void>;
@@ -56,11 +58,28 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return quests.filter(quest => quest.status === status);
   }, [quests]);
 
-  // Get quests by location
-  const getQuestsByLocation = useCallback((locationId: string) => {
-    return quests.filter(quest => 
-      quest.location === locationId || 
-      quest.keyLocations?.some(location => location.name === locationId)
+  // Get quests by location. Matches the canonical `locationId` first,
+  // falling back to a case-insensitive comparison against the legacy
+  // free-text `location` -- checked against both the Location's id and its
+  // name, since an un-migrated document's `location` may hold either -- for
+  // documents written before `locationId` existed. See the contract on
+  // `NPC.location` and `referencesLocation`'s doc comment.
+  //
+  // Takes the whole `Location`, not a bare id: resolving a legacy name back
+  // to an id would need the full locations array, which not every consumer
+  // of this helper is guaranteed to have (see `referencesLocation`'s doc
+  // comment; `NPCContext`'s sibling helper is the concrete case that needs
+  // it). `keyLocations` is a separate concept -- named locations mentioned in
+  // the quest write-up, not a reference to a Location record -- so it keeps
+  // its own comparison against the Location's `name` rather than joining the
+  // id/legacy-text fallback above; case-insensitive to match everything else
+  // here.
+  const getQuestsByLocation = useCallback((location: Location) => {
+    return quests.filter(quest =>
+      referencesLocation(quest, location) ||
+      quest.keyLocations?.some(
+        keyLocation => keyLocation.name.toLowerCase() === location.name.toLowerCase()
+      )
     );
   }, [quests]);
 

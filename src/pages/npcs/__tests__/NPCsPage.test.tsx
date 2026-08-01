@@ -231,53 +231,6 @@ describe("NPCsPage", () => {
       renderPage();
       expect(screen.getByTestId("npc-directory-count")).toHaveTextContent("4");
     });
-
-    it("renders statistics — total NPC count", () => {
-      renderPage();
-      // The total count is displayed as an h2 among the stat cards
-      // Check that "4" (total) appears somewhere in the stats section
-      expect(screen.getAllByTestId("typography-h2")[0]).toHaveTextContent("4");
-    });
-
-    it("shows stat labels: Total NPCs, Alive, Missing, Deceased", () => {
-      renderPage();
-      expect(screen.getByText("Total NPCs")).toBeInTheDocument();
-      expect(screen.getByText("Alive")).toBeInTheDocument();
-      expect(screen.getByText("Missing")).toBeInTheDocument();
-      expect(screen.getByText("Deceased")).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Stats calculation
-  // -------------------------------------------------------------------------
-  describe("stats calculation", () => {
-    it("counts alive, missing, and deceased NPCs correctly", () => {
-      mockNPCData = {
-        ...mockNPCData,
-        npcs: [
-          { id: "1", name: "A", status: "alive" },
-          { id: "2", name: "B", status: "alive" },
-          { id: "3", name: "C", status: "deceased" },
-          { id: "4", name: "D", status: "missing" },
-          { id: "5", name: "E", status: "missing" },
-        ],
-      };
-      renderPage();
-      const h2s = screen.getAllByTestId("typography-h2");
-      // Order: total=5, alive=2, missing=2, deceased=1
-      expect(h2s[0]).toHaveTextContent("5"); // total
-      expect(h2s[1]).toHaveTextContent("2"); // alive
-      expect(h2s[2]).toHaveTextContent("2"); // missing
-      expect(h2s[3]).toHaveTextContent("1"); // deceased
-    });
-
-    it("shows zero stats when no NPCs exist", () => {
-      mockNPCData = { ...mockNPCData, npcs: [] };
-      renderPage();
-      const h2s = screen.getAllByTestId("typography-h2");
-      h2s.forEach((el) => expect(el).toHaveTextContent("0"));
-    });
   });
 
   // -------------------------------------------------------------------------

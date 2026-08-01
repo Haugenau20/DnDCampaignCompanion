@@ -133,8 +133,21 @@ const RumorForm: React.FC<RumorFormProps> = ({
 
   // Handle location selection
   const handleLocationSelect = (locationId: string) => {
+    // The "Select a location" placeholder option carries value '' -- clear both fields
+    // rather than leaving a stale locationId/location pair behind. Before this fix,
+    // choosing the placeholder found no match below and silently left whatever was
+    // previously selected in place: a stale id paired with a blank-looking selection.
+    if (!locationId) {
+      setFormData(prev => ({
+        ...prev,
+        locationId: '',
+        location: ''
+      }));
+      return;
+    }
+
     const selectedLocation = locations.find(loc => loc.id === locationId);
-    
+
     if (selectedLocation) {
       setFormData(prev => ({
         ...prev,

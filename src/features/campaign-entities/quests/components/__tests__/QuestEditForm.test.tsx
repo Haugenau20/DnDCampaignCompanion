@@ -30,6 +30,7 @@ jest.mock('../../../locations/context/LocationContext', () => ({
 
 const { useQuests } = require('../../context/QuestContext');
 const { useNPCs } = require('../../../npcs/context/NPCContext');
+const { useLocations } = require('../../../locations/context/LocationContext');
 
 function setupMocks({
   updateQuest = mockUpdateQuest,
@@ -257,6 +258,79 @@ describe('QuestEditForm', () => {
           })
         );
       });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // locationId capture (LocationCombobox wiring)
+  // -------------------------------------------------------------------------
+  describe('locationId capture', () => {
+    beforeEach(() => {
+      (useLocations as jest.Mock).mockReturnValue({
+        locations: [
+          { id: 'loc-1', name: 'Ironhold' },
+          { id: 'loc-2', name: 'Shadowfen' },
+        ],
+      });
+    });
+
+    afterEach(() => {
+      (useLocations as jest.Mock).mockReturnValue({ locations: [] });
+    });
+
+    test('should write both locationId and location when a real Location is selected', async () => {
+      render(<QuestEditForm quest={makeQuest({ location: '' })} />);
+      // Textbox order: Title(0), Description(1), Location(2), Level Range(3), Background(4), objective(5)...
+      const locationInput = screen.getAllByRole('textbox')[2];
+      fireEvent.change(locationInput, { target: { value: 'Ironhold' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockUpdateQuest).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Ironhold', locationId: 'loc-1' })
+        );
+      });
+    });
+
+    test('should write free text and leave locationId empty when text matches no Location', async () => {
+      render(<QuestEditForm quest={makeQuest({ location: '' })} />);
+      const locationInput = screen.getAllByRole('textbox')[2];
+      fireEvent.change(locationInput, { target: { value: 'Somewhere in Mirkwood' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockUpdateQuest).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Somewhere in Mirkwood', locationId: '' })
+        );
+      });
+    });
+
+    test('should clear a previously-set locationId when switching to free text (regression)', async () => {
+      render(<QuestEditForm quest={makeQuest({ location: 'Ironhold', locationId: 'loc-1' })} />);
+      const locationInput = screen.getAllByRole('textbox')[2];
+      fireEvent.change(locationInput, { target: { value: 'Somewhere else entirely' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockUpdateQuest).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Somewhere else entirely', locationId: '' })
+        );
+      });
+    });
+
+    test('should load and submit an un-migrated Quest (location set, no locationId) without inventing an id', async () => {
+      const quest = makeQuest({ location: 'Ironhold' });
+      delete (quest as any).locationId;
+      render(<QuestEditForm quest={quest} />);
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockUpdateQuest).toHaveBeenCalledTimes(1);
+      });
+
+      const payload = mockUpdateQuest.mock.calls[0][0];
+      expect(payload.location).toBe('Ironhold');
+      expect(payload.locationId).toBeUndefined();
     });
   });
 

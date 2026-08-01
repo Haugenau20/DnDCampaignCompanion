@@ -31,6 +31,11 @@ jest.mock('core/utils/user-utils', () => ({
   getActiveCharacterName: jest.fn(() => null),
 }));
 
+// LocationCombobox (used for the Location field) reads locations from LocationContext.
+jest.mock('../../../locations/context/LocationContext', () => ({
+  useLocations: jest.fn(() => ({ locations: [] })),
+}));
+
 // ---------------------------------------------------------------------------
 // Hook setup helpers
 // ---------------------------------------------------------------------------
@@ -38,6 +43,7 @@ jest.mock('core/utils/user-utils', () => ({
 const { useNPCs } = require('features/campaign-entities/npcs/context/NPCContext');
 const { useQuests } = require('../../../quests/context/QuestContext');
 const { useAuth, useUser } = require('@/features/user-management');
+const { useLocations } = require('../../../locations/context/LocationContext');
 
 function setupMocks({
   updateNPC = mockUpdateNPC,
@@ -435,6 +441,74 @@ describe('NPCEditForm', () => {
           })
         );
       });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // locationId capture (LocationCombobox wiring)
+  // -------------------------------------------------------------------------
+  describe('locationId capture', () => {
+    beforeEach(() => {
+      (useLocations as jest.Mock).mockReturnValue({
+        locations: [
+          { id: 'loc-1', name: 'Ironhold' },
+          { id: 'loc-2', name: 'Shadowfen' },
+        ],
+      });
+    });
+
+    test('should write both locationId and location when a real Location is selected', async () => {
+      render(<NPCEditForm npc={makeNPC({ location: '' })} existingNPCs={[]} />);
+      const locationInput = screen.getAllByRole('textbox')[4];
+      fireEvent.change(locationInput, { target: { value: 'Ironhold' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Ironhold', locationId: 'loc-1' })
+        );
+      });
+    });
+
+    test('should write free text and leave locationId empty when text matches no Location', async () => {
+      render(<NPCEditForm npc={makeNPC({ location: '' })} existingNPCs={[]} />);
+      const locationInput = screen.getAllByRole('textbox')[4];
+      fireEvent.change(locationInput, { target: { value: 'Somewhere in Mirkwood' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Somewhere in Mirkwood', locationId: '' })
+        );
+      });
+    });
+
+    test('should clear a previously-set locationId when switching to free text (regression)', async () => {
+      render(<NPCEditForm npc={makeNPC({ location: 'Ironhold', locationId: 'loc-1' })} existingNPCs={[]} />);
+      const locationInput = screen.getAllByRole('textbox')[4];
+      fireEvent.change(locationInput, { target: { value: 'Somewhere else entirely' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Somewhere else entirely', locationId: '' })
+        );
+      });
+    });
+
+    test('should load and submit an un-migrated NPC (location set, no locationId) without inventing an id', async () => {
+      const npc = makeNPC({ location: 'Ironhold' });
+      delete (npc as any).locationId;
+      render(<NPCEditForm npc={npc} existingNPCs={[]} />);
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockUpdateNPC).toHaveBeenCalledTimes(1);
+      });
+
+      const payload = mockUpdateNPC.mock.calls[0][0];
+      expect(payload.location).toBe('Ironhold');
+      expect(payload.locationId).toBeUndefined();
     });
   });
 

@@ -33,7 +33,19 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return rumors.filter(rumor => rumor.status === status);
   }, [rumors]);
 
-  // Get rumors by location
+  // Get rumors by location.
+  //
+  // Deliberately matches `locationId` only, with no legacy `location`
+  // fallback -- unlike `NPCContext.getNPCsByLocation` and
+  // `QuestContext.getQuestsByLocation`. For NPCs and Quests, `location` on an
+  // un-migrated document may itself hold a location *id* (the sample-data
+  // generators wrote it that way), so comparing the incoming id against that
+  // free text is a meaningful, if imperfect, fallback. Rumors never had that
+  // ambiguity: their `location` has always held a display *name* ("Rivendell"),
+  // never an id, so comparing an incoming location id against it would only
+  // ever match by coincidence (a location whose name happens to equal its own
+  // id-shaped id). Adding the same fallback here would risk false matches
+  // without recovering any real ones, so this stays as it was.
   const getRumorsByLocation = useCallback((locationId: string) => {
     return rumors.filter(rumor => rumor.locationId === locationId);
   }, [rumors]);

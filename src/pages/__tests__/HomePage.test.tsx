@@ -54,6 +54,9 @@ jest.mock("shared/utils/attribution-utils", () => ({
 // ---------------------------------------------------------------------------
 // Child component / layout mocks
 // ---------------------------------------------------------------------------
+// Both layouts render the `viewToggle` HomePage hands them — it lives in the page
+// header rather than on a navigation row of its own, so the mocks have to render it
+// for the switch to be reachable at all.
 jest.mock("pages/layouts/dashboard/DashboardLayout", () => ({
   __esModule: true,
   default: (props: any) => (
@@ -66,7 +69,9 @@ jest.mock("pages/layouts/dashboard/DashboardLayout", () => ({
       data-chapter-count={props.chapters?.length}
       data-location-count={props.locations?.length}
       data-activity-count={props.activities?.length}
-    />
+    >
+      {props.viewToggle}
+    </div>
   ),
 }));
 
@@ -76,7 +81,9 @@ jest.mock("pages/layouts/journal/JournalLayout", () => ({
     <div
       data-testid="journal-layout"
       data-loading={String(props.loading)}
-    />
+    >
+      {props.viewToggle}
+    </div>
   ),
 }));
 
@@ -264,18 +271,23 @@ describe("HomePage", () => {
       expect(screen.queryByTestId("journal-layout")).not.toBeInTheDocument();
     });
 
-    it("renders layout toggle button", () => {
+    it("offers both views as a segmented control, not a single swap button", () => {
       renderPage();
-      expect(
-        screen.getByTestId("button-switch-to-journal-view")
-      ).toBeInTheDocument();
+      // The old control was one button naming only the view you were not on.
+      expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Journal" })).toBeInTheDocument();
     });
 
-    it("toggle button shows 'Switch to Journal View' when on dashboard", () => {
+    it("marks the current view as pressed", () => {
       renderPage();
-      expect(
-        screen.getByTestId("button-switch-to-journal-view")
-      ).toHaveTextContent("Switch to Journal View");
+      expect(screen.getByRole("button", { name: "Dashboard" })).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+      expect(screen.getByRole("button", { name: "Journal" })).toHaveAttribute(
+        "aria-pressed",
+        "false"
+      );
     });
   });
 
@@ -283,27 +295,37 @@ describe("HomePage", () => {
   // Layout toggle
   // -------------------------------------------------------------------------
   describe("layout toggle", () => {
-    it("switches to JournalLayout when toggle button is clicked", () => {
+    it("switches to JournalLayout when Journal is clicked", () => {
       renderPage();
-      fireEvent.click(screen.getByTestId("button-switch-to-journal-view"));
+      fireEvent.click(screen.getByRole("button", { name: "Journal" }));
       expect(screen.getByTestId("journal-layout")).toBeInTheDocument();
       expect(screen.queryByTestId("dashboard-layout")).not.toBeInTheDocument();
     });
 
-    it("toggle button shows 'Switch to Dashboard View' when on journal", () => {
+    it("keeps the toggle reachable from the journal view", () => {
       renderPage();
-      fireEvent.click(screen.getByTestId("button-switch-to-journal-view"));
-      expect(
-        screen.getByTestId("button-switch-to-dashboard-view")
-      ).toHaveTextContent("Switch to Dashboard View");
+      fireEvent.click(screen.getByRole("button", { name: "Journal" }));
+      // Regression guard: the toggle moved out of HomePage's own markup into the
+      // layouts, so a layout that fails to render it would trap the user.
+      expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Journal" })).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
     });
 
-    it("switches back to DashboardLayout when toggle button is clicked again", () => {
+    it("switches back to DashboardLayout when Dashboard is clicked again", () => {
       renderPage();
-      fireEvent.click(screen.getByTestId("button-switch-to-journal-view"));
-      fireEvent.click(screen.getByTestId("button-switch-to-dashboard-view"));
+      fireEvent.click(screen.getByRole("button", { name: "Journal" }));
+      fireEvent.click(screen.getByRole("button", { name: "Dashboard" }));
       expect(screen.getByTestId("dashboard-layout")).toBeInTheDocument();
       expect(screen.queryByTestId("journal-layout")).not.toBeInTheDocument();
+    });
+
+    it("re-selecting the current view is a no-op rather than a toggle", () => {
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Dashboard" }));
+      expect(screen.getByTestId("dashboard-layout")).toBeInTheDocument();
     });
   });
 

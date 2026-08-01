@@ -8,18 +8,22 @@ export const lightTheme: Theme = {
     secondary: '#1E40AF', // Deep, rich blue for contrast
     accent: '#3B82F6', // Bright sky blue for highlights
     background: {
-      primary: '#F8FAFD', // Soft, neutral background with a hint of blue
-      secondary: '#E5EDF8', // Light blue-gray for contrast sections
-      accent: '#D6E4F5', // Subtle blue tint for slight emphasis
+      primary: '#F7F9FC', // Soft, neutral background with a hint of blue
+      secondary: '#EBF0F7', // Light blue-gray for contrast sections
+      accent: '#E4EBF5', // Subtle blue tint for slight emphasis
     },
     text: {
       primary: '#0F172A', // Deep navy for readability
-      secondary: '#1E3A8A', // Bold blue for subtext
+      // Slate rather than blue-900: subtext in blue competed with links and
+      // primary actions for the same "this is interactive" signal.
+      secondary: '#5A6B87', // Muted slate for subtext
       accent: '#2563EB', // Vivid blue for emphasized text
     },
     card: {
       background: '#FFFFFF', // Clean white for modern cards
-      border: '#93C5FD', // Soft blue border for subtle depth
+      // A saturated blue hairline on white reads as an interactive outline, which
+      // made every card look selected. Structure should be quieter than action.
+      border: '#E4E9F2', // Neutral hairline for structure
     },
     button: {
       primary: {
@@ -57,8 +61,11 @@ export const lightTheme: Theme = {
       statusFailed: '#DC2626', // Bold red for errors
       statusUnknown: '#e1b737', // Golden yellow for unknown status
       statusText: '#FFFFFF', // White text for status indicators
-      headerBackground: '#3B82F6', // Stronger, more vibrant blue header
-      footerBackground: '#E5EDF8', // Soft blue-gray footer for balance
+      // The header now carries navigation, campaign context and search in one bar.
+      // A saturated blue field behind all of that fought with the primary actions
+      // inside it, so the bar is a surface and the accent is reserved for actions.
+      headerBackground: '#FFFFFF', // Neutral surface for the single app bar
+      footerBackground: '#EBF0F7', // Soft blue-gray footer for balance
       hoverLight: '#D6E4F5', // Light blue for hover effects
       hoverMedium: '#93C5FD', // Stronger blue hover effect
       iconBackground: '#D6E4F5', // Soft blue for icons
@@ -111,7 +118,10 @@ export const lightTheme: Theme = {
   fonts: {
     primary: 'Inter, sans-serif', // Modern sans-serif for primary text
     secondary: 'system-ui, sans-serif', // System default sans-serif for secondary text
-    heading: 'Inter, sans-serif', // Modern sans-serif for headings
+    // A serif here is what makes --font-heading mean something. Setting it to Inter
+    // made the token identical to `primary`, so headings and body were one typeface
+    // at four sizes and nothing led the page.
+    heading: 'Newsreader, Georgia, serif', // Serif for headings
   },
   borders: {
     radius: {

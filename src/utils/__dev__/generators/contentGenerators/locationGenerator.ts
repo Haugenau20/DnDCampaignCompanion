@@ -161,6 +161,28 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       modifiedBy: dmUid,
       modifiedByUsername: 'DungeonMaster',
       dateModified: formattedDate
+    },
+    {
+      id: 'edoras',
+      name: 'Edoras',
+      type: 'city' as LocationType,
+      status: 'known' as LocationStatus,
+      description: 'The capital of Rohan, a fortified city built atop a hill and home to the Golden Hall of Meduseld.',
+      parentId: null,
+      features: ['Golden Hall of Meduseld', 'Royal barrow-mounds', 'Fortified walls', 'Thatched-roof houses'],
+      connectedNPCs: ['theoden'],
+      relatedQuests: ['defeat-saruman'],
+      notes: [
+        { date: formattedDate, text: 'Seat of King Théoden, freed from Saruman\'s influence by Gandalf.' }
+      ],
+      tags: ['rohan', 'capital', 'fortress'],
+      lastVisited: null,
+      createdBy: dmUid,
+      createdByUsername: 'DungeonMaster',
+      dateAdded: formattedDate,
+      modifiedBy: dmUid,
+      modifiedByUsername: 'DungeonMaster',
+      dateModified: formattedDate
     }
   ];
 };
@@ -168,6 +190,28 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
 // Helper function to get locations for The Hobbit campaign
 const getHobbitLocations = (dmUid: string, formattedDate: string) => {
   return [
+    {
+      id: 'hobbiton',
+      name: 'Hobbiton',
+      type: 'village' as LocationType,
+      status: 'explored' as LocationStatus,
+      description: 'A peaceful village of hobbit-holes in the Shire, home to Bag End and the Baggins family.',
+      parentId: null,
+      features: ['Party Tree', 'The Water', 'Hobbit-holes', 'The Hill'],
+      connectedNPCs: ['bilbo'],
+      relatedQuests: ['unexpected-journey'],
+      notes: [
+        { date: formattedDate, text: 'Where the company gathered before setting off on their journey.' }
+      ],
+      tags: ['shire', 'hobbit village', 'peaceful'],
+      lastVisited: formattedDate,
+      createdBy: dmUid,
+      createdByUsername: 'DungeonMaster',
+      dateAdded: formattedDate,
+      modifiedBy: dmUid,
+      modifiedByUsername: 'DungeonMaster',
+      dateModified: formattedDate
+    },
     {
       id: 'bag-end',
       name: 'Bag End',
@@ -270,6 +314,50 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
         { date: formattedDate, text: 'The destination of the company\'s quest and the ancestral home of Thorin\'s people.' }
       ],
       tags: ['mountain', 'dwarf kingdom', 'treasure', 'dragon'],
+      lastVisited: null,
+      createdBy: dmUid,
+      createdByUsername: 'DungeonMaster',
+      dateAdded: formattedDate,
+      modifiedBy: dmUid,
+      modifiedByUsername: 'DungeonMaster',
+      dateModified: formattedDate
+    },
+    {
+      id: 'beorns-hall',
+      name: 'Beorn\'s Hall',
+      type: 'building' as LocationType,
+      status: 'visited' as LocationStatus,
+      description: 'The wooden hall of the skin-changer Beorn, situated between the Misty Mountains and Mirkwood.',
+      parentId: null,
+      features: ['Great wooden hall', 'Beehives', 'Livestock pens', 'Garden'],
+      connectedNPCs: ['beorn'],
+      relatedQuests: ['unexpected-journey'],
+      notes: [
+        { date: formattedDate, text: 'The company rested here and restocked supplies before entering Mirkwood.' }
+      ],
+      tags: ['refuge', 'skin-changer', 'wilderness'],
+      lastVisited: formattedDate,
+      createdBy: dmUid,
+      createdByUsername: 'DungeonMaster',
+      dateAdded: formattedDate,
+      modifiedBy: dmUid,
+      modifiedByUsername: 'DungeonMaster',
+      dateModified: formattedDate
+    },
+    {
+      id: 'rhosgobel',
+      name: 'Rhosgobel',
+      type: 'building' as LocationType,
+      status: 'known' as LocationStatus,
+      description: 'The rustic home of Radagast the Brown, on the edge of Mirkwood.',
+      parentId: null,
+      features: ['Ramshackle dwelling', 'Animal burrows', 'Overgrown garden'],
+      connectedNPCs: ['radagast'],
+      relatedQuests: ['unexpected-journey'],
+      notes: [
+        { date: formattedDate, text: 'Home to Radagast and the many creatures he tends.' }
+      ],
+      tags: ['wizard', 'nature', 'wilderness'],
       lastVisited: null,
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -393,6 +481,28 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       modifiedBy: dmUid,
       modifiedByUsername: 'DungeonMaster',
       dateModified: formattedDate
+    },
+    {
+      id: 'doriath',
+      name: 'Doriath',
+      type: 'region' as LocationType,
+      status: 'known' as LocationStatus,
+      description: 'The hidden woodland realm of King Thingol and Melian, protected by the Girdle of Melian.',
+      parentId: 'beleriand',
+      features: ['Menegroth', 'The Girdle of Melian', 'Neldoreth forest', 'Esgalduin river'],
+      connectedNPCs: ['thingol', 'luthien'],
+      relatedQuests: ['quest-for-silmaril'],
+      notes: [
+        { date: formattedDate, text: 'Protected by an enchanted barrier that kept out all but the most determined intruders.' }
+      ],
+      tags: ['hidden', 'elven kingdom', 'enchanted'],
+      lastVisited: null,
+      createdBy: dmUid,
+      createdByUsername: 'DungeonMaster',
+      dateAdded: formattedDate,
+      modifiedBy: dmUid,
+      modifiedByUsername: 'DungeonMaster',
+      dateModified: formattedDate
     }
   ];
 };
@@ -502,6 +612,28 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
         { date: formattedDate, text: 'Location known only to trusted Rangers and allies.' }
       ],
       tags: ['secret', 'base', 'rangers'],
+      lastVisited: formattedDate,
+      createdBy: dmUid,
+      createdByUsername: 'DungeonMaster',
+      dateAdded: formattedDate,
+      modifiedBy: dmUid,
+      modifiedByUsername: 'DungeonMaster',
+      dateModified: formattedDate
+    },
+    {
+      id: 'rivendell',
+      name: 'Rivendell',
+      type: 'city' as LocationType,
+      status: 'visited' as LocationStatus,
+      description: 'The elven refuge where Elrond raised the young Aragorn as his foster son.',
+      parentId: null,
+      features: ['Last Homely House', 'Elven archives', 'Waterfalls', 'Council chamber'],
+      connectedNPCs: ['elrond', 'arwen'],
+      relatedQuests: ['lost-heritage'],
+      notes: [
+        { date: formattedDate, text: 'Where Aragorn was fostered as "Estel" and learned of his true heritage.' }
+      ],
+      tags: ['elven', 'haven', 'wisdom'],
       lastVisited: formattedDate,
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',

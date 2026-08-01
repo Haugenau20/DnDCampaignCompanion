@@ -159,8 +159,11 @@
 
 /* ====== LIGHT THEME SPECIFIC EFFECTS ====== */
 
+/* The light header is now a neutral surface rather than a saturated blue field, so
+   the title takes the normal heading colour instead of being inverted to sit on
+   blue. */
 [data-theme="light"] .header-title {
-  color: var(--bg-primary);
+  color: var(--heading-color);
 }
 
 /* Light theme card hover */

@@ -138,19 +138,52 @@ describe('TableView', () => {
   // Sorting indicators
   // -------------------------------------------------------------------------
   describe('sorting indicators', () => {
-    test('shows ArrowUpDown icon on the "Ch #" column when sortField=order', () => {
-      const { container } = render(
-        <TableView {...defaultProps({ sortField: 'order' })} />
+    test('marks the sorted column with aria-sort and leaves the others "none"', () => {
+      render(
+        <TableView {...defaultProps({ sortField: 'order', sortDirection: 'asc' })} />
       );
-      // The sorted column header gets the `typography` class
-      const orderTh = container.querySelector('th.typography, th[class*="typography"]');
-      expect(orderTh).not.toBeNull();
+      expect(screen.getByText('Ch #').closest('th')).toHaveAttribute(
+        'aria-sort',
+        'ascending'
+      );
+      expect(screen.getByText('Title').closest('th')).toHaveAttribute(
+        'aria-sort',
+        'none'
+      );
     });
 
-    test('does NOT show sort icon on "Title" column when sortField=order', () => {
+    test('aria-sort reflects the sort direction', () => {
+      const { rerender } = render(
+        <TableView {...defaultProps({ sortField: 'title', sortDirection: 'asc' })} />
+      );
+      expect(screen.getByText('Title').closest('th')).toHaveAttribute(
+        'aria-sort',
+        'ascending'
+      );
+
+      // sortDirection used to be declared and passed but never destructured, so the
+      // indicator could not distinguish asc from desc.
+      rerender(
+        <TableView {...defaultProps({ sortField: 'title', sortDirection: 'desc' })} />
+      );
+      expect(screen.getByText('Title').closest('th')).toHaveAttribute(
+        'aria-sort',
+        'descending'
+      );
+    });
+
+    test('every sortable header is a keyboard-reachable button', () => {
       render(<TableView {...defaultProps({ sortField: 'order' })} />);
-      // The title header text should still be present
-      expect(screen.getByText('Title')).toBeInTheDocument();
+      for (const label of ['Ch #', 'Title', 'Last Updated']) {
+        expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+      }
+    });
+
+    test('keyboard activation of a header triggers the sort', () => {
+      const onSort = jest.fn();
+      render(<TableView {...defaultProps({ onSort })} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Title' }));
+      expect(onSort).toHaveBeenCalledWith('title');
     });
   });
 

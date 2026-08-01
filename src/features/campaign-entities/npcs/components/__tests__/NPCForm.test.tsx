@@ -36,6 +36,11 @@ jest.mock('core/utils/user-utils', () => ({
   getActiveCharacterName: jest.fn(() => null),
 }));
 
+// LocationCombobox (used for the Location field) reads locations from LocationContext.
+jest.mock('../../../locations/context/LocationContext', () => ({
+  useLocations: jest.fn(() => ({ locations: [] })),
+}));
+
 // ---------------------------------------------------------------------------
 // Hook setup helpers
 // ---------------------------------------------------------------------------
@@ -44,6 +49,7 @@ const { useNPCs } = require('features/campaign-entities/npcs/context/NPCContext'
 const { useNotes } = require('features/collaboration');
 const { useQuests } = require('../../../quests/context/QuestContext');
 const { useAuth, useUser } = require('@/features/user-management');
+const { useLocations } = require('../../../locations/context/LocationContext');
 
 function setupMocks({
   addNPC = mockAddNPC,
@@ -562,6 +568,76 @@ describe('NPCForm', () => {
       });
 
       expect(onSuccess).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // locationId capture (LocationCombobox wiring)
+  // -------------------------------------------------------------------------
+  describe('locationId capture', () => {
+    beforeEach(() => {
+      (useLocations as jest.Mock).mockReturnValue({
+        locations: [
+          { id: 'loc-1', name: 'Ironhold' },
+          { id: 'loc-2', name: 'Shadowfen' },
+        ],
+      });
+    });
+
+    test('should write both locationId and location when a real Location is selected', async () => {
+      render(<NPCForm existingNPCs={[]} />);
+      fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'Aldric' } }); // Name
+      const locationInput = screen.getAllByRole('textbox')[4];
+      fireEvent.change(locationInput, { target: { value: 'Ironhold' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockAddNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Ironhold', locationId: 'loc-1' })
+        );
+      });
+    });
+
+    test('should write free text and leave locationId empty when text matches no Location', async () => {
+      render(<NPCForm existingNPCs={[]} />);
+      fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'Aldric' } }); // Name
+      const locationInput = screen.getAllByRole('textbox')[4];
+      fireEvent.change(locationInput, { target: { value: 'Somewhere in Mirkwood' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockAddNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Somewhere in Mirkwood', locationId: '' })
+        );
+      });
+    });
+
+    test('should clear a previously-set locationId when switching to free text (regression)', async () => {
+      render(<NPCForm existingNPCs={[]} />);
+      fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'Aldric' } }); // Name
+      const locationInput = screen.getAllByRole('textbox')[4];
+      // First select a real location.
+      fireEvent.change(locationInput, { target: { value: 'Ironhold' } });
+      // Then overwrite it with free text matching nothing.
+      fireEvent.change(locationInput, { target: { value: 'Somewhere else entirely' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockAddNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Somewhere else entirely', locationId: '' })
+        );
+      });
+    });
+
+    test('should not invent a locationId for initialData carrying only a legacy location string', async () => {
+      render(<NPCForm existingNPCs={[]} initialData={{ name: 'Aldric', location: 'Ironhold' }} />);
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockAddNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Ironhold', locationId: '' })
+        );
+      });
     });
   });
 

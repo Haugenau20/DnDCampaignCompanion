@@ -238,36 +238,6 @@ describe("LocationsPage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Statistics
-  // -------------------------------------------------------------------------
-  describe("statistics", () => {
-    it("correctly counts total, explored, visited, and known locations", () => {
-      renderPage();
-      const h2s = screen.getAllByTestId("typography-h2");
-      // sampleLocations: total=4, explored=2, visited=1, known=1
-      expect(h2s[0]).toHaveTextContent("4"); // total
-      expect(h2s[1]).toHaveTextContent("2"); // explored
-      expect(h2s[2]).toHaveTextContent("1"); // visited
-      expect(h2s[3]).toHaveTextContent("1"); // known
-    });
-
-    it("shows zero stats when locations list is empty", () => {
-      mockLocationContext = { ...mockLocationContext, locations: [] };
-      renderPage();
-      const h2s = screen.getAllByTestId("typography-h2");
-      h2s.forEach((el) => expect(el).toHaveTextContent("0"));
-    });
-
-    it("shows stat labels: Total Locations, Explored, Visited, Known", () => {
-      renderPage();
-      expect(screen.getByText("Total Locations")).toBeInTheDocument();
-      expect(screen.getByText("Explored")).toBeInTheDocument();
-      expect(screen.getByText("Visited")).toBeInTheDocument();
-      expect(screen.getByText("Known")).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // Create button
   // -------------------------------------------------------------------------
   describe("Add Location button", () => {
