@@ -1,6 +1,7 @@
 // functions/src/userManagement/removeUserFromGroup.ts
 import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import {rethrowHttpsError} from "../shared/httpsErrors";
 
 export const removeUserFromGroup = functions.onCall(
   {
@@ -119,8 +120,8 @@ export const removeUserFromGroup = functions.onCall(
       };
     } catch (error) {
       console.error("Error removing user from group:", error);
-      throw new functions.HttpsError(
-        "internal",
+      rethrowHttpsError(
+        error,
         `Failed to remove user: ${
           error instanceof Error ? error.message : "Unknown error"
         }`

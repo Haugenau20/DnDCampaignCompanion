@@ -3,6 +3,7 @@ import * as functions from "firebase-functions/v2/https";
 import { HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import OpenAI from "openai";
+import {rethrowHttpsError} from "./shared/httpsErrors";
 
 // Types matching your existing OpenAI types
 interface ExtractEntitiesRequest {
@@ -344,11 +345,8 @@ export const getUsageStatus = functions.onCall(
 
     } catch (error) {
       console.error("Get usage status error:", error);
-      
-      if (error instanceof HttpsError) {
-        throw error;
-      }
-      throw new HttpsError("internal", "Failed to get usage status");
+
+      rethrowHttpsError(error, "Failed to get usage status");
     }
   }
 );
@@ -602,11 +600,8 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
 
     } catch (error) {
       console.error("Entity extraction error:", error);
-      
-      if (error instanceof HttpsError) {
-        throw error;
-      }
-      throw new HttpsError("internal", "Failed to extract entities");
+
+      rethrowHttpsError(error, "Failed to extract entities");
     }
   }
 );

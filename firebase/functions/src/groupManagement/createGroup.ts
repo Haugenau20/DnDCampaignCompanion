@@ -1,6 +1,7 @@
 // functions/src/groupManagement/createGroup.ts
 import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import {rethrowHttpsError} from "../shared/httpsErrors";
 
 interface CreateGroupData {
   name: string;
@@ -126,15 +127,13 @@ export const createGroup = functions.onCall(
       // Preserve specific error codes instead of collapsing every failure
       // into "internal" -- callers need to be able to tell "bad input" from
       // "something broke".
-      if (error instanceof functions.HttpsError) {
-        throw error;
-      }
-      console.error("Error creating group:", error);
-      throw new functions.HttpsError(
-        "internal",
+      rethrowHttpsError(
+        error,
         `Failed to create group: ${
           error instanceof Error ? error.message : "Unknown error"
-        }`
+        }`,
+        (wrappedError) =>
+          console.error("Error creating group:", wrappedError)
       );
     }
   }

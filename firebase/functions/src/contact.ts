@@ -1,6 +1,7 @@
 // functions/src/contact.ts
 import * as functions from "firebase-functions/v2/https";
 import nodemailer from "nodemailer";
+import {rethrowHttpsError} from "./shared/httpsErrors";
 
 /**
  * Interface for contact form submission data
@@ -208,14 +209,10 @@ Timestamp: ${new Date().toISOString()}
       // Log error for debugging
       console.error("Error in sendContactEmail function:", error);
 
-      // Re-throw HttpsErrors as-is
-      if (error instanceof functions.HttpsError) {
-        throw error;
-      }
-
-      // Handle nodemailer or other unexpected errors
-      throw new functions.HttpsError(
-        "internal",
+      // Re-throw HttpsErrors as-is; wrap anything else (e.g. nodemailer
+      // failures) as an internal error.
+      rethrowHttpsError(
+        error,
         "Failed to send email. Please try again later."
       );
     }
