@@ -147,6 +147,54 @@ Two method notes:
    was carried as a design question for two sessions; nothing imported the copies. Third occurrence
    of this exact shape (#600, and finding 5's two wrong readings in Phase 3e).
 
+## UI-optimisation pass (2026-08-01, branch `claude/ui-optimization-missing-locations-nv7zph` → `design/new-ui`)
+
+**Tracker state: 84 filed, 77 resolved, 7 open.** Filed #1416–#1421; fixed #1412 (carried over,
+filed 2026-07-29) plus #1416, #1417, #1418, #1419 in the same pass. **Open: #1402, #1405, #1407,
+#1413, #1420, #1421.**
+
+Triggered by the repository owner opening the app on a local dev server for the first time. That is
+now **twice** that running the application has produced more findings than any amount of reading —
+see the 2026-07-29 lesson above, which said exactly this.
+
+### The reported bug was not the bug
+
+The report was "all child locations have gone missing from the Locations page". They had not: the
+campaign being viewed has five locations, all `parentId: null`, so a flat list of five was correct
+and the nesting was never broken. **The report was a false alarm, and the investigation was still
+worth it** — chasing it found #1416 on the same code path, a genuine silent-drop defect live in the
+seed data. Take a false alarm as a reason to read the code path, not as a reason to stop.
+
+### Three defects that a green suite could not have caught
+
+- **#1417** was found by *exercising* a form the brief described as "already correct in shape". It
+  was: right two fields, written together, from an id-keyed control. The bug was one branch down, in
+  what happens when the lookup misses.
+- **#1418** was found in **review of another agent's fix**, not by the agent. Its first attempt
+  matched legacy documents storing an id but not those storing a name — i.e. it fixed the
+  generator-shaped half of the population and left the form-shaped half, silently.
+- **#1412's real scope was wider than filed.** It was recorded as an NPC-page display bug. In fact
+  `location` is an **id** on NPCs and Quests but a **display name** on Rumors, so Quests was
+  affected too, and Rumors read correctly only by luck of its data. **Re-derive a ticket's scope
+  before fixing it**; this one had been sitting with an accurate title and an incomplete blast
+  radius for three days.
+
+### A structural cause worth remembering
+
+Quests kept being left behind — it kept its stat cards when the other three pages lost theirs, and
+kept the pre-redesign filter row when they moved to the shared one. The reason was structural:
+**Quests was the only entity without a Directory component**, so its roster lived in the page and
+every pass over "the directories" missed it. `QuestsPage` was 613 lines against 84–114 for its three
+siblings. Extracting `QuestDirectory` removed the asymmetry that caused the drift, rather than
+fixing its symptoms a third time.
+
+### Sample data
+
+`#1412`'s write-up noted one dangling location reference (`lothlorien`). There were **nine**. Eight
+were resolved by adding the Location records the data had always implied; `lothlorien` is kept
+dangling **on purpose, with a comment**, so something exercises the unresolvable path. `bag-end` →
+`hobbiton` (#1416) was a tenth, in the parent hierarchy rather than the entity fields.
+
 ## Design-handoff implementation pass (2026-07-31, branch `design-handoff/dashboard-1a`)
 
 **Tracker state: 78 filed, 73 resolved, 5 open.** Filed **and fixed** #1414 and #1415 — both
@@ -373,6 +421,12 @@ scheme distinguishes.
 
 | [#1414](./1414-location-directory-deep-nested-match-unreachable.md) | ✅ FIXED | UI | **A search or status match nested 2+ levels deep is unreachable.** `locationMatchesFilters`' `isChild` branch returns on that node's own status/search and never falls through to the descendant check the `isChild === false` path performs. `renderRows` passes `isChild = true` whenever the parent satisfies the type filter — i.e. essentially always, since `typeFilter` defaults to `'all'` — while the auto-expand effect always passes `false`. So the two callers **disagree about the same node**: the expander marks the connecting ancestor "should expand, a descendant matches", the renderer drops it as non-matching, and the branch leading to the match is never drawn. One level deep works, which is why it hides. The `isChild` flag's legitimate job is only to exempt a child from the *type* filter; suppressing descendant matching was never intended. **Pre-existing** — identical at `a0e23fd:110,121`; the roster redesign only made it visible by drawing the hierarchy as nested groups | Medium | Medium | LocationDirectory.tsx:188-222, 285-294 |
 | [#1415](./1415-quests-search-matches-npc-ids-not-names.md) | ✅ FIXED | UI | **Quest search matches raw NPC ids, never NPC names.** `quest.relatedNPCIds?.some(npc => npc.toLowerCase().includes(search))` compares against opaque generated ids, so typing a person's name never matches through this clause — the parameter name `npc` invites the misreading, but it holds an id. Worse than plain dead code, because `importantNPCs` is free text and *is* effectively searchable, so a name finds some quests and misses others with no visible rule. The page already resolves ids to names for display at `:432-434`, so the mechanism exists and simply isn't used here. **Pre-existing** — byte-identical at `a0e23fd:78` | Low | Low | QuestsPage.tsx:125-130 |
+| [#1416](./1416-location-with-unresolvable-parent-id-renders-nowhere.md) | ✅ FIXED | UI | **A location whose `parentId` doesn't resolve renders nowhere.** `renderRows` is only ever called with `'root'` or the id of a row it is already rendering, so a dangling `parentId` leaves the location under a hierarchy key nobody visits: absent from the tree, from the group count and from the empty state, while still counted in the status bar total. Live in seed data — `bag-end` → `hobbiton`, which existed in no campaign, so The Hobbit showed 4 rows under a bar reading 5. [#303](./303-location-parent-id-rederived-from-editable-name.md) documents the mechanism that produces dangling ids in real data but understates it as "appears parentless"; it is invisible. Fixed with a muted "Unplaced" group; empty state now keys off both groups | Medium | Medium | LocationDirectory.tsx |
+| [#1417](./1417-rumor-form-keeps-stale-location-id-on-placeholder.md) | ✅ FIXED | Data integrity | **`RumorForm` kept a stale `locationId` when the location was cleared.** The placeholder option carries `value=''`; `handleLocationSelect` looked it up, found nothing, and returned **without touching state**, so a previous selection survived a visibly-blank control and was saved. The form showed one thing and stored another. Shape-level correctness (right two fields, id-keyed control) hid a control-flow bug one branch down — found only because the form was actually exercised rather than eyeballed | Medium | High | RumorForm.tsx:135-143 |
+| [#1418](./1418-by-location-helpers-compare-id-against-free-text.md) | ✅ FIXED | Data integrity | **`getNPCsByLocation` / `getQuestsByLocation` compared an id against a field that may hold a name**, so they matched generator-created documents and silently missed every form-created one. Plus a second defect: the Quest helper's `keyLocations` clause compared keyLocation *names* against a parameter named `locationId`. Resolving name→id needs the locations array, which `NPCContext` cannot get (`App.tsx:44-45` nests `NPCProvider` outside `LocationProvider`), so both helpers now take the **`Location` record** and share one `referencesLocation` predicate. **Latent** — no callers outside their own contexts and tests | Low | Medium | NPCContext.tsx, QuestContext.tsx |
+| [#1419](./1419-npc-deep-link-silently-filtered-roster-to-one-location.md) | ✅ FIXED | UX | **Following a link to an NPC hid every other location group.** `NPCDirectory` carried a `locationFilter` with no picker, set only by the `?highlight=` effect, so a deep link filtered the whole roster to the target's location — explained solely by a small "Clear location:" ghost button. `RumorDirectory` groups by location identically and had already documented the opposite conclusion in a comment. Filter removed; the deep link now highlights, expands and scrolls, which was always the whole job | Medium | Medium | NPCDirectory.tsx |
+| [#1420](./1420-location-card-is-dead-code.md) | 🔍 DISCOVERED | Maintainability | **`LocationCard.tsx` (543 lines) has no non-test importer** — reachable only via the barrel re-export at `index.ts:27`, which is what hides it from every tooling signal. Superseded when `LocationDirectory` became a roster (`fe0cd72`); its "Expand Sub Locations" button is still in there at `:516-525`. This is the same orphan `7615159` deleted for `QuestCard` in that redesign, missed. **Left unfixed deliberately**: deleting it means deleting its test file too, which moves coverage against a uniform 80% floor — a judgement call, not a bug fix | Low | Low | LocationCard.tsx + index.ts:27 |
+| [#1421](./1421-quest-key-locations-are-free-text-not-references.md) | 🔍 DISCOVERED | Architecture | **`Quest.keyLocations` is `{name, description}[]` with no reference to a Location record** — the last surviving instance of the ambiguity #1412/#1418 closed elsewhere. `QuestDirectory.locationExists` name-matches to decide whether a key location is clickable, so **renaming a Location silently breaks the link**; `getQuestsByLocation` needs a special-case clause for it; deep links go out by name. Scoped out of the `locationId` work on purpose: it is an array of objects with their own `description`, edited inline, so converting it changes the editing UX — feature-sized, not a field addition | Medium | Medium | quests/types.ts, QuestDirectory.tsx, QuestFormSections.tsx |
 
 ## Per-context testing summaries
 
