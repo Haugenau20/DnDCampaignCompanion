@@ -21,6 +21,15 @@ jest.mock('features/campaign-entities/npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(),
 }));
 
+// Group headings resolve `npc.location` (an id) against the locations
+// collection — see #1412. Most tests here set locations to names directly and
+// supply no location records, which resolveLocationName passes through verbatim.
+let mockLocations: any[] = [];
+
+jest.mock('../../../locations/context/LocationContext', () => ({
+  useLocations: () => ({ locations: mockLocations }),
+}));
+
 jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
@@ -114,7 +123,55 @@ const rolf = makeNPC({ id: 'npc-3', name: 'Rolf', location: 'Silverkeep', status
 describe('NPCDirectory', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockLocations = [];
     setupMocks();
+  });
+
+  // -------------------------------------------------------------------------
+  // #1412 — headings used to print the raw `npc.location`, which is an id, so
+  // users saw "mines-of-moria" where the Locations page says "Mines of Moria".
+  // -------------------------------------------------------------------------
+  describe('location headings', () => {
+    const moriaNpc = makeNPC({ id: 'npc-m', name: 'Balin', location: 'mines-of-moria' });
+
+    beforeEach(() => {
+      mockLocations = [
+        { id: 'mines-of-moria', name: 'Mines of Moria' },
+        { id: 'rivendell', name: 'Rivendell' },
+      ];
+    });
+
+    test('shows the location\'s display name, not its id', () => {
+      render(<NPCDirectory npcs={[moriaNpc]} />);
+      expect(
+        screen.getByRole('heading', { name: 'Mines of Moria' })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', { name: 'mines-of-moria' })
+      ).not.toBeInTheDocument();
+    });
+
+    test('groups NPCs stored under the id and under the name together', () => {
+      const byName = makeNPC({ id: 'npc-r1', name: 'Arwen', location: 'Rivendell' });
+      const byId = makeNPC({ id: 'npc-r2', name: 'Elrond', location: 'rivendell' });
+      render(<NPCDirectory npcs={[byName, byId]} />);
+
+      expect(screen.getAllByRole('heading', { name: 'Rivendell' })).toHaveLength(1);
+      expect(screen.getByText('Arwen')).toBeInTheDocument();
+      expect(screen.getByText('Elrond')).toBeInTheDocument();
+    });
+
+    test('leaves an unresolvable location visible as itself rather than prettified', () => {
+      // The sample data's `lothlorien` matches no location record. Title-casing
+      // it would invent a real-looking heading for a place that doesn't exist.
+      const lost = makeNPC({ id: 'npc-l', name: 'Haldir', location: 'lothlorien' });
+      render(<NPCDirectory npcs={[lost]} />);
+
+      expect(screen.getByRole('heading', { name: 'lothlorien' })).toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', { name: 'Lothlorien' })
+      ).not.toBeInTheDocument();
+    });
   });
 
   // -------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import { Quest, QuestStatus } from '../types';
 import { useQuests } from '../context/QuestContext';
 import { useNPCs } from '../../npcs/context/NPCContext';
 import { useLocations } from '../../locations/context/LocationContext';
+import { resolveLocationName } from '../../locations/utils/location-display';
 import { useAuth } from 'features/user-management';
 import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
@@ -96,11 +97,26 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
     ];
   }, [quests]);
 
+  // `quest.location` holds the location's id, so both the filter options and the
+  // row's location cell used to read as slugs -- "mines-of-moria" where the
+  // Locations page says "Mines of Moria" (#1412, the same defect NPCDirectory
+  // had). Resolve once here and key everything -- display, options and the
+  // filter comparison -- off the resolved name, so the three cannot disagree.
+  const questLocationName = useMemo(() => {
+    const names = new Map<string, string>();
+    quests.forEach(quest => {
+      if (quest.location) {
+        names.set(quest.id, resolveLocationName(quest.location, locations));
+      }
+    });
+    return names;
+  }, [quests, locations]);
+
   // Locations come from the quest data, so the option set is unbounded -- this is
   // the one filter dimension in any directory that pills cannot serve, and the
   // reason RosterFilterSelect exists.
   const locationOptions: RosterFilterOption[] = useMemo(() => {
-    const uniqueLocations = new Set(quests.map(q => q.location).filter(Boolean) as string[]);
+    const uniqueLocations = new Set(questLocationName.values());
     return [
       { value: 'all', label: 'All Locations' },
       ...Array.from(uniqueLocations).sort().map(location => ({
@@ -108,7 +124,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
         label: location,
       })),
     ];
-  }, [quests]);
+  }, [questLocationName]);
 
   // Filter quests based on status, location and search query
   const filteredQuests = useMemo(() => {
@@ -118,9 +134,10 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
         return false;
       }
 
-      // Location filter - must match exactly
+      // Location filter - must match exactly, on the same resolved name the
+      // options were built from.
       if (locationFilter !== 'all') {
-        if (quest.location?.toLowerCase() !== locationFilter.toLowerCase()) {
+        if (questLocationName.get(quest.id)?.toLowerCase() !== locationFilter.toLowerCase()) {
           return false;
         }
       }
@@ -153,7 +170,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
 
       return true;
     });
-  }, [quests, statusFilter, locationFilter, searchQuery, getNPCById]);
+  }, [quests, statusFilter, locationFilter, searchQuery, getNPCById, questLocationName]);
 
   // Grouped by status, in the fixed order above, skipping groups with nothing
   // left after filtering.
@@ -496,7 +513,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                     color="secondary"
                     className="hidden md:block text-sm truncate"
                   >
-                    {quest.location || '—'}
+                    {questLocationName.get(quest.id) || '—'}
                   </Typography>
                 </RosterRow>
               );

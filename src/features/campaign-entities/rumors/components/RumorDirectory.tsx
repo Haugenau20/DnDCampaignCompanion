@@ -4,6 +4,7 @@ import { Rumor, RumorStatus, SourceType } from '../types';
 import { useRumors } from '../context/RumorContext';
 import { useNPCs } from '../../npcs/context/NPCContext';
 import { useLocations } from '../../locations/context/LocationContext';
+import { resolveLocationName } from '../../locations/utils/location-display';
 import { useAuth } from 'features/user-management';
 import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
@@ -74,7 +75,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
 
   const { deleteRumor } = useRumors();
   const { getNPCById } = useNPCs();
-  const { getLocationById } = useLocations();
+  const { locations, getLocationById } = useLocations();
   const { user } = useAuth();
   const { navigateToPage, createPath, getCurrentQueryParams } = useNavigation();
   const { highlight: highlightId } = getCurrentQueryParams();
@@ -140,16 +141,24 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   // reading as a rumor's context rather than a control to operate. Rumors
   // with no location land in a muted "Location unknown" group, mirroring
   // NPCDirectory's grouping of NPCs with no location.
+  //
+  // Rumors store `location` as a display name rather than an id, so these
+  // headings read correctly today by luck of the data, not by construction —
+  // NPCs and Quests store the id and printed slugs (#1412). Resolving here too
+  // makes that independent of which form a given record happens to hold, and
+  // canonicalises case so "rivendell" and "Rivendell" are one group.
   const groupedRumors = useMemo(() => {
     return filteredRumors.reduce((acc, rumor) => {
-      const location = rumor.location || 'Location unknown';
+      const location = rumor.location
+        ? resolveLocationName(rumor.location, locations)
+        : 'Location unknown';
       if (!acc[location]) {
         acc[location] = [];
       }
       acc[location].push(rumor);
       return acc;
     }, {} as Record<string, Rumor[]>);
-  }, [filteredRumors]);
+  }, [filteredRumors, locations]);
 
   const handleLocationClick = (location: string) => {
     navigateToPage(createPath('/locations', {}, { highlight: location }));

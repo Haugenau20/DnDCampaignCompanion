@@ -60,8 +60,14 @@ jest.mock('../../../npcs/context/NPCContext', () => ({
   useNPCs: jest.fn(() => ({ getNPCById: jest.fn(() => undefined) })),
 }));
 
+// `locations` feeds the group-heading resolution added for #1412. These tests
+// set `rumor.location` to display names and supply no location records, which
+// resolveLocationName passes through verbatim.
 jest.mock('../../../locations/context/LocationContext', () => ({
-  useLocations: jest.fn(() => ({ getLocationById: jest.fn(() => undefined) })),
+  useLocations: jest.fn(() => ({
+    locations: [],
+    getLocationById: jest.fn(() => undefined),
+  })),
 }));
 
 jest.mock('shared/utils/attribution-utils', () => ({

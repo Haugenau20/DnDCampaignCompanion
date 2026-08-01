@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { NPC } from '../types';
+import { useLocations } from '../../locations/context/LocationContext';
+import { resolveLocationName } from '../../locations/utils/location-display';
 import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
@@ -56,6 +58,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all');
   const [highlightedNpcId, setHighlightedNpcId] = useState<string | null>(null);
   const [expandedNpcId, setExpandedNpcId] = useState<string | null>(null);
+  const { locations } = useLocations();
   const { navigateToPage, createPath } = useNavigation();
 
   // Get URL search params for highlighted NPC
@@ -142,17 +145,24 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
     });
   }, [npcs, searchQuery, statusFilter, relationshipFilter]);
 
-  // Group NPCs by location for display
+  // Group NPCs by location for display.
+  //
+  // `npc.location` holds the location's id, so grouping on it verbatim printed
+  // slugs as headings -- "mines-of-moria" where the Locations page says "Mines
+  // of Moria" (#1412). Resolve to the display name, which also merges entries
+  // stored under different cases of the same place into one group.
   const groupedNPCs = useMemo(() => {
     return filteredNPCs.reduce((acc, npc) => {
-      const location = npc.location || 'Location unknown';
+      const location = npc.location
+        ? resolveLocationName(npc.location, locations)
+        : 'Location unknown';
       if (!acc[location]) {
         acc[location] = [];
       }
       acc[location].push(npc);
       return acc;
     }, {} as Record<string, NPC[]>);
-  }, [filteredNPCs]);
+  }, [filteredNPCs, locations]);
 
   if (isLoading) {
     return (

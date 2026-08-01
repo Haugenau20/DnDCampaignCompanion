@@ -5,7 +5,22 @@
 heading, so users see `mines-of-moria` where the Locations page shows "Mines of Moria".
 
 ## Status
-🔍 DISCOVERED — 2026-07-29. Seen in the running app, confirmed in code.
+✅ FIXED — 2026-08-01. Filed 2026-07-29; seen in the running app, confirmed in code.
+
+> **Scope was wider than filed.** `location` is not consistently one thing across entities: NPCs and
+> Quests store the location's **id**, Rumors store its **display name**. So the defect also affected
+> the **Quests** page — both the row's location column and the location filter's options read as
+> slugs — while `RumorDirectory` rendered correctly only because of what its data happens to hold,
+> not because it resolved anything.
+>
+> Fixed with a single resolver, `locations/utils/location-display.ts`, used by all three directories:
+> id match first, then case-insensitive name match, otherwise the reference verbatim. Handling both
+> forms is what lets one function serve all three. It also canonicalises case, so an entity stored
+> under `rivendell` and one under `Rivendell` now group together instead of forming two headings.
+>
+> The "do not prettify" instruction below was followed — see the tests in
+> `locations/utils/__tests__/location-display.test.ts` and the per-directory cases asserting that
+> `lothlorien` stays `lothlorien`.
 
 ## Category
 UI

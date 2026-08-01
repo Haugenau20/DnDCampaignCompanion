@@ -367,6 +367,26 @@ describe('QuestDirectory', () => {
   // -------------------------------------------------------------------------
   // Row rendering — collapsed
   // -------------------------------------------------------------------------
+  describe('location filter', () => {
+    // The options and the filter comparison both key off the resolved name, so
+    // picking a human-readable option must actually match slug-stored quests.
+    it('offers resolved display names and filters slug-stored quests by them', () => {
+      mockLocations = [makeLocation({ id: 'mines-of-moria', name: 'Mines of Moria' })];
+      mockQuestContext.quests = [
+        makeQuest({ id: 'q-moria', title: 'Escape from Moria', location: 'mines-of-moria' }),
+        makeQuest({ id: 'q-other', title: 'Elsewhere Entirely', location: 'somewhere-else' }),
+      ];
+      renderPage();
+
+      const select = screen.getByRole('combobox', { name: 'Filter by location' });
+      expect(within(select).getByRole('option', { name: 'Mines of Moria' })).toBeInTheDocument();
+
+      fireEvent.change(select, { target: { value: 'Mines of Moria' } });
+      expect(screen.getByText('Escape from Moria')).toBeInTheDocument();
+      expect(screen.queryByText('Elsewhere Entirely')).not.toBeInTheDocument();
+    });
+  });
+
   describe('collapsed row', () => {
     it('shows title, status word and location', () => {
       renderPage();
@@ -381,6 +401,28 @@ describe('QuestDirectory', () => {
       renderPage();
       const row = within(expandButton('No Location Quest'));
       expect(row.getByText('—')).toBeInTheDocument();
+    });
+
+    // #1412: `quest.location` holds an id, so this cell printed slugs.
+    it('shows the location\'s display name, not its id', () => {
+      mockLocations = [makeLocation({ id: 'mines-of-moria', name: 'Mines of Moria' })];
+      mockQuestContext.quests = [
+        makeQuest({ id: 'q-moria', title: 'Escape from Moria', location: 'mines-of-moria' }),
+      ];
+      renderPage();
+      const row = within(expandButton('Escape from Moria'));
+      expect(row.getByText('Mines of Moria')).toBeInTheDocument();
+      expect(row.queryByText('mines-of-moria')).not.toBeInTheDocument();
+    });
+
+    it('leaves an unresolvable location visible as itself rather than prettified', () => {
+      mockLocations = [];
+      mockQuestContext.quests = [
+        makeQuest({ id: 'q-lost', title: 'Lost Quest', location: 'lothlorien' }),
+      ];
+      renderPage();
+      const row = within(expandButton('Lost Quest'));
+      expect(row.getByText('lothlorien')).toBeInTheDocument();
     });
 
     it('shows objective progress as "<completed> of <total> objectives"', () => {
