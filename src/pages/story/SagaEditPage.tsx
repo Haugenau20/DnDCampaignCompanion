@@ -123,6 +123,18 @@ const SagaEditPage: React.FC = () => {
     }
   };
 
+  // Loading is checked BEFORE the context error on purpose (bug #1413).
+  // `loading` now folds in "auth/campaign still restoring", so a fresh page
+  // load renders the spinner rather than claiming no campaign is selected while
+  // the selection is still being restored.
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Typography>Loading...</Typography>
+      </div>
+    );
+  }
+
   // Handle context errors
   if (!hasRequiredContext) {
     return (
@@ -132,14 +144,6 @@ const SagaEditPage: React.FC = () => {
             Please select a group and campaign to edit the saga.
           </Typography>
         </Card>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Typography>Loading...</Typography>
       </div>
     );
   }

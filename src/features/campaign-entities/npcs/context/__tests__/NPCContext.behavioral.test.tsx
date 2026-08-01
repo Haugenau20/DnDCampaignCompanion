@@ -186,6 +186,59 @@ describe('NPCContext Behavioral Testing', () => {
     });
   });
 
+  // ---------------------------------------------------------------------
+  // Bug #1413: contextError must not fire while auth/group/campaign
+  // restoration is still in flight -- only once it has actually finished
+  // and genuinely found nothing selected. Before the fix, `contextError`
+  // was derived from `!!activeGroupId && !!activeCampaignId` alone, so a
+  // fresh page load (both null while restoring) was indistinguishable from
+  // a user with nothing selected, and this error rendered for the whole
+  // ~10s restore window.
+  // ---------------------------------------------------------------------
+  describe('NPC Context contextError vs. in-flight restoration (bug #1413)', () => {
+    test('contextError is null while useAuth reports the restore is still in flight, even with no group/campaign yet', async () => {
+      mockUseAuth.mockReturnValue({ user: null, loading: true });
+      mockUseGroups.mockReturnValue({ activeGroupId: null });
+      mockUseCampaigns.mockReturnValue({ activeCampaignId: null });
+
+      renderNPCContext();
+
+      await waitFor(() => {
+        expect(npcContext).toBeDefined();
+      });
+
+      expect(npcContext.error).toBeNull();
+    });
+
+    test('contextError becomes "Please select a group..." once restoration finishes and no group is selected', async () => {
+      mockUseAuth.mockReturnValue({ user: null, loading: false });
+      mockUseGroups.mockReturnValue({ activeGroupId: null });
+      mockUseCampaigns.mockReturnValue({ activeCampaignId: null });
+
+      renderNPCContext();
+
+      await waitFor(() => {
+        expect(npcContext).toBeDefined();
+      });
+
+      expect(npcContext.error).toBe('Please select a group to view NPCs');
+    });
+
+    test('contextError becomes "Please select a campaign..." once restoration finishes with a group but no campaign', async () => {
+      mockUseAuth.mockReturnValue({ user: { uid: 'test-user' }, loading: false });
+      mockUseGroups.mockReturnValue({ activeGroupId: 'group-1' });
+      mockUseCampaigns.mockReturnValue({ activeCampaignId: null });
+
+      renderNPCContext();
+
+      await waitFor(() => {
+        expect(npcContext).toBeDefined();
+      });
+
+      expect(npcContext.error).toBe('Please select a campaign to view NPCs');
+    });
+  });
+
   describe('NPC Authentication Behavior', () => {
     test('should reject NPC creation when user not authenticated', async () => {
       renderNPCContext();

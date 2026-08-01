@@ -47,9 +47,10 @@ const setupFirebaseDataMock = (overrides: Record<string, unknown> = {}) => {
 const setupContextMocks = (
   groupId: string | null = 'group-1',
   campaignId: string | null = 'campaign-1',
-  user: unknown = { uid: 'user-1' }
+  user: unknown = { uid: 'user-1' },
+  authLoading = false
 ) => {
-  (useAuth as jest.Mock).mockReturnValue({ user });
+  (useAuth as jest.Mock).mockReturnValue({ user, loading: authLoading });
   (useGroups as jest.Mock).mockReturnValue({ activeGroupId: groupId });
   (useCampaigns as jest.Mock).mockReturnValue({ activeCampaignId: campaignId });
 };
@@ -223,6 +224,59 @@ describe('useNPCData', () => {
       const { result } = renderHook(() => useNPCData());
       await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.error).toBe('Something went wrong');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Auth/group/campaign restoration in flight (bug #1413)
+  //
+  // On a fresh page load, activeGroupId/activeCampaignId are briefly null
+  // while Firebase Auth rehydrates and the campaign is restored -- that used
+  // to be indistinguishable from "the user genuinely has nothing selected",
+  // so the page committed to an error state for the whole restore window.
+  // -------------------------------------------------------------------------
+  describe('auth/group/campaign restoration in flight (bug #1413)', () => {
+    test('loading stays true while resolving, even though the Firestore fetch already finished and nothing is selected yet', async () => {
+      // Nothing selected yet AND useAuth reports the restore is still in
+      // flight -- this is the exact shape of a fresh page load before
+      // FirebaseContext has restored activeGroupId/activeCampaignId.
+      setupContextMocks(null, null, null, true);
+      setupFirebaseDataMock({ loading: false });
+
+      const { result } = renderHook(() => useNPCData());
+
+      expect(result.current.loading).toBe(true);
+    });
+
+    test('hasRequiredContext is false and missingContext is null while resolving -- neither confirms nor denies a selection', () => {
+      setupContextMocks(null, null, null, true);
+      setupFirebaseDataMock({ loading: false });
+
+      const { result } = renderHook(() => useNPCData());
+
+      expect(result.current.hasRequiredContext).toBe(false);
+      expect(result.current.missingContext).toBeNull();
+    });
+
+    test('missingContext resolves to "group" only once restoration has actually finished', async () => {
+      setupContextMocks(null, 'campaign-1', { uid: 'user-1' }, false);
+      setupFirebaseDataMock({ loading: false });
+
+      const { result } = renderHook(() => useNPCData());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.missingContext).toBe('group');
+    });
+
+    test('loading becomes false once resolution finishes and nothing is selected, surfacing the real "no context" state', async () => {
+      setupContextMocks(null, null, null, false);
+      setupFirebaseDataMock({ loading: false });
+
+      const { result } = renderHook(() => useNPCData());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.hasRequiredContext).toBe(false);
+      expect(result.current.missingContext).toBe('group');
     });
   });
 });

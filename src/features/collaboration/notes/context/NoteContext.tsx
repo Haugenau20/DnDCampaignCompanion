@@ -3,6 +3,7 @@ import React, { createContext, useContext, useCallback, useState, useEffect } fr
 import { Note, NoteContextValue, ExtractedEntity, EntityType } from "../types";
 import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns, useUser } from "features/user-management";
+import { useCampaignContextStatus } from "shared/hooks/useCampaignContextStatus";
 import { buildCreationAttribution } from "core/attribution";
 import { useNavigate } from 'react-router-dom';
 
@@ -22,6 +23,12 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
   const { userProfile, activeGroupUserProfile } = useUser();
+  // Single shared source of truth for "still resolving vs. genuinely no
+  // selection" (bug #1413) -- see the hook's doc comment. Folded into
+  // `isLoading` below so `NotesList`'s existing loading-before-"no campaign"
+  // ordering holds on a fresh page load instead of briefly showing "No
+  // Campaign Selected" while auth/group/campaign are still restoring.
+  const { isResolving } = useCampaignContextStatus();
   const documentService = DocumentService.getInstance();
   const navigate = useNavigate();
 
@@ -402,7 +409,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   // Create context value
   const value: NoteContextValue = {
     notes,
-    isLoading: loading,
+    isLoading: Boolean(loading) || isResolving,
     error,
     getNoteById,
     createNote,

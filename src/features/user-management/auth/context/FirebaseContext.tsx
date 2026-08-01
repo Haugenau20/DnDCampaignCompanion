@@ -290,6 +290,16 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           } catch (err) {
             console.error('Error in auth state change loading:', err);
             setError(err instanceof Error ? err.message : 'Failed to load user data');
+            // All three flags must be cleared here, not just the last two.
+            // `loadUserProfile` throws when its retries are exhausted, which
+            // skips the `setProfileLoading(false)` on the happy path above and
+            // would otherwise leave `profileLoading` true forever. Since
+            // `loading` is `authLoading || profileLoading || groupsLoading`,
+            // one stuck flag pins the whole thing true — and `useAuth().loading`
+            // now feeds `useCampaignContextStatus().isResolving` (bug #1413),
+            // so every entity page would show a permanent spinner instead of
+            // its error state, and `hasRequiredContext` would never become true.
+            setProfileLoading(false);
             setGroupsLoading(false);
             setAuthLoading(false);
           }

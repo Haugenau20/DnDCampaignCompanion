@@ -13,7 +13,12 @@ import { Plus, AlertCircle } from 'lucide-react';
  */
 const NotesPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
-  const { createNote } = useNotes();
+  // `isLoading` is read purely to suppress the "no campaign selected" warning
+  // while auth/campaign context is still being restored (bug #1413).
+  // NoteContext already folds `useCampaignContextStatus().isResolving` into it,
+  // so this needs no additional hook here — which also keeps NotesPage off the
+  // `useAuth`/`useGroups` surface its test does not mock.
+  const { createNote, isLoading } = useNotes();
   const { activeCampaignId, activeCampaign } = useCampaigns();
 
   /**
@@ -44,7 +49,7 @@ const NotesPage: React.FC = () => {
               Campaign: <span className="font-medium">{activeCampaign.name}</span>
             </Typography>
           )}
-          {!activeCampaignId && (
+          {!isLoading && !activeCampaignId && (
             <div className="flex items-center mt-2 gap-2">
               <AlertCircle className="w-4 h-4 status-warning" />
               <Typography variant="body-sm" color="secondary">

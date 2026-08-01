@@ -70,20 +70,13 @@ const SagaPage: React.FC = () => {
     return saga?.title || "The Campaign Saga";
   };
 
-  // Handle context errors
-  if (!hasRequiredContext) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8 card">
-          <Typography className={`typography`}>
-            Please select a group and campaign to view the saga.
-          </Typography>
-        </Card>
-      </div>
-    );
-  }
-
-  // Loading state
+  // Loading state. Checked BEFORE the context-missing state below (bug
+  // #1413): `loading` has auth/group/campaign restoration folded into it
+  // (see `useSagaData`), so on a fresh page load this stays true for the
+  // whole restore instead of `hasRequiredContext` -- which is briefly false
+  // during that same window regardless of what's actually selected --
+  // committing to a "please select..." message it has to retract seconds
+  // later.
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -92,6 +85,19 @@ const SagaPage: React.FC = () => {
             <Loader2 className="w-6 h-6 animate-spin primary" />
             <Typography className="typography">Loading saga...</Typography>
           </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Handle context errors
+  if (!hasRequiredContext) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="p-8 card">
+          <Typography className={`typography`}>
+            Please select a group and campaign to view the saga.
+          </Typography>
         </Card>
       </div>
     );

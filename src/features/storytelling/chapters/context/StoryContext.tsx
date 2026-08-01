@@ -83,7 +83,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     loading: chaptersLoading, 
     error: chaptersError, 
     refreshChapters,
-    hasRequiredContext 
+    hasRequiredContext
   } = useChapterData();
   
   const { 
@@ -635,8 +635,15 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const isLoading = chaptersLoading || isUpdating;
 
-  // Prepare appropriate error message
-  const contextError = chaptersError || (!hasRequiredContext ? 'Please select a group and campaign' : null);
+  // Prepare appropriate error message. Gated on `!isLoading` so that a fresh
+  // page load -- where the group/campaign have not been restored yet -- renders
+  // the loading state instead of claiming the user selected nothing (#1413).
+  // `useChapterData`'s `loading` folds in `useCampaignContextStatus().isResolving`,
+  // so "still loading" already covers "still restoring the selection", and the
+  // error is reached only once resolution has settled on nothing. This mirrors
+  // what LocationsPage/LocationEditPage get structurally by checking their
+  // loading branch before their context branch.
+  const contextError = chaptersError || (!isLoading && !hasRequiredContext ? 'Please select a group and campaign' : null);
 
   const value: StoryContextValue = {
     chapters,
