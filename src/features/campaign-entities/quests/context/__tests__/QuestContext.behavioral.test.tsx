@@ -566,12 +566,92 @@ describe('QuestContext Behavioral Testing', () => {
         expect(questContext).toBeDefined();
       });
 
-      // BEHAVIOR: Should find quests by location ID and key location name
-      const locationQuests = questContext.getQuestsByLocation('dungeon-123');
+      // BEHAVIOR: Should find quests by location ID and key location name.
+      // `getQuestsByLocation` takes a `Location` record: its `id` matches
+      // quest 1's legacy `location` field (the id form), and its `name`
+      // matches quest 2's `keyLocations[0].name`.
+      const locationQuests = questContext.getQuestsByLocation({ id: 'dungeon-123', name: 'dungeon-123' });
 
       expect(locationQuests).toHaveLength(2); // Should find both direct and key location matches
       expect(locationQuests[0].id).toBe('1');
       expect(locationQuests[1].id).toBe('2');
+    });
+
+    // `locationId` is the canonical reference introduced alongside this
+    // contract; `getQuestsByLocation` must prefer it and only fall back to
+    // the legacy `location` text comparison for documents that have none. The
+    // legacy field may hold either the location's id (sample-data generator
+    // shape) or its display name (form-created shape), so both must match.
+    // `getQuestsByLocation` takes the whole `Location` record -- not a bare
+    // id -- for the same reason NPCContext's sibling helper does.
+    test('should match by locationId first, falling back to either legacy id or legacy name for un-migrated documents', async () => {
+      const minesOfMoria = { id: 'mines-of-moria', name: 'Mines of Moria' };
+      const rivendellLocation = { id: 'rivendell', name: 'Rivendell' };
+
+      const mockQuests = [
+        // Migrated: canonical locationId set.
+        { id: '1', title: 'Quest with locationId', locationId: 'mines-of-moria', location: 'Mines of Moria', keyLocations: [] },
+        // Un-migrated, storing the id (sample-data generator shape).
+        { id: '2', title: 'Quest without locationId (id)', location: 'mines-of-moria', keyLocations: [] },
+        // Un-migrated, storing the display name (form-created shape) -- the
+        // case that was previously missed.
+        { id: '3', title: 'Quest without locationId (name)', location: 'Mines of Moria', keyLocations: [] },
+        // Unrelated location entirely.
+        { id: '4', title: 'Quest elsewhere', locationId: 'rivendell', location: 'Rivendell', keyLocations: [] },
+      ];
+
+      mockUseQuestData.mockReturnValue({
+        quests: mockQuests,
+        loading: false,
+        error: null,
+        getQuestById: jest.fn(),
+        refreshQuests: mockRefreshQuests,
+        hasRequiredContext: true,
+      });
+
+      renderQuestContext();
+
+      await waitFor(() => {
+        expect(questContext).toBeDefined();
+      });
+
+      const matches = questContext.getQuestsByLocation(minesOfMoria);
+      const unrelated = questContext.getQuestsByLocation(rivendellLocation);
+
+      expect(matches.map((quest: any) => quest.id).sort()).toEqual(['1', '2', '3']);
+      expect(unrelated.map((quest: any) => quest.id)).toEqual(['4']);
+      expect(matches.some((quest: any) => quest.id === '4')).toBe(false);
+    });
+
+    // `keyLocations` is a separate concept from `location`/`locationId` --
+    // named locations mentioned in the quest write-up, not a reference to a
+    // Location record -- and is matched on name, case-insensitively, against
+    // the given Location's own name.
+    test('also matches via a keyLocation whose name matches, case-insensitively', async () => {
+      const dungeon = { id: 'dungeon-123', name: 'Dark Dungeon' };
+
+      const mockQuests = [
+        { id: '1', title: 'Quest with key location', location: 'other-location', keyLocations: [{ name: 'dark dungeon', description: 'A cave' }] },
+        { id: '2', title: 'Quest without it', location: 'different-location', keyLocations: [] },
+      ];
+
+      mockUseQuestData.mockReturnValue({
+        quests: mockQuests,
+        loading: false,
+        error: null,
+        getQuestById: jest.fn(),
+        refreshQuests: mockRefreshQuests,
+        hasRequiredContext: true,
+      });
+
+      renderQuestContext();
+
+      await waitFor(() => {
+        expect(questContext).toBeDefined();
+      });
+
+      const matches = questContext.getQuestsByLocation(dungeon);
+      expect(matches.map((quest: any) => quest.id)).toEqual(['1']);
     });
   });
 

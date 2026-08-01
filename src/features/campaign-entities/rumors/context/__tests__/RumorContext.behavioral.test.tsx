@@ -558,6 +558,24 @@ describe('RumorContext Behavioral Testing', () => {
       expect(noLocation).toHaveLength(0);
     });
 
+    // Documents the deliberate decision (see RumorContext.tsx) not to add a
+    // legacy `location` fallback here: Rumors have always stored a display
+    // *name* in `location`, never an id, so comparing an incoming id against
+    // it would not recover any real un-migrated matches.
+    test('does not fall back to matching a legacy free-text location', async () => {
+      renderRumorContext();
+
+      await waitFor(() => {
+        expect(rumorContext).toBeDefined();
+      });
+
+      // 'Dragon Sighting' has no locationId of 'northern mountains', and its
+      // free-text `location` (if any) is a name, not this id -- so passing
+      // the sort of value a legacy `location` field might hold must not match.
+      const result = rumorContext.getRumorsByLocation('northern mountains');
+      expect(result).toHaveLength(0);
+    });
+
     test('should filter rumors by NPC correctly', async () => {
       renderRumorContext();
 

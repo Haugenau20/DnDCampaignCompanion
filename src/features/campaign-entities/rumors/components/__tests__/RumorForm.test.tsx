@@ -209,6 +209,69 @@ describe('RumorForm', () => {
       fireEvent.change(locationSelect, { target: { value: 'loc-1' } });
       expect((locationSelect as HTMLSelectElement).value).toBe('loc-1');
     });
+
+    // Covers the write-side contract: selecting a real Location writes both
+    // `locationId` and `location` (the name) into the submitted payload.
+    test('should write both locationId and location when submitting after selecting a real location', async () => {
+      render(<RumorForm title="Add" />);
+      const inputs = screen.getAllByRole('textbox');
+      await userEvent.type(inputs[0], 'T');
+      await userEvent.type(inputs[1], 'C');
+      await userEvent.type(inputs[2], 'S');
+      const selects = screen.getAllByRole('combobox');
+      const locationSelect = selects[selects.length - 1];
+      fireEvent.change(locationSelect, { target: { value: 'loc-1' } });
+      fireEvent.submit(screen.getByText('Add Rumor').closest('form')!);
+
+      await waitFor(() => {
+        expect(mockAddRumor).toHaveBeenCalledTimes(1);
+      });
+      const payload = mockAddRumor.mock.calls[0][0];
+      expect(payload.locationId).toBe('loc-1');
+      expect(payload.location).toBe('Bree');
+    });
+
+    // Regression test for the bug this pass fixed: handleLocationSelect('') used to find no
+    // matching Location and silently no-op, leaving a stale locationId/location pair from a
+    // prior real selection in place. Switching back to the blank "Select a location" option
+    // must clear both fields, not leave a lie behind.
+    test('should clear locationId and location when switching back to the blank placeholder (regression)', async () => {
+      render(<RumorForm title="Add" />);
+      const inputs = screen.getAllByRole('textbox');
+      await userEvent.type(inputs[0], 'T');
+      await userEvent.type(inputs[1], 'C');
+      await userEvent.type(inputs[2], 'S');
+      const selects = screen.getAllByRole('combobox');
+      const locationSelect = selects[selects.length - 1];
+      // First select a real location.
+      fireEvent.change(locationSelect, { target: { value: 'loc-1' } });
+      // Then switch back to the blank placeholder.
+      fireEvent.change(locationSelect, { target: { value: '' } });
+      fireEvent.submit(screen.getByText('Add Rumor').closest('form')!);
+
+      await waitFor(() => {
+        expect(mockAddRumor).toHaveBeenCalledTimes(1);
+      });
+      const payload = mockAddRumor.mock.calls[0][0];
+      expect(payload.locationId).toBe('');
+      expect(payload.location).toBe('');
+    });
+
+    // An un-migrated rumor (free-text `location`, no `locationId`) must load and submit
+    // without the form inventing an id for it.
+    test('should load and submit an un-migrated rumor (location set, no locationId) without inventing an id', async () => {
+      const rumor = makeRumor({ location: 'Bree', title: 'Old', content: 'old c', sourceName: 'src' });
+      delete (rumor as any).locationId;
+      render(<RumorForm title="Edit" rumor={rumor} />);
+      fireEvent.submit(screen.getByText('Save Changes').closest('form')!);
+
+      await waitFor(() => {
+        expect(mockUpdateRumor).toHaveBeenCalledTimes(1);
+      });
+      const payload = mockUpdateRumor.mock.calls[0][0];
+      expect(payload.location).toBe('Bree');
+      expect(payload.locationId).toBeUndefined();
+    });
   });
 
   describe('validation', () => {

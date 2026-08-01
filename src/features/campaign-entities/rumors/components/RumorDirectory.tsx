@@ -147,11 +147,16 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   // NPCs and Quests store the id and printed slugs (#1412). Resolving here too
   // makes that independent of which form a given record happens to hold, and
   // canonicalises case so "rivendell" and "Rivendell" are one group.
+  //
+  // `resolveLocationName` prefers `rumor.locationId` (the canonical
+  // reference) and falls back to the legacy `rumor.location` free text for
+  // documents written before that field existed; see the contract on
+  // `NPC.location`.
   const groupedRumors = useMemo(() => {
     return filteredRumors.reduce((acc, rumor) => {
-      const location = rumor.location
-        ? resolveLocationName(rumor.location, locations)
-        : 'Location unknown';
+      const location =
+        resolveLocationName({ locationId: rumor.locationId, location: rumor.location }, locations) ??
+        'Location unknown';
       if (!acc[location]) {
         acc[location] = [];
       }

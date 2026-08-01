@@ -35,6 +35,7 @@ jest.mock('../../../locations/context/LocationContext', () => ({
 const { useQuests } = require('../../context/QuestContext');
 const { useNotes } = require('features/collaboration');
 const { useNPCs } = require('../../../npcs/context/NPCContext');
+const { useLocations } = require('../../../locations/context/LocationContext');
 
 function setupMocks({
   addQuest = mockAddQuest,
@@ -358,6 +359,91 @@ describe('QuestCreateForm', () => {
       expect(payload).not.toHaveProperty('createdBy');
       expect(payload).not.toHaveProperty('createdByUsername');
       expect(payload).not.toHaveProperty('dateAdded');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // locationId capture (LocationCombobox wiring)
+  // -------------------------------------------------------------------------
+  describe('locationId capture', () => {
+    beforeEach(() => {
+      (useLocations as jest.Mock).mockReturnValue({
+        locations: [
+          { id: 'loc-1', name: 'Ironhold' },
+          { id: 'loc-2', name: 'Shadowfen' },
+        ],
+      });
+    });
+
+    afterEach(() => {
+      (useLocations as jest.Mock).mockReturnValue({ locations: [] });
+    });
+
+    function fillRequiredFields() {
+      const textboxes = screen.getAllByRole('textbox');
+      fireEvent.change(textboxes[0], { target: { value: 'New Quest' } });
+      const descLabel = screen.getByText('Description *');
+      const descTextarea = descLabel.parentElement?.querySelector('textarea');
+      fireEvent.change(descTextarea!, { target: { value: 'Quest description' } });
+    }
+
+    test('should write both locationId and location when a real Location is selected', async () => {
+      render(<QuestCreateForm />);
+      fillRequiredFields();
+      // Textbox order: Title(0), Description(1), Location(2), Level Range(3), Background(4).
+      const locationInput = screen.getAllByRole('textbox')[2];
+      fireEvent.change(locationInput, { target: { value: 'Ironhold' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockAddQuest).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Ironhold', locationId: 'loc-1' })
+        );
+      });
+    });
+
+    test('should write free text and leave locationId empty when text matches no Location', async () => {
+      render(<QuestCreateForm />);
+      fillRequiredFields();
+      const locationInput = screen.getAllByRole('textbox')[2];
+      fireEvent.change(locationInput, { target: { value: 'Somewhere in Mirkwood' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockAddQuest).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Somewhere in Mirkwood', locationId: '' })
+        );
+      });
+    });
+
+    test('should clear a previously-set locationId when switching to free text (regression)', async () => {
+      render(<QuestCreateForm />);
+      fillRequiredFields();
+      const locationInput = screen.getAllByRole('textbox')[2];
+      fireEvent.change(locationInput, { target: { value: 'Ironhold' } });
+      fireEvent.change(locationInput, { target: { value: 'Somewhere else entirely' } });
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockAddQuest).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Somewhere else entirely', locationId: '' })
+        );
+      });
+    });
+
+    test('should not invent a locationId for initialData carrying only a legacy location string', async () => {
+      render(
+        <QuestCreateForm
+          initialData={{ title: 'New Quest', description: 'Quest description', location: 'Ironhold' }}
+        />
+      );
+      fireEvent.submit(document.querySelector('form')!);
+
+      await waitFor(() => {
+        expect(mockAddQuest).toHaveBeenCalledWith(
+          expect.objectContaining({ location: 'Ironhold', locationId: '' })
+        );
+      });
     });
   });
 

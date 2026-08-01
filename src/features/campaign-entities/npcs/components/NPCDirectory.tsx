@@ -151,11 +151,15 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   // slugs as headings -- "mines-of-moria" where the Locations page says "Mines
   // of Moria" (#1412). Resolve to the display name, which also merges entries
   // stored under different cases of the same place into one group.
+  //
+  // `resolveLocationName` prefers `npc.locationId` (the canonical reference)
+  // and falls back to the legacy `npc.location` free text for documents
+  // written before that field existed; see the contract on `NPC.location`.
   const groupedNPCs = useMemo(() => {
     return filteredNPCs.reduce((acc, npc) => {
-      const location = npc.location
-        ? resolveLocationName(npc.location, locations)
-        : 'Location unknown';
+      const location =
+        resolveLocationName({ locationId: npc.locationId, location: npc.location }, locations) ??
+        'Location unknown';
       if (!acc[location]) {
         acc[location] = [];
       }

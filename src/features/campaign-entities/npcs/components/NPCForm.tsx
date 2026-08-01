@@ -10,6 +10,7 @@ import { useQuests } from '../../quests/context/QuestContext';
 import { useNPCs } from '../context/NPCContext';
 import { useNotes } from 'features/collaboration';
 import { useUser } from 'features/user-management';
+import LocationCombobox from '../../locations/components/LocationCombobox';
 import clsx from 'clsx';
 import { DomainData } from 'core/types/common';
 
@@ -26,6 +27,7 @@ interface NPCFormProps {
     race?: string;
     occupation?: string;
     location?: string;
+    locationId?: string;
     appearance?: string;
     personality?: string;
     background?: string;
@@ -75,6 +77,7 @@ const NPCForm: React.FC<NPCFormProps> = ({
       race: initialData.race || '',
       occupation: initialData.occupation || '',
       location: initialData.location || '',
+      locationId: initialData.locationId || '',
       appearance: initialData.appearance || '',
       personality: initialData.personality || '',
       background: initialData.background || '',
@@ -179,6 +182,7 @@ const NPCForm: React.FC<NPCFormProps> = ({
         race: formData.race || '',
         occupation: formData.occupation || '',
         location: formData.location || '',
+        locationId: formData.locationId || '',
         relationship: formData.relationship as NPCRelationship,
         description: formData.description || '',
         appearance: formData.appearance || '',
@@ -273,10 +277,13 @@ const NPCForm: React.FC<NPCFormProps> = ({
                 onChange={(e) => handleInputChange('occupation', e.target.value)}
               />
 
-              <Input
+              <LocationCombobox
                 label="Location"
                 value={formData.location || ''}
-                onChange={(e) => handleInputChange('location', e.target.value)}
+                onChange={(value) => handleInputChange('location', value)}
+                onSelectLocation={(loc) =>
+                  setFormData(prev => ({ ...prev, locationId: loc?.id ?? '' }))
+                }
               />
             </div>
 

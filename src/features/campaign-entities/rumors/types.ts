@@ -22,7 +22,12 @@ export interface Rumor extends BaseContent {
   sourceType: SourceType;
   sourceName: string;
   sourceNpcId?: string; // Optional reference to NPC if source is an NPC
+  /**
+   * See the `location`/`locationId` contract documented on `NPC.location` in
+   * `features/campaign-entities/npcs/types.ts` -- shared verbatim here.
+   */
   location?: string;
+  /** See the `location`/`locationId` contract documented on `NPC.location`. */
   locationId?: string; // Optional reference to location in system
   relatedNPCs: string[]; // Array of NPC IDs
   relatedLocations: string[]; // Array of location IDs

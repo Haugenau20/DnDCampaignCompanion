@@ -102,11 +102,20 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
   // Locations page says "Mines of Moria" (#1412, the same defect NPCDirectory
   // had). Resolve once here and key everything -- display, options and the
   // filter comparison -- off the resolved name, so the three cannot disagree.
+  //
+  // `resolveLocationName` prefers `quest.locationId` (the canonical
+  // reference) and falls back to the legacy `quest.location` free text for
+  // documents written before that field existed; see the contract on
+  // `NPC.location`.
   const questLocationName = useMemo(() => {
     const names = new Map<string, string>();
     quests.forEach(quest => {
-      if (quest.location) {
-        names.set(quest.id, resolveLocationName(quest.location, locations));
+      const resolved = resolveLocationName(
+        { locationId: quest.locationId, location: quest.location },
+        locations
+      );
+      if (resolved) {
+        names.set(quest.id, resolved);
       }
     });
     return names;

@@ -6,6 +6,8 @@ import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useGroups, useCampaigns, useAuth, useUser } from 'features/user-management';
 import { generateUniqueEntityId } from 'core/utils/entity-id';
+import { referencesLocation } from '../../locations/utils/location-display';
+import { Location } from '../../locations/types';
 
 const NPCContext = createContext<NPCContextValue | undefined>(undefined);
 
@@ -38,11 +40,19 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   }, [npcs]);
 
-  // Get NPCs by location
-  const getNPCsByLocation = useCallback((location: string) => {
-    return npcs.filter(npc => 
-      npc.location?.toLowerCase() === location.toLowerCase()
-    );
+  // Get NPCs by location. Matches the canonical `locationId` first, falling
+  // back to a case-insensitive comparison against the legacy free-text
+  // `location` -- checked against both the Location's id and its name, since
+  // an un-migrated document's `location` may hold either -- for documents
+  // written before `locationId` existed. See the contract on `NPC.location`
+  // and `referencesLocation`'s doc comment.
+  //
+  // Takes the whole `Location`, not a bare id: resolving a legacy name back
+  // to an id would need the full locations array, and this context is
+  // mounted outside `LocationProvider` (see App.tsx), so it has no access to
+  // one.
+  const getNPCsByLocation = useCallback((location: Location) => {
+    return npcs.filter(npc => referencesLocation(npc, location));
   }, [npcs]);
 
   // Get NPCs by relationship

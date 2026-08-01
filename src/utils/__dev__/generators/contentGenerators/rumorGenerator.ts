@@ -243,8 +243,11 @@ const getHobbitRumors = (aragornUid: string, gandalfUid: string, gimliUid: strin
       sourceType: 'traveler' as SourceType,
       sourceName: 'Woodman',
       sourceNpcId: null,
+      // "Edge of Mirkwood" does not exactly match the Location record's name
+      // ("Mirkwood"), so it does not resolve -- kept as the free-text
+      // fallback case rather than pointed at 'mirkwood'.
       location: 'Edge of Mirkwood',
-      locationId: 'mirkwood',
+      locationId: null,
       dateAdded: formattedDate,
       dateModified: formattedDate,
       createdBy: aragornUid,
