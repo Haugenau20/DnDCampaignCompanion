@@ -293,6 +293,103 @@ describe('NoteContext Bug Tests', () => {
     });
   });
 
+  // -------------------------------------------------------------------------
+  // Bug #1422 — notes for ALL campaigns share one flat collection at
+  // `groups/{g}/users/{uid}/notes` and are joined to a campaign by a
+  // `campaignId` field, but the list rendered is filtered to the active
+  // campaign. Allocating an id from the filtered list reuses one that already
+  // exists as soon as the active campaign has fewer notes than another, and
+  // `createDocument` refuses to overwrite. Reproduced in the browser: with two
+  // notes in campaign A and none in campaign B, creating B's first note failed
+  // and rendered the raw internal error (including the user's uid) in the UI.
+  // -------------------------------------------------------------------------
+  describe('Cross-campaign ID collision (bug #1422)', () => {
+    const noteInCampaign = (id: string, campaignId: string): Note => ({
+      id,
+      title: 'Existing Note',
+      content: 'Content',
+      extractedEntities: [],
+      status: 'active' as NoteStatus,
+      tags: [],
+      updatedAt: '2025-06-15T00:00:00.000Z',
+      campaignId,
+      createdBy: 'test-user',
+      createdByUsername: 'Test User',
+      createdByCharacterName: 'Test Character',
+      dateAdded: '2025-06-15T00:00:00.000Z',
+      dateModified: '2025-06-15T00:00:00.000Z',
+      modifiedBy: 'test-user',
+      modifiedByUsername: 'Test User',
+      modifiedByCharacterName: 'Test Character'
+    });
+
+    test('does not reuse an id held by a note in a different campaign', async () => {
+      getUserName.mockReturnValue('Test User');
+      getActiveCharacterName.mockReturnValue('Test Character');
+
+      // Both notes belong to another campaign, so the active campaign renders
+      // an EMPTY list -- while note-1 and note-2 are nonetheless taken.
+      mockDocumentService.getCollection.mockResolvedValue([
+        noteInCampaign('note-1', 'other-campaign'),
+        noteInCampaign('note-2', 'other-campaign')
+      ]);
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+
+      // The active campaign genuinely has no notes to show ...
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
+      expect(capturedContext.notes).toHaveLength(0);
+
+      await act(async () => {
+        const noteId = await capturedContext.createNote('New Note', 'New content');
+
+        // ... but the id must still clear the other campaign's notes.
+        // Before the fix this returned 'note-1', colliding with an existing
+        // document and making note creation impossible in this campaign.
+        expect(noteId).toBe('note-3');
+      });
+    });
+
+    test('allocates distinct ids for two creates before any refetch', async () => {
+      getUserName.mockReturnValue('Test User');
+      getActiveCharacterName.mockReturnValue('Test Character');
+
+      mockDocumentService.getCollection.mockResolvedValue([
+        noteInCampaign('note-1', 'other-campaign')
+      ]);
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
+
+      let first: string = '';
+      let second: string = '';
+      await act(async () => {
+        first = await capturedContext.createNote('First', 'content');
+      });
+      await act(async () => {
+        second = await capturedContext.createNote('Second', 'content');
+      });
+
+      expect(first).toBe('note-2');
+      expect(second).toBe('note-3');
+      expect(first).not.toBe(second);
+    });
+  });
+
   describe('Entity Conversion Requirements', () => {
     test('should handle entity conversion with minimal data', async () => {
       getUserName.mockReturnValue('Test User');

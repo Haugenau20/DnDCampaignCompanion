@@ -3,24 +3,27 @@ import Typography from '../../core/components/Typography';
 import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
 import { NPCDirectory, useNPCData } from 'features/campaign-entities';
-import { useAuth, useGroups, useCampaigns } from 'features/user-management';
+import { useAuth } from 'features/user-management';
+import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { Plus, Loader2, AlertCircle } from 'lucide-react';
 
 const NPCsPage: React.FC = () => {
   // Hooks
   const { user } = useAuth();
-  const { activeGroupId } = useGroups();
-  const { activeCampaignId } = useCampaigns();
   const { npcs, loading, error, refreshNPCs } = useNPCData();
+  // Single shared source of truth for "still resolving vs. genuinely no
+  // selection" (bug #1413) -- see the hook's doc comment. `loading` above
+  // already has auth/group/campaign restoration folded in, so this can't
+  // fire while a real selection is still being restored on page load.
+  const { missingContext } = useCampaignContextStatus();
   const { navigateToPage } = useNavigation();
 
-  // Check for missing context
   const contextError = useMemo(() => {
-    if (!activeGroupId) return "Please select a group to view NPCs";
-    if (!activeCampaignId) return "Please select a campaign to view NPCs";
+    if (missingContext === 'group') return "Please select a group to view NPCs";
+    if (missingContext === 'campaign') return "Please select a campaign to view NPCs";
     return null;
-  }, [activeGroupId, activeCampaignId]);
+  }, [missingContext]);
 
   // Handle NPC update
   const handleNPCUpdate = async () => {

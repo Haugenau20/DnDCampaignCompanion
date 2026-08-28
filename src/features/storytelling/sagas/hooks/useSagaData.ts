@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { SagaData, SagaContentInput } from '../types';
 import { useFirestore } from 'features/user-management';
 import { useAuth, useGroups, useCampaigns, useUser } from 'features/user-management';
+import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
 import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
 
 /**
@@ -22,6 +23,7 @@ export const useSagaData = () => {
   const { activeGroupUserProfile } = useUser();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
+  const { isResolving, hasRequiredContext, missingContext } = useCampaignContextStatus();
 
   /**
    * Fetch saga from Firebase with appropriate group/campaign context
@@ -165,12 +167,15 @@ export const useSagaData = () => {
 
   return {
     saga,
-    loading,
+    // Folds in `isResolving` (bug #1413) -- see useNPCData's identical fold
+    // in campaign-entities for why this can't just be `useGroups().loading`.
+    loading: Boolean(loading) || isResolving,
     error,
     fetchSaga,
     saveSaga,
     updateSaga,
-    hasRequiredContext: !!activeGroupId && !!activeCampaignId
+    hasRequiredContext,
+    missingContext
   };
 };
 

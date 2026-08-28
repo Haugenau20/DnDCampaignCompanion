@@ -1,6 +1,7 @@
 // functions/src/campaignManagement/deleteCampaign.ts
 import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import {rethrowHttpsError} from "../shared/httpsErrors";
 
 interface DeleteCampaignData {
   groupId: string;
@@ -133,15 +134,13 @@ export const deleteCampaign = functions.onCall(
       // Preserve specific error codes (permission-denied, not-found) instead
       // of collapsing every failure into "internal" -- callers need to be
       // able to tell "you don't have access" from "something broke".
-      if (error instanceof functions.HttpsError) {
-        throw error;
-      }
-      console.error("Error deleting campaign:", error);
-      throw new functions.HttpsError(
-        "internal",
+      rethrowHttpsError(
+        error,
         `Failed to delete campaign: ${
           error instanceof Error ? error.message : "Unknown error"
-        }`
+        }`,
+        (wrappedError) =>
+          console.error("Error deleting campaign:", wrappedError)
       );
     }
   }

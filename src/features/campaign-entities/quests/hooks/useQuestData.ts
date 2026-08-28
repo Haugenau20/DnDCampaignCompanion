@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Quest } from '../types';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
+import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
 
 /**
  * Hook for managing Quest data fetching and state with proper group/campaign context
@@ -14,6 +15,7 @@ export const useQuestData = () => {
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
+  const { isResolving, hasRequiredContext, missingContext } = useCampaignContextStatus();
 
   /**
    * Fetch Quests from Firebase with appropriate group/campaign context
@@ -65,11 +67,14 @@ export const useQuestData = () => {
 
   return {
     quests,
-    loading,
+    // Folds in `isResolving` (bug #1413) -- see useNPCData's identical fold
+    // for why this can't just be `useGroups().loading`.
+    loading: Boolean(loading) || isResolving,
     error,
     getQuestById,
     refreshQuests: fetchQuests,
-    hasRequiredContext: !!activeGroupId && !!activeCampaignId
+    hasRequiredContext,
+    missingContext
   };
 };
 

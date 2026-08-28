@@ -26,7 +26,10 @@ const mockNPCsList = [
   { id: "npc-1", name: "Gandalf" },
   { id: "npc-2", name: "Saruman" },
 ];
-let mockNPCDataReturn = { npcs: mockNPCsList };
+let mockNPCDataReturn: { npcs: any[]; loading: boolean } = {
+  npcs: mockNPCsList,
+  loading: false,
+};
 
 jest.mock("features/campaign-entities", () => ({
   useNPCData: () => mockNPCDataReturn,
@@ -68,6 +71,7 @@ jest.mock("../../../core/components/Card", () => {
 
 jest.mock("lucide-react", () => ({
   ArrowLeft: () => <span data-testid="arrow-left" />,
+  Loader2: () => <span data-testid="loader" />,
 }));
 
 // ---------------------------------------------------------------------------
@@ -84,7 +88,7 @@ describe("NPCsEditPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNpcId = "npc-1";
-    mockNPCDataReturn = { npcs: mockNPCsList };
+    mockNPCDataReturn = { npcs: mockNPCsList, loading: false };
   });
 
   // -------------------------------------------------------------------------
@@ -173,6 +177,38 @@ describe("NPCsEditPage", () => {
       renderPage();
       fireEvent.click(screen.getByTestId("edit-form-cancel"));
       expect(mockNavigateToPage).toHaveBeenCalledWith("/npcs");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Bug #1424 — while auth and the campaign are still restoring, `npcs` is an
+  // empty array, so `editingNPC` is undefined and the page used to commit to
+  // "NPC not found". Measured in the browser before the fix: a direct load of
+  // /npcs/edit/bard showed the red error for ~3.9s before the real form
+  // replaced it. Same defect as #1413, wearing different words.
+  // -------------------------------------------------------------------------
+  describe("still loading (bug #1424)", () => {
+    beforeEach(() => {
+      // The state on a fresh page load: the fetch has not resolved, so the
+      // list is empty -- indistinguishable from "this NPC does not exist"
+      // unless the page consults `loading`.
+      mockNPCDataReturn = { npcs: [], loading: true };
+    });
+
+    it("does NOT claim the NPC is missing while data is still loading", () => {
+      renderPage();
+      expect(screen.queryByText("NPC not found")).not.toBeInTheDocument();
+    });
+
+    it("renders the loading indicator instead", () => {
+      renderPage();
+      expect(screen.getByTestId("loader")).toBeInTheDocument();
+    });
+
+    it("still reports a genuinely missing NPC once loading has finished", () => {
+      mockNPCDataReturn = { npcs: [], loading: false };
+      renderPage();
+      expect(screen.getByText("NPC not found")).toBeInTheDocument();
     });
   });
 });

@@ -3,6 +3,7 @@ import React, { createContext, useContext, useCallback, useState, useEffect } fr
 import { Note, NoteContextValue, ExtractedEntity, EntityType } from "../types";
 import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns, useUser } from "features/user-management";
+import { useCampaignContextStatus } from "shared/hooks/useCampaignContextStatus";
 import { buildCreationAttribution } from "core/attribution";
 import { useNavigate } from 'react-router-dom';
 
@@ -16,12 +17,26 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   children 
 }) => {
   const [notes, setNotes] = useState<Note[]>([]);
+  // Ids of EVERY note this user owns in the active group, not just the active
+  // campaign's. Notes are stored flat at `groups/{g}/users/{uid}/notes` and are
+  // joined to a campaign by a `campaignId` field, so an id must be unique across
+  // all campaigns even though the list we render is per-campaign. `notes` above
+  // is the filtered view and is the wrong basis for allocating one -- that is
+  // bug #1422. Kept as a separate slice rather than storing the unfiltered array
+  // because nothing else needs the other campaigns' note bodies.
+  const [allNoteIds, setAllNoteIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
   const { userProfile, activeGroupUserProfile } = useUser();
+  // Single shared source of truth for "still resolving vs. genuinely no
+  // selection" (bug #1413) -- see the hook's doc comment. Folded into
+  // `isLoading` below so `NotesList`'s existing loading-before-"no campaign"
+  // ordering holds on a fresh page load instead of briefly showing "No
+  // Campaign Selected" while auth/group/campaign are still restoring.
+  const { isResolving } = useCampaignContextStatus();
   const documentService = DocumentService.getInstance();
   const navigate = useNavigate();
 
@@ -36,13 +51,18 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!user?.uid || !activeGroupId) {
         console.log('NoteContext: No user or active group, clearing notes');
         setNotes([]);
+        setAllNoteIds([]);
         return [];
       }
-      
+
       // Use the correct path for user notes: groups/{groupId}/users/{userId}/notes
       const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
       const fetchedData = await documentService.getCollection<Note>(notesCollection);
-      
+
+      // Record the unfiltered id set before the campaign filter below discards
+      // it. This is what new ids are allocated against (bug #1422).
+      setAllNoteIds(fetchedData.map(note => note.id));
+
       // Filter notes by active campaign ID
       let filteredNotes: Note[] = [];
       
@@ -92,20 +112,28 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
 
   /**
    * Generate sequential note ID (note-1, note-2, etc.)
+   *
+   * Allocated against `allNoteIds` -- every note in the user's collection --
+   * and NOT against `notes`, which holds only the active campaign's. The
+   * documents share one flat collection, so a per-campaign maximum produces an
+   * id that already exists as soon as the active campaign has fewer notes than
+   * another: with two notes in campaign A and none in campaign B, B's first
+   * note is allocated `note-1` and `createDocument` refuses to overwrite it,
+   * which is bug #1422.
    */
   const generateSequentialNoteId = useCallback((): string => {
     // Find highest existing number
-    const noteIds = notes.map(note => note.id)
+    const noteIds = allNoteIds
       .filter(id => id.startsWith('note-'))
       .map(id => {
         const match = id.match(/note-(\d+)/);
         return match ? parseInt(match[1], 10) : 0;
       });
-    
+
     // Get next number in sequence (or start with 1 if none exist)
     const nextNumber = noteIds.length > 0 ? Math.max(...noteIds) + 1 : 1;
     return `note-${nextNumber}`;
-  }, [notes]);
+  }, [allNoteIds]);
 
   /**
    * Create a new note locally (not saved to Firebase until saveNote is called)
@@ -137,7 +165,10 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     
     // Add to local state immediately for instant feedback
     setNotes(prevNotes => [newNote, ...prevNotes]);
-    
+    // Claim the id straight away. Two creates in a row happen before any
+    // refetch, so without this the second would be allocated the same number.
+    setAllNoteIds(prevIds => prevIds.includes(noteId) ? prevIds : [...prevIds, noteId]);
+
     console.log(`NoteContext: Created local note ${noteId} for campaign ${activeCampaignId}`);
     
     return noteId;
@@ -402,7 +433,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   // Create context value
   const value: NoteContextValue = {
     notes,
-    isLoading: loading,
+    isLoading: Boolean(loading) || isResolving,
     error,
     getNoteById,
     createNote,

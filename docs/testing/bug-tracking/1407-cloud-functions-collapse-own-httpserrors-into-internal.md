@@ -6,7 +6,10 @@ Both user-management Cloud Functions throw precise `HttpsError` codes (`permissi
 `internal` — so no caller can ever distinguish "you are not allowed" from "the server broke".
 
 ## Status
-🔍 DISCOVERED — 2026-07-29. Found by the subagent implementing
+✅ FIXED (2026-08-01) — awaiting a Functions deploy to take effect. See "Resolution" at the foot of
+this document.
+
+Originally 🔍 DISCOVERED — 2026-07-29. Found by the subagent implementing
 [#1403](./1403-campaign-delete-confirmed-but-never-performed.md) while following these functions as
 the pattern to copy; verified independently.
 
@@ -94,3 +97,64 @@ Two lines, no behaviour change for genuine internal failures. Deliberately **not
 mix an unreviewed production change into a feature review. Both require a Functions deploy.
 
 Worth checking `contact.ts` and `entityExtraction.ts` for the same shape before deploying.
+
+## Resolution (2026-08-01)
+
+Fixed — but **not** by pasting the two-line guard into each `catch`, which would have re-created the
+condition that produced the bug. This defect exists because the guard was a copy-paste convention:
+six callables, four of which had it and two of which did not, with no mechanism making the rule
+single-sourced.
+
+**One helper now owns the rule**: `firebase/functions/src/shared/httpsErrors.ts` exports
+`rethrowHttpsError(error, fallbackMessage, onWrapped?)`, and all six callables route their `catch`
+through it.
+
+### The survey the fix was based on
+
+| File | Before | After |
+|---|---|---|
+| `userManagement/deleteUser.ts` | **DEFECTIVE** — collapsed `permission-denied`/`not-found` into `internal` | uses helper |
+| `userManagement/removeUserFromGroup.ts` | **DEFECTIVE** — collapsed `permission-denied`/`failed-precondition` | uses helper |
+| `campaignManagement/deleteCampaign.ts` | already correct (inline guard, added by #1403) | uses helper |
+| `groupManagement/createGroup.ts` | already correct (inline guard) | uses helper |
+| `contact.ts` | already correct (inline guard) | uses helper |
+| `entityExtraction.ts` (×2 callables) | already correct (inline guard, **named** `HttpsError` import) | uses helper |
+
+So the report's scope was exactly right: only the two functions it named were broken. Its suggestion
+to check `contact.ts`/`entityExtraction.ts` was worth making and came back clean.
+
+### Two things that needed checking rather than assuming
+
+1. **`instanceof` across import styles.** Five files use `import * as functions from
+   "firebase-functions/v2/https"` (→ `functions.HttpsError`); `entityExtraction.ts` also uses the
+   named `import { HttpsError }`. Both resolve to the same class from the same module specifier, so
+   one `instanceof` check in the helper is correct for all of them. **Verified by reading every
+   import line in the package** — all eight are `firebase-functions/v2/https`. Had any file used v1's
+   `functions.https.HttpsError`, the check would have failed **silently** and reinstated the bug.
+2. **The `onWrapped` callback exists to preserve a real difference, not for generality.**
+   `deleteUser`, `removeUserFromGroup`, `contact.ts` and `entityExtraction.ts` logged every caught
+   error *unconditionally*; `deleteCampaign.ts` and `createGroup.ts` logged *only* on the wrap path,
+   after their early return. Unifying the six catch blocks without `onWrapped` would have quietly
+   changed which errors get logged in two of them.
+
+### Verification, and its limits — read this before trusting the fix
+
+- `cd firebase/functions && npm run build` — exit 0.
+- `npm run lint` — 435 errors / 2 warnings, against a **pre-existing** baseline of 437 / 2 measured
+  on the unmodified tree. All remaining errors are package-wide whitespace/quote-style/JSDoc noise
+  unrelated to this bug.
+- Root `tsc --noEmit` — clean; no `src/` file was touched.
+
+⚠️ **There is no test proving this fix.** `firebase/functions/` has no test runner at all — its
+`package.json` has only lint/build/serve/shell/deploy. So unlike every other fix in this tracker,
+this one is verified by **compilation and reading only**, with no revert-proof. That is a real gap,
+not a formality: the `instanceof` correctness above is exactly the kind of claim that fails silently
+in production and compiles perfectly.
+
+**`firebase-functions-test@^3.1.0` is already in `devDependencies` and entirely unused.** A harness
+using it (invoke each callable as a non-admin, assert `error.code`) would make this bug and any
+regression in the helper provable. Deliberately **not** built here — adding a test runner to the
+functions package is infrastructure scope for the owner to approve, not part of a bug fix.
+
+⚠️ **Requires `firebase deploy --only functions` to reach users.** Nothing changes in production
+until that runs.

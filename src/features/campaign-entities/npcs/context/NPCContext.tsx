@@ -4,7 +4,8 @@ import { NPC, NPCContextValue, NPCRelationship, NPCNote } from '../types';
 import { DomainData } from 'core/types/common';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
-import { useGroups, useCampaigns, useAuth, useUser } from 'features/user-management';
+import { useAuth, useUser } from 'features/user-management';
+import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
 import { generateUniqueEntityId } from 'core/utils/entity-id';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { Location } from '../../locations/types';
@@ -14,8 +15,9 @@ const NPCContext = createContext<NPCContextValue | undefined>(undefined);
 export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use the NPCData hook for basic CRUD operations
   const { npcs, loading, error, refreshNPCs, hasRequiredContext } = useNPCData();
-  const { activeGroupId } = useGroups();
-  const { activeCampaignId } = useCampaigns();
+  // Single shared source of truth for "still resolving vs. genuinely no
+  // selection" (bug #1413) -- see the hook's doc comment.
+  const { missingContext } = useCampaignContextStatus();
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();
   
@@ -182,12 +184,16 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await refreshNPCs();
   }, [hasRequiredContext, user, deleteData, refreshNPCs]);
 
-  // Error message for missing context
+  // Error message for missing context. `missingContext` is only ever
+  // 'group'/'campaign' once resolution has actually finished (bug #1413) --
+  // while it's still in flight this stays null and `isLoading` below (which
+  // already has `isResolving` folded into it by `useNPCData`) carries the
+  // spinner instead.
   const contextError = useMemo(() => {
-    if (!activeGroupId) return "Please select a group to view NPCs";
-    if (!activeCampaignId) return "Please select a campaign to view NPCs";
+    if (missingContext === 'group') return "Please select a group to view NPCs";
+    if (missingContext === 'campaign') return "Please select a campaign to view NPCs";
     return null;
-  }, [activeGroupId, activeCampaignId]);
+  }, [missingContext]);
 
   const value: NPCContextValue = {
     npcs,

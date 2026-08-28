@@ -18,12 +18,37 @@ const QuestEditPage: React.FC = () => {
   
   const editingQuest = quests.find(quest => quest.id === questId);
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated.
+  //
+  // Gated on `loading` for the same reason the render branches below are
+  // ordered the way they are (bug #1413, extended by #1423): `user` is null
+  // both when nobody is signed in AND while Firebase Auth is still rehydrating
+  // on a fresh page load. Firing on the bare `!user` sends a signed-in user
+  // back to the list ~124ms into a reload, before auth can restore -- so
+  // reloading this page, or opening a bookmark to it, never worked.
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       navigateToPage('/quests');
     }
-  }, [user, navigateToPage]);
+  }, [loading, user, navigateToPage]);
+
+  // Loading is checked BEFORE the context-selection message on purpose
+  // (bug #1413). `loading` now folds in "auth/campaign still restoring", so on
+  // a fresh page load this renders the spinner instead of telling the user they
+  // have selected no campaign when they have — the error below is reached only
+  // once restoration has finished and genuinely produced nothing.
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="p-8">
+          <div className="flex items-center gap-4">
+            <Loader2 className="w-6 h-6 animate-spin primary" />
+            <Typography>Loading quest data...</Typography>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   // Show context selection message if needed
   if (!hasRequiredContext) {
@@ -46,29 +71,16 @@ const QuestEditPage: React.FC = () => {
           <Card.Content className="text-center py-12">
             <AlertCircle className="w-12 h-12 mx-auto mb-4 typography-secondary" />
             <Typography variant="h3" className="mb-2">
-              {!activeGroupId 
-                ? "No Group Selected" 
+              {!activeGroupId
+                ? "No Group Selected"
                 : "No Campaign Selected"}
             </Typography>
             <Typography color="secondary" className="mb-6">
-              {!activeGroupId 
-                ? "Please select a group to edit quests." 
+              {!activeGroupId
+                ? "Please select a group to edit quests."
                 : "Please select a campaign within your group to edit quests."}
             </Typography>
           </Card.Content>
-        </Card>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8">
-          <div className="flex items-center gap-4">
-            <Loader2 className="w-6 h-6 animate-spin primary" />
-            <Typography>Loading quest data...</Typography>
-          </div>
         </Card>
       </div>
     );

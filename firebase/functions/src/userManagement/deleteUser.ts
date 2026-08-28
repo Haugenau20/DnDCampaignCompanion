@@ -1,6 +1,7 @@
 // functions/src/userManagement/deleteUser.ts
 import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import {rethrowHttpsError} from "../shared/httpsErrors";
 
 interface DeleteUserData {
   userId: string;
@@ -105,8 +106,8 @@ export const deleteUser = functions.onCall(
       return {success: true, message: "User deleted successfully"};
     } catch (error) {
       console.error("Error deleting user:", error);
-      throw new functions.HttpsError(
-        "internal",
+      rethrowHttpsError(
+        error,
         `Failed to delete user: ${
           error instanceof Error ? error.message : "Unknown error"
         }`

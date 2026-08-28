@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Chapter } from '../types';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
+import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
 
 /**
  * Hook for managing chapter data fetching and state with proper group/campaign context
@@ -14,6 +15,7 @@ export const useChapterData = () => {
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
+  const { isResolving, hasRequiredContext } = useCampaignContextStatus();
 
   /**
    * Fetch chapters from Firebase with appropriate group/campaign context
@@ -62,10 +64,12 @@ export const useChapterData = () => {
 
   return {
     chapters,
-    loading,
+    // Folds in `isResolving` (bug #1413) -- see useNPCData's identical fold in
+    // campaign-entities for why this can't just be `useGroups().loading`.
+    loading: Boolean(loading) || isResolving,
     error,
     refreshChapters: fetchChapters,
-    hasRequiredContext: !!activeGroupId && !!activeCampaignId
+    hasRequiredContext
   };
 };
 

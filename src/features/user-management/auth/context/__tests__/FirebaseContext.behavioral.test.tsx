@@ -932,6 +932,41 @@ describe("FirebaseContext Behavioral Testing", () => {
       expect(result.current.error).toBe("Group profile error");
     });
 
+    // Regression guard for the #1413 fix. `loading` is
+    // `authLoading || profileLoading || groupsLoading`, so ANY one of the three
+    // staying true pins `loading` true forever. The catch below this describe's
+    // subject used to reset only `groupsLoading` and `authLoading` — but
+    // `loadUserProfile` throws when its retries are exhausted, which skips the
+    // `setProfileLoading(false)` on the happy path, leaving `profileLoading`
+    // stuck true.
+    //
+    // Before #1413 that was nearly inert. After it, `useAuth().loading` feeds
+    // `useCampaignContextStatus().isResolving`, so a stuck flag means every
+    // entity page renders a PERMANENT spinner instead of its error state, and
+    // `hasRequiredContext` never becomes true so writes throw. Fixing #1413
+    // promoted a dormant defect into a page-level outage — the same
+    // wake-a-neighbour pattern as #018 -> #852 and #1300 -> #1411.
+    //
+    // This costs ~2s of real time: getUserProfile rejects, and loadUserProfile
+    // retries twice with hardcoded 1s backoffs before rethrowing (bug #901's
+    // untestable delays). Unlike #901's two skipped siblings above, this one is
+    // worth the wall-clock, because the state it guards is now user-visible.
+    test("loading settles to false when the profile load fails outright", async () => {
+      const fakeUser = makeUser("u-1");
+      mockGetUserProfile.mockRejectedValue(new Error("Firebase unavailable"));
+
+      const { result } = renderHook(() => useFirebaseContext(), { wrapper });
+
+      await act(async () => {
+        await capturedAuthCallback!(fakeUser);
+      });
+
+      // The user must reach a definite state. A stuck `loading` is worse than
+      // the error itself: the page can never render anything but a spinner.
+      expect(result.current.loading).toBe(false);
+      expect(result.current.error).toBeTruthy();
+    }, 10000);
+
     // NOTE: This test verifies that the provider does not throw synchronously.
     // The async retry loop (bug #901) means we cannot easily await full
     // completion; we only verify that initiating the auth callback does not

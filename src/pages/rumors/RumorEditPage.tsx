@@ -17,12 +17,18 @@ const RumorEditPage: React.FC = () => {
   
   const editingRumor = rumors.find(rumor => rumor.id === rumorId);
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated.
+  //
+  // Gated on `isLoading` because `user` is null both when nobody is signed in
+  // AND while Firebase Auth is still rehydrating on a fresh page load. Firing
+  // on the bare `!user` sent a signed-in user back to the list mid-restore, so
+  // reloading this page or opening a bookmark to it never worked (bug #1423,
+  // the redirect-shaped half of #1413).
   useEffect(() => {
-    if (!user) {
+    if (!isLoading && !user) {
       navigateToPage('/rumors');
     }
-  }, [user, navigateToPage]);
+  }, [isLoading, user, navigateToPage]);
 
   if (isLoading) {
     return (

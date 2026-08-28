@@ -57,8 +57,12 @@ jest.mock("features/campaign-entities", () => ({
   ),
 }));
 
+// Mutable so a test can represent "auth has not rehydrated yet" (user === null
+// while loading is still true), which is a different state from "signed out".
+let mockAuthUser: { uid: string } | null = { uid: "user-1" };
+
 jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: { uid: "user-1" } }),
+  useAuth: () => ({ user: mockAuthUser }),
   useGroups: () => ({ activeGroupId: "group-1" }),
 }));
 
@@ -116,6 +120,7 @@ describe("QuestEditPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockQuestId = "quest-1";
+    mockAuthUser = { uid: "user-1" };
     mockQuestContext = {
       quests: [
         { id: "quest-1", title: "Find the Dragon" },
@@ -292,6 +297,37 @@ describe("QuestEditPage", () => {
     it("navigates to /quests on form cancel", () => {
       renderPage();
       fireEvent.click(screen.getByTestId("edit-form-cancel"));
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/quests");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Bug #1423 — the redirect must distinguish "still rehydrating" from
+  // "signed out". `user` is null in both cases; only `loading` tells them
+  // apart. Measured in the browser before the fix: a direct load of
+  // /quests/edit/<id> while signed in landed on /quests within ~124ms.
+  // -------------------------------------------------------------------------
+  describe("auth still rehydrating (bug #1423)", () => {
+    beforeEach(() => {
+      // The state on a fresh page load: Firebase Auth has not called back yet,
+      // so there is no user *and* the context still reports itself as loading.
+      mockAuthUser = null;
+      mockQuestContext.loading = true;
+    });
+
+    it("does NOT redirect to /quests while auth is still restoring", () => {
+      renderPage();
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+    });
+
+    it("shows the loading indicator instead of redirecting", () => {
+      renderPage();
+      expect(screen.getByTestId("loader")).toBeInTheDocument();
+    });
+
+    it("still redirects once loading finishes and there is genuinely no user", () => {
+      mockQuestContext.loading = false;
+      renderPage();
       expect(mockNavigateToPage).toHaveBeenCalledWith("/quests");
     });
   });
