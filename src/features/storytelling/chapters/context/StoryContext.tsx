@@ -1,5 +1,5 @@
 // src/features/storytelling/chapters/context/StoryContext.tsx
-import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react';
 import { Chapter, ChapterProgress, StoryProgress } from '../types';
 import { DomainData } from 'core/types/common';
 import { useChapterData } from '../hooks/useChapterData';
@@ -91,10 +91,12 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     deleteData
   } = useFirebaseData<Chapter>({ collection: 'chapters' });
   
-  // Create a separate instance for story progress
+  // Create a separate instance for story progress. Only the read side is used:
+  // writes go through `persistProgress` below, because this hook's `updateData`
+  // cannot create the document it needs to write to.
   const {
     data: progressData = [],
-    updateData: updateProgressData
+    getData: refreshProgress
   } = useFirebaseData<StoryProgress>({ collection: 'story-progress' });
 
   const { user } = useAuth();
@@ -104,6 +106,45 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Real, held-in-state reading progress. `defaultProgress` remains only the
   // initial/fallback value for a first-time reader who has no persisted document.
   const [storedProgress, setStoredProgress] = useState<StoryProgress>(defaultProgress);
+
+  /**
+   * Synchronous mirror of `storedProgress`, and the value every mutation below
+   * builds from.
+   *
+   * `updateChapterProgress` and `updateCurrentChapter` both replace the WHOLE
+   * `current-progress` document, and finishing a chapter fires both in the same
+   * tick — `onPageChange(page, true)` marks it complete, then `onNextChapter()`
+   * navigates, which sets the new current chapter. Building each from the
+   * `storedProgress` closure meant the second one read the pre-update value and
+   * overwrote the first: completing a chapter recorded `currentChapter` and then
+   * silently dropped the `chapterProgress` entry it had just written.
+   *
+   * A ref updated synchronously (rather than waiting for a re-render) means the
+   * second mutation composes on top of the first, so last-write-wins is safe.
+   */
+  const progressRef = useRef<StoryProgress>(defaultProgress);
+
+  /**
+   * Re-fetch the progress document once the group and campaign are known.
+   *
+   * `useFirebaseData` fetches on mount and then only on an auth-state event, and
+   * its `getData` identity is stable because `useFirestore`'s `getCollection` is
+   * a `useCallback` with an empty dependency array. On a page load the mount
+   * fetch therefore runs while the campaign context is still restoring — it logs
+   * "No active group selected for collection: story-progress" and returns
+   * nothing — and nothing ever asks again. `progressData` stayed `[]` for the
+   * life of the page, so reading progress was never read BACK even once it was
+   * being written correctly.
+   *
+   * The entity contexts avoid this by going through their own `use*Data()` hooks,
+   * which watch the context; this one uses `useFirebaseData` directly and so has
+   * to ask again itself.
+   */
+  useEffect(() => {
+    if (hasRequiredContext) {
+      refreshProgress();
+    }
+  }, [hasRequiredContext, refreshProgress]);
 
   // Populate storedProgress from the persisted 'current-progress' document once
   // useFirebaseData's own on-mount fetch resolves. Guarded so it only ever writes
@@ -116,6 +157,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       (doc) => (doc as StoryProgress & { id?: string }).id === 'current-progress'
     );
     if (persisted) {
+      progressRef.current = persisted;
       setStoredProgress(persisted);
     }
   }, [progressData]);
@@ -142,9 +184,56 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return currentIndex > 0 ? chapters[currentIndex - 1] : undefined;
   }, [chapters]);
 
+  /**
+   * Write the whole progress document, creating it if it does not exist yet.
+   *
+   * Both callers below replace the entire `current-progress` document rather
+   * than patching fields, so an upsert is the correct verb — and it is the only
+   * one that works. `useFirebaseData`'s `updateData` is an *update*, which
+   * Firestore rejects on a missing document, and nothing anywhere creates this
+   * document: it is not seeded by the sample-data generator and there is no
+   * create path in the app. Every campaign therefore started with no progress
+   * document, so the first write failed with
+   *
+   *   NOT_FOUND: no entity to update: .../story-progress/current-progress
+   *
+   * and the callers' `catch` logged it and moved on. Reading progress has never
+   * persisted for any campaign — which is why the 2026-07-29 data audit found
+   * zero story-progress documents and read it as "no data to migrate".
+   *
+   * `setDocument` upserts, so the first write creates and later ones replace.
+   */
+  const persistProgress = useCallback(async (updatedProgress: StoryProgress) => {
+    await firebaseServices.document.setDocument(
+      'story-progress',
+      'current-progress',
+      updatedProgress
+    );
+  }, []);
+
+  /**
+   * Apply a change to reading progress: derive the next document from the ref
+   * (never from a render closure), publish it synchronously so a mutation later
+   * in the same tick composes on top of it, then persist.
+   *
+   * The ref is advanced BEFORE the await deliberately. Both mutations are
+   * fire-and-forget from ambient call sites, so if the write loses a race or
+   * fails outright the in-memory value still reflects what the reader did, and
+   * the next write carries it.
+   */
+  const applyProgress = useCallback(
+    async (mutate: (previous: StoryProgress) => StoryProgress) => {
+      const next = mutate(progressRef.current);
+      progressRef.current = next;
+      setStoredProgress(next);
+      await persistProgress(next);
+    },
+    [persistProgress]
+  );
+
   // Update chapter progress
   const updateChapterProgress = useCallback(async (
-    chapterId: string, 
+    chapterId: string,
     progress: Partial<ChapterProgress>
   ) => {
     try {
@@ -153,38 +242,38 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
       
-      // Bug #852: this used to rebuild the entry from scratch, defaulting every
-      // field the caller did not supply — so any call omitting `isComplete`
-      // silently cleared a stored `true`. The outer spreads preserved *other*
-      // chapters; nothing preserved this one. Merge over the existing entry so
-      // the body honours the Partial<ChapterProgress> the signature advertises.
-      const existing = storedProgress.chapterProgress[chapterId];
+      await applyProgress(previous => {
+        // Bug #852: this used to rebuild the entry from scratch, defaulting every
+        // field the caller did not supply — so any call omitting `isComplete`
+        // silently cleared a stored `true`. The outer spreads preserved *other*
+        // chapters; nothing preserved this one. Merge over the existing entry so
+        // the body honours the Partial<ChapterProgress> the signature advertises.
+        const existing = previous.chapterProgress[chapterId];
 
-      const updatedProgress = {
-        ...storedProgress,
-        chapterProgress: {
-          ...storedProgress.chapterProgress,
-          [chapterId]: {
-            chapterId,
-            // Precedence, per field: what the caller explicitly supplied wins,
-            // then what is already stored, then the default. `??` not `||`, so
-            // an explicit `false`/`0` from the caller is honoured rather than
-            // falling through. A caller can still clear isComplete on purpose;
-            // what it can no longer do is clear it by staying silent.
-            lastPosition: progress.lastPosition ?? existing?.lastPosition ?? 0,
-            isComplete: progress.isComplete ?? existing?.isComplete ?? false,
-            lastRead: new Date()
+        return {
+          ...previous,
+          chapterProgress: {
+            ...previous.chapterProgress,
+            [chapterId]: {
+              chapterId,
+              // Precedence, per field: what the caller explicitly supplied wins,
+              // then what is already stored, then the default. `??` not `||`, so
+              // an explicit `false`/`0` from the caller is honoured rather than
+              // falling through. A caller can still clear isComplete on purpose;
+              // what it can no longer do is clear it by staying silent.
+              lastPosition: progress.lastPosition ?? existing?.lastPosition ?? 0,
+              isComplete: progress.isComplete ?? existing?.isComplete ?? false,
+              lastRead: new Date()
+            }
           }
-        }
-      };
+        };
+      });
 
-      await updateProgressData('current-progress', updatedProgress);
-      setStoredProgress(updatedProgress);
       refreshChapters();
     } catch (error) {
       console.error('Failed to update chapter progress:', error);
     }
-  }, [storedProgress, updateProgressData, refreshChapters, hasRequiredContext]);
+  }, [applyProgress, refreshChapters, hasRequiredContext]);
 
   // Update current chapter
   const updateCurrentChapter = useCallback(async (chapterId: string) => {
@@ -194,18 +283,15 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
       
-      const updatedProgress = {
-        ...storedProgress,
+      await applyProgress(previous => ({
+        ...previous,
         currentChapter: chapterId,
         lastRead: new Date()
-      };
-
-      await updateProgressData('current-progress', updatedProgress);
-      setStoredProgress(updatedProgress);
+      }));
     } catch (error) {
       console.error('Failed to update current chapter:', error);
     }
-  }, [storedProgress, updateProgressData, hasRequiredContext]);
+  }, [applyProgress, hasRequiredContext]);
 
   // Mark chapter as complete
   const markChapterComplete = useCallback(async (chapterId: string) => {

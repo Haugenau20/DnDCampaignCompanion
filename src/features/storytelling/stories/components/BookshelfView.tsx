@@ -1,150 +1,152 @@
 // src/features/storytelling/stories/components/BookshelfView.tsx
 import React, { useMemo } from 'react';
 import Typography from 'core/components/Typography';
-import { Chapter } from 'features/storytelling/chapters/types';
 import clsx from 'clsx';
-
-// Import book SVG components
 import {
-  BookRed,
-  BookBlue,
-  BookGreen,
-  BookPurple,
-  BookBrown,
-  BookAged,
-  BookOrnate,
-  BookClasped,
-  BookRibbed,
-  BookJeweled,
-  BookManuscript
-} from './books';
+  ChapterWithProgress,
+  ChapterReadState,
+  groupChaptersByTens,
+} from 'features/storytelling/chapters/utils/chapter-progress';
 
-interface BookshelfViewProps {
-  chapters: Chapter[];
-  currentChapterId?: string;
+/**
+ * Props shared by both chapter views (this component and `ChapterList`). See
+ * the fuller note on `ChapterViewProps` in `ChapterList.tsx` — both mirror
+ * the page's contract exactly so either view can be swapped in without the
+ * page changing what it passes down.
+ *
+ * `onEditChapter` / `isAdmin` round-trip through this component's props for
+ * that same reason, but the shelf itself has no per-spine edit affordance —
+ * there isn't room on a book spine for a second control, and admins can
+ * still edit from `ChapterList`. They are intentionally unused here.
+ */
+export interface ChapterViewProps {
+  items: ChapterWithProgress[];
   onChapterSelect: (chapterId: string) => void;
+  onEditChapter?: (chapterId: string) => void;
+  isAdmin?: boolean;
 }
 
-// Array of book components for easy access
-const BookComponents = [
-  BookRed,
-  BookBlue,
-  BookGreen,
-  BookPurple,
-  BookBrown,
-  BookAged,
-  BookOrnate,
-  BookClasped,
-  BookRibbed,
-  BookJeweled,
-  BookManuscript
-];
+/** Spine height class per read state — "reading" stands slightly taller. */
+const SPINE_HEIGHT: Record<ChapterReadState, string> = {
+  read: 'h-36',
+  reading: 'h-40',
+  unread: 'h-36',
+};
 
-const BookshelfView: React.FC<BookshelfViewProps> = ({
-  chapters,
-  currentChapterId,
-  onChapterSelect
-}) => {
+/**
+ * Spine fill per read state. Read state is the *only* thing a spine encodes
+ * now — no more per-chapter colour/height rotation that encoded nothing
+ * (previously `(order + title.length) % 11` for colour, content length for
+ * height). Read = solid fill; reading = accent fill with a ring; unread =
+ * pale with a dashed outline, so an untouched chapter reads as "empty slot"
+ * rather than just another book.
+ */
+const SPINE_FILL: Record<ChapterReadState, string> = {
+  read: 'bg-status-completed',
+  reading: 'bg-status-active border-2 border-accent',
+  unread: 'bg-secondary border-2 border-dashed border-card',
+};
 
-  // Group chapters by 10s for the bookshelf
-  const groupedChapters = useMemo(() => {
-    const groups: Array<Array<typeof chapters[0]>> = [];
-    const sortedByOrder = [...chapters].sort((a, b) => a.order - b.order);
-    
-    // Create groups of 10 chapters
-    for (let i = 0; i < sortedByOrder.length; i += 10) {
-      groups.push(sortedByOrder.slice(i, i + 10));
-    }
-    
-    return groups;
-  }, [chapters]);
+/** Spine text colour — white reads on the two filled states, muted on the pale unread one. */
+const SPINE_TEXT_COLOR: Record<ChapterReadState, 'white' | 'secondary'> = {
+  read: 'white',
+  reading: 'white',
+  unread: 'secondary',
+};
 
-  // Function to determine which book component to use.
-  // Takes the chapter itself rather than its order: callers already hold the object,
-  // so the previous `chapters.find(c => c.order === chapterOrder)` re-scanned the
-  // whole list once per rendered book (O(n²) across a 39-chapter shelf) to recover
-  // a chapter it had been handed. The lookup also silently picked the first match
-  // when two chapters shared an `order`.
-  const getBookComponent = (chapter: Chapter) => {
-    // Use a deterministic but varied selection based on chapter order
-    // and title length (if available)
-    const titleFactor = chapter.title?.length || 0;
-    const index = (chapter.order + titleFactor) % BookComponents.length;
-    return BookComponents[index];
-  };
+/**
+ * A single book spine. Titles are readable without hovering — chapter number
+ * and title run down the spine via `writing-mode: vertical-rl` — and the
+ * whole spine is a real `<button>` so the shelf is keyboard-navigable.
+ */
+const Spine: React.FC<{
+  item: ChapterWithProgress;
+  onSelect: (chapterId: string) => void;
+}> = ({ item, onSelect }) => {
+  const { chapter, state } = item;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(chapter.id)}
+      aria-label={`Chapter ${chapter.order}: ${chapter.title} — ${state}`}
+      className={clsx(
+        'w-10 shrink-0 rounded-t-sm transition-transform hover:-translate-y-1',
+        // items-START, not items-end. With `writing-mode: vertical-rl` the label
+        // runs top-to-bottom and grows past the spine on longer titles; aligning
+        // to the end pushed that overflow out of the TOP, so "1. A Long-expected
+        // Party" rendered as "ong-expected Party" — losing the chapter number,
+        // which is the one part of the label that identifies the spine. Starting
+        // at the top clips the tail of the title instead, which is recoverable
+        // from context and from the aria-label.
+        'flex items-start justify-center overflow-hidden py-2',
+        SPINE_HEIGHT[state],
+        SPINE_FILL[state]
+      )}
+    >
+      <Typography
+        as="span"
+        variant="caption"
+        color={SPINE_TEXT_COLOR[state]}
+        className="whitespace-nowrap"
+        style={{ writingMode: 'vertical-rl' }}
+      >
+        {chapter.order}. {chapter.title}
+      </Typography>
+    </button>
+  );
+};
+
+/** A single legend entry: a swatch matching a spine state, plus its label. */
+const LegendItem: React.FC<{ swatchClassName: string; label: string }> = ({
+  swatchClassName,
+  label,
+}) => (
+  <div className="flex items-center gap-2">
+    <span
+      className={clsx('inline-block w-4 h-4 rounded-sm shrink-0', swatchClassName)}
+      aria-hidden="true"
+    />
+    <Typography variant="body-sm" color="secondary">{label}</Typography>
+  </div>
+);
+
+/** Legend explaining the shelf's only encoding: read state. */
+const Legend: React.FC = () => (
+  <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-t card-border bg-secondary">
+    <LegendItem swatchClassName={SPINE_FILL.read} label="Read" />
+    <LegendItem swatchClassName={SPINE_FILL.reading} label="Reading now" />
+    <LegendItem swatchClassName={SPINE_FILL.unread} label="Unread" />
+  </div>
+);
+
+/**
+ * A shelf of chapter spines, grouped by tens. Spines are left-aligned and
+ * wrap onto further rows instead of centring a fixed-width block inside a
+ * full-width card, and every spine is the same size — finding a chapter
+ * means reading titles, not hovering every spine on the shelf.
+ */
+const BookshelfView: React.FC<ChapterViewProps> = ({ items, onChapterSelect }) => {
+  const groups = useMemo(() => groupChaptersByTens(items), [items]);
 
   return (
     <div className="rounded-lg overflow-hidden card">
-      {groupedChapters.map((group, groupIndex) => (
-        <div key={groupIndex} className="mb-8">
-          <div className="p-3 border-b card-border">
-            <Typography variant="h4" className="typography-heading">
-              Chapters {groupIndex * 10 + 1}-{groupIndex * 10 + group.length}
-            </Typography>
+      {groups.map((group) => (
+        <div key={group.label} className="p-4">
+          <Typography variant="h4" className="mb-4">{group.label}</Typography>
+
+          <div className="flex flex-wrap items-end gap-3">
+            {group.items.map((item) => (
+              <Spine key={item.chapter.id} item={item} onSelect={onChapterSelect} />
+            ))}
           </div>
-          
-          {/* Books row with fixed width */}
-            <div className="relative px-6 pt-8 flex items-end gap-2 mx-auto mt-4"
-            style={{ width: 'min-content', maxWidth: '100%', overflowX: 'auto' }}>
-            {group.map((chapter) => {
-              const isCurrentChapter = chapter.id === currentChapterId;
-              
-              // Calculate book height based on content length
-              const contentLength = chapter.content?.length || 0;
-              let bookHeight = 120; // base height
-              if (contentLength > 3500) bookHeight = 190;
-              else if (contentLength > 3000) bookHeight = 180;
-              else if (contentLength > 2500) bookHeight = 170;
-              else if (contentLength > 2000) bookHeight = 160;
-              else if (contentLength > 1500) bookHeight = 150;
-              else if (contentLength > 1000) bookHeight = 140;
-              else if (contentLength > 500) bookHeight = 130;
-              else if (contentLength > 250) bookHeight = 120;
-              else if (contentLength > 100) bookHeight = 110;
-              
-              // Get the book component for this chapter
-              const BookComponent = getBookComponent(chapter);
-              
-              return (
-                <div 
-                  key={chapter.id}
-                  onClick={() => onChapterSelect(chapter.id)}
-                  className={clsx(
-                    "flex-shrink-0 cursor-pointer transition-transform hover:-translate-y-2",
-                    isCurrentChapter ? "relative z-10 -translate-y-2" : ""
-                  )}
-                  style={{ width: '45px' }}
-                >
-                  {/* Book */}
-                  <div 
-                    className={clsx(
-                      "w-full rounded-t-sm shadow-md hover:shadow-lg transition-shadow", 
-                      isCurrentChapter ? `ring-2 primary ring-offset-2` : ""
-                    )}
-                  >
-                    {/* Render the book component */}
-                    <BookComponent height={bookHeight} className="w-full" />
-                  </div>
-                  
-                  {/* Chapter number below book */}
-                  <div className="text-center mt-2">
-                    <Typography 
-                      variant="body-sm" 
-                      className={clsx(
-                        "text-xs", 
-                        isCurrentChapter ? `typography font-bold` : ""
-                      )}
-                      title={`Chapter ${chapter.order}: ${chapter.title}`}
-                    >
-                      {chapter.order}
-                    </Typography>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+
+          {/* Wooden shelf edge */}
+          <div className="mt-2 h-3 rounded-sm bg-secondary border-t card-border" aria-hidden="true" />
         </div>
       ))}
+
+      {groups.length > 0 && <Legend />}
     </div>
   );
 };

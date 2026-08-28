@@ -136,11 +136,13 @@ describe('StoryContext Reading Progress (bug #018)', () => {
         return {
           data: progressCollectionData,
           updateData: mockUpdateProgressData,
+          getData: jest.fn().mockResolvedValue([]),
         };
       }
       return {
         updateData: mockUpdateData,
         deleteData: mockDeleteData,
+        getData: jest.fn().mockResolvedValue([]),
       };
     });
   });

@@ -1,14 +1,7 @@
-﻿// src/pages/story/__tests__/ChaptersPage.test.tsx
+// src/pages/story/__tests__/ChaptersPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ChaptersPage from "../ChaptersPage";
-
-// ---------------------------------------------------------------------------
-// react-router-dom mock
-// ---------------------------------------------------------------------------
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-}));
 
 // ---------------------------------------------------------------------------
 // Context / hook mocks
@@ -21,51 +14,76 @@ jest.mock("shared/context/NavigationContext", () => ({
 
 interface StoryContextMock {
   chapters: any[];
-  storyProgress: { currentChapter: string | null };
+  storyProgress: { currentChapter: string; chapterProgress: Record<string, any> };
   isLoading: boolean;
 }
 
+const NO_PROGRESS = { currentChapter: "", chapterProgress: {} };
+
 let mockStoryContext: StoryContextMock = {
   chapters: [],
-  storyProgress: { currentChapter: null },
+  storyProgress: NO_PROGRESS,
   isLoading: false,
 };
 
+// `features/storytelling`'s barrel is mocked here — but the utils import
+// (`features/storytelling/chapters/utils/chapter-progress`) is deliberately
+// left real, since ChaptersPage's filtering/derivation behaviour is exactly
+// what these tests exercise, and that module already has its own test suite
+// backing its contract.
+//
+// `ChapterList` doesn't exist yet (a parallel change is adding it); this stub
+// stands in so ChaptersPage's own tests aren't blocked on that landing.
 jest.mock("features/storytelling", () => ({
   useStory: () => mockStoryContext,
   BookshelfView: (props: any) => (
     <div
       data-testid="bookshelf-view"
-      data-chapter-count={props.chapters?.length}
-      data-current-chapter={props.currentChapterId}
-    />
-  ),
-  TableView: (props: any) => (
-    <div
-      data-testid="table-view"
-      data-chapter-count={props.chapters?.length}
-      data-sort-field={props.sortField}
-      data-sort-direction={props.sortDirection}
+      data-count={props.items?.length}
       data-is-admin={String(props.isAdmin)}
     >
-      <button
-        data-testid="table-sort-order"
-        onClick={() => props.onSort("order")}
-      >
-        Sort by Order
-      </button>
-      <button
-        data-testid="table-sort-title"
-        onClick={() => props.onSort("title")}
-      >
-        Sort by Title
-      </button>
-      <button
-        data-testid="table-edit-chapter"
-        onClick={() => props.onEditChapter?.("chapter-01")}
-      >
-        Edit
-      </button>
+      {props.items?.map((item: any) => (
+        <div key={item.chapter.id}>
+          <span data-testid={`shelf-title-${item.chapter.id}`}>{item.chapter.title}</span>
+          <button
+            data-testid={`shelf-select-${item.chapter.id}`}
+            onClick={() => props.onChapterSelect(item.chapter.id)}
+          >
+            select
+          </button>
+          <button
+            data-testid={`shelf-edit-${item.chapter.id}`}
+            onClick={() => props.onEditChapter(item.chapter.id)}
+          >
+            edit
+          </button>
+        </div>
+      ))}
+    </div>
+  ),
+  ChapterList: (props: any) => (
+    <div
+      data-testid="chapter-list"
+      data-count={props.items?.length}
+      data-is-admin={String(props.isAdmin)}
+    >
+      {props.items?.map((item: any) => (
+        <div key={item.chapter.id}>
+          <span data-testid={`list-title-${item.chapter.id}`}>{item.chapter.title}</span>
+          <button
+            data-testid={`list-select-${item.chapter.id}`}
+            onClick={() => props.onChapterSelect(item.chapter.id)}
+          >
+            select
+          </button>
+          <button
+            data-testid={`list-edit-${item.chapter.id}`}
+            onClick={() => props.onEditChapter(item.chapter.id)}
+          >
+            edit
+          </button>
+        </div>
+      ))}
     </div>
   ),
 }));
@@ -79,7 +97,7 @@ jest.mock("@/features/user-management", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../core/components/Typography", () => ({
+jest.mock("core/components/Typography", () => ({
   __esModule: true,
   default: ({ children, variant, color }: any) => (
     <div
@@ -109,21 +127,27 @@ jest.mock("shared/components/Breadcrumb", () => ({
   ),
 }));
 
-jest.mock("../../../core/components/Button", () => ({
+jest.mock("core/components/Button", () => ({
   __esModule: true,
-  default: ({ children, onClick, startIcon, variant }: any) => (
-    <button data-testid={`button-${String(children).trim().replace(/\s+/g, "-").toLowerCase()}`} onClick={onClick}>
+  default: ({ children, onClick }: any) => (
+    <button
+      data-testid={`button-${String(children).trim().replace(/\s+/g, "-").toLowerCase()}`}
+      onClick={onClick}
+    >
       {children}
     </button>
   ),
 }));
 
+jest.mock("../components/StoryViewTabs", () => ({
+  __esModule: true,
+  default: () => <div data-testid="story-view-tabs" />,
+}));
+
 jest.mock("lucide-react", () => ({
   Plus: () => <span data-testid="plus-icon" />,
-  Bookmark: () => <span data-testid="bookmark-icon" />,
   List: () => <span data-testid="list-icon" />,
   Grid: () => <span data-testid="grid-icon" />,
-  Book: () => <span data-testid="book-icon" />,
 }));
 
 // Suppress localStorage warnings in tests
@@ -131,9 +155,15 @@ const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
     getItem: (key: string) => store[key] ?? null,
-    setItem: (key: string, value: string) => { store[key] = value; },
-    removeItem: (key: string) => { delete store[key]; },
-    clear: () => { store = {}; },
+    setItem: (key: string, value: string) => {
+      store[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
   };
 })();
 Object.defineProperty(window, "localStorage", { value: localStorageMock });
@@ -142,10 +172,19 @@ Object.defineProperty(window, "localStorage", { value: localStorageMock });
 // Helpers
 // ---------------------------------------------------------------------------
 const CHAPTERS = [
-  { id: "chapter-01", title: "The Beginning", order: 1, dateModified: "2024-01-01" },
-  { id: "chapter-02", title: "A Hard Day", order: 2, dateModified: "2024-01-02" },
-  { id: "chapter-03", title: "Aftermath", order: 3, dateModified: "2024-01-03" },
+  { id: "chapter-01", title: "The Beginning", order: 1, content: "", summary: "Where it all started" },
+  { id: "chapter-02", title: "A Hard Day", order: 2, content: "", summary: "Trouble brews in the north" },
+  { id: "chapter-03", title: "Aftermath", order: 3, content: "", summary: "Picking up the pieces" },
 ];
+
+// chapter-01 read, chapter-02 current/reading at 62%, chapter-03 unread.
+const PROGRESS_STARTED = {
+  currentChapter: "chapter-02",
+  chapterProgress: {
+    "chapter-01": { chapterId: "chapter-01", lastPosition: 100, isComplete: true, lastRead: new Date() },
+    "chapter-02": { chapterId: "chapter-02", lastPosition: 62, isComplete: false, lastRead: new Date() },
+  },
+};
 
 function renderPage() {
   return render(<ChaptersPage />);
@@ -161,7 +200,7 @@ describe("ChaptersPage", () => {
     mockUser = { uid: "user-1" };
     mockStoryContext = {
       chapters: CHAPTERS,
-      storyProgress: { currentChapter: null },
+      storyProgress: NO_PROGRESS,
       isLoading: false,
     };
   });
@@ -178,11 +217,11 @@ describe("ChaptersPage", () => {
       );
     });
 
-    it("does NOT render bookshelf or table view while loading", () => {
+    it("does NOT render bookshelf or list view while loading", () => {
       mockStoryContext = { ...mockStoryContext, isLoading: true, chapters: [] };
       renderPage();
       expect(screen.queryByTestId("bookshelf-view")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("table-view")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("chapter-list")).not.toBeInTheDocument();
     });
   });
 
@@ -190,11 +229,6 @@ describe("ChaptersPage", () => {
   // Rendering
   // -------------------------------------------------------------------------
   describe("rendering", () => {
-    it("renders without crashing", () => {
-      const { container } = renderPage();
-      expect(container).toBeInTheDocument();
-    });
-
     it("renders breadcrumb with Home, Story, Chapters", () => {
       renderPage();
       expect(screen.getByTestId("breadcrumb-item-0")).toHaveTextContent("Home");
@@ -204,50 +238,58 @@ describe("ChaptersPage", () => {
 
     it("renders page heading 'Session Chronicles'", () => {
       renderPage();
-      expect(screen.getByTestId("typography-h2")).toHaveTextContent(
-        "Session Chronicles"
-      );
+      expect(screen.getByTestId("typography-h2")).toHaveTextContent("Session Chronicles");
     });
 
-    it("displays total chapter count", () => {
+    it("renders StoryViewTabs in the header", () => {
       renderPage();
-      expect(screen.getByText(/3 chapters total/i)).toBeInTheDocument();
+      expect(screen.getByTestId("story-view-tabs")).toBeInTheDocument();
     });
 
-    it("displays singular 'chapter' for a single chapter", () => {
-      mockStoryContext = {
-        ...mockStoryContext,
-        chapters: [CHAPTERS[0]],
-      };
-      renderPage();
-      expect(screen.getByText(/1 chapter total/i)).toBeInTheDocument();
-    });
-
-    it("renders empty state when no chapters exist", () => {
+    it("renders empty state when no chapters exist at all", () => {
       mockStoryContext = { ...mockStoryContext, chapters: [] };
       renderPage();
-      expect(
-        screen.getByText(/No chapters available yet\./i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/No chapters available yet\./i)).toBeInTheDocument();
     });
 
-    it("renders bookshelf view by default", () => {
+    it("does not render the search/filter row when there are no chapters", () => {
+      mockStoryContext = { ...mockStoryContext, chapters: [] };
+      renderPage();
+      expect(screen.queryByPlaceholderText(/Search chapter titles/i)).not.toBeInTheDocument();
+    });
+
+    it("renders the shelf view by default", () => {
       renderPage();
       expect(screen.getByTestId("bookshelf-view")).toBeInTheDocument();
-      expect(screen.queryByTestId("table-view")).not.toBeInTheDocument();
-    });
-
-    it("passes all chapters to BookshelfView", () => {
-      renderPage();
-      expect(screen.getByTestId("bookshelf-view")).toHaveAttribute(
-        "data-chapter-count",
-        "3"
-      );
+      expect(screen.queryByTestId("chapter-list")).not.toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Authenticated user controls
+  // ResumeBar wiring
+  // -------------------------------------------------------------------------
+  describe("resume bar wiring", () => {
+    it("shows 'Start reading' when nothing has been read", () => {
+      renderPage();
+      expect(screen.getByTestId("typography-h4")).toHaveTextContent("Start reading");
+    });
+
+    it("shows the current chapter when progress exists", () => {
+      mockStoryContext = { ...mockStoryContext, storyProgress: PROGRESS_STARTED };
+      renderPage();
+      expect(screen.getByText(/Chapter 2: A Hard Day/)).toBeInTheDocument();
+    });
+
+    it("navigates to the resume chapter when Resume is clicked", () => {
+      mockStoryContext = { ...mockStoryContext, storyProgress: PROGRESS_STARTED };
+      renderPage();
+      fireEvent.click(screen.getByText("Resume"));
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/story/chapters/chapter-02");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // User controls
   // -------------------------------------------------------------------------
   describe("user controls", () => {
     it("renders 'New Chapter' button when user is signed in", () => {
@@ -261,83 +303,10 @@ describe("ChaptersPage", () => {
       expect(screen.queryByTestId("button-new-chapter")).not.toBeInTheDocument();
     });
 
-    it("renders 'Back to Selection' button", () => {
-      renderPage();
-      expect(
-        screen.getByTestId("button-back-to-selection")
-      ).toBeInTheDocument();
-    });
-
-    it("does NOT render 'Continue Reading' button when no currentChapter", () => {
-      renderPage();
-      expect(
-        screen.queryByTestId("button-continue-reading")
-      ).not.toBeInTheDocument();
-    });
-
-    it("renders 'Continue Reading' button when currentChapter is set", () => {
-      mockStoryContext = {
-        ...mockStoryContext,
-        storyProgress: { currentChapter: "chapter-02" },
-      };
-      renderPage();
-      expect(
-        screen.getByTestId("button-continue-reading")
-      ).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Navigation
-  // -------------------------------------------------------------------------
-  describe("navigation", () => {
     it("navigates to /story/chapters/create on 'New Chapter' click", () => {
       renderPage();
       fireEvent.click(screen.getByTestId("button-new-chapter"));
-      expect(mockNavigateToPage).toHaveBeenCalledWith(
-        "/story/chapters/create"
-      );
-    });
-
-    it("navigates to /story on 'Back to Selection' click", () => {
-      renderPage();
-      fireEvent.click(screen.getByTestId("button-back-to-selection"));
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/story");
-    });
-
-    it("navigates to currentChapter on 'Continue Reading' click", () => {
-      mockStoryContext = {
-        ...mockStoryContext,
-        storyProgress: { currentChapter: "chapter-02" },
-      };
-      renderPage();
-      fireEvent.click(screen.getByTestId("button-continue-reading"));
-      expect(mockNavigateToPage).toHaveBeenCalledWith(
-        "/story/chapters/chapter-02"
-      );
-    });
-
-    it("navigates to first chapter when 'Continue Reading' and no currentChapter (fallback)", () => {
-      mockStoryContext = {
-        ...mockStoryContext,
-        storyProgress: { currentChapter: null },
-        chapters: CHAPTERS,
-      };
-      // No Continue Reading button shown — but test the handleContinueReading path
-      // This path is only hit when currentChapter is falsy but we click the button.
-      // The button is hidden, so this logic cannot be tested via UI without currentChapter.
-      // The test documents the specification: button only shows when currentChapter is set.
-      expect(true).toBe(true); // guard — button hidden when no currentChapter
-    });
-
-    it("navigates to /story/chapters/edit/:id from TableView edit handler", () => {
-      // Switch to table view first
-      renderPage();
-      fireEvent.click(screen.getByText("Table"));
-      fireEvent.click(screen.getByTestId("table-edit-chapter"));
-      expect(mockNavigateToPage).toHaveBeenCalledWith(
-        "/story/chapters/edit/chapter-01"
-      );
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/story/chapters/create");
     });
   });
 
@@ -345,136 +314,147 @@ describe("ChaptersPage", () => {
   // View toggle
   // -------------------------------------------------------------------------
   describe("view toggle", () => {
-    it("switches to table view when Table button is clicked", () => {
+    it("switches to list view when List is clicked", () => {
       renderPage();
-      fireEvent.click(screen.getByText("Table"));
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
+      fireEvent.click(screen.getByText("List"));
+      expect(screen.getByTestId("chapter-list")).toBeInTheDocument();
       expect(screen.queryByTestId("bookshelf-view")).not.toBeInTheDocument();
     });
 
-    it("switches back to bookshelf view when Bookshelf button is clicked", () => {
+    it("switches back to shelf view when Shelf is clicked", () => {
       renderPage();
-      fireEvent.click(screen.getByText("Table"));
-      fireEvent.click(screen.getByText("Bookshelf"));
+      fireEvent.click(screen.getByText("List"));
+      fireEvent.click(screen.getByText("Shelf"));
       expect(screen.getByTestId("bookshelf-view")).toBeInTheDocument();
-      expect(screen.queryByTestId("table-view")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("chapter-list")).not.toBeInTheDocument();
     });
 
     it("saves view preference to localStorage when switching views", () => {
       renderPage();
-      fireEvent.click(screen.getByText("Table"));
-      expect(localStorage.getItem("chapters-view-preference")).toBe("table");
+      fireEvent.click(screen.getByText("List"));
+      expect(localStorage.getItem("chapters-view-preference")).toBe("list");
     });
 
-    it("restores table view preference from localStorage", () => {
+    it("restores list view preference from localStorage", () => {
+      localStorage.setItem("chapters-view-preference", "list");
+      renderPage();
+      expect(screen.getByTestId("chapter-list")).toBeInTheDocument();
+    });
+
+    it("treats a legacy 'table' preference as 'list'", () => {
       localStorage.setItem("chapters-view-preference", "table");
       renderPage();
-      expect(screen.getByTestId("table-view")).toBeInTheDocument();
+      expect(screen.getByTestId("chapter-list")).toBeInTheDocument();
     });
-  });
 
-  // -------------------------------------------------------------------------
-  // Sort behavior (TableView)
-  // -------------------------------------------------------------------------
-  describe("sort behavior in table view", () => {
-    beforeEach(() => {
+    it("treats a legacy 'bookshelf' preference as 'shelf'", () => {
+      localStorage.setItem("chapters-view-preference", "bookshelf");
       renderPage();
-      fireEvent.click(screen.getByText("Table"));
-    });
-
-    it("passes default sort field 'order' and direction 'asc' to TableView", () => {
-      expect(screen.getByTestId("table-view")).toHaveAttribute(
-        "data-sort-field",
-        "order"
-      );
-      expect(screen.getByTestId("table-view")).toHaveAttribute(
-        "data-sort-direction",
-        "asc"
-      );
-    });
-
-    it("toggles sort direction when same sort field is clicked", () => {
-      fireEvent.click(screen.getByTestId("table-sort-order"));
-      expect(screen.getByTestId("table-view")).toHaveAttribute(
-        "data-sort-direction",
-        "desc"
-      );
-    });
-
-    it("resets sort direction to asc when a new sort field is selected", () => {
-      // First, toggle order to desc
-      fireEvent.click(screen.getByTestId("table-sort-order")); // now desc
-      // Now click title (new field) — should reset to asc
-      fireEvent.click(screen.getByTestId("table-sort-title"));
-      expect(screen.getByTestId("table-view")).toHaveAttribute(
-        "data-sort-field",
-        "title"
-      );
-      expect(screen.getByTestId("table-view")).toHaveAttribute(
-        "data-sort-direction",
-        "asc"
-      );
-    });
-
-    it("sorts chapters by title alphabetically in ascending order", () => {
-      fireEvent.click(screen.getByTestId("table-sort-title"));
-      // Aftermath < A Hard Day < The Beginning alphabetically
-      expect(screen.getByTestId("table-view")).toHaveAttribute(
-        "data-sort-field",
-        "title"
-      );
-      expect(screen.getByTestId("table-view")).toHaveAttribute(
-        "data-sort-direction",
-        "asc"
-      );
-    });
-
-    it("passes isAdmin=true to TableView when user is signed in", () => {
-      expect(screen.getByTestId("table-view")).toHaveAttribute(
-        "data-is-admin",
-        "true"
-      );
-    });
-
-    it("passes isAdmin=false to TableView when user is not signed in", () => {
-      // This test needs its own render context (not inside the beforeEach bookshelf+table setup)
-      // The "sort behavior in table view" beforeEach already renders and clicks Table.
-      // We use getByRole to be precise but the simplest approach is a fresh describe.
-      // Covered by the next sub-suite below.
-      expect(true).toBe(true);
+      expect(screen.getByTestId("bookshelf-view")).toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Unauthenticated user table view
+  // Search + unread filter
   // -------------------------------------------------------------------------
-  describe("unauthenticated user in table view", () => {
-    it("passes isAdmin=false to TableView when user is not signed in", () => {
+  describe("search and filter", () => {
+    it("shows All/Unread pills with live counts", () => {
+      mockStoryContext = { ...mockStoryContext, storyProgress: PROGRESS_STARTED };
+      renderPage();
+      expect(screen.getByText("All 3")).toBeInTheDocument();
+      // chapter-01 is read; chapter-02 and chapter-03 are not => 2 unread
+      expect(screen.getByText("Unread 2")).toBeInTheDocument();
+    });
+
+    it("filters to unread chapters when the Unread pill is clicked", () => {
+      mockStoryContext = { ...mockStoryContext, storyProgress: PROGRESS_STARTED };
+      renderPage();
+      fireEvent.click(screen.getByText("Unread 2"));
+      expect(screen.queryByTestId("shelf-title-chapter-01")).not.toBeInTheDocument();
+      expect(screen.getByTestId("shelf-title-chapter-02")).toBeInTheDocument();
+      expect(screen.getByTestId("shelf-title-chapter-03")).toBeInTheDocument();
+    });
+
+    it("returns to all chapters when the All pill is clicked again", () => {
+      mockStoryContext = { ...mockStoryContext, storyProgress: PROGRESS_STARTED };
+      renderPage();
+      fireEvent.click(screen.getByText("Unread 2"));
+      fireEvent.click(screen.getByText("All 3"));
+      expect(screen.getByTestId("shelf-title-chapter-01")).toBeInTheDocument();
+    });
+
+    it("persists the active filter to localStorage", () => {
+      renderPage();
+      fireEvent.click(screen.getByText(/Unread/));
+      expect(localStorage.getItem("chapters-filter-preference")).toBe("unread");
+    });
+
+    it("restores the unread filter from localStorage", () => {
+      localStorage.setItem("chapters-filter-preference", "unread");
+      mockStoryContext = { ...mockStoryContext, storyProgress: PROGRESS_STARTED };
+      renderPage();
+      expect(screen.queryByTestId("shelf-title-chapter-01")).not.toBeInTheDocument();
+    });
+
+    it("filters by search query across title and summary", () => {
+      renderPage();
+      fireEvent.change(screen.getByPlaceholderText(/Search chapter titles/i), {
+        target: { value: "hard day" },
+      });
+      expect(screen.getByTestId("shelf-title-chapter-02")).toBeInTheDocument();
+      expect(screen.queryByTestId("shelf-title-chapter-01")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("shelf-title-chapter-03")).not.toBeInTheDocument();
+    });
+
+    it("updates pill counts live as the search query changes", () => {
+      mockStoryContext = { ...mockStoryContext, storyProgress: PROGRESS_STARTED };
+      renderPage();
+      fireEvent.change(screen.getByPlaceholderText(/Search chapter titles/i), {
+        target: { value: "aftermath" },
+      });
+      expect(screen.getByText("All 1")).toBeInTheDocument();
+      expect(screen.getByText("Unread 1")).toBeInTheDocument();
+    });
+
+    it("shows a no-results message when the search matches nothing", () => {
+      renderPage();
+      fireEvent.change(screen.getByPlaceholderText(/Search chapter titles/i), {
+        target: { value: "nonexistent chapter title" },
+      });
+      expect(screen.getByText(/No chapters match your search\./i)).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Navigation from child views
+  // -------------------------------------------------------------------------
+  describe("navigation from child views", () => {
+    it("navigates to a chapter on select from the shelf view", () => {
+      renderPage();
+      fireEvent.click(screen.getByTestId("shelf-select-chapter-01"));
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/story/chapters/chapter-01");
+    });
+
+    it("navigates to the edit route on edit from the shelf view", () => {
+      renderPage();
+      fireEvent.click(screen.getByTestId("shelf-edit-chapter-01"));
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/story/chapters/edit/chapter-01");
+    });
+
+    it("passes isAdmin=true to child views when signed in", () => {
+      renderPage();
+      expect(screen.getByTestId("bookshelf-view")).toHaveAttribute("data-is-admin", "true");
+    });
+
+    it("passes isAdmin=false to child views when signed out", () => {
       mockUser = null;
-      const { unmount } = render(<ChaptersPage />);
-      fireEvent.click(screen.getByText("Table"));
-      expect(screen.getByTestId("table-view")).toHaveAttribute(
-        "data-is-admin",
-        "false"
-      );
-      unmount();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // BookshelfView receives currentChapterId
-  // -------------------------------------------------------------------------
-  describe("bookshelf receives current chapter context", () => {
-    it("passes currentChapterId to BookshelfView when currentChapter is set", () => {
-      mockStoryContext = {
-        ...mockStoryContext,
-        storyProgress: { currentChapter: "chapter-02" },
-      };
       renderPage();
-      expect(screen.getByTestId("bookshelf-view")).toHaveAttribute(
-        "data-current-chapter",
-        "chapter-02"
-      );
+      expect(screen.getByTestId("bookshelf-view")).toHaveAttribute("data-is-admin", "false");
+    });
+
+    it("passes the full item count to BookshelfView", () => {
+      renderPage();
+      expect(screen.getByTestId("bookshelf-view")).toHaveAttribute("data-count", "3");
     });
   });
 });
