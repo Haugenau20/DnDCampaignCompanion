@@ -39,6 +39,10 @@ let mockLocationContext: LocationContextMock = {
   hasRequiredContext: true,
 };
 
+// Mutable so a test can represent "auth has not rehydrated yet" (user === null
+// while isLoading is still true), which is a different state from "signed out".
+let mockAuthUser: { uid: string } | null = { uid: "user-1" };
+
 jest.mock("features/campaign-entities", () => ({
   useLocations: () => mockLocationContext,
   LocationEditForm: (props: any) => (
@@ -56,7 +60,7 @@ jest.mock("features/campaign-entities", () => ({
 }));
 
 jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: { uid: "user-1" } }),
+  useAuth: () => ({ user: mockAuthUser }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -116,6 +120,7 @@ describe("LocationEditPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockLocationId = "loc-1";
+    mockAuthUser = { uid: "user-1" };
     mockLocationContext = {
       locations: [
         { id: "loc-1", name: "Rivendell" },
@@ -301,6 +306,30 @@ describe("LocationEditPage", () => {
     it("navigates to /locations on form cancel", () => {
       renderPage();
       fireEvent.click(screen.getByTestId("edit-form-cancel"));
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/locations");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Bug #1423 — `user` is null both while auth is rehydrating and when nobody
+  // is signed in; only `isLoading` separates them. Measured in the browser
+  // before the fix: a direct load of /locations/edit/rivendell while signed in
+  // landed on /locations within ~375ms.
+  // -------------------------------------------------------------------------
+  describe("auth still rehydrating (bug #1423)", () => {
+    beforeEach(() => {
+      mockAuthUser = null;
+      mockLocationContext.isLoading = true;
+    });
+
+    it("does NOT redirect to /locations while auth is still restoring", () => {
+      renderPage();
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+    });
+
+    it("still redirects once loading finishes and there is genuinely no user", () => {
+      mockLocationContext.isLoading = false;
+      renderPage();
       expect(mockNavigateToPage).toHaveBeenCalledWith("/locations");
     });
   });

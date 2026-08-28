@@ -22,12 +22,18 @@ const LocationEditPage: React.FC = () => {
   
   const editingLocation = locations.find(location => location.id === locationId);
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated.
+  //
+  // Gated on `isLoading` because `user` is null both when nobody is signed in
+  // AND while Firebase Auth is still rehydrating on a fresh page load. Firing
+  // on the bare `!user` sent a signed-in user back to the list mid-restore, so
+  // reloading this page or opening a bookmark to it never worked (bug #1423,
+  // the redirect-shaped half of #1413).
   useEffect(() => {
-    if (!user) {
+    if (!isLoading && !user) {
       navigateToPage('/locations');
     }
-  }, [user, navigateToPage]);
+  }, [isLoading, user, navigateToPage]);
 
   if (isLoading) {
     return (

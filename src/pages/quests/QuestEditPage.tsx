@@ -18,12 +18,19 @@ const QuestEditPage: React.FC = () => {
   
   const editingQuest = quests.find(quest => quest.id === questId);
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated.
+  //
+  // Gated on `loading` for the same reason the render branches below are
+  // ordered the way they are (bug #1413, extended by #1423): `user` is null
+  // both when nobody is signed in AND while Firebase Auth is still rehydrating
+  // on a fresh page load. Firing on the bare `!user` sends a signed-in user
+  // back to the list ~124ms into a reload, before auth can restore -- so
+  // reloading this page, or opening a bookmark to it, never worked.
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       navigateToPage('/quests');
     }
-  }, [user, navigateToPage]);
+  }, [loading, user, navigateToPage]);
 
   // Loading is checked BEFORE the context-selection message on purpose
   // (bug #1413). `loading` now folds in "auth/campaign still restoring", so on
