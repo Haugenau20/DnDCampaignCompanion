@@ -1,18 +1,20 @@
 # Post-Test-Coverage Roadmap
 
-*Last updated: 2026-08-01, end of the **UI-optimisation pass** on
-`claude/ui-optimization-missing-locations-nv7zph`, pushed to **`design/new-ui`** (not `main`).*
+*Last updated: 2026-08-28, end of the **browser-verification pass** on
+`claude/testing-post-coverage-roadmap-4u5ajb`.*
 
-> ### ⚠️ FIRST: the ordered deploy from 2026-07-30 may still be outstanding
+> ### ⚠️ FIRST: the ordered deploy from 2026-07-30 — step 1 done, steps 2 and 3 still outstanding
 >
 > Section 0 of [What to do next](#what-to-do-next) describes a **three-step ordered deploy** —
-> Functions, then frontend, then production Firestore rules. Steps 1 and 3 are manual and cannot be
-> verified from inside a session. **Until step 3 is done, three live security exposures remain**:
-> private notes readable group-wide (#1408), self-promotion to group admin (#1409), and any member
-> able to mint registration tokens (#1410).
+> Functions, then frontend, then production Firestore rules.
 >
-> **Confirm with the repository owner whether that deploy happened before starting anything else.**
-> No amount of UI work outranks it. The 2026-08-01 session did not touch it.
+> **Step 1 (`firebase deploy --only functions`) was confirmed done by the repository owner on
+> 2026-08-28.** That lands #1403's `deleteCampaign`, #1409's `createGroup` and #1407's
+> `rethrowHttpsError`.
+>
+> **Steps 2 and 3 remain.** Until step 3, three live security exposures remain: private notes
+> readable group-wide (#1408), self-promotion to group admin (#1409), and any member able to mint
+> registration tokens (#1410). Step 3 must not precede step 2 — see the ordering table in Section 0.
 
 This guide is the starting point for the next session. Point your orchestrator (Opus) at this file; it tells the orchestrator and the Sonnet workers it spawns what to do, in what order, and where to stop.
 
@@ -21,21 +23,37 @@ This guide is the starting point for the next session. Point your orchestrator (
 **Restructuring: complete.** All four domains plus the `shared`/`core` pass. Five tags on `main`.
 No file-moving work left; do not start any.
 
-**Bug tracker: 84 filed, 77 resolved, 7 open.** Open: #1402, #1405, #1407, #1413, #1420, #1421 — and
-see the deploy warning above, which is not a tracker row.
+**Bug tracker: 87 filed, 83 resolved, 4 open.** Open: **#1402, #1405, #1420, #1421** — and see the
+deploy warning above, which is not a tracker row. #1407 and #1413 were fixed on
+`claude/testing-post-coverage-roadmap-4u5ajb`; #1422, #1423 and #1424 were filed and fixed there too.
 
-**Branch state, 2026-08-01.** The last three sessions' work is on **`design/new-ui`**, which is
-**ahead of `main`**. `main` has not seen the roster redesign, the `locationId` contract, or any of
-#1414–#1421. Do not measure a baseline against `main` and conclude something regressed.
+**Branch state, 2026-08-28.** `design/new-ui` **merged to `main`** (PR #28, 2026-08-01), so the
+roster redesign, the `locationId` contract and #1414–#1421 are all on `main` now. Current work sits
+on **`claude/testing-post-coverage-roadmap-4u5ajb`**, which is ahead of `main` by the #1407, #1413,
+#1422, #1423 and #1424 commits. **There is no PR for it yet.**
 
-**Verified baseline on `design/new-ui`, measured 2026-08-01:**
+**Verified baseline on `claude/testing-post-coverage-roadmap-4u5ajb`, measured 2026-08-28:**
 
 | Metric | Value |
 |---|---|
-| Tests | **0 failed / 2 skipped / 4255 passed / 4257 total** |
-| Suites | **0 failed / 186 passed / 186 total** |
+| Tests | **0 failed / 2 skipped / 4282 passed / 4284 total** |
+| Suites | **0 failed / 187 passed / 187 total** |
 | `./node_modules/.bin/tsc --noEmit` | clean |
 | `npm run build` | succeeds, warnings all pre-existing |
+
+*(Reconciliation: `main` is 4043-ish; this branch adds #1413's +15 and this session's +12.)*
+
+> ### ⚠️ The dev emulator holds data that survives across sessions — check it before believing it
+>
+> `start-dev.ps1 -Action start` **re-imports `firebase/emulator-data`** if present, so what you see
+> in the running app can be arbitrarily old. On 2026-08-28 it was a **pre-2026-08-01 export**: three
+> Hobbit locations were missing and `locationId` was absent from all 36 entity documents, which
+> looked exactly like two sample-data defects and were nearly filed as such. The generator was
+> correct all along — it defines all 8 Hobbit locations and writes `locationId` 89 times.
+>
+> Firestore `createTime` shows the **import** time, so stale data looks freshly generated.
+> `manage-dev-data.ps1 -Action generate` resolves it. **Check seed data against the generator before
+> filing anything about seed data.**
 
 *(Use the **project-local** `tsc`. A bare `npx tsc` resolves a different TypeScript in this
 environment and fails on unrelated tsconfig deprecation options — it looks like a real error and is
@@ -1099,44 +1117,72 @@ because nothing in the app imports Firebase Storage.
 
 ## What to do next
 
-### 0a. Where the 2026-08-01 session left off — start here for feature work
+### 0a. Where the 2026-08-28 session left off — start here for feature work
 
-*(Section 0 below still outranks this. Check the deploy first.)*
+*(Section 0 below still outranks this. Steps 2 and 3 of the deploy are still pending.)*
 
-Work sits on **`design/new-ui`**. In priority order:
+Work sits on **`claude/testing-post-coverage-roadmap-4u5ajb`**. In priority order:
 
-**1. Look at it in a browser.** Nothing in the 2026-08-01 session was verified visually — gates only.
-Two changes most deserve eyes:
+**1. Open a PR for this branch.** It carries five fixes — #1407, #1413, #1422, #1423, #1424 — and
+has none. Merging is also **step 2 of the ordered deploy**, which unblocks step 3 and closes the
+three live security exposures. This is the highest-value action available.
+
+**2. [#1402](bug-tracking/1402-cross-session-id-collision-surfaces-developer-error.md) — the
+cross-session half of the id problem.** #1422 fixed the deterministic single-session case for notes;
+#1402 is the same failure across two sessions, and it affects all four entity types. Its
+refresh-and-retry fix closes both properly. **This is now the most user-visible open row** — it
+surfaces the same raw developer error, including the user's uid, into the UI.
+
+**3. [#1421](bug-tracking/1421-quest-key-locations-are-free-text-not-references.md) — finish the
+location-reference work.** `Quest.keyLocations` is the last place an entity refers to a location by
+free text alone. The pattern is already established and documented. Feature-sized because it changes
+an editing UX.
+
+**4. Step 2 of the `locationId` contract — the backfill, if it is even needed.** Step 1 (commit
+`d6d9847`) deliberately shipped **without** a migration: documents with no `locationId` render
+correctly through the legacy fallback and gain an id the next time anyone edits them. **Decide this
+with numbers, not guesses**, and count them **in production** — a local emulator count is worthless
+here, as the 2026-08-28 session found out (see the stale-data warning above).
+
+**5. [#1420](bug-tracking/1420-location-card-is-dead-code.md) — delete `LocationCard`.** Trivial, but
+it moves coverage against a uniform 80% floor, so it is the owner's call rather than a drive-by.
+
+**Still not verified visually**, carried over from 2026-08-01 and not reached on 2026-08-28:
   - **`RosterFilterSelect`** (`core/components/Roster.tsx`) is a native `<select>` wearing the filter
     pills' classes. The closed control matches the pills; the **open dropdown list is browser-rendered
     and will not**. If that reads badly, give it the `.input` token instead and accept a different
     height. This is a known unknown, not a defect.
-  - **The two NPC forms** now use `LocationCombobox` where they had a free-text input. That changes a
-    field users type into, on both create and edit.
+  - **Chapter create and delete.** Delete is the interesting one: `deleteChapter` reorders the
+    remaining chapters inline (`StoryContext:525`), and chapter ids are `chapter-{order}`, so
+    **deleting re-keys documents**. Note there is **no reorder affordance in the UI at all** —
+    `reorderChapters` is exposed on the context and called by nothing — so delete is the only way to
+    reach the re-keying that #017/#1202/#016 all trace to.
+  - **Campaign delete (#1403) and the admin panel.** Safe to drive: there are **zero**
+    `window.confirm`/`alert`/`prompt` calls anywhere in `src/`, so every confirmation is the in-app
+    React `Dialog` portal and no browser modal can freeze an automated session.
 
-Run it with `.\scripts\start-dev.ps1 -Action start` and regenerate data with
-`.\scripts\manage-dev-data.ps1 -Action generate`. **Do not reach for `manage-environment.ps1` or
-the Docker compose files** — see CLAUDE.md; they appear unused and cost a session real time once.
+Run it with `.\scripts\start-dev.ps1 -Action start` and **regenerate data first** with
+`.\scripts\manage-dev-data.ps1 -Action generate` — the emulator import is stale. **Do not reach for
+`manage-environment.ps1` or the Docker compose files** — see CLAUDE.md; they appear unused and cost
+a session real time once.
 
-**2. [#1421](bug-tracking/1421-quest-key-locations-are-free-text-not-references.md) — finish the
-location-reference work.** `Quest.keyLocations` is the last place an entity refers to a location by
-free text alone. The pattern is already established and documented; this is the natural continuation,
-and it is the largest remaining correctness item. Feature-sized because it changes an editing UX.
+#### The method lesson from 2026-08-28, and it generalises
 
-**3. Step 2 of the `locationId` contract — the backfill, if it is even needed.** Step 1 (commit
-`d6d9847`) deliberately shipped **without** a migration: documents with no `locationId` render
-correctly through the legacy fallback and gain an id the next time anyone edits them, so the
-un-migrated population drains on its own. **Decide this with numbers, not guesses** — count how many
-production documents still lack `locationId` before considering a bulk write. It may never be worth
-the risk.
+**Sweep by the shape of the decision, not the text of the message.** #1413 fixed "pages that render
+a selection message during rehydration" and left two thirds of its own family live: #1423 (the page
+*redirects*, rendering nothing to grep for) and #1424 (the page says *"not found"*, different
+wording, same defect). The question to ask is **"where does this component commit to an answer the
+unsettled state cannot support?"** — which includes redirects, `return null`, and every terminal
+branch.
 
-**4. [#1420](bug-tracking/1420-location-card-is-dead-code.md) — delete `LocationCard`.** Trivial, but
-it moves coverage against a uniform 80% floor, so it is the owner's call rather than a drive-by.
+And its corollary: **reordering render branches does not constrain an effect.** #1413 edited
+`QuestEditPage`, reordering its branches correctly, and the page stayed broken because the
+`useEffect` above them redirected first.
 
-**5. [#1413](bug-tracking/1413-entity-pages-show-error-state-while-campaign-context-restores.md)** —
-still open and still the most user-visible of the remaining tracker rows: a normal reload reports
-itself as a failure for ~10 seconds. Needs a third "still resolving" state across all four entity
-contexts at once.
+**Also: probe timing can manufacture a false pass.** The first #1413 verification looked green and
+proved nothing — the navigation helper returns only after the app has settled, so the whole
+transient was over before sampling began. Loading the route in a same-origin `<iframe>` and polling
+`contentDocument` from the parent survives the app's boot and captures from t=0.
 
 #### Two process notes from that session, both of which changed an outcome
 
@@ -1156,7 +1202,7 @@ production.**
 
 | # | Step | Why this position |
 |---|---|---|
-| 1 | **`firebase deploy --only functions`** (`europe-west1`) | Adds `createGroup` (#1409) and `deleteCampaign` (#1403). Harmless alone — nothing calls them yet. `firebase.json` now auto-builds first, so `lib/` can no longer go out stale. |
+| 1 | ✅ **DONE 2026-08-28** — **`firebase deploy --only functions`** (`europe-west1`) | Adds `createGroup` (#1409) and `deleteCampaign` (#1403). Harmless alone — nothing calls them yet. `firebase.json` now auto-builds first, so `lib/` can no longer go out stale. |
 | 2 | **Merge the PR** → CI deploys the frontend | The new frontend calls `createGroup` instead of writing an admin profile client-side. Must be live **before** the rules forbid the old path. |
 | 3 | **Paste `firebase/firestore.rules.prod` into the console** | Now safe: no client writes `role: "admin"` any more. |
 
@@ -1173,9 +1219,9 @@ tokens (#1410). The rules file's header documents every change and how each was 
 `allow read, write: if true` — to production. Expect a new emulator warning about a missing rules file;
 that is intended and behaviourally identical to before.
 
-**Open tracker rows:** #1402, #1405, #1407, #1412, #1413. All have full reports. #1407
-(`deleteUser`/`removeUserFromGroup` collapsing their own error codes into `internal`) is a two-line
-fix that needs a Functions deploy, so it pairs naturally with step 1 above.
+**Open tracker rows** *(updated 2026-08-28)*: **#1402, #1405, #1420, #1421**. All have full reports.
+#1412 and #1413 are fixed; #1407 is fixed **and its Functions deploy is done** (step 1 above,
+confirmed by the repository owner 2026-08-28).
 
 **New local-dev dependency:** creating a group now requires the **Functions emulator**, not just
 Firestore+Auth. `start-dev.ps1` starts it, so the normal workflow is fine — but a Firestore-only

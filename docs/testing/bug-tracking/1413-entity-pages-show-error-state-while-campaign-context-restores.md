@@ -165,3 +165,43 @@ reading. Here it lives in the test mocks.
 ⚠️ **The gates cannot see this bug.** Every one of them was green while it was live, because the
 defect is a ~10s transient during a real Firebase auth rehydration that no test performs. The fix
 should be confirmed by reloading an entity page in the running app before this row is trusted.
+
+## Browser confirmation (2026-08-28) — and two defects the sweep missed
+
+**The fix works.** Measured against the running dev server, signed in, sampling the DOM from true
+t=0 of a fresh app boot on each route:
+
+| Route | Settles | Selection message or alert at any point |
+|---|---|---|
+| `/npcs` | 7167 ms | never |
+| `/quests` | 8012 ms | never |
+| `/locations` | 6382 ms | never |
+| `/rumors` | 6992 ms | never |
+| `/story/chapters` | 2942 ms | never |
+| `/notes` | 1428 ms | never |
+
+Each goes blank → *"Loading…"* → content. The spinner also **resolves**, which independently
+confirms the `profileLoading` fix above: had that regressed, every one of these would spin forever.
+
+**Method note, because the first attempt gave a false pass.** Navigating and then polling shows
+nothing: the navigation helper returns only after the app has already settled, so the entire
+transient is over before the first sample. The window has to be captured from a context that
+survives the app's own boot — here, loading each route in a same-origin `<iframe>` and polling
+`contentDocument` from the parent. **A green reading from a probe that started too late is
+indistinguishable from a fix.**
+
+### The sweep was incomplete, in two shapes it could not have found
+
+This entry's sweep looked for *"every place that renders a selection message."* Two more instances
+of the same root cause — committing to a terminal state while the context is unsettled — were still
+live, because neither renders a selection message:
+
+- **[#1423](./1423-edit-pages-redirect-to-list-during-auth-rehydration.md)** — `QuestEditPage`,
+  `LocationEditPage` and `RumorEditPage` **redirect** to their list on a bare `if (!user)`, so they
+  render nothing at all to search for. Note that this entry *did* edit `QuestEditPage`, reordering
+  its render branches — and the page stayed broken, because the `useEffect` above them fired first.
+  **Reordering render branches does not constrain an effect.**
+- **[#1424](./1424-npc-edit-page-claims-npc-not-found-while-loading.md)** — `NPCsEditPage` renders
+  **"NPC not found"**: the same decision, different wording.
+
+**Sweep by the shape of the decision, not the text of the message.**
