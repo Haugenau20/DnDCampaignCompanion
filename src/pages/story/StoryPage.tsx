@@ -82,11 +82,17 @@ const StoryPage: React.FC = () => {
     if (currentChapter) {
       // Only send isComplete when BookViewer actually signals completion.
       //
-      // BookViewer calls onPageChange(page) on every page turn with no flag,
-      // and additionally onPageChange(page, true) on the last page. Forwarding
-      // `!!isComplete` turned that first call into an explicit `false`, which
-      // cleared a chapter's stored completion on any page turn (bug #852).
-      // Omitting the key instead lets the context preserve what it has.
+      // BookViewer emits exactly once per page turn: `(page, true)` on the last
+      // page, `(page)` with no flag otherwise. The double-emit it used to do on
+      // the last page is fixed at the emitter.
+      //
+      // This branch is still load-bearing, and is NOT a leftover workaround.
+      // `updateChapterProgress` merges over the stored entry, so omitting the
+      // key preserves a stored `true` — but passing `isComplete: !!isComplete`
+      // would write an explicit `false` on every ordinary page turn, and an
+      // explicit false still clears (pinned by StoryContext.progress.test.tsx,
+      // "still allows a caller to clear isComplete explicitly"). Collapsing
+      // this ternary re-opens bug #852 from the consumer side.
       updateChapterProgress(
         currentChapter.id,
         isComplete
