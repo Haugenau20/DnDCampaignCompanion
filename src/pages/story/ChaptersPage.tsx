@@ -112,10 +112,12 @@ const ChaptersPage: React.FC = () => {
     navigateToPage(`/story/chapters/edit/${chapterId}`);
   };
 
-  // `position` isn't consumed yet: StoryPage (owned outside this change) has
-  // no mechanism to resume mid-chapter, only to open a chapter by id. The
-  // parameter is kept on the callback so that wiring can land later without
-  // another change to ResumeBar's contract.
+  // `position` is deliberately not passed along. Resuming mid-chapter does
+  // work now, but the reader restores the position itself from stored
+  // progress — the same source this summary was derived from — so putting it
+  // in the URL would duplicate the fact and let the two disagree. The
+  // parameter stays on the callback because it is part of ResumeBar's
+  // contract and reads as intent at the call site.
   const handleResume = (chapterId: string, _position: number) => {
     navigateToPage(`/story/chapters/${chapterId}`);
   };

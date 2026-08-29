@@ -1,4 +1,4 @@
-﻿// src/pages/story/__tests__/StoryPage.test.tsx
+// src/pages/story/__tests__/StoryPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import StoryPage from "../StoryPage";
@@ -24,11 +24,10 @@ jest.mock("shared/context/NavigationContext", () => ({
 
 const mockUpdateChapterProgress = jest.fn();
 const mockUpdateCurrentChapter = jest.fn();
-const mockGetChapterById = jest.fn();
 
 interface StoryContextMock {
   chapters: any[];
-  storyProgress: { currentChapter: string | null };
+  storyProgress: { currentChapter: string | null; chapterProgress?: Record<string, any> };
   isLoading: boolean;
   error: string | null;
   getChapterById: jest.Mock;
@@ -36,78 +35,67 @@ interface StoryContextMock {
   updateCurrentChapter: jest.Mock;
 }
 
-let mockStoryContext: StoryContextMock = {
-  chapters: [
-    { id: "chapter-01", title: "The Beginning", order: 1, content: "Once upon a time..." },
-    { id: "chapter-02", title: "The Middle", order: 2, content: "Things got harder..." },
-    { id: "chapter-03", title: "The End", order: 3, content: "And they rested." },
-  ],
-  storyProgress: { currentChapter: null },
-  isLoading: false,
-  error: null,
-  getChapterById: mockGetChapterById,
-  updateChapterProgress: mockUpdateChapterProgress,
-  updateCurrentChapter: mockUpdateCurrentChapter,
-};
+let mockStoryContext: StoryContextMock;
 
+// The page derives read state through the real `deriveChapterProgress`, so the
+// rail mock below records what it was handed rather than re-deriving anything.
 jest.mock("features/storytelling", () => ({
   useStory: () => mockStoryContext,
-  BookViewer: (props: any) => (
+  ChapterReader: (props: any) => (
     <div
-      data-testid="book-viewer"
+      data-testid="chapter-reader"
       data-title={props.title}
+      data-position={String(props.position)}
+      data-chapter-number={String(props.chapterNumber)}
+      data-chapter-count={String(props.chapterCount)}
+      data-next-title={props.nextChapterTitle ?? ""}
       data-has-next={String(props.hasNextChapter)}
       data-has-prev={String(props.hasPreviousChapter)}
+      data-has-edit={String(!!props.onEdit)}
     >
-      <button
-        data-testid="book-viewer-next"
-        onClick={props.onNextChapter}
-      >
+      <button data-testid="reader-next" onClick={props.onNextChapter}>
         Next
       </button>
-      <button
-        data-testid="book-viewer-prev"
-        onClick={props.onPreviousChapter}
-      >
+      <button data-testid="reader-prev" onClick={props.onPreviousChapter}>
         Prev
       </button>
-      <button
-        data-testid="book-viewer-page-change"
-        onClick={() => props.onPageChange(2)}
-      >
-        Page Change
+      <button data-testid="reader-edit" onClick={props.onEdit}>
+        Edit
       </button>
+      {/* An ordinary scroll: position only, no completion opinion. */}
       <button
-        data-testid="book-viewer-page-1"
-        onClick={() => props.onPageChange(1)}
+        data-testid="reader-progress"
+        onClick={() => props.onProgressChange(42)}
       >
-        Page 1 (initial load / back-navigation, no isComplete flag)
+        Scrolled
       </button>
+      {/* The reader reaching the end of the chapter. */}
       <button
-        data-testid="book-viewer-page-complete"
-        onClick={() => props.onPageChange(3, true)}
+        data-testid="reader-complete"
+        onClick={() => props.onProgressChange(100, true)}
       >
-        Last Page (BookViewer explicitly signals isComplete)
+        Finished
       </button>
     </div>
   ),
-  SlidingChapters: (props: any) => (
+  ChapterRail: (props: any) => (
     <div
-      data-testid="sliding-chapters"
+      data-testid="chapter-rail"
       data-is-open={String(props.isOpen)}
       data-current-chapter={props.currentChapterId}
+      data-item-count={String(props.items.length)}
     >
-      <button
-        data-testid="sliding-chapters-close"
-        onClick={props.onClose}
-      >
+      <button data-testid="rail-close" onClick={props.onClose}>
         Close
       </button>
       <button
-        data-testid="sliding-chapters-select"
+        data-testid="rail-select"
         onClick={() => props.onChapterSelect("chapter-03")}
       >
         Select Ch3
+      </button>
+      <button data-testid="rail-back" onClick={props.onBackToIndex}>
+        All chapters
       </button>
     </div>
   ),
@@ -142,19 +130,6 @@ jest.mock("../../../core/components/Typography", () => ({
   ),
 }));
 
-jest.mock("shared/components/Breadcrumb", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <nav data-testid="breadcrumb">
-      {props.items.map((item: any, i: number) => (
-        <span key={i} data-testid={`breadcrumb-item-${i}`}>
-          {item.label}
-        </span>
-      ))}
-    </nav>
-  ),
-}));
-
 jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick }: any) => (
@@ -180,10 +155,8 @@ jest.mock("../../../core/components/Card", () => {
 });
 
 jest.mock("lucide-react", () => ({
-  Book: () => <span data-testid="book-icon" />,
   Menu: () => <span data-testid="menu-icon" />,
   Loader2: () => <span data-testid="loader-icon" />,
-  Edit: () => <span data-testid="edit-icon" />,
 }));
 
 // ---------------------------------------------------------------------------
@@ -211,7 +184,7 @@ describe("StoryPage", () => {
         { id: "chapter-02", title: "The Middle", order: 2, content: "Things got harder..." },
         { id: "chapter-03", title: "The End", order: 3, content: "And they rested." },
       ],
-      storyProgress: { currentChapter: null },
+      storyProgress: { currentChapter: null, chapterProgress: {} },
       isLoading: false,
       error: null,
       getChapterById: jest.fn().mockImplementation(resolveChapterById),
@@ -230,10 +203,10 @@ describe("StoryPage", () => {
       expect(screen.getByText(/Loading chapter\.\.\./i)).toBeInTheDocument();
     });
 
-    it("does NOT render BookViewer while loading", () => {
+    it("does NOT render the reader while loading", () => {
       mockStoryContext = { ...mockStoryContext, isLoading: true };
       renderPage();
-      expect(screen.queryByTestId("book-viewer")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("chapter-reader")).not.toBeInTheDocument();
     });
   });
 
@@ -249,10 +222,10 @@ describe("StoryPage", () => {
       );
     });
 
-    it("does NOT render BookViewer when there is an error", () => {
+    it("does NOT render the reader when there is an error", () => {
       mockStoryContext = { ...mockStoryContext, error: "Something failed" };
       renderPage();
-      expect(screen.queryByTestId("book-viewer")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("chapter-reader")).not.toBeInTheDocument();
     });
   });
 
@@ -265,57 +238,98 @@ describe("StoryPage", () => {
       expect(container).toBeInTheDocument();
     });
 
-    it("renders breadcrumb with Home, Story, Session Chapters, and chapter title", () => {
+    it("renders the reader with the numbered chapter title", () => {
       renderPage();
-      expect(screen.getByTestId("breadcrumb-item-0")).toHaveTextContent("Home");
-      expect(screen.getByTestId("breadcrumb-item-1")).toHaveTextContent("Story");
-      expect(screen.getByTestId("breadcrumb-item-2")).toHaveTextContent(
-        "Session Chapters"
-      );
-      // Last breadcrumb shows chapter order and title
-      expect(screen.getByTestId("breadcrumb-item-3")).toHaveTextContent(
-        "1. The Beginning"
-      );
-    });
-
-    it("renders BookViewer with chapter title", () => {
-      renderPage();
-      expect(screen.getByTestId("book-viewer")).toHaveAttribute(
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
         "data-title",
         "1. The Beginning"
       );
     });
 
-    it("shows chapter counter text with correct count", () => {
+    it("hands the reader its position in the book for the footer", () => {
       renderPage();
-      expect(screen.getByText(/Reading Chapter 1 of 3/i)).toBeInTheDocument();
+      const reader = screen.getByTestId("chapter-reader");
+      expect(reader).toHaveAttribute("data-chapter-number", "1");
+      expect(reader).toHaveAttribute("data-chapter-count", "3");
     });
 
-    it("renders SlidingChapters closed by default", () => {
+    it("names the next chapter so the reader's Next button can label itself", () => {
       renderPage();
-      expect(screen.getByTestId("sliding-chapters")).toHaveAttribute(
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
+        "data-next-title",
+        "The Middle"
+      );
+    });
+
+    // The redesign states reading position exactly once, in the reader's
+    // footer. These three were separate statements of the same fact on the
+    // pre-redesign page and were removed deliberately — a failure here means
+    // one has been reintroduced, not that the test is stale.
+    it("does not restate the position in page chrome", () => {
+      renderPage();
+      expect(screen.queryByTestId("breadcrumb")).not.toBeInTheDocument();
+      expect(screen.queryByText(/Reading Chapter/i)).not.toBeInTheDocument();
+    });
+
+    it("does not render a second way back to the index alongside the rail's", () => {
+      renderPage();
+      expect(
+        screen.queryByTestId("button-back-to-chapters")
+      ).not.toBeInTheDocument();
+    });
+
+    it("gives the rail every chapter, with read state derived", () => {
+      renderPage();
+      expect(screen.getByTestId("chapter-rail")).toHaveAttribute(
+        "data-item-count",
+        "3"
+      );
+    });
+
+    it("tells the rail which chapter is open", () => {
+      renderPage();
+      expect(screen.getByTestId("chapter-rail")).toHaveAttribute(
+        "data-current-chapter",
+        "chapter-01"
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Rail drawer (narrow screens)
+  // -------------------------------------------------------------------------
+  describe("rail drawer", () => {
+    it("starts closed", () => {
+      renderPage();
+      expect(screen.getByTestId("chapter-rail")).toHaveAttribute(
         "data-is-open",
         "false"
       );
     });
 
-    it("opens SlidingChapters when Chapters button is clicked", () => {
+    it("opens when the Chapters trigger is clicked", () => {
       renderPage();
       fireEvent.click(screen.getByTestId("button-chapters"));
-      expect(screen.getByTestId("sliding-chapters")).toHaveAttribute(
+      expect(screen.getByTestId("chapter-rail")).toHaveAttribute(
         "data-is-open",
         "true"
       );
     });
 
-    it("closes SlidingChapters when onClose is called", () => {
+    it("closes when the rail asks to close", () => {
       renderPage();
       fireEvent.click(screen.getByTestId("button-chapters"));
-      fireEvent.click(screen.getByTestId("sliding-chapters-close"));
-      expect(screen.getByTestId("sliding-chapters")).toHaveAttribute(
+      fireEvent.click(screen.getByTestId("rail-close"));
+      expect(screen.getByTestId("chapter-rail")).toHaveAttribute(
         "data-is-open",
         "false"
       );
+    });
+
+    it("navigates to the chapters index from the rail", () => {
+      renderPage();
+      fireEvent.click(screen.getByTestId("rail-back"));
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/story");
     });
   });
 
@@ -323,33 +337,33 @@ describe("StoryPage", () => {
   // Previous / Next chapter navigation
   // -------------------------------------------------------------------------
   describe("chapter navigation", () => {
-    it("BookViewer has no previous chapter for the first chapter", () => {
+    it("has no previous chapter for the first chapter", () => {
       renderPage();
-      expect(screen.getByTestId("book-viewer")).toHaveAttribute(
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
         "data-has-prev",
         "false"
       );
     });
 
-    it("BookViewer has next chapter for chapter-01 (not last)", () => {
+    it("has a next chapter for chapter-01", () => {
       renderPage();
-      expect(screen.getByTestId("book-viewer")).toHaveAttribute(
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
         "data-has-next",
         "true"
       );
     });
 
-    it("navigates to next chapter when next is clicked", () => {
+    it("navigates to the next chapter when next is clicked", () => {
       renderPage();
-      fireEvent.click(screen.getByTestId("book-viewer-next"));
+      fireEvent.click(screen.getByTestId("reader-next"));
       expect(mockNavigateToPage).toHaveBeenCalledWith(
         "/story/chapters/chapter-02"
       );
     });
 
-    it("navigates to chapter-03 when selected from SlidingChapters", () => {
+    it("navigates to chapter-03 when selected from the rail", () => {
       renderPage();
-      fireEvent.click(screen.getByTestId("sliding-chapters-select"));
+      fireEvent.click(screen.getByTestId("rail-select"));
       expect(mockNavigateToPage).toHaveBeenCalledWith(
         "/story/chapters/chapter-03"
       );
@@ -357,40 +371,37 @@ describe("StoryPage", () => {
 
     it("has no next chapter for the last chapter", () => {
       mockChapterId = "chapter-03";
-      mockStoryContext = {
-        ...mockStoryContext,
-        getChapterById: jest.fn().mockImplementation(resolveChapterById),
-      };
       renderPage();
-      expect(screen.getByTestId("book-viewer")).toHaveAttribute(
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
         "data-has-next",
         "false"
       );
     });
 
-    it("has previous chapter for last chapter", () => {
+    it("has a previous chapter for the last chapter", () => {
       mockChapterId = "chapter-03";
-      mockStoryContext = {
-        ...mockStoryContext,
-        getChapterById: jest.fn().mockImplementation(resolveChapterById),
-      };
       renderPage();
-      expect(screen.getByTestId("book-viewer")).toHaveAttribute(
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
         "data-has-prev",
         "true"
       );
     });
 
-    it("navigates to previous chapter when prev is clicked", () => {
+    it("navigates to the previous chapter when prev is clicked", () => {
       mockChapterId = "chapter-03";
-      mockStoryContext = {
-        ...mockStoryContext,
-        getChapterById: jest.fn().mockImplementation(resolveChapterById),
-      };
       renderPage();
-      fireEvent.click(screen.getByTestId("book-viewer-prev"));
+      fireEvent.click(screen.getByTestId("reader-prev"));
       expect(mockNavigateToPage).toHaveBeenCalledWith(
         "/story/chapters/chapter-02"
+      );
+    });
+
+    it("reports the right position for a chapter in the middle of the book", () => {
+      mockChapterId = "chapter-02";
+      renderPage();
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
+        "data-chapter-number",
+        "2"
       );
     });
   });
@@ -399,20 +410,28 @@ describe("StoryPage", () => {
   // Authenticated user controls
   // -------------------------------------------------------------------------
   describe("authenticated user controls", () => {
-    it("renders Edit button when user is signed in", () => {
+    // Edit now lives inside the reader card rather than in page chrome, so the
+    // page's part of the contract is whether it supplies the handler at all.
+    it("gives the reader an edit handler when a user is signed in", () => {
       renderPage();
-      expect(screen.getByTestId("button-edit")).toBeInTheDocument();
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
+        "data-has-edit",
+        "true"
+      );
     });
 
-    it("does NOT render Edit button when user is not signed in", () => {
+    it("withholds the edit handler when nobody is signed in", () => {
       mockUser = null;
       renderPage();
-      expect(screen.queryByTestId("button-edit")).not.toBeInTheDocument();
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
+        "data-has-edit",
+        "false"
+      );
     });
 
-    it("navigates to edit page when Edit button is clicked", () => {
+    it("navigates to the edit page when the reader's Edit is used", () => {
       renderPage();
-      fireEvent.click(screen.getByTestId("button-edit"));
+      fireEvent.click(screen.getByTestId("reader-edit"));
       expect(mockNavigateToPage).toHaveBeenCalledWith(
         "/story/chapters/edit/chapter-01"
       );
@@ -420,27 +439,53 @@ describe("StoryPage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Back to selection
+  // Resuming
   // -------------------------------------------------------------------------
-  describe("back to chapters", () => {
-    it("renders 'Back to Chapters' button", () => {
+  describe("resuming where the reader left off", () => {
+    it("hands the reader the stored scroll position for this chapter", () => {
+      mockStoryContext = {
+        ...mockStoryContext,
+        storyProgress: {
+          currentChapter: "chapter-01",
+          chapterProgress: {
+            "chapter-01": { chapterId: "chapter-01", lastPosition: 63, isComplete: false },
+          },
+        },
+      };
       renderPage();
-      expect(
-        screen.getByTestId("button-back-to-chapters")
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
+        "data-position",
+        "63"
+      );
     });
 
-    it("navigates to /story/chapters when Back to Chapters is clicked", () => {
+    it("starts at the top for a chapter with no stored position", () => {
       renderPage();
-      fireEvent.click(screen.getByTestId("button-back-to-chapters"));
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/story/chapters");
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
+        "data-position",
+        "0"
+      );
     });
 
-    it("does not reuse the 'Back to Selection' label, which points at /story elsewhere", () => {
-      renderPage();
-      expect(
-        screen.queryByTestId("button-back-to-selection")
-      ).not.toBeInTheDocument();
+    // The stored position updates on every persisted scroll. If that flowed
+    // straight back into the reader, a restore effect watching `position`
+    // would drag the reader back to a place they had already scrolled past.
+    it("does not push a new position at the reader mid-chapter", () => {
+      const { rerender } = renderPage();
+      mockStoryContext = {
+        ...mockStoryContext,
+        storyProgress: {
+          currentChapter: "chapter-01",
+          chapterProgress: {
+            "chapter-01": { chapterId: "chapter-01", lastPosition: 80, isComplete: false },
+          },
+        },
+      };
+      rerender(<StoryPage />);
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
+        "data-position",
+        "0"
+      );
     });
   });
 
@@ -448,14 +493,13 @@ describe("StoryPage", () => {
   // Redirect behavior for unresolved chapters
   // -------------------------------------------------------------------------
   describe("redirect for unknown chapter", () => {
-    it("redirects to first chapter when requested chapterId does not exist", () => {
+    it("redirects to the first chapter when the requested chapterId does not exist", () => {
       mockChapterId = "chapter-99";
       mockStoryContext = {
         ...mockStoryContext,
         getChapterById: jest.fn().mockReturnValue(undefined),
       };
       renderPage();
-      // useEffect fires to navigate to first chapter
       expect(mockNavigateToPage).toHaveBeenCalledWith(
         "/story/chapters/chapter-01"
       );
@@ -466,7 +510,7 @@ describe("StoryPage", () => {
   // Empty chapters — redirect
   // -------------------------------------------------------------------------
   describe("no chapters available", () => {
-    it("does NOT navigate when chapters array is empty and not loading", () => {
+    it("does NOT navigate when the chapters array is empty and not loading", () => {
       mockStoryContext = {
         ...mockStoryContext,
         chapters: [],
@@ -474,52 +518,39 @@ describe("StoryPage", () => {
         getChapterById: jest.fn().mockReturnValue(undefined),
       };
       renderPage();
-      // No first chapter to navigate to
       expect(mockNavigateToPage).not.toHaveBeenCalled();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Page change / progress tracking
+  // Progress tracking
   // -------------------------------------------------------------------------
   describe("reading progress tracking", () => {
-    // The ABSENCE of `isComplete` in these two payloads is the assertion, not
-    // an oversight (bug #852). An ordinary page turn knows only the position;
-    // it has no opinion about completion. Sending `isComplete: false` — which
-    // is what this did until 2026-07-28 — made every page turn an explicit
-    // instruction to clear the flag, wiping a chapter's stored completion.
-    // StoryContext merges partial updates, so omitting the key preserves it.
-    it("calls updateChapterProgress when BookViewer fires onPageChange", () => {
+    // The ABSENCE of `isComplete` in this payload is the assertion, not an
+    // oversight (bug #852). An ordinary scroll knows only the position; it has
+    // no opinion about completion. Sending `isComplete: false` would make every
+    // scroll an explicit instruction to clear the flag, wiping a chapter's
+    // stored completion. StoryContext merges partial updates, so omitting the
+    // key preserves it.
+    it("persists the scroll position without asserting completion", () => {
       renderPage();
-      fireEvent.click(screen.getByTestId("book-viewer-page-change"));
+      fireEvent.click(screen.getByTestId("reader-progress"));
       expect(mockUpdateChapterProgress).toHaveBeenCalledWith("chapter-01", {
-        lastPosition: 2,
+        lastPosition: 42,
       });
-    });
-
-    // Regression test for bug #851: BookViewer fires onPageChange(1) with no
-    // isComplete flag on initial load and whenever the reader navigates back
-    // to page 1 (e.g. pressing Home). Neither should mark the chapter complete
-    // — only BookViewer's own last-page / chapter-transition signal should.
-    it("does NOT mark the chapter complete on page 1 when isComplete is not signaled", () => {
-      renderPage();
-      fireEvent.click(screen.getByTestId("book-viewer-page-1"));
-      expect(mockUpdateChapterProgress).toHaveBeenCalledWith("chapter-01", {
-        lastPosition: 1,
-      });
-      // The requirement, stated independently of the payload's exact shape:
-      // nothing about a page-1 navigation may assert completion.
+      // Stated independently of the payload's exact shape: nothing about an
+      // ordinary scroll may assert completion either way.
       expect(mockUpdateChapterProgress).not.toHaveBeenCalledWith(
         "chapter-01",
-        expect.objectContaining({ isComplete: true })
+        expect.objectContaining({ isComplete: expect.anything() })
       );
     });
 
-    it("marks the chapter complete when BookViewer explicitly signals isComplete", () => {
+    it("marks the chapter complete when the reader signals completion", () => {
       renderPage();
-      fireEvent.click(screen.getByTestId("book-viewer-page-complete"));
+      fireEvent.click(screen.getByTestId("reader-complete"));
       expect(mockUpdateChapterProgress).toHaveBeenCalledWith("chapter-01", {
-        lastPosition: 3,
+        lastPosition: 100,
         isComplete: true,
       });
     });
