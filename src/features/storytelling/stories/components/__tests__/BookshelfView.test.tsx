@@ -103,34 +103,85 @@ describe('BookshelfView', () => {
     });
   });
 
-  describe('read state is the only visual encoding', () => {
-    test('a read spine is filled with the completed status colour', () => {
+  describe('read state treatment', () => {
+    // Read state is drawn as a treatment applied OVER the book illustration,
+    // not as a replacement for it. The shelf briefly rendered every chapter as
+    // an identical coloured rectangle, which bought at-a-glance progress at the
+    // cost of the shelf reading as a bar chart rather than a shelf. Identity
+    // (which illustration, how thick, how tall) and state (these filters) were
+    // never competing for the same channel.
+    const bookOf = (name: RegExp) =>
+      screen.getByRole('button', { name }).querySelector('span') as HTMLElement;
+
+    test('a read book is drawn at full colour', () => {
       const items = [makeItem({ id: 'ch-1', title: 'Read Chapter', order: 1 }, { state: 'read' })];
       render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
-      const spine = screen.getByRole('button', { name: /Read Chapter/ });
-      expect(spine.className).toMatch(/bg-status-completed/);
+      const book = bookOf(/Read Chapter/);
+      expect(book.className).toMatch(/opacity-100/);
+      expect(book.className).not.toMatch(/grayscale/);
     });
 
-    test('a reading spine is filled with the active status colour, ringed, and taller', () => {
+    test('an unread book is faded and drained of colour, but still a book', () => {
+      const items = [makeItem({ id: 'ch-1', title: 'Unread Chapter', order: 1 }, { state: 'unread' })];
+      render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
+      const book = bookOf(/Unread Chapter/);
+      expect(book.className).toMatch(/grayscale/);
+      expect(book.className).toMatch(/opacity-45/);
+      // The illustration is still rendered -- unread must not flatten the book
+      // into a different kind of object.
+      expect(book.querySelector('svg')).toBeInTheDocument();
+    });
+
+    test('the chapter being read is lifted off the shelf', () => {
       const items = [
         makeItem({ id: 'ch-1', title: 'Reading Chapter', order: 1 }, { state: 'reading' }),
         makeItem({ id: 'ch-2', title: 'Unread Chapter', order: 2 }, { state: 'unread' }),
       ];
       render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
-      const reading = screen.getByRole('button', { name: /Reading Chapter/ });
-      const unread = screen.getByRole('button', { name: /Unread Chapter/ });
-      expect(reading.className).toMatch(/bg-status-active/);
-      expect(reading.className).toMatch(/border-accent/);
-      expect(reading.className).toMatch(/h-40/);
-      expect(unread.className).not.toMatch(/h-40/);
+      // Anchored to a class boundary: every book carries
+      // `group-hover:-translate-y-2`, which contains this substring, so an
+      // unanchored match would pass for a book that is not lifted at rest.
+      const liftedAtRest = /(^|\s)-translate-y-2/;
+      expect(bookOf(/Reading Chapter/).className).toMatch(liftedAtRest);
+      expect(bookOf(/Unread Chapter/).className).not.toMatch(liftedAtRest);
     });
 
-    test('an unread spine has a pale, dashed outline', () => {
-      const items = [makeItem({ id: 'ch-1', title: 'Unread Chapter', order: 1 }, { state: 'unread' })];
+    test('the current chapter is ringed', () => {
+      const items = [
+        makeItem({ id: 'ch-1', title: 'Current Chapter', order: 1 }, { state: 'reading', isCurrent: true }),
+        makeItem({ id: 'ch-2', title: 'Other Chapter', order: 2 }, { state: 'unread' }),
+      ];
       render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
-      const spine = screen.getByRole('button', { name: /Unread Chapter/ });
-      expect(spine.className).toMatch(/border-dashed/);
-      expect(spine.className).not.toMatch(/bg-status-completed|bg-status-active/);
+      expect(bookOf(/Current Chapter/).className).toMatch(/ring-accent/);
+      expect(bookOf(/Other Chapter/).className).not.toMatch(/ring-accent/);
+    });
+  });
+
+  describe('book illustrations', () => {
+    // The point of the shelf existing beside the list view: thirty chapters
+    // should look like thirty books, not thirty identical boxes.
+    test('neighbouring chapters are drawn as different books', () => {
+      const items = [
+        makeItem({ id: 'ch-1', title: 'One', order: 1 }, { state: 'unread' }),
+        makeItem({ id: 'ch-2', title: 'Two', order: 2 }, { state: 'unread' }),
+      ];
+      const { container } = render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
+      const svgs = [...container.querySelectorAll('button svg')];
+      expect(svgs).toHaveLength(2);
+      expect(svgs[0].innerHTML).not.toBe(svgs[1].innerHTML);
+    });
+
+    // A ~40px spine cannot carry a full title at a readable size; it clipped
+    // mid-word and lost the chapter number, the one part identifying the book.
+    // Titles live in the list view; the shelf shows the number and keeps the
+    // title one hover -- or one screen reader stop -- away.
+    test('shows the chapter number, with the title available but not set on the spine', () => {
+      const items = [makeItem({ id: 'ch-9', title: 'A Very Long Chapter Title Indeed', order: 9 }, { state: 'unread' })];
+      render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
+      const button = screen.getByRole('button', { name: /A Very Long Chapter Title Indeed/ });
+      expect(button).toHaveTextContent('9');
+      expect(button).not.toHaveTextContent('A Very Long Chapter Title Indeed');
+      expect(button).toHaveAttribute('title', 'Chapter 9: A Very Long Chapter Title Indeed');
     });
   });
 
