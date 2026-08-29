@@ -269,11 +269,22 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         };
       });
 
-      refreshChapters();
+      // Deliberately does NOT refetch chapters. Reading progress lives in the
+      // `story-progress` document; a progress write cannot change a single
+      // chapter document, so re-reading the whole `chapters` collection here
+      // bought nothing — and cost a great deal.
+      //
+      // `refreshChapters()` sets `loading` true, which feeds `isLoading`, which
+      // makes StoryPage swap the reader for its loading card. That UNMOUNTS the
+      // reader, resetting the per-chapter guard that stops it re-reporting
+      // completion; on remount it reported completion again, refetched again,
+      // and the page sat in a permanent READER -> LOADING -> READER loop about
+      // once a second, writing to Firestore on every pass. The same refetch also
+      // tore the reader down mid-scroll, discarding the reader's position.
     } catch (error) {
       console.error('Failed to update chapter progress:', error);
     }
-  }, [applyProgress, refreshChapters, hasRequiredContext]);
+  }, [applyProgress, hasRequiredContext]);
 
   // Update current chapter
   const updateCurrentChapter = useCallback(async (chapterId: string) => {

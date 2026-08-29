@@ -291,6 +291,39 @@ describe('StoryContext Reading Progress (bug #018)', () => {
     ).toBe(true);
   });
 
+  test('does not refetch the chapters collection when progress changes', async () => {
+    // Progress lives in the `story-progress` document. A progress write cannot
+    // change a chapter document, so refetching `chapters` here bought nothing.
+    //
+    // It cost a great deal, though: refreshChapters() sets `loading` true,
+    // which feeds StoryContext's `isLoading`, which makes StoryPage swap the
+    // reader for its loading card -- unmounting the reader. That reset the
+    // reader's per-chapter guard against re-reporting completion, so on
+    // remount it reported completion again and triggered another refetch. In
+    // the browser the page sat in a permanent reader -> loading -> reader
+    // loop about once a second, writing to Firestore on every pass, and tore
+    // the reader down mid-scroll each time.
+    renderStoryContext();
+
+    await waitFor(() => {
+      expect(storyContext).toBeDefined();
+    });
+
+    mockRefreshChapters.mockClear();
+
+    await act(async () => {
+      await storyContext.updateChapterProgress('chapter-01', { lastPosition: 40 });
+    });
+
+    expect(mockRefreshChapters).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await storyContext.updateCurrentChapter('chapter-02');
+    });
+
+    expect(mockRefreshChapters).not.toHaveBeenCalled();
+  });
+
   test('still allows a caller to clear isComplete explicitly (bug #852)', async () => {
     // The fix must not make completion permanently sticky -- an explicit
     // `isComplete: false` has to win over the stored value. Only silence is
