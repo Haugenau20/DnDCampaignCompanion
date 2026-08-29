@@ -149,14 +149,17 @@ const ChapterRailHeader: React.FC<ChapterRailHeaderProps> = ({
  * presentation, matching the contract's note that they only matter below
  * `lg`. Below `lg` there's no room for a permanent column, so the identical
  * row list (via `ChapterRailList`) becomes a left-side drawer instead, shown
- * only while `isOpen` is true, with a click-to-dismiss backdrop in the style
- * of `SlidingChapters`.
+ * only while `isOpen` is true, with a click-to-dismiss backdrop.
  *
- * The drawer is mounted only while open, rather than always-mounted and
- * translated off-screen the way `SlidingChapters` does it. That trades away
- * an exit slide animation, but it matters more here: unlike `SlidingChapters`,
- * this component also renders a second, always-mounted copy of the same list
- * (the persistent rail). Tailwind's `lg:`-prefixed visibility classes have no
+ * This replaces `SlidingChapters` (deleted in the same change that added this
+ * file; see git history), which was a drawer and nothing else — the reader had
+ * to open an overlay, covering the prose, just to see where they were.
+ *
+ * The drawer here is mounted only while open, rather than always-mounted and
+ * translated off-screen the way `SlidingChapters` did it. That trades away an
+ * exit slide animation, but it matters more here: unlike that component, this
+ * one also renders a second, always-mounted copy of the same list (the
+ * persistent rail). Tailwind's `lg:`-prefixed visibility classes have no
  * effect in jsdom, so an always-mounted drawer would leave two live copies of
  * every chapter row in the tree whenever `isOpen` is true — duplicate
  * accessible names, duplicate tab stops, and ambiguous queries in tests.
@@ -193,8 +196,8 @@ const ChapterRail: React.FC<ChapterRailProps> = ({
       </aside>
 
       {/* Drawer — below lg only, and only while open. See the component doc
-          comment above for why this differs from SlidingChapters' always-mounted
-          transform approach. */}
+          comment above for why the mount is gated rather than translated
+          off-screen. */}
       {isOpen && (
         <div className="lg:hidden">
           <div
