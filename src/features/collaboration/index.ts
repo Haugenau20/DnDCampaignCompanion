@@ -3,6 +3,11 @@
 // Note context and hooks
 export { NoteProvider, useNotes } from './notes/context/NoteContext';
 export { useNoteData } from './notes/hooks/useNoteData';
+export { useCreateNote } from './notes/hooks/useCreateNote';
+// Note presentation helpers — pure, no Firebase, safe for any consumer.
+export { deriveTitle, displayTitle, MAX_DERIVED_TITLE_LENGTH } from './notes/utils/note-title';
+export { matchesInText } from './notes/utils/entity-matching';
+export { formatLastSaved } from './notes/utils/save-status';
 // Components consumed by pages/notes/* and other external consumers
 export { default as NotesList } from './notes/components/NotesList';
 export { default as NoteEditor } from './notes/components/NoteEditor';
