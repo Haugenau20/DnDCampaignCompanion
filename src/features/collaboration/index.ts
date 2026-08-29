@@ -38,6 +38,7 @@ export { useOpenAIExtractor } from './entity-extraction/hooks/useOpenAIExtractor
 // Entity extraction components consumed by pages/notes/* and layout
 export { default as EntityExtractor } from './entity-extraction/components/EntityExtractor';
 export { default as FloatingUsageIndicator } from './entity-extraction/components/FloatingUsageIndicator';
+export { default as UsageMeter } from './entity-extraction/components/UsageMeter';
 export { default as EntityCard } from './entity-extraction/components/EntityCard';
 // Entity extraction / usage types
 export type {
