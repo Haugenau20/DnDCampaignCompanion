@@ -1,0 +1,266 @@
+// src/features/collaboration/notes/components/__tests__/CampaignLinksPanel.test.tsx
+
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import CampaignLinksPanel from '../CampaignLinksPanel';
+import { Note } from '../../types';
+import { PotentialReference } from '../NoteReferences';
+
+const mockNavigateToPage = jest.fn();
+const mockGetNoteById = jest.fn();
+const mockUpdateNote = jest.fn();
+const mockExtractWithOpenAI = jest.fn();
+const mockUseNoteReferences = jest.fn();
+
+jest.mock('../NoteReferences', () => ({
+  __esModule: true,
+  default: () => null,
+  useNoteReferences: (...args: any[]) => mockUseNoteReferences(...args),
+  normalizeTextForComparison: (text: string) =>
+    text.toLowerCase().replace(/[.,!?;:\s]+/g, '-').replace(/^-+|-+$/g, ''),
+}));
+
+jest.mock('../../context/NoteContext', () => ({ useNotes: jest.fn() }));
+jest.mock('shared/hooks/useNavigation', () => ({ useNavigation: jest.fn() }));
+jest.mock('@/features/campaign-entities', () => ({
+  useNPCs: jest.fn(() => ({ npcs: [], isLoading: false })),
+  useLocations: jest.fn(() => ({ locations: [], isLoading: false })),
+  useQuests: jest.fn(() => ({ quests: [], isLoading: false })),
+  useRumors: jest.fn(() => ({ rumors: [], isLoading: false })),
+}));
+jest.mock('@/features/collaboration/entity-extraction/hooks/useEntityExtractor', () => ({
+  useEntityExtractor: jest.fn(),
+}));
+
+const { useNotes } = require('../../context/NoteContext');
+const { useNavigation } = require('shared/hooks/useNavigation');
+const {
+  useEntityExtractor,
+} = require('@/features/collaboration/entity-extraction/hooks/useEntityExtractor');
+
+function makeNote(overrides: Partial<Note> = {}): Note {
+  return {
+    id: 'note-1',
+    title: 'Session',
+    content: 'x'.repeat(80),
+    extractedEntities: [],
+    status: 'active',
+    tags: [],
+    updatedAt: '2024-01-15T10:00:00.000Z',
+    campaignId: 'campaign-1',
+    createdBy: 'user-1',
+    createdByUsername: 'TestUser',
+    dateAdded: '2024-01-15T10:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function setupMocks({
+  references = [] as PotentialReference[],
+  note = makeNote(),
+  isUsageLimitExceeded = false,
+  isExtractionAvailable = true,
+} = {}) {
+  mockUseNoteReferences.mockReturnValue({ references, isLoading: false });
+  mockGetNoteById.mockReturnValue(note);
+  (useNotes as jest.Mock).mockReturnValue({
+    getNoteById: mockGetNoteById,
+    updateNote: mockUpdateNote,
+  });
+  (useNavigation as jest.Mock).mockReturnValue({
+    navigateToPage: mockNavigateToPage,
+    currentPath: '/notes/note-1',
+  });
+  (useEntityExtractor as jest.Mock).mockReturnValue({
+    extractWithOpenAI: mockExtractWithOpenAI,
+    isExtracting: false,
+    error: null,
+    isUsageLimitExceeded,
+    contactInfo: isUsageLimitExceeded
+      ? { message: 'Limit reached', contactUrl: '/contact', prefilledSubject: 'More scans' }
+      : null,
+    isExtractionAvailable: () => isExtractionAvailable,
+    refreshUsageStatus: jest.fn(),
+  });
+  mockUpdateNote.mockResolvedValue(undefined);
+}
+
+describe('CampaignLinksPanel', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('empty', () => {
+    test('should render only the header when there is nothing to show', () => {
+      setupMocks();
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.getByText('Campaign links')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /scan note/i })).toBeInTheDocument();
+
+      // The two empty-state essays this merge exists to delete.
+      expect(screen.queryByText(/no campaign elements found/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/click the search button/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/no new content found/i)).not.toBeInTheDocument();
+      expect(screen.queryByText('Smart Detection')).not.toBeInTheDocument();
+      expect(screen.queryByText('Campaign References Found')).not.toBeInTheDocument();
+    });
+
+    test('should not render either group label when both groups are empty', () => {
+      setupMocks();
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.queryByText(/in your campaign/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/detected, not in your campaign/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('matched entities', () => {
+    const references: PotentialReference[] = [
+      { id: 'npc-1', type: 'npc', title: 'Gundren Rockseeker', matchingText: ['Gundren Rockseeker'] },
+      { id: 'loc-1', type: 'location', title: 'Phandalin', matchingText: ['Phandalin'] },
+    ];
+
+    test('should list them under a counted group label', () => {
+      setupMocks({ references });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.getByText('IN YOUR CAMPAIGN · 2')).toBeInTheDocument();
+      expect(screen.getByText('Gundren Rockseeker')).toBeInTheDocument();
+      expect(screen.getByText('Phandalin')).toBeInTheDocument();
+    });
+
+    test('should show each entity type name', () => {
+      setupMocks({ references });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.getByText('NPC')).toBeInTheDocument();
+      expect(screen.getByText('Location')).toBeInTheDocument();
+    });
+
+    test('should navigate to the entity when its row is clicked', () => {
+      setupMocks({ references });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      fireEvent.click(screen.getByText('Gundren Rockseeker'));
+
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/npcs?highlight=npc-1');
+    });
+  });
+
+  describe('detections', () => {
+    const detected = makeNote({
+      extractedEntities: [
+        {
+          id: 'ent-1',
+          text: 'Black Spider',
+          type: 'npc',
+          confidence: 0.91,
+          isConverted: false,
+          createdAt: '2024-01-15T10:00:00.000Z',
+        },
+      ],
+    });
+
+    test('should list them under a counted warning group with confidence', () => {
+      setupMocks({ note: detected });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.getByText('DETECTED, NOT IN YOUR CAMPAIGN · 1')).toBeInTheDocument();
+      expect(screen.getByText('Black Spider')).toBeInTheDocument();
+      expect(screen.getByText('looks like an NPC · 91% confidence')).toBeInTheDocument();
+    });
+
+    test('should not list a detection that matches an existing reference', () => {
+      setupMocks({
+        note: detected,
+        references: [
+          { id: 'npc-9', type: 'npc', title: 'Black Spider', matchingText: ['Black Spider'] },
+        ],
+      });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.queryByText(/detected, not in your campaign/i)).not.toBeInTheDocument();
+    });
+
+    test('should offer an Add action', () => {
+      setupMocks({ note: detected });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('scanning', () => {
+    test('should save the editor before extracting', async () => {
+      setupMocks();
+      const saveCurrentEditorContent = jest.fn().mockResolvedValue(undefined);
+      const getCurrentEditorContent = jest
+        .fn()
+        .mockReturnValue({ title: '', content: 'y'.repeat(80) });
+      mockExtractWithOpenAI.mockResolvedValue([]);
+
+      render(
+        <CampaignLinksPanel
+          noteId="note-1"
+          getCurrentEditorContent={getCurrentEditorContent}
+          saveCurrentEditorContent={saveCurrentEditorContent}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+      await waitFor(() => {
+        expect(saveCurrentEditorContent).toHaveBeenCalled();
+      });
+      expect(mockExtractWithOpenAI).toHaveBeenCalledWith('y'.repeat(80));
+    });
+
+    test('should abort the scan when the pre-save fails (bug #1051)', async () => {
+      setupMocks();
+      const saveCurrentEditorContent = jest.fn().mockRejectedValue(new Error('offline'));
+      mockExtractWithOpenAI.mockResolvedValue([]);
+
+      render(
+        <CampaignLinksPanel noteId="note-1" saveCurrentEditorContent={saveCurrentEditorContent} />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to save your work before analysis/i)).toBeInTheDocument();
+      });
+      expect(mockExtractWithOpenAI).not.toHaveBeenCalled();
+    });
+
+    test('should refuse to scan content that is too short', async () => {
+      setupMocks({ note: makeNote({ content: 'too short' }) });
+
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/too short for analysis/i)).toBeInTheDocument();
+      });
+      expect(mockExtractWithOpenAI).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('usage limits', () => {
+    test('should surface the limit and a way to ask for more', () => {
+      setupMocks({ isUsageLimitExceeded: true });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.getByText(/usage limit reached/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /request limit increase/i })).toBeInTheDocument();
+    });
+
+    test('should disable scanning when extraction is unavailable', () => {
+      setupMocks({ isExtractionAvailable: false });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.getByRole('button', { name: /scan note/i })).toBeDisabled();
+    });
+  });
+});

@@ -13,6 +13,8 @@ export { default as NotesList } from './notes/components/NotesList';
 export { default as NoteEditor } from './notes/components/NoteEditor';
 export { default as NoteCard } from './notes/components/NoteCard';
 export { default as NoteReferences } from './notes/components/NoteReferences';
+export { default as CampaignLinksPanel } from './notes/components/CampaignLinksPanel';
+export { useNoteReferences } from './notes/components/NoteReferences';
 export type { NoteEditorRef } from './notes/components/NoteEditor';
 // Named helpers re-exported from NoteReferences for consumers still outside
 // the collaboration domain (e.g. EntityExtractor, pending its own migration)
