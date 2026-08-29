@@ -3,12 +3,10 @@
 import React, { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from "react";
 import { Note } from "../types";
 import Typography from "../../../../core/components/Typography";
-import Input from "../../../../core/components/Input";
-import Button from "../../../../core/components/Button";
 import { useNotes } from "../context/NoteContext";
 import { deriveTitle } from "../utils/note-title";
 import { formatLastSaved } from "../utils/save-status";
-import { Loader2, Save, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowLeft, Archive, Trash2, Check } from 'lucide-react';
 
 interface NoteEditorProps {
   /** ID of the note to edit */
@@ -17,6 +15,10 @@ interface NoteEditorProps {
   readOnly?: boolean;
   /** Callback when note is saved (auto or manual) */
   onSave?: () => void;
+  /** Rendered in the surface's own top bar, left of Archive/Delete. */
+  onBack?: () => void;
+  onArchive?: () => void;
+  onDelete?: () => void;
 }
 
 export interface NoteEditorRef {
@@ -45,7 +47,10 @@ const AUTOSAVE_INTERVAL_MS = 30000;
 const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   noteId,
   readOnly = false,
-  onSave
+  onSave,
+  onBack,
+  onArchive,
+  onDelete
 }, ref) => {
   const { getNoteById, updateNote, saveNote } = useNotes();
   const [note, setNote] = useState<Note | undefined>();
@@ -61,7 +66,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   /**
    * Error message from the most recent manual save attempt, surfaced to the
    * user via {@link getStatusIndicator}. Only set by {@link triggerManualSave}
-   * (the Save button / Ctrl+S call sites) — the ref-exposed
+   * (the Ctrl+S call site) — the ref-exposed
    * `saveCurrentContent` still rejects directly so EntityExtractor can abort
    * AI extraction on a failed pre-extraction save (bug #1051).
    */
@@ -74,6 +79,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   const contentRef = useRef(content);
   const hasExplicitTitleRef = useRef(hasExplicitTitle);
   const debounceTimerRef = useRef<number | null>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { titleRef.current = title; }, [title]);
   useEffect(() => { contentRef.current = content; }, [content]);
@@ -194,8 +200,8 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   }, [note, readOnly, hasExplicitTitle, title, content, saveNote, onSave]);
 
   /**
-   * Fire-and-forget wrapper around `handleManualSave` for the Save button and
-   * Ctrl+S shortcut. Neither call site awaits the promise, so
+   * Fire-and-forget wrapper around `handleManualSave` for the Ctrl+S
+   * shortcut. The call site doesn't await the promise, so
    * `handleManualSave`'s re-thrown error (needed by the imperative
    * `saveCurrentContent` ref contract — see bug #1051) would otherwise become
    * an unhandled promise rejection with nothing shown to the user. This
@@ -249,6 +255,14 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     }
   };
 
+  // Grow the body to fit its content instead of sitting at a fixed 30 rows.
+  useEffect(() => {
+    const element = bodyRef.current;
+    if (!element) return;
+    element.style.height = "auto";
+    element.style.height = `${element.scrollHeight}px`;
+  }, [content]);
+
   // Get status indicator
   const getStatusIndicator = () => {
     if (isSaving) {
@@ -285,74 +299,84 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     const lastSavedText = lastSaved ? formatLastSaved(lastSaved) : "Not saved yet";
 
     return (
-      <Typography variant="body-sm" color="secondary">
-        {lastSavedText}
-      </Typography>
+      <div className="flex items-center gap-2">
+        <Check className="w-4 h-4 status-completed" />
+        <Typography variant="body-sm" color="secondary" className="text-[13px]">
+          {`${lastSavedText} · saves as you write`}
+        </Typography>
+      </div>
     );
   };
 
   return (
-    <div className="note-editor space-y-4">
-      {/* Note header */}
-      <div className="flex flex-col gap-2 mb-4">
-        <div className="flex justify-between items-center">
-          <Typography variant="h3">
-            Title
-          </Typography>
-        </div>
+    <div className="note-editor card rounded-xl flex flex-col min-h-[70vh]">
+      {/* Top bar */}
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b card-border text-[13px]">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1.5 typography-secondary hover:underline"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          All notes
+        </button>
 
-        {/* Title input */}
-        <Input
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onArchive}
+            disabled={readOnly}
+            className="flex items-center gap-1.5 typography-secondary hover:underline disabled:opacity-50"
+          >
+            <Archive className="w-4 h-4" />
+            Archive
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={readOnly}
+            className="flex items-center gap-1.5 typography-error hover:underline disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
+        </div>
+      </div>
+
+      {/* The writing itself */}
+      <div className="flex-1 flex flex-col px-8 py-6">
+        <input
           value={effectiveTitle}
           onChange={handleTitleChange}
           placeholder="Untitled note"
           disabled={readOnly}
-          className="note-title font-bold"
+          aria-label="Note title"
+          className="note-title w-full bg-transparent border-none outline-none typography-heading text-[30px] font-medium placeholder:opacity-40"
         />
 
         {!hasExplicitTitle && (
-          <Typography variant="caption" color="muted" className="text-xs">
+          <Typography variant="caption" color="muted" className="mt-1 text-xs">
             Taken from the first line. Click to write your own title.
           </Typography>
         )}
+
+        <textarea
+          ref={bodyRef}
+          value={content}
+          onChange={handleContentChange}
+          placeholder="Write your note here..."
+          disabled={readOnly}
+          aria-label="Note content"
+          className="note-textarea flex-1 w-full mt-5 bg-transparent border-none outline-none resize-none text-[17px] leading-[1.65] placeholder:opacity-40"
+          style={{ minHeight: "40vh" }}
+        />
       </div>
 
-      <div className="flex justify-between items-center">
-        <Typography variant="h3">
-          Content
-        </Typography>
-      </div>
-
-      {/* Content editor */}
-      <Input
-        value={content}
-        onChange={handleContentChange}
-        isTextArea={true}
-        rows={30}
-        placeholder="Write your note here..."
-        disabled={readOnly}
-        className="note-textarea font-mono"
-      />
-
-      {/* Status bar: save state is stated exactly once, via getStatusIndicator */}
-      <div className="flex flex-col gap-2">
-        <div className="flex justify-between items-center">
-          {getStatusIndicator()}
-
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={triggerManualSave}
-            disabled={readOnly || isSaving}
-            startIcon={<Save className="w-4 h-4" />}
-            className="save-manually-button"
-          >
-            Save (Ctrl+S)
-          </Button>
-        </div>
-
-        <Typography variant="body-sm" color="secondary">
-          {`${wordCount} ${wordCount === 1 ? "word" : "words"}`}
+      {/* Footer: save state stated once, and only once */}
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t card-border bg-secondary text-[13px]">
+        {getStatusIndicator()}
+        <Typography variant="body-sm" color="secondary" className="text-[13px]">
+          {`${wordCount.toLocaleString()} ${wordCount === 1 ? "word" : "words"} · Ctrl+S to save now`}
         </Typography>
       </div>
     </div>
