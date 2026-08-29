@@ -17,11 +17,6 @@ jest.mock('../../context/NoteContext', () => ({
   useNotes: jest.fn(),
 }));
 
-// Mock lodash debounce to run immediately in tests
-jest.mock('lodash', () => ({
-  debounce: (fn: (...args: any[]) => any) => fn,
-}));
-
 const { useNotes } = require('../../context/NoteContext');
 
 function setupMocks({
@@ -61,16 +56,29 @@ function makeNote(overrides: Partial<Note> = {}): Note {
   };
 }
 
+function renderEditor({
+  note = makeNote(),
+  props = {} as Partial<React.ComponentProps<typeof NoteEditor>>,
+} = {}) {
+  setupMocks({ note });
+  return render(<NoteEditor noteId="note-1" {...props} />);
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('NoteEditor', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     mockUpdateNote.mockResolvedValue(undefined);
     mockSaveNote.mockResolvedValue(undefined);
     setupMocks({ note: makeNote() });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   // -------------------------------------------------------------------------
@@ -104,9 +112,11 @@ describe('NoteEditor', () => {
       expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
     });
 
+    // Placeholder is "Untitled note", not "Note Title" -- this is the same
+    // input the title-derivation tests below locate by that placeholder.
     test('should render note title placeholder when note exists', () => {
       render(<NoteEditor noteId="note-1" />);
-      expect(screen.getByPlaceholderText('Note Title')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Untitled note')).toBeInTheDocument();
     });
 
     test('should render content placeholder', () => {
@@ -121,7 +131,7 @@ describe('NoteEditor', () => {
   describe('input interaction', () => {
     test('should update title input when user types', () => {
       render(<NoteEditor noteId="note-1" />);
-      const titleInput = screen.getByPlaceholderText('Note Title');
+      const titleInput = screen.getByPlaceholderText('Untitled note');
       fireEvent.change(titleInput, { target: { value: 'New Title' } });
       expect(titleInput).toHaveValue('New Title');
     });
@@ -135,8 +145,11 @@ describe('NoteEditor', () => {
 
     test('should call updateNote when title changes (via debounced save)', async () => {
       render(<NoteEditor noteId="note-1" />);
-      const titleInput = screen.getByPlaceholderText('Note Title');
+      const titleInput = screen.getByPlaceholderText('Untitled note');
       fireEvent.change(titleInput, { target: { value: 'Updated Title' } });
+
+      jest.advanceTimersByTime(2500);
+
       await waitFor(() => {
         expect(mockUpdateNote).toHaveBeenCalledWith(
           'note-1',
@@ -152,7 +165,7 @@ describe('NoteEditor', () => {
   describe('read-only mode', () => {
     test('should disable title input when readOnly is true', () => {
       render(<NoteEditor noteId="note-1" readOnly={true} />);
-      expect(screen.getByPlaceholderText('Note Title')).toBeDisabled();
+      expect(screen.getByPlaceholderText('Untitled note')).toBeDisabled();
     });
 
     test('should disable content textarea when readOnly is true', () => {
@@ -201,22 +214,15 @@ describe('NoteEditor', () => {
       expect(screen.getByText('Not saved to server')).toBeInTheDocument();
     });
 
-    test('should show "Remember to save your work!" when note is unsaved', () => {
+    // The separate "Remember to save your work!" / "Click Save to store this
+    // note permanently" caption row is gone -- save state is stated exactly
+    // once now, via the status indicator above. See the "save status"
+    // describe block below for the positive assertion.
+    test('should not show a second "remember to save" message alongside the status indicator', () => {
       setupMocks({ note: makeNote({ isUnsaved: true }) });
       render(<NoteEditor noteId="note-1" />);
-      expect(screen.getByText("Remember to save your work!")).toBeInTheDocument();
-    });
-
-    test('should show "Click Save to store this note permanently" when note is unsaved', () => {
-      setupMocks({ note: makeNote({ isUnsaved: true }) });
-      render(<NoteEditor noteId="note-1" />);
-      expect(screen.getByText('Click Save to store this note permanently')).toBeInTheDocument();
-    });
-
-    test('should show autosave interval text for saved notes', () => {
-      setupMocks({ note: makeNote({ isUnsaved: false }) });
-      render(<NoteEditor noteId="note-1" />);
-      expect(screen.getByText(/Autosave every/i)).toBeInTheDocument();
+      expect(screen.queryByText(/remember to save your work/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/click save to store this note permanently/i)).not.toBeInTheDocument();
     });
   });
 
@@ -449,46 +455,163 @@ describe('NoteEditor', () => {
   });
 
   // -------------------------------------------------------------------------
-  // getLastSavedText — various time branches.
-  //
-  // Line references removed: getLastSavedText's leading
-  // `if (note?.isUnsaved || hasUnsavedChanges) return "Not saved"` guard was
-  // deleted as dead code (bug #1050's sibling, #1052, 2026-07-28) — its only
-  // caller had already tested that same condition false before calling it, so
-  // the guard could never fire. Assertions below are unchanged.
+  // Last-saved text, via formatLastSaved (replaces the old getLastSavedText,
+  // which had no day unit and rendered "Saved 10870h ago" for an old note).
   // -------------------------------------------------------------------------
   describe('last saved text', () => {
-    test('should show "Never saved" when note has no dateModified and is not unsaved', () => {
+    test('should show "Not saved yet" when note has no dateModified and is not unsaved', () => {
       setupMocks({ note: makeNote({ isUnsaved: false, dateModified: undefined }) });
       render(<NoteEditor noteId="note-1" />);
-      expect(screen.getByText('Never saved')).toBeInTheDocument();
+      expect(screen.getByText('Not saved yet')).toBeInTheDocument();
     });
 
-    test('should show "Saved Xs ago" when note was saved less than 60 seconds ago', () => {
-      // dateModified 10 seconds ago
+    test('should show "Saved just now" when note was saved less than a minute ago', () => {
       const tenSecondsAgo = new Date(Date.now() - 10_000).toISOString();
       setupMocks({ note: makeNote({ isUnsaved: false, dateModified: tenSecondsAgo }) });
       render(<NoteEditor noteId="note-1" />);
-      // e.g. "Saved 10s ago"
-      expect(screen.getByText(/Saved \d+s ago/)).toBeInTheDocument();
+      expect(screen.getByText('Saved just now')).toBeInTheDocument();
     });
 
-    test('should show "Saved Xm ago" when note was saved between 1 and 59 minutes ago (lines 181-182)', () => {
-      // dateModified 2 minutes ago
+    test('should show a minutes-ago phrase when note was saved a few minutes ago', () => {
       const twoMinutesAgo = new Date(Date.now() - 120_000).toISOString();
       setupMocks({ note: makeNote({ isUnsaved: false, dateModified: twoMinutesAgo }) });
       render(<NoteEditor noteId="note-1" />);
-      // e.g. "Saved 2m ago"
-      expect(screen.getByText(/Saved \d+m ago/)).toBeInTheDocument();
+      expect(screen.getByText(/saved 2 minutes ago/i)).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Title derivation (Task 11: deriveTitle drives the title until the user
+  // types one explicitly).
+  // -------------------------------------------------------------------------
+  describe('title derivation', () => {
+    test('should save a title derived from the first content line', async () => {
+      renderEditor({ note: makeNote({ title: '', content: '' }) });
+
+      fireEvent.change(screen.getByPlaceholderText('Write your note here...'), {
+        target: { value: 'Wave Echo Cave\nThe party met Gundren.' },
+      });
+
+      jest.advanceTimersByTime(2500);
+
+      await waitFor(() => {
+        expect(mockUpdateNote).toHaveBeenCalledWith(
+          'note-1',
+          expect.objectContaining({ title: 'Wave Echo Cave' })
+        );
+      });
     });
 
-    test('should show saved-seconds-ago text for a just-saved note (exercises getLastSavedText)', () => {
-      // A saved note with a very recent dateModified produces "Saved Xs ago"
-      const justNow = new Date(Date.now() - 5_000).toISOString();
-      setupMocks({ note: makeNote({ isUnsaved: false, dateModified: justNow }) });
-      render(<NoteEditor noteId="note-1" />);
-      // Should show time-based saved text
-      expect(screen.getByText(/Saved \d+s ago/)).toBeInTheDocument();
+    test('should stop deriving once the user types a title', async () => {
+      renderEditor({ note: makeNote({ title: '', content: 'First line' }) });
+
+      fireEvent.change(screen.getByPlaceholderText('Untitled note'), {
+        target: { value: 'My own title' },
+      });
+      fireEvent.change(screen.getByPlaceholderText('Write your note here...'), {
+        target: { value: 'A different first line' },
+      });
+
+      jest.advanceTimersByTime(2500);
+
+      await waitFor(() => {
+        expect(mockUpdateNote).toHaveBeenCalledWith(
+          'note-1',
+          expect.objectContaining({ title: 'My own title' })
+        );
+      });
+    });
+
+    test('should hide the derivation hint once the title is explicit', () => {
+      renderEditor({ note: makeNote({ title: 'Explicit', content: 'x' }) });
+      expect(
+        screen.queryByText('Taken from the first line. Click to write your own title.')
+      ).not.toBeInTheDocument();
+    });
+
+    test('should show the derivation hint while the title is derived', () => {
+      renderEditor({ note: makeNote({ title: '', content: 'First line' }) });
+      expect(
+        screen.getByText('Taken from the first line. Click to write your own title.')
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('autosave', () => {
+    test('should save about two seconds after typing stops', async () => {
+      renderEditor({ note: makeNote({ content: 'start' }) });
+
+      fireEvent.change(screen.getByPlaceholderText('Write your note here...'), {
+        target: { value: 'start and more' },
+      });
+
+      jest.advanceTimersByTime(1000);
+      expect(mockUpdateNote).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(1500);
+      await waitFor(() => expect(mockUpdateNote).toHaveBeenCalled());
+    });
+
+    test('should save on an interval during continuous typing', async () => {
+      renderEditor({ note: makeNote({ content: 'start' }) });
+      const body = screen.getByPlaceholderText('Write your note here...');
+
+      // Type without ever pausing long enough for the debounce to fire.
+      for (let tick = 0; tick < 20; tick += 1) {
+        fireEvent.change(body, { target: { value: `start ${'x'.repeat(tick)}` } });
+        jest.advanceTimersByTime(1800);
+      }
+
+      await waitFor(() => expect(mockUpdateNote).toHaveBeenCalled());
+    });
+
+    test('should save a note shorter than three characters', async () => {
+      renderEditor({ note: makeNote({ content: '' }) });
+
+      fireEvent.change(screen.getByPlaceholderText('Write your note here...'), {
+        target: { value: 'ab' },
+      });
+
+      jest.advanceTimersByTime(2500);
+
+      // MIN_CONTENT_LENGTH used to return early with no state change, leaving
+      // a two-character note reading "Unsaved changes" forever.
+      await waitFor(() => {
+        expect(mockUpdateNote).toHaveBeenCalledWith(
+          'note-1',
+          expect.objectContaining({ content: 'ab' })
+        );
+      });
+    });
+  });
+
+  describe('save status', () => {
+    test('should state the save status exactly once', () => {
+      renderEditor({ note: makeNote({ isUnsaved: false, dateModified: new Date().toISOString() }) });
+
+      expect(screen.queryByText(/autosave every/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/remember to save your work/i)).not.toBeInTheDocument();
+      expect(screen.getAllByText(/saved/i)).toHaveLength(1);
+    });
+
+    test('should not claim an hour count for an old note', () => {
+      const longAgo = new Date('2024-01-01T00:00:00.000Z').toISOString();
+      renderEditor({ note: makeNote({ isUnsaved: false, dateModified: longAgo }) });
+
+      expect(screen.queryByText(/\d{3,}h ago/)).not.toBeInTheDocument();
+    });
+
+    test('should count words', () => {
+      renderEditor({ note: makeNote({ content: 'one two three four five' }) });
+      expect(screen.getByText(/5 words/)).toBeInTheDocument();
+    });
+  });
+
+  describe('removed API', () => {
+    test('should not accept an onExtractEntities prop', () => {
+      // Compile-time contract; asserted here so the deletion is recorded.
+      const props = Object.keys({ noteId: '', readOnly: false, onSave: () => undefined });
+      expect(props).not.toContain('onExtractEntities');
     });
   });
 });

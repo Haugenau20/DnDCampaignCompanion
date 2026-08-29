@@ -1,12 +1,13 @@
 // Updated src/features/collaboration/notes/components/NoteEditor.tsx
 
-import React, { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from "react";
 import { Note } from "../types";
 import Typography from "../../../../core/components/Typography";
 import Input from "../../../../core/components/Input";
 import Button from "../../../../core/components/Button";
 import { useNotes } from "../context/NoteContext";
-import { debounce } from "lodash";
+import { deriveTitle } from "../utils/note-title";
+import { formatLastSaved } from "../utils/save-status";
 import { Loader2, Save, AlertCircle } from 'lucide-react';
 
 interface NoteEditorProps {
@@ -14,8 +15,6 @@ interface NoteEditorProps {
   noteId: string;
   /** Whether the editor is read-only */
   readOnly?: boolean;
-  /** Callback when user requests entity extraction */
-  onExtractEntities?: () => void;
   /** Callback when note is saved (auto or manual) */
   onSave?: () => void;
 }
@@ -27,16 +26,26 @@ export interface NoteEditorRef {
   saveCurrentContent: () => Promise<void>;
 }
 
+/** Idle delay before an autosave fires. Short enough that a pause in real
+ *  prose reaches the server; the interval below covers continuous writing. */
+const AUTOSAVE_DEBOUNCE_MS = 2000;
+/** True interval save while the note is dirty. The debounce alone fires only
+ *  after typing STOPS, so a writer who never pauses was never saved -- while
+ *  the editor claimed "Autosave every 45s". */
+const AUTOSAVE_INTERVAL_MS = 30000;
+// MIN_CONTENT_LENGTH is deleted: it returned early with no state change, so a
+// two-character note read "Unsaved changes" indefinitely with no explanation.
+
 /**
  * Component for editing note content
- * Features auto-save functionality via debounce and handles unsaved notes
- * Exposes methods to get and save current content for external components
+ * Features auto-save functionality (2s idle debounce + a real 30s interval
+ * while dirty) and handles unsaved notes.
+ * Exposes methods to get and save current content for external components.
  */
-const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({ 
-  noteId, 
+const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
+  noteId,
   readOnly = false,
-  onExtractEntities,
-  onSave 
+  onSave
 }, ref) => {
   const { getNoteById, updateNote, saveNote } = useNotes();
   const [note, setNote] = useState<Note | undefined>();
@@ -45,6 +54,10 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  /** True once the loaded note had an explicit title, or the user has typed
+   *  one. While false, the title shown and saved is derived from the first
+   *  content line instead. No new persisted field -- this is purely local. */
+  const [hasExplicitTitle, setHasExplicitTitle] = useState(false);
   /**
    * Error message from the most recent manual save attempt, surfaced to the
    * user via {@link getStatusIndicator}. Only set by {@link triggerManualSave}
@@ -54,15 +67,26 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
    */
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Autosave interval configuration
-  const AUTOSAVE_DELAY_MS = 45000; // 45 seconds - optimized for D&D sessions
-  const MIN_CONTENT_LENGTH = 3; // Minimum characters to trigger autosave
+  // Refs mirroring the latest title/content/hasExplicitTitle so the debounce
+  // timeout and interval callbacks always read fresh values without having
+  // to be re-created (and thus reset) on every keystroke.
+  const titleRef = useRef(title);
+  const contentRef = useRef(content);
+  const hasExplicitTitleRef = useRef(hasExplicitTitle);
+  const debounceTimerRef = useRef<number | null>(null);
+
+  useEffect(() => { titleRef.current = title; }, [title]);
+  useEffect(() => { contentRef.current = content; }, [content]);
+  useEffect(() => { hasExplicitTitleRef.current = hasExplicitTitle; }, [hasExplicitTitle]);
+
+  const effectiveTitle = hasExplicitTitle ? title : deriveTitle(content);
+  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
 
   // Expose methods to parent components
   useImperativeHandle(ref, () => ({
-    getCurrentContent: () => ({ title, content }),
+    getCurrentContent: () => ({ title: effectiveTitle, content }),
     saveCurrentContent: handleManualSave
-  }), [title, content]);
+  }), [effectiveTitle, content]);
 
   // Load note data when ID changes
   useEffect(() => {
@@ -72,61 +96,93 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       setTitle(noteData.title || "");
       setContent(noteData.content || "");
       setHasUnsavedChanges(!!noteData.isUnsaved);
+      setHasExplicitTitle(!!noteData.title?.trim());
       // Set last saved time from note's modification date (if saved)
       setLastSaved(noteData.isUnsaved ? null : (noteData.dateModified ? new Date(noteData.dateModified) : null));
     }
   }, [noteId, getNoteById]);
 
-  // Debounced save function for autosave
-  const debouncedSave = useCallback(
-    debounce(async (noteId: string, field: string, value: string) => {
-      // Skip save if content is too short
-      if (field === "content" && value.length < MIN_CONTENT_LENGTH) {
-        return;
+  const clearDebounceTimer = useCallback(() => {
+    if (debounceTimerRef.current !== null) {
+      window.clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+  }, []);
+
+  // Clear any pending debounce timer on unmount.
+  useEffect(() => clearDebounceTimer, [clearDebounceTimer]);
+
+  /**
+   * The shared autosave write: always saves both fields together so a
+   * content-only edit still persists a title derived from the new content,
+   * and a title-only edit doesn't clobber content. Used by both the idle
+   * debounce and the dirty-note interval below.
+   */
+  const performAutosave = useCallback(async () => {
+    if (!note || readOnly) return;
+
+    const nextTitle = hasExplicitTitleRef.current ? titleRef.current : deriveTitle(contentRef.current);
+    const nextContent = contentRef.current;
+
+    try {
+      setIsSaving(true);
+
+      const currentNote = getNoteById(note.id);
+      await updateNote(note.id, { title: nextTitle, content: nextContent });
+
+      if (currentNote?.isUnsaved) {
+        // For unsaved notes, just update locally until manual save
+        setHasUnsavedChanges(true);
+      } else {
+        setLastSaved(new Date());
+        setHasUnsavedChanges(false);
       }
 
-      try {
-        setIsSaving(true);
-        
-        // For unsaved notes, just update locally until manual save
-        const currentNote = getNoteById(noteId);
-        if (currentNote?.isUnsaved) {
-          await updateNote(noteId, { [field]: value });
-          setHasUnsavedChanges(true);
-        } else {
-          // For saved notes, save to Firebase
-          await updateNote(noteId, { [field]: value });
-          setLastSaved(new Date());
-          setHasUnsavedChanges(false);
-        }
-        
-        // Notify parent of save
-        onSave?.();
-      } catch (error) {
-        console.error("Failed to save note:", error);
-      } finally {
-        setIsSaving(false);
-      }
-    }, AUTOSAVE_DELAY_MS),
-    [updateNote, getNoteById, onSave]
-  );
+      onSave?.();
+    } catch (error) {
+      console.error("Failed to save note:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [note, readOnly, getNoteById, updateNote, onSave]);
+
+  const scheduleAutosave = useCallback(() => {
+    clearDebounceTimer();
+    debounceTimerRef.current = window.setTimeout(() => {
+      debounceTimerRef.current = null;
+      performAutosave();
+    }, AUTOSAVE_DEBOUNCE_MS);
+  }, [clearDebounceTimer, performAutosave]);
+
+  // Real interval save while the note is dirty. The debounce above only fires
+  // after typing STOPS, so a writer who never pauses was never saved. Cleared
+  // on unmount and whenever the note goes clean (hasUnsavedChanges -> false).
+  useEffect(() => {
+    if (readOnly || !hasUnsavedChanges || !note) return;
+    const id = window.setInterval(() => {
+      performAutosave();
+    }, AUTOSAVE_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [readOnly, hasUnsavedChanges, note, performAutosave]);
 
   // Manual save function for Ctrl+S and save button
   const handleManualSave = useCallback(async () => {
     if (!note || readOnly) return;
-    
+
+    const nextTitle = hasExplicitTitle ? title : deriveTitle(content);
+
     try {
       setIsSaving(true);
-      
+
       // Always save to Firebase on manual save
-      await saveNote(note.id, { 
-        title,
-        content 
+      await saveNote(note.id, {
+        title: nextTitle,
+        content
       });
-      
+
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
-      
+
       // Notify parent of save
       onSave?.();
     } catch (error) {
@@ -135,7 +191,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     } finally {
       setIsSaving(false);
     }
-  }, [note, readOnly, title, content, saveNote, onSave]);
+  }, [note, readOnly, hasExplicitTitle, title, content, saveNote, onSave]);
 
   /**
    * Fire-and-forget wrapper around `handleManualSave` for the Save button and
@@ -171,11 +227,13 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
     setTitle(newTitle);
+    setHasExplicitTitle(true);
+    hasExplicitTitleRef.current = true;
     setHasUnsavedChanges(true);
     setSaveError(null);
 
     if (!readOnly && note) {
-      debouncedSave(note.id, "title", newTitle);
+      scheduleAutosave();
     }
   };
 
@@ -187,25 +245,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     setSaveError(null);
 
     if (!readOnly && note) {
-      debouncedSave(note.id, "content", newContent);
-    }
-  };
-
-  // Format last saved time
-  const getLastSavedText = () => {
-    if (!lastSaved) return "Never saved";
-    
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - lastSaved.getTime()) / 1000);
-    
-    if (diffInSeconds < 60) {
-      return `Saved ${diffInSeconds}s ago`;
-    } else if (diffInSeconds < 3600) {
-      const diffInMinutes = Math.floor(diffInSeconds / 60);
-      return `Saved ${diffInMinutes}m ago`;
-    } else {
-      const diffInHours = Math.floor(diffInSeconds / 3600);
-      return `Saved ${diffInHours}h ago`;
+      scheduleAutosave();
     }
   };
 
@@ -242,9 +282,11 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       );
     }
 
+    const lastSavedText = lastSaved ? formatLastSaved(lastSaved) : "Not saved yet";
+
     return (
       <Typography variant="body-sm" color="secondary">
-        {getLastSavedText()}
+        {lastSavedText}
       </Typography>
     );
   };
@@ -258,23 +300,29 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
             Title
           </Typography>
         </div>
-        
+
         {/* Title input */}
         <Input
-          value={title}
+          value={effectiveTitle}
           onChange={handleTitleChange}
-          placeholder="Note Title"
+          placeholder="Untitled note"
           disabled={readOnly}
           className="note-title font-bold"
         />
+
+        {!hasExplicitTitle && (
+          <Typography variant="caption" color="muted" className="text-xs">
+            Taken from the first line. Click to write your own title.
+          </Typography>
+        )}
       </div>
-      
+
       <div className="flex justify-between items-center">
         <Typography variant="h3">
           Content
         </Typography>
       </div>
-      
+
       {/* Content editor */}
       <Input
         value={content}
@@ -286,11 +334,11 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
         className="note-textarea font-mono"
       />
 
-      {/* Enhanced status bar with manual save button */}
+      {/* Status bar: save state is stated exactly once, via getStatusIndicator */}
       <div className="flex flex-col gap-2">
         <div className="flex justify-between items-center">
           {getStatusIndicator()}
-          
+
           <Button
             variant="primary"
             size="sm"
@@ -302,19 +350,10 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
             Save (Ctrl+S)
           </Button>
         </div>
-        
-        {/* Helpful text */}
-        <div className="flex justify-between items-center">
-          <Typography variant="body-sm" color="secondary" className="italic">
-            {note?.isUnsaved ? "Click Save to store this note permanently" : `Autosave every ${AUTOSAVE_DELAY_MS / 1000}s`}
-          </Typography>
-          
-          {(note?.isUnsaved || hasUnsavedChanges) && (
-            <Typography variant="body-sm" className="status-unknown italic">
-              Remember to save your work!
-            </Typography>
-          )}
-        </div>
+
+        <Typography variant="body-sm" color="secondary">
+          {`${wordCount} ${wordCount === 1 ? "word" : "words"}`}
+        </Typography>
       </div>
     </div>
   );
