@@ -9,6 +9,7 @@ import { PotentialReference } from '../NoteReferences';
 const mockNavigateToPage = jest.fn();
 const mockGetNoteById = jest.fn();
 const mockUpdateNote = jest.fn();
+const mockConvertEntity = jest.fn();
 const mockExtractWithOpenAI = jest.fn();
 const mockUseNoteReferences = jest.fn();
 
@@ -22,11 +23,14 @@ jest.mock('../NoteReferences', () => ({
 
 jest.mock('../../context/NoteContext', () => ({ useNotes: jest.fn() }));
 jest.mock('shared/hooks/useNavigation', () => ({ useNavigation: jest.fn() }));
+// No default implementation here: defaults are set in `beforeEach` below so
+// individual tests can override one collection with `.mockReturnValue(...)`
+// (e.g. to seed an existing campaign NPC) without leaking into later tests.
 jest.mock('@/features/campaign-entities', () => ({
-  useNPCs: jest.fn(() => ({ npcs: [], isLoading: false })),
-  useLocations: jest.fn(() => ({ locations: [], isLoading: false })),
-  useQuests: jest.fn(() => ({ quests: [], isLoading: false })),
-  useRumors: jest.fn(() => ({ rumors: [], isLoading: false })),
+  useNPCs: jest.fn(),
+  useLocations: jest.fn(),
+  useQuests: jest.fn(),
+  useRumors: jest.fn(),
 }));
 jest.mock('@/features/collaboration/entity-extraction/hooks/useEntityExtractor', () => ({
   useEntityExtractor: jest.fn(),
@@ -34,6 +38,7 @@ jest.mock('@/features/collaboration/entity-extraction/hooks/useEntityExtractor',
 
 const { useNotes } = require('../../context/NoteContext');
 const { useNavigation } = require('shared/hooks/useNavigation');
+const { useNPCs, useLocations, useQuests, useRumors } = require('@/features/campaign-entities');
 const {
   useEntityExtractor,
 } = require('@/features/collaboration/entity-extraction/hooks/useEntityExtractor');
@@ -57,15 +62,18 @@ function makeNote(overrides: Partial<Note> = {}): Note {
 
 function setupMocks({
   references = [] as PotentialReference[],
+  referencesLoading = false,
   note = makeNote(),
   isUsageLimitExceeded = false,
   isExtractionAvailable = true,
+  hookError = null as string | null,
 } = {}) {
-  mockUseNoteReferences.mockReturnValue({ references, isLoading: false });
+  mockUseNoteReferences.mockReturnValue({ references, isLoading: referencesLoading });
   mockGetNoteById.mockReturnValue(note);
   (useNotes as jest.Mock).mockReturnValue({
     getNoteById: mockGetNoteById,
     updateNote: mockUpdateNote,
+    convertEntity: mockConvertEntity,
   });
   (useNavigation as jest.Mock).mockReturnValue({
     navigateToPage: mockNavigateToPage,
@@ -74,7 +82,7 @@ function setupMocks({
   (useEntityExtractor as jest.Mock).mockReturnValue({
     extractWithOpenAI: mockExtractWithOpenAI,
     isExtracting: false,
-    error: null,
+    error: hookError,
     isUsageLimitExceeded,
     contactInfo: isUsageLimitExceeded
       ? { message: 'Limit reached', contactUrl: '/contact', prefilledSubject: 'More scans' }
@@ -83,11 +91,19 @@ function setupMocks({
     refreshUsageStatus: jest.fn(),
   });
   mockUpdateNote.mockResolvedValue(undefined);
+  mockConvertEntity.mockResolvedValue('created-id-1');
 }
 
 describe('CampaignLinksPanel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Fresh, empty campaign collections by default; individual tests
+    // override one via `.mockReturnValue(...)` where they need to seed an
+    // existing element (e.g. the campaign-filtering test below).
+    (useNPCs as jest.Mock).mockReturnValue({ npcs: [], isLoading: false });
+    (useLocations as jest.Mock).mockReturnValue({ locations: [], isLoading: false });
+    (useQuests as jest.Mock).mockReturnValue({ quests: [], isLoading: false });
+    (useRumors as jest.Mock).mockReturnValue({ rumors: [], isLoading: false });
   });
 
   describe('empty', () => {
@@ -245,6 +261,124 @@ describe('CampaignLinksPanel', () => {
       });
       expect(mockExtractWithOpenAI).not.toHaveBeenCalled();
     });
+
+    test('should show an error message when extraction itself throws', async () => {
+      setupMocks();
+      mockExtractWithOpenAI.mockRejectedValue(new Error('Network error'));
+
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Network error')).toBeInTheDocument();
+      });
+    });
+
+    test('should disable the scan button and show a spinner while extracting', async () => {
+      setupMocks();
+      mockExtractWithOpenAI.mockReturnValue(new Promise(() => {})); // never resolves
+
+      const { container } = render(<CampaignLinksPanel noteId="note-1" />);
+
+      fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /scan note/i })).toBeDisabled();
+      });
+      expect(container.querySelector('.animate-spin')).toBeInTheDocument();
+    });
+
+    test('should deduplicate detections with the same text and type', async () => {
+      setupMocks();
+      const entity1 = {
+        id: 'ent-1',
+        text: 'Merlin',
+        type: 'npc' as const,
+        confidence: 0.7,
+        isConverted: false,
+        createdAt: '2024-01-15T10:00:00.000Z',
+      };
+      const entity2 = {
+        id: 'ent-2',
+        text: 'Merlin',
+        type: 'npc' as const,
+        confidence: 0.9,
+        isConverted: false,
+        createdAt: '2024-01-15T10:00:00.000Z',
+      };
+      mockExtractWithOpenAI.mockResolvedValue([entity1, entity2]);
+
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('DETECTED, NOT IN YOUR CAMPAIGN · 1')).toBeInTheDocument();
+      });
+      expect(screen.getAllByText('Merlin')).toHaveLength(1);
+    });
+
+    test('should filter out a detection that already exists in the campaign', async () => {
+      setupMocks();
+      // Seed an existing campaign NPC with the same name the scan will "detect".
+      (useNPCs as jest.Mock).mockReturnValue({
+        npcs: [{ id: 'npc-existing', name: 'Smaug' }],
+        isLoading: false,
+      });
+      const detectedButExisting = {
+        id: 'ent-1',
+        text: 'Smaug',
+        type: 'npc' as const,
+        confidence: 0.9,
+        isConverted: false,
+        createdAt: '2024-01-15T10:00:00.000Z',
+      };
+      mockExtractWithOpenAI.mockResolvedValue([detectedButExisting]);
+
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+      await waitFor(() => {
+        expect(mockExtractWithOpenAI).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(screen.queryByText(/detected, not in your campaign/i)).not.toBeInTheDocument();
+      });
+      expect(screen.queryByText('Smaug')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('entity conversion', () => {
+    test('should convert a detection via Add and notify the parent', async () => {
+      const onEntityConverted = jest.fn();
+      const detected = makeNote({
+        extractedEntities: [
+          {
+            id: 'ent-1',
+            text: 'Black Spider',
+            type: 'npc',
+            confidence: 0.91,
+            isConverted: false,
+            createdAt: '2024-01-15T10:00:00.000Z',
+          },
+        ],
+      });
+      setupMocks({ note: detected });
+      mockConvertEntity.mockResolvedValue('created-npc-1');
+
+      render(<CampaignLinksPanel noteId="note-1" onEntityConverted={onEntityConverted} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /add/i }));
+
+      await waitFor(() => {
+        expect(mockConvertEntity).toHaveBeenCalledWith('note-1', 'ent-1', 'npc');
+      });
+      await waitFor(() => {
+        expect(onEntityConverted).toHaveBeenCalledWith('ent-1', 'created-npc-1');
+      });
+    });
   });
 
   describe('usage limits', () => {
@@ -261,6 +395,23 @@ describe('CampaignLinksPanel', () => {
       render(<CampaignLinksPanel noteId="note-1" />);
 
       expect(screen.getByRole('button', { name: /scan note/i })).toBeDisabled();
+    });
+
+    test('should navigate to the contact page with the prefilled subject', () => {
+      setupMocks({ isUsageLimitExceeded: true });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      fireEvent.click(screen.getByRole('button', { name: /request limit increase/i }));
+
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/contact?subject=More+scans');
+    });
+
+    test('should suppress the inline error when only the usage limit is exceeded', () => {
+      setupMocks({ isUsageLimitExceeded: true, hookError: 'Some hook error' });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.getByText(/usage limit reached/i)).toBeInTheDocument();
+      expect(screen.queryByText('Some hook error')).not.toBeInTheDocument();
     });
   });
 });
