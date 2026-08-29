@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useNavigation } from '../context/NavigationContext';
-import { useNotes } from 'features/collaboration';
+import { useCreateNote } from 'features/collaboration';
 import { Plus, BookOpen, User, Scroll, MessageSquare, MapPin, FileText, X } from 'lucide-react';
 import Button from 'core/components/Button';
 import clsx from 'clsx';
@@ -12,26 +12,19 @@ import clsx from 'clsx';
  */
 const GlobalActionButton: React.FC = () => {
   const { navigateToPage } = useNavigation();
-  const { createNote } = useNotes();
-  
+  const { createAndOpen } = useCreateNote();
+
   // State for open/closed
   const [isOpen, setIsOpen] = useState(false);
-  
+
   /**
    * Handle creating a new note
-   * Creates a new note locally and navigates to the note editor instantly
+   * Creates the note and navigates to it via the shared useCreateNote hook,
+   * then closes the menu.
    */
   const handleCreateNote = async () => {
-    try {
-      // Create note locally (no Firebase operations, so it's instant)
-      const noteId = await createNote("New Note", "");
-      // Navigate immediately since note creation is now instant
-      navigateToPage(`/notes/${noteId}`);
-      setIsOpen(false); // Close menu after creation
-    } catch (error) {
-      console.error("Failed to create note:", error);
-      // Note: Error handling is managed by the NoteContext
-    }
+    await createAndOpen();
+    setIsOpen(false); // Close menu after creation
   };
   
   // Navigation actions

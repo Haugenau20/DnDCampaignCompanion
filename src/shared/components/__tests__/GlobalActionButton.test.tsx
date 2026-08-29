@@ -17,15 +17,15 @@ jest.mock('../../context/NavigationContext', () => ({
 const { useNavigation } = require('../../context/NavigationContext');
 
 // ---------------------------------------------------------------------------
-// Mock NoteContext
+// Mock useCreateNote
 // ---------------------------------------------------------------------------
-const mockCreateNote = jest.fn();
+const mockCreateAndOpen = jest.fn();
 
 jest.mock('features/collaboration', () => ({
-  useNotes: jest.fn(),
+  useCreateNote: jest.fn(),
 }));
 
-const { useNotes } = require('features/collaboration');
+const { useCreateNote } = require('features/collaboration');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -39,9 +39,9 @@ function makeNavMock(overrides = {}) {
   };
 }
 
-function makeNotesMock(overrides = {}) {
+function makeCreateNoteMock(overrides = {}) {
   return {
-    createNote: mockCreateNote,
+    createAndOpen: mockCreateAndOpen,
     ...overrides,
   };
 }
@@ -58,8 +58,8 @@ describe('GlobalActionButton', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useNavigation as jest.Mock).mockReturnValue(makeNavMock());
-    (useNotes as jest.Mock).mockReturnValue(makeNotesMock());
-    mockCreateNote.mockResolvedValue('new-note-id');
+    (useCreateNote as jest.Mock).mockReturnValue(makeCreateNoteMock());
+    mockCreateAndOpen.mockResolvedValue(undefined);
   });
 
   // -------------------------------------------------------------------------
@@ -205,21 +205,12 @@ describe('GlobalActionButton', () => {
       fireEvent.click(screen.getByRole('button', { name: /open action menu/i }));
     }
 
-    test('should call createNote when "New Note" is clicked', async () => {
+    test('should call createAndOpen when "New Note" is clicked', async () => {
       openMenu();
       await act(async () => {
         fireEvent.click(screen.getByText('New Note'));
       });
-      expect(mockCreateNote).toHaveBeenCalledWith('New Note', '');
-    });
-
-    test('should navigate to the new note after creation', async () => {
-      mockCreateNote.mockResolvedValue('note-abc-123');
-      openMenu();
-      await act(async () => {
-        fireEvent.click(screen.getByText('New Note'));
-      });
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/notes/note-abc-123');
+      expect(mockCreateAndOpen).toHaveBeenCalled();
     });
 
     test('should close the menu after note creation', async () => {
@@ -232,16 +223,8 @@ describe('GlobalActionButton', () => {
       });
     });
 
-    test('should handle createNote failure gracefully without crashing', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      mockCreateNote.mockRejectedValue(new Error('Note creation failed'));
-      openMenu();
-      // Should not throw
-      await act(async () => {
-        fireEvent.click(screen.getByText('New Note'));
-      });
-      expect(consoleErrorSpy).toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
-    });
+    // Failure handling for note creation itself (logging, not navigating) now
+    // lives entirely in useCreateNote -- see useCreateNote.test.ts -- since
+    // createAndOpen already catches its own errors and never rejects.
   });
 });
