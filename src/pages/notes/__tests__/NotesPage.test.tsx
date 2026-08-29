@@ -68,14 +68,27 @@ function renderPage() {
 
 function setupMocks({
   activeCampaignId = "campaign-1" as string | null,
-  activeCampaign = { id: "campaign-1", name: "The Fellowship" } as { id: string; name: string } | null,
+  // No default value here: whether a campaign object accompanies the id is
+  // derived below, so an explicit `activeCampaignId: null` also clears
+  // `activeCampaign` by default instead of leaving a stale campaign object
+  // behind. Pass `activeCampaign` explicitly to exercise a state where the
+  // two disagree (there shouldn't be a real one, but a regression could
+  // produce it).
+  activeCampaign,
   isLoading = false,
 }: {
   activeCampaignId?: string | null;
   activeCampaign?: { id: string; name: string } | null;
   isLoading?: boolean;
 } = {}) {
-  mockCampaigns = { activeCampaignId, activeCampaign };
+  const resolvedCampaign =
+    activeCampaign !== undefined
+      ? activeCampaign
+      : activeCampaignId === null
+      ? null
+      : { id: "campaign-1", name: "The Fellowship" };
+
+  mockCampaigns = { activeCampaignId, activeCampaign: resolvedCampaign };
   (useNotes as jest.Mock).mockReturnValue({ isLoading });
   (useCreateNote as jest.Mock).mockReturnValue({ createAndOpen: mockCreateAndOpen });
 }
@@ -110,6 +123,12 @@ describe('NotesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /new note/i }));
 
     expect(mockCreateAndOpen).toHaveBeenCalled();
+  });
+
+  test('should NOT show the subtitle when the campaign context has cleared', () => {
+    setupMocks({ activeCampaignId: null });
+    render(<NotesPage />);
+    expect(screen.queryByText(/Your private notes for/)).not.toBeInTheDocument();
   });
 
   test('should hide the create button without an active campaign', () => {
