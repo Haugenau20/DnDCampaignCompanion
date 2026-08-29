@@ -101,9 +101,13 @@ jest.mock("../../../core/components/Card", () => {
 });
 
 jest.mock("lucide-react", () => ({
-  Book: () => <span data-testid="book-icon" />,
   Edit: () => <span data-testid="edit-icon" />,
   Loader2: () => <span data-testid="loader-icon" />,
+}));
+
+jest.mock("../components/StoryViewTabs", () => ({
+  __esModule: true,
+  default: () => <div data-testid="story-view-tabs" />,
 }));
 
 // ---------------------------------------------------------------------------
@@ -304,20 +308,12 @@ describe("SagaPage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Navigation
+  // Story view tabs
   // -------------------------------------------------------------------------
-  describe("navigation", () => {
-    it("renders 'Back to Selection' button", () => {
+  describe("story view tabs", () => {
+    it("renders StoryViewTabs in the header", () => {
       renderPage();
-      expect(
-        screen.getByTestId("button-back-to-selection")
-      ).toBeInTheDocument();
-    });
-
-    it("navigates to /story when 'Back to Selection' is clicked", () => {
-      renderPage();
-      fireEvent.click(screen.getByTestId("button-back-to-selection"));
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/story");
+      expect(screen.getByTestId("story-view-tabs")).toBeInTheDocument();
     });
   });
 });

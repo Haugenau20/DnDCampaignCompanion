@@ -116,6 +116,9 @@ describe('StoryContext Bug Discovery Tests', () => {
     mockUseFirebaseData.mockReturnValue({
       updateData: mockUpdateData,
       deleteData: mockDeleteData,
+      // The real hook exposes getData; StoryContext re-fetches progress with it
+      // once the campaign context resolves.
+      getData: jest.fn().mockResolvedValue([]),
     });
 
     mockFirebaseServices.document.setDocument.mockResolvedValue(undefined);

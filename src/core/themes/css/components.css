@@ -704,6 +704,32 @@
   background-color: var(--hover-light);
 }
 
+/* ====== CHAPTER READER ====== */
+/* The reader deliberately does NOT reuse the .book-* surfaces above. Those carry
+   the paginated book chrome - parchment fill, header band, pagination bar - and
+   the reader is a plain reading card: theme card background, hairline border, no
+   ornament. Only the prose face is special.
+
+   The face is named explicitly here rather than taken from a theme token,
+   because no existing token is a reading serif in all three themes:
+   --font-heading is 'Newsreader, Georgia, serif' in light but plain Inter in
+   dark, and in medieval it is MedievalSharp, whose own definition says
+   "decorative font for headings only" - a display face, unreadable for a
+   chapter's worth of body text. --font-primary is no better, being Inter in
+   light and dark. Colour still comes from the theme; only the typeface is
+   fixed, because the reading measure is a property of the reader rather than
+   of the palette. Both families below are already loaded in public/index.html. */
+.reader-prose {
+  color: var(--text-primary);
+  font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+}
+
+/* Medieval already sets its BODY text to Crimson Text, so the reader matches
+   the rest of that theme's prose instead of importing a face it never uses. */
+[data-theme="medieval"] .reader-prose {
+  font-family: 'Crimson Text', Georgia, serif;
+}
+
 /* ====== JOURNAL STYLING ====== */
 .journal-container {
   background-color: var(--journal-leather);

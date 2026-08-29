@@ -5,9 +5,10 @@ import Typography from '../../core/components/Typography';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
-import { Book, Edit, Loader2 } from 'lucide-react';
+import { Edit, Loader2 } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { useAuth } from 'features/user-management';
+import StoryViewTabs from './components/StoryViewTabs';
 
 // Constants for saga default content and tips
 const SAGA_DEFAULT_OPENING = "In a realm where magic weaves through the fabric of reality and ancient powers stir from long slumber, a group of unlikely heroes finds their fates intertwined by destiny's unseen hand.";
@@ -123,8 +124,9 @@ const SagaPage: React.FC = () => {
         <Breadcrumb items={breadcrumbItems} className="mb-4" />
 
         {/* Page Header */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
+            <StoryViewTabs />
             {saga && saga.lastUpdated && (
               <Typography variant="body-sm" color="secondary" className="hidden md:block">
                 Last updated: {new Date(saga.lastUpdated).toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})}
@@ -143,14 +145,6 @@ const SagaPage: React.FC = () => {
                 Edit Saga
               </Button>
             )}
-            
-            <Button
-              variant="ghost"
-              onClick={() => navigateToPage('/story')}
-              startIcon={<Book />}
-            >
-              Back to Selection
-            </Button>
           </div>
         </div>
 

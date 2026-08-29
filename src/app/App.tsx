@@ -1,6 +1,6 @@
 // src/app/App.tsx
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { NavigationProvider } from 'shared/context/NavigationContext';
 import { SearchProvider } from 'shared/context/SearchContext';
 import { NPCProvider, LocationProvider, RumorProvider } from 'features/campaign-entities';
@@ -19,7 +19,6 @@ import Layout from 'app/layout/Layout';
 // Import pages
 import HomePage from 'pages/HomePage';
 import {
-  StorySelectionPage,
   StoryPage,
   SagaPage,
   SagaEditPage,
@@ -54,7 +53,12 @@ const App: React.FC = () => {
                               <PrivacyNotice />
                               <Routes>
                                 <Route path="/" element={<HomePage />} />
-                                <Route path="/story" element={<StorySelectionPage />} />
+                                {/* `/story` is now the chapters index; the old dedicated
+                                    selection page is gone (see git history for
+                                    StorySelectionPage). `/story/selection` redirects so
+                                    existing bookmarks don't 404. */}
+                                <Route path="/story" element={<ChaptersPage />} />
+                                <Route path="/story/selection" element={<Navigate to="/story" replace />} />
                                 <Route path="/story/chapters" element={<ChaptersPage />} />
                                 <Route path="/story/chapters/:chapterId" element={<StoryPage />} />
                                 <Route path="/story/saga" element={<SagaPage />} />

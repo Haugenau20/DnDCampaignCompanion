@@ -21,7 +21,12 @@ jest.mock("react-router-dom", () => {
     capturedRoutes.push(path);
     return <div data-testid={`route-${path.replace(/\//g, "_").replace(/^_/, "").replace(/:/g, "")}`}>{element}</div>;
   };
-  return { Routes, Route };
+  // App.tsx renders <Navigate> as the /story/selection redirect's element;
+  // stub it so that element is a valid renderable component under the mock.
+  const Navigate = ({ to }: { to: string }) => (
+    <div data-testid="navigate" data-to={to} />
+  );
+  return { Routes, Route, Navigate };
 });
 
 // ---------------------------------------------------------------------------
@@ -132,7 +137,6 @@ jest.mock("../pages/HomePage", () => ({
 }));
 
 jest.mock("../pages/story", () => ({
-  StorySelectionPage: () => <div data-testid="page-story-selection" />,
   StoryPage: () => <div data-testid="page-story" />,
   SagaPage: () => <div data-testid="page-saga" />,
   SagaEditPage: () => <div data-testid="page-saga-edit" />,
@@ -191,6 +195,7 @@ import App from "app/App";
 const EXPECTED_ROUTES = [
   "/",
   "/story",
+  "/story/selection",
   "/story/chapters",
   "/story/chapters/:chapterId",
   "/story/saga",

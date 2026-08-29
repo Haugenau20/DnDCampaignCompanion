@@ -4,33 +4,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import BookshelfView from '../BookshelfView';
 import { Chapter } from 'features/storytelling/chapters/types';
-
-// ---------------------------------------------------------------------------
-// Mock book SVG components — pure presentational; we only care about the
-// shelf layout and click behaviour, not SVG rendering.
-// ---------------------------------------------------------------------------
-jest.mock('../books', () => {
-  const makeFakeBook = (name: string) => {
-    const Comp = ({ height, className }: { height: number; className?: string }) => (
-      <div data-testid={`book-${name}`} style={{ height }} className={className} />
-    );
-    Comp.displayName = name;
-    return Comp;
-  };
-  return {
-    BookRed: makeFakeBook('BookRed'),
-    BookBlue: makeFakeBook('BookBlue'),
-    BookGreen: makeFakeBook('BookGreen'),
-    BookPurple: makeFakeBook('BookPurple'),
-    BookBrown: makeFakeBook('BookBrown'),
-    BookAged: makeFakeBook('BookAged'),
-    BookOrnate: makeFakeBook('BookOrnate'),
-    BookClasped: makeFakeBook('BookClasped'),
-    BookRibbed: makeFakeBook('BookRibbed'),
-    BookJeweled: makeFakeBook('BookJeweled'),
-    BookManuscript: makeFakeBook('BookManuscript'),
-  };
-});
+import { ChapterWithProgress } from 'features/storytelling/chapters/utils/chapter-progress';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -49,13 +23,25 @@ function makeChapter(overrides: Partial<Chapter> = {}): Chapter {
   };
 }
 
-function makeChapters(count: number, startOrder = 1): Chapter[] {
+function makeItem(
+  chapterOverrides: Partial<Chapter> = {},
+  itemOverrides: Partial<Omit<ChapterWithProgress, 'chapter'>> = {}
+): ChapterWithProgress {
+  return {
+    chapter: makeChapter(chapterOverrides),
+    state: 'unread',
+    percentRead: 0,
+    isCurrent: false,
+    ...itemOverrides,
+  };
+}
+
+function makeItems(count: number, startOrder = 1): ChapterWithProgress[] {
   return Array.from({ length: count }, (_, i) =>
-    makeChapter({
-      id: `ch-${startOrder + i}`,
-      title: `Chapter ${startOrder + i}`,
-      order: startOrder + i,
-    })
+    makeItem(
+      { id: `ch-${startOrder + i}`, title: `Chapter ${startOrder + i}`, order: startOrder + i },
+      { state: 'unread' }
+    )
   );
 }
 
@@ -64,200 +50,168 @@ function makeChapters(count: number, startOrder = 1): Chapter[] {
 // ---------------------------------------------------------------------------
 
 describe('BookshelfView', () => {
-  // -------------------------------------------------------------------------
-  // Basic rendering
-  // -------------------------------------------------------------------------
-  describe('rendering', () => {
-    test('renders nothing meaningful when chapters array is empty', () => {
-      const { container } = render(
-        <BookshelfView chapters={[]} onChapterSelect={jest.fn()} />
-      );
-      // No shelf groups should be rendered
-      expect(container.querySelectorAll('h4').length).toBe(0);
+  describe('rendering and grouping', () => {
+    test('renders nothing meaningful when items is empty', () => {
+      render(<BookshelfView items={[]} onChapterSelect={jest.fn()} />);
+      expect(screen.queryAllByRole('heading')).toHaveLength(0);
+      expect(screen.queryAllByRole('button')).toHaveLength(0);
     });
 
-    test('renders a single shelf group for ≤10 chapters', () => {
-      render(
-        <BookshelfView
-          chapters={makeChapters(5)}
-          onChapterSelect={jest.fn()}
-        />
-      );
-      // Heading "Chapters 1-5"
-      expect(screen.getByText('Chapters 1-5')).toBeInTheDocument();
+    test('renders a single group heading for 5 chapters', () => {
+      render(<BookshelfView items={makeItems(5)} onChapterSelect={jest.fn()} />);
+      expect(screen.getByText('Chapters 1–5')).toBeInTheDocument();
     });
 
-    test('renders chapter order numbers on the shelf', () => {
-      render(
-        <BookshelfView
-          chapters={makeChapters(3)}
-          onChapterSelect={jest.fn()}
-        />
-      );
-      expect(screen.getByText('1')).toBeInTheDocument();
-      expect(screen.getByText('2')).toBeInTheDocument();
-      expect(screen.getByText('3')).toBeInTheDocument();
-    });
-
-    test('renders two shelf groups for 11 chapters', () => {
-      render(
-        <BookshelfView
-          chapters={makeChapters(11)}
-          onChapterSelect={jest.fn()}
-        />
-      );
-      expect(screen.getByText('Chapters 1-10')).toBeInTheDocument();
-      expect(screen.getByText('Chapters 11-11')).toBeInTheDocument();
-    });
-
-    test('renders three shelf groups for 21 chapters', () => {
-      render(
-        <BookshelfView
-          chapters={makeChapters(21)}
-          onChapterSelect={jest.fn()}
-        />
-      );
-      expect(screen.getByText('Chapters 1-10')).toBeInTheDocument();
-      expect(screen.getByText('Chapters 11-20')).toBeInTheDocument();
-      expect(screen.getByText('Chapters 21-21')).toBeInTheDocument();
-    });
-
-    test('renders chapter title in tooltip (title attribute)', () => {
-      render(
-        <BookshelfView
-          chapters={[makeChapter({ id: 'ch-1', title: 'Rise of Heroes', order: 1 })]}
-          onChapterSelect={jest.fn()}
-        />
-      );
-      // The Typography that displays order number has a title attribute
-      const el = document.querySelector('[title="Chapter 1: Rise of Heroes"]');
-      expect(el).not.toBeNull();
+    test('renders two group headings for 11 chapters', () => {
+      render(<BookshelfView items={makeItems(11)} onChapterSelect={jest.fn()} />);
+      expect(screen.getByText('Chapters 1–10')).toBeInTheDocument();
+      expect(screen.getByText('Chapters 11–11')).toBeInTheDocument();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Grouping and sorting
-  // -------------------------------------------------------------------------
-  describe('grouping and sorting', () => {
-    test('sorts chapters by order before grouping', () => {
-      const chapters = [
-        makeChapter({ id: 'ch-3', title: 'Third', order: 3 }),
-        makeChapter({ id: 'ch-1', title: 'First', order: 1 }),
-        makeChapter({ id: 'ch-2', title: 'Second', order: 2 }),
+  describe('spines are real, keyboard-reachable buttons', () => {
+    test('gives each spine an accessible name of the form "Chapter N: Title — state"', () => {
+      const items = [
+        makeItem({ id: 'ch-4', title: 'Over Hill and Under Hill', order: 4 }, { state: 'read' }),
       ];
-      render(
-        <BookshelfView chapters={chapters} onChapterSelect={jest.fn()} />
-      );
-      // All belong to group 1-3
-      expect(screen.getByText('Chapters 1-3')).toBeInTheDocument();
+      render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
+      expect(
+        screen.getByRole('button', { name: 'Chapter 4: Over Hill and Under Hill — read' })
+      ).toBeInTheDocument();
     });
-  });
 
-  // -------------------------------------------------------------------------
-  // Click behaviour
-  // -------------------------------------------------------------------------
-  describe('click behaviour', () => {
-    test('calls onChapterSelect with the correct chapter id when a book is clicked', () => {
+    test('reflects reading and unread states in the accessible name', () => {
+      const items = [
+        makeItem({ id: 'ch-1', title: 'Reading One', order: 1 }, { state: 'reading' }),
+        makeItem({ id: 'ch-2', title: 'Unread Two', order: 2 }, { state: 'unread' }),
+      ];
+      render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
+      expect(
+        screen.getByRole('button', { name: 'Chapter 1: Reading One — reading' })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Chapter 2: Unread Two — unread' })
+      ).toBeInTheDocument();
+    });
+
+    test('clicking a spine calls onChapterSelect with the chapter id', () => {
       const onChapterSelect = jest.fn();
-      render(
-        <BookshelfView
-          chapters={makeChapters(3)}
-          onChapterSelect={onChapterSelect}
-        />
-      );
-      // Click the first book wrapper (the div holding the book component)
-      // Chapter order number text is the most reliably clickable element per chapter
-      const chapterNumber = screen.getByText('2'); // chapter 2
-      fireEvent.click(chapterNumber.closest('[style]') as Element);
-      expect(onChapterSelect).toHaveBeenCalledWith('ch-2');
-    });
-
-    test('calls onChapterSelect for each unique chapter id on separate clicks', () => {
-      const onChapterSelect = jest.fn();
-      render(
-        <BookshelfView
-          chapters={makeChapters(2)}
-          onChapterSelect={onChapterSelect}
-        />
-      );
-      const numberEls = [screen.getByText('1'), screen.getByText('2')];
-      numberEls.forEach((el) => fireEvent.click(el.closest('[style]') as Element));
-      expect(onChapterSelect).toHaveBeenCalledTimes(2);
-      expect(onChapterSelect).toHaveBeenNthCalledWith(1, 'ch-1');
-      expect(onChapterSelect).toHaveBeenNthCalledWith(2, 'ch-2');
+      const items = [makeItem({ id: 'ch-9', title: 'Ninth Chapter', order: 9 }, { state: 'read' })];
+      render(<BookshelfView items={items} onChapterSelect={onChapterSelect} />);
+      fireEvent.click(screen.getByRole('button', { name: /Ninth Chapter/ }));
+      expect(onChapterSelect).toHaveBeenCalledWith('ch-9');
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Current chapter highlighting
-  // -------------------------------------------------------------------------
-  describe('current chapter highlighting', () => {
-    test('applies active class to the current chapter wrapper', () => {
-      render(
-        <BookshelfView
-          chapters={makeChapters(3)}
-          currentChapterId="ch-2"
-          onChapterSelect={jest.fn()}
-        />
-      );
-      // The active chapter wrapper has "-translate-y-2" and "z-10"
-      const chapterEl = screen.getByText('2').closest('[style]') as HTMLElement;
-      expect(chapterEl.className).toMatch(/-translate-y-2/);
+  describe('read state treatment', () => {
+    // Read state is drawn as a treatment applied OVER the book illustration,
+    // not as a replacement for it. The shelf briefly rendered every chapter as
+    // an identical coloured rectangle, which bought at-a-glance progress at the
+    // cost of the shelf reading as a bar chart rather than a shelf. Identity
+    // (which illustration, how thick, how tall) and state (these filters) were
+    // never competing for the same channel.
+    const bookOf = (name: RegExp) =>
+      screen.getByRole('button', { name }).querySelector('span') as HTMLElement;
+
+    test('a read book is drawn at full colour', () => {
+      const items = [makeItem({ id: 'ch-1', title: 'Read Chapter', order: 1 }, { state: 'read' })];
+      render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
+      const book = bookOf(/Read Chapter/);
+      expect(book.className).toMatch(/opacity-100/);
+      expect(book.className).not.toMatch(/grayscale/);
     });
 
-    test('does not apply active class to non-current chapters', () => {
-      render(
-        <BookshelfView
-          chapters={makeChapters(3)}
-          currentChapterId="ch-2"
-          onChapterSelect={jest.fn()}
-        />
-      );
-      const otherEl = screen.getByText('1').closest('[style]') as HTMLElement;
-      // Should not have z-10 class (active marker)
-      expect(otherEl.className).not.toMatch(/z-10/);
+    test('an unread book is faded and drained of colour, but still a book', () => {
+      const items = [makeItem({ id: 'ch-1', title: 'Unread Chapter', order: 1 }, { state: 'unread' })];
+      render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
+      const book = bookOf(/Unread Chapter/);
+      expect(book.className).toMatch(/grayscale/);
+      expect(book.className).toMatch(/opacity-45/);
+      // The illustration is still rendered -- unread must not flatten the book
+      // into a different kind of object.
+      expect(book.querySelector('svg')).toBeInTheDocument();
     });
 
-    test('renders without currentChapterId prop without error', () => {
-      expect(() =>
-        render(
-          <BookshelfView
-            chapters={makeChapters(3)}
-            onChapterSelect={jest.fn()}
-          />
-        )
-      ).not.toThrow();
+    test('the chapter being read is lifted off the shelf', () => {
+      const items = [
+        makeItem({ id: 'ch-1', title: 'Reading Chapter', order: 1 }, { state: 'reading' }),
+        makeItem({ id: 'ch-2', title: 'Unread Chapter', order: 2 }, { state: 'unread' }),
+      ];
+      render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
+      // Anchored to a class boundary: every book carries
+      // `group-hover:-translate-y-2`, which contains this substring, so an
+      // unanchored match would pass for a book that is not lifted at rest.
+      const liftedAtRest = /(^|\s)-translate-y-2/;
+      expect(bookOf(/Reading Chapter/).className).toMatch(liftedAtRest);
+      expect(bookOf(/Unread Chapter/).className).not.toMatch(liftedAtRest);
+    });
+
+    test('the current chapter is ringed', () => {
+      const items = [
+        makeItem({ id: 'ch-1', title: 'Current Chapter', order: 1 }, { state: 'reading', isCurrent: true }),
+        makeItem({ id: 'ch-2', title: 'Other Chapter', order: 2 }, { state: 'unread' }),
+      ];
+      render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
+      expect(bookOf(/Current Chapter/).className).toMatch(/ring-accent/);
+      expect(bookOf(/Other Chapter/).className).not.toMatch(/ring-accent/);
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Book height based on content length
-  // -------------------------------------------------------------------------
-  describe('book height calculation', () => {
-    test('assigns base height 120 for short content', () => {
-      render(
-        <BookshelfView
-          chapters={[makeChapter({ content: 'Short.', order: 1 })]}
-          onChapterSelect={jest.fn()}
-        />
-      );
-      // Any of the fake book divs should render
-      const bookEl = document.querySelector('[data-testid^="book-"]') as HTMLElement;
-      expect(bookEl).not.toBeNull();
-      // height 120 (base) or anything — we just confirm it renders
-      expect(parseInt(bookEl.style.height, 10)).toBeGreaterThanOrEqual(110);
+  describe('book illustrations', () => {
+    // The point of the shelf existing beside the list view: thirty chapters
+    // should look like thirty books, not thirty identical boxes.
+    test('neighbouring chapters are drawn as different books', () => {
+      const items = [
+        makeItem({ id: 'ch-1', title: 'One', order: 1 }, { state: 'unread' }),
+        makeItem({ id: 'ch-2', title: 'Two', order: 2 }, { state: 'unread' }),
+      ];
+      const { container } = render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
+      const svgs = [...container.querySelectorAll('button svg')];
+      expect(svgs).toHaveLength(2);
+      expect(svgs[0].innerHTML).not.toBe(svgs[1].innerHTML);
     });
 
-    test('assigns larger height for long content (>3500 chars)', () => {
-      const longContent = 'A'.repeat(4000);
+    // A ~40px spine cannot carry a full title at a readable size; it clipped
+    // mid-word and lost the chapter number, the one part identifying the book.
+    // Titles live in the list view; the shelf shows the number and keeps the
+    // title one hover -- or one screen reader stop -- away.
+    test('shows the chapter number, with the title available but not set on the spine', () => {
+      const items = [makeItem({ id: 'ch-9', title: 'A Very Long Chapter Title Indeed', order: 9 }, { state: 'unread' })];
+      render(<BookshelfView items={items} onChapterSelect={jest.fn()} />);
+      const button = screen.getByRole('button', { name: /A Very Long Chapter Title Indeed/ });
+      expect(button).toHaveTextContent('9');
+      expect(button).not.toHaveTextContent('A Very Long Chapter Title Indeed');
+      expect(button).toHaveAttribute('title', 'Chapter 9: A Very Long Chapter Title Indeed');
+    });
+  });
+
+  describe('legend', () => {
+    test('renders Read, Reading now and Unread once chapters exist', () => {
+      render(<BookshelfView items={makeItems(2)} onChapterSelect={jest.fn()} />);
+      expect(screen.getByText('Read')).toBeInTheDocument();
+      expect(screen.getByText('Reading now')).toBeInTheDocument();
+      expect(screen.getByText('Unread')).toBeInTheDocument();
+    });
+
+    test('does not render the legend when there are no chapters', () => {
+      render(<BookshelfView items={[]} onChapterSelect={jest.fn()} />);
+      expect(screen.queryByText('Reading now')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('shared props contract', () => {
+    test('accepts isAdmin and onEditChapter without rendering an edit affordance', () => {
+      const onEditChapter = jest.fn();
       render(
         <BookshelfView
-          chapters={[makeChapter({ content: longContent, order: 1 })]}
+          items={makeItems(1)}
           onChapterSelect={jest.fn()}
+          isAdmin
+          onEditChapter={onEditChapter}
         />
       );
-      const bookEl = document.querySelector('[data-testid^="book-"]') as HTMLElement;
-      expect(parseInt(bookEl.style.height, 10)).toBe(190);
+      expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+      expect(onEditChapter).not.toHaveBeenCalled();
     });
   });
 });
