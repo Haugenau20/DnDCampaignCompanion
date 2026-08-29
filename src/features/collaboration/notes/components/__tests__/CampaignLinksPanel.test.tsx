@@ -414,4 +414,39 @@ describe('CampaignLinksPanel', () => {
       expect(screen.queryByText('Some hook error')).not.toBeInTheDocument();
     });
   });
+
+  describe('loading references', () => {
+    const detected = makeNote({
+      extractedEntities: [
+        {
+          id: 'ent-1',
+          text: 'Black Spider',
+          type: 'npc',
+          confidence: 0.91,
+          isConverted: false,
+          createdAt: '2024-01-15T10:00:00.000Z',
+        },
+      ],
+    });
+
+    test('should not classify detections until references have finished loading', () => {
+      setupMocks({ note: detected, referencesLoading: true });
+
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      // With references still loading, the reference set is incomplete --
+      // an entity that IS in the campaign could be misclassified as a
+      // detection if this ran now. Nothing should be classified yet.
+      expect(screen.queryByText(/detected, not in your campaign/i)).not.toBeInTheDocument();
+      expect(screen.queryByText('Black Spider')).not.toBeInTheDocument();
+    });
+
+    test('should disable scanning until references have loaded', () => {
+      setupMocks({ referencesLoading: true });
+
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.getByRole('button', { name: /scan note/i })).toBeDisabled();
+    });
+  });
 });

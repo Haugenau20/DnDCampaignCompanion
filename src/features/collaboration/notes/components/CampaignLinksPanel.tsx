@@ -78,7 +78,7 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
   saveCurrentEditorContent,
   onEntityConverted,
 }) => {
-  const { references } = useNoteReferences(noteId);
+  const { references, isLoading: referencesLoading } = useNoteReferences(noteId);
   const { getNoteById, updateNote, convertEntity } = useNotes();
   const { navigateToPage } = useNavigation();
   const { npcs } = useNPCs();
@@ -122,8 +122,15 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
   };
 
   // Load existing entities from the note, filtering out anything that
-  // already matches a reference (unless it has been converted).
+  // already matches a reference (unless it has been converted). Deferred
+  // until references have actually settled: `references` is derived from
+  // the four entity contexts, and while any of them is still loading it is
+  // an incomplete set — filtering against it here could show an entity that
+  // IS in the campaign as "detected, not in your campaign" for the moment
+  // between mount and the contexts arriving.
   useEffect(() => {
+    if (referencesLoading) return;
+
     const note = getNoteById(noteId);
     if (note && note.extractedEntities.length > 0) {
       const filteredEntities = note.extractedEntities.filter(entity => {
@@ -135,7 +142,7 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
       setExtractedEntities([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteId, getNoteById, references]);
+  }, [noteId, getNoteById, references, referencesLoading]);
 
   /**
    * Deduplicate extracted entities based on text and type
@@ -192,6 +199,11 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
    * already in the campaign.
    */
   const handleExtract = async () => {
+    // Defensive: the button is disabled while references are loading, but
+    // guard here too since filterNewEntities reads the same not-yet-settled
+    // npcs/locations/quests/rumors.
+    if (referencesLoading) return;
+
     setIsExtracting(true);
     setError(null);
 
@@ -330,7 +342,7 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
           variant="outline"
           size="sm"
           onClick={handleExtract}
-          disabled={isProcessing || !isExtractionAvailable()}
+          disabled={isProcessing || !isExtractionAvailable() || referencesLoading}
           startIcon={
             isProcessing ? (
               <Loader2 className="w-4 h-4 animate-spin" />
