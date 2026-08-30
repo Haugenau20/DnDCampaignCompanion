@@ -259,6 +259,19 @@ describe('NoteEditor', () => {
       });
       expect(mockSaveNote).not.toHaveBeenCalled();
     });
+
+    // C1 (also): the footer used to say "Ctrl+S to save now" unconditionally
+    // while this handler only checked ctrlKey -- macOS users (Cmd+S) had no
+    // working shortcut at all. The handler now accepts metaKey too.
+    test('should call saveNote when Cmd+S (metaKey) is pressed', async () => {
+      render(<NoteEditor noteId="note-1" />);
+      await act(async () => {
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 's', metaKey: true, bubbles: true })
+        );
+      });
+      expect(mockSaveNote).toHaveBeenCalled();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -592,6 +605,73 @@ describe('NoteEditor', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // C1 (CRITICAL, data loss): a brand-new note (isUnsaved: true) was only ever
+  // persisted via updateNote, which for an unsaved note just updates local
+  // state -- performAutosave (both the debounce and the 30s interval) never
+  // wrote it to Firestore. Only saveNote does that.
+  // ---------------------------------------------------------------------------
+  describe('unsaved note persistence (C1)', () => {
+    test('should call saveNote, not merely updateNote, when autosaving a brand-new (isUnsaved) note', async () => {
+      renderEditor({ note: makeNote({ isUnsaved: true, title: '', content: 'start' }) });
+
+      fireEvent.change(screen.getByPlaceholderText('Write your note here...'), {
+        target: { value: 'start and more' },
+      });
+
+      jest.advanceTimersByTime(2500);
+
+      await waitFor(() => {
+        expect(mockSaveNote).toHaveBeenCalledWith(
+          'note-1',
+          expect.objectContaining({ content: 'start and more' })
+        );
+      });
+    });
+
+    test('should persist a brand-new note on the 30s interval even when typing never pauses', async () => {
+      renderEditor({ note: makeNote({ isUnsaved: true, title: '', content: 'start' }) });
+      const body = screen.getByPlaceholderText('Write your note here...');
+
+      // Type without ever pausing long enough for the debounce to fire.
+      for (let tick = 0; tick < 20; tick += 1) {
+        fireEvent.change(body, { target: { value: `start ${'x'.repeat(tick)}` } });
+        jest.advanceTimersByTime(1800);
+      }
+
+      await waitFor(() => expect(mockSaveNote).toHaveBeenCalled());
+    });
+
+    test('should switch the footer away from "Not saved to server" once a new note is autosaved', async () => {
+      renderEditor({ note: makeNote({ isUnsaved: true, title: '', content: 'start' }) });
+
+      expect(screen.getByText('Not saved to server')).toBeInTheDocument();
+
+      fireEvent.change(screen.getByPlaceholderText('Write your note here...'), {
+        target: { value: 'start and more' },
+      });
+
+      jest.advanceTimersByTime(2500);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Not saved to server')).not.toBeInTheDocument();
+      });
+    });
+
+    test('should not regress a not-yet-unsaved (already-saved) note back to saveNote-only expectations -- updateNote still used', async () => {
+      renderEditor({ note: makeNote({ isUnsaved: false, content: 'start' }) });
+
+      fireEvent.change(screen.getByPlaceholderText('Write your note here...'), {
+        target: { value: 'start and more' },
+      });
+
+      jest.advanceTimersByTime(2500);
+
+      await waitFor(() => expect(mockUpdateNote).toHaveBeenCalled());
+      expect(mockSaveNote).not.toHaveBeenCalled();
+    });
+  });
+
   describe('save status', () => {
     test('should state the save status exactly once', () => {
       renderEditor({ note: makeNote({ isUnsaved: false, dateModified: new Date().toISOString() }) });
@@ -669,6 +749,15 @@ describe('NoteEditor', () => {
       renderEditor({ note: makeNote({ content: 'one two three' }) });
       expect(screen.getByText(/3 words/)).toBeInTheDocument();
       expect(screen.getByText(/to save now/i)).toBeInTheDocument();
+    });
+
+    // C1 (also): the label must not contradict the handler. The keydown
+    // handler accepts both Ctrl+S and Cmd+S (metaKey) -- see the "keyboard
+    // shortcut" describe block -- so the footer must name both.
+    test('should name both Ctrl+S and Cmd+S, matching what the handler accepts', () => {
+      renderEditor({ note: makeNote({ content: 'one two three' }) });
+      expect(screen.getByText(/ctrl\+s/i)).toBeInTheDocument();
+      expect(screen.getByText(/⌘s/i)).toBeInTheDocument();
     });
   });
 });

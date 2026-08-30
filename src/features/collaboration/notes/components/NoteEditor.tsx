@@ -140,15 +140,23 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       setIsSaving(true);
 
       const currentNote = getNoteById(note.id);
-      await updateNote(note.id, { title: nextTitle, content: nextContent });
+      const isNewNote = !!currentNote?.isUnsaved;
+      // A brand-new note (isUnsaved: true) exists only in React state --
+      // updateNote's own unsaved branch just rewrites that state and returns,
+      // writing nothing to Firestore. saveNote is the only path that actually
+      // creates the document, so autosave must use it for a new note (C1).
+      // Once the note is saved once, updateNote correctly routes further
+      // edits through saveNote internally.
+      const persist = isNewNote ? saveNote : updateNote;
+      await persist(note.id, { title: nextTitle, content: nextContent });
 
-      if (currentNote?.isUnsaved) {
-        // For unsaved notes, just update locally until manual save
-        setHasUnsavedChanges(true);
-      } else {
-        setLastSaved(new Date());
-        setHasUnsavedChanges(false);
+      if (isNewNote) {
+        // Reflect the now-created document locally so the footer's
+        // "Not saved to server" state clears without waiting on a reload.
+        setNote(prev => (prev ? { ...prev, isUnsaved: false } : prev));
       }
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
 
       onSave?.();
     } catch (error) {
@@ -156,7 +164,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     } finally {
       setIsSaving(false);
     }
-  }, [note, readOnly, getNoteById, updateNote, onSave]);
+  }, [note, readOnly, getNoteById, updateNote, saveNote, onSave]);
 
   const scheduleAutosave = useCallback(() => {
     clearDebounceTimer();
@@ -225,7 +233,10 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   // Add keyboard shortcut for manual save
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 's') {
+      // Accept Cmd+S (metaKey) alongside Ctrl+S -- otherwise macOS users have
+      // no working shortcut at all, since they don't carry a physical Ctrl
+      // key in the same role. The footer label below names both.
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
         triggerManualSave();
       }
@@ -382,7 +393,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t card-border bg-secondary text-[13px]">
         {getStatusIndicator()}
         <Typography variant="body-sm" color="secondary" className="text-[13px]">
-          {`${wordCount.toLocaleString()} ${wordCount === 1 ? "word" : "words"} · Ctrl+S to save now`}
+          {`${wordCount.toLocaleString()} ${wordCount === 1 ? "word" : "words"} · Ctrl+S (⌘S on Mac) to save now`}
         </Typography>
       </div>
     </div>
