@@ -2542,26 +2542,33 @@ git commit -m "feat(contact): rebuild the form around a real category field"
 Append to `src/core/themes/css/components.css`:
 
 ```css
-/* ====== CONTACT CALLOUT ====== */
+/* ====== CALLOUT ====== */
 /*
-  An inverted surface: the theme's text colour becomes the ground and the
-  ground becomes the text. Reserved for the one statement on a page that must
-  not be skimmed past -- on the contact page, the response time, which used to
-  sit in a right-hand column styled identically to three blocks of advice.
+  An emphasis surface for the one statement on a page that must not be skimmed
+  past -- on the contact page, the response time, which used to sit in a
+  right-hand column styled identically to three blocks of advice.
 
-  Inverting the two tokens the theme already guarantees contrast between means
-  it stays legible in light, dark and medieval without a second palette. The
-  descendant rule is needed because Typography sets its own colour.
+  The accent background carries the emphasis and the left rule carries the
+  eye, so the text stays the page's normal colour and needs no override. Pair
+  with `rounded-r-*` rather than `rounded-*` so the rule stays a square edge.
 */
-.callout-inverted {
-  background-color: var(--text-primary);
-  color: var(--bg-primary);
-}
-
-.callout-inverted .typography {
-  color: var(--bg-primary);
+.callout-emphasis {
+  background-color: var(--bg-accent);
+  border-left: 4px solid var(--color-primary);
 }
 ```
+
+**This step was corrected after the page was first looked at in the browser.**
+The original version inverted `--text-primary` and `--bg-primary`, on the
+reasoning that a theme already guarantees contrast between that pair, so the
+callout would stay legible everywhere without a second palette. That reasoning
+held for legibility and failed for appropriateness: light gave a heavy `#0F172A`
+slab, **dark gave a near-white `#E0E0E0` block that read as an alert rather than
+a note**, and medieval gave dark chocolate on parchment. `--bg-accent` is the
+token each theme already tuned for a subtly emphasised surface. The lesson worth
+keeping: a colour rule derived from tokens can be provably legible in every
+theme and still belong in none of them, and only looking at it in the browser
+catches that.
 
 - [ ] **Step 2: Write the failing test**
 
@@ -2725,8 +2732,8 @@ const ContactPage: React.FC = () => {
       </div>
 
       {/* The response expectation, stated where it cannot be missed */}
-      <div className="callout-inverted rounded-lg p-4 flex items-start gap-3">
-        <Clock className="w-5 h-5 mt-1 shrink-0" />
+      <div className="callout-emphasis rounded-r-lg p-4 flex items-start gap-3">
+        <Clock className="w-5 h-5 mt-1 shrink-0 primary" />
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-6">
           <Typography variant="body" className="font-semibold shrink-0">
             We answer within 1–2 weeks.
