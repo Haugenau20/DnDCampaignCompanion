@@ -1,147 +1,161 @@
-// src/components/features/contact/ContactForm.tsx
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { httpsCallable, Functions } from 'firebase/functions';
-import ServiceRegistry from 'core/services/firebase/core/ServiceRegistry';
-import Typography from 'core/components/Typography';
-import Input from 'core/components/Input';
-import Button from 'core/components/Button';
-import { Send, Check, AlertCircle } from 'lucide-react';
+// src/shared/components/ContactForm.tsx
+import React, { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
+import { httpsCallable, Functions } from "firebase/functions";
+import ServiceRegistry from "core/services/firebase/core/ServiceRegistry";
+import Typography from "core/components/Typography";
+import Input from "core/components/Input";
+import Button from "core/components/Button";
+import { APP_VERSION } from "core/constants/app";
+import { useAuth, useGroups, useCampaigns } from "features/user-management";
+import { useNavigation } from "shared/hooks/useNavigation";
+import { Send, AlertCircle, Info } from "lucide-react";
+import CategoryChips from "./contact/CategoryChips";
+import SenderIdentity from "./contact/SenderIdentity";
+import ContactSuccess from "./contact/ContactSuccess";
+import {
+  ContactCategoryId,
+  getContactCategory,
+  categoryFromLegacySubject,
+} from "./contact/contact-categories";
+import { useFunctionsReady } from "./contact/useFunctionsReady";
 
-interface ContactFormData {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-}
+/** The shortest message we will accept */
+const MIN_MESSAGE_LENGTH = 10;
 
+/**
+ * Props for the ContactForm component
+ */
 interface ContactFormProps {
-  /** Optional initial data for the form */
-  initialData?: Partial<ContactFormData>;
+  /** Optional initial message text */
+  initialMessage?: string;
 }
 
 /**
- * Contact form component with support for URL parameter pre-filling
- * Handles subject pre-filling for usage limit increase requests
- * Uses Firebase callable functions to send emails securely
+ * The contact form.
+ *
+ * Owns validation, payload assembly and submit; every piece of the UI it
+ * renders is a presentational component in `./contact/`. The category is a
+ * real field rather than a subject string the app deep-links a magic value
+ * into, and the email subject is composed server-side from it.
  */
-const ContactForm: React.FC<ContactFormProps> = ({ initialData = {} }) => {
+const ContactForm: React.FC<ContactFormProps> = ({ initialMessage = "" }) => {
   const location = useLocation();
+  const { navigateToPage } = useNavigation();
+  const { user } = useAuth();
+  const { activeGroupId, activeGroupUserProfile } = useGroups();
+  const { activeCampaignId, activeCampaign } = useCampaigns();
+  const { failed: initFailed } = useFunctionsReady();
+
+  const [category, setCategory] = useState<ContactCategoryId | null>(null);
+  const [message, setMessage] = useState(initialMessage);
+  const [reason, setReason] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [useDifferentEmail, setUseDifferentEmail] = useState(false);
+  const [messageTouched, setMessageTouched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [reference, setReference] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [legacySubject, setLegacySubject] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<ContactFormData>({
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-    ...initialData
-  });
+  const signedInName = activeGroupUserProfile?.username ?? null;
+  const signedInEmail = user?.email ?? null;
+  const showIdentityInputs = !user || useDifferentEmail;
 
-  // Initialize Firebase Functions from existing service registry
+  const selectedCategory = category ? getContactCategory(category) : null;
+
+  /**
+   * The route the sender came from.
+   *
+   * `location.pathname` is always "/contact" by the time this renders, which
+   * tells a bug report nothing. Entry points pass the originating path as
+   * `?from=`; when that is absent the route is genuinely unknown and we send
+   * null rather than something misleading.
+   */
+  const originatingRoute = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("from");
+  }, [location.search]);
+
+  // Select the category a legacy `?subject=` deep link refers to. Links such
+  // as `/contact?subject=Smart Detection Limit Increase Request` keep working.
   useEffect(() => {
-    try {
-      const registry = ServiceRegistry.getInstance();
-      
-      // Check if Firebase services are initialized
-      if (registry.has('functions')) {
-        setIsInitialized(true);
-      } else {
-        // If not initialized yet, wait a bit and try again
-        const timeout = setTimeout(() => {
-          if (registry.has('functions')) {
-            setIsInitialized(true);
-          } else {
-            setSubmitError('Failed to initialize contact system. Please refresh the page.');
-          }
-        }, 1000);
-        
-        return () => clearTimeout(timeout);
-      }
-    } catch (error) {
-      console.error('Failed to access Firebase Functions:', error);
-      setSubmitError('Failed to initialize contact system. Please refresh the page.');
+    const params = new URLSearchParams(location.search);
+    const prefilledSubject = params.get("subject");
+    if (!prefilledSubject) {
+      return;
     }
-  }, []);
 
-  // Handle URL parameters for pre-filling
-  useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
-    const prefilledSubject = urlParams.get('subject');
-    
-    if (prefilledSubject) {
-      setFormData(prev => ({
-        ...prev,
-        subject: prefilledSubject,
-        // Pre-fill message for limit increase requests
-        message: prefilledSubject.includes('Limit Increase') 
-          ? 'Hello,\n\nI would like to request an increase to my smart detection usage limit.\n\n*************\nInsert reason for usage increase here\n*************\n\nPlease let me know if you need more information from me.\n\nThank you!'
-          : prev.message
-      }));
+    const mapped = categoryFromLegacySubject(prefilledSubject);
+    if (mapped) {
+      setCategory(mapped);
+    } else {
+      // Unrecognised: pass it through as free text rather than mislabelling
+      // it as a category it is not.
+      setLegacySubject(prefilledSubject);
     }
   }, [location.search]);
 
-  /**
-   * Handle input changes for form fields
-   * @param field - The form field to update
-   * @returns Event handler function
-   */
-  const handleInputChange = (field: keyof ContactFormData) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: e.target.value
-    }));
-    
-    // Clear any previous errors when user starts typing
-    if (submitError) {
-      setSubmitError(null);
-    }
-  };
+  const messageTooShort =
+    message.trim().length > 0 && message.trim().length < MIN_MESSAGE_LENGTH;
 
   /**
-   * Validate form data before submission
-   * @returns Error message if validation fails, null if valid
+   * Shown inline under the message field, never in the submit-error banner.
+   *
+   * Submitting a too-short message sets `messageTouched`, which already
+   * reveals the inline warning; putting the same sentence in the banner as
+   * well would say it twice.
    */
-  const validateForm = (): string | null => {
-    if (!formData.name.trim()) {
-      return 'Name is required';
+  const TOO_SHORT_MESSAGE = `Your message needs at least ${MIN_MESSAGE_LENGTH} characters.`;
+
+  /**
+   * Validate the form.
+   *
+   * @returns An error message, or null when the form is ready to send
+   */
+  const validate = (): string | null => {
+    if (!category) {
+      return "Please pick a category so we know what we're looking at.";
     }
-    if (!formData.email.trim()) {
-      return 'Email is required';
+    if (showIdentityInputs) {
+      if (!name.trim()) {
+        return "Name is required";
+      }
+      if (!email.trim()) {
+        return "Email is required";
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        return "Please enter a valid email address";
+      }
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      return 'Please enter a valid email address';
+    if (!message.trim()) {
+      return "A message is required";
     }
-    if (!formData.message.trim()) {
-      return 'Message is required';
-    }
-    if (formData.message.trim().length < 10) {
-      return 'Message must be at least 10 characters long';
+    if (message.trim().length < MIN_MESSAGE_LENGTH) {
+      return TOO_SHORT_MESSAGE;
     }
     return null;
   };
 
   /**
-   * Submit the contact form using Firebase callable function
+   * Send the message via the Firebase callable function.
+   *
    * @param e - Form submission event
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate form before submission
-    const validationError = validateForm();
-    if (validationError) {
-      setSubmitError(validationError);
-      return;
-    }
+    setMessageTouched(true);
 
-    // Don't submit if Firebase Functions not initialized
-    if (!isInitialized) {
-      setSubmitError('Contact system not ready. Please try again in a moment.');
+    const validationError = validate();
+    if (validationError) {
+      // The too-short case already renders inline under the message field
+      // (now that messageTouched is set above); showing it again in the
+      // banner would just be the same sentence twice.
+      setSubmitError(
+        validationError === TOO_SHORT_MESSAGE ? null : validationError
+      );
       return;
     }
 
@@ -149,198 +163,217 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialData = {} }) => {
     setSubmitError(null);
 
     try {
-      // Get the Firebase Functions instance from service registry
-      const registry = ServiceRegistry.getInstance();
-      const functions = registry.get('functions') as Functions;
-      
+      const functions = ServiceRegistry.getInstance().get<Functions>("functions");
       if (!functions) {
-        throw new Error('Firebase Functions not available');
+        throw new Error("Firebase Functions not available");
       }
-      
-      // Create callable function reference
-      const sendContactEmail = httpsCallable(functions, 'sendContactEmail');
-      
-      // Prepare data for submission (remove empty subject if not provided)
-      const submissionData = {
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        subject: formData.subject.trim() || undefined,
-        message: formData.message.trim(),
+
+      const sendContactEmail = httpsCallable(functions, "sendContactEmail");
+      const trimmedReason = reason.trim();
+
+      const result = await sendContactEmail({
+        category,
+        // Still sent so that an older deployment of the function, which
+        // ignores `category`, still produces a meaningful subject line.
+        subject: selectedCategory?.subjectLabel ?? legacySubject ?? undefined,
+        message: message.trim(),
+        reason: trimmedReason || undefined,
+        name: showIdentityInputs ? name.trim() : signedInName ?? "",
+        email: showIdentityInputs ? email.trim() : signedInEmail ?? "",
+        context: {
+          groupId: activeGroupId,
+          campaignId: activeCampaignId,
+          route: originatingRoute,
+          appVersion: APP_VERSION,
+        },
+      });
+
+      const response = result.data as {
+        success: boolean;
+        message: string;
+        reference?: string;
       };
 
-      // Call the Firebase function
-      const result = await sendContactEmail(submissionData);
-      
-      // Check if the function returned success
-      // result.data contains the response from the cloud function
-      const response = result.data as { success: boolean; message: string };
-      
-      if (response && response.success) {
-        // Success - reset form and show success message
-        setSubmitSuccess(true);
-        setFormData({
-          name: '',
-          email: '',
-          subject: '',
-          message: ''
-        });
-      } else {
-        throw new Error(response?.message || 'Unexpected response from server');
+      if (!response?.success) {
+        throw new Error(response?.message || "Unexpected response from server");
       }
 
+      // The reference is optional: an older deployment does not return one,
+      // and the success card must never render "CC-undefined".
+      setReference(response.reference ?? null);
+      setShowSuccess(true);
     } catch (error: any) {
-      let errorMessage = 'Failed to send message. Please try again.';
-      
-      // Handle Firebase Functions errors
-      if (error.code) {
-        switch (error.code) {
-          case 'functions/invalid-argument':
-            errorMessage = error.message || 'Please check your input and try again.';
-            break;
-          case 'functions/resource-exhausted':
-            errorMessage = 'Too many requests. Please wait before trying again.';
-            break;
-          case 'functions/unauthenticated':
-            errorMessage = 'Authentication required. Please refresh the page.';
-            break;
-          case 'functions/internal':
-            errorMessage = 'Server error. Please try again later.';
-            break;
-          case 'functions/unavailable':
-            errorMessage = 'Service temporarily unavailable. Please try again later.';
-            break;
-          default:
-            errorMessage = error.message || errorMessage;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      setSubmitError(errorMessage);
-      console.error('Contact form submission error:', error);
+      setSubmitError(describeSubmitError(error));
+      console.error("Contact form submission error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   /**
-   * Reset form to allow sending another message
+   * Clear the message for a second submission, keeping the category.
+   *
+   * Someone writing again is usually writing about the same area; making
+   * them re-pick a chip they just picked is friction with nothing behind it.
    */
-  const handleSendAnother = () => {
-    setSubmitSuccess(false);
-    // Clear any URL parameters that might be set
-    const urlParams = new URLSearchParams(location.search);
-    if (urlParams.has('subject')) {
-      // Re-apply URL parameter pre-filling
-      const prefilledSubject = urlParams.get('subject');
-      if (prefilledSubject) {
-        setFormData(prev => ({
-          ...prev,
-          subject: prefilledSubject,
-          message: prefilledSubject.includes('Limit Increase') 
-            ? 'Hello,\n\nI would like to request an increase to my smart detection usage limit.\n\n*************\nInsert reason for usage increase here\n*************\n\nPlease let me know if you need more information from me.\n\nThank you!'
-            : ''
-        }));
-      }
-    }
+  const handleWriteAnother = () => {
+    setShowSuccess(false);
+    setReference(null);
+    setMessage("");
+    setReason("");
+    setMessageTouched(false);
+    setSubmitError(null);
   };
 
-  // Show success state after successful submission
-  if (submitSuccess) {
-    return (
-      <div className="text-center py-6">
-        <div className="mb-4 mx-auto w-12 h-12 rounded-full flex items-center justify-center success-icon-bg">
-          <Check size={24} className="success-icon" />
-        </div>
-        <Typography variant="h3" className="mb-2">
-          Message Sent!
-        </Typography>
-        <Typography color="secondary" className="mb-4">
-          Thank you for contacting us. We'll get back to you as soon as possible.
-        </Typography>
-        <Button onClick={handleSendAnother}>
-          Send Another Message
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-md mx-auto">
-      {/* Name input field */}
-      <Input
-        label="Name"
-        value={formData.name}
-        onChange={handleInputChange('name')}
-        required
-        disabled={isSubmitting || !isInitialized}
-        placeholder="Your full name"
-      />
-
-      {/* Email input field */}
-      <Input
-        label="Email"
-        type="email"
-        value={formData.email}
-        onChange={handleInputChange('email')}
-        required
-        disabled={isSubmitting || !isInitialized}
-        placeholder="your.email@example.com"
-      />
-
-      {/* Subject input field (optional) */}
-      <Input
-        label="Subject (optional)"
-        value={formData.subject}
-        onChange={handleInputChange('subject')}
-        disabled={isSubmitting || !isInitialized}
-        placeholder="Brief description of your inquiry"
-      />
-
-      {/* Message textarea field */}
-      <Input
-        label="Message"
-        isTextArea
-        rows={6}
-        value={formData.message}
-        onChange={handleInputChange('message')}
-        required
-        disabled={isSubmitting || !isInitialized}
-        placeholder="Please describe your question, feedback, or issue in detail... (minimum 10 characters)"
-      />
-
-      {/* Error message display */}
-      {submitError && (
-        <div className="flex items-center gap-2 p-3 rounded error-container">
-          <AlertCircle className="w-4 h-4 status-failed" />
-          <Typography variant="body-sm" color="error">
-            {submitError}
-          </Typography>
-        </div>
+    <div className="space-y-6">
+      {showSuccess && (
+        <ContactSuccess
+          reference={reference}
+          campaignName={activeCampaign?.name ?? null}
+          onBackToCampaign={() => navigateToPage("/")}
+          onWriteAnother={handleWriteAnother}
+        />
       )}
 
-      {/* Submit button */}
-      <Button
-        type="submit"
-        variant="primary"
-        fullWidth
-        disabled={isSubmitting || !isInitialized}
-        startIcon={isSubmitting ? undefined : <Send className="w-4 h-4" />}
-        isLoading={isSubmitting}
-      >
-        {!isInitialized ? 'Initializing...' : isSubmitting ? 'Sending...' : 'Send Message'}
-      </Button>
+      <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+        {/* Category */}
+        <div className="space-y-2">
+          <Typography variant="body-sm" className="form-label">
+            What's this about?
+          </Typography>
+          <CategoryChips
+            value={category}
+            onChange={setCategory}
+            disabled={isSubmitting}
+          />
+        </div>
 
-      {/* Help text for limit increase requests */}
-      {formData.subject.includes('Limit Increase') && (
-        <div className="p-3 rounded info-container">
+        {/* Message, with a live counter */}
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between gap-4">
+            <label htmlFor="contact-message" className="form-label text-sm">
+              What happened?
+            </label>
+            <Typography variant="body-sm" color="secondary">
+              {`${message.length} characters`}
+            </Typography>
+          </div>
+          <textarea
+            id="contact-message"
+            value={message}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              if (submitError) setSubmitError(null);
+            }}
+            onBlur={() => setMessageTouched(true)}
+            disabled={isSubmitting}
+            rows={6}
+            className="input w-full rounded-lg p-3 min-h-[150px] text-[15px] leading-[1.6]"
+            placeholder="What you clicked, what happened, and what you expected instead."
+          />
+          {messageTouched && messageTooShort && (
+            <Typography variant="body-sm" color="error">
+              {TOO_SHORT_MESSAGE}
+            </Typography>
+          )}
+        </div>
+
+        {/* Guidance that follows the category, beside the field it governs */}
+        {selectedCategory?.guidance && (
+          <div
+            data-testid="category-guidance"
+            className="card card-subtle rounded-lg p-3 flex items-start gap-2"
+          >
+            <Info className="w-4 h-4 mt-1 shrink-0 primary" />
+            <Typography variant="body-sm" color="secondary">
+              {selectedCategory.guidance}
+            </Typography>
+          </div>
+        )}
+
+        {/* The optional second field, currently smart-detection only */}
+        {selectedCategory?.extraFieldLabel && (
+          <Input
+            label={selectedCategory.extraFieldLabel}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            disabled={isSubmitting}
+            placeholder="Roughly how much you scan, and what for."
+          />
+        )}
+
+        <hr className="card-divider border-t" />
+
+        <SenderIdentity
+          signedInName={signedInName}
+          signedInEmail={signedInEmail}
+          showInputs={showIdentityInputs}
+          name={name}
+          email={email}
+          onNameChange={setName}
+          onEmailChange={setEmail}
+          onUseDifferentEmail={() => setUseDifferentEmail(true)}
+          disabled={isSubmitting}
+        />
+
+        {/* The init failure is surfaced, but never disables submit: the
+            registry may have recovered, and submit reports its own errors. */}
+        {initFailed && (
           <Typography variant="body-sm" color="secondary">
-            <strong>Tip:</strong> Include details about your D&D campaign and how you use the smart detection feature to help us process your request better.
+            The contact system was slow to start. Sending should still work — if it doesn't, refresh the page.
           </Typography>
+        )}
+
+        {submitError && (
+          <div className="flex items-center gap-2 p-3 rounded error-bg">
+            <AlertCircle className="w-4 h-4 status-failed" />
+            <Typography variant="body-sm" color="error">
+              {submitError}
+            </Typography>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-4">
+          <Typography variant="body-sm" color="secondary">
+            A copy goes to your email address.
+          </Typography>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isSubmitting}
+            startIcon={isSubmitting ? undefined : <Send className="w-4 h-4" />}
+            isLoading={isSubmitting}
+          >
+            {isSubmitting ? "Sending..." : "Send message"}
+          </Button>
         </div>
-      )}
-    </form>
+      </form>
+    </div>
   );
+};
+
+/**
+ * Turn a Firebase callable error into something the sender can act on.
+ *
+ * @param error - The thrown error
+ * @returns A human-readable message
+ */
+const describeSubmitError = (error: any): string => {
+  switch (error?.code) {
+    case "functions/invalid-argument":
+      return error.message || "Please check your input and try again.";
+    case "functions/resource-exhausted":
+      return "Too many requests. Please wait before trying again.";
+    case "functions/unauthenticated":
+      return "Authentication required. Please refresh the page.";
+    case "functions/internal":
+      return "Server error. Please try again later.";
+    case "functions/unavailable":
+      return "Service temporarily unavailable. Please try again later.";
+    default:
+      return error?.message || "Failed to send message. Please try again.";
+  }
 };
 
 export default ContactForm;

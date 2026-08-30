@@ -29,9 +29,10 @@ jest.mock("react-router-dom", () => ({
     </a>
   ),
   useNavigate: jest.fn(),
+  useLocation: jest.fn(),
 }));
 
-const { useNavigate } = require("react-router-dom");
+const { useNavigate, useLocation } = require("react-router-dom");
 
 // ---------------------------------------------------------------------------
 // Mock Firebase context hooks
@@ -149,8 +150,10 @@ function setupMocks({
   activeGroup = null as null | { name: string },
   activeCampaignId = null as null | string,
   campaigns = [] as Array<{ id: string; name: string }>,
+  pathname = "/dashboard",
 } = {}) {
   (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
+  (useLocation as jest.Mock).mockReturnValue({ pathname });
   (useAuth as jest.Mock).mockReturnValue({ user, signOut: mockSignOut });
   (useGroups as jest.Mock).mockReturnValue({
     activeGroupUserProfile: user
@@ -444,6 +447,40 @@ describe("Header", () => {
       );
 
       expect(screen.getByTestId("context-switcher")).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Report a problem
+  // -------------------------------------------------------------------------
+  describe("report a problem", () => {
+    test("offers a way to report a problem", async () => {
+      const user = userEvent.setup();
+      setupMocks({ user: { uid: "u1" } });
+      render(<Header />);
+
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+
+      expect(
+        screen.getByRole("button", { name: /Report a problem/i })
+      ).toBeInTheDocument();
+    });
+
+    test("carries the current route to the contact page as context", async () => {
+      const user = userEvent.setup();
+      setupMocks({ user: { uid: "u1" }, pathname: "/dashboard" });
+      render(<Header />);
+
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      await user.click(
+        screen.getByRole("button", { name: /Report a problem/i })
+      );
+
+      // The originating route is what makes a bug report actionable; by the
+      // time the form renders, the current path is only ever "/contact".
+      expect(mockNavigate).toHaveBeenCalledWith(
+        expect.stringContaining("/contact?from=")
+      );
     });
   });
 

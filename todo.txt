@@ -53,5 +53,19 @@ Not signed in UI must be updated and made the same on every page.
 
 Make project true Single Page Application.
 
-It should be possible to use other services (e.g. Google) to sign in. in this it must still be ensured people 
+It should be possible to use other services (e.g. Google) to sign in. in this it must still be ensured people
 can't just create their own users, or maybe some kind of limit during a beta roll-out to avoid backend usage runaway (potential firebase cost runaway)
+
+Contact form: let people attach a screenshot to a bug report.
+    - Deliberately left out of the contact page redesign (PR 2, 2026-08-30) rather than shipped
+      as a disabled control that does nothing. The design mock (screenshot 5a) has the drop zone.
+    - Why it is worth doing: for a bug report a screenshot is the single biggest quality win.
+      "Deleting a note takes me back to the list" is three exchanges of questions without one.
+    - Why it was deferred: it is not a UI change. It needs Firebase Storage wiring, security
+      rules scoped so one user cannot read another's uploads, size and MIME-type limits, cleanup
+      of orphaned uploads when a submission is abandoned, and a new failure mode on submit
+      (upload succeeded, email failed, or the reverse). None of that is otherwise touched by the
+      redesign.
+    - Where it would go: src/shared/components/contact/ - a new field component alongside
+      CategoryChips/SenderIdentity, plus a download URL in the callable payload that
+      firebase/functions/src/contact.ts links from the email body.
