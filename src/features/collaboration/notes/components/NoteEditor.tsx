@@ -39,6 +39,18 @@ const AUTOSAVE_INTERVAL_MS = 30000;
 // two-character note read "Unsaved changes" indefinitely with no explanation.
 
 /**
+ * The title to WRITE to Firestore: the explicit title as typed, or "" when
+ * there isn't one. Never the derived string (I1) -- `displayTitle` (NoteCard,
+ * NotesList's search) derives from content at read time, and a derived value
+ * once written here would come back on the next load indistinguishable from
+ * a title the user actually typed, permanently hiding the "Taken from the
+ * first line" hint and freezing the title against further edits.
+ */
+function titleToPersist(isExplicit: boolean, explicitTitle: string): string {
+  return isExplicit ? explicitTitle : "";
+}
+
+/**
  * Component for editing note content
  * Features auto-save functionality (2s idle debounce + a real 30s interval
  * while dirty) and handles unsaved notes.
@@ -133,7 +145,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   const performAutosave = useCallback(async () => {
     if (!note || readOnly) return;
 
-    const nextTitle = hasExplicitTitleRef.current ? titleRef.current : deriveTitle(contentRef.current);
+    const nextTitle = titleToPersist(hasExplicitTitleRef.current, titleRef.current);
     const nextContent = contentRef.current;
 
     try {
@@ -189,7 +201,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   const handleManualSave = useCallback(async () => {
     if (!note || readOnly) return;
 
-    const nextTitle = hasExplicitTitle ? title : deriveTitle(content);
+    const nextTitle = titleToPersist(hasExplicitTitle, title);
 
     try {
       setIsSaving(true);

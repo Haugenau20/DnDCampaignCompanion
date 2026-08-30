@@ -493,19 +493,24 @@ describe('NoteEditor', () => {
   // types one explicitly).
   // -------------------------------------------------------------------------
   describe('title derivation', () => {
-    test('should save a title derived from the first content line', async () => {
+    // I1: the derived title is shown live but must NOT be the value written
+    // to Firestore -- see the "title persistence (I1)" describe block below
+    // for why a persisted derived string breaks on the second open.
+    test('should derive the displayed title from the first content line, without persisting that derived string', async () => {
       renderEditor({ note: makeNote({ title: '', content: '' }) });
 
       fireEvent.change(screen.getByPlaceholderText('Write your note here...'), {
         target: { value: 'Wave Echo Cave\nThe party met Gundren.' },
       });
 
+      expect(screen.getByDisplayValue('Wave Echo Cave')).toBeInTheDocument();
+
       jest.advanceTimersByTime(2500);
 
       await waitFor(() => {
         expect(mockUpdateNote).toHaveBeenCalledWith(
           'note-1',
-          expect.objectContaining({ title: 'Wave Echo Cave' })
+          expect.objectContaining({ title: '' })
         );
       });
     });
@@ -669,6 +674,88 @@ describe('NoteEditor', () => {
 
       await waitFor(() => expect(mockUpdateNote).toHaveBeenCalled());
       expect(mockSaveNote).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // I1 (IMPORTANT): a derived title used to be PERSISTED (title: deriveTitle(
+  // content)) by both performAutosave and handleManualSave. On the SECOND
+  // open, the stored title was non-empty, so the load effect's
+  // `!!noteData.title?.trim()` treated it as user-authored: the derivation
+  // hint vanished and rewriting the opening line stopped updating the title
+  // anywhere. The fix persists "" when the title is not explicit and lets
+  // `displayTitle` (NoteCard, NotesList search) derive at read time instead.
+  // ---------------------------------------------------------------------------
+  describe('title persistence (I1)', () => {
+    test('should persist an empty title, not the derived string, via autosave when the title is not explicit', async () => {
+      renderEditor({ note: makeNote({ title: '', content: '' }) });
+
+      fireEvent.change(screen.getByPlaceholderText('Write your note here...'), {
+        target: { value: 'Wave Echo Cave\nThe party met Gundren.' },
+      });
+
+      jest.advanceTimersByTime(2500);
+
+      await waitFor(() => {
+        expect(mockUpdateNote).toHaveBeenCalledWith(
+          'note-1',
+          expect.objectContaining({ title: '' })
+        );
+      });
+      // The title input itself must still show the derived value -- only the
+      // persisted field changes.
+      expect(screen.getByDisplayValue('Wave Echo Cave')).toBeInTheDocument();
+    });
+
+    test('should persist an empty title, not the derived string, via manual save (Ctrl+S) when the title is not explicit', async () => {
+      renderEditor({ note: makeNote({ title: '', content: 'Derived First Line\nmore' }) });
+
+      await act(async () => {
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true })
+        );
+      });
+
+      expect(mockSaveNote).toHaveBeenCalledWith(
+        'note-1',
+        expect.objectContaining({ title: '' })
+      );
+    });
+
+    test('should still persist the explicit title as-is (unaffected by the derived-title fix)', async () => {
+      renderEditor({ note: makeNote({ title: 'My own title', content: 'Some content' }) });
+
+      await act(async () => {
+        document.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true })
+        );
+      });
+
+      expect(mockSaveNote).toHaveBeenCalledWith(
+        'note-1',
+        expect.objectContaining({ title: 'My own title' })
+      );
+    });
+
+    test('should still show the derivation hint on a note reloaded with the persisted (empty-title) shape, and keep deriving from the first line', () => {
+      // This is the shape a note now round-trips as: title "" persisted by
+      // the fix above, content unchanged. Reload = a fresh render with that
+      // exact shape (title never became "Wave Echo Cave" on disk).
+      renderEditor({ note: makeNote({ title: '', content: 'Wave Echo Cave\nThe party met Gundren.' }) });
+
+      expect(
+        screen.getByText('Taken from the first line. Click to write your own title.')
+      ).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Wave Echo Cave')).toBeInTheDocument();
+
+      fireEvent.change(screen.getByPlaceholderText('Write your note here...'), {
+        target: { value: 'A Different First Line\nmore' },
+      });
+
+      expect(screen.getByDisplayValue('A Different First Line')).toBeInTheDocument();
+      expect(
+        screen.getByText('Taken from the first line. Click to write your own title.')
+      ).toBeInTheDocument();
     });
   });
 
