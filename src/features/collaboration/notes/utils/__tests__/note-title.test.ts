@@ -26,11 +26,13 @@ describe('deriveTitle', () => {
   test('should keep a line that is exactly the maximum length', () => {
     const line = 'a'.repeat(MAX_DERIVED_TITLE_LENGTH);
     expect(deriveTitle(line)).toBe(line);
-    expect(deriveTitle(line)).toHaveLength(80);
+    // Pinned concretely: the cap is sized to one line of the editor's 30px
+    // display face, not to prose. Widening it clips the title mid-word.
+    expect(deriveTitle(line)).toHaveLength(52);
   });
 
   test('should cut a long line on a word boundary without an ellipsis', () => {
-    // 17 words of 4 chars + spaces runs past 80 chars mid-word.
+    // 20 words of 4 chars + spaces runs well past the cap, mid-word.
     const line = 'word '.repeat(20).trim();
     const result = deriveTitle(line);
     expect(result.length).toBeLessThanOrEqual(MAX_DERIVED_TITLE_LENGTH);
@@ -47,9 +49,11 @@ describe('deriveTitle', () => {
   });
 
   test('should not leave trailing whitespace after a boundary cut', () => {
-    const line = `${'x'.repeat(78)} tail`;
-    const result = deriveTitle(line);
-    expect(result).toBe('x'.repeat(78));
+    // The first token ends just under the cap, so the cut lands on the space
+    // before " tail" and must not keep that space.
+    const firstToken = 'x'.repeat(MAX_DERIVED_TITLE_LENGTH - 2);
+    const result = deriveTitle(`${firstToken} tail`);
+    expect(result).toBe(firstToken);
   });
 });
 

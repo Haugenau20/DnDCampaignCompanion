@@ -100,7 +100,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onSaveNow }) => {
             onClick={handleTitleClick}
             variant="body"
             color={title ? "default" : "muted"}
-            className="font-semibold text-[17px] text-left bg-transparent border-none p-0 cursor-pointer hover:underline"
+            className="font-semibold text-[17px] text-left bg-transparent border-none p-0 cursor-pointer hover:underline block max-w-full truncate"
           >
             {title || "Untitled note"}
           </Typography>

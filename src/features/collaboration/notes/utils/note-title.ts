@@ -5,10 +5,17 @@ import { Note } from "../types";
 /**
  * Maximum length of a title derived from a note's content.
  *
- * Long enough for a real session heading, short enough that the index row's
- * title never wraps past one line at the width the list container gives it.
+ * Sized to roughly one line of the editor's 30px display face, NOT to prose.
+ * This was 80 initially, which is a comfortable prose measure but far wider
+ * than that heading renders: a first line of ordinary length was clipped
+ * mid-word ("...at the Stonehill Inn in P") with nothing to signal it.
+ *
+ * The cap is not the whole answer -- an explicit title the user types is not
+ * capped at all -- so the editor and index rows also truncate with an ellipsis
+ * in CSS. That ellipsis is presentational; it never enters the stored value,
+ * because a stored "..." would be indistinguishable from one the user typed.
  */
-export const MAX_DERIVED_TITLE_LENGTH = 80;
+export const MAX_DERIVED_TITLE_LENGTH = 52;
 
 /**
  * The literal title every note got on creation before this redesign

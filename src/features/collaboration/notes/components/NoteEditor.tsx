@@ -374,13 +374,21 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
 
       {/* The writing itself */}
       <div className="flex-1 flex flex-col px-8 py-6">
+        {/*
+          `text-ellipsis` on an input renders the "…" only while the field is
+          unfocused, which is exactly the behaviour wanted here: a long title
+          reads with a clear truncation mark, and clicking in to edit reveals
+          the whole value. Without it the title clips mid-letter
+          ("...at the Stonehill Inn in P") with nothing to signal that more
+          text exists. This covers explicit titles too, which are uncapped.
+        */}
         <input
           value={effectiveTitle}
           onChange={handleTitleChange}
           placeholder="Untitled note"
           disabled={readOnly}
           aria-label="Note title"
-          className="note-title w-full bg-transparent border-none outline-none typography-heading text-[30px] font-medium placeholder:opacity-40"
+          className="note-title w-full bg-transparent border-none outline-none typography-heading text-[30px] font-medium placeholder:opacity-40 overflow-hidden text-ellipsis whitespace-nowrap"
         />
 
         {!hasExplicitTitle && (
