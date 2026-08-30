@@ -1,92 +1,38 @@
-﻿// src/features/collaboration/notes/components/__tests__/NoteReferences.test.tsx
+// src/features/collaboration/notes/components/__tests__/NoteReferences.test.tsx
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import NoteReferences from '../NoteReferences';
 import { Note } from '../../types';
-
-// ---------------------------------------------------------------------------
-// Mock external dependencies
-// ---------------------------------------------------------------------------
 
 const mockNavigateToPage = jest.fn();
 const mockGetNoteById = jest.fn();
 const mockGetCollection = jest.fn();
 
-jest.mock('shared/hooks/useNavigation', () => ({
-  useNavigation: jest.fn(),
+jest.mock('../../context/NoteContext', () => ({ useNotes: jest.fn() }));
+jest.mock('@/features/user-management', () => ({ useCampaigns: jest.fn() }));
+jest.mock('@/features/campaign-entities', () => ({
+  useNPCs: jest.fn(),
+  useLocations: jest.fn(),
+  useQuests: jest.fn(),
+  useRumors: jest.fn(),
+}));
+jest.mock('shared/hooks/useNavigation', () => ({ useNavigation: jest.fn() }));
+jest.mock('core/services/firebase/data/DocumentService', () => ({
+  __esModule: true,
+  default: { getInstance: () => ({ getCollection: mockGetCollection }) },
 }));
 
-jest.mock('../../context/NoteContext', () => ({
-  useNotes: jest.fn(),
-}));
-
-jest.mock('@/features/user-management', () => ({
-  useCampaigns: jest.fn(),
-}));
-
-// DocumentService mock — must use factory that doesn't capture outer let/const
-// We expose __mockGetCollection so tests can control it via the module's own mock fn
-jest.mock('core/services/firebase/data/DocumentService', () => {
-  const getCollectionMock = jest.fn();
-  const instance = { getCollection: getCollectionMock };
-  return {
-    __esModule: true,
-    default: {
-      getInstance: jest.fn(() => instance),
-      __getCollectionMock: getCollectionMock,
-    },
-  };
-});
-
-const { useNavigation } = require('shared/hooks/useNavigation');
 const { useNotes } = require('../../context/NoteContext');
 const { useCampaigns } = require('@/features/user-management');
-const DocumentServiceModule = require('core/services/firebase/data/DocumentService');
-const getCollectionMock: jest.Mock = DocumentServiceModule.default.__getCollectionMock;
-
-function setupMocks({
-  note = undefined as Note | undefined,
-  activeCampaignId = 'campaign-1' as string | null,
-  npcs = [] as any[],
-  locations = [] as any[],
-  quests = [] as any[],
-  rumors = [] as any[],
-} = {}) {
-  (useNavigation as jest.Mock).mockReturnValue({
-    navigateToPage: mockNavigateToPage,
-    currentPath: '/notes/note-1',
-  });
-  (useNotes as jest.Mock).mockReturnValue({
-    getNoteById: mockGetNoteById,
-  });
-  mockGetNoteById.mockReturnValue(note);
-
-  (useCampaigns as jest.Mock).mockReturnValue({
-    activeCampaignId,
-  });
-
-  // DocumentService.getCollection returns different arrays per type
-  getCollectionMock.mockImplementation((collection: string) => {
-    switch (collection) {
-      case 'npcs': return Promise.resolve(npcs);
-      case 'locations': return Promise.resolve(locations);
-      case 'quests': return Promise.resolve(quests);
-      case 'rumors': return Promise.resolve(rumors);
-      default: return Promise.resolve([]);
-    }
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Fixture helpers
-// ---------------------------------------------------------------------------
+const { useNPCs, useLocations, useQuests, useRumors } = require('@/features/campaign-entities');
+const { useNavigation } = require('shared/hooks/useNavigation');
 
 function makeNote(overrides: Partial<Note> = {}): Note {
   return {
     id: 'note-1',
-    title: 'My Session Note',
-    content: 'We met Aldric the wizard in Silverkeep.',
+    title: 'Session',
+    content: '',
     extractedEntities: [],
     status: 'active',
     tags: [],
@@ -99,200 +45,128 @@ function makeNote(overrides: Partial<Note> = {}): Note {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+function setupMocks({
+  content = '',
+  npcs = [] as any[],
+  locations = [] as any[],
+  quests = [] as any[],
+  rumors = [] as any[],
+  activeCampaignId = 'campaign-1' as string | null,
+} = {}) {
+  mockGetNoteById.mockReturnValue(makeNote({ content }));
+  (useNotes as jest.Mock).mockReturnValue({ getNoteById: mockGetNoteById });
+  (useCampaigns as jest.Mock).mockReturnValue({ activeCampaignId });
+  (useNPCs as jest.Mock).mockReturnValue({ npcs, isLoading: false });
+  (useLocations as jest.Mock).mockReturnValue({ locations, isLoading: false });
+  (useQuests as jest.Mock).mockReturnValue({ quests, isLoading: false });
+  (useRumors as jest.Mock).mockReturnValue({ rumors, isLoading: false });
+  (useNavigation as jest.Mock).mockReturnValue({
+    navigateToPage: mockNavigateToPage,
+    currentPath: '/notes/note-1',
+  });
+}
 
 describe('NoteReferences', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    setupMocks();
   });
 
-  // -------------------------------------------------------------------------
-  // No campaign state
-  // -------------------------------------------------------------------------
-  describe('no campaign selected', () => {
-    test('should show "Loading campaign context..." when activeCampaignId is null', () => {
-      setupMocks({ activeCampaignId: null });
-      render(<NoteReferences noteId="note-1" />);
-      expect(screen.getByText(/loading campaign context/i)).toBeInTheDocument();
+  test('should find an NPC named in the note', async () => {
+    setupMocks({
+      content: 'The party met Gundren Rockseeker at the inn.',
+      npcs: [{ id: 'npc-1', name: 'Gundren Rockseeker' }],
     });
 
-    test('should render "Campaign References Found" heading even without campaign', () => {
-      setupMocks({ activeCampaignId: null });
-      render(<NoteReferences noteId="note-1" />);
-      expect(screen.getByText('Campaign References Found')).toBeInTheDocument();
+    render(<NoteReferences noteId="note-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Gundren Rockseeker')).toBeInTheDocument();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Loading state
-  // -------------------------------------------------------------------------
-  describe('loading state', () => {
-    test('should show "Searching for references..." while loading', async () => {
-      // Make getCollection hang
-      getCollectionMock.mockReturnValue(new Promise(() => {}));
-      setupMocks({ note: makeNote() });
-      (useCampaigns as jest.Mock).mockReturnValue({ activeCampaignId: 'campaign-1' });
-      render(<NoteReferences noteId="note-1" />);
-      // Loading text should show immediately
-      await waitFor(() => {
-        expect(screen.getByText(/searching for references/i)).toBeInTheDocument();
-      });
+  test('should NOT fetch collections from DocumentService', async () => {
+    setupMocks({
+      content: 'The party met Gundren Rockseeker.',
+      npcs: [{ id: 'npc-1', name: 'Gundren Rockseeker' }],
+    });
+
+    render(<NoteReferences noteId="note-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Gundren Rockseeker')).toBeInTheDocument();
+    });
+    // The whole point of the change: four network reads per note open, gone.
+    expect(mockGetCollection).not.toHaveBeenCalled();
+  });
+
+  test('should not match an entity spanning a sentence boundary', async () => {
+    setupMocks({
+      content: 'We camped in the cave. Wave Echo starts tomorrow.',
+      locations: [{ id: 'loc-1', name: 'Cave Wave Echo' }],
+    });
+
+    render(<NoteReferences noteId="note-1" />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Cave Wave Echo')).not.toBeInTheDocument();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Empty state
-  // -------------------------------------------------------------------------
-  describe('empty state', () => {
-    test('should show empty state message when no references are found', async () => {
-      setupMocks({ note: makeNote({ content: 'Some random content xyz123.' }) });
-      render(<NoteReferences noteId="note-1" />);
-      await waitFor(() => {
-        expect(screen.getByText(/no campaign elements found/i)).toBeInTheDocument();
-      });
+  test('should not match a name inside a longer word', async () => {
+    setupMocks({
+      content: 'The caverns were flooded.',
+      locations: [{ id: 'loc-1', name: 'Cave' }],
     });
 
-    test('should call onSearchComplete callback after search finishes', async () => {
-      const onSearchComplete = jest.fn();
-      setupMocks({ note: makeNote() });
-      render(<NoteReferences noteId="note-1" onSearchComplete={onSearchComplete} />);
-      await waitFor(() => {
-        expect(onSearchComplete).toHaveBeenCalled();
-      });
+    render(<NoteReferences noteId="note-1" />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Cave')).not.toBeInTheDocument();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Reference matching
-  // -------------------------------------------------------------------------
-  describe('reference matching', () => {
-    test('should render NPC reference when NPC name appears in note content', async () => {
-      setupMocks({
-        note: makeNote({ content: 'We met Aldric at the inn.' }),
-        npcs: [{ id: 'npc-1', name: 'Aldric', title: 'Wizard' }],
-      });
-      render(<NoteReferences noteId="note-1" />);
-      await waitFor(() => {
-        expect(screen.getByText('Aldric')).toBeInTheDocument();
-      });
+  test('should report matches across all four entity types', async () => {
+    setupMocks({
+      content: 'Gundren went to Phandalin about the Lost Mine and the Black Spider.',
+      npcs: [{ id: 'npc-1', name: 'Gundren' }],
+      locations: [{ id: 'loc-1', name: 'Phandalin' }],
+      quests: [{ id: 'quest-1', title: 'Lost Mine' }],
+      rumors: [{ id: 'rumor-1', title: 'Black Spider' }],
     });
 
-    test('should render Location reference when location name appears in note content', async () => {
-      setupMocks({
-        note: makeNote({ content: 'We traveled to Silverkeep.' }),
-        locations: [{ id: 'loc-1', name: 'Silverkeep' }],
-      });
-      render(<NoteReferences noteId="note-1" />);
-      await waitFor(() => {
-        expect(screen.getByText('Silverkeep')).toBeInTheDocument();
-      });
-    });
+    render(<NoteReferences noteId="note-1" />);
 
-    test('should render Quest reference when quest title appears in note content', async () => {
-      setupMocks({
-        note: makeNote({ content: 'We began the dark rift quest.' }),
-        quests: [{ id: 'q-1', title: 'dark rift' }],
-      });
-      render(<NoteReferences noteId="note-1" />);
-      await waitFor(() => {
-        expect(screen.getByText('dark rift')).toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(screen.getByText('Gundren')).toBeInTheDocument();
     });
+    expect(screen.getByText('Phandalin')).toBeInTheDocument();
+    expect(screen.getByText('Lost Mine')).toBeInTheDocument();
+    expect(screen.getByText('Black Spider')).toBeInTheDocument();
+  });
 
-    test('should render Rumor reference when rumor title appears in note content', async () => {
-      setupMocks({
-        note: makeNote({ content: 'The shadow conspiracy is known.' }),
-        rumors: [{ id: 'r-1', title: 'shadow conspiracy' }],
-      });
-      render(<NoteReferences noteId="note-1" />);
-      await waitFor(() => {
-        expect(screen.getByText('shadow conspiracy')).toBeInTheDocument();
-      });
-    });
+  test('should report no references for an empty note', async () => {
+    setupMocks({ content: '', npcs: [{ id: 'npc-1', name: 'Gundren' }] });
 
-    test('should NOT render reference when element name does NOT appear in note content', async () => {
-      setupMocks({
-        note: makeNote({ content: 'Nothing about goblins here.' }),
-        npcs: [{ id: 'npc-2', name: 'Mysterious Stranger' }],
-      });
-      render(<NoteReferences noteId="note-1" />);
-      await waitFor(() => {
-        expect(screen.queryByText('Mysterious Stranger')).not.toBeInTheDocument();
-      });
-    });
+    render(<NoteReferences noteId="note-1" />);
 
-    test('should call onReferencesFound with found references array', async () => {
-      const onReferencesFound = jest.fn();
-      setupMocks({
-        note: makeNote({ content: 'Met Aldric.' }),
-        npcs: [{ id: 'npc-1', name: 'Aldric' }],
-      });
-      render(<NoteReferences noteId="note-1" onReferencesFound={onReferencesFound} />);
-      await waitFor(() => {
-        expect(onReferencesFound).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ id: 'npc-1', type: 'npc' }),
-          ])
-        );
-      });
+    await waitFor(() => {
+      expect(screen.queryByText('Gundren')).not.toBeInTheDocument();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Navigation
-  // -------------------------------------------------------------------------
-  describe('navigation on reference click', () => {
-    test('should navigate to NPC page with highlight when NPC reference is clicked', async () => {
-      setupMocks({
-        note: makeNote({ content: 'Met Aldric.' }),
-        npcs: [{ id: 'npc-1', name: 'Aldric' }],
-      });
-      render(<NoteReferences noteId="note-1" />);
-      await waitFor(() => {
-        expect(screen.getByText('Aldric')).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByText('Aldric'));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/npcs?highlight=npc-1');
+  test('should surface found references to its parent', async () => {
+    const onReferencesFound = jest.fn();
+    setupMocks({
+      content: 'Gundren was here.',
+      npcs: [{ id: 'npc-1', name: 'Gundren' }],
     });
 
-    test('should navigate to Location page with highlight when location reference is clicked', async () => {
-      setupMocks({
-        note: makeNote({ content: 'Visited Silverkeep.' }),
-        locations: [{ id: 'loc-1', name: 'Silverkeep' }],
-      });
-      render(<NoteReferences noteId="note-1" />);
-      await waitFor(() => {
-        expect(screen.getByText('Silverkeep')).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByText('Silverkeep'));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/locations?highlight=loc-1');
-    });
-  });
+    render(<NoteReferences noteId="note-1" onReferencesFound={onReferencesFound} />);
 
-  // -------------------------------------------------------------------------
-  // No note content
-  // -------------------------------------------------------------------------
-  describe('note without content', () => {
-    test('should show empty state when note has no content', async () => {
-      setupMocks({
-        note: makeNote({ content: '' }),
-        npcs: [{ id: 'npc-1', name: 'Aldric' }],
-      });
-      render(<NoteReferences noteId="note-1" />);
-      await waitFor(() => {
-        expect(screen.getByText(/no campaign elements found/i)).toBeInTheDocument();
-      });
-    });
-
-    test('should show empty state when note is not found', async () => {
-      setupMocks({ note: undefined });
-      render(<NoteReferences noteId="note-999" />);
-      await waitFor(() => {
-        expect(screen.getByText(/no campaign elements found/i)).toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(onReferencesFound).toHaveBeenCalledWith([
+        expect.objectContaining({ id: 'npc-1', type: 'npc', title: 'Gundren' }),
+      ]);
     });
   });
 });

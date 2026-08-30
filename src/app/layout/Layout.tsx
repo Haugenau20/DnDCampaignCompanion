@@ -3,7 +3,6 @@ import React from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import Navigation from './Navigation';
-import { FloatingUsageIndicator } from 'features/collaboration';
 import GlobalActionButton from 'shared/components/GlobalActionButton';
 
 interface LayoutProps {
@@ -23,9 +22,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {children}
         </main>
       <Footer />
-      
-      {/* Floating usage indicator - only shows on note pages */}
-      <FloatingUsageIndicator />
+
+      {/* FloatingUsageIndicator no longer renders here (or anywhere): it
+          self-gated to /notes/* routes, but Layout wraps every route, so it
+          kept appearing on note pages even after NotePage stopped rendering
+          it directly. UsageMeter in the note rail replaces it. The
+          component, its barrel export, and its tests are kept -- only the
+          render site is gone. */}
       <GlobalActionButton />
     </div>
   );

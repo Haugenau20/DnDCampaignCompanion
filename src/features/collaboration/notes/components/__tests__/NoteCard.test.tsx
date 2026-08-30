@@ -55,117 +55,164 @@ describe('NoteCard', () => {
     setupMocks();
   });
 
-  // -------------------------------------------------------------------------
-  // Basic rendering
-  // -------------------------------------------------------------------------
-  describe('rendering', () => {
-    test('should render note title', () => {
-      render(<NoteCard note={makeNote()} />);
+  describe('title', () => {
+    test('should render an explicit title', () => {
+      render(<NoteCard note={makeNote({ title: 'Session 5 Notes' })} />);
       expect(screen.getByText('Session 5 Notes')).toBeInTheDocument();
     });
 
-    test('should render "Untitled Note" when title is empty', () => {
-      render(<NoteCard note={makeNote({ title: '' })} />);
-      expect(screen.getByText('Untitled Note')).toBeInTheDocument();
+    test('should derive the title from the first content line when untitled', () => {
+      render(<NoteCard note={makeNote({ title: '', content: 'Wave Echo Cave\nrest of it' })} />);
+      expect(screen.getByText('Wave Echo Cave')).toBeInTheDocument();
     });
 
-    test('should render content preview when content is short', () => {
-      render(<NoteCard note={makeNote({ content: 'Short content.' })} />);
-      expect(screen.getByText('Short content.')).toBeInTheDocument();
+    test('should read "Untitled note" only when there is no title and no content', () => {
+      render(<NoteCard note={makeNote({ title: '', content: '' })} />);
+      expect(screen.getByText('Untitled note')).toBeInTheDocument();
     });
 
-    test('should render content truncated to 150 chars with ellipsis when content is long', () => {
+    test('should never render the string "New Note"', () => {
+      render(<NoteCard note={makeNote({ title: '', content: '' })} />);
+      expect(screen.queryByText('New Note')).not.toBeInTheDocument();
+      expect(screen.queryByText('Untitled Note')).not.toBeInTheDocument();
+    });
+
+    test('should render the derived title, not the legacy "New Note" title, for a pre-redesign note', () => {
+      render(<NoteCard note={makeNote({ title: 'New Note', content: 'Wave Echo Cave\nmore' })} />);
+      expect(screen.getByText('Wave Echo Cave')).toBeInTheDocument();
+      expect(screen.queryByText('New Note')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('preview', () => {
+    test('should render the content without a manual ellipsis', () => {
       const longContent = 'A'.repeat(200);
       render(<NoteCard note={makeNote({ content: longContent })} />);
-      const expected = 'A'.repeat(150) + '...';
-      expect(screen.getByText(expected)).toBeInTheDocument();
+      // Truncation is CSS (line-clamp-2), not a substring: the full text is
+      // in the DOM and there is no injected "...".
+      expect(screen.getByText(longContent)).toBeInTheDocument();
+      expect(screen.queryByText(`${'A'.repeat(150)}...`)).not.toBeInTheDocument();
     });
 
-    test('should render "No content yet" when content is empty', () => {
-      render(<NoteCard note={makeNote({ content: '' })} />);
-      expect(screen.getByText('No content yet')).toBeInTheDocument();
+    test('should apply line-clamp-2 to the preview', () => {
+      render(<NoteCard note={makeNote({ content: 'Some content here.' })} />);
+      expect(screen.getByText('Some content here.')).toHaveClass('line-clamp-2');
+    });
+  });
+
+  describe('entity chips', () => {
+    test('should render a chip per non-zero entity type with correct plurals', () => {
+      const note = makeNote({
+        extractedEntities: [
+          { id: 'e1', text: 'Gundren', type: 'npc', confidence: 0.9, isConverted: true, createdAt: '2024-01-15T10:00:00.000Z' },
+          { id: 'e2', text: 'Sildar', type: 'npc', confidence: 0.9, isConverted: true, createdAt: '2024-01-15T10:00:00.000Z' },
+          { id: 'e3', text: 'Elmo', type: 'npc', confidence: 0.9, isConverted: true, createdAt: '2024-01-15T10:00:00.000Z' },
+          { id: 'e4', text: 'Phandalin', type: 'location', confidence: 0.9, isConverted: true, createdAt: '2024-01-15T10:00:00.000Z' },
+          { id: 'e5', text: 'Black Spider', type: 'rumor', confidence: 0.9, isConverted: true, createdAt: '2024-01-15T10:00:00.000Z' },
+        ],
+      });
+      render(<NoteCard note={note} />);
+
+      expect(screen.getByText('3 NPCs')).toBeInTheDocument();
+      expect(screen.getByText('1 location')).toBeInTheDocument();
+      expect(screen.getByText('1 rumor')).toBeInTheDocument();
     });
 
-    test('should render "Updated:" label', () => {
-      render(<NoteCard note={makeNote()} />);
-      expect(screen.getByText(/Updated:/)).toBeInTheDocument();
+    test('should not render a chip for a type with no entities', () => {
+      const note = makeNote({
+        extractedEntities: [
+          { id: 'e1', text: 'Gundren', type: 'npc', confidence: 0.9, isConverted: true, createdAt: '2024-01-15T10:00:00.000Z' },
+        ],
+      });
+      render(<NoteCard note={note} />);
+
+      expect(screen.getByText('1 NPC')).toBeInTheDocument();
+      expect(screen.queryByText(/quest/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/location/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('tags', () => {
+    test('should render each tag as its own chip, not a joined string', () => {
+      render(<NoteCard note={makeNote({ tags: ['session', 'rivendell'] })} />);
+      expect(screen.getByText('session')).toBeInTheDocument();
+      expect(screen.getByText('rivendell')).toBeInTheDocument();
+      expect(screen.queryByText('session, rivendell')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('unsaved notes', () => {
+    test('should show a "Not saved yet" badge', () => {
+      render(<NoteCard note={makeNote({ isUnsaved: true })} />);
+      expect(screen.getByText('Not saved yet')).toBeInTheDocument();
     });
 
-    test('should NOT render Archived badge for active notes', () => {
-      render(<NoteCard note={makeNote({ status: 'active' })} />);
-      expect(screen.queryByText('Archived')).not.toBeInTheDocument();
+    test('should offer a "Save now" action that does not navigate', () => {
+      const onSaveNow = jest.fn();
+      render(<NoteCard note={makeNote({ id: 'note-9', isUnsaved: true })} onSaveNow={onSaveNow} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /save now/i }));
+
+      expect(onSaveNow).toHaveBeenCalledWith('note-9');
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
     });
 
-    test('should render Archived badge for archived notes', () => {
+    test('should not show the badge for a saved note', () => {
+      render(<NoteCard note={makeNote({ isUnsaved: false })} />);
+      expect(screen.queryByText('Not saved yet')).not.toBeInTheDocument();
+      expect(screen.queryByText('Not Saved')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('archived notes', () => {
+    test('should mark an archived note', () => {
       render(<NoteCard note={makeNote({ status: 'archived' })} />);
       expect(screen.getByText('Archived')).toBeInTheDocument();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Tags rendering
-  // -------------------------------------------------------------------------
-  describe('tags rendering', () => {
-    test('should render tags joined by comma when tags are present', () => {
-      render(<NoteCard note={makeNote({ tags: ['combat', 'dragon'] })} />);
-      expect(screen.getByText('combat, dragon')).toBeInTheDocument();
-    });
-
-    test('should not render tags section when tags array is empty', () => {
-      const { container } = render(<NoteCard note={makeNote({ tags: [] })} />);
-      // Assert on the tags block itself, identified by its Tag icon. A previous
-      // `queryByText(/,/)` matched any comma on the card, so it was tripped by the
-      // "Updated: January 15, 2024 at 10:00 AM" date rather than by any tag.
-      expect(container.querySelector('.lucide-tag')).toBeNull();
-      // The date, commas and all, is still expected to be there.
-      expect(container.querySelector('.lucide-calendar')).not.toBeNull();
-    });
-
-    test('should render the tags section when tags are present', () => {
-      const { container } = render(
-        <NoteCard note={makeNote({ tags: ['combat'] })} />
-      );
-      expect(container.querySelector('.lucide-tag')).not.toBeNull();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Click navigation
-  // -------------------------------------------------------------------------
-  describe('click navigation', () => {
-    test('should call navigateToPage with note detail path when card is clicked', () => {
-      render(<NoteCard note={makeNote({ id: 'note-42' })} />);
-      // The card is a clickable div/card; click on the title
+  describe('navigation', () => {
+    test('should navigate to the note when the row is activated', () => {
+      render(<NoteCard note={makeNote({ id: 'note-3' })} />);
       fireEvent.click(screen.getByText('Session 5 Notes'));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/notes/note-42');
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/notes/note-3');
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Status badge rendering.
-  //
-  // These previously described themselves as covering getStatusBadgeClass's
-  // "active" and default branches. That function was removed as dead code
-  // (bug #1050, 2026-07-28): its only call site was already gated on
-  // note.status === "archived", so those two branches could never execute and
-  // the tests below were never reaching them. The class is now inlined.
-  //
-  // Both assertions were correct as written and are unchanged — they test the
-  // rendered output, which is the behaviour that actually matters here.
-  // -------------------------------------------------------------------------
-  describe('status badge styling', () => {
-    test('should render Archived badge element with badge class for archived notes', () => {
-      render(<NoteCard note={makeNote({ status: 'archived' })} />);
-      const badge = screen.getByText('Archived');
-      // The badge span should have the archived status class applied
-      expect(badge.tagName.toLowerCase()).toBe('span');
-      expect(badge.className).toContain('status-archived');
+  // ---------------------------------------------------------------------------
+  // I3 (IMPORTANT): the row used to be role="button" + tabIndex={0} +
+  // aria-label={title}, containing a real <button> ("Save now"). A
+  // role="button" must not contain focusable descendants (screen readers
+  // announce a button inside a button), and the row-level aria-label
+  // overrode the row's whole accessible name, hiding the timestamp, entity
+  // chips, tag chips and the "Not saved yet"/"Archived" badges from
+  // assistive tech. The title is now the sole interactive element; the row
+  // is a plain div.
+  // ---------------------------------------------------------------------------
+  describe('accessibility structure (I3)', () => {
+    test('should not mark the row itself as an interactive button (no button nested in a button)', () => {
+      const { container } = render(
+        <NoteCard note={makeNote({ isUnsaved: true })} onSaveNow={jest.fn()} />
+      );
+      const row = container.querySelector('.note-card');
+      expect(row).not.toHaveAttribute('role');
+      expect(row).not.toHaveAttribute('tabindex');
+      expect(row).not.toHaveAttribute('aria-label');
     });
 
-    test('should render no badge for notes with a non-archived status', () => {
-      render(<NoteCard note={makeNote({ status: 'unknown-status' as any })} />);
-      // Badge condition is: note.status === "archived" — does not match
-      expect(screen.queryByText('Archived')).not.toBeInTheDocument();
+    test('should expose the title as a real <button> element, not a div playing the role', () => {
+      render(<NoteCard note={makeNote({ id: 'note-7', title: 'Session 5 Notes' })} />);
+      const titleButton = screen.getByRole('button', { name: 'Session 5 Notes' });
+      expect(titleButton.tagName).toBe('BUTTON');
+
+      fireEvent.click(titleButton);
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/notes/note-7');
+    });
+
+    test('should expose "Untitled note" as the accessible title button when there is no title', () => {
+      render(<NoteCard note={makeNote({ id: 'note-8', title: '', content: '' })} />);
+      const titleButton = screen.getByRole('button', { name: 'Untitled note' });
+      expect(titleButton.tagName).toBe('BUTTON');
     });
   });
 });

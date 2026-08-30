@@ -1,4 +1,4 @@
-﻿// src/pages/notes/__tests__/NotePage.test.tsx
+// src/pages/notes/__tests__/NotePage.test.tsx
 import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import NotePage from "../NotePage";
@@ -38,6 +38,7 @@ jest.mock("@/features/user-management", () => ({
 }));
 
 const mockDeleteNote = jest.fn().mockResolvedValue(undefined);
+const mockArchiveNote = jest.fn().mockResolvedValue(undefined);
 const mockGetNoteById = jest.fn();
 
 const mockNavigateToPage = jest.fn();
@@ -66,62 +67,41 @@ jest.mock("core/services/firebase/data/DocumentService", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-// NoteEditor, NoteReferences, useNotes, EntityExtractor and
+// NoteEditor, CampaignLinksPanel, UsageMeter, useNotes and
 // FloatingUsageIndicator all come from the collaboration domain barrel now,
-// so they are mocked together in a single factory.
-jest.mock("features/collaboration", () => {
+// so they are mocked together in a single factory. FloatingUsageIndicator
+// stays mocked (and asserted absent) even though NotePage no longer renders
+// it -- the component itself is untouched and still exported.
+jest.mock("@/features/collaboration", () => {
   const React = require("react");
-  const NoteEditorMock = React.forwardRef((props: any, ref: any) => {
-    React.useImperativeHandle(ref, () => ({
-      getCurrentContent: () => ({ title: "Test Note", content: "Some content" }),
-      saveCurrentContent: jest.fn().mockResolvedValue(undefined),
-    }));
-    return (
-      <div data-testid="note-editor" data-readonly={props.readOnly ? "true" : "false"}>
-        {/* Expose a trigger button so tests can fire the onSave callback */}
-        <button
-          data-testid="note-editor-trigger-save"
-          onClick={() => props.onSave && props.onSave()}
-        >
-          Trigger Save
-        </button>
-      </div>
-    );
-  });
-  NoteEditorMock.displayName = "NoteEditor";
-
-  const NoteReferencesMock = (props: any) => (
-    <div
-      data-testid="note-references"
-      data-note-id={props.noteId}
-    >
-      {/* Expose triggers so tests can fire callbacks */}
+  const NoteEditorMock = React.forwardRef((props: any, _ref: any) => (
+    <div data-testid="note-editor" data-readonly={props.readOnly ? "true" : "false"}>
+      {/* Exercises the wiring NotePage owns: back/archive/delete now live in
+          the editor's own top bar (Tasks 11-12), and onSave still fires. */}
+      <button onClick={props.onBack}>All notes</button>
+      <button onClick={props.onArchive}>Archive</button>
+      <button onClick={props.onDelete}>Delete</button>
       <button
-        data-testid="note-references-found"
-        onClick={() => props.onReferencesFound && props.onReferencesFound([{ id: "ref-1" }])}
+        data-testid="note-editor-trigger-save"
+        onClick={() => props.onSave && props.onSave()}
       >
-        Fire References Found
-      </button>
-      <button
-        data-testid="note-references-complete"
-        onClick={() => props.onSearchComplete && props.onSearchComplete()}
-      >
-        Fire Search Complete
+        Trigger Save
       </button>
     </div>
-  );
+  ));
+  NoteEditorMock.displayName = "NoteEditor";
 
-  const EntityExtractorMock = (props: any) => (
-    <div data-testid="entity-extractor" data-note-id={props.noteId}>
+  const CampaignLinksPanelMock = (props: any) => (
+    <div data-testid="campaign-links-panel" data-note-id={props.noteId}>
       {/* Expose triggers so tests can fire getCurrentEditorContent and saveCurrentEditorContent */}
       <button
-        data-testid="entity-extractor-get-content"
+        data-testid="campaign-links-get-content"
         onClick={() => props.getCurrentEditorContent && props.getCurrentEditorContent()}
       >
         Get Content
       </button>
       <button
-        data-testid="entity-extractor-save-content"
+        data-testid="campaign-links-save-content"
         onClick={async () => props.saveCurrentEditorContent && await props.saveCurrentEditorContent()}
       >
         Save Content
@@ -129,16 +109,19 @@ jest.mock("features/collaboration", () => {
     </div>
   );
 
+  const UsageMeterMock = () => <div data-testid="usage-meter" />;
+
   const FloatingUsageIndicatorMock = () => <div data-testid="floating-usage-indicator" />;
 
   return {
     __esModule: true,
     NoteEditor: NoteEditorMock,
-    NoteReferences: NoteReferencesMock,
-    EntityExtractor: EntityExtractorMock,
+    CampaignLinksPanel: CampaignLinksPanelMock,
+    UsageMeter: UsageMeterMock,
     FloatingUsageIndicator: FloatingUsageIndicatorMock,
     useNotes: () => ({
       deleteNote: mockDeleteNote,
+      archiveNote: mockArchiveNote,
       getNoteById: mockGetNoteById,
     }),
   };
@@ -170,6 +153,8 @@ jest.mock("lucide-react", () => ({
   Trash2: () => <span data-testid="trash-icon" />,
   AlertCircle: () => <span data-testid="alert-circle-icon" />,
   ExternalLink: () => <span data-testid="external-link-icon" />,
+  // Dialog (real, not mocked) renders its own close icon.
+  X: () => <span data-testid="x-icon" />,
 }));
 
 // ---------------------------------------------------------------------------
@@ -208,6 +193,7 @@ describe("NotePage", () => {
     mockGetNoteById.mockReturnValue(sampleNote);
     mockGetDocument.mockResolvedValue(null);
     mockDeleteNote.mockResolvedValue(undefined);
+    mockArchiveNote.mockResolvedValue(undefined);
   });
 
   // -------------------------------------------------------------------------
@@ -281,29 +267,9 @@ describe("NotePage", () => {
       expect(screen.getByTestId("note-editor")).toBeInTheDocument();
     });
 
-    it("renders NoteReferences", () => {
+    it("renders the campaign links panel for same-campaign notes", () => {
       renderPage();
-      expect(screen.getByTestId("note-references")).toBeInTheDocument();
-    });
-
-    it("renders EntityExtractor for same-campaign notes", () => {
-      renderPage();
-      expect(screen.getByTestId("entity-extractor")).toBeInTheDocument();
-    });
-
-    it("renders FloatingUsageIndicator", () => {
-      renderPage();
-      expect(screen.getByTestId("floating-usage-indicator")).toBeInTheDocument();
-    });
-
-    it("renders 'Back to Notes' button", () => {
-      renderPage();
-      expect(screen.getByText("Back to Notes")).toBeInTheDocument();
-    });
-
-    it("renders 'Delete' button", () => {
-      renderPage();
-      expect(screen.getByText("Delete")).toBeInTheDocument();
+      expect(screen.getByTestId("campaign-links-panel")).toBeInTheDocument();
     });
 
     it("NoteEditor is not read-only for same-campaign notes", () => {
@@ -365,20 +331,12 @@ describe("NotePage", () => {
       });
     });
 
-    it("does NOT render EntityExtractor for cross-campaign notes", async () => {
+    it("does NOT render the campaign links panel for cross-campaign notes", async () => {
       renderPage();
       await waitFor(() => {
         expect(
-          screen.queryByTestId("entity-extractor")
+          screen.queryByTestId("campaign-links-panel")
         ).not.toBeInTheDocument();
-      });
-    });
-
-    it("Delete button is disabled for cross-campaign notes", async () => {
-      renderPage();
-      await waitFor(() => {
-        const deleteBtn = screen.getByText("Delete");
-        expect(deleteBtn).toBeDisabled();
       });
     });
   });
@@ -387,19 +345,80 @@ describe("NotePage", () => {
   // Navigation
   // -------------------------------------------------------------------------
   describe("navigation", () => {
-    it("navigates to /notes when 'Back to Notes' is clicked", () => {
+    it("navigates to /notes when the editor's back action is triggered", () => {
       renderPage();
-      fireEvent.click(screen.getByText("Back to Notes"));
+      fireEvent.click(screen.getByRole("button", { name: /all notes/i }));
       expect(mockNavigateToPage).toHaveBeenCalledWith("/notes");
     });
+  });
 
-    it("deletes the note and navigates to /notes when 'Delete' is clicked", async () => {
+  // -------------------------------------------------------------------------
+  // Delete confirmation
+  // Bug fix: handleDeleteNote used to delete and navigate away on a single
+  // click, while leaving a group and deleting an account both confirm first.
+  // -------------------------------------------------------------------------
+  describe("delete confirmation", () => {
+    test("should not delete on the first click", () => {
       renderPage();
-      fireEvent.click(screen.getByText("Delete"));
-      await waitFor(() => {
-        expect(mockDeleteNote).toHaveBeenCalledWith("note-1");
-        expect(mockNavigateToPage).toHaveBeenCalledWith("/notes");
-      });
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+
+      expect(mockDeleteNote).not.toHaveBeenCalled();
+      expect(mockNavigateToPage).not.toHaveBeenCalledWith("/notes");
+    });
+
+    test("should ask before deleting", () => {
+      renderPage();
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+
+      expect(screen.getByText(/delete this note/i)).toBeInTheDocument();
+    });
+
+    test("should delete once confirmed", async () => {
+      renderPage();
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.click(screen.getByRole("button", { name: /delete note/i }));
+
+      await waitFor(() => expect(mockDeleteNote).toHaveBeenCalledWith("note-1"));
+    });
+
+    test("should leave the note alone when the dialog is cancelled", () => {
+      renderPage();
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+
+      expect(mockDeleteNote).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Layout
+  // -------------------------------------------------------------------------
+  describe("layout", () => {
+    test("should render the merged campaign links panel", () => {
+      renderPage();
+      expect(screen.getByTestId("campaign-links-panel")).toBeInTheDocument();
+    });
+
+    test("should render the labelled usage meter", () => {
+      renderPage();
+      expect(screen.getByTestId("usage-meter")).toBeInTheDocument();
+    });
+
+    test("should NOT render the floating usage indicator", () => {
+      renderPage();
+      expect(screen.queryByTestId("floating-usage-indicator")).not.toBeInTheDocument();
+    });
+
+    test("should archive from the editor top bar", async () => {
+      renderPage();
+
+      fireEvent.click(screen.getByRole("button", { name: /archive/i }));
+
+      await waitFor(() => expect(mockArchiveNote).toHaveBeenCalledWith("note-1"));
     });
   });
 
@@ -501,91 +520,87 @@ describe("NotePage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Delete note error path (line 137)
+  // Delete error path
   // -------------------------------------------------------------------------
-  describe("handleDeleteNote error path", () => {
+  describe("handleConfirmDelete error path", () => {
     it("does not navigate away when deleteNote throws", async () => {
       mockDeleteNote.mockRejectedValue(new Error("Delete failed"));
       renderPage();
-      fireEvent.click(screen.getByText("Delete"));
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.click(screen.getByRole("button", { name: /delete note/i }));
+
       // Give the async handler time to settle
+      await act(async () => {});
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+    });
+
+    it("closes the dialog after a failed delete, leaving the note editor visible", async () => {
+      mockDeleteNote.mockRejectedValue(new Error("Delete failed"));
+      renderPage();
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.click(screen.getByRole("button", { name: /delete note/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByText(/delete this note/i)).not.toBeInTheDocument();
+      });
+      expect(screen.getByTestId("note-editor")).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Archive error path
+  // -------------------------------------------------------------------------
+  describe("handleArchiveNote error path", () => {
+    it("does not navigate away when archiveNote throws", async () => {
+      mockArchiveNote.mockRejectedValue(new Error("Archive failed"));
+      renderPage();
+
+      fireEvent.click(screen.getByRole("button", { name: /archive/i }));
+
       await act(async () => {});
       expect(mockNavigateToPage).not.toHaveBeenCalled();
     });
   });
 
   // -------------------------------------------------------------------------
-  // NoteEditor onSave callback → refreshReferences (lines 145-146)
+  // NoteEditor onSave callback (lines 145-146)
   // -------------------------------------------------------------------------
-  describe("NoteEditor onSave triggers refreshReferences", () => {
-    it("clicking note-editor-trigger-save fires refreshReferences without error", async () => {
+  describe("NoteEditor onSave", () => {
+    it("clicking note-editor-trigger-save fires onSave without error", async () => {
       renderPage();
-      // The trigger button is rendered inside the mocked NoteEditor
       const triggerBtn = screen.getByTestId("note-editor-trigger-save");
       fireEvent.click(triggerBtn);
-      // After firing, NoteReferences should still be present (key was incremented)
-      expect(screen.getByTestId("note-references")).toBeInTheDocument();
-    });
-
-    it("NoteReferences is still mounted after onSave fires (key change causes remount)", async () => {
-      renderPage();
-      fireEvent.click(screen.getByTestId("note-editor-trigger-save"));
-      // NoteReferences remounts with the new key
-      await waitFor(() => {
-        expect(screen.getByTestId("note-references")).toBeInTheDocument();
-      });
+      // No onSave handler is wired up (references are found reactively by
+      // CampaignLinksPanel), so this just guards against a crash.
+      expect(screen.getByTestId("note-editor")).toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // NoteReferences callbacks: onReferencesFound (line 153) and onSearchComplete (line 160)
+  // getCurrentEditorContent via CampaignLinksPanel trigger (lines 85-89)
   // -------------------------------------------------------------------------
-  describe("NoteReferences onReferencesFound callback (line 153)", () => {
-    it("clicking 'Fire References Found' does not crash and page remains stable", () => {
+  describe("getCurrentEditorContent — noteEditorRef.current is set", () => {
+    it("CampaignLinksPanel trigger calls getCurrentEditorContent without error", () => {
       renderPage();
-      const btn = screen.getByTestId("note-references-found");
+      const btn = screen.getByTestId("campaign-links-get-content");
       fireEvent.click(btn);
-      // Page still renders correctly after callback fires
-      expect(screen.getByTestId("note-references")).toBeInTheDocument();
-    });
-  });
-
-  describe("NoteReferences onSearchComplete callback (line 160)", () => {
-    it("clicking 'Fire Search Complete' does not crash and page remains stable", () => {
-      renderPage();
-      const btn = screen.getByTestId("note-references-complete");
-      fireEvent.click(btn);
-      // Page still renders correctly after callback fires
-      expect(screen.getByTestId("note-references")).toBeInTheDocument();
+      expect(screen.getByTestId("campaign-links-panel")).toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // getCurrentEditorContent via EntityExtractor trigger (lines 91-94)
+  // saveCurrentEditorContent via CampaignLinksPanel trigger (lines 92-96)
   // -------------------------------------------------------------------------
-  describe("getCurrentEditorContent — noteEditorRef.current is set (lines 91-92)", () => {
-    it("EntityExtractor trigger calls getCurrentEditorContent without error", () => {
+  describe("saveCurrentEditorContent — noteEditorRef.current is set", () => {
+    it("CampaignLinksPanel trigger calls saveCurrentEditorContent without error", async () => {
       renderPage();
-      const btn = screen.getByTestId("entity-extractor-get-content");
-      fireEvent.click(btn);
-      // The mocked ref returns { title: "Test Note", content: "Some content" }
-      // No crash means line 91-92 executed successfully
-      expect(screen.getByTestId("entity-extractor")).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // saveCurrentEditorContent via EntityExtractor trigger (lines 98-99)
-  // -------------------------------------------------------------------------
-  describe("saveCurrentEditorContent — noteEditorRef.current is set (lines 98-99)", () => {
-    it("EntityExtractor trigger calls saveCurrentEditorContent without error", async () => {
-      renderPage();
-      const btn = screen.getByTestId("entity-extractor-save-content");
+      const btn = screen.getByTestId("campaign-links-save-content");
       await act(async () => {
         fireEvent.click(btn);
       });
-      // The mocked ref's saveCurrentContent resolves successfully
-      expect(screen.getByTestId("entity-extractor")).toBeInTheDocument();
+      expect(screen.getByTestId("campaign-links-panel")).toBeInTheDocument();
     });
   });
 });

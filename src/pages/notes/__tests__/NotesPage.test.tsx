@@ -29,6 +29,7 @@ jest.mock("@/features/user-management", () => ({
 }));
 
 const mockCreateNote = jest.fn().mockResolvedValue("new-note-id");
+const mockCreateAndOpen = jest.fn();
 
 const mockNavigateToPage = jest.fn();
 
@@ -42,34 +43,16 @@ jest.mock("shared/hooks/useNavigation", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-// NotesList and useNotes both come from the collaboration domain barrel now,
-// so they are mocked together in a single factory.
-jest.mock("features/collaboration", () => ({
-  __esModule: true,
-  useNotes: () => ({
-    createNote: mockCreateNote,
-  }),
+// NotesList, useNotes and useCreateNote all come from the collaboration
+// domain barrel now, so they are mocked together in a single factory.
+jest.mock('@/features/collaboration', () => ({
+  ...jest.requireActual('@/features/collaboration'),
   NotesList: () => <div data-testid="notes-list" />,
+  useNotes: jest.fn(),
+  useCreateNote: jest.fn(),
 }));
 
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, variant, color }: any) => {
-    const testId = variant
-      ? `typography-${variant}`
-      : color
-      ? `typography-${color}`
-      : "typography";
-    return <div data-testid={testId}>{children}</div>;
-  },
-}));
-
-jest.mock("../../../core/components/Button", () => ({
-  __esModule: true,
-  default: ({ children, onClick }: any) => (
-    <button onClick={onClick}>{children}</button>
-  ),
-}));
+const { useNotes, useCreateNote } = require("@/features/collaboration");
 
 jest.mock("lucide-react", () => ({
   Plus: () => <span data-testid="plus-icon" />,
@@ -83,109 +66,92 @@ function renderPage() {
   return render(<NotesPage />);
 }
 
+function setupMocks({
+  activeCampaignId = "campaign-1" as string | null,
+  // No default value here: whether a campaign object accompanies the id is
+  // derived below, so an explicit `activeCampaignId: null` also clears
+  // `activeCampaign` by default instead of leaving a stale campaign object
+  // behind. Pass `activeCampaign` explicitly to exercise a state where the
+  // two disagree (there shouldn't be a real one, but a regression could
+  // produce it).
+  activeCampaign,
+  isLoading = false,
+}: {
+  activeCampaignId?: string | null;
+  activeCampaign?: { id: string; name: string } | null;
+  isLoading?: boolean;
+} = {}) {
+  const resolvedCampaign =
+    activeCampaign !== undefined
+      ? activeCampaign
+      : activeCampaignId === null
+      ? null
+      : { id: "campaign-1", name: "The Fellowship" };
+
+  mockCampaigns = { activeCampaignId, activeCampaign: resolvedCampaign };
+  (useNotes as jest.Mock).mockReturnValue({ isLoading });
+  (useCreateNote as jest.Mock).mockReturnValue({ createAndOpen: mockCreateAndOpen });
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-describe("NotesPage", () => {
+describe('NotesPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockCampaigns = {
-      activeCampaignId: "campaign-1",
-      activeCampaign: { id: "campaign-1", name: "The Fellowship" },
-    };
     mockCreateNote.mockResolvedValue("new-note-id");
   });
 
-  // -------------------------------------------------------------------------
-  // Rendering
-  // -------------------------------------------------------------------------
-  describe("rendering", () => {
-    it("renders without crashing", () => {
-      const { container } = renderPage();
-      expect(container).toBeInTheDocument();
-    });
-
-    it("renders the page heading 'My Notes'", () => {
-      renderPage();
-      expect(screen.getByTestId("typography-h2")).toHaveTextContent("My Notes");
-    });
-
-    it("renders NotesList", () => {
-      renderPage();
-      expect(screen.getByTestId("notes-list")).toBeInTheDocument();
-    });
+  test('should render the page heading', () => {
+    setupMocks();
+    render(<NotesPage />);
+    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
   });
 
-  // -------------------------------------------------------------------------
-  // Campaign context display
-  // -------------------------------------------------------------------------
-  describe("campaign name display", () => {
-    it("shows the active campaign name when a campaign is selected", () => {
-      renderPage();
-      expect(screen.getByText("The Fellowship")).toBeInTheDocument();
-    });
-
-    it("does NOT show campaign name when no campaign is selected", () => {
-      mockCampaigns = { activeCampaignId: null, activeCampaign: null };
-      renderPage();
-      expect(screen.queryByText("The Fellowship")).not.toBeInTheDocument();
-    });
+  test('should name the campaign in the subtitle and say the notes are private', () => {
+    setupMocks({ activeCampaign: { id: 'campaign-1', name: 'Phandelver' } });
+    render(<NotesPage />);
+    expect(
+      screen.getByText('Your private notes for Phandelver. Only you can read them.')
+    ).toBeInTheDocument();
   });
 
-  // -------------------------------------------------------------------------
-  // No campaign warning
-  // -------------------------------------------------------------------------
-  describe("no campaign selected", () => {
-    beforeEach(() => {
-      mockCampaigns = { activeCampaignId: null, activeCampaign: null };
-    });
+  test('should create a note from the header button', () => {
+    setupMocks();
+    render(<NotesPage />);
 
-    it("shows the no-campaign warning message", () => {
-      renderPage();
-      expect(
-        screen.getByText(
-          "No campaign selected - select a campaign to view and create notes"
-        )
-      ).toBeInTheDocument();
-    });
+    fireEvent.click(screen.getByRole('button', { name: /new note/i }));
 
-    it("does NOT show 'New Note' button when no campaign is active", () => {
-      renderPage();
-      expect(screen.queryByText("New Note")).not.toBeInTheDocument();
-    });
+    expect(mockCreateAndOpen).toHaveBeenCalled();
   });
 
-  // -------------------------------------------------------------------------
-  // Create note button
-  // -------------------------------------------------------------------------
-  describe("New Note button", () => {
-    it("renders 'New Note' button when campaign is selected", () => {
-      renderPage();
-      expect(screen.getByText("New Note")).toBeInTheDocument();
-    });
+  test('should NOT show the subtitle when the campaign context has cleared', () => {
+    setupMocks({ activeCampaignId: null });
+    render(<NotesPage />);
+    expect(screen.queryByText(/Your private notes for/)).not.toBeInTheDocument();
+  });
 
-    it("calls createNote with default title and content on click", async () => {
-      renderPage();
-      fireEvent.click(screen.getByText("New Note"));
-      await waitFor(() => {
-        expect(mockCreateNote).toHaveBeenCalledWith("New Note", "");
-      });
-    });
+  test('should hide the create button without an active campaign', () => {
+    setupMocks({ activeCampaignId: null });
+    render(<NotesPage />);
+    expect(screen.queryByRole('button', { name: /new note/i })).not.toBeInTheDocument();
+  });
 
-    it("navigates to the new note's page after creation", async () => {
-      renderPage();
-      fireEvent.click(screen.getByText("New Note"));
-      await waitFor(() => {
-        expect(mockNavigateToPage).toHaveBeenCalledWith("/notes/new-note-id");
-      });
-    });
+  test('should warn when no campaign is selected and loading has settled', () => {
+    setupMocks({ activeCampaignId: null, isLoading: false });
+    render(<NotesPage />);
+    expect(screen.getByText(/no campaign selected/i)).toBeInTheDocument();
+  });
 
-    it("does NOT navigate when no active campaign", async () => {
-      mockCampaigns = { activeCampaignId: null, activeCampaign: null };
-      renderPage();
-      // Button is not rendered, so no navigation should happen
-      expect(screen.queryByText("New Note")).not.toBeInTheDocument();
-      expect(mockNavigateToPage).not.toHaveBeenCalled();
-    });
+  test('should NOT warn while still loading (bug #1413)', () => {
+    setupMocks({ activeCampaignId: null, isLoading: true });
+    render(<NotesPage />);
+    expect(screen.queryByText(/no campaign selected/i)).not.toBeInTheDocument();
+  });
+
+  test('should render the notes list', () => {
+    setupMocks();
+    render(<NotesPage />);
+    expect(screen.getByTestId('notes-list')).toBeInTheDocument();
   });
 });

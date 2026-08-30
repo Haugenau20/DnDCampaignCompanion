@@ -1,14 +1,14 @@
 // src/features/collaboration/notes/components/NoteReferences.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { EntityType } from "../types";
 import Typography from "../../../../core/components/Typography";
 import Card from "../../../../core/components/Card";
-import Button from "../../../../core/components/Button";
 import { useNavigation } from "shared/hooks/useNavigation";
 import { useNotes } from "../context/NoteContext";
 import { useCampaigns } from "features/user-management";
-import DocumentService from "core/services/firebase/data/DocumentService";
-import { Loader2, Users, MapPin, Scroll, MessageSquare, ExternalLink } from 'lucide-react';
+import { useNPCs, useLocations, useQuests, useRumors } from "features/campaign-entities";
+import { matchesInText } from "../utils/entity-matching";
+import { Loader2, Users, MapPin, Scroll, MessageSquare } from 'lucide-react';
 
 export interface PotentialReference {
   id: string;
@@ -40,194 +40,108 @@ export const normalizeTextForComparison = (text: string): string => {
     .trim();
 };
 
+/** One entity as the matcher sees it: an id, a type, and the names to test. */
+interface MatchCandidate {
+  id: string;
+  type: EntityType;
+  /** Preferred display label. */
+  title: string;
+  name?: string;
+  /** Every string worth testing against the note, most specific first. */
+  candidates: string[];
+}
+
+/**
+ * Campaign entities that actually appear in a note's text.
+ *
+ * Reads the four collections from their contexts rather than issuing four
+ * `DocumentService.getCollection` calls on every note open, and tests each
+ * name once against the raw note body with `matchesInText`. The previous
+ * implementation re-normalized the entire note once per entity and matched on
+ * dash-joined text, which let a match run across a sentence boundary.
+ */
+export function useNoteReferences(noteId: string): {
+  references: PotentialReference[];
+  isLoading: boolean;
+} {
+  const { getNoteById } = useNotes();
+  const { activeCampaignId } = useCampaigns();
+  const { npcs, isLoading: npcsLoading } = useNPCs();
+  const { locations, isLoading: locationsLoading } = useLocations();
+  const { quests, isLoading: questsLoading } = useQuests();
+  const { rumors, isLoading: rumorsLoading } = useRumors();
+
+  const note = getNoteById(noteId);
+  const noteContent = note?.content ?? "";
+
+  const isLoading =
+    !activeCampaignId || npcsLoading || locationsLoading || questsLoading || rumorsLoading;
+
+  const references = useMemo<PotentialReference[]>(() => {
+    if (!noteContent || !activeCampaignId) return [];
+
+    const build = (
+      items: Array<Record<string, any>>,
+      type: EntityType,
+      fallback: string
+    ): MatchCandidate[] =>
+      items.map(item => ({
+        id: item.id,
+        type,
+        title: item.name || item.title || fallback,
+        name: item.name,
+        // Both fields are tested, de-duplicated, empties dropped.
+        candidates: Array.from(
+          new Set([item.name, item.title].filter((value): value is string => !!value))
+        ),
+      }));
+
+    const all: MatchCandidate[] = [
+      ...build(npcs as any[], "npc", "Unnamed NPC"),
+      ...build(locations as any[], "location", "Unnamed Location"),
+      ...build(quests as any[], "quest", "Unnamed Quest"),
+      ...build(rumors as any[], "rumor", "Unnamed Rumor"),
+    ];
+
+    return all.reduce<PotentialReference[]>((found, entity) => {
+      const matchingText = entity.candidates.filter(candidate =>
+        matchesInText(noteContent, candidate)
+      );
+
+      if (matchingText.length > 0) {
+        found.push({
+          id: entity.id,
+          type: entity.type,
+          title: entity.title,
+          name: entity.name,
+          matchingText,
+        });
+      }
+
+      return found;
+    }, []);
+  }, [noteContent, activeCampaignId, npcs, locations, quests, rumors]);
+
+  return { references, isLoading };
+}
+
 /**
  * Component for finding and displaying potential campaign element references in notes
  */
 const NoteReferences: React.FC<NoteReferencesProps> = ({ noteId, onReferencesFound, onSearchComplete }) => {
-  const [references, setReferences] = useState<PotentialReference[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const { navigateToPage } = useNavigation();
-  const { getNoteById } = useNotes();
-  const { activeCampaignId } = useCampaigns();
-  const documentService = DocumentService.getInstance();
+  const { references, isLoading } = useNoteReferences(noteId);
 
-  // Start search when campaign context is ready
-  useEffect(() => {
-    if (activeCampaignId) {
-      findReferences();
-    } else {
-      // No campaign context yet, keep loading
-      setIsLoading(true);
-    }
-  }, [noteId, activeCampaignId]);
-
-  // Notify parent when references are found
+  // Notify parent when references are found / search completes.
   useEffect(() => {
     if (onReferencesFound) {
       onReferencesFound(references);
     }
-  }, [references, onReferencesFound]);
-
-  /**
-   * Find campaign elements that actually appear in the note text
-   * Uses case and whitespace insensitive matching
-   */
-  const findReferences = async () => {
-    try {
-      setIsLoading(true);
-      const note = getNoteById(noteId);
-      if (!note || !note.content) {
-        setReferences([]);
-        return;
-      }
-
-      if (!activeCampaignId) {
-        setReferences([]);
-        return;
-      }
-
-      // Get all campaign elements
-      const [npcs, locations, quests, rumors] = await Promise.all([
-        documentService.getCollection<any>('npcs'),
-        documentService.getCollection<any>('locations'),
-        documentService.getCollection<any>('quests'),
-        documentService.getCollection<any>('rumors')
-      ]);
-
-      const potentialReferences: PotentialReference[] = [];
-      const noteContent = note.content;
-      const normalizedNoteContent = normalizeTextForComparison(noteContent);
-
-      // Check NPCs
-      npcs.forEach(npc => {
-        const matchingText: string[] = [];
-        
-        // Check name
-        if (npc.name) {
-          const normalizedName = normalizeTextForComparison(npc.name);
-          if (normalizedNoteContent.includes(normalizedName)) {
-            matchingText.push(npc.name);
-          }
-        }
-        
-        // Check title if different from name
-        if (npc.title && npc.title !== npc.name) {
-          const normalizedTitle = normalizeTextForComparison(npc.title);
-          if (normalizedNoteContent.includes(normalizedTitle)) {
-            matchingText.push(npc.title);
-          }
-        }
-        
-        if (matchingText.length > 0) {
-          potentialReferences.push({
-            id: npc.id,
-            type: 'npc',
-            title: npc.name || npc.title || 'Unnamed NPC',
-            name: npc.name,
-            matchingText: matchingText
-          });
-        }
-      });
-
-      // Check Locations
-      locations.forEach(location => {
-        const matchingText: string[] = [];
-        
-        if (location.name) {
-          const normalizedName = normalizeTextForComparison(location.name);
-          if (normalizedNoteContent.includes(normalizedName)) {
-            matchingText.push(location.name);
-          }
-        }
-        
-        if (location.title && location.title !== location.name) {
-          const normalizedTitle = normalizeTextForComparison(location.title);
-          if (normalizedNoteContent.includes(normalizedTitle)) {
-            matchingText.push(location.title);
-          }
-        }
-        
-        if (matchingText.length > 0) {
-          potentialReferences.push({
-            id: location.id,
-            type: 'location',
-            title: location.name || location.title || 'Unnamed Location',
-            name: location.name,
-            matchingText: matchingText
-          });
-        }
-      });
-
-      // Check Quests
-      quests.forEach(quest => {
-        const matchingText: string[] = [];
-        
-        if (quest.title) {
-          const normalizedTitle = normalizeTextForComparison(quest.title);
-          if (normalizedNoteContent.includes(normalizedTitle)) {
-            matchingText.push(quest.title);
-          }
-        }
-        
-        if (quest.name && quest.name !== quest.title) {
-          const normalizedName = normalizeTextForComparison(quest.name);
-          if (normalizedNoteContent.includes(normalizedName)) {
-            matchingText.push(quest.name);
-          }
-        }
-        
-        if (matchingText.length > 0) {
-          potentialReferences.push({
-            id: quest.id,
-            type: 'quest',
-            title: quest.title || quest.name || 'Unnamed Quest',
-            name: quest.name,
-            matchingText: matchingText
-          });
-        }
-      });
-
-      // Check Rumors
-      rumors.forEach(rumor => {
-        const matchingText: string[] = [];
-        
-        if (rumor.title) {
-          const normalizedTitle = normalizeTextForComparison(rumor.title);
-          if (normalizedNoteContent.includes(normalizedTitle)) {
-            matchingText.push(rumor.title);
-          }
-        }
-        
-        if (rumor.name && rumor.name !== rumor.title) {
-          const normalizedName = normalizeTextForComparison(rumor.name);
-          if (normalizedNoteContent.includes(normalizedName)) {
-            matchingText.push(rumor.name);
-          }
-        }
-        
-        if (matchingText.length > 0) {
-          potentialReferences.push({
-            id: rumor.id,
-            type: 'rumor',
-            title: rumor.title || rumor.name || 'Unnamed Rumor',
-            name: rumor.name,
-            matchingText: matchingText
-          });
-        }
-      });
-
-      setReferences(potentialReferences);
-    } catch (error) {
-      console.error("Failed to find references:", error);
-      setReferences([]);
-    } finally {
-      setIsLoading(false);
-      // Notify parent that search is complete
-      if (onSearchComplete) {
-        onSearchComplete();
-      }
+    if (!isLoading && onSearchComplete) {
+      onSearchComplete();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [references, isLoading]);
 
   /**
    * Navigate to the entity detail page
@@ -239,7 +153,7 @@ const NoteReferences: React.FC<NoteReferencesProps> = ({ noteId, onReferencesFou
       quest: "/quests",
       rumor: "/rumors"
     };
-    
+
     const path = paths[reference.type];
     if (path) {
       navigateToPage(`${path}?highlight=${reference.id}`);
@@ -282,30 +196,13 @@ const NoteReferences: React.FC<NoteReferencesProps> = ({ noteId, onReferencesFou
     }
   };
 
-  // Show loading state until campaign context is ready
-  if (!activeCampaignId) {
-    return (
-      <Card className="note-references">
-        <Card.Content>
-          <Typography variant="h4" className="mb-4">
-            Campaign References Found
-          </Typography>
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="w-5 h-5 mr-3 animate-spin primary" />
-            <Typography color="secondary">Loading campaign context...</Typography>
-          </div>
-        </Card.Content>
-      </Card>
-    );
-  }
-
   return (
     <Card className="note-references">
       <Card.Content>
         <Typography variant="h4" className="mb-4">
           Campaign References Found
         </Typography>
-        
+
         {/* Loading state */}
         {isLoading && (
           <div className="flex items-center justify-center py-4">
@@ -313,16 +210,16 @@ const NoteReferences: React.FC<NoteReferencesProps> = ({ noteId, onReferencesFou
             <Typography color="secondary">Searching for references...</Typography>
           </div>
         )}
-        
+
         {/* References list */}
         {!isLoading && references.length > 0 && (
           <div className="space-y-2">
             {references.map((reference, index) => (
-              <div 
+              <div
                 key={`${reference.type}-${reference.id}-${index}`}
                 className="flex items-center justify-between p-3 card transition-colors reference-item"
               >
-                <div 
+                <div
                   className="flex items-center gap-3 flex-1 cursor-pointer"
                   onClick={() => navigateToEntity(reference)}
                 >
@@ -342,7 +239,7 @@ const NoteReferences: React.FC<NoteReferencesProps> = ({ noteId, onReferencesFou
             ))}
           </div>
         )}
-        
+
         {/* Empty state */}
         {!isLoading && references.length === 0 && (
           <Typography color="secondary">

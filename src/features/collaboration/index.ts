@@ -3,11 +3,18 @@
 // Note context and hooks
 export { NoteProvider, useNotes } from './notes/context/NoteContext';
 export { useNoteData } from './notes/hooks/useNoteData';
+export { useCreateNote } from './notes/hooks/useCreateNote';
+// Note presentation helpers — pure, no Firebase, safe for any consumer.
+export { deriveTitle, displayTitle, MAX_DERIVED_TITLE_LENGTH, LEGACY_DEFAULT_TITLE } from './notes/utils/note-title';
+export { matchesInText } from './notes/utils/entity-matching';
+export { formatLastSaved } from './notes/utils/save-status';
 // Components consumed by pages/notes/* and other external consumers
 export { default as NotesList } from './notes/components/NotesList';
 export { default as NoteEditor } from './notes/components/NoteEditor';
 export { default as NoteCard } from './notes/components/NoteCard';
 export { default as NoteReferences } from './notes/components/NoteReferences';
+export { default as CampaignLinksPanel } from './notes/components/CampaignLinksPanel';
+export { useNoteReferences } from './notes/components/NoteReferences';
 export type { NoteEditorRef } from './notes/components/NoteEditor';
 // Named helpers re-exported from NoteReferences for consumers still outside
 // the collaboration domain (e.g. EntityExtractor, pending its own migration)
@@ -31,6 +38,7 @@ export { useOpenAIExtractor } from './entity-extraction/hooks/useOpenAIExtractor
 // Entity extraction components consumed by pages/notes/* and layout
 export { default as EntityExtractor } from './entity-extraction/components/EntityExtractor';
 export { default as FloatingUsageIndicator } from './entity-extraction/components/FloatingUsageIndicator';
+export { default as UsageMeter } from './entity-extraction/components/UsageMeter';
 export { default as EntityCard } from './entity-extraction/components/EntityCard';
 // Entity extraction / usage types
 export type {

@@ -3,28 +3,27 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Typography from "../../core/components/Typography";
 import Button from "../../core/components/Button";
+import Dialog from "core/components/Dialog";
 import { useNavigation } from "shared/hooks/useNavigation";
-import { useNotes, NoteEditor, NoteEditorRef, NoteReferences, PotentialReference, Note, EntityExtractor, FloatingUsageIndicator } from "features/collaboration";
+import { useNotes, NoteEditor, NoteEditorRef, CampaignLinksPanel, UsageMeter, Note } from "features/collaboration";
 import { useCampaigns } from "features/user-management";
-import { ArrowLeft, Trash2, AlertCircle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, AlertCircle, ExternalLink } from 'lucide-react';
 import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups } from "features/user-management";
 
 /**
  * Page for viewing and editing an individual user note
  * Handles campaign context and cross-campaign note access
- * Now includes floating usage indicator for Smart Detection
  */
 const NotePage: React.FC = () => {
   const { noteId } = useParams<{ noteId: string }>();
   const { navigateToPage } = useNavigation();
-  const { deleteNote, getNoteById } = useNotes();
+  const { deleteNote, getNoteById, archiveNote } = useNotes();
   const { activeCampaignId, activeCampaign, campaigns } = useCampaigns();
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
-  const [referenceUpdateTrigger, setReferenceUpdateTrigger] = useState(0);
-  const [foundReferences, setFoundReferences] = useState<PotentialReference[]>([]);
-  const [referencesSearchComplete, setReferencesSearchComplete] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [crossCampaignNote, setCrossCampaignNote] = useState<Note | null>(null);
   const [isLoadingCrossCampaignNote, setIsLoadingCrossCampaignNote] = useState(false);
   const [crossCampaignNotFound, setCrossCampaignNotFound] = useState(false);
@@ -82,7 +81,7 @@ const NotePage: React.FC = () => {
     }
   }, [noteId, currentCampaignNote, crossCampaignNote, crossCampaignNotFound, isLoadingCrossCampaignNote, user?.uid, activeGroupId, activeCampaignId, documentService]);
 
-  // Functions to expose editor content to EntityExtractor
+  // Functions to expose editor content to CampaignLinksPanel
   const getCurrentEditorContent = () => {
     if (noteEditorRef.current) {
       return noteEditorRef.current.getCurrentContent();
@@ -123,37 +122,32 @@ const NotePage: React.FC = () => {
   };
 
   /**
-   * Delete this note and navigate back
+   * Archive this note and navigate back
    */
-  const handleDeleteNote = async () => {
+  const handleArchiveNote = async () => {
+    try {
+      await archiveNote(noteId);
+      navigateToPage("/notes");
+    } catch (error) {
+      console.error("Failed to archive note:", error);
+    }
+  };
+
+  /**
+   * Deleting a note is irreversible and used to happen on a single click,
+   * while leaving a group and deleting an account both ask first.
+   */
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
     try {
       await deleteNote(noteId);
       navigateToPage("/notes");
     } catch (error) {
       console.error("Failed to delete note:", error);
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
     }
-  };
-  
-  /**
-   * Trigger a refresh of note references
-   */
-  const refreshReferences = () => {
-    setReferenceUpdateTrigger(prev => prev + 1);
-    setReferencesSearchComplete(false); // Reset search state when refreshing
-  };
-
-  /**
-   * Handle references found by NoteReferences component
-   */
-  const handleReferencesFound = (references: PotentialReference[]) => {
-    setFoundReferences(references);
-  };
-
-  /**
-   * Handle when reference search is complete
-   */
-  const handleSearchComplete = () => {
-    setReferencesSearchComplete(true);
   };
 
   // Loading state for cross-campaign note
@@ -197,30 +191,9 @@ const NotePage: React.FC = () => {
 
   return (
     <div className={`max-w-7xl mx-auto px-4 py-8 note-page`}>
-      <div className="mb-8 flex items-center justify-between">
-        <Button
-          variant="ghost"
-          onClick={handleBackClick}
-          className={`back-button`}
-          startIcon={<ArrowLeft className="w-5 h-5" />}
-        >
-          Back to Notes
-        </Button>
-        
-        <Button
-          variant="ghost"
-          onClick={handleDeleteNote}
-          className={`delete-button`}
-          startIcon={<Trash2 className="w-5 h-5" />}
-          disabled={isFromDifferentCampaign} // Disable delete for cross-campaign notes to prevent confusion
-        >
-          Delete
-        </Button>
-      </div>
-
       {/* Warning banner for cross-campaign notes */}
       {isFromDifferentCampaign && (
-        <div className="mb-6 p-4 rounded-lg border-l-4 status-warning">
+        <div className="mb-6 p-4 rounded-lg border-l-4 status-unknown">
           <div className="flex items-start gap-3">
             <ExternalLink className="w-5 h-5 mt-0.5 flex-shrink-0" />
             <div>
@@ -228,8 +201,8 @@ const NotePage: React.FC = () => {
                 Note from Different Campaign
               </Typography>
               <Typography variant="body-sm" color="secondary">
-                This note belongs to <span className="font-medium">{noteCampaign?.name || 'Unknown Campaign'}</span>, 
-                not your currently active campaign ({activeCampaign?.name}). 
+                This note belongs to <span className="font-medium">{noteCampaign?.name || 'Unknown Campaign'}</span>,
+                not your currently active campaign ({activeCampaign?.name}).
                 You can view it but some features like entity extraction may not work as expected.
               </Typography>
             </div>
@@ -237,38 +210,46 @@ const NotePage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="space-y-6 col-span-2">
-          <NoteEditor 
-            ref={noteEditorRef}
-            noteId={noteId}
-            onSave={refreshReferences}
-            readOnly={isFromDifferentCampaign} // Make cross-campaign notes read-only
-          />
-        </div>
-        <div className="space-y-6">
-          {/* Only show entity extraction for notes in the active campaign */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
+        <NoteEditor
+          ref={noteEditorRef}
+          noteId={noteId}
+          readOnly={isFromDifferentCampaign} // Make cross-campaign notes read-only
+          onBack={handleBackClick}
+          onArchive={handleArchiveNote}
+          onDelete={() => setIsDeleteDialogOpen(true)}
+        />
+
+        <div className="space-y-4">
+          {/* Only show campaign links for notes in the active campaign */}
           {!isFromDifferentCampaign && (
-            <EntityExtractor 
+            <CampaignLinksPanel
               noteId={noteId}
-              existingReferences={foundReferences}
-              referencesSearchComplete={referencesSearchComplete}
-              onEntityConverted={refreshReferences}
               getCurrentEditorContent={getCurrentEditorContent}
               saveCurrentEditorContent={saveCurrentEditorContent}
             />
           )}
-          <NoteReferences 
-            noteId={noteId} 
-            key={referenceUpdateTrigger}
-            onReferencesFound={handleReferencesFound}
-            onSearchComplete={handleSearchComplete}
-          />
+          <UsageMeter />
         </div>
       </div>
 
-      {/* Floating usage indicator - only shows on note pages */}
-      <FloatingUsageIndicator />
+      <Dialog
+        open={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        title="Delete this note?"
+      >
+        <Typography color="secondary" className="mb-4">
+          This permanently removes the note and everything in it. This cannot be undone.
+        </Typography>
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleConfirmDelete} disabled={isDeleting}>
+            Delete note
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 };
