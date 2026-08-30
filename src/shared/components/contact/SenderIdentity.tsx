@@ -76,12 +76,14 @@ const SenderIdentity: React.FC<SenderIdentityProps> = ({
         data-testid="sender-avatar"
         className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-secondary typography"
       >
-        {(signedInName || "?").charAt(0).toUpperCase()}
+        {(signedInName || signedInEmail || "?").charAt(0).toUpperCase()}
       </div>
 
       <div className="flex-1 min-w-0">
         <Typography variant="body">
-          {`Sending as ${signedInName} · ${signedInEmail}`}
+          {signedInName
+            ? `Sending as ${signedInName} · ${signedInEmail}`
+            : `Sending as ${signedInEmail}`}
         </Typography>
         <Typography variant="body-sm" color="secondary">
           We'll attach your group, campaign and app version so you don't have to describe them.

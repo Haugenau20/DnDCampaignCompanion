@@ -931,3 +931,40 @@
   background-color: var(--bg-accent);
   border-left: 4px solid var(--color-primary);
 }
+
+/* ====== CHIP (single-select pill) ====== */
+/*
+  Colour only -- pair with Tailwind's `border` for the width, because
+  --border-width-sm is empty in this file and injected per theme.
+
+  Chips deliberately do NOT reuse `.card` or `.button-primary`, which is how
+  the first version was built and why it broke in the medieval theme:
+
+  - `.card` is not a neutral surface. theme-effects.css gives medieval cards
+    decorative ::before/::after corner flourishes and a thicker border, so
+    every UNSELECTED chip arrived wearing card ornaments.
+  - `--button-primary-bg` is tuned for buttons sitting on a card. In medieval
+    it is #E8D0AA, pale tan, which on the #FDF5E6 parchment page is nearly the
+    same value -- so the SELECTED chip was the faintest thing in the row.
+
+  Together those inverted the hierarchy: selection read as less prominent than
+  non-selection. Filling the selected chip with --color-primary and taking the
+  text from --bg-primary inverts the page's own two strongest tokens, which
+  every theme already guarantees contrast between: #2563EB, #8AB4F8 and
+  #8B0000 against their respective page grounds.
+*/
+.chip {
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+}
+
+.chip:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.chip-selected {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--bg-primary);
+}

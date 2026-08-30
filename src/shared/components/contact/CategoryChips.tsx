@@ -48,10 +48,8 @@ const CategoryChips: React.FC<CategoryChipsProps> = ({
             disabled={disabled}
             onClick={() => onChange(category.id)}
             className={clsx(
-              "button rounded-full px-4 py-2 text-sm border",
-              isSelected
-                ? "button-primary"
-                : "card card-border typography"
+              "button chip rounded-full border px-4 py-2 text-sm",
+              isSelected && "chip-selected"
             )}
           >
             {category.chipLabel}

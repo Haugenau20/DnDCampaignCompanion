@@ -63,6 +63,24 @@ describe("SenderIdentity", () => {
     });
   });
 
+  // On a hard page load the group profile resolves after the auth user, so
+  // there is a real window in which the email is known and the username is
+  // not. The first version rendered "Sending as null · dm@example.com".
+  describe("before the group profile has loaded", () => {
+    it("names the sender by email rather than showing the word null", () => {
+      render(<SenderIdentity {...baseProps} signedInName={null} />);
+
+      expect(screen.getByText("Sending as dm@example.com")).toBeInTheDocument();
+      expect(screen.queryByText(/null/)).not.toBeInTheDocument();
+    });
+
+    it("falls back to the email's initial for the avatar", () => {
+      render(<SenderIdentity {...baseProps} signedInName={null} />);
+
+      expect(screen.getByTestId("sender-avatar")).toHaveTextContent("D");
+    });
+  });
+
   describe("showing the inputs", () => {
     it("asks for a name and an email", () => {
       render(<SenderIdentity {...baseProps} showInputs />);
