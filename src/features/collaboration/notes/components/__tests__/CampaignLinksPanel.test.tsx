@@ -131,6 +131,63 @@ describe('CampaignLinksPanel', () => {
     });
   });
 
+  describe('not scanned yet', () => {
+    test('should say so for a note that has never been scanned', () => {
+      setupMocks();
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.getByText('Not scanned yet.')).toBeInTheDocument();
+      // Distinct from the post-scan message.
+      expect(screen.queryByText(/no new names found/i)).not.toBeInTheDocument();
+    });
+
+    test('should not say so once the note carries stored entities', () => {
+      setupMocks({
+        note: makeNote({
+          extractedEntities: [
+            {
+              id: 'ent-1',
+              text: 'Black Spider',
+              type: 'npc',
+              confidence: 0.91,
+              isConverted: false,
+              createdAt: '2024-01-15T10:00:00.000Z',
+            },
+          ],
+        }),
+      });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.queryByText('Not scanned yet.')).not.toBeInTheDocument();
+    });
+
+    test('should not say so when the note already links to campaign entities', () => {
+      setupMocks({
+        references: [
+          { id: 'npc-1', type: 'npc', title: 'Gundren', matchingText: ['Gundren'] },
+        ],
+      });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.queryByText('Not scanned yet.')).not.toBeInTheDocument();
+    });
+
+    test('should give way to the post-scan message once a scan completes empty', async () => {
+      setupMocks();
+      mockExtractWithOpenAI.mockResolvedValue([]);
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.getByText('Not scanned yet.')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('No new names found in this note.')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('Not scanned yet.')).not.toBeInTheDocument();
+    });
+  });
+
   describe('matched entities', () => {
     const references: PotentialReference[] = [
       { id: 'npc-1', type: 'npc', title: 'Gundren Rockseeker', matchingText: ['Gundren Rockseeker'] },

@@ -340,6 +340,23 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
   const isProcessing = isExtracting || hookIsExtracting || isSavingBeforeExtraction;
   const detections = extractedEntities.filter(entity => !entity.isConverted);
 
+  /**
+   * Whether this note looks like it has never been through a scan.
+   *
+   * Nothing on the note records "was scanned" -- adding such a field is out of
+   * scope -- so this is inferred: no stored entities, no matched references,
+   * and no scan completed in this session. That makes a note which WAS scanned
+   * and genuinely found nothing indistinguishable from one never scanned, once
+   * the session ends. The imprecision is deliberate and only ever understates
+   * progress; it never claims a scan happened when it did not.
+   */
+  const storedEntityCount = getNoteById(noteId)?.extractedEntities.length ?? 0;
+  const looksUnscanned =
+    !scanFoundNothing &&
+    !isProcessing &&
+    storedEntityCount === 0 &&
+    references.length === 0;
+
   return (
     <div className="campaign-links card rounded-xl p-4">
       {/* Header — always rendered, even when both groups are empty */}
@@ -363,6 +380,12 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
           Scan note
         </Button>
       </div>
+
+      {looksUnscanned && (
+        <Typography variant="body-sm" color="muted" className="mt-4">
+          Not scanned yet.
+        </Typography>
+      )}
 
       {scanFoundNothing && detections.length === 0 && (
         <Typography variant="body-sm" color="secondary" className="mt-4">
