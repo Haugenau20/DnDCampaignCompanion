@@ -5,11 +5,18 @@ import { useUsageContext } from "../context/UsageContext";
 import { UsagePeriod } from "../types";
 import { clsx } from "clsx";
 
-/** The three periods, in the order they are rendered, with their labels. */
-const PERIODS: Array<{ key: UsagePeriod; label: string }> = [
-  { key: "daily", label: "Today" },
-  { key: "weekly", label: "This week" },
-  { key: "monthly", label: "This month" },
+/**
+ * The three periods in render order.
+ *
+ * `label` names the window the count covers ("Today"); `allowance` names the
+ * quota that refills ("Daily"). They are separate because the reset sentence
+ * needs the second: "Today resets tomorrow" reads as a contradiction, while
+ * "Daily allowance resets tomorrow" is what actually happens.
+ */
+const PERIODS: Array<{ key: UsagePeriod; label: string; allowance: string }> = [
+  { key: "daily", label: "Today", allowance: "Daily" },
+  { key: "weekly", label: "This week", allowance: "Weekly" },
+  { key: "monthly", label: "This month", allowance: "Monthly" },
 ];
 
 /**
@@ -26,7 +33,7 @@ function formatReset(iso: string): string | null {
 
   const now = new Date();
   const time = date.toLocaleTimeString(undefined, {
-    hour: "numeric",
+    hour: "2-digit",
     minute: "2-digit",
   });
 
@@ -95,14 +102,19 @@ const UsageMeter: React.FC = () => {
     );
   }
 
-  const rows = PERIODS.map(({ key, label }) => {
+  const rows = PERIODS.map(({ key, label, allowance }) => {
     const period = usage[key];
     // An admin's custom limit overrides the daily allowance only — the same
     // rule the old indicator's ring and tooltip applied.
     const limit = key === "daily" && customLimit ? customLimit : period.limit;
     const ratio = limit > 0 ? period.count / limit : 0;
 
-    return { key, label, count: period.count, limit, ratio };
+    // Every row carries its own reset, so the two periods that aren't binding
+    // are still discoverable on hover rather than being unreachable.
+    const reset = formatReset(nextReset[key]);
+    const resetSentence = reset ? `${allowance} allowance resets ${reset}.` : null;
+
+    return { key, label, count: period.count, limit, ratio, resetSentence };
   });
 
   // Whichever allowance runs out first is the one that actually gates a scan.
@@ -110,7 +122,7 @@ const UsageMeter: React.FC = () => {
     ? rows.find(r => r.key === exceededPeriod)
     : rows.reduce((worst, r) => (r.ratio > worst.ratio ? r : worst), rows[0]);
 
-  const resetText = binding ? formatReset(nextReset[binding.key]) : null;
+  const bindingReset = binding?.resetSentence ?? null;
 
   return (
     <Shell>
@@ -123,6 +135,7 @@ const UsageMeter: React.FC = () => {
             <div
               key={row.key}
               data-testid={`usage-row-${row.key}`}
+              title={row.resetSentence ?? undefined}
               className={clsx(
                 isExceeded && "status-failed",
                 !isExceeded && isBinding && "status-unknown"
@@ -156,9 +169,9 @@ const UsageMeter: React.FC = () => {
         })}
       </div>
 
-      {resetText && (
+      {bindingReset && (
         <Typography variant="caption" color="muted" className="block mt-2">
-          {`${binding?.label} resets ${resetText}.`}
+          {bindingReset}
         </Typography>
       )}
     </Shell>

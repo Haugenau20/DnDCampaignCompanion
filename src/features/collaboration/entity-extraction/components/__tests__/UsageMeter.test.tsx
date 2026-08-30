@@ -131,10 +131,46 @@ describe('UsageMeter', () => {
       expect(row('daily')).toHaveClass('status-failed');
     });
 
-    test('should name when the binding period resets', () => {
+    test('should name when the binding allowance resets', () => {
       setupUsage({ daily: { count: 9, limit: 10 } });
       render(<UsageMeter />);
-      expect(screen.getByText(/resets/i)).toBeInTheDocument();
+
+      // "Today resets tomorrow" reads as a contradiction -- the footnote names
+      // the ALLOWANCE, not the period whose row is highlighted.
+      expect(screen.getByText(/^Daily allowance resets /)).toBeInTheDocument();
+      expect(screen.queryByText(/^Today resets/)).not.toBeInTheDocument();
+    });
+
+    test('should name the weekly allowance when the week is binding', () => {
+      setupUsage({
+        daily: { count: 1, limit: 25 }, // 4%
+        weekly: { count: 290, limit: 300 }, // 96% -- binding
+        monthly: { count: 290, limit: 1000 }, // 29%
+      });
+      render(<UsageMeter />);
+
+      expect(screen.getByText(/^Weekly allowance resets /)).toBeInTheDocument();
+    });
+  });
+
+  describe('per-period reset on hover', () => {
+    test('should give every row its own reset tooltip', () => {
+      setupUsage({});
+      render(<UsageMeter />);
+
+      expect(row('daily')).toHaveAttribute(
+        'title',
+        expect.stringMatching(/^Daily allowance resets /) as unknown as string
+      );
+      expect(row('weekly').getAttribute('title')).toMatch(/^Weekly allowance resets /);
+      expect(row('monthly').getAttribute('title')).toMatch(/^Monthly allowance resets /);
+    });
+
+    test('should not carry a tooltip when a reset time is unknown', () => {
+      setupUsage({}, {}, { nextReset: { daily: '', weekly: '', monthly: '' } });
+      render(<UsageMeter />);
+
+      expect(row('daily')).not.toHaveAttribute('title');
     });
   });
 
