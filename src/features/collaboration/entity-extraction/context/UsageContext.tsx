@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { UsageStatus } from '../types';
 import EntityExtractionService from '../services/EntityExtractionService';
+import { useAuth } from 'features/user-management';
 
 interface UsageContextValue {
   usageStatus: UsageStatus | null;
@@ -35,7 +36,9 @@ export const UsageProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   } | null>(null);
   
   const entityService = EntityExtractionService.getInstance();
-  const hasLoadedUsage = useRef(false);
+  const { user } = useAuth();
+  /** uid whose usage has already been fetched -- see the load effect below. */
+  const loadedForUid = useRef<string | null>(null);
 
   /**
    * Refresh usage status from server
@@ -48,11 +51,10 @@ export const UsageProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setUsageStatus(status);
         setIsUsageLimitExceeded(status.limitExceeded);
       }
-      // Always mark as loaded, even for null (unauthenticated) responses:
-      hasLoadedUsage.current = true;
+      // Nothing to mark here: the load effect below claims the uid BEFORE
+      // calling, so a null or thrown response cannot retrigger it (bug #650).
     } catch (error) {
       console.error('Error refreshing usage status:', error);
-      hasLoadedUsage.current = true; // Prevent retry on error too
     } finally {
       setIsLoadingUsage(false);
     }
@@ -90,7 +92,9 @@ export const UsageProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUsageStatus(null);
     setIsUsageLimitExceeded(false);
     setContactInfo(null);
-    hasLoadedUsage.current = false;
+    // Release the uid claim so the next signed-in user (or the same one after
+    // a manual limit increase) is fetched afresh.
+    loadedForUid.current = null;
     entityService.clearUsageCache();
   }, [entityService]);
 
@@ -103,12 +107,28 @@ export const UsageProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return !usageStatus.limitExceeded;
   }, [usageStatus]);
 
-  // Load initial usage status
+  /**
+   * Load usage once per signed-in user.
+   *
+   * This used to fire on mount and guard itself with a plain boolean. But
+   * `fetchUsageStatus` reads `auth.currentUser`, which is still null on the
+   * first render while Firebase restores the session — so that fetch returned
+   * null WITHOUT ever calling `getUsageStatus`, flipped the guard, and never
+   * tried again. Usage therefore stayed empty for the whole session unless a
+   * scan happened to populate it from its own response, which is why the
+   * usage meter appeared only after someone's first scan.
+   *
+   * Keying on the uid fixes that and is still loop-proof: the ref is set
+   * BEFORE the call, so a response of null cannot retrigger it (bug #650).
+   * A different uid — a genuine account switch — legitimately refetches.
+   */
   useEffect(() => {
-    if (!hasLoadedUsage.current && !isLoadingUsage) {
-      refreshUsageStatus();
-    }
-  }, [refreshUsageStatus, isLoadingUsage]);
+    const uid = user?.uid ?? null;
+    if (!uid || loadedForUid.current === uid) return;
+
+    loadedForUid.current = uid;
+    refreshUsageStatus();
+  }, [user?.uid, refreshUsageStatus]);
 
     const value: UsageContextValue = {
     usageStatus,

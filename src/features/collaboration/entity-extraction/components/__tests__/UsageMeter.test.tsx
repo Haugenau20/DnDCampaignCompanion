@@ -13,9 +13,11 @@ type Period = { count: number; limit: number };
 function setupUsage(
   periods: { daily?: Period; weekly?: Period; monthly?: Period } | null,
   extra: any = {},
-  status: any = {}
+  status: any = {},
+  isLoadingUsage = false
 ) {
   (useUsageContext as jest.Mock).mockReturnValue({
+    isLoadingUsage,
     usageStatus: periods
       ? {
           usage: {
@@ -152,9 +154,48 @@ describe('UsageMeter', () => {
     });
   });
 
-  test('should render nothing before usage data arrives', () => {
-    setupUsage(null);
-    const { container } = render(<UsageMeter />);
-    expect(container).toBeEmptyDOMElement();
+  describe('always present', () => {
+    // The meter used to render nothing at all until usage data arrived, which
+    // in practice meant it was invisible until the user's FIRST scan -- the
+    // moment it is least useful to hide, since that is when someone is trying
+    // to find out what their allowance is.
+
+    test('should still name itself while usage is loading', () => {
+      setupUsage(null, {}, {}, true);
+      render(<UsageMeter />);
+
+      expect(screen.getByText('Smart detection')).toBeInTheDocument();
+      expect(screen.getByText(/checking your allowance/i)).toBeInTheDocument();
+    });
+
+    test('should still name itself when usage could not be fetched', () => {
+      setupUsage(null);
+      render(<UsageMeter />);
+
+      expect(screen.getByText('Smart detection')).toBeInTheDocument();
+      expect(screen.getByText(/unavailable/i)).toBeInTheDocument();
+    });
+
+    test('should never invent limits it does not have', () => {
+      setupUsage(null);
+      render(<UsageMeter />);
+
+      // No fabricated "0 of 10" -- an unknown allowance is stated as unknown.
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      expect(screen.queryByText(/ of /)).not.toBeInTheDocument();
+    });
+
+    test('should show every period at zero rather than hiding', () => {
+      setupUsage({
+        daily: { count: 0, limit: 10 },
+        weekly: { count: 0, limit: 50 },
+        monthly: { count: 0, limit: 200 },
+      });
+      render(<UsageMeter />);
+
+      expect(within(row('daily')).getByText('0 of 10')).toBeInTheDocument();
+      expect(within(row('weekly')).getByText('0 of 50')).toBeInTheDocument();
+      expect(within(row('monthly')).getByText('0 of 200')).toBeInTheDocument();
+    });
   });
 });

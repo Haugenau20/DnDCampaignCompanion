@@ -53,26 +53,45 @@ function formatReset(iso: string): string | null {
  * limit — is toned and carries the reset time, since it is the only one the
  * reader can act on.
  */
-const UsageMeter: React.FC = () => {
-  const { usageStatus } = useUsageContext();
+/** The block's heading, rendered in every state so the panel never vanishes. */
+const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="usage-meter card rounded-xl p-4">
+    <Typography variant="body-sm" className="font-medium">
+      Smart detection
+    </Typography>
+    {children}
+  </div>
+);
 
-  // Nothing to say until usage has loaded. A skeleton here would be a second
-  // unexplained shape in the corner, which is the problem being fixed.
-  if (!usageStatus) return null;
+const UsageMeter: React.FC = () => {
+  const { usageStatus, isLoadingUsage } = useUsageContext();
+
+  // The block is ALWAYS rendered. It used to return null until usage data
+  // arrived, which meant it was invisible until the user's first scan --
+  // precisely when someone most wants to know what their allowance is. Zero
+  // usage is a real, informative state ("0 of 10"), not an absence.
+  if (!usageStatus) {
+    return (
+      <Shell>
+        <Typography variant="caption" color="muted" className="block mt-0.5">
+          {isLoadingUsage
+            ? "Checking your allowance…"
+            : "Usage unavailable right now."}
+        </Typography>
+      </Shell>
+    );
+  }
 
   const { usage, exceededPeriod, nextReset } = usageStatus;
   const { isUnlimited, customLimit } = usage;
 
   if (isUnlimited) {
     return (
-      <div className="usage-meter card rounded-xl p-4">
-        <Typography variant="body-sm" className="font-medium">
-          Smart detection
-        </Typography>
+      <Shell>
         <Typography variant="caption" color="secondary" className="block mt-0.5">
           Unlimited scans
         </Typography>
-      </div>
+      </Shell>
     );
   }
 
@@ -94,11 +113,7 @@ const UsageMeter: React.FC = () => {
   const resetText = binding ? formatReset(nextReset[binding.key]) : null;
 
   return (
-    <div className="usage-meter card rounded-xl p-4">
-      <Typography variant="body-sm" className="font-medium">
-        Smart detection
-      </Typography>
-
+    <Shell>
       <div className="mt-2 space-y-2">
         {rows.map(row => {
           const isBinding = binding?.key === row.key;
@@ -146,7 +161,7 @@ const UsageMeter: React.FC = () => {
           {`${binding?.label} resets ${resetText}.`}
         </Typography>
       )}
-    </div>
+    </Shell>
   );
 };
 

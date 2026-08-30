@@ -43,6 +43,18 @@ jest.mock("../../services/EntityExtractionService", () => ({
   },
 }));
 
+// Usage is fetched per authenticated user: `auth.currentUser` is null on the
+// first render while auth restores, so a fetch issued then never reaches the
+// network. See the "waits for auth" block below.
+jest.mock("@/features/user-management", () => ({ useAuth: jest.fn() }));
+
+const { useAuth } = require("@/features/user-management");
+
+/** Signed in by default — the state nearly every test here assumes. */
+function setUser(uid: string | null = "user-1") {
+  (useAuth as jest.Mock).mockReturnValue({ user: uid ? { uid } : null });
+}
+
 // ---------------------------------------------------------------------------
 // Helpers / Fixtures
 // ---------------------------------------------------------------------------
@@ -83,6 +95,7 @@ describe("UsageContext Behavioral Testing", () => {
     // Default: fetchUsageStatus resolves to a valid status (avoids bug #650 loop)
     mockFetchUsageStatus.mockResolvedValue(makeUsageStatus());
     mockClearUsageCache.mockReturnValue(undefined);
+    setUser();
   });
 
   // -------------------------------------------------------------------------
@@ -566,6 +579,61 @@ describe("UsageContext Behavioral Testing", () => {
       await waitForInitialLoad(result);
 
       expect(result.current.hasCustomLimit).toBe(true);
+    });
+  });
+  describe("waits for auth before fetching", () => {
+    test("should not fetch while there is no authenticated user", () => {
+      setUser(null);
+
+      renderHook(() => useUsageContext(), { wrapper });
+
+      // fetchUsageStatus bails on a null auth.currentUser WITHOUT calling the
+      // server, so a fetch issued now is wasted -- and the old guard then
+      // marked usage "loaded", so it never tried again for the whole session.
+      expect(mockFetchUsageStatus).not.toHaveBeenCalled();
+    });
+
+    test("should fetch once the user arrives", async () => {
+      setUser(null);
+      const { rerender } = renderHook(() => useUsageContext(), { wrapper });
+      expect(mockFetchUsageStatus).not.toHaveBeenCalled();
+
+      setUser("user-1");
+      rerender();
+
+      await waitFor(() => expect(mockFetchUsageStatus).toHaveBeenCalledTimes(1));
+    });
+
+    test("should fetch exactly once per user, even across re-renders", async () => {
+      const { rerender } = renderHook(() => useUsageContext(), { wrapper });
+      await waitFor(() => expect(mockFetchUsageStatus).toHaveBeenCalledTimes(1));
+
+      rerender();
+      rerender();
+
+      expect(mockFetchUsageStatus).toHaveBeenCalledTimes(1);
+    });
+
+    test("should not loop when the fetch keeps resolving null (bug #650)", async () => {
+      mockFetchUsageStatus.mockResolvedValue(null);
+
+      const { rerender } = renderHook(() => useUsageContext(), { wrapper });
+      await waitFor(() => expect(mockFetchUsageStatus).toHaveBeenCalledTimes(1));
+
+      rerender();
+      rerender();
+
+      expect(mockFetchUsageStatus).toHaveBeenCalledTimes(1);
+    });
+
+    test("should re-fetch when a different user signs in", async () => {
+      const { rerender } = renderHook(() => useUsageContext(), { wrapper });
+      await waitFor(() => expect(mockFetchUsageStatus).toHaveBeenCalledTimes(1));
+
+      setUser("user-2");
+      rerender();
+
+      await waitFor(() => expect(mockFetchUsageStatus).toHaveBeenCalledTimes(2));
     });
   });
 });
