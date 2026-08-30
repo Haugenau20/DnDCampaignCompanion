@@ -1400,6 +1400,24 @@ describe("FirebaseContext Behavioral Testing", () => {
       expect(result.current.activeGroupId).toBe("group-1");
     });
 
+    test("switchGroup refuses when there is no authenticated user", async () => {
+      const { result } = await signInWithTwoGroups();
+      mockUpdateUserProfile.mockClear();
+      mockGetCurrentUserId.mockReturnValue(null);
+
+      await act(async () => {
+        await expect(result.current.switchGroup("group-2")).rejects.toThrow(
+          "Not authenticated"
+        );
+      });
+
+      // The old useGroups.switchGroup coerced a null id to '' and wrote to
+      // users/, creating a document at an empty path segment. The provider
+      // refuses instead, so nothing is written and the context does not move.
+      expect(mockUpdateUserProfile).not.toHaveBeenCalled();
+      expect(result.current.activeGroupId).toBe("group-1");
+    });
+
     test("switchCampaign moves activeCampaignId in React state", async () => {
       const { result } = await signInWithTwoGroups();
 
