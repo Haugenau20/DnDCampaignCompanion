@@ -104,6 +104,20 @@
   border: var(--border-width-sm) solid var(--card-border);
 }
 
+/*
+  Colour only -- pair with a directional Tailwind width such as `border-t` or
+  `divide-y` to draw a single hairline in the card border's theme colour.
+
+  `.card-border` above cannot do this job: it is the `border` SHORTHAND, so it
+  sets a width on all four sides. Combining it with `border-t` therefore draws
+  a full box rather than a top rule. That is invisible where the element sits
+  flush against a card edge, and very visible where it is inset -- which is how
+  it surfaced, as a rectangle around each inset row of the notes index.
+*/
+.card-divider {
+  border-color: var(--card-border);
+}
+
 .card:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);

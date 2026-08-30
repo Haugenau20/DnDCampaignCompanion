@@ -340,7 +340,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   return (
     <div className="note-editor card rounded-xl flex flex-col min-h-[70vh]">
       {/* Top bar */}
-      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b card-border text-[13px]">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b card-divider text-[13px]">
         <button
           type="button"
           onClick={onBack}
@@ -410,7 +410,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       </div>
 
       {/* Footer: save state stated once, and only once */}
-      <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t card-border bg-secondary text-[13px]">
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t card-divider bg-secondary text-[13px]">
         {getStatusIndicator()}
         <Typography variant="body-sm" color="secondary" className="text-[13px]">
           {`${wordCount.toLocaleString()} ${wordCount === 1 ? "word" : "words"} · Ctrl+S (⌘S on Mac) to save now`}

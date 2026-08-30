@@ -310,6 +310,25 @@ describe('NotesList', () => {
     });
   });
 
+  describe('row dividers', () => {
+    test('should separate rows with a hairline, not a box around each row', () => {
+      setupMocks({ notes: [makeNote(), makeNote(), makeNote()] });
+      const { container } = render(<NotesList />);
+
+      const dividers = container.querySelectorAll('.border-t');
+      // One divider per row after the first.
+      expect(dividers).toHaveLength(2);
+
+      dividers.forEach(divider => {
+        // `card-border` is the `border` SHORTHAND -- it sets a width on all
+        // four sides, so pairing it with `border-t` drew a rectangle around
+        // every inset row. `card-divider` is colour only.
+        expect(divider).toHaveClass('card-divider');
+        expect(divider).not.toHaveClass('card-border');
+      });
+    });
+  });
+
   describe('collapsing a long list', () => {
     test('should show the first four rows and an expander', () => {
       setupMocks({ notes: Array.from({ length: 9 }, () => makeNote()) });

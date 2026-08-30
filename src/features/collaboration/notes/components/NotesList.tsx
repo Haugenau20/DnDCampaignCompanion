@@ -221,9 +221,14 @@ const NotesList: React.FC = () => {
         <>
           <div className="card rounded-xl overflow-hidden">
             {shownNotes.map((note, index) => (
+              // The divider is inset 20px from the container edge, so it sits
+              // on a wrapper with a horizontal margin and the row pulls itself
+              // back out to full width. `card-divider` is colour only -- the
+              // `card-border` shorthand used here previously set a width on
+              // all four sides and drew a rectangle around every inset row.
               <div
                 key={note.id}
-                className={clsx(index > 0 && "border-t card-border mx-5")}
+                className={clsx(index > 0 && "border-t card-divider mx-5")}
               >
                 <div className={clsx(index > 0 && "-mx-5")}>
                   <NoteCard note={note} onSaveNow={handleSaveNow} />
