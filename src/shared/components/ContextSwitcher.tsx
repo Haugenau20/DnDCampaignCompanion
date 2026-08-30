@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useGroups, useCampaigns, JoinGroupDialog } from 'features/user-management';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
+import type { Campaign } from 'core/types/user';
 import { 
   ChevronDown, 
   Settings, 
@@ -29,24 +30,68 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
   onClose 
 }) => {
   const { activeGroupId, setActiveGroup } = useGroups();
-  const { activeCampaignId, setActiveCampaign } = useCampaigns();
-  
+  const {
+    activeCampaignId,
+    setActiveCampaign,
+    campaigns: activeGroupCampaigns,
+    getCampaigns,
+  } = useCampaigns();
+
   // Local state for selections (pure UI state, no backend calls)
   const [isOpen, setIsOpen] = useState(inDialog); // Always open in dialog mode
   const [showJoinGroupDialog, setShowJoinGroupDialog] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(activeGroupId);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(activeCampaignId);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  /**
+   * Campaigns belonging to a group the user has selected but not yet applied.
+   * `null` while the active group is the selected one, because the context
+   * already holds that group's list.
+   */
+  const [otherGroupCampaigns, setOtherGroupCampaigns] = useState<Campaign[] | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+
   // Update local selections when active IDs change (initial load)
   useEffect(() => {
     setSelectedGroupId(activeGroupId);
   }, [activeGroupId]);
-  
+
+  const isSelectedGroupActive = selectedGroupId === activeGroupId;
+
+  /**
+   * Keep the campaign list and the campaign selection tied to the SELECTED
+   * group rather than the active one.
+   *
+   * `useCampaigns().campaigns` is populated by FirebaseContext for the ACTIVE
+   * group, so selecting a different group used to leave the active group's
+   * campaigns on screen -- and applying then wrote a group and a campaign that
+   * did not belong together. Selecting another group now loads that group's
+   * campaigns and moves the selection onto one of them, so a stale id can
+   * never survive the change.
+   */
   useEffect(() => {
-    setSelectedCampaignId(activeCampaignId);
-  }, [activeCampaignId]);
-  
+    if (!selectedGroupId || isSelectedGroupActive) {
+      setOtherGroupCampaigns(null);
+      setSelectedCampaignId(activeCampaignId);
+      return;
+    }
+
+    let cancelled = false;
+    getCampaigns(selectedGroupId).then((list) => {
+      if (cancelled) return;
+      setOtherGroupCampaigns(list);
+      setSelectedCampaignId(list[0]?.id ?? null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedGroupId, isSelectedGroupActive, activeCampaignId, getCampaigns]);
+
+  const visibleCampaigns = isSelectedGroupActive
+    ? activeGroupCampaigns
+    : otherGroupCampaigns ?? [];
+
   // Determine if there are changes to apply
   const hasChanges = selectedGroupId !== activeGroupId || selectedCampaignId !== activeCampaignId;
   
@@ -64,23 +109,46 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [inDialog]);
   
-  // Apply changes handler - only now do we call the backend
+  /**
+   * Apply the staged selection.
+   *
+   * The group and the campaign are two separate writes, so a failure between
+   * them would otherwise leave the app in exactly the broken pairing this
+   * component now prevents: the new group active, the old group's campaign
+   * still selected. If the campaign write fails, put the group back and say
+   * so, rather than reloading into a state nobody asked for.
+   */
   const handleApplyChanges = async () => {
+    setApplyError(null);
+    const previousGroupId = activeGroupId;
+    let groupChanged = false;
+
     try {
-      // Only change group if it's different
-      if (selectedGroupId !== activeGroupId && selectedGroupId) {
+      if (selectedGroupId && selectedGroupId !== activeGroupId) {
         await setActiveGroup(selectedGroupId);
+        groupChanged = true;
       }
-      
-      // Only change campaign if it's different
-      if (selectedCampaignId !== activeCampaignId && selectedCampaignId) {
+
+      if (selectedCampaignId && selectedCampaignId !== activeCampaignId) {
         await setActiveCampaign(selectedCampaignId);
       }
-      
+
       // Reload page to refresh all data and UI
       window.location.reload();
     } catch (error) {
-      console.error("Error applying context changes:", error);
+      if (groupChanged && previousGroupId) {
+        try {
+          await setActiveGroup(previousGroupId);
+        } catch (rollbackError) {
+          console.error("Could not restore the previous group:", rollbackError);
+        }
+      }
+
+      setApplyError(
+        error instanceof Error
+          ? error.message
+          : "Could not switch group or campaign."
+      );
     }
   };
   
@@ -99,10 +167,9 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
       <div className="relative w-full" ref={dropdownRef}>
         {/* Header button - only shown in header mode */}
         {!inDialog && (
-          <ContextButton 
-            isOpen={isOpen} 
-            setIsOpen={setIsOpen} 
-            hasChanges={hasChanges}
+          <ContextButton
+            isOpen={isOpen}
+            setIsOpen={setIsOpen}
           />
         )}
         
@@ -121,29 +188,39 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
             />
             
             {/* Campaigns Section */}
-            <CampaignSelector 
-              activeGroupId={activeGroupId}
+            <CampaignSelector
+              selectedGroupId={selectedGroupId}
               activeCampaignId={activeCampaignId}
               selectedCampaignId={selectedCampaignId}
+              campaigns={visibleCampaigns}
               onSelectCampaign={setSelectedCampaignId}
             />
-            
+
             {/* Action Buttons for Dialog Mode */}
             {inDialog && (
-              <div className="p-3 border-t flex justify-end gap-2">
-                <Button 
-                  onClick={handleApplyChanges}
-                  disabled={!hasChanges}
-                >
-                  Apply Changes
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={handleReset}
-                >
-                  Close Without Applying
-                </Button>
-              </div>
+              <>
+                {applyError && (
+                  <div className="px-3 pt-3">
+                    <Typography variant="body-sm" color="error">
+                      {applyError}
+                    </Typography>
+                  </div>
+                )}
+                <div className="p-3 border-t flex justify-end gap-2">
+                  <Button
+                    onClick={handleApplyChanges}
+                    disabled={!hasChanges}
+                  >
+                    Apply Changes
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleReset}
+                  >
+                    Close Without Applying
+                  </Button>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -169,7 +246,6 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
 const ContextButton: React.FC<{
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  hasChanges: boolean;
 }> = ({ isOpen, setIsOpen }) => {
   const { activeGroup } = useGroups();
   const { activeCampaign } = useCampaigns();
@@ -281,20 +357,21 @@ const GroupSelector: React.FC<{
  * Component for selecting campaigns
  */
 const CampaignSelector: React.FC<{
-  activeGroupId: string | null;
+  selectedGroupId: string | null;
   activeCampaignId: string | null;
   selectedCampaignId: string | null;
+  campaigns: Campaign[];
   onSelectCampaign: (campaignId: string) => void;
-}> = ({ 
-  activeGroupId, 
-  activeCampaignId, 
-  selectedCampaignId, 
-  onSelectCampaign 
+}> = ({
+  selectedGroupId,
+  activeCampaignId,
+  selectedCampaignId,
+  campaigns,
+  onSelectCampaign
 }) => {
-  const { campaigns } = useCampaigns();
-  
-  // Only show if a group is selected
-  if (!activeGroupId) return null;
+  // Only show once a group is selected -- the list belongs to the SELECTED
+  // group, so gating on the ACTIVE one was part of the bug.
+  if (!selectedGroupId) return null;
   
   return (
     <div className="p-2 border-t">

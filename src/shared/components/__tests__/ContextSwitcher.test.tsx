@@ -9,6 +9,7 @@ import ContextSwitcher from '../ContextSwitcher';
 // ---------------------------------------------------------------------------
 const mockSetActiveGroup = jest.fn();
 const mockSetActiveCampaign = jest.fn();
+const mockGetCampaigns = jest.fn();
 
 // ContextSwitcher consumes JoinGroupDialog through the domain barrel, so the
 // barrel mock re-exports the component stub defined further down.
@@ -75,6 +76,7 @@ function makeCampaignsMock(overrides = {}) {
     activeCampaignId: 'campaign-1',
     activeCampaign: mockCampaigns[0],
     setActiveCampaign: mockSetActiveCampaign,
+    getCampaigns: mockGetCampaigns,
     ...overrides,
   };
 }
@@ -94,6 +96,7 @@ describe('ContextSwitcher', () => {
     (useCampaigns as jest.Mock).mockReturnValue(makeCampaignsMock());
     mockSetActiveGroup.mockResolvedValue(undefined);
     mockSetActiveCampaign.mockResolvedValue(undefined);
+    mockGetCampaigns.mockResolvedValue([]);
     // Mock window.location.reload
     Object.defineProperty(window, 'location', {
       value: { reload: mockReload },
@@ -312,6 +315,76 @@ describe('ContextSwitcher', () => {
       });
 
       expect(mockSetActiveGroup).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Bug: a group could be applied together with another group's campaign
+  // -------------------------------------------------------------------------
+  describe('campaigns follow the selected group', () => {
+    const councilCampaigns = [{ id: 'campaign-3', name: 'Council Business' }];
+
+    test('lists the selected group\'s campaigns, not the active group\'s', async () => {
+      mockGetCampaigns.mockResolvedValue(councilCampaigns);
+      renderContextSwitcher({ inDialog: true });
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Order of the Phoenix'));
+      });
+
+      expect(mockGetCampaigns).toHaveBeenCalledWith('group-2');
+      expect(screen.getByText('Council Business')).toBeInTheDocument();
+      expect(screen.queryByText('Middle Earth Adventures')).not.toBeInTheDocument();
+    });
+
+    test('never applies a campaign belonging to a different group', async () => {
+      mockGetCampaigns.mockResolvedValue(councilCampaigns);
+      renderContextSwitcher({ inDialog: true });
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Order of the Phoenix'));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /apply changes/i }));
+      });
+
+      expect(mockSetActiveGroup).toHaveBeenCalledWith('group-2');
+      // campaign-1 belongs to group-1 and must not be carried across
+      expect(mockSetActiveCampaign).not.toHaveBeenCalledWith('campaign-1');
+      expect(mockSetActiveCampaign).toHaveBeenCalledWith('campaign-3');
+    });
+
+    test('returns to the active group\'s campaigns when it is reselected', async () => {
+      mockGetCampaigns.mockResolvedValue(councilCampaigns);
+      renderContextSwitcher({ inDialog: true });
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Order of the Phoenix'));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByText('Fellowship of the Ring'));
+      });
+
+      expect(screen.getByText('Middle Earth Adventures')).toBeInTheDocument();
+      expect(screen.queryByText('Council Business')).not.toBeInTheDocument();
+    });
+
+    test('restores the previous group when the campaign write fails', async () => {
+      mockGetCampaigns.mockResolvedValue(councilCampaigns);
+      mockSetActiveCampaign.mockRejectedValue(new Error('Campaign write failed'));
+      renderContextSwitcher({ inDialog: true });
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Order of the Phoenix'));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /apply changes/i }));
+      });
+
+      // The group is put back, so the app is never left in a broken pairing
+      expect(mockSetActiveGroup).toHaveBeenLastCalledWith('group-1');
+      expect(mockReload).not.toHaveBeenCalled();
+      expect(screen.getByText(/Campaign write failed/)).toBeInTheDocument();
     });
   });
 
