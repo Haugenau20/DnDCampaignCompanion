@@ -76,13 +76,19 @@ describe("Layout", () => {
       expect(screen.getByTestId("footer")).toBeInTheDocument();
     });
 
-    test("should render the FloatingUsageIndicator", () => {
+    // FloatingUsageIndicator's last render site was here. It self-gated to
+    // /notes/* routes but Layout wraps every route, so it appeared on every
+    // note page even after NotePage stopped rendering it directly (it was
+    // superseded there by UsageMeter in the note rail). Layout no longer
+    // renders it at all -- a deliberate decision, not an oversight. The
+    // component, its barrel export, and its own test suite are untouched.
+    test("should not render the FloatingUsageIndicator", () => {
       render(
         <Layout>
           <p>Content</p>
         </Layout>
       );
-      expect(screen.getByTestId("floating-usage")).toBeInTheDocument();
+      expect(screen.queryByTestId("floating-usage")).not.toBeInTheDocument();
     });
 
     test("should render the GlobalActionButton", () => {
