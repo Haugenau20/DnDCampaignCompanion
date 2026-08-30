@@ -4,13 +4,50 @@ import nodemailer from "nodemailer";
 import {rethrowHttpsError} from "./shared/httpsErrors";
 
 /**
+ * The set of things a person can contact us about.
+ *
+ * Mirrors `src/shared/components/contact/contact-categories.ts`. This package
+ * cannot import from `src/` -- it is a separate npm package with its own
+ * tsconfig -- so the ids and subject labels are duplicated on purpose. The
+ * design doc (section 4) is the single source of truth for both copies.
+ */
+const CATEGORY_SUBJECTS: Record<string, string> = {
+  "broken": "Bug report",
+  "feature": "Feature request",
+  "smart-detection": "Smart detection limit increase",
+  "account": "Account or group",
+  "other": "General enquiry",
+};
+
+/**
+ * Context the app attaches automatically so the sender does not have to
+ * describe their setup.
+ */
+interface ContactContext {
+  groupId?: string | null;
+  campaignId?: string | null;
+  route?: string | null;
+  appVersion?: string | null;
+}
+
+/**
  * Interface for contact form submission data
  */
 interface ContactFormData {
   name: string;
   email: string;
+  /** The selected category id. Optional: an older client may not send one. */
+  category?: string;
+  /**
+   * Free-text subject. Kept for compatibility with older clients, and still
+   * sent by the current one as a fallback for older deployments of this
+   * function. `category` wins when both are present.
+   */
   subject?: string;
   message: string;
+  /** The optional second field, currently only for smart-detection */
+  reason?: string;
+  context?: ContactContext;
 }
 
 // Your personal campaign email will be set as an environment variable
@@ -83,6 +120,63 @@ const sanitizeText = (text: string): string => {
 };
 
 /**
+ * Generate a short reference for one submission.
+ *
+ * Nothing is persisted: the reference exists so that a human can find the
+ * thread again in an inbox, and so a follow-up message can point at the
+ * first one. Four digits is enough for that and is short enough to quote.
+ *
+ * @returns A reference of the form CC-4192
+ */
+const generateReference = (): string => {
+  const digits = Math.floor(1000 + Math.random() * 9000);
+  return `CC-${digits}`;
+};
+
+/**
+ * Work out what to call this submission in the email subject.
+ *
+ * Prefers the typed category, falls back to a free-text subject from an
+ * older client, and finally to a generic label. The frontend deploys
+ * separately from this function, so neither half may assume the other has
+ * been updated.
+ *
+ * @param category - The category id, if the client sent one
+ * @param subject - The free-text subject, if the client sent one
+ * @returns A human-readable label for the subject line
+ */
+const composeSubjectLabel = (
+  category: string | undefined,
+  subject: string
+): string => {
+  if (category && CATEGORY_SUBJECTS[category]) {
+    return CATEGORY_SUBJECTS[category];
+  }
+  if (subject) {
+    return subject;
+  }
+  return "General enquiry";
+};
+
+/**
+ * Render the automatically attached context as plain-text lines.
+ *
+ * @param context - The context the client attached, if any
+ * @returns Zero or more `Label: value` lines
+ */
+const formatContextLines = (context: ContactContext | undefined): string[] => {
+  if (!context) {
+    return [];
+  }
+  const lines: string[] = [];
+  if (context.groupId) lines.push(`Group: ${context.groupId}`);
+  if (context.campaignId) lines.push(`Campaign: ${context.campaignId}`);
+  if (context.route) lines.push(`Came from: ${context.route}`);
+  if (context.appVersion) lines.push(`App version: ${context.appVersion}`);
+  return lines;
+};
+
+/**
  * Cloud function to handle contact form submissions using callable function pattern
  * This function sends emails via nodemailer and includes rate limiting protection
  */
@@ -94,7 +188,8 @@ export const sendContactEmail = functions.onCall(
   async (request: functions.CallableRequest<ContactFormData>) => {
     try {
       // Extract data from request
-      const {name, email, subject, message} = request.data;
+      const {name, email, category, subject, message, reason, context} =
+        request.data;
 
       // Validate required fields
       if (!name || !email || !message) {
@@ -117,6 +212,7 @@ export const sendContactEmail = functions.onCall(
       const sanitizedEmail = sanitizeText(email);
       const sanitizedSubject = subject ? sanitizeText(subject) : "";
       const sanitizedMessage = sanitizeText(message);
+      const sanitizedReason = reason ? sanitizeText(reason) : "";
 
       // Additional validation after sanitization
       if (!sanitizedName || !sanitizedEmail || !sanitizedMessage) {
@@ -138,10 +234,13 @@ export const sendContactEmail = functions.onCall(
         );
       }
 
-      // Prepare email subject with proper formatting
-      const emailSubject = sanitizedSubject
-        ? `D&D Campaign Contact: ${sanitizedSubject}`
-        : "D&D Campaign Contact Form";
+      // Compose the subject from the typed category, so that the sender no
+      // longer has to write one and so every email of a kind reads alike.
+      const reference = generateReference();
+      const subjectLabel = composeSubjectLabel(category, sanitizedSubject);
+      const emailSubject =
+        `[${reference}] D&D Campaign Companion: ${subjectLabel}`;
+      const contextLines = formatContextLines(context);
 
       // Prepare email content with both text and HTML versions
       const mailOptions = {
@@ -152,13 +251,15 @@ export const sendContactEmail = functions.onCall(
         text: `
 Contact Form Submission
 
+Reference: ${reference}
+Category: ${subjectLabel}
 Name: ${sanitizedName}
 Email: ${sanitizedEmail}
-${sanitizedSubject ? `Subject: ${sanitizedSubject}` : ""}
 
 Message:
 ${sanitizedMessage}
-
+${sanitizedReason ? `\nWhy they need more:\n${sanitizedReason}\n` : ""}
+${contextLines.length ? `\nAttached context:\n${contextLines.join("\n")}\n` : ""}
 ---
 Sent via D&D Campaign Companion Contact Form
 User ID: ${userId}
@@ -171,18 +272,31 @@ Timestamp: ${new Date().toISOString()}
   </h2>
   
   <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <p><strong>Reference:</strong> ${reference}</p>
+    <p><strong>Category:</strong> ${subjectLabel}</p>
     <p><strong>From:</strong> ${sanitizedName}</p>
     <p><strong>Email:</strong> <a href="mailto:${sanitizedEmail}">${sanitizedEmail}</a></p>
-    ${sanitizedSubject ? `<p><strong>Subject:</strong> ${sanitizedSubject}</p>` : ""}
   </div>
-  
+
   <div style="margin: 20px 0;">
     <h3 style="color: #333;">Message:</h3>
     <div style="background: white; padding: 15px; border-left: 4px solid #4f46e5; margin: 10px 0;">
       ${sanitizedMessage.replace(/\n/g, "<br>")}
     </div>
   </div>
-  
+  ${sanitizedReason ? `
+  <div style="margin: 20px 0;">
+    <h3 style="color: #333;">Why they need more:</h3>
+    <div style="background: white; padding: 15px; border-left: 4px solid #4f46e5; margin: 10px 0;">
+      ${sanitizedReason.replace(/\n/g, "<br>")}
+    </div>
+  </div>` : ""}
+  ${contextLines.length ? `
+  <div style="margin: 20px 0;">
+    <h3 style="color: #333;">Attached context:</h3>
+    <p style="color: #6b7280; font-size: 13px;">${contextLines.join("<br>")}</p>
+  </div>` : ""}
+
   <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
   <p style="color: #6b7280; font-size: 12px;">
     Sent via D&D Campaign Companion Contact Form<br>
@@ -197,12 +311,15 @@ Timestamp: ${new Date().toISOString()}
       await transporter.sendMail(mailOptions);
 
       // Log successful submission for monitoring
-      console.log(`Contact form email sent successfully from ${sanitizedEmail} (${userId})`);
+      console.log(
+        `Contact form email sent (${reference}) from ${sanitizedEmail} (${userId})`
+      );
 
       // Return success response
       return {
         success: true,
         message: "Email sent successfully! We'll get back to you soon.",
+        reference,
       };
 
     } catch (error) {
