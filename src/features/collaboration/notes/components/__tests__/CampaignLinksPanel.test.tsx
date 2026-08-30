@@ -350,6 +350,86 @@ describe('CampaignLinksPanel', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // I2 (IMPORTANT): a scan that finds nothing new used to leave the panel
+  // rendering byte-for-byte what it rendered before the click -- no feedback
+  // at all for a multi-second OpenAI call. Spec §7's "no explanatory card"
+  // governs the IDLE panel; a user-initiated scan still needs a result.
+  // ---------------------------------------------------------------------------
+  describe('no-results feedback (I2)', () => {
+    test('should not show a no-results line before any scan has run', () => {
+      setupMocks();
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.queryByText(/no new names found/i)).not.toBeInTheDocument();
+    });
+
+    test('should show a one-line no-results message after a completed scan finds nothing new', async () => {
+      setupMocks();
+      mockExtractWithOpenAI.mockResolvedValue([]);
+
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/no new names found in this note/i)).toBeInTheDocument();
+      });
+    });
+
+    test('should not show the no-results line when a scan finds detections', async () => {
+      setupMocks();
+      mockExtractWithOpenAI.mockResolvedValue([
+        {
+          id: 'ent-1',
+          text: 'Merlin',
+          type: 'npc' as const,
+          confidence: 0.9,
+          isConverted: false,
+          createdAt: '2024-01-15T10:00:00.000Z',
+        },
+      ]);
+
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Merlin')).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/no new names found/i)).not.toBeInTheDocument();
+    });
+
+    test('should clear a prior no-results message once a later scan finds something', async () => {
+      setupMocks();
+      mockExtractWithOpenAI.mockResolvedValueOnce([]);
+
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+      await waitFor(() => {
+        expect(screen.getByText(/no new names found in this note/i)).toBeInTheDocument();
+      });
+
+      mockExtractWithOpenAI.mockResolvedValueOnce([
+        {
+          id: 'ent-2',
+          text: 'Elminster',
+          type: 'npc' as const,
+          confidence: 0.9,
+          isConverted: false,
+          createdAt: '2024-01-15T10:00:00.000Z',
+        },
+      ]);
+
+      fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+      await waitFor(() => {
+        expect(screen.getByText('Elminster')).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/no new names found/i)).not.toBeInTheDocument();
+    });
+  });
+
   describe('entity conversion', () => {
     test('should convert a detection via Add and notify the parent', async () => {
       const onEntityConverted = jest.fn();

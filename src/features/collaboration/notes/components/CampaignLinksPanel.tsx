@@ -91,6 +91,13 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isSavingBeforeExtraction, setIsSavingBeforeExtraction] = useState(false);
   const [convertingIds, setConvertingIds] = useState<Set<string>>(new Set());
+  /**
+   * True once a scan has COMPLETED in this session and found nothing new.
+   * Never set on first load -- only `handleExtract` touches it -- so the
+   * idle panel stays exactly as spec'd, and a user-initiated scan that comes
+   * back empty still gets a one-line answer instead of silence.
+   */
+  const [scanFoundNothing, setScanFoundNothing] = useState(false);
 
   const {
     extractWithOpenAI,
@@ -206,6 +213,7 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
 
     setIsExtracting(true);
     setError(null);
+    setScanFoundNothing(false);
 
     try {
       if (saveCurrentEditorContent) {
@@ -259,6 +267,7 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
       }
 
       setExtractedEntities(newEntities);
+      setScanFoundNothing(newEntities.length === 0);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to analyze note";
       setError(errorMessage);
@@ -354,6 +363,12 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
           Scan note
         </Button>
       </div>
+
+      {scanFoundNothing && detections.length === 0 && (
+        <Typography variant="body-sm" color="secondary" className="mt-4">
+          No new names found in this note.
+        </Typography>
+      )}
 
       {isUsageLimitExceeded && contactInfo && (
         <div className="mt-4 p-3 rounded-lg border-l-4 status-failed">
