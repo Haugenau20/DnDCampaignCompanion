@@ -1,6 +1,6 @@
 // src/features/collaboration/notes/utils/__tests__/note-title.test.ts
 
-import { deriveTitle, displayTitle, MAX_DERIVED_TITLE_LENGTH } from '../note-title';
+import { deriveTitle, displayTitle, MAX_DERIVED_TITLE_LENGTH, LEGACY_DEFAULT_TITLE } from '../note-title';
 
 describe('deriveTitle', () => {
   test('should return the first line of content', () => {
@@ -68,5 +68,27 @@ describe('displayTitle', () => {
 
   test('should return null when there is no title and no content', () => {
     expect(displayTitle({ title: '', content: '' })).toBeNull();
+  });
+
+  // Legacy migration: notes created before this redesign persisted the
+  // literal placeholder "New Note" as an explicit title. That string must
+  // never be treated as a real explicit title, or every pre-existing note
+  // displays "New Note" forever. See LEGACY_DEFAULT_TITLE.
+  describe('legacy "New Note" titles', () => {
+    test('should treat the exact legacy title as absent and fall through to the derived title', () => {
+      expect(displayTitle({ title: LEGACY_DEFAULT_TITLE, content: 'Wave Echo Cave\nmore' })).toBe('Wave Echo Cave');
+    });
+
+    test('should treat the exact legacy title as absent and fall through to null when there is no content', () => {
+      expect(displayTitle({ title: LEGACY_DEFAULT_TITLE, content: '' })).toBeNull();
+    });
+
+    test('should still treat a title that merely contains the legacy string as explicit', () => {
+      expect(displayTitle({ title: 'New Notes on the cave', content: 'ignored' })).toBe('New Notes on the cave');
+    });
+
+    test('should treat the legacy title as absent even with surrounding whitespace', () => {
+      expect(displayTitle({ title: '  New Note  ', content: 'Derived line' })).toBe('Derived line');
+    });
   });
 });

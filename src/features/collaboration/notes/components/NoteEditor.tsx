@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef, useImperativeHandle, f
 import { Note } from "../types";
 import Typography from "../../../../core/components/Typography";
 import { useNotes } from "../context/NoteContext";
-import { deriveTitle } from "../utils/note-title";
+import { deriveTitle, LEGACY_DEFAULT_TITLE } from "../utils/note-title";
 import { formatLastSaved } from "../utils/save-status";
 import { Loader2, AlertCircle, ArrowLeft, Archive, Trash2, Check } from 'lucide-react';
 
@@ -102,7 +102,13 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       setTitle(noteData.title || "");
       setContent(noteData.content || "");
       setHasUnsavedChanges(!!noteData.isUnsaved);
-      setHasExplicitTitle(!!noteData.title?.trim());
+      // The exact legacy "New Note" placeholder (persisted on every note
+      // created before this redesign) is not a real explicit title -- see
+      // LEGACY_DEFAULT_TITLE in note-title.ts. Treating it as one would
+      // show "New Note" in the title field, with no derivation hint, on
+      // every pre-existing note.
+      const loadedTitle = noteData.title?.trim() ?? "";
+      setHasExplicitTitle(!!loadedTitle && loadedTitle !== LEGACY_DEFAULT_TITLE);
       // Set last saved time from note's modification date (if saved)
       setLastSaved(noteData.isUnsaved ? null : (noteData.dateModified ? new Date(noteData.dateModified) : null));
     }

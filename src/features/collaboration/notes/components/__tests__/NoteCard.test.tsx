@@ -76,6 +76,12 @@ describe('NoteCard', () => {
       expect(screen.queryByText('New Note')).not.toBeInTheDocument();
       expect(screen.queryByText('Untitled Note')).not.toBeInTheDocument();
     });
+
+    test('should render the derived title, not the legacy "New Note" title, for a pre-redesign note', () => {
+      render(<NoteCard note={makeNote({ title: 'New Note', content: 'Wave Echo Cave\nmore' })} />);
+      expect(screen.getByText('Wave Echo Cave')).toBeInTheDocument();
+      expect(screen.queryByText('New Note')).not.toBeInTheDocument();
+    });
   });
 
   describe('preview', () => {

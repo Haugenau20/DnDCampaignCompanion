@@ -530,6 +530,18 @@ describe('NoteEditor', () => {
         screen.getByText('Taken from the first line. Click to write your own title.')
       ).toBeInTheDocument();
     });
+
+    // Legacy migration: notes created before this redesign persisted the
+    // literal placeholder "New Note" as an explicit title. The editor must
+    // treat that as if no title were set at all -- showing the derived
+    // title and the derivation hint, not "New Note".
+    test('should show the derivation hint and the derived title for a legacy "New Note" title', () => {
+      renderEditor({ note: makeNote({ title: 'New Note', content: 'Wave Echo Cave\nmore' }) });
+      expect(screen.getByDisplayValue('Wave Echo Cave')).toBeInTheDocument();
+      expect(
+        screen.getByText('Taken from the first line. Click to write your own title.')
+      ).toBeInTheDocument();
+    });
   });
 
   describe('autosave', () => {
