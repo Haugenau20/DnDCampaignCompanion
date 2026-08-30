@@ -262,11 +262,13 @@ describe('NotesList', () => {
       ];
     }
 
+    // I3: the row itself is a plain div (no role="button") now that the
+    // title is the sole interactive element -- select rows by their
+    // '.note-card' class directly instead of filtering button roles.
     function renderedTitles(): string[] {
-      return screen
-        .getAllByRole('button')
-        .filter(node => node.className.includes('note-card'))
-        .map(node => within(node).getAllByText(/Oldest|Middle|Newest|Unsaved one/)[0].textContent ?? '');
+      return Array.from(document.querySelectorAll<HTMLElement>('.note-card')).map(
+        node => within(node).getAllByText(/Oldest|Middle|Newest|Unsaved one/)[0].textContent ?? ''
+      );
     }
 
     test('should default to newest first by dateAdded', () => {

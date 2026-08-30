@@ -61,11 +61,12 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onSaveNow }) => {
     navigateToPage(`/notes/${note.id}`);
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      handleViewNote();
-    }
+  const handleTitleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    // The row below also navigates on click (mouse convenience only -- it
+    // carries no role/tabIndex, so it isn't a second interactive element to
+    // assistive tech). Stop the bubble so a title click doesn't fire twice.
+    event.stopPropagation();
+    handleViewNote();
   };
 
   const handleSaveNow = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -85,11 +86,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onSaveNow }) => {
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      aria-label={title ?? "Untitled note"}
       onClick={handleViewNote}
-      onKeyDown={handleKeyDown}
       className={`note-card grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-4 px-5 py-4 cursor-pointer transition-colors ${
         note.isUnsaved ? "border-l-[3px] border-l-current status-unknown" : ""
       }`}
@@ -97,15 +94,16 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onSaveNow }) => {
       {/* Left: the note itself */}
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          {title ? (
-            <Typography variant="body" className="font-semibold text-[17px]">
-              {title}
-            </Typography>
-          ) : (
-            <Typography variant="body" color="muted" className="font-semibold text-[17px]">
-              Untitled note
-            </Typography>
-          )}
+          <Typography
+            as="button"
+            type="button"
+            onClick={handleTitleClick}
+            variant="body"
+            color={title ? "default" : "muted"}
+            className="font-semibold text-[17px] text-left bg-transparent border-none p-0 cursor-pointer hover:underline"
+          >
+            {title || "Untitled note"}
+          </Typography>
 
           {note.isUnsaved && (
             <span className="px-2 py-0.5 rounded text-xs font-medium bg-secondary status-unknown">

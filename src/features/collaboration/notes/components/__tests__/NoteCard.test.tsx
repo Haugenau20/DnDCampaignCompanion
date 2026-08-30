@@ -178,4 +178,41 @@ describe('NoteCard', () => {
       expect(mockNavigateToPage).toHaveBeenCalledWith('/notes/note-3');
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // I3 (IMPORTANT): the row used to be role="button" + tabIndex={0} +
+  // aria-label={title}, containing a real <button> ("Save now"). A
+  // role="button" must not contain focusable descendants (screen readers
+  // announce a button inside a button), and the row-level aria-label
+  // overrode the row's whole accessible name, hiding the timestamp, entity
+  // chips, tag chips and the "Not saved yet"/"Archived" badges from
+  // assistive tech. The title is now the sole interactive element; the row
+  // is a plain div.
+  // ---------------------------------------------------------------------------
+  describe('accessibility structure (I3)', () => {
+    test('should not mark the row itself as an interactive button (no button nested in a button)', () => {
+      const { container } = render(
+        <NoteCard note={makeNote({ isUnsaved: true })} onSaveNow={jest.fn()} />
+      );
+      const row = container.querySelector('.note-card');
+      expect(row).not.toHaveAttribute('role');
+      expect(row).not.toHaveAttribute('tabindex');
+      expect(row).not.toHaveAttribute('aria-label');
+    });
+
+    test('should expose the title as a real <button> element, not a div playing the role', () => {
+      render(<NoteCard note={makeNote({ id: 'note-7', title: 'Session 5 Notes' })} />);
+      const titleButton = screen.getByRole('button', { name: 'Session 5 Notes' });
+      expect(titleButton.tagName).toBe('BUTTON');
+
+      fireEvent.click(titleButton);
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/notes/note-7');
+    });
+
+    test('should expose "Untitled note" as the accessible title button when there is no title', () => {
+      render(<NoteCard note={makeNote({ id: 'note-8', title: '', content: '' })} />);
+      const titleButton = screen.getByRole('button', { name: 'Untitled note' });
+      expect(titleButton.tagName).toBe('BUTTON');
+    });
+  });
 });
