@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { SearchBar } from 'shared/components/SearchBar';
 import ThemeSelector from 'shared/components/ThemeSelector';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   useAuth,
   useGroups,
@@ -13,7 +13,7 @@ import {
   UserProfile,
   SignInForm
 } from 'features/user-management';
-import { Menu, X, LogOut, ShieldAlert, UserPlus, User, Book, ChevronDown, Users, LogIn } from 'lucide-react';
+import { Menu, X, LogOut, ShieldAlert, UserPlus, User, Book, ChevronDown, Users, LogIn, Bug } from 'lucide-react';
 import ContextSwitcher from 'shared/components/ContextSwitcher';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
@@ -25,6 +25,7 @@ import Navigation from './Navigation';
  */
 const Header: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, signOut } = useAuth();
   const { activeGroupUserProfile, refreshGroups, activeGroup } = useGroups();
   const { activeCampaignId, campaigns } = useCampaigns();
@@ -96,7 +97,20 @@ const Header: React.FC = () => {
     setShowProfile(true);
     setMenuOpen(false);
   };
-  
+
+  /**
+   * Open the contact page as a problem report, carrying where the user was.
+   *
+   * TODO(PR 4): this moves into the profile menu when that lands. The
+   * `?from=` parameter must survive the move -- it is the only way the
+   * report knows which page the problem was on, since by the time the form
+   * renders the current path is always "/contact".
+   */
+  const handleReportProblem = () => {
+    setMenuOpen(false);
+    navigate(`/contact?from=${encodeURIComponent(location.pathname)}`);
+  };
+
   // Handle join group click
   const handleJoinGroupClick = () => {
     setShowJoinGroup(true);
@@ -243,7 +257,20 @@ const Header: React.FC = () => {
                         >
                           <span className="text-xs font-medium typography">Profile</span>
                         </Button>
-                        
+
+                        {/* Report a problem — contact is where bug reports
+                            come from, and the footer was its only entrance */}
+                        <Button
+                          variant="ghost"
+                          startIcon={<Bug size={24} className="primary" />}
+                          iconPosition="top"
+                          onClick={handleReportProblem}
+                          className="flex flex-col items-center gap-1 button-ghost typography"
+                          aria-label="Report a problem"
+                        >
+                          <span className="text-xs font-medium typography">Report</span>
+                        </Button>
+
                         {/* Join Group Button */}
                         <Button
                           variant="ghost"
