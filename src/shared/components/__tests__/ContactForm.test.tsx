@@ -1,428 +1,524 @@
-// src/components/features/contact/__tests__/ContactForm.test.tsx
-
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import ContactForm from '../ContactForm';
-
-// ---------------------------------------------------------------------------
-// Mock external dependencies
-// ---------------------------------------------------------------------------
+// src/shared/components/__tests__/ContactForm.test.tsx
+import React from "react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import ContactForm from "../ContactForm";
 
 const mockSendContactEmail = jest.fn();
 const mockRegistryHas = jest.fn();
 const mockRegistryGet = jest.fn();
+const mockNavigateToPage = jest.fn();
 
-// Mock ServiceRegistry singleton
-jest.mock('core/services/firebase/core/ServiceRegistry', () => {
-  return {
-    __esModule: true,
-    default: {
-      getInstance: jest.fn(() => ({
-        has: mockRegistryHas,
-        get: mockRegistryGet,
-      })),
-    },
-  };
-});
+let mockUser: { email: string | null } | null = null;
+let mockGroups = {
+  activeGroupId: "group-1" as string | null,
+  activeGroupUserProfile: { username: "DungeonMaster" } as { username?: string } | null,
+};
+let mockCampaigns = {
+  activeCampaignId: "campaign-1" as string | null,
+  activeCampaign: { name: "Phandelver" } as { name: string } | null,
+};
+let mockSearch = "";
 
-// Mock Firebase Functions
-jest.mock('firebase/functions', () => ({
+jest.mock("core/services/firebase/core/ServiceRegistry", () => ({
+  __esModule: true,
+  default: { getInstance: jest.fn(() => ({ has: mockRegistryHas, get: mockRegistryGet })) },
+}));
+
+jest.mock("firebase/functions", () => ({
   httpsCallable: jest.fn(() => mockSendContactEmail),
 }));
 
-// Mock react-router-dom
-jest.mock('react-router-dom', () => ({
-  useLocation: jest.fn(),
+jest.mock("react-router-dom", () => ({
+  useLocation: () => ({ search: mockSearch, pathname: "/contact" }),
 }));
 
-// ---------------------------------------------------------------------------
-// Hook setup helpers
-// ---------------------------------------------------------------------------
+jest.mock("shared/hooks/useNavigation", () => ({
+  useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
+}));
 
-const { useLocation } = require('react-router-dom');
-const { httpsCallable } = require('firebase/functions');
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser }),
+  useGroups: () => mockGroups,
+  useCampaigns: () => mockCampaigns,
+}));
 
-function setupMocks({
-  locationSearch = '',
-  registryHasFunction = true,
-  sendEmailResult = { data: { success: true, message: 'Message sent' } },
-}: {
-  locationSearch?: string;
-  registryHasFunction?: boolean;
-  sendEmailResult?: { data: { success: boolean; message: string } } | Error;
-} = {}) {
-  useLocation.mockReturnValue({ search: locationSearch, pathname: '/contact' });
-  mockRegistryHas.mockReturnValue(registryHasFunction);
-  mockRegistryGet.mockReturnValue({} /* mock Functions instance */);
-  (httpsCallable as jest.Mock).mockReturnValue(mockSendContactEmail);
+const VALID_MESSAGE = "The delete button removed my note without asking first.";
 
-  if (sendEmailResult instanceof Error) {
-    mockSendContactEmail.mockRejectedValue(sendEmailResult);
-  } else {
-    mockSendContactEmail.mockResolvedValue(sendEmailResult);
-  }
+/** Fill the form to the point where it can legitimately be submitted. */
+async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("radio", { name: "Something is broken" }));
+  await user.type(screen.getByLabelText("What happened?"), VALID_MESSAGE);
 }
 
-// ---------------------------------------------------------------------------
-// Helper: fill all required form fields
-// ---------------------------------------------------------------------------
-async function fillRequiredFields({
-  name = 'John Doe',
-  email = 'john@example.com',
-  message = 'This is a test message long enough',
-}: {
-  name?: string;
-  email?: string;
-  message?: string;
-} = {}) {
-  const nameInput = screen.getAllByRole('textbox')[0];
-  const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
-  const messageTextarea = screen.getAllByRole('textbox').find(
-    el => el.tagName === 'TEXTAREA' && (el as HTMLTextAreaElement).placeholder?.includes('minimum')
-  );
+describe("ContactForm", () => {
+  let user: ReturnType<typeof userEvent.setup>;
 
-  if (name) fireEvent.change(nameInput, { target: { value: name } });
-  if (email && emailInput) fireEvent.change(emailInput, { target: { value: email } });
-  if (message && messageTextarea) fireEvent.change(messageTextarea, { target: { value: message } });
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-describe('ContactForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    setupMocks();
+    user = userEvent.setup();
+    mockRegistryHas.mockReturnValue(true);
+    mockRegistryGet.mockReturnValue({});
+    mockSendContactEmail.mockResolvedValue({
+      data: { success: true, message: "Sent", reference: "CC-4192" },
+    });
+    mockUser = { email: "dm@example.com" };
+    mockGroups = {
+      activeGroupId: "group-1",
+      activeGroupUserProfile: { username: "DungeonMaster" },
+    };
+    mockCampaigns = {
+      activeCampaignId: "campaign-1",
+      activeCampaign: { name: "Phandelver" },
+    };
+    mockSearch = "";
   });
 
   // -------------------------------------------------------------------------
-  // Rendering
+  // Structure
   // -------------------------------------------------------------------------
-  describe('rendering', () => {
-    test('should render Name label', () => {
+  describe("structure", () => {
+    it("asks what the message is about before asking what happened", () => {
       render(<ContactForm />);
-      expect(screen.getByText('Name')).toBeInTheDocument();
+
+      expect(
+        screen.getByRole("radiogroup", { name: "What's this about?" })
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("What happened?")).toBeInTheDocument();
     });
 
-    test('should render Email label', () => {
+    it("no longer offers a free-text subject field", () => {
       render(<ContactForm />);
-      expect(screen.getByText('Email')).toBeInTheDocument();
+
+      expect(screen.queryByLabelText(/^Subject/i)).not.toBeInTheDocument();
     });
 
-    test('should render Subject label (optional)', () => {
+    it("says a copy goes to the sender", () => {
       render(<ContactForm />);
-      expect(screen.getByText('Subject (optional)')).toBeInTheDocument();
-    });
 
-    test('should render Message label', () => {
-      render(<ContactForm />);
-      expect(screen.getByText('Message')).toBeInTheDocument();
-    });
-
-    test('should render Send Message submit button', () => {
-      render(<ContactForm />);
-      expect(screen.getByRole('button', { name: /send message/i })).toBeInTheDocument();
-    });
-
-    test('should render email input with type="email"', () => {
-      render(<ContactForm />);
-      const emailInput = document.querySelector('input[type="email"]');
-      expect(emailInput).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Initialization state
-  // -------------------------------------------------------------------------
-  describe('initialization', () => {
-    test('should show "Initializing..." button text when Firebase not ready', () => {
-      setupMocks({ registryHasFunction: false });
-      render(<ContactForm />);
-      // Shows initializing because timeout hasn't fired
-      expect(screen.getByText('Initializing...')).toBeInTheDocument();
-    });
-
-    test('should disable submit button when not initialized', () => {
-      setupMocks({ registryHasFunction: false });
-      render(<ContactForm />);
-      const button = screen.getByRole('button', { name: /initializing\.\.\./i });
-      expect(button).toBeDisabled();
-    });
-
-    test('should show "Send Message" when Firebase is initialized', async () => {
-      setupMocks({ registryHasFunction: true });
-      render(<ContactForm />);
-      await waitFor(() => {
-        expect(screen.getByText('Send Message')).toBeInTheDocument();
-      });
+      expect(
+        screen.getByText("A copy goes to your email address.")
+      ).toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Initial data pre-population
+  // The character counter and the ten-character minimum
   // -------------------------------------------------------------------------
-  describe('initialData pre-population', () => {
-    test('should prefill name from initialData', () => {
-      render(<ContactForm initialData={{ name: 'Pre-filled Name' }} />);
-      expect(screen.getByDisplayValue('Pre-filled Name')).toBeInTheDocument();
+  describe("the character counter", () => {
+    it("starts at zero", () => {
+      render(<ContactForm />);
+
+      expect(screen.getByText("0 characters")).toBeInTheDocument();
     });
 
-    test('should prefill email from initialData', () => {
-      render(<ContactForm initialData={{ email: 'prefilled@example.com' }} />);
-      expect(screen.getByDisplayValue('prefilled@example.com')).toBeInTheDocument();
+    it("counts what has been typed", async () => {
+      render(<ContactForm />);
+
+      await user.type(screen.getByLabelText("What happened?"), "abcde");
+
+      expect(screen.getByText("5 characters")).toBeInTheDocument();
     });
 
-    test('should prefill subject from initialData', () => {
-      render(<ContactForm initialData={{ subject: 'Pre-filled Subject' }} />);
-      expect(screen.getByDisplayValue('Pre-filled Subject')).toBeInTheDocument();
+    it("does not complain about length on the first keystroke", async () => {
+      render(<ContactForm />);
+
+      await user.type(screen.getByLabelText("What happened?"), "abc");
+
+      expect(screen.queryByText(/at least 10 characters/i)).not.toBeInTheDocument();
     });
 
-    test('should prefill message from initialData', () => {
-      render(<ContactForm initialData={{ message: 'Pre-filled message text' }} />);
-      expect(screen.getByDisplayValue('Pre-filled message text')).toBeInTheDocument();
+    it("complains on blur once there is something to complain about", async () => {
+      render(<ContactForm />);
+
+      await user.type(screen.getByLabelText("What happened?"), "abc");
+      await user.tab();
+
+      expect(screen.getByText(/at least 10 characters/i)).toBeInTheDocument();
+    });
+
+    it("does not complain on blur when the field is still empty", async () => {
+      render(<ContactForm />);
+
+      await user.click(screen.getByLabelText("What happened?"));
+      await user.tab();
+
+      expect(screen.queryByText(/at least 10 characters/i)).not.toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // URL parameter pre-filling
+  // Category-driven guidance
   // -------------------------------------------------------------------------
-  describe('URL parameter pre-filling', () => {
-    test('should prefill subject from URL query parameter', async () => {
-      setupMocks({ locationSearch: '?subject=My+Subject' });
+  describe("guidance", () => {
+    it("shows nothing before a category is picked", () => {
       render(<ContactForm />);
-      await waitFor(() => {
-        expect(screen.getByDisplayValue('My Subject')).toBeInTheDocument();
-      });
+
+      expect(screen.queryByTestId("category-guidance")).not.toBeInTheDocument();
     });
 
-    test('should prefill message template for Limit Increase subject', async () => {
-      setupMocks({ locationSearch: '?subject=Limit+Increase+Request' });
+    it("tells a bug reporter the three things that help most", async () => {
       render(<ContactForm />);
-      await waitFor(() => {
-        expect(screen.getByDisplayValue(/usage limit/i)).toBeInTheDocument();
-      });
-    });
-  });
 
-  // -------------------------------------------------------------------------
-  // Form validation
-  // -------------------------------------------------------------------------
-  describe('validation', () => {
-    test('should show error when name is empty on submit', async () => {
-      render(<ContactForm />);
-      const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByText('Name is required')).toBeInTheDocument();
-      });
-    });
+      await user.click(screen.getByRole("radio", { name: "Something is broken" }));
 
-    test('should show error when email is empty on submit', async () => {
-      render(<ContactForm />);
-      const nameInput = screen.getAllByRole('textbox')[0];
-      fireEvent.change(nameInput, { target: { value: 'John' } });
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByText('Email is required')).toBeInTheDocument();
-      });
-    });
-
-    test('should show error for invalid email format', async () => {
-      render(<ContactForm />);
-      const nameInput = screen.getAllByRole('textbox')[0];
-      fireEvent.change(nameInput, { target: { value: 'John' } });
-      const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
-      fireEvent.change(emailInput, { target: { value: 'not-an-email' } });
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByText(/valid email address/i)).toBeInTheDocument();
-      });
-    });
-
-    test('should show error when message is empty on submit', async () => {
-      render(<ContactForm />);
-      const nameInput = screen.getAllByRole('textbox')[0];
-      const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
-      fireEvent.change(nameInput, { target: { value: 'John' } });
-      fireEvent.change(emailInput, { target: { value: 'john@test.com' } });
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByText('Message is required')).toBeInTheDocument();
-      });
-    });
-
-    test('should show error when message is too short (< 10 chars)', async () => {
-      render(<ContactForm />);
-      const nameInput = screen.getAllByRole('textbox')[0];
-      const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement;
-      fireEvent.change(nameInput, { target: { value: 'John' } });
-      fireEvent.change(emailInput, { target: { value: 'john@test.com' } });
-      // Find message textarea by placeholder
-      const messageTextarea = document.querySelector('textarea') as HTMLTextAreaElement;
-      fireEvent.change(messageTextarea, { target: { value: 'Short' } });
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByText(/at least 10 characters/i)).toBeInTheDocument();
-      });
-    });
-
-    test('should clear error when user starts typing after error', async () => {
-      render(<ContactForm />);
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByText('Name is required')).toBeInTheDocument();
-      });
-      const nameInput = screen.getAllByRole('textbox')[0];
-      fireEvent.change(nameInput, { target: { value: 'J' } });
-      await waitFor(() => {
-        expect(screen.queryByText('Name is required')).not.toBeInTheDocument();
-      });
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Form submission
-  // -------------------------------------------------------------------------
-  describe('form submission', () => {
-    test('should call sendContactEmail with correct data on valid submission', async () => {
-      render(<ContactForm />);
-      await fillRequiredFields();
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(mockSendContactEmail).toHaveBeenCalledWith(
-          expect.objectContaining({
-            name: 'John Doe',
-            email: 'john@example.com',
-            message: 'This is a test message long enough',
-          })
-        );
-      });
-    });
-
-    test('should show success state after successful submission', async () => {
-      render(<ContactForm />);
-      await fillRequiredFields();
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByText('Message Sent!')).toBeInTheDocument();
-      });
-    });
-
-    test('should show "Send Another Message" button after success', async () => {
-      render(<ContactForm />);
-      await fillRequiredFields();
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /send another message/i })).toBeInTheDocument();
-      });
-    });
-
-    test('should show "Sending..." during submission', async () => {
-      mockSendContactEmail.mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve({ data: { success: true, message: 'OK' } }), 100))
+      expect(screen.getByTestId("category-guidance")).toHaveTextContent(
+        "For a bug, three things help most: what you clicked, what happened, and what you expected instead."
       );
-      render(<ContactForm />);
-      await fillRequiredFields();
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByText('Sending...')).toBeInTheDocument();
-      });
     });
 
-    test('should show error message on Firebase function failure', async () => {
-      const error = new Error('Network failure');
-      mockSendContactEmail.mockRejectedValue(error);
+    it("changes when the category changes", async () => {
       render(<ContactForm />);
-      await fillRequiredFields();
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByText(/Network failure/i)).toBeInTheDocument();
-      });
+
+      await user.click(screen.getByRole("radio", { name: "Something is broken" }));
+      await user.click(screen.getByRole("radio", { name: "Feature idea" }));
+
+      expect(screen.getByTestId("category-guidance")).toHaveTextContent(
+        /what you're trying to do matters more/
+      );
     });
 
-    test('should show error message for Firebase functions/resource-exhausted error code', async () => {
-      const error = Object.assign(new Error('Rate limited'), { code: 'functions/resource-exhausted' });
-      mockSendContactEmail.mockRejectedValue(error);
+    it("shows none for a category that has none", async () => {
       render(<ContactForm />);
-      await fillRequiredFields();
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByText(/too many requests/i)).toBeInTheDocument();
-      });
+
+      await user.click(screen.getByRole("radio", { name: "Account or group" }));
+
+      expect(screen.queryByTestId("category-guidance")).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The smart-detection second field
+  // -------------------------------------------------------------------------
+  describe("the smart-detection second field", () => {
+    it("appears only for that category", async () => {
+      render(<ContactForm />);
+
+      expect(screen.queryByLabelText("Why do you need more?")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("radio", { name: "More smart detection" }));
+
+      expect(screen.getByLabelText("Why do you need more?")).toBeInTheDocument();
     });
 
-    test('should show error message for functions/unavailable code', async () => {
-      const error = Object.assign(new Error('Unavailable'), { code: 'functions/unavailable' });
-      mockSendContactEmail.mockRejectedValue(error);
+    it("does not prefill a message full of asterisks", async () => {
       render(<ContactForm />);
-      await fillRequiredFields();
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByText(/temporarily unavailable/i)).toBeInTheDocument();
-      });
+
+      await user.click(screen.getByRole("radio", { name: "More smart detection" }));
+
+      expect(screen.getByLabelText("What happened?")).toHaveValue("");
     });
 
-    test('should not submit when Firebase not initialized', async () => {
-      setupMocks({ registryHasFunction: false });
+    it("is optional -- the form submits without it", async () => {
       render(<ContactForm />);
-      await fillRequiredFields();
-      // Wait for form to be filled, then submit
-      const form = document.querySelector('form')!;
-      fireEvent.submit(form);
-      await waitFor(() => {
-        // Either contact system not ready message or no call to sendContactEmail
-        const noCallOrError =
-          !mockSendContactEmail.mock.calls.length ||
-          screen.queryByText(/not ready/i);
-        expect(noCallOrError).toBeTruthy();
+
+      await user.click(screen.getByRole("radio", { name: "More smart detection" }));
+      await user.type(screen.getByLabelText("What happened?"), VALID_MESSAGE);
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await waitFor(() => expect(mockSendContactEmail).toHaveBeenCalled());
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Legacy deep links
+  // -------------------------------------------------------------------------
+  describe("legacy deep links", () => {
+    it("selects the smart-detection category from the old subject parameter", () => {
+      mockSearch = "?subject=Smart%20Detection%20Limit%20Increase%20Request";
+
+      render(<ContactForm />);
+
+      expect(
+        screen.getByRole("radio", { name: "More smart detection" })
+      ).toBeChecked();
+    });
+
+    it("selects nothing for a subject that maps to no category", () => {
+      mockSearch = "?subject=Something%20unrelated";
+
+      render(<ContactForm />);
+
+      screen.getAllByRole("radio").forEach((chip) => {
+        expect(chip).not.toBeChecked();
       });
     });
   });
 
   // -------------------------------------------------------------------------
-  // Success state behavior
+  // Identity
   // -------------------------------------------------------------------------
-  describe('success state', () => {
-    test('should show thank you message in success state', async () => {
+  describe("identity", () => {
+    it("does not ask a signed-in user to retype their name and email", () => {
       render(<ContactForm />);
-      await fillRequiredFields();
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByText(/thank you for contacting us/i)).toBeInTheDocument();
-      });
+
+      expect(
+        screen.getByText("Sending as DungeonMaster · dm@example.com")
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
     });
 
-    test('should return to form when "Send Another Message" is clicked', async () => {
+    it("reveals the inputs on request", async () => {
       render(<ContactForm />);
-      await fillRequiredFields();
-      fireEvent.submit(document.querySelector('form')!);
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /send another message/i })).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByRole('button', { name: /send another message/i }));
-      await waitFor(() => {
-        expect(screen.getByText('Name')).toBeInTheDocument();
-      });
+
+      await user.click(screen.getByRole("button", { name: "Use a different email" }));
+
+      expect(screen.getByLabelText("Name")).toBeInTheDocument();
+      expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    });
+
+    it("asks a signed-out user for a name and email", () => {
+      mockUser = null;
+
+      render(<ContactForm />);
+
+      expect(screen.getByLabelText("Name")).toBeInTheDocument();
+      expect(screen.queryByText(/Sending as/)).not.toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Limit Increase tip
+  // The payload
   // -------------------------------------------------------------------------
-  describe('limit increase tip', () => {
-    test('should show tip when subject contains "Limit Increase"', async () => {
-      render(<ContactForm initialData={{ subject: 'Limit Increase Request' }} />);
-      await waitFor(() => {
-        expect(screen.getByText(/Tip:/)).toBeInTheDocument();
+  describe("the payload", () => {
+    it("sends the category as its own field", async () => {
+      render(<ContactForm />);
+      await fillValidForm(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await waitFor(() => expect(mockSendContactEmail).toHaveBeenCalled());
+      expect(mockSendContactEmail.mock.calls[0][0]).toMatchObject({
+        category: "broken",
+        message: VALID_MESSAGE,
       });
     });
 
-    test('should not show tip when subject does not contain "Limit Increase"', () => {
-      render(<ContactForm initialData={{ subject: 'General Question' }} />);
-      expect(screen.queryByText(/Tip:/)).not.toBeInTheDocument();
+    it("still sends a subject, so an older deployed function keeps working", async () => {
+      render(<ContactForm />);
+      await fillValidForm(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await waitFor(() => expect(mockSendContactEmail).toHaveBeenCalled());
+      expect(mockSendContactEmail.mock.calls[0][0].subject).toBe("Bug report");
+    });
+
+    it("attaches the group, campaign and app version automatically", async () => {
+      render(<ContactForm />);
+      await fillValidForm(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await waitFor(() => expect(mockSendContactEmail).toHaveBeenCalled());
+      expect(mockSendContactEmail.mock.calls[0][0].context).toMatchObject({
+        groupId: "group-1",
+        campaignId: "campaign-1",
+      });
+      expect(
+        mockSendContactEmail.mock.calls[0][0].context.appVersion
+      ).toEqual(expect.any(String));
+    });
+
+    it("attaches the originating route from the from parameter", async () => {
+      mockSearch = "?from=%2Fnotes%2Fabc";
+
+      render(<ContactForm />);
+      await fillValidForm(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await waitFor(() => expect(mockSendContactEmail).toHaveBeenCalled());
+      expect(mockSendContactEmail.mock.calls[0][0].context.route).toBe("/notes/abc");
+    });
+
+    it("sends a null route rather than the useless /contact", async () => {
+      render(<ContactForm />);
+      await fillValidForm(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await waitFor(() => expect(mockSendContactEmail).toHaveBeenCalled());
+      expect(mockSendContactEmail.mock.calls[0][0].context.route).toBeNull();
+    });
+
+    it("sends the signed-in identity", async () => {
+      render(<ContactForm />);
+      await fillValidForm(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await waitFor(() => expect(mockSendContactEmail).toHaveBeenCalled());
+      expect(mockSendContactEmail.mock.calls[0][0]).toMatchObject({
+        name: "DungeonMaster",
+        email: "dm@example.com",
+      });
+    });
+
+    it("sends the reason when the smart-detection field is filled", async () => {
+      render(<ContactForm />);
+
+      await user.click(screen.getByRole("radio", { name: "More smart detection" }));
+      await user.type(screen.getByLabelText("What happened?"), VALID_MESSAGE);
+      await user.type(screen.getByLabelText("Why do you need more?"), "Big campaign");
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await waitFor(() => expect(mockSendContactEmail).toHaveBeenCalled());
+      expect(mockSendContactEmail.mock.calls[0][0].reason).toBe("Big campaign");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Validation
+  // -------------------------------------------------------------------------
+  describe("validation", () => {
+    it("refuses to send without a category", async () => {
+      render(<ContactForm />);
+
+      await user.type(screen.getByLabelText("What happened?"), VALID_MESSAGE);
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      expect(mockSendContactEmail).not.toHaveBeenCalled();
+      expect(screen.getByText(/pick a category/i)).toBeInTheDocument();
+    });
+
+    it("refuses to send a message shorter than ten characters", async () => {
+      render(<ContactForm />);
+
+      await user.click(screen.getByRole("radio", { name: "Something is broken" }));
+      await user.type(screen.getByLabelText("What happened?"), "short");
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      expect(mockSendContactEmail).not.toHaveBeenCalled();
+      expect(screen.getByText(/at least 10 characters/i)).toBeInTheDocument();
+    });
+
+    it("rejects a malformed email from a signed-out sender", async () => {
+      mockUser = null;
+
+      render(<ContactForm />);
+      await user.click(screen.getByRole("radio", { name: "Something is broken" }));
+      await user.type(screen.getByLabelText("Name"), "Rowan");
+      await user.type(screen.getByLabelText("Email"), "not-an-email");
+      await user.type(screen.getByLabelText("What happened?"), VALID_MESSAGE);
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      expect(mockSendContactEmail).not.toHaveBeenCalled();
+      expect(screen.getByText(/valid email address/i)).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Success
+  // -------------------------------------------------------------------------
+  describe("success", () => {
+    it("shows the reference the function returned", async () => {
+      render(<ContactForm />);
+      await fillValidForm(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      expect(
+        await screen.findByText("Sent — reference CC-4192")
+      ).toBeInTheDocument();
+    });
+
+    it("keeps the message on the page", async () => {
+      render(<ContactForm />);
+      await fillValidForm(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await screen.findByText("Sent — reference CC-4192");
+      expect(screen.getByLabelText("What happened?")).toHaveValue(VALID_MESSAGE);
+    });
+
+    it("survives a function that returns no reference", async () => {
+      mockSendContactEmail.mockResolvedValue({
+        data: { success: true, message: "Sent" },
+      });
+
+      render(<ContactForm />);
+      await fillValidForm(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      expect(await screen.findByText("Sent")).toBeInTheDocument();
+      expect(screen.queryByText(/undefined/)).not.toBeInTheDocument();
+    });
+
+    it("clears the message but keeps the category on Write another", async () => {
+      render(<ContactForm />);
+      await fillValidForm(user);
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+      await screen.findByText("Sent — reference CC-4192");
+
+      await user.click(screen.getByRole("button", { name: "Write another" }));
+
+      expect(screen.getByLabelText("What happened?")).toHaveValue("");
+      expect(
+        screen.getByRole("radio", { name: "Something is broken" })
+      ).toBeChecked();
+      expect(screen.queryByText(/Sent —/)).not.toBeInTheDocument();
+    });
+
+    it("navigates away on Back to the campaign", async () => {
+      render(<ContactForm />);
+      await fillValidForm(user);
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+      await screen.findByText("Sent — reference CC-4192");
+
+      await user.click(screen.getByRole("button", { name: "Back to Phandelver" }));
+
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Initialisation
+  // -------------------------------------------------------------------------
+  describe("initialisation", () => {
+    it("keeps the submit button enabled and correctly labelled from the start", () => {
+      mockRegistryHas.mockReturnValue(false);
+
+      render(<ContactForm />);
+
+      const button = screen.getByRole("button", { name: /Send message/ });
+      expect(button).toBeEnabled();
+      expect(button).not.toHaveTextContent(/Initializing/);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Errors
+  // -------------------------------------------------------------------------
+  describe("errors", () => {
+    it("reports a rate limit in words the sender can act on", async () => {
+      mockSendContactEmail.mockRejectedValue({
+        code: "functions/resource-exhausted",
+      });
+
+      render(<ContactForm />);
+      await fillValidForm(user);
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      expect(
+        await screen.findByText(/Too many requests/i)
+      ).toBeInTheDocument();
+    });
+
+    it("does not claim success when the function reports failure", async () => {
+      mockSendContactEmail.mockResolvedValue({
+        data: { success: false, message: "Nope" },
+      });
+
+      render(<ContactForm />);
+      await fillValidForm(user);
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await waitFor(() =>
+        expect(screen.queryByText(/^Sent/)).not.toBeInTheDocument()
+      );
     });
   });
 });
