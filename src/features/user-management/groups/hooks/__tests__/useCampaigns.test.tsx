@@ -49,6 +49,7 @@ jest.mock("@/core/services/firebase", () => ({
 // ---------------------------------------------------------------------------
 const mockSetError = jest.fn();
 const mockRefreshCampaigns = jest.fn();
+const mockSwitchCampaign = jest.fn();
 
 let mockContextValue: any = {};
 
@@ -78,6 +79,7 @@ function makeContext(overrides: Record<string, any> = {}) {
     refreshGroups: jest.fn().mockResolvedValue([]),
     refreshCampaigns: mockRefreshCampaigns,
     refreshUserProfile: jest.fn().mockResolvedValue(undefined),
+    switchCampaign: mockSwitchCampaign,
     ...overrides,
   };
 }
@@ -89,6 +91,7 @@ describe("useCampaigns Behavioral Testing", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRefreshCampaigns.mockResolvedValue([]);
+    mockSwitchCampaign.mockResolvedValue(undefined);
     mockContextValue = makeContext();
   });
 
@@ -310,10 +313,7 @@ describe("useCampaigns Behavioral Testing", () => {
 
   // -------------------------------------------------------------------------
   describe("setActiveCampaign Behavior", () => {
-    test("should call auth.setActiveCampaign with campaignId", async () => {
-      mockSetActiveCampaign.mockReturnValue(undefined);
-      mockGetCurrentUserId.mockReturnValue("u1");
-      mockUpdateGroupUserProfile.mockResolvedValue(undefined);
+    test("should delegate to the context's switchCampaign", async () => {
       mockContextValue = makeContext({ activeGroupId: "g1" });
 
       const { result } = renderHook(() => useCampaigns());
@@ -322,30 +322,14 @@ describe("useCampaigns Behavioral Testing", () => {
         await result.current.setActiveCampaign("c1");
       });
 
-      expect(mockSetActiveCampaign).toHaveBeenCalledWith("c1");
+      // Setting the service-level campaign and writing the group profile both
+      // live in FirebaseContext now, because only the provider can also move
+      // activeCampaignId in React state -- which is what makes a switch
+      // visible without reloading the page.
+      expect(mockSwitchCampaign).toHaveBeenCalledWith("c1");
     });
 
-    test("should update group user profile with activeCampaignId when userId is available", async () => {
-      mockSetActiveCampaign.mockReturnValue(undefined);
-      mockGetCurrentUserId.mockReturnValue("u1");
-      mockUpdateGroupUserProfile.mockResolvedValue(undefined);
-      mockContextValue = makeContext({ activeGroupId: "g1" });
-
-      const { result } = renderHook(() => useCampaigns());
-
-      await act(async () => {
-        await result.current.setActiveCampaign("c2");
-      });
-
-      expect(mockUpdateGroupUserProfile).toHaveBeenCalledWith("g1", "u1", {
-        activeCampaignId: "c2",
-      });
-    });
-
-    test("should call refreshCampaigns after setting active campaign", async () => {
-      mockSetActiveCampaign.mockReturnValue(undefined);
-      mockGetCurrentUserId.mockReturnValue("u1");
-      mockUpdateGroupUserProfile.mockResolvedValue(undefined);
+    test("should not set the service-level campaign itself", async () => {
       mockContextValue = makeContext({ activeGroupId: "g1" });
 
       const { result } = renderHook(() => useCampaigns());
@@ -354,25 +338,12 @@ describe("useCampaigns Behavioral Testing", () => {
         await result.current.setActiveCampaign("c1");
       });
 
-      expect(mockRefreshCampaigns).toHaveBeenCalledTimes(1);
-    });
-
-    test("should throw when no activeGroupId is set", async () => {
-      mockContextValue = makeContext({ activeGroupId: null });
-
-      const { result } = renderHook(() => useCampaigns());
-
-      await expect(
-        act(async () => {
-          await result.current.setActiveCampaign("c1");
-        })
-      ).rejects.toThrow("No active group selected");
+      expect(mockSetActiveCampaign).not.toHaveBeenCalled();
+      expect(mockUpdateGroupUserProfile).not.toHaveBeenCalled();
     });
 
     test("should call setError and re-throw on failure", async () => {
-      mockSetActiveCampaign.mockImplementation(() => {
-        throw new Error("Set active failed");
-      });
+      mockSwitchCampaign.mockRejectedValue(new Error("Set active failed"));
       mockContextValue = makeContext({ activeGroupId: "g1" });
 
       const { result } = renderHook(() => useCampaigns());
@@ -384,6 +355,19 @@ describe("useCampaigns Behavioral Testing", () => {
       });
 
       expect(mockSetError).toHaveBeenCalledWith("Set active failed");
+    });
+
+    test("should propagate the guard error when no group is active", async () => {
+      mockSwitchCampaign.mockRejectedValue(new Error("No active group selected"));
+      mockContextValue = makeContext({ activeGroupId: null });
+
+      const { result } = renderHook(() => useCampaigns());
+
+      await expect(
+        act(async () => {
+          await result.current.setActiveCampaign("c1");
+        })
+      ).rejects.toThrow("No active group selected");
     });
   });
 

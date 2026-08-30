@@ -5,12 +5,13 @@ import firebaseServices from 'core/services/firebase';
 import { Campaign } from 'core/types/user';
 
 export function useCampaigns() {
-  const { 
-    campaigns, 
-    activeGroupId, 
+  const {
+    campaigns,
+    activeGroupId,
     activeCampaignId,
     setError,
-    refreshCampaigns
+    refreshCampaigns,
+    switchCampaign
   } = useFirebaseContext();
 
   // Find the active campaign object based on ID
@@ -81,36 +82,23 @@ export function useCampaigns() {
   }, [activeGroupId, setError, refreshCampaigns]);
 
   // Set active campaign
+  //
+  // Delegates to FirebaseContext, which writes the stored preference, sets the
+  // service-level campaign AND moves `activeCampaignId` in React state. Doing
+  // the first two here (as this used to) changed nothing any consumer could
+  // see, because `refreshCampaigns` only assigns `activeCampaignId` when there
+  // is none -- so the switch was invisible until the page reloaded.
   const setActiveCampaign = useCallback(async (
     campaignId: string
   ): Promise<void> => {
     try {
-      console.log(`useCampaigns: Setting active campaign to ${campaignId}`);
       setError(null);
-      
-      if (!activeGroupId) {
-        throw new Error('No active group selected');
-      }
-      
-      // Update Firebase context
-      firebaseServices.auth.setActiveCampaign(campaignId);
-      
-      // Update user preference in group profile
-      const userId = firebaseServices.auth.getCurrentUserId();
-      if (userId) {
-        console.log(`useCampaigns: Updating user's activeCampaignId to ${campaignId}`);
-        await firebaseServices.user.updateGroupUserProfile(activeGroupId, userId, {
-          activeCampaignId: campaignId
-        });
-      }
-      
-      // Refresh campaigns to update the UI
-      await refreshCampaigns();
+      await switchCampaign(campaignId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to set active campaign');
       throw err;
     }
-  }, [activeGroupId, setError, refreshCampaigns]);
+  }, [setError, switchCampaign]);
 
   // Get campaigns for a specific group
   const getCampaigns = useCallback(async (groupId: string): Promise<Campaign[]> => {
