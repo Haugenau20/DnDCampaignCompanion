@@ -908,3 +908,26 @@
   font-size: small;
   font-style: italic;
 }
+
+/* ====== CALLOUT ====== */
+/*
+  An emphasis surface for the one statement on a page that must not be skimmed
+  past -- on the contact page, the response time, which used to sit in a
+  right-hand column styled identically to three blocks of advice.
+
+  The accent background carries the emphasis and the left rule carries the
+  eye, so the text stays the page's normal colour and needs no override. Pair
+  with `rounded-r-*` rather than `rounded-*` so the rule stays a square edge.
+
+  This deliberately replaced an earlier "inverted surface" version that swapped
+  --text-primary and --bg-primary. Inverting those two keeps any theme legible,
+  which is why it looked sound, but legible is not the same as belonging: in
+  the dark theme it produced a near-white #E0E0E0 slab that read as an alert
+  rather than a note, and in the medieval theme a dark chocolate block on
+  parchment. --bg-accent is the token each theme already tuned for exactly this
+  job.
+*/
+.callout-emphasis {
+  background-color: var(--bg-accent);
+  border-left: 4px solid var(--color-primary);
+}
