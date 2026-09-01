@@ -60,15 +60,15 @@ the same day. They are kept here because the reasoning matters when the same que
    purely as a **type** (instances come from `ServiceRegistry`), so those are now `import type` and
    carry no runtime edge. The 9 imports that reached into user-management's internals are gone too:
    its barrel now exports the 7 components external callers need, so `app/App.tsx`,
-   `app/layout/Header.tsx` and `shared/components/ContextSwitcher.tsx` go through it.
+   `app/layout/Header.tsx` and `shared/components/context-switcher/ContextSwitcher.tsx` go through it.
 
    **Adding components to that barrel first required removing 12 intra-domain self-barrel imports**,
    which would otherwise have become real cycles (`index.ts` → `AdminPanel.tsx` → `index.ts`). The
    three later-migrated domains have zero such imports; user-management was the pre-pattern outlier.
    **Inside a domain, import siblings directly — never your own barrel.**
-3. **`shared/` → `features/`**, found in `shared/components/{AttributionInfo,ContextSwitcher,
-   GlobalActionButton}.tsx` and `shared/context/SearchContext.tsx` — a dozen-plus imports across
-   those four files, every one going through the target domain's barrel (`user-management`,
+3. **`shared/` → `features/`**, found in `shared/components/{AttributionInfo,GlobalActionButton}.tsx`,
+   `shared/components/context-switcher/ContextSwitcher.tsx` and `shared/context/SearchContext.tsx` —
+   a dozen-plus imports across those four files, every one going through the target domain's barrel (`user-management`,
    `collaboration`, `storytelling`, `campaign-entities`); none reaches into internals.
    **Resolved 2026-07-27 by amending the rule, not by moving code.** These four are genuinely
    cross-cutting: a search context that indexes several domains at once, an attribution line that
@@ -218,7 +218,7 @@ src/
 ├── pages/                    # Route components
 │   └── layouts/              #   Dashboard + journal layouts (aggregate several domains)
 ├── shared/                   # Cross-domain code owned by no single feature
-│   ├── components/           #   incl. Breadcrumb, ContextSwitcher, AttributionInfo
+│   ├── components/           #   incl. Breadcrumb, context-switcher/, AttributionInfo
 │   ├── context/              #   Navigation, Search
 │   ├── hooks/                #   useFirebaseData, useNavigation, useSearch
 │   └── utils/
@@ -281,11 +281,11 @@ the tree.
 - **Use test failures to improve code quality before major refactoring**
 
 ### Current State
-- **Testing Infrastructure**: Jest + React Testing Library, **4,229 tests across 185 suites**
+- **Testing Infrastructure**: Jest + React Testing Library, **4,540 tests across 209 suites**
 - **Coverage**: **91.96% statements / 92.42% lines / 85.77% functions / 84.05% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-31 on `design-handoff/dashboard-1a`)
-- **Baseline**: **0 failed / 2 skipped / 4227 passed / 4229 total across 185 suites.** The 2 skips are #901's, closed as testability-only. **Any red is a regression.**
+- **Baseline**: **0 failed / 2 skipped / 4538 passed / 4540 total across 209 suites.** The 2 skips are #901's, closed as testability-only. **Any red is a regression.**
   - The previously recorded baseline of 7 failures — the ID-collision markers #002/#004/#009/#012 in the four `*Context.bugs` suites — is **obsolete**: that cluster was fixed 2026-07-28 and those four suites now pass 29/29. If you find advice anywhere telling you to tolerate reds, check `docs/testing/bug-tracking/README.md` before believing it.
-  - Measured on the `design-handoff/dashboard-1a` branch, which is ahead of `main`. On `main` expect roughly 182 suites / 4043 tests, also fully green.
+  - Measured on the `redesign/context-switcher` branch, which is ahead of `main`. On `main` expect roughly 182 suites / 4043 tests, also fully green.
   - To prove "the same suites failed", run the suspect suites alone and match counts against the full run; piping a full run through `tail` discards the earlier failures' names.
 - **Firebase Testing**: Emulator integration available but underutilized
 

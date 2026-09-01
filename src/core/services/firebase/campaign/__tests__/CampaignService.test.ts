@@ -12,6 +12,7 @@ const mockGetDoc = jest.fn();
 const mockGetDocs = jest.fn();
 const mockSetDoc = jest.fn();
 const mockUpdateDoc = jest.fn();
+const mockGetCountFromServer = jest.fn();
 const mockHttpsCallable = jest.fn();
 const mockCollection = jest.fn((_db: any, ...segs: string[]) => ({ path: segs.join('/') }));
 const mockDoc = jest.fn((_db_or_ref: any, ...segs: string[]) => ({
@@ -35,6 +36,7 @@ jest.mock('firebase/firestore', () => ({
   getDocs: function() { return (mockGetDocs as Function).apply(null, arguments); },
   setDoc: function() { return (mockSetDoc as Function).apply(null, arguments); },
   updateDoc: function() { return (mockUpdateDoc as Function).apply(null, arguments); },
+  getCountFromServer: function() { return (mockGetCountFromServer as Function).apply(null, arguments); },
 }));
 
 jest.mock('firebase/app', () => ({ initializeApp: jest.fn(() => ({})) }));
@@ -115,6 +117,7 @@ describe('CampaignService', () => {
       getDocs: function() { return (mockGetDocs as Function).apply(null, arguments); },
       setDoc: function() { return (mockSetDoc as Function).apply(null, arguments); },
       updateDoc: function() { return (mockUpdateDoc as Function).apply(null, arguments); },
+      getCountFromServer: function() { return (mockGetCountFromServer as Function).apply(null, arguments); },
     }));
     jest.doMock('firebase/app', () => ({ initializeApp: jest.fn(() => ({})) }));
     jest.doMock('firebase/auth', () => ({
@@ -134,7 +137,7 @@ describe('CampaignService', () => {
       emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001' },
     }));
 
-    [mockGetDoc, mockGetDocs, mockSetDoc, mockUpdateDoc, mockHttpsCallable,
+    [mockGetDoc, mockGetDocs, mockSetDoc, mockUpdateDoc, mockGetCountFromServer, mockHttpsCallable,
      mockGetGroupUserProfile, mockUpdateGroupUserProfile].forEach(m => m.mockReset());
 
     CampaignService = require('../CampaignService').default;
@@ -430,6 +433,63 @@ describe('CampaignService', () => {
 
       const svc = CampaignService.getInstance();
       await expect(svc.deleteCampaign('g1', 'c1')).rejects.toThrow('permission-denied');
+    });
+  });
+
+  // ─── getCampaignCounts ──────────────────────────────────────────────────────
+
+  describe('getCampaignCounts', () => {
+    /** Shape getCountFromServer returns: snapshot.data().count */
+    const countSnapshot = (count: number) => ({ data: () => ({ count }) });
+
+    beforeEach(() => {
+      mockGetGroupUserProfile.mockResolvedValue({ userId: 'campaign-user' });
+    });
+
+    test('counts chapters and NPCs for the named campaign', async () => {
+      mockGetCountFromServer
+        .mockResolvedValueOnce(countSnapshot(39))
+        .mockResolvedValueOnce(countSnapshot(16));
+
+      const svc = CampaignService.getInstance();
+      const counts = await svc.getCampaignCounts('g1', 'c1');
+
+      expect(counts).toEqual({ chapters: 39, npcs: 16 });
+    });
+
+    test('counts under the named campaign, not the active one', async () => {
+      mockGetCountFromServer.mockResolvedValue(countSnapshot(0));
+
+      const svc = CampaignService.getInstance();
+      await svc.getCampaignCounts('g1', 'c1');
+
+      expect(mockCollection).toHaveBeenCalledWith(
+        expect.anything(), 'groups', 'g1', 'campaigns', 'c1', 'chapters'
+      );
+      expect(mockCollection).toHaveBeenCalledWith(
+        expect.anything(), 'groups', 'g1', 'campaigns', 'c1', 'npcs'
+      );
+    });
+
+    test('refuses when the caller is not a member of the group', async () => {
+      mockGetGroupUserProfile.mockResolvedValue(null);
+
+      const svc = CampaignService.getInstance();
+      await expect(svc.getCampaignCounts('g1', 'c1')).rejects.toThrow(
+        'You are not a member of this group'
+      );
+      expect(mockGetCountFromServer).not.toHaveBeenCalled();
+    });
+
+    test('rejects when an aggregation fails', async () => {
+      mockGetCountFromServer.mockRejectedValue(new Error('permission-denied'));
+
+      // The caller decides what a missing count means. For the switcher it
+      // means the row shows its name and no second line -- never an error.
+      const svc = CampaignService.getInstance();
+      await expect(svc.getCampaignCounts('g1', 'c1')).rejects.toThrow(
+        'permission-denied'
+      );
     });
   });
 });

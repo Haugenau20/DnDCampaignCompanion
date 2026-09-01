@@ -49,6 +49,9 @@ const mockSetActiveCampaign = jest.fn();
 
 const mockGetUserProfile = jest.fn();
 const mockGetGroupUserProfile = jest.fn();
+const mockUpdateUserProfile = jest.fn();
+const mockUpdateGroupUserProfile = jest.fn();
+const mockGetCurrentUserId = jest.fn();
 
 const mockGetGroups = jest.fn();
 const mockGetCampaigns = jest.fn();
@@ -60,10 +63,13 @@ jest.mock("@/core/services/firebase", () => ({
       getAuth: (...args: any[]) => mockGetAuth(...args),
       setActiveGroup: (...args: any[]) => mockSetActiveGroup(...args),
       setActiveCampaign: (...args: any[]) => mockSetActiveCampaign(...args),
+      getCurrentUserId: () => mockGetCurrentUserId(),
     },
     user: {
       getUserProfile: (...args: any[]) => mockGetUserProfile(...args),
       getGroupUserProfile: (...args: any[]) => mockGetGroupUserProfile(...args),
+      updateUserProfile: (...args: any[]) => mockUpdateUserProfile(...args),
+      updateGroupUserProfile: (...args: any[]) => mockUpdateGroupUserProfile(...args),
     },
     group: {
       getGroups: (...args: any[]) => mockGetGroups(...args),
@@ -155,6 +161,9 @@ describe("FirebaseContext Behavioral Testing", () => {
     mockGetGroupUserProfile.mockResolvedValue(null);
     mockGetGroups.mockResolvedValue([]);
     mockGetCampaigns.mockResolvedValue([]);
+    mockGetCurrentUserId.mockReturnValue("user-1");
+    mockUpdateUserProfile.mockResolvedValue(undefined);
+    mockUpdateGroupUserProfile.mockResolvedValue(undefined);
   });
 
   // -------------------------------------------------------------------------
@@ -1311,6 +1320,139 @@ describe("FirebaseContext Behavioral Testing", () => {
       });
 
       expect(result.current.activeGroupId).toBe("g-active-state");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Switching context in place
+  //
+  // Before these existed, setActiveGroup persisted to Firestore and called
+  // refreshGroups, which only re-lists groups -- activeGroupId in React state
+  // never moved. window.location.reload() was the whole switching mechanism.
+  // -------------------------------------------------------------------------
+  describe("switchGroup / switchCampaign", () => {
+    /** Sign a user in with two groups, group-1 active, and settle the provider. */
+    async function signInWithTwoGroups() {
+      mockGetUserProfile.mockResolvedValue(
+        makeUserProfile({ groups: ["group-1", "group-2"], activeGroupId: "group-1" })
+      );
+      mockGetGroups.mockResolvedValue([makeGroup("group-1"), makeGroup("group-2")]);
+      mockGetGroupUserProfile.mockResolvedValue(
+        makeGroupUserProfile({ activeCampaignId: "campaign-1" })
+      );
+      mockGetCampaigns.mockResolvedValue([makeCampaign("campaign-1", "group-1")]);
+
+      const rendered = renderHook(() => useFirebaseContext(), { wrapper });
+
+      await act(async () => {
+        await capturedAuthCallback!(makeUser());
+      });
+      await waitFor(() => expect(rendered.result.current.activeGroupId).toBe("group-1"));
+
+      return rendered;
+    }
+
+    test("switchGroup moves activeGroupId in React state, not just in Firestore", async () => {
+      const { result } = await signInWithTwoGroups();
+
+      mockGetGroupUserProfile.mockResolvedValue(
+        makeGroupUserProfile({ activeCampaignId: "campaign-9" })
+      );
+      mockGetCampaigns.mockResolvedValue([makeCampaign("campaign-9", "group-2")]);
+
+      await act(async () => {
+        await result.current.switchGroup("group-2");
+      });
+
+      expect(result.current.activeGroupId).toBe("group-2");
+      expect(mockUpdateUserProfile).toHaveBeenCalledWith("user-1", {
+        activeGroupId: "group-2",
+      });
+    });
+
+    test("switchGroup loads the new group's campaigns and activates its own", async () => {
+      const { result } = await signInWithTwoGroups();
+
+      mockGetGroupUserProfile.mockResolvedValue(
+        makeGroupUserProfile({ activeCampaignId: "campaign-9" })
+      );
+      mockGetCampaigns.mockResolvedValue([makeCampaign("campaign-9", "group-2")]);
+
+      await act(async () => {
+        await result.current.switchGroup("group-2");
+      });
+
+      expect(mockGetCampaigns).toHaveBeenLastCalledWith("group-2");
+      expect(result.current.campaigns.map((c) => c.id)).toEqual(["campaign-9"]);
+      expect(result.current.activeCampaignId).toBe("campaign-9");
+    });
+
+    test("switchGroup rejects and leaves the context alone when the write fails", async () => {
+      const { result } = await signInWithTwoGroups();
+      mockUpdateUserProfile.mockRejectedValue(new Error("Profile write failed"));
+
+      await act(async () => {
+        await expect(result.current.switchGroup("group-2")).rejects.toThrow(
+          "Profile write failed"
+        );
+      });
+
+      expect(result.current.activeGroupId).toBe("group-1");
+    });
+
+    test("switchGroup refuses when there is no authenticated user", async () => {
+      const { result } = await signInWithTwoGroups();
+      mockUpdateUserProfile.mockClear();
+      mockGetCurrentUserId.mockReturnValue(null);
+
+      await act(async () => {
+        await expect(result.current.switchGroup("group-2")).rejects.toThrow(
+          "Not authenticated"
+        );
+      });
+
+      // The old useGroups.switchGroup coerced a null id to '' and wrote to
+      // users/, creating a document at an empty path segment. The provider
+      // refuses instead, so nothing is written and the context does not move.
+      expect(mockUpdateUserProfile).not.toHaveBeenCalled();
+      expect(result.current.activeGroupId).toBe("group-1");
+    });
+
+    test("switchCampaign moves activeCampaignId in React state", async () => {
+      const { result } = await signInWithTwoGroups();
+
+      await act(async () => {
+        await result.current.switchCampaign("campaign-2");
+      });
+
+      expect(result.current.activeCampaignId).toBe("campaign-2");
+      expect(mockUpdateGroupUserProfile).toHaveBeenCalledWith("group-1", "user-1", {
+        activeCampaignId: "campaign-2",
+      });
+      expect(mockSetActiveCampaign).toHaveBeenCalledWith("campaign-2");
+    });
+
+    test("switchCampaign rejects and leaves the context alone when the write fails", async () => {
+      const { result } = await signInWithTwoGroups();
+      mockUpdateGroupUserProfile.mockRejectedValue(new Error("Group profile write failed"));
+
+      await act(async () => {
+        await expect(result.current.switchCampaign("campaign-2")).rejects.toThrow(
+          "Group profile write failed"
+        );
+      });
+
+      expect(result.current.activeCampaignId).toBe("campaign-1");
+    });
+
+    test("switchCampaign refuses when there is no active group", async () => {
+      const { result } = renderHook(() => useFirebaseContext(), { wrapper });
+
+      await act(async () => {
+        await expect(result.current.switchCampaign("campaign-2")).rejects.toThrow(
+          "No active group selected"
+        );
+      });
     });
   });
 });

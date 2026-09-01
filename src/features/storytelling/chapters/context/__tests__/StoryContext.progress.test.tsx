@@ -30,12 +30,14 @@ import { StoryProvider, useStory } from '../StoryContext';
 // Mock Firebase dependencies
 const mockUseAuth = jest.fn();
 const mockUseUser = jest.fn();
+const mockUseCampaigns = jest.fn();
 const mockUseChapterData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
 jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
+  useCampaigns: () => mockUseCampaigns(),
 }));
 
 jest.mock('features/storytelling/chapters/hooks/useChapterData', () => ({
@@ -90,6 +92,11 @@ describe('StoryContext Reading Progress (bug #018)', () => {
   // per-test (before render) to control what the persisted-document read-back
   // effect finds.
   let progressCollectionData: any[];
+  // Stable identity across every render, matching the real useFirebaseData
+  // contract (its getData is a useCallback with an empty dependency array).
+  // A fresh jest.fn() per render would make a call-count assertion measure
+  // render churn rather than the effect's actual dependency behaviour.
+  let mockRefreshProgress: jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -103,9 +110,14 @@ describe('StoryContext Reading Progress (bug #018)', () => {
     mockDeleteData = jest.fn().mockResolvedValue(undefined);
     mockUpdateProgressData = jest.fn().mockResolvedValue(undefined);
     mockRefreshChapters = jest.fn();
+    mockRefreshProgress = jest.fn().mockResolvedValue([]);
 
     mockUseAuth.mockReturnValue({
       user: { uid: 'test-user' },
+    });
+
+    mockUseCampaigns.mockReturnValue({
+      activeCampaignId: 'campaign-1',
     });
 
     mockUseUser.mockReturnValue({
@@ -136,7 +148,7 @@ describe('StoryContext Reading Progress (bug #018)', () => {
         return {
           data: progressCollectionData,
           updateData: mockUpdateProgressData,
-          getData: jest.fn().mockResolvedValue([]),
+          getData: mockRefreshProgress,
         };
       }
       return {
@@ -157,6 +169,35 @@ describe('StoryContext Reading Progress (bug #018)', () => {
         <StoryTestComponent onContextChange={handleContextChange} />
       </StoryProvider>
     );
+  };
+
+  // Like renderStoryContext, but exposes a `rerender` that can change
+  // useCampaigns()'s activeCampaignId between renders, to drive the
+  // campaign-switch effect under test below.
+  const renderStoryProvider = ({ activeCampaignId }: { activeCampaignId?: string } = {}) => {
+    mockUseCampaigns.mockReturnValue({ activeCampaignId: activeCampaignId ?? 'campaign-1' });
+
+    const handleContextChange = (context: any) => {
+      storyContext = context;
+    };
+
+    const result = render(
+      <StoryProvider>
+        <StoryTestComponent onContextChange={handleContextChange} />
+      </StoryProvider>
+    );
+
+    return {
+      ...result,
+      rerender: (next: { activeCampaignId?: string }) => {
+        mockUseCampaigns.mockReturnValue({ activeCampaignId: next.activeCampaignId });
+        result.rerender(
+          <StoryProvider>
+            <StoryTestComponent onContextChange={handleContextChange} />
+          </StoryProvider>
+        );
+      },
+    };
   };
 
   test('accumulates chapter progress across successive updateChapterProgress calls for different chapters (bug #018)', async () => {
@@ -364,5 +405,21 @@ describe('StoryContext Reading Progress (bug #018)', () => {
     expect(
       storyContext.storyProgress.chapterProgress['chapter-01'].lastPosition
     ).toBe(100);
+  });
+
+  describe("campaign switching", () => {
+    test("refetches reading progress when the active campaign changes", async () => {
+      // Reading progress is per campaign. Its effect keyed only on
+      // hasRequiredContext, which stays true across a switch, so the previous
+      // campaign's position survived into the new one.
+      const { rerender } = renderStoryProvider({ activeCampaignId: "campaign-1" });
+
+      await waitFor(() => expect(mockRefreshProgress).toHaveBeenCalledTimes(1));
+
+      mockRefreshProgress.mockClear();
+      rerender({ activeCampaignId: "campaign-2" });
+
+      await waitFor(() => expect(mockRefreshProgress).toHaveBeenCalledTimes(1));
+    });
   });
 });

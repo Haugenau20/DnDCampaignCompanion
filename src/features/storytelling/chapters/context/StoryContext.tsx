@@ -4,7 +4,7 @@ import { Chapter, ChapterProgress, StoryProgress } from '../types';
 import { DomainData } from 'core/types/common';
 import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
-import { useAuth, useUser } from 'features/user-management';
+import { useAuth, useUser, useCampaigns } from 'features/user-management';
 import firebaseServices from 'core/services/firebase';
 import { buildModificationAttribution } from 'core/attribution';
 
@@ -101,6 +101,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const { user } = useAuth();
   const { activeGroupUserProfile } = useUser();
+  const { activeCampaignId } = useCampaigns();
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Real, held-in-state reading progress. `defaultProgress` remains only the
@@ -139,12 +140,19 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
    * The entity contexts avoid this by going through their own `use*Data()` hooks,
    * which watch the context; this one uses `useFirebaseData` directly and so has
    * to ask again itself.
+   *
+   * It must also ask again when the CAMPAIGN changes. Reading progress lives at
+   * groups/{g}/campaigns/{c}/story-progress, so it is per campaign -- but
+   * `hasRequiredContext` is true both before and after a switch, so keying on
+   * that alone left the previous campaign's position on screen. Every entity
+   * hook already keys on `activeCampaignId`; this one was the exception, and it
+   * only stopped mattering because switching used to reload the page.
    */
   useEffect(() => {
     if (hasRequiredContext) {
       refreshProgress();
     }
-  }, [hasRequiredContext, refreshProgress]);
+  }, [hasRequiredContext, activeCampaignId, refreshProgress]);
 
   // Populate storedProgress from the persisted 'current-progress' document once
   // useFirebaseData's own on-mount fetch resolves. Guarded so it only ever writes

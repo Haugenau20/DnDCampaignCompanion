@@ -7,16 +7,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   useAuth,
   useGroups,
-  useCampaigns,
   JoinGroupDialog,
   AdminPanel,
   UserProfile,
   SignInForm
 } from 'features/user-management';
-import { Menu, X, LogOut, ShieldAlert, UserPlus, User, Book, ChevronDown, Users, LogIn, Bug } from 'lucide-react';
-import ContextSwitcher from 'shared/components/ContextSwitcher';
+import { Menu, X, LogOut, ShieldAlert, UserPlus, User, LogIn, Bug } from 'lucide-react';
+import ContextSwitcher from 'shared/components/context-switcher/ContextSwitcher';
 import Button from 'core/components/Button';
-import Typography from 'core/components/Typography';
 import Dialog from 'core/components/Dialog';
 import Navigation from './Navigation';
 
@@ -27,8 +25,7 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useAuth();
-  const { activeGroupUserProfile, refreshGroups, activeGroup } = useGroups();
-  const { activeCampaignId, campaigns } = useCampaigns();
+  const { activeGroupUserProfile, refreshGroups, activeGroup, groups, setActiveGroup } = useGroups();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -41,11 +38,7 @@ const Header: React.FC = () => {
   const [showProfile, setShowProfile] = useState(false);
   const [showJoinGroup, setShowJoinGroup] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
-  const [showContextSwitcher, setShowContextSwitcher] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
-
-  // Get the active campaign name
-  const activeCampaign = campaigns.find(c => c.id === activeCampaignId);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -116,19 +109,43 @@ const Header: React.FC = () => {
     setShowJoinGroup(true);
     setMenuOpen(false);
   };
-  
+
+  /**
+   * One success behaviour for joining a group, from either entrance.
+   *
+   * Refreshing alone left the user in the group they were already in, staring
+   * at a list they had just changed. joinGroupWithToken returns void and no id
+   * reaches us, so the new group is the one that appears in the list; if none
+   * does -- a re-join, or a race -- refresh and say nothing rather than guess.
+   *
+   * `JoinGroupDialog` calls `onSuccess()` fire-and-forget, so a rejection here
+   * would otherwise be an unhandled promise rejection. The group refresh has
+   * already succeeded by this point -- the user is not stranded, only left in
+   * whichever group they were already in -- and the switcher is a one-click
+   * way back to the group they just joined, so this logs rather than
+   * inventing new error UI for a landing failure, the same way
+   * `handleSignOut` reports its own failures.
+   */
+  const handleJoinedGroup = async () => {
+    setShowJoinGroup(false);
+    const before = new Set(groups.map((group) => group.id));
+    const after = await refreshGroups();
+    const joined = after?.find((group) => !before.has(group.id));
+    if (joined) {
+      try {
+        await setActiveGroup(joined.id);
+      } catch (err) {
+        console.error('Error switching to the newly joined group:', err);
+      }
+    }
+  };
+
   // Handle admin click
   const handleAdminClick = () => {
     setShowAdmin(true);
     setMenuOpen(false);
   };
 
-  // Handle context switcher click
-  const handleContextSwitcherClick = () => {
-    setShowContextSwitcher(true);
-    setMenuOpen(false);
-  };
-  
   // Handle sign in click
   const handleSignInClick = () => {
     setShowSignIn(true);
@@ -156,25 +173,16 @@ const Header: React.FC = () => {
               <span className="lg:hidden">D&D Companion</span>
             </Link>
 
-            {/* Campaign context — the active campaign was previously only visible
-                after opening the hamburger menu. */}
-            {user && activeCampaign && (
+            {/* Campaign context, and the door onto changing it. Previously a
+                chip that opened a modal over the page it was about to
+                change; now the popover's own anchor. */}
+            {user && activeGroup && (
               <>
                 <span
                   aria-hidden="true"
-                  className="hidden md:block w-px h-6 self-center opacity-40 bg-secondary"
+                  className="w-px h-6 self-center opacity-40 bg-secondary"
                 ></span>
-                <button
-                  type="button"
-                  onClick={handleContextSwitcherClick}
-                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md button-ghost max-w-[14rem]"
-                  aria-label={`Active campaign: ${activeCampaign.name}. Change group or campaign`}
-                >
-                  <Typography variant="body-sm" className="truncate font-semibold">
-                    {activeCampaign.name}
-                  </Typography>
-                  <ChevronDown size={14} className="flex-shrink-0" />
-                </button>
+                <ContextSwitcher onJoinGroup={() => setShowJoinGroup(true)} />
               </>
             )}
 
@@ -314,48 +322,6 @@ const Header: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Campaign Section - Only when logged in */}
-                  {user && (
-                    <div className="pt-4">
-                      <h3 className="mb-3 font-medium typography">
-                        Campaign
-                      </h3>
-                      
-                      {/* Group Display */}
-                      <div className="mb-2">
-                        <Typography variant="body-sm" color="secondary">Group:</Typography>
-                        <div className="flex items-center mt-1 pl-1">
-                          <Users size={18} className="mr-2 flex-shrink-0 primary" />
-                          <Typography className="flex-1 truncate">
-                            {activeGroup ? activeGroup.name : 'No Group Selected'}
-                          </Typography>
-                        </div>
-                      </div>
-                      
-                      {/* Campaign Display */}
-                      <div className="mb-3">
-                        <Typography variant="body-sm" color="secondary">Campaign:</Typography>
-                        <div className="flex items-center mt-1 pl-1">
-                          <Book size={18} className="mr-2 flex-shrink-0 primary" />
-                          <Typography className="flex-1 truncate">
-                            {activeCampaign ? activeCampaign.name : 'No Campaign Selected'}
-                          </Typography>
-                        </div>
-                      </div>
-                      
-                      {/* Change Button */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full"
-                        onClick={handleContextSwitcherClick}
-                        endIcon={<ChevronDown size={16} />}
-                      >
-                        Change
-                      </Button>
-                    </div>
-                  )}
-
                   {/* Appearance Section - Always visible */}
                   <div className="pt-4">
                     <h3 className="mb-3 font-medium typography">
@@ -399,15 +365,12 @@ const Header: React.FC = () => {
         />
       </Dialog>
       
-      {/* Join Group Dialog */}
+      {/* Join Group Dialog -- the sole mount; ContextSwitcher's chip opens it
+          through the `onJoinGroup` callback rather than mounting its own. */}
       <JoinGroupDialog
         open={showJoinGroup}
         onClose={() => setShowJoinGroup(false)}
-        onSuccess={() => {
-          if (refreshGroups) {
-            refreshGroups();
-          }
-        }}
+        onSuccess={handleJoinedGroup}
       />
       
       {/* Admin Panel Dialog */}
@@ -420,21 +383,6 @@ const Header: React.FC = () => {
         <AdminPanel 
           onClose={() => setShowAdmin(false)}
         />
-      </Dialog>
-      
-      {/* Context Switcher Dialog */}
-      <Dialog
-        open={showContextSwitcher}
-        onClose={() => setShowContextSwitcher(false)}
-        title="Select Group and Campaign"
-        maxWidth="max-w-md"
-      >
-        <div className="p-4">
-          <ContextSwitcher 
-            inDialog={true} 
-            onClose={() => setShowContextSwitcher(false)} 
-          />
-        </div>
       </Dialog>
       
       {/* Sign In Dialog */}

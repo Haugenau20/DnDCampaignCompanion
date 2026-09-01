@@ -51,6 +51,7 @@ jest.mock("@/core/services/firebase", () => ({
 // ---------------------------------------------------------------------------
 const mockSetError = jest.fn();
 const mockRefreshGroups = jest.fn();
+const mockSwitchGroup = jest.fn();
 
 let mockContextValue: any = {};
 
@@ -84,6 +85,7 @@ function makeContext(overrides: Record<string, any> = {}) {
     refreshGroups: mockRefreshGroups,
     refreshCampaigns: jest.fn().mockResolvedValue([]),
     refreshUserProfile: jest.fn().mockResolvedValue(undefined),
+    switchGroup: mockSwitchGroup,
     ...overrides,
   };
 }
@@ -95,6 +97,7 @@ describe("useGroups Behavioral Testing", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRefreshGroups.mockResolvedValue([]);
+    mockSwitchGroup.mockResolvedValue(undefined);
     mockContextValue = makeContext();
   });
 
@@ -323,9 +326,7 @@ describe("useGroups Behavioral Testing", () => {
 
   // -------------------------------------------------------------------------
   describe("switchGroup / setActiveGroup Behavior", () => {
-    test("should call user.updateUserProfile with activeGroupId update", async () => {
-      mockGetCurrentUserId.mockReturnValue("u1");
-      mockUpdateUserProfile.mockResolvedValue(undefined);
+    test("should delegate to the context's switchGroup", async () => {
       mockContextValue = makeContext({ user: { uid: "u1" } as any });
 
       const { result } = renderHook(() => useGroups());
@@ -334,14 +335,13 @@ describe("useGroups Behavioral Testing", () => {
         await result.current.switchGroup("g2");
       });
 
-      expect(mockUpdateUserProfile).toHaveBeenCalledWith(
-        expect.any(String),
-        { activeGroupId: "g2" }
-      );
+      // The profile write and the context update both live in FirebaseContext
+      // now, so that a switch actually reaches React state instead of relying
+      // on a page reload. This hook's job is to forward and to report errors.
+      expect(mockSwitchGroup).toHaveBeenCalledWith("g2");
     });
 
-    test("should call refreshGroups after switching", async () => {
-      mockUpdateUserProfile.mockResolvedValue(undefined);
+    test("should not write the user profile itself", async () => {
       mockContextValue = makeContext({ user: { uid: "u1" } as any });
 
       const { result } = renderHook(() => useGroups());
@@ -350,11 +350,11 @@ describe("useGroups Behavioral Testing", () => {
         await result.current.switchGroup("g2");
       });
 
-      expect(mockRefreshGroups).toHaveBeenCalledTimes(1);
+      expect(mockUpdateUserProfile).not.toHaveBeenCalled();
     });
 
     test("should call setError and re-throw on failure", async () => {
-      mockUpdateUserProfile.mockRejectedValue(new Error("Switch failed"));
+      mockSwitchGroup.mockRejectedValue(new Error("Switch failed"));
 
       const { result } = renderHook(() => useGroups());
 
@@ -571,7 +571,7 @@ describe("useGroups Behavioral Testing", () => {
     });
 
     test("switchGroup: setError uses fallback string when a non-Error is thrown", async () => {
-      mockUpdateUserProfile.mockRejectedValue({ code: "UNAVAILABLE" });
+      mockSwitchGroup.mockRejectedValue({ code: "UNAVAILABLE" });
 
       const { result } = renderHook(() => useGroups());
 
@@ -718,23 +718,6 @@ describe("useGroups Behavioral Testing", () => {
       const { result } = renderHook(() => useGroups());
 
       expect(result.current.isAdmin).toBe(false);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  describe("switchGroup — getCurrentUserId null fallback (line 75)", () => {
-    test("should use empty string when getCurrentUserId returns null", async () => {
-      // getCurrentUserId returns null → '' is used as userId for updateUserProfile
-      mockGetCurrentUserId.mockReturnValue(null);
-      mockUpdateUserProfile.mockResolvedValue(undefined);
-
-      const { result } = renderHook(() => useGroups());
-
-      await act(async () => {
-        await result.current.switchGroup("g2");
-      });
-
-      expect(mockUpdateUserProfile).toHaveBeenCalledWith("", { activeGroupId: "g2" });
     });
   });
 

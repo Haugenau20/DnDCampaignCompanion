@@ -1,18 +1,28 @@
 // src/core/services/firebase/campaign/CampaignService.ts
-import { 
-    collection, 
-    doc, 
-    getDoc, 
-    getDocs, 
+import {
+    collection,
+    doc,
+    getDoc,
+    getDocs,
     setDoc,
-    updateDoc
+    updateDoc,
+    getCountFromServer
   } from 'firebase/firestore';
   import { getFunctions, httpsCallable } from 'firebase/functions';
   import BaseFirebaseService from '../core/BaseFirebaseService';
   import ServiceRegistry from '../core/ServiceRegistry';
   import type UserService from '../user/UserService';
   import { Campaign } from '../../../types/user';
-  
+
+  /**
+   * How much a campaign holds. Used to tell two campaigns apart in the
+   * context switcher, where a name alone is not enough.
+   */
+  export interface CampaignCounts {
+    chapters: number;
+    npcs: number;
+  }
+
   /**
    * CampaignService manages campaign operations
    */
@@ -131,6 +141,48 @@ import {
         console.error(`CampaignService: Error fetching campaigns for group ${groupId}:`, error);
         return [];
       }
+    }
+
+    /**
+     * Count the chapters and NPCs in a campaign.
+     *
+     * Aggregation queries bill one read each regardless of collection size,
+     * which is what makes it affordable to describe every campaign in the
+     * switcher rather than only the active one. The two counts run in
+     * parallel; either rejecting rejects the pair, and the caller decides what
+     * a missing count means -- in the switcher, a row with no second line.
+     *
+     * @param groupId ID of the group the campaign belongs to
+     * @param campaignId ID of the campaign to describe
+     * @returns Chapter and NPC counts for that campaign
+     */
+    public async getCampaignCounts(
+      groupId: string,
+      campaignId: string
+    ): Promise<CampaignCounts> {
+      const userId = this.getCurrentUser()?.uid;
+      if (!userId) {
+        throw new Error('Not authenticated');
+      }
+
+      const userProfileDoc = await this.userService.getGroupUserProfile(groupId, userId);
+      if (!userProfileDoc) {
+        throw new Error('You are not a member of this group');
+      }
+
+      const countOf = async (collectionName: string): Promise<number> => {
+        const snapshot = await getCountFromServer(
+          collection(this.db, 'groups', groupId, 'campaigns', campaignId, collectionName)
+        );
+        return snapshot.data().count;
+      };
+
+      const [chapters, npcs] = await Promise.all([
+        countOf('chapters'),
+        countOf('npcs')
+      ]);
+
+      return { chapters, npcs };
     }
 
     /**

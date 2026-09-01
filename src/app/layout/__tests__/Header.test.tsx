@@ -38,6 +38,10 @@ const { useNavigate, useLocation } = require("react-router-dom");
 // Mock Firebase context hooks
 // ---------------------------------------------------------------------------
 const mockSignOut = jest.fn();
+// useGroups' refreshGroups and setActiveGroup, hoisted so tests can configure
+// and assert on them -- the join-success handler calls both.
+const mockRefreshGroups = jest.fn();
+const mockSetActiveGroup = jest.fn();
 
 // Header consumes these components through the domain barrel, so the barrel
 // mock re-exports the component stubs defined further down.
@@ -77,7 +81,7 @@ jest.mock("shared/components/ThemeSelector", () => ({
   default: () => <div data-testid="theme-selector" />,
 }));
 
-jest.mock("shared/components/ContextSwitcher", () => ({
+jest.mock("shared/components/context-switcher/ContextSwitcher", () => ({
   __esModule: true,
   default: () => <div data-testid="context-switcher" />,
 }));
@@ -96,8 +100,12 @@ jest.mock("../Navigation", () => ({
 // ---------------------------------------------------------------------------
 jest.mock("@/features/user-management/groups/components/JoinGroupDialog", () => ({
   __esModule: true,
-  default: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="join-group-dialog" /> : null,
+  default: ({ open, onSuccess }: { open: boolean; onSuccess: () => void }) =>
+    open ? (
+      <button data-testid="trigger-join-success" onClick={onSuccess}>
+        Join
+      </button>
+    ) : null,
 }));
 
 jest.mock("@/features/user-management/admin/components/AdminPanel", () => ({
@@ -147,7 +155,8 @@ jest.mock("core/components/Dialog", () => ({
 function setupMocks({
   user = null as null | { uid: string },
   isAdmin = false,
-  activeGroup = null as null | { name: string },
+  activeGroup = null as null | { id?: string; name: string },
+  groups = [] as Array<{ id: string; name: string }>,
   activeCampaignId = null as null | string,
   campaigns = [] as Array<{ id: string; name: string }>,
   pathname = "/dashboard",
@@ -159,8 +168,10 @@ function setupMocks({
     activeGroupUserProfile: user
       ? { role: isAdmin ? "admin" : "member", username: "TestUser" }
       : null,
-    refreshGroups: jest.fn(),
+    refreshGroups: mockRefreshGroups,
+    setActiveGroup: mockSetActiveGroup,
     activeGroup,
+    groups,
   });
   (useCampaigns as jest.Mock).mockReturnValue({
     activeCampaignId,
@@ -168,10 +179,18 @@ function setupMocks({
   });
 }
 
+// window.location.reload must never be called by the join-success handler.
+const mockReload = jest.fn();
+
 describe("Header", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRefreshGroups.mockResolvedValue([]);
     setupMocks();
+    Object.defineProperty(window, "location", {
+      value: { reload: mockReload },
+      writable: true,
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -360,39 +379,6 @@ describe("Header", () => {
   // Campaign context display
   // -------------------------------------------------------------------------
   describe("campaign context", () => {
-    test("should display No Group Selected when no active group", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" }, activeGroup: null });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      expect(screen.getByText("No Group Selected")).toBeInTheDocument();
-    });
-
-    test("should display active group name when available", async () => {
-      const user = userEvent.setup();
-      setupMocks({
-        user: { uid: "u1" },
-        activeGroup: { name: "Fellowship of the Ring" },
-      });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      expect(screen.getByText("Fellowship of the Ring")).toBeInTheDocument();
-    });
-
-    test("should display No Campaign Selected when no active campaign", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" }, activeCampaignId: null, campaigns: [] });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      expect(screen.getByText("No Campaign Selected")).toBeInTheDocument();
-    });
-
     test("should display active campaign name when available", async () => {
       const user = userEvent.setup();
       setupMocks({
@@ -404,48 +390,43 @@ describe("Header", () => {
 
       await user.click(screen.getByRole("button", { name: /menu/i }));
 
-      // The name now appears twice: in the always-visible header chip and in the
-      // menu's Campaign section.
-      expect(screen.getAllByText("The Dark Campaign")).toHaveLength(2);
+      // The menu's read-only Campaign section is gone: the switcher chip is
+      // the one place the active campaign is shown, and the one door onto
+      // changing it.
+      expect(screen.queryByText("The Dark Campaign")).not.toBeInTheDocument();
     });
 
-    test("shows the active campaign in the bar without opening the menu", () => {
+    test("hosts the context switcher in the bar", () => {
       setupMocks({
         user: { uid: "u1" },
+        activeGroup: { id: "g1", name: "The Fellowship" },
         activeCampaignId: "camp-1",
         campaigns: [{ id: "camp-1", name: "The Dark Campaign" }],
       });
       render(<Header />);
 
-      // Which campaign you are in was previously only discoverable by opening the
-      // hamburger menu.
-      expect(
-        screen.getByRole("button", { name: /Active campaign: The Dark Campaign/ })
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("context-switcher")).toBeInTheDocument();
     });
 
-    test("omits the campaign chip when there is no active campaign", () => {
-      setupMocks({ user: { uid: "u1" }, activeCampaignId: null, campaigns: [] });
+    test("omits the switcher when there is no active group", () => {
+      setupMocks({ user: { uid: "u1" }, activeGroup: null, campaigns: [] });
       render(<Header />);
 
-      expect(
-        screen.queryByRole("button", { name: /Active campaign:/ })
-      ).not.toBeInTheDocument();
+      // Nothing to switch between, and nothing to name.
+      expect(screen.queryByTestId("context-switcher")).not.toBeInTheDocument();
     });
 
-    test("opens the context switcher from the campaign chip", async () => {
-      const user = userEvent.setup();
+    test("keeps the switcher when a group has no campaigns yet", () => {
       setupMocks({
         user: { uid: "u1" },
-        activeCampaignId: "camp-1",
-        campaigns: [{ id: "camp-1", name: "The Dark Campaign" }],
+        activeGroup: { id: "g1", name: "The Fellowship" },
+        activeCampaignId: null,
+        campaigns: [],
       });
       render(<Header />);
 
-      await user.click(
-        screen.getByRole("button", { name: /Active campaign: The Dark Campaign/ })
-      );
-
+      // The chip is now the only entrance to switching, so a group with no
+      // campaigns must not strand the user without one.
       expect(screen.getByTestId("context-switcher")).toBeInTheDocument();
     });
   });
@@ -497,6 +478,85 @@ describe("Header", () => {
         "data-variant",
         "inline"
       );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Joining a group -- the sole mount, and its one success behaviour
+  // -------------------------------------------------------------------------
+  describe("joining a group", () => {
+    test("mounts the join dialog exactly once", async () => {
+      const user = userEvent.setup();
+      setupMocks({
+        user: { uid: "u1" },
+        activeGroup: { id: "g1", name: "The Fellowship" },
+      });
+      render(<Header />);
+
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      await user.click(screen.getByRole("button", { name: /join group/i }));
+
+      expect(screen.getAllByTestId("trigger-join-success")).toHaveLength(1);
+    });
+
+    test("switches to a group the user has just joined", async () => {
+      const user = userEvent.setup();
+      setupMocks({
+        user: { uid: "u1" },
+        activeGroup: { id: "g1", name: "The Fellowship" },
+        groups: [{ id: "g1", name: "The Fellowship" }],
+      });
+      // refreshGroups resolves with the list as it is AFTER joining
+      mockRefreshGroups.mockResolvedValue([
+        { id: "g1", name: "The Fellowship" },
+        { id: "g2", name: "The Council of Elrond" },
+      ]);
+      render(<Header />);
+
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      await user.click(screen.getByRole("button", { name: /join group/i }));
+      await user.click(screen.getByTestId("trigger-join-success"));
+
+      // joinGroupWithToken returns void, so the new group is the one that
+      // appears in the list. Landing the user in it is the whole point of
+      // having just joined it.
+      expect(mockSetActiveGroup).toHaveBeenCalledWith("g2");
+      expect(mockReload).not.toHaveBeenCalled();
+    });
+
+    // Finding 3 of the 2026-09-01 review: JoinGroupDialog's stub above calls
+    // onSuccess() fire-and-forget (no await, no catch), and useGroups().
+    // setActiveGroup re-throws after recording its own failure -- so a
+    // rejection here used to become an unhandled promise rejection with
+    // nothing shown to the user. The group refresh has already succeeded by
+    // this point, so this only has to confirm the rejection is actually
+    // handled (not just that this test doesn't fail).
+    test("reports rather than throws when landing in the newly joined group fails", async () => {
+      const user = userEvent.setup();
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      setupMocks({
+        user: { uid: "u1" },
+        activeGroup: { id: "g1", name: "The Fellowship" },
+        groups: [{ id: "g1", name: "The Fellowship" }],
+      });
+      mockRefreshGroups.mockResolvedValue([
+        { id: "g1", name: "The Fellowship" },
+        { id: "g2", name: "The Council of Elrond" },
+      ]);
+      mockSetActiveGroup.mockRejectedValue(new Error("Switch failed"));
+      render(<Header />);
+
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      await user.click(screen.getByRole("button", { name: /join group/i }));
+
+      await act(async () => {
+        await user.click(screen.getByTestId("trigger-join-success"));
+      });
+
+      expect(mockSetActiveGroup).toHaveBeenCalledWith("g2");
+      expect(consoleErrorSpy).toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
     });
   });
 });

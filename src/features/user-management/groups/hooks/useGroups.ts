@@ -4,13 +4,14 @@ import { useFirebaseContext } from 'features/user-management/auth/context/Fireba
 import firebaseServices from 'core/services/firebase';
 
 export function useGroups() {
-  const { 
+  const {
     user,
-    groups, 
-    activeGroupId, 
+    groups,
+    activeGroupId,
     activeGroupUserProfile,
-    setError, 
+    setError,
     refreshGroups,
+    switchGroup: switchGroupContext,
     loading: firebaseLoading
   } = useFirebaseContext();
 
@@ -66,23 +67,22 @@ export function useGroups() {
   }, [setError, refreshGroups]);
 
   // Switch active group (alias for setActiveGroup for backward compatibility)
+  //
+  // The write and the context update both live in FirebaseContext, because
+  // only the provider can move `activeGroupId` in React state. Writing the
+  // profile here and calling `refreshGroups()` -- what this did before -- left
+  // the context on the old group and needed a page reload to take effect.
   const switchGroup = useCallback(async (
     groupId: string
   ): Promise<void> => {
     try {
       setError(null);
-      // This will update both the service and context
-      await firebaseServices.user.updateUserProfile(firebaseServices.auth.getCurrentUserId() || '', {
-        activeGroupId: groupId
-      });
-      
-      // Refresh all data
-      await refreshGroups();
+      await switchGroupContext(groupId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to switch group');
       throw err;
     }
-  }, [setError, refreshGroups]);
+  }, [setError, switchGroupContext]);
 
   // Set active group (original name)
   const setActiveGroup = switchGroup;

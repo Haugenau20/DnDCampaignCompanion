@@ -29,6 +29,8 @@ interface FirebaseContextType {
   refreshGroups: () => Promise<Group[]>;
   refreshCampaigns: () => Promise<Campaign[]>;
   refreshUserProfile: () => Promise<void>;
+  switchGroup: (groupId: string) => Promise<void>;
+  switchCampaign: (campaignId: string) => Promise<void>;
 }
 
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
@@ -199,6 +201,59 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  /**
+   * Switch the active group, in Firestore AND in React state.
+   *
+   * `refreshGroups` only re-lists the user's groups; it calls
+   * `setActiveGroupContext` solely for the one-group-no-active-group case. So
+   * persisting `activeGroupId` and calling it -- which is what
+   * `useGroups().setActiveGroup` used to do -- left `activeGroupId` in this
+   * provider pointing at the OLD group, and only a full page reload made the
+   * switch visible. `setActiveGroupContext` already does the whole job
+   * correctly, including loading the new group's campaigns and activating the
+   * one the user last had open there; it was simply unreachable from outside.
+   *
+   * Firestore is written first so a rejected write leaves the context on the
+   * group it was already showing.
+   */
+  const switchGroup = async (groupId: string): Promise<void> => {
+    const userId = firebaseServices.auth.getCurrentUserId();
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
+
+    await firebaseServices.user.updateUserProfile(userId, { activeGroupId: groupId });
+    await setActiveGroupContext(groupId);
+  };
+
+  /**
+   * Switch the active campaign within the active group, in Firestore AND in
+   * React state.
+   *
+   * `refreshCampaigns` only assigns `activeCampaignId` when there is none, so
+   * the previous implementation in `useCampaigns` moved the SERVICE-level
+   * campaign and the stored preference while this provider kept serving the
+   * old id to every consumer.
+   *
+   * The service context and the React state are both set only after the write
+   * resolves, so a failure cannot leave the three out of step.
+   */
+  const switchCampaign = async (campaignId: string): Promise<void> => {
+    if (!activeGroupId) {
+      throw new Error('No active group selected');
+    }
+
+    const userId = firebaseServices.auth.getCurrentUserId();
+    if (userId) {
+      await firebaseServices.user.updateGroupUserProfile(activeGroupId, userId, {
+        activeCampaignId: campaignId
+      });
+    }
+
+    firebaseServices.auth.setActiveCampaign(campaignId);
+    setActiveCampaignId(campaignId);
+  };
+
   // Load user profile with retry logic
   const loadUserProfile = async (userId: string) => {
     console.log(`Loading user profile for ${userId}`);
@@ -342,7 +397,9 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Context updaters
     refreshGroups,
     refreshCampaigns,
-    refreshUserProfile
+    refreshUserProfile,
+    switchGroup,
+    switchCampaign
   };
 
   return (
