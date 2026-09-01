@@ -91,6 +91,15 @@ production build.
 **Baseline: 0 failed / 2 skipped / 4543 passed / 4545 total across 209 suites**, measured on `main`
 at `b73232a` during batch 1. Any red is a regression.
 
+**Running total after each batch** — compare against the row above yours, and reconcile the delta
+against what the diffs actually added. A delta that does not reconcile is a finding.
+
+| After batch | Suites | Passed | Total | Delta | Accounted for by |
+|---|---|---|---|---|---|
+| baseline | 209 | 4543 | 4545 | — | — |
+| 1 (tasks 1, 3) | 209 | 4548 | 4550 | +5 | GroupService +1, UserService +3, Header +1 |
+| 2 (tasks 2, 4) | 211 | 4565 | 4567 | +17 | UserProfile +5, ProfilePage +8, ProfileSectionRail +3, App +1 |
+
 > CLAUDE.md records 4538/4540 for this commit and is **stale** — it was measured on
 > `redesign/context-switcher` before that branch merged. Task 11 corrects it. Compare against the
 > number above, and against the previous batch's number thereafter. The count moves only as this plan's own suites are added or its two doomed suites
@@ -163,7 +172,19 @@ proving nothing**, which is the failure mode this whole review structure exists 
   on the accessible name (`getByRole("dialog", { name: … })`); a `queryByText` for the title passes
   against broken code too. *(Found reviewing Task 3 — the agent's own assertion had this bug.)*
 - **`IntersectionObserver` does not exist in jsdom.** Anything using it needs a shim or a
-  feature-detected fallback. *(Relevant to Task 4.)*
+  feature-detected fallback. `ProfileSectionRail` feature-detects. *(Task 4.)*
+- **`ProfilePage.test.tsx` stubs `UserProfile`**, so any assertion about what is *inside* the
+  profile — the `Close` button included — passes trivially there. The DoD guard for "no `Close`
+  button below `Delete account`" therefore belongs to `DangerZoneCard`'s own suite in Task 9, where
+  the real component renders. The page-level test is scoped and renamed to say it only guards the
+  shell. *(Caught reviewing Task 4.)*
+- **The App routing suite is `src/__tests__/App.test.tsx`**, not `src/app/__tests__/`. It asserts an
+  **exact** `EXPECTED_ROUTES` list and mocks every page module, so adding a route requires adding
+  both a `jest.mock` and a list entry, or the suite fails. *(Task 4.)*
+- **A `checking`-style in-flight flag does not cover a debounce window.** Between a keystroke and
+  the debounced call, nothing is in flight and the previous verdict is still in state. Reset the
+  verdict when the input changes, not when the request starts. *(Task 2 — its own author flagged
+  the gap; the fix and a test that fails without it landed in review.)*
 
 ---
 
