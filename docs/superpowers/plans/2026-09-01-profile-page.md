@@ -1,6 +1,8 @@
 # Profile page and header menu — implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Execution model:** this plan is executed by **Sonnet subagents**, one task per subagent, with
+> Opus as orchestrator and reviewer. Read "How this plan is executed" before dispatching anything.
+> Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give the profile a real URL, split its 797-line component along scope boundaries, move
 theme to the account, make the destructive actions say what they destroy — and fix the reason those
@@ -17,35 +19,125 @@ menu and both profile-dialog mounts are replaced by one named account menu in
 Functions in `europe-west1`), TailwindCSS with a token-based theme system, Jest + React Testing
 Library, `lucide-react`, `clsx`, `react-router-dom` v6.
 
-**Spec:** `docs/superpowers/specs/2026-09-01-profile-page-design.md` — read it before Task 1. This
-plan argues from it and does not restate it. The PR description is the requirement; the spec records
-what reading the code changed about it.
+**Spec:** `docs/superpowers/specs/2026-09-01-profile-page-design.md`. This plan argues from it and
+does not restate it. Each task's brief carries the spec facts that task needs, so a subagent does
+**not** have to read the whole spec to work — but it must read the sections its brief names.
 
-## Global Constraints
+---
 
-- **Never use hardcoded colours.** Every colour comes from a theme token or an existing utility
-  class (`card`, `card-divider`, `dropdown`, `dropdown-item`, `dropdown-item-active`, `chip`,
-  `chip-selected`, `callout-emphasis`, `error-bg`, `delete-button`, `form-error`, `success-icon`,
-  `typography*`, `button-*`, `bg-secondary`, `selectable-item`, `divider`, `tag`). CLAUDE.md makes
-  this non-negotiable. The swatches in the Appearance card read `theme.colors.primary` from the
-  theme definitions, which is a token lookup, not a literal.
-- **No `@/…` imports in shipping code.** `react-scripts`' webpack ignores tsconfig `paths`, so
-  `@/…` passes `tsc` and jest and then fails `npm run build`. Use bare `baseUrl` specifiers
-  (`core/components/…`, `shared/hooks/…`, `features/user-management`). `@/…` is allowed **only**
-  inside `__tests__/` and `test-utils/`.
-- **Import features through their barrel** from `pages/` and `shared/`; **inside** a domain import
-  siblings directly — importing `features/user-management/index.ts` from within user-management is
-  a circular import, and the existing profile tests mock around exactly that.
-- **Double quotes** per ESLint. JSDoc on every exported component, hook and function.
-- **The suite is green and must stay green.** Baseline on `main` at `b73232a`: **0 failed / 2
-  skipped / 4538 passed across 209 suites.** Any red is a regression.
-- **Never edit a test to make it pass.** This plan *does* delete two suites (Tasks 5 and 10); each
-  deletion is because the component under test ceases to exist, and each is paired with the suite
-  that inherits its intent. No assertion is weakened to accommodate new code.
-- **Three gates before proposing a merge:** `npx tsc --noEmit`, `npm test`, `npm run build`. The
-  third is not implied by the first two.
-- **No file over ~400 lines**, per the DoD. The largest thing this plan creates is
-  `CharactersCard.tsx` + `CharacterRow.tsx`, deliberately split for that reason.
+## How this plan is executed
+
+### Roles
+
+| Role | Who | Does |
+|---|---|---|
+| **Orchestrator / reviewer** | Opus, the main session | Dispatches one brief per task, reviews every diff, runs the batch gate, writes every commit, owns Task 11 |
+| **Implementer** | Sonnet subagent, one per task | Executes exactly one task's steps, runs that task's targeted tests, reports back. **Never commits, never pushes, never touches a file outside its allow-list** |
+
+A subagent starts cold: it has no memory of the design conversation and no reason to know this
+repo's conventions. Everything it needs is in its brief. If a brief turns out to be missing
+something, that is an orchestrator bug — fix the brief in this file, then re-dispatch.
+
+### Batches
+
+Two subagents run at a time, at most. Batches are cut so that the two agents in a batch have
+**disjoint file allow-lists** — that is what makes it safe for them to share one working tree, and
+what lets the orchestrator stage each task's paths into its own commit afterwards.
+
+| Batch | Tasks | Parallel? | Why they can share a tree |
+|---|---|---|---|
+| 1 | 1, 3 | Yes | Task 1 owns the services + `UserProfile.tsx` handlers; Task 3 owns `Header.tsx` + `UserProfileButton.tsx` |
+| 2 | 2, 4 | Yes | Task 2 owns `UserProfile.tsx` validation; Task 4 creates `pages/profile/` and adds one route line |
+| 3 | 5 | No | The split touches every profile file at once |
+| 4 | 6, 7 | Yes | Task 6 owns `AccountCard` + `GroupMembershipCard` + the join hook; Task 7 owns `AppearanceCard` + `SessionManager` + `core/types/user.ts` |
+| 5 | 8, 9 | Yes | Task 8 owns `CharacterRow` + `useCharacterRoster`; Task 9 owns the danger zone + `DocumentService` |
+| 6 | 10 | No | Rewrites the header and deletes two files |
+| — | 11 | Orchestrator | The record of what actually happened; not delegated |
+
+**Task 2 and Task 1 both touch `UserProfile.tsx` and must not run together.** Task 2 is in batch 2
+for exactly that reason.
+
+### The commit protocol
+
+Subagents leave their work in the working tree and report. They do **not** run `git commit`,
+`git add`, `git push`, `git checkout` or `git stash` — a subagent that commits makes the batch
+unreviewable and can strand its partner's uncommitted work.
+
+After each batch the orchestrator:
+
+1. Reads the full diff for each task's allow-list, separately.
+2. Runs the batch gate (below).
+3. Stages **one task's paths at a time** and writes that task's commit, in task order.
+
+### The batch gate
+
+Run by the orchestrator after every batch, never by a subagent:
+
+```bash
+npx tsc --noEmit
+npm test
+```
+
+and, before proposing the merge, once at the end:
+
+```bash
+npm run build
+```
+
+`npm run build` is not implied by the other two: `react-scripts`' webpack honours tsconfig
+`baseUrl` but ignores `paths`, so an `@/…` import passes `tsc` and jest and then fails the
+production build.
+
+**Baseline: 0 failed / 2 skipped / 4538 passed across 209 suites**, on `main` at `b73232a`. Any red
+is a regression. The count moves only as this plan's own suites are added or its two doomed suites
+are deleted; every batch gate compares against the previous batch's number, not against 4538
+forever.
+
+### Review checklist — what the orchestrator checks on every returned diff
+
+Sonnet is good at these tasks and bad at noticing when a task quietly became a different task. Check:
+
+- [ ] **No file outside the allow-list was touched.** `git status --short` against the brief.
+- [ ] **No test was weakened.** Diff every `__tests__` change. An assertion that got looser, a
+      `toBe` that became `toBeTruthy`, a removed case, a `skip` — all are regressions dressed as
+      progress. The only legitimate test deletions in this plan are named in Tasks 5 and 10.
+- [ ] **The tests actually ran and actually failed first.** The report must quote the failing run.
+      A test that passed before the implementation was written is testing nothing.
+- [ ] **No `@/…` import in shipping code.** Allowed only under `__tests__/` and `test-utils/`.
+- [ ] **No hardcoded colour.** Hex, `rgb(`, or a Tailwind palette class like `text-red-500`.
+- [ ] **No barrel self-import inside `features/user-management/`** — that is a circular import; the
+      domain's own files import siblings directly.
+- [ ] **JSDoc on every exported component, hook and function**, and double quotes per ESLint.
+- [ ] **No file over ~400 lines**, per the DoD.
+
+### The constraints block
+
+Every brief opens with this block, verbatim. It is repeated per task on purpose: a cold subagent
+that has to go looking for the rules will invent them instead.
+
+> **Repo constraints — read before writing any code**
+>
+> 1. **Never edit a test to make it pass.** Tests define expected behaviour. If a test fails, the
+>    code is wrong, or the test is describing something the plan changed on purpose — in which case
+>    stop and report, do not edit.
+> 2. **No hardcoded colours.** Use theme tokens or the existing utility classes: `card`,
+>    `card-divider`, `dropdown`, `dropdown-item`, `dropdown-item-active`, `chip`, `chip-selected`,
+>    `callout-emphasis`, `error-bg`, `delete-button`, `form-error`, `form-success`, `success-icon`,
+>    `typography`, `typography-secondary`, `typography-muted`, `typography-error`, `button-primary`,
+>    `button-outline`, `button-ghost`, `button-link`, `bg-secondary`, `selectable-item`, `divider`,
+>    `tag`, `hint`, `toast`.
+> 3. **No `@/…` imports in shipping code** — webpack ignores tsconfig `paths` and the production
+>    build fails on them. Use bare specifiers rooted at `src/`: `core/components/Button`,
+>    `shared/hooks/useNavigation`, `features/user-management`. `@/…` is allowed **only** inside
+>    `__tests__/` and `test-utils/`.
+> 4. **Inside `features/user-management/`, import siblings directly.** Importing that domain's own
+>    `index.ts` from inside it is a circular import.
+> 5. **Double quotes** (ESLint). **JSDoc** on every exported component, hook and function.
+> 6. **Do not run any `git` command.** Leave your work in the working tree and report.
+> 7. **Touch only the files in your allow-list.** If the task appears to need another file, stop and
+>    report rather than widening.
+> 8. **Run only your task's targeted tests**, with the command in your brief. The orchestrator runs
+>    the full suite.
 
 ---
 
@@ -53,91 +145,135 @@ what reading the code changed about it.
 
 **Created**
 
-| File | Responsibility |
-|---|---|
-| `src/pages/profile/ProfilePage.tsx` | Shell: back link, `h1`, subtitle, two-column grid, section ids, signed-out/loading states |
-| `src/pages/profile/ProfileSectionRail.tsx` | Sticky rail; tracks the visible section, anchors to it |
-| `src/pages/profile/index.ts` | Barrel for the route import |
-| `…/profiles/components/AccountCard.tsx` | Email, groups you're in, `Join another` |
-| `…/profiles/components/GroupMembershipCard.tsx` | Group name + role pill, name-in-group, posting-as row |
-| `…/profiles/components/UsernameEditor.tsx` | The inline edit and its four validation states |
-| `…/profiles/components/CharactersCard.tsx` | List, add row, card-level copy |
-| `…/profiles/components/CharacterRow.tsx` | One character: star, name, labelled actions, inline confirm, own error |
-| `…/profiles/components/AppearanceCard.tsx` | Three theme option cards |
-| `…/profiles/components/DangerZoneCard.tsx` | Two rows, their sentences, their buttons |
-| `…/profiles/components/LeaveGroupDialog.tsx` | Confirmation, from a page |
-| `…/profiles/components/DeleteAccountDialog.tsx` | Confirmation gated on typing the account email |
-| `…/profiles/hooks/useCharacterRoster.ts` | Character state, four mutations, per-row errors |
-| `…/profiles/hooks/useUsernameEditor.ts` | Debounced validation; `null` means "not yet checked" |
-| `…/profiles/hooks/useAccountTheme.ts` | Read/write the account theme |
-| `…/profiles/hooks/useGroupFootprint.ts` | The counts the leave sentence needs |
-| `…/groups/hooks/useJoinGroupCompletion.ts` | The one landing behaviour for a successful join |
-| `src/shared/components/user-menu/UserMenu.tsx` | Trigger + popover; owns open state |
-| `src/shared/components/user-menu/UserMenuTrigger.tsx` | Avatar + posting-as name + chevron |
-| `src/shared/components/user-menu/PostingAsList.tsx` | Character rows, check on the current |
-| `src/shared/components/user-menu/ThemeSegmented.tsx` | `Light` / `Dark` / `Med.` |
-| `src/shared/components/user-menu/UserMenuLinks.tsx` | Profile, members count, report, admin, sign out |
-| `src/shared/hooks/usePopoverKeys.ts` | **Moved** from `shared/components/context-switcher/` |
-| `__tests__/` beside each of the above | One suite per unit |
+| File | Responsibility | Task |
+|---|---|---|
+| `src/pages/profile/ProfilePage.tsx` | Shell: back link, `h1`, subtitle, two-column grid, section ids, states | 4 |
+| `src/pages/profile/ProfileSectionRail.tsx` | Sticky rail; tracks the visible section, anchors to it | 4 |
+| `src/pages/profile/index.ts` | Barrel for the route import | 4 |
+| `…/profiles/components/AccountCard.tsx` | Email, groups you're in, `Join another` | 5, 6 |
+| `…/profiles/components/GroupMembershipCard.tsx` | Group name + role pill, name-in-group, posting-as row | 5, 6 |
+| `…/profiles/components/UsernameEditor.tsx` | The inline edit and its four validation states | 5 |
+| `…/profiles/components/CharactersCard.tsx` | List, add row, card-level copy | 5 |
+| `…/profiles/components/CharacterRow.tsx` | One character: star, name, labelled actions, inline confirm, own error | 5, 8 |
+| `…/profiles/components/AppearanceCard.tsx` | Three theme option cards | 5, 7 |
+| `…/profiles/components/DangerZoneCard.tsx` | Two rows, their sentences, their buttons | 5, 9 |
+| `…/profiles/components/LeaveGroupDialog.tsx` | Confirmation, from a page | 5, 9 |
+| `…/profiles/components/DeleteAccountDialog.tsx` | Confirmation gated on typing the account email | 5, 9 |
+| `…/profiles/hooks/useCharacterRoster.ts` | Character state, four mutations, per-row errors | 5, 8 |
+| `…/profiles/hooks/useUsernameEditor.ts` | Debounced validation; `null` means "not yet checked" | 5 |
+| `…/profiles/hooks/useAccountTheme.ts` | Read/write the account theme | 7 |
+| `…/profiles/hooks/useGroupFootprint.ts` | The counts the leave sentence needs | 9 |
+| `…/groups/hooks/useJoinGroupCompletion.ts` | The one landing behaviour for a successful join | 6 |
+| `src/shared/components/user-menu/UserMenu.tsx` | Trigger + popover; owns open state | 10 |
+| `src/shared/components/user-menu/UserMenuTrigger.tsx` | Avatar + posting-as name + chevron | 10 |
+| `src/shared/components/user-menu/PostingAsList.tsx` | Character rows, check on the current | 10 |
+| `src/shared/components/user-menu/ThemeSegmented.tsx` | `Light` / `Dark` / `Med.` | 10 |
+| `src/shared/components/user-menu/UserMenuLinks.tsx` | Profile, members count, report, admin, sign out | 10 |
+| `src/shared/hooks/usePopoverKeys.ts` | **Moved** from `shared/components/context-switcher/` | 10 |
 
 **Modified**
 
-| File | Change |
-|---|---|
-| `src/core/services/firebase/group/GroupService.ts` | `removeUserFromGroup` uses `this.functions` |
-| `src/core/services/firebase/user/UserService.ts` | `+ deleteAccount(userId)` |
-| `src/core/services/firebase/data/DocumentService.ts` | `+ getCollectionCount(path)` |
-| `src/core/types/user.ts` | `UserProfile.preferences?: { theme?: string }` |
-| `src/features/user-management/auth/components/SessionManager.tsx` | Account theme, with one-time migration |
-| `src/features/user-management/index.ts` | Barrel: `- UserProfile`, `+` the cards and hooks the page needs |
-| `src/app/App.tsx` | `+ <Route path="/profile" …>` |
-| `src/app/layout/Header.tsx` | Hamburger, both dialog mounts and desktop Sign Out replaced by `UserMenu` |
-| `src/shared/components/context-switcher/ContextSwitcher.tsx` | `usePopoverKeys` import path |
-| `CLAUDE.md` | What this PR changed (Task 11) |
+| File | Change | Task |
+|---|---|---|
+| `src/core/services/firebase/group/GroupService.ts` | `removeUserFromGroup` uses `this.functions` | 1 |
+| `src/core/services/firebase/user/UserService.ts` | `+ deleteAccount(userId)` | 1 |
+| `src/core/services/firebase/data/DocumentService.ts` | `+ getCollectionCount(path)` | 9 |
+| `src/core/types/user.ts` | `UserProfile.preferences?: { theme?: string }` | 7 |
+| `…/auth/components/SessionManager.tsx` | Account theme, with one-time migration | 7 |
+| `src/features/user-management/index.ts` | `- UserProfile`, `+` the cards and hooks the page needs | 5, 6, 9 |
+| `src/app/App.tsx` | `+ <Route path="/profile" …>` | 4 |
+| `src/app/layout/Header.tsx` | Title fix (3); then hamburger + mounts replaced by `UserMenu` (10) | 3, 10 |
+| `…/context-switcher/ContextSwitcher.tsx` | `usePopoverKeys` import path | 10 |
+| `CLAUDE.md` | What this PR changed | 11 |
 
 **Deleted**
 
-| File | Reason |
-|---|---|
-| `…/profiles/components/UserProfile.tsx` | Becomes the nine components above (spec §9.2) |
-| `…/profiles/components/__tests__/UserProfile.test.tsx` | Every test rehomed; see Task 5 |
-| `…/auth/components/UserProfileButton.tsx` | Dead code superseded by `UserMenu` (spec §9.1) |
-| `…/auth/components/__tests__/UserProfileButton.test.tsx` | Its component is gone |
-| `…/context-switcher/usePopoverKeys.ts` + its test | Moved to `shared/hooks/` |
+| File | Reason | Task |
+|---|---|---|
+| `…/profiles/components/UserProfile.tsx` | Becomes the nine components above (spec §9.2) | 5 |
+| `…/profiles/components/__tests__/UserProfile.test.tsx` | Every test rehomed; see Task 5 Step 1 | 5 |
+| `…/auth/components/UserProfileButton.tsx` | Dead code superseded by `UserMenu` (spec §9.1) | 10 |
+| `…/auth/components/__tests__/UserProfileButton.test.tsx` | Its component is gone | 10 |
+| `…/context-switcher/usePopoverKeys.ts` + its test | Moved to `shared/hooks/` | 10 |
 
 ---
 
 ## Task → Commit Map
 
-Tasks 1–3 are bug fixes that stand alone: if the redesign is deferred, they still ship.
+| Task | Batch | Commit subject |
+|---|---|---|
+| 1 | 1 | `fix(profile): call the callables in the region they are deployed to` |
+| 2 | 2 | `fix(profile): stop the username editor starting in a valid state` |
+| 3 | 1 | `fix(profile): stop the dialog title reading undefined's profile` |
+| 4 | 2 | `feat(profile): a page at /profile` |
+| 5 | 3 | `refactor(profile): split the profile into per-section cards` |
+| 6 | 4 | `feat(profile): scope the cards, and say which scope each one is` |
+| 7 | 4 | `feat(profile): store the theme on the account, not the membership` |
+| 8 | 5 | `feat(profile): label the character actions and confirm removal` |
+| 9 | 5 | `feat(profile): say what leaving and deleting actually affect` |
+| 10 | 6 | `feat(header): one named account menu` |
+| 11 | — | `docs(profile): record what the redesign changed` |
 
-| Task | Commit subject |
-|---|---|
-| 1 | `fix(profile): call the callables in the region they are deployed to` |
-| 2 | `fix(profile): stop the username editor starting in a valid state` |
-| 3 | `fix(profile): stop the dialog title reading undefined's profile` |
-| 4 | `feat(profile): a page at /profile` |
-| 5 | `refactor(profile): split the profile into per-section cards` |
-| 6 | `feat(profile): scope the cards, and say which scope each one is` |
-| 7 | `feat(profile): store the theme on the account, not the membership` |
-| 8 | `feat(profile): label the character actions and confirm removal` |
-| 9 | `feat(profile): say what leaving and deleting actually affect` |
-| 10 | `feat(header): one named account menu` |
-| 11 | `docs(profile): record what the redesign changed` |
+Tasks 1–3 are standalone bug fixes: if the redesign is deferred, they still ship.
 
 ---
 
-## Task 1: Call the callables in the region they are deployed to
+## Task 1 — Call the callables in the region they are deployed to
 
-**The most serious defect in this PR, and the smallest fix in it.** `UserProfile.tsx:138,173` call
-bare `getFunctions()`, which resolves `us-central1`. Every function in this repo deploys to
-`europe-west1`, and `BaseFirebaseService` registers a `Functions` bound to that region *and* wired
-to the emulator when `useEmulators` is set. The component's instance is bound to neither, so leave
-group and delete account fail in production and in local dev alike.
+**Batch 1, parallel with Task 3.**
+
+### Brief
+
+> **Repo constraints** — the block in "How this plan is executed". Read it first.
+
+**What you need to know (verified; do not re-derive):**
+
+- `src/features/user-management/profiles/components/UserProfile.tsx` lines **138** and **173** call
+  bare `getFunctions()`. With no arguments the Firebase JS SDK resolves the **default region,
+  `us-central1`**.
+- **Every** Cloud Function in this repo is deployed to `europe-west1` — all seven `onCall`
+  declarations under `firebase/functions/src/`, including `deleteUser`
+  (`firebase/functions/src/userManagement/deleteUser.ts:12`) and `removeUserFromGroup`
+  (`…/removeUserFromGroup.ts:8`).
+- `src/core/services/firebase/core/BaseFirebaseService.ts:49` builds
+  `getFunctions(app, 'europe-west1')` and line **80** registers it as `"functions"`. That same
+  instance is what gets `connectFunctionsEmulator` applied in development, so the bare call misses
+  the emulator too.
+- Every service extending `BaseFirebaseService` therefore already has `this.functions`, correctly
+  regioned. `src/shared/components/ContactForm.tsx:166` shows the component-side equivalent
+  (`ServiceRegistry.getInstance().get<Functions>("functions")`).
+- `GroupService.removeUserFromGroup` (`src/core/services/firebase/group/GroupService.ts:150`) has
+  the same defect inside the service itself.
+- **This is not a style cleanup. Leave group and delete account cannot work today**, in production
+  or in local dev.
+
+**Files you may touch:**
+
+```
+src/core/services/firebase/group/GroupService.ts
+src/core/services/firebase/user/UserService.ts
+src/core/services/firebase/group/__tests__/GroupService.test.ts        (create if absent)
+src/core/services/firebase/user/__tests__/UserService.test.ts          (create if absent)
+src/features/user-management/profiles/components/UserProfile.tsx       (the two handlers only)
+src/features/user-management/profiles/components/__tests__/UserProfile.test.tsx  (the two callable tests only)
+```
+
+**Files you must NOT touch:** anything else. In particular **do not** fix the same bug in
+`GroupService.createGroup` (line 59) or `CampaignService.deleteCampaign` (line 243) — they are real,
+they are out of scope, and Task 11 records them. Do not touch `Header.tsx` or
+`UserProfileButton.tsx`; another agent owns them in this batch.
+
+**Targeted test command:**
+
+```bash
+npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="(GroupService|UserService|UserProfile)"
+```
+
+### Steps
 
 - [ ] **Step 1: Write the failing tests**
 
-`src/core/services/firebase/group/__tests__/GroupService.test.ts` (extend if present, create if not):
+`GroupService.test.ts`:
 
 ```
 describe("removeUserFromGroup")
@@ -146,7 +282,7 @@ describe("removeUserFromGroup")
       and that the module-level getFunctions was NOT called during the method
 ```
 
-`src/core/services/firebase/user/__tests__/UserService.test.ts`:
+`UserService.test.ts`:
 
 ```
 describe("deleteAccount")
@@ -155,20 +291,12 @@ describe("deleteAccount")
   test("propagates the callable's error")
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [ ] **Step 2: Run them and watch them fail.** Quote the failure in your report. `removeUserFromGroup`'s
+      test fails because the method calls `getFunctions()`; `deleteAccount`'s three fail because the
+      method does not exist.
 
-```bash
-npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="(GroupService|UserService)"
-```
-
-`removeUserFromGroup`'s test fails because the method calls `getFunctions()` at `GroupService.ts:150`;
-`deleteAccount`'s three fail because the method does not exist.
-
-- [ ] **Step 3: Fix `GroupService.removeUserFromGroup`**
-
-Replace the local `const functions = getFunctions();` with `this.functions`. Leave `createGroup`
-(`:59`) and `CampaignService.deleteCampaign` (`:243`) alone — they carry the same defect, they are
-outside this PR's scope, and Task 11 records them so the next person does not have to rediscover it.
+- [ ] **Step 3: Fix `GroupService.removeUserFromGroup`** — replace the local
+      `const functions = getFunctions();` with `this.functions`.
 
 - [ ] **Step 4: Add `UserService.deleteAccount`**
 
@@ -189,37 +317,66 @@ outside this PR's scope, and Task 11 records them so the next person does not ha
 public async deleteAccount(userId: string): Promise<void>
 ```
 
-- [ ] **Step 5: Point the component at the services**
+- [ ] **Step 5: Point the component at the services.** In `UserProfile.tsx`, delete the
+      `firebase/functions` import. `handleGroupLeave` calls
+      `firebaseServices.group.removeUserFromGroup(activeGroupId, user.uid)`; `handleAccountDelete`
+      calls `firebaseServices.user.deleteAccount(user.uid)`. **Change nothing else in the file** —
+      the `onCancel()` / `window.location.href` sequence is Task 9's, not yours.
 
-In `UserProfile.tsx`, delete the `firebase/functions` import. `handleGroupLeave` calls
-`firebaseServices.group.removeUserFromGroup(activeGroupId, user.uid)`; `handleAccountDelete` calls
-`firebaseServices.user.deleteAccount(user.uid)`. Nothing else changes — the
-`onCancel()` / `window.location.href` sequence is Task 9's problem, not this commit's.
+      `UserProfile.test.tsx` mocks `firebase/functions` and asserts on `mockCallable`. Two tests —
+      `should call the leave group callable when confirmed` and `should call httpsCallable deleteUser
+      when Delete My Account is confirmed` — now watch the wrong seam. Re-point them at the mocked
+      **service** methods. This is not weakening them: the assertion "the callable was invoked"
+      survives verbatim one layer down, where it can also prove the region. Touch no other test.
 
-`UserProfile.test.tsx` mocks `firebase/functions` and asserts on `mockCallable`. Two tests
-(`should call the leave group callable when confirmed`, `should call httpsCallable deleteUser when
-Delete My Account is confirmed`) now watch the wrong seam: re-point them at the mocked **service**
-methods. This is not weakening a test — the assertion "the callable was invoked" survives verbatim
-one layer down, where it can also prove the region.
+- [ ] **Step 6: Run the targeted tests; all green.**
 
-- [ ] **Step 6: Verify**
+### Report back
 
-```bash
-npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="(GroupService|UserService|UserProfile)"
-npx tsc --noEmit
-```
-
-- [ ] **Step 7: Commit** — `fix(profile): call the callables in the region they are deployed to`
+Failing-run output from Step 2, the final test run, the list of files you changed, and anything in
+the brief that turned out to be wrong.
 
 ---
 
-## Task 2: Stop the username editor starting in a valid state
+## Task 2 — Stop the username editor starting in a valid state
 
-The debounce effect returns early on `!isEditingUsername || !newUsername || …` and sets both flags
-`true` (`UserProfile.tsx:87-92`). Opening the editor therefore starts in a passing state, and `Save`
-is enabled against a name nothing has checked.
+**Batch 2, parallel with Task 4.**
 
-- [ ] **Step 1: Write the failing tests** in the existing `UserProfile.test.tsx`:
+### Brief
+
+> **Repo constraints** — the block in "How this plan is executed". Read it first.
+
+**What you need to know:**
+
+- The debounce effect starts at `UserProfile.tsx:91`. Its guard is line **92**:
+  `if (!isEditingUsername || !newUsername || !activeGroup || newUsername === activeGroupUserProfile?.username)`,
+  and lines **93–94** set `setUsernameValid(true); setUsernameAvailable(true);`.
+- So opening the editor starts in a *passing* state, and `Save` is briefly enabled against a name
+  nothing has checked.
+- `Save`'s `disabled` expression already reads `!usernameValid || !usernameAvailable`, so `null`
+  disables it with no further change. That is the whole fix: `null` means "not yet checked".
+- The unchanged-name case keeps its behaviour — `newUsername === activeGroupUserProfile.username`
+  is already its own clause in `disabled`.
+
+**Files you may touch:**
+
+```
+src/features/user-management/profiles/components/UserProfile.tsx                 (validation only)
+src/features/user-management/profiles/components/__tests__/UserProfile.test.tsx  (add tests only)
+```
+
+**Files you must NOT touch:** anything else, and inside `UserProfile.tsx` do not touch the leave /
+delete handlers — Task 1 has just changed them.
+
+**Targeted test command:**
+
+```bash
+npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="UserProfile"
+```
+
+### Steps
+
+- [ ] **Step 1: Write the failing tests**
 
 ```
 describe("username validation")
@@ -229,35 +386,60 @@ describe("username validation")
   test("Save is disabled again when the name is edited after a passing check")
 ```
 
-- [ ] **Step 2: Run them** — the first, second and fourth fail; the flags are `true` before any
-      check runs.
+- [ ] **Step 2: Run them.** The first, second and fourth fail. Quote the failure.
 
-- [ ] **Step 3: Change the initial and reset states**
+- [ ] **Step 3: Initialise both flags to `null`** and set them to `null` — not `true` — in the
+      early-return branch. Add `checking` to `Save`'s `disabled` expression, so a name edited inside
+      the debounce window cannot leave a stale pass on screen.
 
-`usernameValid` and `usernameAvailable` initialise to `null`, and the early-return branch sets them
-to `null` rather than `true`. `Save`'s `disabled` already reads `!usernameValid || !usernameAvailable`,
-so `null` disables it with no further change. Add `checking` to that disabled expression so a name
-edited inside the debounce window cannot leave a stale pass on screen.
+- [ ] **Step 4: Run the targeted tests; all green**, including every pre-existing username test.
 
-The unchanged-name case keeps its behaviour: `newUsername === activeGroupUserProfile.username`
-already disables `Save` on a clause of its own, so `null` there costs nothing.
+### Report back
 
-- [ ] **Step 4: Verify and commit** — `fix(profile): stop the username editor starting in a valid state`
+As Task 1.
 
 ---
 
-## Task 3: Stop the dialog title reading undefined's profile
+## Task 3 — Stop the dialog title reading undefined's profile
+
+**Batch 1, parallel with Task 1.**
+
+### Brief
+
+> **Repo constraints** — the block in "How this plan is executed". Read it first.
+
+**What you need to know:**
+
+- Two files carry this line verbatim — `src/app/layout/Header.tsx:359` and
+  `src/features/user-management/auth/components/UserProfileButton.tsx:93`:
 
 ```tsx
 title={`${activeGroupUserProfile?.username}'s profile` || 'Your Profile'}
 ```
 
-A template literal is always truthy, so the fallback is unreachable and the header reads
-`undefined's profile` until the profile loads. It exists in **two** places — `Header.tsx:359` and
-`UserProfileButton.tsx:93` — because the dialog is mounted twice.
+- A template literal is **always truthy**, so the `||` fallback is unreachable and the dialog header
+  reads `undefined's profile` until the profile loads.
+- Both mounts are deleted later (Tasks 4 and 10). Fix them anyway: the defect then goes even if the
+  redesign is deferred, and no reviewer has to take "it disappears eventually" on faith.
 
-Both mounts are deleted later (Tasks 4 and 10). Fix them anyway, so the defect is gone even if the
-redesign is deferred, and so no reviewer has to take "it disappears eventually" on faith.
+**Files you may touch:**
+
+```
+src/app/layout/Header.tsx                                              (the title line only)
+src/features/user-management/auth/components/UserProfileButton.tsx     (the title line only)
+src/app/layout/__tests__/Header.test.tsx
+```
+
+**Files you must NOT touch:** anything else. Task 1 owns `UserProfile.tsx` and the services in this
+batch — do not open them.
+
+**Targeted test command:**
+
+```bash
+npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="Header"
+```
+
+### Steps
 
 - [ ] **Step 1: Failing test** in `Header.test.tsx`:
 
@@ -267,24 +449,73 @@ test("the profile dialog is not titled undefined's profile before the profile lo
     "Your profile" and that nothing matching /undefined/ is in the document
 ```
 
-- [ ] **Step 2: Fix both call sites**
+- [ ] **Step 2: Run it; it fails.** Quote the failure.
+
+- [ ] **Step 3: Fix both call sites**
 
 ```tsx
 const username = activeGroupUserProfile?.username;
 title={username ? `${username}'s profile` : "Your profile"}
 ```
 
-- [ ] **Step 3: Verify and commit** — `fix(profile): stop the dialog title reading undefined's profile`
+- [ ] **Step 4: Run the targeted tests; all green.**
+
+### Report back
+
+As Task 1.
 
 ---
 
-## Task 4: A page at /profile
+## Task 4 — A page at /profile
 
-The route and the shell only. The page renders the **existing** `UserProfile` component in its
-right-hand column for this one commit, so the route is provably reachable before the split starts.
-Task 5 replaces that single child with the cards.
+**Batch 2, parallel with Task 2.**
 
-- [ ] **Step 1: Write the failing tests** — `src/pages/profile/__tests__/ProfilePage.test.tsx`:
+### Brief
+
+> **Repo constraints** — the block in "How this plan is executed". Read it first.
+
+**What you need to know:**
+
+- This task builds the **route and the shell only.** The right-hand column renders the *existing*
+  `UserProfile` component for this one commit, so the route is provably reachable before the split
+  starts. Task 5 replaces that single child with the cards. **Do not split anything here.**
+- Page conventions to copy from `src/pages/ContactPage.tsx`: outer
+  `max-w-7xl mx-auto px-4 py-8 space-y-6`; a back button using `button button-link flex items-center
+  gap-2 text-sm` with an `ArrowLeft`; `useNavigation().navigateToPage` for navigation;
+  `useCampaigns().activeCampaign` for the campaign name. `ContactPage` phrases the back link
+  `Back to {activeCampaign.name}` falling back to `Back to the campaign` — **use that exact
+  wording**, because two pages phrasing one link two ways is how the old header ended up with three
+  names for one destination.
+- `pages` is already in the jest `moduleNameMapper` allow-list in `jest.config.ts`, so no config
+  change is needed.
+- `useGroups()` exposes `loading`, which already separates "no groups" from "not loaded yet".
+- **`IntersectionObserver` does not exist in jsdom.** Either feature-detect it and fall back to
+  "first section is active", or define a no-op shim in the test file. Do not let the rail throw
+  under test.
+
+**Files you may touch:**
+
+```
+src/pages/profile/ProfilePage.tsx                     (new)
+src/pages/profile/ProfileSectionRail.tsx              (new)
+src/pages/profile/index.ts                            (new)
+src/pages/profile/__tests__/ProfilePage.test.tsx      (new)
+src/pages/profile/__tests__/ProfileSectionRail.test.tsx (new)
+src/app/App.tsx                                       (one route line + one import)
+src/app/__tests__/App.test.tsx                        (if a routing suite exists)
+```
+
+**Files you must NOT touch:** `UserProfile.tsx` and its test — Task 2 owns them in this batch.
+
+**Targeted test command:**
+
+```bash
+npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="(ProfilePage|ProfileSectionRail|App)"
+```
+
+### Steps
+
+- [ ] **Step 1: Write the failing tests**
 
 ```
 describe("ProfilePage")
@@ -295,25 +526,18 @@ describe("ProfilePage")
   test("tells a signed-out visitor to sign in, and does not redirect")
   test("renders the account sections but no group sections when there is no active group")
   test("renders a loading state while groups are still loading")
+
+App routing
+  test("/profile renders the profile page")
 ```
 
-`src/app/__tests__/App.test.tsx` (or the routing suite that exists):
-
-```
-test("/profile renders the profile page")
-```
-
-- [ ] **Step 2: Run; all fail** — no such module, no such route.
+- [ ] **Step 2: Run; all fail** — no such module, no such route. Quote it.
 
 - [ ] **Step 3: Build the shell**
 
-`ProfilePage.tsx`, following `ContactPage`'s conventions exactly where they overlap:
-
 ```tsx
 <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-  {/* back link — same button/button-link treatment and the same wording as ContactPage,
-      because two pages phrasing one link two ways is how the old header ended up with
-      three names for the same destination */}
+  {/* back link, ContactPage's treatment and wording */}
   <Typography variant="h1">Your profile</Typography>
   <Typography color="secondary">
     Changes save as you make them. Nothing here needs a save button.
@@ -321,30 +545,27 @@ test("/profile renders the profile page")
 
   <div className="grid grid-cols-1 md:grid-cols-[212px_1fr] gap-7">
     <ProfileSectionRail sections={sections} />
-    <div className="space-y-4">{/* cards */}</div>
+    <div className="space-y-4">{/* UserProfile for now; cards in Task 5 */}</div>
   </div>
 </div>
 ```
 
-Below `md` the rail renders nothing: it is a shortcut to six cards on a page you can already scroll,
-and a horizontal scrolling tab strip above the content would cost more than it saves.
+Below `md` the rail renders **nothing**: it is a shortcut to six cards on a page you can already
+scroll, and a horizontal scrolling tab strip above the content would cost more than it saves.
 
-- [ ] **Step 4: Build `ProfileSectionRail`**
-
-A `nav` of anchors — `Account`, `{group name}`, `Characters`, `Appearance`, a rule, then
-`Leaving and deleting` in the error tone. Anchors, not buttons, so `/profile#characters` is
-linkable. `sticky top-4` on the desktop breakpoint. Active tracking uses an `IntersectionObserver`
-over the section elements, defaulting to the first section until the observer first fires; guard for
-`IntersectionObserver` being absent under jsdom (define a no-op in the test setup, or feature-detect
-and fall back to the first section, which is what the tests assert against).
+- [ ] **Step 4: Build `ProfileSectionRail`** — a `nav` of **anchors** (not buttons, so
+      `/profile#characters` is linkable): `Account`, `{group name}`, `Characters`, `Appearance`, a
+      rule, then `Leaving and deleting` in the error tone. `sticky top-4` at the desktop breakpoint.
+      Active item is solid dark. Track the visible section with `IntersectionObserver`, defaulting to
+      the first section until it first fires.
 
 - [ ] **Step 5: States**
 
 | State | Renders |
 |---|---|
-| Signed out | Shell + one card: "You need to be signed in to see your profile", with the sign-in trigger. **Not a redirect** — the URL staying linkable is the point of the PR |
-| No active group | Account and Appearance only; the group-scoped cards say they need a group; danger zone shows only `Delete your account` |
-| Loading | Shell + skeleton cards, keyed off `useGroups().loading`, which already separates "no groups" from "not loaded yet" |
+| Signed out | Shell + one card: "You need to be signed in to see your profile", with the sign-in trigger. **Not a redirect** — the URL staying linkable is the point of this PR |
+| No active group | Account and Appearance only; group-scoped cards say they need a group; danger zone shows only `Delete your account` |
+| Loading | Shell + skeleton cards, keyed off `useGroups().loading` |
 
 - [ ] **Step 6: Register the route** in `App.tsx`, beside `/contact`:
 
@@ -352,66 +573,153 @@ and fall back to the first section, which is what the tests assert against).
 <Route path="/profile" element={<ProfilePage />} />
 ```
 
-`pages` is already in the jest `moduleNameMapper` allow-list, so no config change is needed.
+- [ ] **Step 7: Run the targeted tests; all green.**
 
-- [ ] **Step 7: Verify and commit** — `feat(profile): a page at /profile`
+### Report back
+
+As Task 1, plus: which approach you took for `IntersectionObserver` under jsdom.
 
 ---
 
-## Task 5: Split the profile into per-section cards
+## Task 5 — Split the profile into per-section cards
 
-**Behaviour-preserving.** Every section moves to its own component with its current behaviour
-intact; the scope copy, the role pill and the posting-as row arrive in Task 6. Splitting and
-redesigning in one commit would make the diff unreviewable and hide any behaviour that changed by
-accident.
+**Batch 3, alone.** This is the largest task in the plan and the one most likely to need a second
+pass. If it grows beyond what one agent can hold, stop and report — the natural seam is hooks in
+one commit, components in the next.
 
-- [ ] **Step 1: Rehome the tests first**
+### Brief
 
-`UserProfile.test.tsx` is deleted at the end of this task, so its assertions must land in their new
-homes *before* the component goes. Map, one row per `describe` in the current file:
+> **Repo constraints** — the block in "How this plan is executed". Read it first.
+
+**What you need to know:**
+
+- **This task is behaviour-preserving.** Every section moves to its own component with its *current*
+  behaviour intact. The scope copy, role pill, posting-as row, per-row errors, theme cards and
+  danger-zone sentences all arrive in Tasks 6–9. Splitting and redesigning at once makes the diff
+  unreviewable and hides behaviour that changed by accident. **If you find yourself improving
+  something, stop — that is a later task.**
+- `UserProfile.tsx` is 797 lines and holds eight sections plus two nested dialogs.
+- Extract **hooks first, then components**. Hooks carry behaviour; components carry markup. In that
+  order every component becomes a rendering change over a tested hook.
+- The existing test file mocks the domain barrel and then re-points the direct sibling imports at
+  that mock:
+  ```ts
+  jest.mock("@/features/user-management", () => ({ useAuth: jest.fn(), useGroups: jest.fn(), useUser: jest.fn() }));
+  jest.mock("../../../auth/hooks/useAuth", () => require("@/features/user-management"));
+  ```
+  New suites for components inside the domain need the same shape, with paths adjusted.
+- `src/features/user-management/index.ts` currently exports `UserProfile`. That export goes; the
+  cards the page imports are added, because `pages/` must come through the barrel.
+
+**Files you may touch:** everything under
+`src/features/user-management/profiles/`, plus `src/features/user-management/index.ts` and
+`src/pages/profile/ProfilePage.tsx`.
+
+**Files you must NOT touch:** `Header.tsx`, `UserProfileButton.tsx`, anything under `core/services/`,
+`SessionManager.tsx`.
+
+**Targeted test command:**
+
+```bash
+npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="(profiles|ProfilePage)"
+```
+
+### Steps
+
+- [ ] **Step 1: Rehome the tests first.** `UserProfile.test.tsx` is deleted at the end of this task,
+      so its assertions must land in their new homes *before* the component goes. One row per
+      `describe` in the current file:
 
 | Current describe | New home |
 |---|---|
-| `unauthenticated state` | `ProfilePage.test.tsx` (Task 4 already covers it) |
-| `profile display` (email, group, username, role) | `AccountCard.test.tsx`, `GroupMembershipCard.test.tsx` |
-| `profile display` (active character, empty character list) | `CharactersCard.test.tsx` |
+| `unauthenticated state` | `ProfilePage.test.tsx` (Task 4 covers it) |
+| `profile display` — email, group, username, role | `AccountCard.test.tsx`, `GroupMembershipCard.test.tsx` |
+| `profile display` — active character, empty list | `CharactersCard.test.tsx` |
 | `username editing`, `username save` | `UsernameEditor.test.tsx`, `useUsernameEditor.test.ts` |
 | `character management`, `character name async operations`, `character update` | `CharacterRow.test.tsx`, `useCharacterRoster.test.ts` |
-| `theme dropdown` | `AppearanceCard.test.tsx` (rewritten in Task 7 — the dropdown becomes three cards) |
+| `theme dropdown` | `AppearanceCard.test.tsx` (Task 7 rewrites it — the dropdown becomes three cards) |
 | `destructive actions`, `delete account` | `DangerZoneCard.test.tsx`, `LeaveGroupDialog.test.tsx`, `DeleteAccountDialog.test.tsx` |
-| `close button` (4 tests) | **No successor.** The spec deletes the button. `ProfilePage.test.tsx` gains `test("renders no Close button under the danger zone")`, so the DoD line is asserted even though the assertions invert |
+| `close button` (4 tests) | **No successor.** The spec deletes the button. Add `test("renders no Close button under the danger zone")` to `ProfilePage.test.tsx` so the DoD line is asserted from the other direction |
 
-- [ ] **Step 2: Extract the hooks first, then the components**
+- [ ] **Step 2: Extract the hooks**
 
-Hooks carry the behaviour; components carry the markup. Extracting in that order means each
-component is a rendering change with a tested hook underneath it.
+  - `useUsernameEditor(currentUsername)` → `{ value, setValue, isEditing, open, cancel, submit, checking, valid, available, error }`, carrying Task 2's `null`-is-unchecked state machine unchanged.
+  - `useCharacterRoster()` → `{ characters, activeCharacterId, add, rename, remove, setActive, rowErrors, addError, saving }`. **Errors keyed by character id** (`Record<string, string>`) even though nothing renders them per-row yet — that shape is what makes Task 8 a rendering change instead of a rewrite.
 
-- `useUsernameEditor(currentUsername)` → `{ value, setValue, isEditing, open, cancel, submit, checking, valid, available, error }`, holding Task 2's `null`-is-unchecked state machine.
-- `useCharacterRoster()` → `{ characters, activeCharacterId, add, rename, remove, setActive, rowErrors, addError, saving }`. Errors keyed by character id (`Record<string, string>`); the shape is what makes Task 8's per-row errors a rendering detail rather than a rewrite.
+- [ ] **Step 3: Extract the components**, each with the markup it has today: `AccountCard`,
+      `GroupMembershipCard` (+ `UsernameEditor`), `CharactersCard` (+ `CharacterRow`),
+      `AppearanceCard`, `DangerZoneCard` (+ `LeaveGroupDialog`, `DeleteAccountDialog`).
 
-- [ ] **Step 3: Extract the components**, each with the markup it has today:
-      `AccountCard`, `GroupMembershipCard` (+ `UsernameEditor`), `CharactersCard` (+ `CharacterRow`),
-      `AppearanceCard`, `DangerZoneCard` (+ the two dialogs).
+- [ ] **Step 4: Compose them in `ProfilePage`.** Delete `UserProfile.tsx`, delete its test, remove
+      the barrel's `UserProfile` export, add the cards to the barrel.
 
-- [ ] **Step 4: Compose them in `ProfilePage`** and delete `UserProfile.tsx`, its test, and the
-      barrel's `UserProfile` export. Add the cards the page imports to the barrel — the page is in
-      `pages/`, so it must come through it.
-
-- [ ] **Step 5: Verify no file exceeds ~400 lines**
+- [ ] **Step 5: Check the line budget**
 
 ```bash
-wc -l src/features/user-management/profiles/components/*.tsx src/pages/profile/*.tsx | sort -n
+wc -l src/features/user-management/profiles/components/*.tsx src/features/user-management/profiles/hooks/*.ts src/pages/profile/*.tsx | sort -n
 ```
 
-- [ ] **Step 6: Verify and commit** — `refactor(profile): split the profile into per-section cards`
+Nothing over ~400 lines.
+
+- [ ] **Step 6: Run the targeted tests; all green.**
+
+### Report back
+
+As Task 1, plus the `wc -l` table and the rehoming map as you actually implemented it — any test
+that did **not** find a home is a finding the orchestrator needs.
 
 ---
 
-## Task 6: Scope the cards, and say which scope each one is
+## Task 6 — Scope the cards, and say which scope each one is
 
-Now the cards say what they govern. Per the spec, scope is the organising principle: the account
-card applies everywhere, the group card applies to one membership, and the page says so in words
-rather than by adjacency.
+**Batch 4, parallel with Task 7.**
+
+### Brief
+
+> **Repo constraints** — the block in "How this plan is executed". Read it first.
+
+**What you need to know:**
+
+- Scope is the organising principle: the account card applies everywhere, the group card applies to
+  one membership, and the page says so **in words** rather than by adjacency.
+- The group card is titled with `activeGroup.name` and carries a role pill (`Administrator` /
+  `Member`) beside it, so it is obvious the settings below are per-membership.
+- The posting-as row is **display-only** — star, name, and the muted
+  `— new chapters, quests and rumours are credited to this name`. Changing it happens in the
+  Characters card or the header menu. Two controls for one value on one screen is what the current
+  profile does.
+- Delete the separate "Active Character" block: it duplicates what the Characters list says.
+- `Header.handleJoinedGroup` (`src/app/layout/Header.tsx:129`) holds the one correct landing
+  behaviour for a successful join — refresh, find the group that appeared, switch to it, log a
+  landing failure rather than invent error UI. **Move it verbatim, comments included**, into
+  `src/features/user-management/groups/hooks/useJoinGroupCompletion.ts`, and have both `Header` and
+  `AccountCard` use it.
+- PR 3 landed a commit called "mount the join dialog once". The invariant it protects is **one
+  behaviour**, not one mount; a second surface now legitimately needs the action, and the hook is
+  what preserves the invariant. Add a test asserting both entrances call the same completion path.
+
+**Files you may touch:**
+
+```
+…/profiles/components/AccountCard.tsx                     + its test
+…/profiles/components/GroupMembershipCard.tsx             + its test
+…/profiles/components/CharactersCard.tsx                  + its test  (subtitle only)
+…/groups/hooks/useJoinGroupCompletion.ts                  + its test  (new)
+src/features/user-management/index.ts                     (export the hook)
+src/app/layout/Header.tsx                                 (use the hook; nothing else)
+src/app/layout/__tests__/Header.test.tsx
+```
+
+**Files you must NOT touch:** `AppearanceCard`, `SessionManager`, `core/types/user.ts` — Task 7 owns
+them in this batch. Also not `CharacterRow` or the danger zone.
+
+**Targeted test command:**
+
+```bash
+npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="(AccountCard|GroupMembershipCard|CharactersCard|useJoinGroupCompletion|Header)"
+```
+
+### Steps
 
 - [ ] **Step 1: Failing tests**
 
@@ -431,45 +739,79 @@ GroupMembershipCard
 
 CharactersCard
   test("is subtitled with what 'posting as' means")
-  test("marks the active character and offers 'Post as this' only on the others")
+
+useJoinGroupCompletion
+  test("switches to the group that appeared after the refresh")
+  test("refreshes and stays put when no new group appears")
+  test("logs rather than throwing when the switch fails")
 ```
 
-- [ ] **Step 2: Implement the copy and the grids**
+- [ ] **Step 2: Run; they fail. Quote it.**
 
-Account card is a `grid grid-cols-[170px_1fr_auto]`. The group card is titled with
-`activeGroup.name` and carries the role pill (`tag` utility) beside it. The posting-as row is
-**display-only** — star, name, and the muted `— new chapters, quests and rumours are credited to
-this name`. Changing it happens in the Characters card or the header menu; two controls for one
-value on one screen is what the current profile does.
+- [ ] **Step 3: Implement the copy and the grids.** Account card is a
+      `grid grid-cols-[170px_1fr_auto]`: `Email · dm@example.com · used to sign in`, then
+      `Groups you're in · {names} · Join another`. Group card gets the name title, the role pill
+      (`tag` utility) and the caveat subtitle; keep the existing inline username edit with its
+      debounced `validateUsername`, availability tick and error message exactly as it is.
 
-The separate "Active Character" block is deleted here: it duplicated what the Characters list
-already says.
+- [ ] **Step 4: Extract `useJoinGroupCompletion`** and use it from both `Header` and `AccountCard`.
 
-- [ ] **Step 3: Wire `Join another`**
+- [ ] **Step 5: Run the targeted tests; all green.**
 
-Extract `Header.handleJoinedGroup` into `features/user-management/groups/hooks/useJoinGroupCompletion.ts`
-verbatim, comments included — refresh, find the group that appeared, switch to it, log a landing
-failure rather than invent error UI. Both `Header` and `AccountCard` mount `JoinGroupDialog` and
-both call this hook.
+### Report back
 
-PR 3 landed a "mount the join dialog once" commit; the invariant it protects is **one behaviour**,
-not one mount, and the hook is what preserves it now that a second surface legitimately needs the
-action. Add a test asserting both entrances call the same completion path, so the invariant has an
-owner.
-
-- [ ] **Step 4: Verify and commit** — `feat(profile): scope the cards, and say which scope each one is`
+As Task 1.
 
 ---
 
-## Task 7: Store the theme on the account, not the membership
+## Task 7 — Store the theme on the account, not the membership
 
-The spec (§1.2) corrects the PR's framing: switching group does not restyle anything, because
-`SessionManager` applies the stored theme once behind a ref (`SessionManager.tsx:22-42`). The real
-symptom is that your theme is whichever group happened to be active when you last signed in.
+**Batch 4, parallel with Task 6.**
 
-Two things the PR asks for are already true and must not be re-implemented: `ThemeContext`
-writes `localStorage` on every change and reads it before first paint
-(`ThemeContext.tsx:24-37,45`).
+### Brief
+
+> **Repo constraints** — the block in "How this plan is executed". Read it first.
+
+**What you need to know (the PR's framing of this bug is wrong; the spec §1.2 corrects it):**
+
+- The PR says switching group can restyle the app. **It cannot.** `SessionManager.tsx:22-42` applies
+  the stored theme once, behind `initialThemeApplied.current`, a ref set on first profile load and
+  cleared only on sign-out. Every later `activeGroupUserProfile` is ignored.
+- The **real** symptom: your theme is whichever group happened to be active when you last signed in.
+  Pick Dark in one group, sign in one day with the other active, and you get the other group's
+  theme, with nothing on screen connecting the two.
+- **Two things the PR asks for are already done — do not re-implement them.**
+  `ThemeContext.applyThemeToDOM` writes `localStorage` on every change, and the provider reads it
+  before first paint (`src/core/themes/ThemeContext.tsx:24-37,45`).
+- Writing `preferences` to `users/{uid}` is already permitted: `firebase/firestore.rules.prod:147`
+  allows a self-write of any field except `isAdmin`. **No rules change.**
+- Theme names are exactly `light | dark | medieval` (`src/core/themes/types.ts:7`), and
+  `themes` in `src/core/themes/definitions/index.ts` maps each to a `Theme` whose `colors.primary`
+  is the swatch colour. Reading that is a token lookup, not a hardcoded colour.
+- `useUser()` exposes `updateUserProfile(uid, updates)` for the account doc and
+  `updateGroupUserProfile(uid, updates)` for the membership. This task moves theme from the second
+  to the first.
+
+**Files you may touch:**
+
+```
+src/core/types/user.ts                                    (UserProfile.preferences)
+…/auth/components/SessionManager.tsx                      + its test
+…/profiles/hooks/useAccountTheme.ts                       + its test  (new)
+…/profiles/components/AppearanceCard.tsx                  + its test
+src/features/user-management/index.ts                     (export useAccountTheme)
+```
+
+**Files you must NOT touch:** `AccountCard`, `GroupMembershipCard`, `Header.tsx` — Task 6 owns them
+in this batch.
+
+**Targeted test command:**
+
+```bash
+npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="(SessionManager|useAccountTheme|AppearanceCard)"
+```
+
+### Steps
 
 - [ ] **Step 1: Failing tests**
 
@@ -492,9 +834,9 @@ AppearanceCard
   test("switching theme calls the account writer, not updateGroupUserProfile")
 ```
 
-- [ ] **Step 2: Extend the type**
+- [ ] **Step 2: Run; they fail. Quote it.**
 
-`core/types/user.ts`, on `UserProfile`:
+- [ ] **Step 3: Extend the type** in `core/types/user.ts`, on `UserProfile`:
 
 ```ts
 /** Account-scoped preferences. Theme lives here, not on a membership, so it
@@ -505,17 +847,12 @@ preferences?: {
 };
 ```
 
-The Firestore rule for `users/{userId}` permits a self-write of any field but `isAdmin`, so no rules
-change is needed — verified against `firebase/firestore.rules.prod:147`.
+- [ ] **Step 4: `useAccountTheme`** — applies through `setTheme` immediately, then persists with
+      `updateUserProfile`. A failed write surfaces its message and **leaves the applied theme
+      alone**: the user asked for this theme, the local change is already right, and reverting the
+      screen to punish a failed write is the behaviour Task 8 is fixing elsewhere.
 
-- [ ] **Step 3: `useAccountTheme`**
-
-Applies through `setTheme` immediately, then persists with `updateUserProfile`. A failed write
-surfaces its message and leaves the applied theme alone: the user asked for this theme, the local
-change is already correct, and reverting the screen to punish a failed write is the behaviour the
-character rows are being fixed for in Task 8.
-
-- [ ] **Step 4: `SessionManager` and the migration**
+- [ ] **Step 5: `SessionManager` and the migration**
 
 ```
 account theme exists            → apply it
@@ -524,23 +861,63 @@ neither                         → leave ThemeContext on its localStorage value
 ```
 
 The migration takes the theme of **the group active at the moment it runs** — the same value the
-current code would have applied at that sign-in, so nothing changes under the user. Group-level
-`preferences.theme` values are left in place: they are stale after this, and clearing them buys a
+current code would have applied at that sign-in, so nothing changes under the user. Leave the
+group-level `preferences.theme` values in place: they are stale after this, and clearing them buys a
 second write per user and nothing else.
 
-The `initialThemeApplied` ref goes. With an account-scoped value there is no per-group change to
+Delete the `initialThemeApplied` ref. With an account-scoped value there is no per-group change to
 guard against, so the effect can depend on the profile honestly.
 
-- [ ] **Step 5: The Appearance card**
+- [ ] **Step 6: The Appearance card** — three side-by-side option cards (`Light`, `Dark`,
+      `Medieval`), each a swatch + name, the selected one carrying a border, a focus ring and a
+      check. This deletes the custom dropdown and its click-outside handler.
 
-Three side-by-side option cards, each a swatch + name, the selected one carrying a border, a focus
-ring and a check. This deletes the custom dropdown and its click-outside handler.
+- [ ] **Step 7: Run the targeted tests; all green.**
 
-- [ ] **Step 6: Verify and commit** — `feat(profile): store the theme on the account, not the membership`
+### Report back
+
+As Task 1, plus: confirm you did **not** add `localStorage` mirroring (it already exists).
 
 ---
 
-## Task 8: Label the character actions and confirm removal
+## Task 8 — Label the character actions and confirm removal
+
+**Batch 5, parallel with Task 9.**
+
+### Brief
+
+> **Repo constraints** — the block in "How this plan is executed". Read it first.
+
+**What you need to know:**
+
+- Today each row carries three **unlabelled ghost icon buttons**, and the active row carries a full
+  accent ring that makes a list item the loudest element on the screen.
+- Every mutation already writes to Firestore immediately and rolls local state back on failure — but
+  the message lands in a single `error` slot at the bottom of a scrolling surface, so **the row
+  silently reverts with the explanation offscreen.**
+- `useCharacterRoster` (Task 5) already keys errors by character id. Rendering them per row is
+  therefore a rendering change, not a rewrite.
+- Today `Rename` hijacks the add-row input at the top, which is why the add button mutates into two
+  icon buttons mid-flow.
+- Character deletion currently has **no** confirmation at all, while Leave Group gets a whole dialog.
+
+**Files you may touch:**
+
+```
+…/profiles/components/CharacterRow.tsx        + its test
+…/profiles/components/CharactersCard.tsx      + its test
+…/profiles/hooks/useCharacterRoster.ts        + its test
+```
+
+**Files you must NOT touch:** the danger zone, `DocumentService` — Task 9 owns them in this batch.
+
+**Targeted test command:**
+
+```bash
+npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="(CharacterRow|CharactersCard|useCharacterRoster)"
+```
+
+### Steps
 
 - [ ] **Step 1: Failing tests**
 
@@ -561,32 +938,85 @@ useCharacterRoster
   test("clears a row's error when that row's next mutation succeeds")
 ```
 
-- [ ] **Step 2: Per-row errors**
+- [ ] **Step 2: Run; they fail. Quote it.**
 
-`rowErrors: Record<string, string>` in the hook; `CharacterRow` renders `rowErrors[character.id]`
-under its own name. This is the whole of the PR's "render the failure on the row that failed", and
-the reason the mutations moved into a hook in Task 5: eight `setError` calls against one slot is
-what a single component naturally produces.
+- [ ] **Step 3: Per-row errors** — `CharacterRow` renders `rowErrors[character.id]` under its own
+      name. This is the whole of "render the failure on the row that failed".
 
-- [ ] **Step 3: Rename in the row**
+- [ ] **Step 4: Rename in the row** — the row swaps its name for an input with its own confirm and
+      cancel. The add row is untouched and stays available throughout.
 
-Today `Rename` hijacks the add-row input at the top, which is why the add button mutates into two
-icon buttons mid-flow. The row swaps its name for an input with its own confirm and cancel; the add
-row is untouched and stays available throughout.
+- [ ] **Step 5: Inline removal confirmation** — `Remove {name}? Remove / Cancel`, **on the row, not
+      a dialog.** It is one destructive click on a list item; the two dialogs on this page are
+      reserved for ending a membership or an account.
 
-- [ ] **Step 4: Inline removal confirmation**
+- [ ] **Step 6: Drop the accent ring** on the active row. The star and the `posting as` marker in a
+      muted accent tone are enough.
 
-`Remove {name}? Remove / Cancel`, on the row — not a dialog. It is one destructive click on a list
-item, and the two dialogs on this page are reserved for ending a membership or an account.
+- [ ] **Step 7: Add row** at the bottom: input `Add a character…` + outlined `Add`.
 
-- [ ] **Step 5: Drop the accent ring** on the active row. The star and the `posting as` marker are
-      enough; the ring makes a list item the loudest element on the page.
+- [ ] **Step 8: Run the targeted tests; all green.**
 
-- [ ] **Step 6: Verify and commit** — `feat(profile): label the character actions and confirm removal`
+### Report back
+
+As Task 1.
 
 ---
 
-## Task 9: Say what leaving and deleting actually affect
+## Task 9 — Say what leaving and deleting actually affect
+
+**Batch 5, parallel with Task 8.**
+
+### Brief
+
+> **Repo constraints** — the block in "How this plan is executed". Read it first.
+
+**What you need to know:**
+
+- `handleGroupLeave` currently calls `onCancel()`, then `await refreshGroups()`, then
+  `window.location.href = "/"` — closing the surface it is inside, then discarding the refresh it
+  just waited for. On a page this is simply: await the service, await `refreshGroups()`,
+  `navigate("/")`.
+- Task 1 has already moved both actions onto services. **Do not reintroduce `httpsCallable` or
+  `getFunctions` anywhere.**
+- The counts, and what each costs:
+
+| Clause | Source |
+|---|---|
+| `N campaigns` | `firebaseServices.campaign.getCampaigns(groupId)` — one query |
+| `N chapters` | `firebaseServices.campaign.getCampaignCounts(groupId, campaignId)` per campaign, summed |
+| `N of your own notes` | `getCollectionCount("groups/{groupId}/users/{uid}/notes")` — notes are a **flat per-user collection**, so "your own notes in this group" is exactly this path |
+
+- `CampaignService.getCampaignCounts` (`src/core/services/firebase/campaign/CampaignService.ts:159`,
+  with its `countOf` helper at `:173`) already proves the `getCountFromServer` pattern.
+  `DocumentService.getCollectionCount(path)` is the general form.
+- **Omit any clause whose count has not resolved.** A failed count is not an error state: the
+  sentence reads correctly with two clauses and the button does not depend on it.
+  `shared/components/context-switcher/useCampaignCounts.ts` set this precedent one PR ago — read it.
+- The two actions are **not equivalent** and must not look it. Today they are two identical outline
+  buttons stacked on each other.
+
+**Files you may touch:**
+
+```
+src/core/services/firebase/data/DocumentService.ts        + its test
+…/profiles/hooks/useGroupFootprint.ts                     + its test  (new)
+…/profiles/components/DangerZoneCard.tsx                  + its test
+…/profiles/components/LeaveGroupDialog.tsx                + its test
+…/profiles/components/DeleteAccountDialog.tsx             + its test
+src/features/user-management/index.ts                     (export if the page needs it)
+```
+
+**Files you must NOT touch:** `CharacterRow`, `CharactersCard`, `useCharacterRoster` — Task 8 owns
+them in this batch.
+
+**Targeted test command:**
+
+```bash
+npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="(DocumentService|useGroupFootprint|DangerZone|LeaveGroupDialog|DeleteAccountDialog)"
+```
+
+### Steps
 
 - [ ] **Step 1: Failing tests**
 
@@ -613,62 +1043,98 @@ DeleteAccountDialog
   test("signs out and navigates home on success")
 ```
 
-- [ ] **Step 2: `DocumentService.getCollectionCount(path)`**
+- [ ] **Step 2: Run; they fail. Quote it.**
 
-A `getCountFromServer` over a collection path. `CampaignService.getCampaignCounts` already proves
-the pattern (`CampaignService.ts:173-185`); this is the general form the notes clause needs.
+- [ ] **Step 3: `DocumentService.getCollectionCount(path)`** — `getCountFromServer` over a
+      collection path.
 
-- [ ] **Step 3: `useGroupFootprint(groupId)`**
+- [ ] **Step 4: `useGroupFootprint(groupId)`** — fetches all three counts when the danger-zone card
+      mounts; omits any clause that has not resolved.
 
-| Clause | Source |
-|---|---|
-| `N campaigns` | `campaign.getCampaigns(groupId)` |
-| `N chapters` | `campaign.getCampaignCounts(groupId, campaignId)` per campaign, summed |
-| `N of your own notes` | `getCollectionCount("groups/{groupId}/users/{uid}/notes")` — notes are a flat per-user collection, so "your own notes in this group" is exactly this path |
+- [ ] **Step 5: The two rows.** Each states its scope in words *before* its button:
 
-Fetches when the danger-zone card mounts. **Omits any clause whose count has not resolved** — a
-failed count is not an error state; the sentence reads correctly with two clauses and the button
-does not depend on it. `useCampaignCounts` set this precedent one PR ago.
+  - **`Leave {group}`** — `You lose access to N campaigns, N chapters and N of your own notes in
+    this group. Your account and your other group stay as they are.` → outlined error button
+    `Leave group`.
+  - **`Delete your account`** — `Removes you from both groups and deletes every profile, character
+    and note you own. Permanent. You'll be asked to type your email to confirm.` → **solid** error
+    button `Delete account`, on a tinted ground.
 
-- [ ] **Step 4: The two rows**
+- [ ] **Step 6: Fix the leave sequence** — await the service, await `refreshGroups()`, then
+      `navigate("/")`. Account deletion: await the service, await `signOut()`, `navigate("/")`.
 
-Each states its scope in words *before* its button. `Leave {group}` gets an outlined error button;
-`Delete your account` gets a **solid** error button on a tinted ground, because they are not
-equivalent actions and today they are two identical outline buttons stacked on each other.
-
-- [ ] **Step 5: Fix the leave sequence**
-
-`handleGroupLeave` currently calls `onCancel()`, then `await refreshGroups()`, then
-`window.location.href = "/"` — closing the surface it is inside, then discarding the refresh it just
-waited for. On a page: `await` the service, `await refreshGroups()`, then `navigate("/")`. The
-awaited refresh is now what makes the redirect correct rather than a value thrown away one line
-before a hard navigation.
-
-Account deletion: `await` the service, `await signOut()`, `navigate("/")`.
-
-- [ ] **Step 6: Gate the delete confirm** on the typed account email, compared case-insensitively
+- [ ] **Step 7: Gate the delete confirm** on the typed account email, compared case-insensitively
       after trimming. The email is on screen in the account card above; this is a speed bump, not a
       memory test.
 
-- [ ] **Step 7: Delete the trailing `Close` button.** Everything here saves as you go, so a button
-      that looks like a form's primary action one row under `Delete account` is actively dangerous.
+- [ ] **Step 8: Delete the trailing `Close` button** if any trace of it survived Task 5.
 
-- [ ] **Step 8: Verify and commit** — `feat(profile): say what leaving and deleting actually affect`
+- [ ] **Step 9: Run the targeted tests; all green.**
+
+### Report back
+
+As Task 1.
 
 ---
 
-## Task 10: One named account menu
+## Task 10 — One named account menu
 
-What this replaces is the **hamburger**, not the file the PR names: `UserProfileButton` renders
-three ghost icons but nothing renders `UserProfileButton` (spec §1.3). Mobile navigation is a
-separate bar mounted in `Layout` (`Navigation variant="mobile"`), so removing the hamburger strands
-nothing.
+**Batch 6, alone.**
 
-- [ ] **Step 1: Move `usePopoverKeys` to `shared/hooks/`**, with its test, and update
-      `ContextSwitcher`'s import. It is a general keyboard contract with two callers now, and
-      leaving it filed under the name of the first component that needed it is how shared behaviour
-      gets copied instead of imported. Run the context-switcher suites and confirm they are
-      untouched by the move.
+### Brief
+
+> **Repo constraints** — the block in "How this plan is executed". Read it first.
+
+**What you need to know (the PR names the wrong file; spec §1.3 corrects it):**
+
+- The PR says `UserProfileButton` renders the three unlabelled ghost icons in the header. It does —
+  but **nothing renders `UserProfileButton`.** Every `<UserProfileButton` in the repo is inside its
+  own test file. PR 3 rebuilt the header around its own hamburger, and **that** is what actually
+  carries Profile / Report / Groups / Admin today (`Header.tsx:243-320`).
+- So this task replaces **the hamburger**, and deletes `UserProfileButton.tsx` and its test.
+- Mobile navigation is a **separate bar** mounted in `Layout` (`Navigation variant="mobile"`), so
+  removing the hamburger strands no navigation. Verify before you delete.
+- `usePopoverKeys` (`src/shared/components/context-switcher/usePopoverKeys.ts`) already implements
+  the whole keyboard contract — focus trap, arrows, Home/End, Escape-returns-focus — and is tested.
+  **Move it to `src/shared/hooks/usePopoverKeys.ts`** with its test, update `ContextSwitcher`'s
+  import, and reuse it. Do not write a second one.
+- `ContextSwitcher.tsx` is the pattern to follow for popover shape, click-outside and error
+  placement: a failed action keeps the popover open with the message **inside** it.
+- `Header.handleReportProblem` (`Header.tsx:102`) carries
+  `?from=${encodeURIComponent(location.pathname)}`. That parameter is the only thing that tells the
+  report which page the problem was on — by the time the form renders, the path is always
+  `/contact`. The `TODO(PR 4)` comment at `Header.tsx:97` says exactly this; **delete the TODO with
+  the move.**
+- `Group members` is a **count, not a control** (spec §9.3). Member management is out of scope and
+  lives in the admin panel, so a row that navigates nowhere for non-admins would be a dead control
+  for most of the people who see it. Render it as text with the count; admins reach the list through
+  `Admin panel`.
+- When signed out, the header keeps a `Sign In` button **at every width** — the hamburger carried
+  the mobile one — plus the existing `ThemeSelector`, so theme stays reachable without an account.
+  The user menu renders only for signed-in users.
+
+**Files you may touch:**
+
+```
+src/shared/components/user-menu/*.tsx + __tests__/            (new)
+src/shared/hooks/usePopoverKeys.ts + its test                 (moved)
+src/shared/components/context-switcher/usePopoverKeys.ts      (delete, with its test)
+src/shared/components/context-switcher/ContextSwitcher.tsx    (import path only)
+src/app/layout/Header.tsx + its test
+…/auth/components/UserProfileButton.tsx                       (delete)
+…/auth/components/__tests__/UserProfileButton.test.tsx        (delete)
+```
+
+**Targeted test command:**
+
+```bash
+npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="(user-menu|usePopoverKeys|ContextSwitcher|Header)"
+```
+
+### Steps
+
+- [ ] **Step 1: Move `usePopoverKeys`** to `shared/hooks/`, with its test; update `ContextSwitcher`'s
+      import. Run the context-switcher suites and confirm the move changed nothing.
 
 - [ ] **Step 2: Failing tests**
 
@@ -705,57 +1171,53 @@ Header
   test("shows a Sign In button at every width when signed out")
 ```
 
-- [ ] **Step 3: Build the menu** — one trigger chip (avatar, posting-as name, chevron) opening a
-      ~284px popover: header (username + `Admin in {group}`), `POSTING AS` list, rule, theme
-      segmented control, rule, `Profile and settings ›`, the `Group members` count, `Report a
-      problem`, `Admin panel` (admins only), `Sign out` in a quieter weight.
+- [ ] **Step 3: Run; they fail. Quote it.**
 
-      `Group members` is a **count, not a control** (spec §9.3): member management is out of scope
-      and lives in the admin panel, so a row that navigates nowhere for non-admins would be a dead
-      control for most of the people who see it.
+- [ ] **Step 4: Build the menu** — one trigger chip (avatar, posting-as name, chevron) opening a
+      ~284px popover:
+      1. Header: username + `Admin in {group}`.
+      2. `POSTING AS` — the character list, click to switch, check on the current one.
+      3. Rule. `Theme` with the inline three-way segmented control.
+      4. Rule. `Profile and settings ›` → `/profile`; the `Group members` count; `Report a problem`
+         → `/contact?from=…`; `Admin panel` for admins only; `Sign out` in a quieter weight.
 
-      `Report a problem` carries `?from=${encodeURIComponent(location.pathname)}` exactly as
-      `Header.handleReportProblem` does today. That parameter is the only thing that tells the
-      report which page the problem was on — by the time the form renders, the path is always
-      `/contact`. `Header.tsx:96` carries a `TODO(PR 4)` saying so; delete the TODO with the move.
+- [ ] **Step 5: Strip the header** — remove the hamburger, its click-outside and positioning
+      effects, both dialog mounts and the desktop `Sign Out` button. **Keep** the `JoinGroupDialog`
+      mount (driven by `useJoinGroupCompletion` from Task 6), the `AdminPanel` dialog and the
+      `SignInForm` dialog: the menu opens the first two, and the third is for signed-out users.
 
-- [ ] **Step 4: Strip the header**
-
-Remove the hamburger, its click-outside and positioning effects, both dialog mounts, and the desktop
-`Sign Out` button. Keep the `JoinGroupDialog` mount (now driven by `useJoinGroupCompletion`), the
-`AdminPanel` dialog and the `SignInForm` dialog — the menu opens the first two, and the third is for
-signed-out users.
-
-When signed out, the header keeps a `Sign In` button **at every width** (the hamburger carried the
-mobile one) plus the existing `ThemeSelector`, so theme stays reachable without an account. The
-user menu renders only for signed-in users.
-
-- [ ] **Step 5: Delete `UserProfileButton.tsx` and its test** (spec §9.1). Confirm nothing imports
-      it first:
+- [ ] **Step 6: Delete `UserProfileButton.tsx` and its test.** Confirm nothing imports it first:
 
 ```bash
 grep -rn "UserProfileButton" src --include=*.tsx --include=*.ts | grep -v "auth/components/UserProfileButton"
 ```
 
-- [ ] **Step 6: Also delete `useTheme()`'s unused destructure** — it is in the file being deleted, so
-      this resolves itself; note it in the commit body so the PR's §6 bullet is visibly answered.
+      Expect no output outside its own test file. (Deleting the file also removes the unused
+      `useTheme()` destructure the PR's §6 asks about — note that in your report.)
 
-- [ ] **Step 7: Verify and commit** — `feat(header): one named account menu`
+- [ ] **Step 7: Run the targeted tests; all green.**
+
+### Report back
+
+As Task 1, plus the `grep` output from Step 6.
 
 ---
 
-## Task 11: Record what the redesign changed
+## Task 11 — Record what the redesign changed
+
+**Orchestrator only. Not delegated** — this is the record of what actually happened, and only the
+reviewer of all ten diffs can write it.
 
 - [ ] **Step 1: Update `CLAUDE.md`** — the profile is a page, theme is account-scoped, and the
-      four-resolver / region trap now has a worked example: a bare `getFunctions()` passes every
-      gate and reaches a region with nothing in it.
+      resolver/region trap now has a worked example: a bare `getFunctions()` passes every gate and
+      reaches a region with nothing in it.
 
-- [ ] **Step 2: Record the two unfixed siblings** of the region bug —
-      `GroupService.createGroup:59` and `CampaignService.deleteCampaign:243` — in
-      `docs/testing/bug-tracking/README.md`, with the reasoning from spec §1.1. They are real, they
-      are out of scope here, and they should not have to be rediscovered.
+- [ ] **Step 2: Record the two unfixed siblings** of the region bug — `GroupService.createGroup:59`
+      and `CampaignService.deleteCampaign:243` — in `docs/testing/bug-tracking/README.md`, with the
+      reasoning from spec §1.1. They are real, they are out of scope here, and they should not have
+      to be rediscovered.
 
-- [ ] **Step 3: Append an outcome section to the spec**, as PR 3 did: what the plan predicted, what
+- [ ] **Step 3: Append an outcome section to the spec**, as PR 3 did: what this plan predicted, what
       it got wrong, and what the next person should know.
 
 - [ ] **Step 4: Run the three gates**
@@ -765,9 +1227,6 @@ npx tsc --noEmit
 npm test
 npm run build
 ```
-
-Compare against the baseline: **0 failed / 2 skipped / 4538 passed across 209 suites**, plus this
-PR's new suites, minus the two deleted ones.
 
 - [ ] **Step 5: Commit** — `docs(profile): record what the redesign changed`
 
@@ -783,7 +1242,7 @@ PR's new suites, minus the two deleted ones.
 | Theme stored per account, existing per-group values migrated | 7 |
 | Labelled character actions; removal confirmed; failures on the row | 8 |
 | Danger zone states what each action affects; deletion requires the email | 9 |
-| No `Close` button below `Delete account` | 9 |
+| No `Close` button below `Delete account` | 5 (asserted), 9 (enforced) |
 | One named header menu; posting-as and theme without leaving the page; `Report a problem` | 10 |
 | `undefined's profile` cannot appear anywhere | 3, and structurally 4 + 10 |
 | `npm test` passes with the profile suites updated | every task; gates in 11 |
