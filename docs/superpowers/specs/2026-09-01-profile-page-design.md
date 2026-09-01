@@ -371,26 +371,30 @@ first three are bug fixes that stand on their own if the redesign is deferred.
 
 ---
 
-## 9. Open questions
+## 9. Decisions
 
-These change what gets written and I would rather ask than assume.
+Four questions were put to the maintainer on 2026-09-01. All four were resolved in favour
+of the recommendation; they are kept here because the reasoning matters if they resurface.
 
-**9.1 `UserProfileButton` — delete it?** It is dead code (§1.3) whose entire content is
-superseded by the new menu, and it carries its own copy of the title bug. My
-recommendation is to delete it and its 249-line test in commit 10. The DoD says
-"`UserProfileButton.test.tsx` updated", which was written on the assumption that the
-component is live. Deleting removes a test file rather than updating one.
+**9.1 `UserProfileButton` is deleted, with its test.** It is dead code (§1.3) whose entire
+content is superseded by the new menu, and it carries its own copy of the title bug. The
+DoD line "`UserProfileButton.test.tsx` updated" was written on the assumption that the
+component is live; deleting the component deletes the test rather than updating it, and
+that is the honest outcome. Commit 10.
 
-**9.2 `UserProfile.tsx` — delete it?** Same question one level up. The spec says "keep the
-`UserProfile` component exported if anything else imports it"; nothing does, once the
-dialog mounts go. My recommendation is to delete it and export the cards.
+**9.2 `UserProfile.tsx` is deleted, not reduced.** Nothing imports it once the two dialog
+mounts go. Keeping a thin composition behind the name would preserve exactly the shape
+that let a second copy of the dialog live undetected for a release cycle. The barrel
+loses `UserProfile` and gains the cards. Commit 5.
 
-**9.3 `Group members` — a count or a control?** `7b` shows `Group members  5`. I have it as
-a static count (§6) because member management is out of scope and non-admins have nowhere
-to go. The alternative is admins-only, opening the admin panel's member view — which makes
-it a second admin entry point in a menu that already has one.
+**9.3 `Group members` is a count, not a control.** Member management is out of scope and
+lives in the admin panel, so a row that navigates nowhere for non-admins would be a dead
+control for most of the people who see it. Admins reach the list through `Admin panel`,
+which is already in the menu; a second admin entry point beside it would be the only thing
+the alternative bought.
 
-**9.4 The chapter count.** One `getCountFromServer` per campaign in the group, on page
-load, for a sentence in a card most users will never act on. The alternative is fetching it
-when the leave dialog opens, which makes the card's sentence shorter than the mock until
-you click. I have it eager, matching `7a`; say if the read cost is not worth it.
+**9.4 The counts are fetched when the danger-zone card mounts.** Two or three
+`getCountFromServer` calls, no document reads, and the full sentence matches `7a` on
+arrival. Any clause whose count has not resolved is omitted rather than guessed, so a
+failed count costs a clause and not an error state. If group sizes ever make the fan-out
+matter, the chapter clause is the first thing to drop — not a reason to denormalise.
