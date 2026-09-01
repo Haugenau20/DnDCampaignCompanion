@@ -482,6 +482,39 @@ describe("Header", () => {
   });
 
   // -------------------------------------------------------------------------
+  // Profile dialog title
+  // -------------------------------------------------------------------------
+  describe("profile dialog title", () => {
+    test("the profile dialog is not titled undefined's profile before the profile loads", async () => {
+      const user = userEvent.setup();
+      setupMocks({ user: { uid: "u1" } });
+      // The profile hasn't loaded yet: activeGroupUserProfile is still null
+      // even though the user is signed in.
+      (useGroups as jest.Mock).mockReturnValue({
+        activeGroupUserProfile: null,
+        refreshGroups: mockRefreshGroups,
+        setActiveGroup: mockSetActiveGroup,
+        activeGroup: null,
+        groups: [],
+      });
+      render(<Header />);
+
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      await user.click(screen.getByRole("button", { name: /^profile$/i }));
+
+      expect(
+        screen.getByRole("dialog", { name: "Your profile" })
+      ).toBeInTheDocument();
+      // Asserted against the accessible name rather than the text: the Dialog
+      // mock above renders `title` only as aria-label, so a queryByText for
+      // /undefined/ would pass against the broken code too.
+      expect(
+        screen.queryByRole("dialog", { name: /undefined/i })
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Joining a group -- the sole mount, and its one success behaviour
   // -------------------------------------------------------------------------
   describe("joining a group", () => {

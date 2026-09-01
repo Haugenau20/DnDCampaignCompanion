@@ -22,6 +22,11 @@ const UserProfileButton: React.FC = () => {
 
   const isAdmin = activeGroupUserProfile?.role === 'admin' || false;
 
+  // The profile may not have loaded yet even though the user is signed in;
+  // a template literal is always truthy, so `${username}'s profile' || 'x'`
+  // never falls back and used to render "undefined's profile".
+  const username = activeGroupUserProfile?.username;
+
   const handleProfileClick = () => {
     setShowProfile(true);
   };
@@ -90,7 +95,7 @@ const UserProfileButton: React.FC = () => {
       <Dialog
         open={showProfile}
         onClose={() => setShowProfile(false)}
-        title={`${activeGroupUserProfile?.username}'s profile` || 'Your Profile'}
+        title={username ? `${username}'s profile` : "Your profile"}
         maxWidth="max-w-md"
       >
         <UserProfile 
