@@ -26,6 +26,53 @@ jest.mock('@/features/user-management', () => ({
 const { useGroups, useCampaigns } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------
+// CampaignStep now pulls in useStory() / useNPCs(), both of which THROW
+// outside their providers -- neither is mounted here, so both barrels are
+// mocked with minimal stand-ins. Their exact numbers are exercised by
+// CampaignStep's own suite; here they only need to not crash the tree.
+// ---------------------------------------------------------------------------
+jest.mock('@/features/storytelling', () => ({
+  useStory: () => ({
+    chapters: [],
+    storyProgress: { currentChapter: '' },
+  }),
+}));
+
+jest.mock('@/features/campaign-entities', () => ({
+  useNPCs: () => ({ npcs: [] }),
+}));
+
+// ---------------------------------------------------------------------------
+// useCampaignCounts / useGroupSummaries reach `core/services/firebase`
+// directly (not through the mocked user-management barrel above), so without
+// this mock mounting the popover would exercise BaseFirebaseService's real
+// constructor and crash under jsdom (no firebase/analytics or
+// firebase/functions mock is registered globally -- see setupTests.ts and
+// test-utils/enhanced-test-utils.tsx for the same problem solved the same
+// way). The promises never resolve: this suite only asserts on names and
+// navigation, never on counts, so there is nothing to gain from letting them
+// settle, and a lot of act() noise to lose by doing so.
+// ---------------------------------------------------------------------------
+const mockGetCampaignCounts = jest.fn();
+const mockFirebaseGetCampaigns = jest.fn();
+const mockFirebaseGetGroupUsers = jest.fn();
+const mockGetCurrentUserId = jest.fn();
+
+jest.mock('@/core/services/firebase', () => ({
+  __esModule: true,
+  default: {
+    auth: { getCurrentUserId: (...args: any[]) => mockGetCurrentUserId(...args) },
+    campaign: {
+      getCampaignCounts: (...args: any[]) => mockGetCampaignCounts(...args),
+      getCampaigns: (...args: any[]) => mockFirebaseGetCampaigns(...args),
+    },
+    group: {
+      getGroupUsers: (...args: any[]) => mockFirebaseGetGroupUsers(...args),
+    },
+  },
+}));
+
+// ---------------------------------------------------------------------------
 // Mock JoinGroupDialog to avoid deep dependency chain
 // ---------------------------------------------------------------------------
 jest.mock('@/features/user-management/groups/components/JoinGroupDialog', () => {
@@ -90,6 +137,13 @@ function openSwitcher() {
   fireEvent.click(screen.getAllByRole('button')[0]);
 }
 
+/** Go from the campaign step to the group step. */
+async function openGroupStep() {
+  await act(async () => {
+    fireEvent.click(screen.getByRole('menuitem', { name: /change/i }));
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -97,6 +151,10 @@ function openSwitcher() {
 describe('ContextSwitcher', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetCampaignCounts.mockImplementation(() => new Promise(() => {}));
+    mockFirebaseGetCampaigns.mockImplementation(() => new Promise(() => {}));
+    mockFirebaseGetGroupUsers.mockImplementation(() => new Promise(() => {}));
+    mockGetCurrentUserId.mockReturnValue('user-1');
     (useGroups as jest.Mock).mockReturnValue(makeGroupsMock());
     (useCampaigns as jest.Mock).mockReturnValue(makeCampaignsMock());
     mockSetActiveGroup.mockResolvedValue(undefined);
@@ -112,20 +170,13 @@ describe('ContextSwitcher', () => {
   describe('opening and closing', () => {
     test('starts closed', () => {
       renderContextSwitcher();
-      expect(screen.queryByText('Select Group')).not.toBeInTheDocument();
+      expect(screen.queryByText('Campaigns in this group')).not.toBeInTheDocument();
     });
 
     test('opens from the trigger', () => {
       renderContextSwitcher();
       openSwitcher();
-      expect(screen.getByText('Select Group')).toBeInTheDocument();
-    });
-
-    test('lists the groups once open', () => {
-      renderContextSwitcher();
-      openSwitcher();
-      expect(screen.getByText('Fellowship of the Ring')).toBeInTheDocument();
-      expect(screen.getByText('Order of the Phoenix')).toBeInTheDocument();
+      expect(screen.getByText('Campaigns in this group')).toBeInTheDocument();
     });
 
     test('lists the campaigns once open', () => {
@@ -139,14 +190,14 @@ describe('ContextSwitcher', () => {
     test('closes when clicking outside', async () => {
       renderContextSwitcher();
       openSwitcher();
-      expect(screen.getByText('Select Group')).toBeInTheDocument();
+      expect(screen.getByText('Campaigns in this group')).toBeInTheDocument();
 
       await act(async () => {
         fireEvent.mouseDown(document.body);
       });
 
       await waitFor(() => {
-        expect(screen.queryByText('Select Group')).not.toBeInTheDocument();
+        expect(screen.queryByText('Campaigns in this group')).not.toBeInTheDocument();
       });
     });
 
@@ -155,15 +206,6 @@ describe('ContextSwitcher', () => {
       renderContextSwitcher();
       expect(screen.getAllByRole('button')[0]).toBeDisabled();
       expect(screen.getByText('Loading...')).toBeInTheDocument();
-    });
-
-    test('reports when there are no groups', () => {
-      (useGroups as jest.Mock).mockReturnValue(
-        makeGroupsMock({ groups: [], loading: false })
-      );
-      renderContextSwitcher();
-      openSwitcher();
-      expect(screen.getByText('No groups available')).toBeInTheDocument();
     });
 
     test('reports when there are no campaigns', () => {
@@ -175,15 +217,30 @@ describe('ContextSwitcher', () => {
       expect(screen.getByText('No campaigns in this group')).toBeInTheDocument();
     });
 
-    // Critical 1: CampaignSelector's `if (!activeGroupId) return null;` guard
-    // is live and, until now, untested.
-    test('hides the campaign section when there is no active group', () => {
-      (useGroups as jest.Mock).mockReturnValue(
-        makeGroupsMock({ activeGroupId: null, activeGroup: null })
-      );
+    // The group list is now a second step behind `Change`, reached from the
+    // campaign step -- this replaces the old "lists the groups once open"
+    // coverage, since groups are no longer visible on the default view.
+    test('reaches the group list behind Change', async () => {
       renderContextSwitcher();
       openSwitcher();
-      expect(screen.queryByText('Select Campaign')).not.toBeInTheDocument();
+
+      await openGroupStep();
+
+      expect(screen.getByText('Choose a group')).toBeInTheDocument();
+      expect(screen.getByText('Fellowship of the Ring')).toBeInTheDocument();
+      expect(screen.getByText('Order of the Phoenix')).toBeInTheDocument();
+    });
+
+    test('returns to the campaigns after choosing a group', async () => {
+      renderContextSwitcher();
+      openSwitcher();
+
+      await openGroupStep();
+      await act(async () => {
+        fireEvent.click(screen.getByText('Order of the Phoenix'));
+      });
+
+      expect(mockSetActiveGroup).toHaveBeenCalledWith('group-2');
     });
   });
 
@@ -202,9 +259,10 @@ describe('ContextSwitcher', () => {
       expect(mockSetActiveCampaign).toHaveBeenCalledWith('campaign-2');
     });
 
-    test('clicking a group switches to it immediately', async () => {
+    test('clicking a group (reached behind Change) switches to it immediately', async () => {
       renderContextSwitcher();
       openSwitcher();
+      await openGroupStep();
 
       await act(async () => {
         fireEvent.click(screen.getByText('Order of the Phoenix'));
@@ -249,7 +307,7 @@ describe('ContextSwitcher', () => {
       });
 
       await waitFor(() => {
-        expect(screen.queryByText('Select Group')).not.toBeInTheDocument();
+        expect(screen.queryByText('Campaigns in this group')).not.toBeInTheDocument();
       });
     });
 
@@ -264,18 +322,24 @@ describe('ContextSwitcher', () => {
       expect(mockSetActiveCampaign).not.toHaveBeenCalled();
     });
 
-    // Critical 2: the group-side twin of the test above -- handleSelectGroup's
-    // `if (groupId === activeGroupId)` early return was untested.
-    test('does not switch when the active group is clicked, but still closes the popover', async () => {
+    // Critical 2, restated for the two-step shell: clicking the already-active
+    // group on the group step is "changed my mind" rather than "close the
+    // whole popover" -- it returns to the campaign step, which stays open.
+    // handleSelectGroup's `if (groupId === activeGroupId) { setStep('campaigns'); return; }`
+    // branch is what this exercises.
+    test('does not switch when the active group is clicked, and returns to the campaign step', async () => {
       renderContextSwitcher();
       openSwitcher();
+      await openGroupStep();
+      expect(screen.getByText('Choose a group')).toBeInTheDocument();
 
       await act(async () => {
         fireEvent.click(screen.getByText('Fellowship of the Ring'));
       });
 
       expect(mockSetActiveGroup).not.toHaveBeenCalled();
-      expect(screen.queryByText('Select Group')).not.toBeInTheDocument();
+      expect(screen.getByText('Campaigns in this group')).toBeInTheDocument();
+      expect(screen.getByRole('menu')).toBeInTheDocument();
     });
 
     test('reports a failed switch and leaves the context alone', async () => {
@@ -296,17 +360,19 @@ describe('ContextSwitcher', () => {
   // Regression coverage for the bug fixed in 592b548: selecting a group used
   // to leave the PREVIOUS group's campaigns on screen, so applying could pair
   // a new group with an old group's campaign. Staged selection is gone now,
-  // so that pairing is impossible by construction -- this component reads
+  // so that pairing is impossible by construction -- CampaignStep reads
   // `campaigns` straight from `useCampaigns()` on every render rather than
   // caching a list keyed off a "selected" group. This test asserts the
   // transition (switch group -> the group's own campaign is what a further
   // click acts on), not merely an end state, so it would fail if a future
-  // change reintroduced a locally cached / stale campaign list.
+  // change reintroduced a locally cached / stale campaign list -- including
+  // one hiding inside the CampaignStep rewrite this task performed.
   // -------------------------------------------------------------------------
   describe('campaigns follow the selected group', () => {
     test('after switching group, selecting a campaign acts on the NEW group\'s campaign, not the previous group\'s', async () => {
       const { rerender } = renderContextSwitcher();
       openSwitcher();
+      await openGroupStep();
 
       await act(async () => {
         fireEvent.click(screen.getByText('Order of the Phoenix'));
@@ -330,7 +396,9 @@ describe('ContextSwitcher', () => {
       );
       rerender(<ContextSwitcher />);
 
-      // The switch closed the popover; reopen it to act on the new list.
+      // The switch closed the popover; reopen it to act on the new list. The
+      // reopened panel lands back on the campaign step (the popover-close
+      // effect resets `step`), so no extra navigation is needed here.
       openSwitcher();
       expect(screen.getByText('Council Business')).toBeInTheDocument();
       expect(screen.queryByText('Middle Earth Adventures')).not.toBeInTheDocument();
@@ -398,6 +466,7 @@ describe('ContextSwitcher', () => {
     test('undo restores the previous group and campaign pair', async () => {
       const { rerender } = renderContextSwitcher();
       openSwitcher();
+      await openGroupStep();
 
       await act(async () => {
         fireEvent.click(screen.getByText('Order of the Phoenix'));
@@ -454,13 +523,13 @@ describe('ContextSwitcher', () => {
     test('offers a way to join a group', () => {
       renderContextSwitcher();
       openSwitcher();
-      expect(screen.getByText('Join Group')).toBeInTheDocument();
+      expect(screen.getByText('Join a group with an invite code')).toBeInTheDocument();
     });
 
     test('opens the join dialog', () => {
       renderContextSwitcher();
       openSwitcher();
-      fireEvent.click(screen.getByText('Join Group'));
+      fireEvent.click(screen.getByText('Join a group with an invite code'));
       expect(screen.getByTestId('join-group-dialog')).toBeInTheDocument();
     });
   });

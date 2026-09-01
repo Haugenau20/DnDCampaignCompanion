@@ -2,17 +2,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useGroups, useCampaigns, JoinGroupDialog } from 'features/user-management';
 import Typography from 'core/components/Typography';
-import type { Campaign } from 'core/types/user';
 import UndoToast from './UndoToast';
 import ContextTrigger from './ContextTrigger';
+import CampaignStep from './CampaignStep';
+import GroupStep from './GroupStep';
 import { usePopoverKeys } from './usePopoverKeys';
-import {
-  Users,
-  BookOpen,
-  PlusCircle,
-  Check
-} from 'lucide-react';
-import clsx from 'clsx';
 
 /**
  * Lets the user see and change the active group and campaign.
@@ -30,6 +24,11 @@ const ContextSwitcher: React.FC = () => {
   const { activeCampaignId, setActiveCampaign, campaigns } = useCampaigns();
 
   const [isOpen, setIsOpen] = useState(false);
+  /**
+   * Which step the popover shows. Campaigns lead; the group step is only
+   * reached behind `Change` on the campaign step.
+   */
+  const [step, setStep] = useState<'campaigns' | 'groups'>('campaigns');
   const [showJoinGroupDialog, setShowJoinGroupDialog] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
   /**
@@ -49,6 +48,12 @@ const ContextSwitcher: React.FC = () => {
   const closePopover = useCallback(() => setIsOpen(false), []);
 
   usePopoverKeys({ isOpen, panelRef, triggerRef, onClose: closePopover });
+
+  // Reset to the campaign step whenever the popover closes, so it never
+  // reopens mid-flow on the group step the user left it on.
+  useEffect(() => {
+    if (!isOpen) setStep('campaigns');
+  }, [isOpen]);
 
   // Close when clicking outside
   useEffect(() => {
@@ -93,13 +98,25 @@ const ContextSwitcher: React.FC = () => {
     }
   };
 
+  /**
+   * Choose a group from the group step.
+   *
+   * Because `setActiveGroup` loads that group's campaigns and activates the
+   * one the user last had open there (Task 2), the campaign step is correct
+   * by construction when it reappears -- this is the structural cure for the
+   * bug fixed in 592b548, where a stale, locally cached campaign list could
+   * pair a new group with the previous group's campaign.
+   */
   const handleSelectGroup = (groupId: string) => {
     if (groupId === activeGroupId) {
-      setIsOpen(false);
+      setStep('campaigns');
       return;
     }
     const name = groups.find((g) => g.id === groupId)?.name ?? 'that group';
-    void applySwitch(name, () => setActiveGroup(groupId));
+    void applySwitch(name, async () => {
+      await setActiveGroup(groupId);
+      setStep('campaigns');
+    });
   };
 
   const handleSelectCampaign = (campaignId: string) => {
@@ -148,20 +165,18 @@ const ContextSwitcher: React.FC = () => {
             aria-label="Group and campaign"
             className="dropdown absolute left-0 top-full mt-1 w-[23.5rem] max-w-[calc(100vw-2rem)] rounded-md shadow-lg z-20"
           >
-            {/* Groups Section */}
-            <GroupSelector
-              activeGroupId={activeGroupId}
-              onSelectGroup={handleSelectGroup}
-              showJoinGroupDialog={() => setShowJoinGroupDialog(true)}
-            />
-
-            {/* Campaigns Section */}
-            <CampaignSelector
-              activeGroupId={activeGroupId}
-              activeCampaignId={activeCampaignId}
-              campaigns={campaigns}
-              onSelectCampaign={handleSelectCampaign}
-            />
+            {step === 'campaigns' ? (
+              <CampaignStep
+                onSelectCampaign={handleSelectCampaign}
+                onChangeGroup={() => setStep('groups')}
+                onJoinGroup={() => setShowJoinGroupDialog(true)}
+              />
+            ) : (
+              <GroupStep
+                onSelectGroup={handleSelectGroup}
+                onBack={() => setStep('campaigns')}
+              />
+            )}
           </div>
         )}
 
@@ -197,162 +212,6 @@ const ContextSwitcher: React.FC = () => {
         }}
       />
     </>
-  );
-};
-
-/**
- * Component for selecting groups
- */
-const GroupSelector: React.FC<{
-  activeGroupId: string | null;
-  onSelectGroup: (groupId: string) => void;
-  showJoinGroupDialog: () => void;
-}> = ({
-  activeGroupId,
-  onSelectGroup,
-  showJoinGroupDialog
-}) => {
-  const { groups, loading: groupsLoading } = useGroups();
-
-  return (
-    <div className="p-2">
-      <Typography variant="body-sm" color="secondary" className="px-3 py-1">
-        Select Group
-      </Typography>
-
-      <div className="mt-1 max-h-48 overflow-y-auto">
-        {/* Loading State */}
-        {groupsLoading ? (
-          <LoadingState text="Loading groups..." />
-        ) : groups.length > 0 ? (
-          /* Group List */
-          groups.map(group => {
-            // With staged selection gone, "active" and "selected" are one
-            // state -- the row carries the tint and the check together.
-            const isActive = group.id === activeGroupId;
-
-            return (
-              <button
-                key={group.id}
-                role="menuitem"
-                onClick={() => onSelectGroup(group.id)}
-                className={clsx(
-                  "flex items-center justify-between px-3 py-2 w-full text-left rounded-md",
-                  isActive ? `dropdown-item-active` : `dropdown-item`
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 flex-shrink-0" />
-                  <Typography className="truncate">
-                    {group.name}
-                  </Typography>
-                </div>
-
-                {/* Show active indicator */}
-                {isActive && (
-                  <Check className="w-4 h-4" />
-                )}
-              </button>
-            );
-          })
-        ) : (
-          /* Empty State */
-          <div className="px-3 py-2">
-            <Typography color="secondary">No groups available</Typography>
-          </div>
-        )}
-
-        {/* Join Group Option */}
-        <button
-          role="menuitem"
-          onClick={showJoinGroupDialog}
-          className="flex items-center gap-2 px-3 py-2 w-full text-left rounded-md dropdown-item"
-        >
-          <PlusCircle className="w-4 h-4 flex-shrink-0" />
-          <Typography>Join Group</Typography>
-        </button>
-      </div>
-    </div>
-  );
-};
-
-/**
- * Component for selecting campaigns
- */
-const CampaignSelector: React.FC<{
-  activeGroupId: string | null;
-  activeCampaignId: string | null;
-  campaigns: Campaign[];
-  onSelectCampaign: (campaignId: string) => void;
-}> = ({
-  activeGroupId,
-  activeCampaignId,
-  campaigns,
-  onSelectCampaign
-}) => {
-  // Only show once a group is active -- there is no selected-but-not-active
-  // group anymore, so this is simply "is there a group at all".
-  if (!activeGroupId) return null;
-
-  return (
-    <div className="p-2 border-t">
-      <Typography variant="body-sm" color="secondary" className="px-3 py-1">
-        Select Campaign
-      </Typography>
-
-      <div className="mt-1 max-h-48 overflow-y-auto">
-        {campaigns.length > 0 ? (
-          /* Campaign List */
-          campaigns.map(campaign => {
-            const isActive = campaign.id === activeCampaignId;
-
-            return (
-              <button
-                key={campaign.id}
-                role="menuitem"
-                onClick={() => onSelectCampaign(campaign.id)}
-                className={clsx(
-                  "flex items-center justify-between px-3 py-2 w-full text-left rounded-md",
-                  isActive ? `dropdown-item-active` : `dropdown-item`
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 flex-shrink-0" />
-                  <Typography className="truncate">
-                    {campaign.name}
-                  </Typography>
-                </div>
-
-                {/* Show active indicator */}
-                {isActive && (
-                  <Check className="w-4 h-4" />
-                )}
-              </button>
-            );
-          })
-        ) : (
-          /* Empty State */
-          <div className="px-3 py-2">
-            <Typography color="secondary">No campaigns in this group</Typography>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-/**
- * Loading state component
- */
-const LoadingState: React.FC<{ text: string }> = ({ text }) => {
-
-  return (
-    <div className="px-3 py-2 flex items-center justify-center">
-      <div className="animate-spin w-4 h-4 border-2 border-t-transparent rounded-full mr-2 primary" />
-      <Typography variant="body-sm" color="secondary">
-        {text}
-      </Typography>
-    </div>
   );
 };
 
