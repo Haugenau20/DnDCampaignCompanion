@@ -3823,3 +3823,44 @@ Mapped to the PR description's own checklist:
 - [ ] `npm test` passes; `ContextSwitcher.test.tsx` is rewritten for immediate application, replacing rather than silently deleting the obsolete `Apply Changes` tests — Task 4
 
 Plus the three gates from Task 10, and the browser pass that no gate can perform.
+
+---
+
+## Task 10 record: what actually happened vs. what the plan predicted
+
+**Gates (Steps 1 and 4 only — see below for what was deliberately not done).** On
+`redesign/context-switcher`: `npx tsc --noEmit` clean; `npm test` — 209 suites passed, 209 total,
+2 skipped / 4538 passed / 4540 total; `npm run build` succeeded (pre-existing ESLint warnings only,
+none new). This matches the numbers the dispatching task expected.
+
+**Steps 2 and 3 were not performed and remain open.** Both require a running dev server, the
+Firebase emulators, generated sample data, and an authenticated session (the switcher is gated on
+`user && activeGroup`, so an unauthenticated app shows nothing). They were explicitly carved out of
+this pass and handed to the maintainer as an open item: the three-theme visual check (popover
+surface, `.toast` treatment, active-row tint, medieval card flourishes, chip truncation at ~360px)
+and the emulator-backed flow exercise (campaign switch with no reload, `Undo`, `Change` → group
+switch, keyboard-only operation).
+
+**Step 4 — the one consumer that needed touching.** `StoryContext`'s reading-progress effect keyed
+only on `hasRequiredContext`, which is true both before and after a campaign switch, so it would have
+kept showing the previous campaign's reading position once switching stopped reloading the page.
+Fixed in `aca5111` by adding `activeCampaignId` to the effect's dependency array. Every other
+consumer this redesign touches — `useNPCData`, `useLocationData`, `useQuestData`, `useRumorData`,
+`useChapterData` — already keyed on `activeCampaignId` and needed no change.
+
+**Where the plan and the implementation diverged:**
+
+- `GroupStep` (Step 6 in this document, around line 3435) is specified almost entirely in prose —
+  row-summary formatting rules, pluralisation, date-guarding — with only two verbatim code blocks
+  (the footnote and the header button). There is no full component listing. It was implemented
+  against acceptance criteria supplied at dispatch time rather than transcribed from code in the
+  plan; the surrounding tasks (props shape, shell reuse with `CampaignStep`, wiring into
+  `ContextSwitcher`'s step state) still matched.
+- Several of the plan's own test blocks, written before the fix they were meant to guard, would have
+  passed identically with or without the code change they named — they exercised the surrounding
+  render path but not the specific behaviour under test. `aca5111`'s test changes are the corrective
+  example: they hoist a stable `mockRefreshProgress` and add a dedicated campaign-switch regression
+  test precisely so the assertion measures dependency-array behaviour rather than incidental render
+  churn. Later tasks in this plan added this kind of revert-check (does the test actually fail if you
+  revert the fix?) as standard practice; worth doing from the start on the next plan rather than
+  discovering it midway.
