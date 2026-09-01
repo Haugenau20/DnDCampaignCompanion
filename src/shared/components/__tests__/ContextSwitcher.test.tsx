@@ -81,7 +81,9 @@ function makeCampaignsMock(overrides = {}) {
   };
 }
 
-function renderContextSwitcher(props: { onClose?: jest.Mock } = {}) {
+function renderContextSwitcher(
+  props: { onClose?: jest.Mock; inDialog?: boolean } = {}
+) {
   return render(<ContextSwitcher {...props} />);
 }
 
@@ -153,6 +155,7 @@ describe('ContextSwitcher', () => {
       (useGroups as jest.Mock).mockReturnValue(makeGroupsMock({ loading: true }));
       renderContextSwitcher();
       expect(screen.getAllByRole('button')[0]).toBeDisabled();
+      expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
 
     test('reports when there are no groups', () => {
@@ -171,6 +174,17 @@ describe('ContextSwitcher', () => {
       renderContextSwitcher();
       openSwitcher();
       expect(screen.getByText('No campaigns in this group')).toBeInTheDocument();
+    });
+
+    // Critical 1: CampaignSelector's `if (!activeGroupId) return null;` guard
+    // is live and, until now, untested.
+    test('hides the campaign section when there is no active group', () => {
+      (useGroups as jest.Mock).mockReturnValue(
+        makeGroupsMock({ activeGroupId: null, activeGroup: null })
+      );
+      renderContextSwitcher();
+      openSwitcher();
+      expect(screen.queryByText('Select Campaign')).not.toBeInTheDocument();
     });
   });
 
@@ -249,6 +263,20 @@ describe('ContextSwitcher', () => {
       });
 
       expect(mockSetActiveCampaign).not.toHaveBeenCalled();
+    });
+
+    // Critical 2: the group-side twin of the test above -- handleSelectGroup's
+    // `if (groupId === activeGroupId)` early return was untested.
+    test('does not switch when the active group is clicked, but still closes the popover', async () => {
+      renderContextSwitcher();
+      openSwitcher();
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Fellowship of the Ring'));
+      });
+
+      expect(mockSetActiveGroup).not.toHaveBeenCalled();
+      expect(screen.queryByText('Select Group')).not.toBeInTheDocument();
     });
 
     test('reports a failed switch and leaves the context alone', async () => {
@@ -419,6 +447,38 @@ describe('ContextSwitcher', () => {
       });
 
       expect(screen.getByText(/Could not switch back/)).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Important 2: in dialog mode there is no ContextButton to reopen the
+  // lists with, so a switch collapsing them would strand the user with an
+  // empty dialog and a toast. A later task deletes `inDialog` (and this
+  // guard) entirely; until then it must not regress.
+  // -------------------------------------------------------------------------
+  describe('dialog mode', () => {
+    test('switching inside the dialog does not collapse the lists', async () => {
+      renderContextSwitcher({ inDialog: true });
+      expect(screen.getByText('Select Group')).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Hogwarts Campaign'));
+      });
+
+      expect(screen.getByText('Select Group')).toBeInTheDocument();
+      expect(screen.getByText('Select Campaign')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /undo/i })).toBeInTheDocument();
+    });
+
+    test('clicking the active group in the dialog is a no-op that keeps the lists open', async () => {
+      renderContextSwitcher({ inDialog: true });
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Fellowship of the Ring'));
+      });
+
+      expect(mockSetActiveGroup).not.toHaveBeenCalled();
+      expect(screen.getByText('Select Group')).toBeInTheDocument();
     });
   });
 

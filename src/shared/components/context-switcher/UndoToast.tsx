@@ -1,5 +1,5 @@
 // src/shared/components/context-switcher/UndoToast.tsx
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import Typography from "core/components/Typography";
 
 /**
@@ -33,10 +33,22 @@ const UndoToast: React.FC<UndoToastProps> = ({
   onDismiss,
   duration = 6000
 }) => {
+  // ContextSwitcher passes a fresh `onDismiss` arrow on every render, so the
+  // countdown below must not be keyed to that reference -- an ambient
+  // parent re-render (unrelated to what the toast says) would otherwise
+  // tear the timer down and restart the full duration, letting the toast
+  // outlive its duration or never dismiss. A ref carries the latest
+  // callback without making it a dependency, so only a real change to the
+  // toast's own content (label, error, duration) resets the clock.
+  const onDismissRef = useRef(onDismiss);
   useEffect(() => {
-    const timer = window.setTimeout(onDismiss, duration);
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => onDismissRef.current(), duration);
     return () => window.clearTimeout(timer);
-  }, [label, error, duration, onDismiss]);
+  }, [label, error, duration]);
 
   return (
     <div

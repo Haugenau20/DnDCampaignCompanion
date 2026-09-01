@@ -101,4 +101,46 @@ describe("UndoToast", () => {
     const status = screen.getByRole("status");
     expect(status).toHaveAttribute("aria-live", "polite");
   });
+
+  // Regression: ContextSwitcher passes a fresh inline `onDismiss` arrow on
+  // every render. If the auto-dismiss effect lists `onDismiss` as a
+  // dependency, an ambient parent re-render (unrelated to the toast's own
+  // content) tears the timer down and restarts the full duration -- so in
+  // the real app, a context switch that causes several ambient re-renders
+  // can make the toast outlive its duration or never dismiss at all. The
+  // timer must be anchored to the toast's own identity (label/error/duration)
+  // and stay unaffected by a `onDismiss` that merely changes reference.
+  test("keeps its dismiss timer anchored to itself, not to onDismiss's identity", () => {
+    const onDismiss = jest.fn();
+
+    const Wrapper: React.FC<{ renderCount: number }> = ({ renderCount }) => (
+      <UndoToast
+        label="The Hobbit"
+        onUndo={jest.fn()}
+        // A brand new arrow every render -- exactly what ContextSwitcher
+        // passes, and exactly what must NOT restart the countdown.
+        onDismiss={() => onDismiss(renderCount)}
+        duration={6000}
+      />
+    );
+
+    const { rerender } = render(<Wrapper renderCount={0} />);
+
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+    expect(onDismiss).not.toHaveBeenCalled();
+
+    // An ambient re-render partway through the countdown, with a fresh
+    // onDismiss closure -- the ContextSwitcher-shaped case.
+    rerender(<Wrapper renderCount={1} />);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    // 4000ms + 2000ms = the original 6000ms duration, counted from mount --
+    // not from the re-render.
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
 });

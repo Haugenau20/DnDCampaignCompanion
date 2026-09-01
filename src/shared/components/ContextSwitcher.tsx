@@ -61,7 +61,7 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
 
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        if (!inDialog) setIsOpen(false);
       }
     };
 
@@ -89,7 +89,10 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
 
     try {
       await change();
-      setIsOpen(false);
+      // Dialog mode renders no ContextButton to reopen the lists with, so
+      // closing here would strand the user with an empty dialog and a
+      // toast. Task 5 deletes `inDialog` and this guard along with it.
+      if (!inDialog) setIsOpen(false);
       setUndoTarget({ ...previous, label });
     } catch (error) {
       setSwitchError(
@@ -102,7 +105,7 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
 
   const handleSelectGroup = (groupId: string) => {
     if (groupId === activeGroupId) {
-      setIsOpen(false);
+      if (!inDialog) setIsOpen(false);
       return;
     }
     const name = groups.find((g) => g.id === groupId)?.name ?? 'that group';
@@ -111,7 +114,7 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
 
   const handleSelectCampaign = (campaignId: string) => {
     if (campaignId === activeCampaignId) {
-      setIsOpen(false);
+      if (!inDialog) setIsOpen(false);
       return;
     }
     const name = campaigns.find((c) => c.id === campaignId)?.name ?? 'that campaign';
