@@ -968,3 +968,23 @@
   border-color: var(--color-primary);
   color: var(--bg-primary);
 }
+
+/* ====== TOAST ====== */
+/*
+  A transient confirmation carrying exactly one action.
+
+  Deliberately NOT an inverted surface, although the mock draws one. The
+  contact callout tried `--text-primary` on `--bg-primary` on the reasoning
+  that every theme guarantees contrast between that pair, and it was legible
+  everywhere and right nowhere: light gave a heavy slab, dark gave a near-white
+  block that read as an alert rather than a confirmation, and medieval gave
+  dark chocolate on parchment. `--bg-accent` is the token each theme already
+  tunes for a subtly emphasised surface, and `--color-primary` carries the
+  action -- the same resolution the callout landed on.
+*/
+.toast {
+  background-color: var(--bg-accent);
+  border: var(--border-width-sm) solid var(--card-border);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}

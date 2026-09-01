@@ -4,13 +4,14 @@ import { useGroups, useCampaigns, JoinGroupDialog } from 'features/user-manageme
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import type { Campaign } from 'core/types/user';
-import { 
-  ChevronDown, 
-  Settings, 
-  Users, 
-  BookOpen, 
+import UndoToast from 'shared/components/context-switcher/UndoToast';
+import {
+  ChevronDown,
+  Settings,
+  Users,
+  BookOpen,
   PlusCircle,
-  Check 
+  Check
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -24,144 +25,120 @@ interface ContextSwitcherProps {
  * It supports two modes:
  * 1. Header mode: Shows as a dropdown in the header
  * 2. Dialog mode: Shows as an expanded list in a dialog
+ *
+ * Selecting a group or campaign switches to it immediately -- there is no
+ * staged selection and no Apply step. A mis-click is recovered through the
+ * undo toast rather than a pre-commit confirmation.
  */
-const ContextSwitcher: React.FC<ContextSwitcherProps> = ({ 
+const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
   inDialog = false,
-  onClose 
+  onClose
 }) => {
-  const { activeGroupId, setActiveGroup } = useGroups();
-  const {
-    activeCampaignId,
-    setActiveCampaign,
-    campaigns: activeGroupCampaigns,
-    getCampaigns,
-  } = useCampaigns();
+  const { activeGroupId, setActiveGroup, groups } = useGroups();
+  const { activeCampaignId, setActiveCampaign, campaigns } = useCampaigns();
 
-  // Local state for selections (pure UI state, no backend calls)
-  const [isOpen, setIsOpen] = useState(inDialog); // Always open in dialog mode
+  // Still initialised from `inDialog`, which Task 5 removes. Until then the
+  // Header dialog is the one caller that passes it, and it must keep opening
+  // to the lists rather than to a trigger button inside a modal.
+  const [isOpen, setIsOpen] = useState(inDialog);
   const [showJoinGroupDialog, setShowJoinGroupDialog] = useState(false);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(activeGroupId);
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(activeCampaignId);
-  const [applyError, setApplyError] = useState<string | null>(null);
+  const [switchError, setSwitchError] = useState<string | null>(null);
   /**
-   * Campaigns belonging to a group the user has selected but not yet applied.
-   * `null` while the active group is the selected one, because the context
-   * already holds that group's list.
+   * The group and campaign to go back to, plus what we switched to. Held only
+   * while the toast is up.
    */
-  const [otherGroupCampaigns, setOtherGroupCampaigns] = useState<Campaign[] | null>(null);
+  const [undoTarget, setUndoTarget] = useState<{
+    groupId: string | null;
+    campaignId: string | null;
+    label: string;
+  } | null>(null);
+  const [undoError, setUndoError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Update local selections when active IDs change (initial load)
-  useEffect(() => {
-    setSelectedGroupId(activeGroupId);
-  }, [activeGroupId]);
-
-  const isSelectedGroupActive = selectedGroupId === activeGroupId;
-
-  /**
-   * Keep the campaign list and the campaign selection tied to the SELECTED
-   * group rather than the active one.
-   *
-   * `useCampaigns().campaigns` is populated by FirebaseContext for the ACTIVE
-   * group, so selecting a different group used to leave the active group's
-   * campaigns on screen -- and applying then wrote a group and a campaign that
-   * did not belong together. Selecting another group now loads that group's
-   * campaigns and moves the selection onto one of them, so a stale id can
-   * never survive the change.
-   */
-  useEffect(() => {
-    if (!selectedGroupId || isSelectedGroupActive) {
-      setOtherGroupCampaigns(null);
-      setSelectedCampaignId(activeCampaignId);
-      return;
-    }
-
-    let cancelled = false;
-    getCampaigns(selectedGroupId).then((list) => {
-      if (cancelled) return;
-      setOtherGroupCampaigns(list);
-      setSelectedCampaignId(list[0]?.id ?? null);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedGroupId, isSelectedGroupActive, activeCampaignId, getCampaigns]);
-
-  const visibleCampaigns = isSelectedGroupActive
-    ? activeGroupCampaigns
-    : otherGroupCampaigns ?? [];
-
-  // Determine if there are changes to apply
-  const hasChanges = selectedGroupId !== activeGroupId || selectedCampaignId !== activeCampaignId;
-  
   // Close dropdown when clicking outside (only in header mode)
   useEffect(() => {
     if (inDialog) return;
-    
+
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [inDialog]);
-  
+
   /**
-   * Apply the staged selection.
+   * Apply a switch and offer to take it back.
    *
-   * The group and the campaign are two separate writes, so a failure between
-   * them would otherwise leave the app in exactly the broken pairing this
-   * component now prevents: the new group active, the old group's campaign
-   * still selected. If the campaign write fails, put the group back and say
-   * so, rather than reloading into a state nobody asked for.
+   * Selection used to be staged behind `Apply Changes`, with a
+   * `Close Without Applying` beside it -- a Cancel with the state machine
+   * written into its label, which existed because users could not otherwise
+   * predict whether closing would commit. Applying on click removes the
+   * question; the undo covers the mis-click that the confirmation was
+   * protecting against, without charging every correct switch for it.
    */
-  const handleApplyChanges = async () => {
-    setApplyError(null);
-    const previousGroupId = activeGroupId;
-    let groupChanged = false;
+  const applySwitch = async (
+    label: string,
+    change: () => Promise<void>
+  ): Promise<void> => {
+    const previous = { groupId: activeGroupId, campaignId: activeCampaignId };
+    setSwitchError(null);
+    setUndoError(null);
 
     try {
-      if (selectedGroupId && selectedGroupId !== activeGroupId) {
-        await setActiveGroup(selectedGroupId);
-        groupChanged = true;
-      }
-
-      if (selectedCampaignId && selectedCampaignId !== activeCampaignId) {
-        await setActiveCampaign(selectedCampaignId);
-      }
-
-      // Reload page to refresh all data and UI
-      window.location.reload();
+      await change();
+      setIsOpen(false);
+      setUndoTarget({ ...previous, label });
     } catch (error) {
-      if (groupChanged && previousGroupId) {
-        try {
-          await setActiveGroup(previousGroupId);
-        } catch (rollbackError) {
-          console.error("Could not restore the previous group:", rollbackError);
-        }
-      }
-
-      setApplyError(
+      setSwitchError(
         error instanceof Error
           ? error.message
-          : "Could not switch group or campaign."
+          : 'Could not switch group or campaign.'
       );
     }
   };
-  
-  // Reset selections to current active values
-  const handleReset = () => {
-    setSelectedGroupId(activeGroupId);
-    setSelectedCampaignId(activeCampaignId);
-    
-    if (onClose) {
-      onClose();
+
+  const handleSelectGroup = (groupId: string) => {
+    if (groupId === activeGroupId) {
+      setIsOpen(false);
+      return;
+    }
+    const name = groups.find((g) => g.id === groupId)?.name ?? 'that group';
+    void applySwitch(name, () => setActiveGroup(groupId));
+  };
+
+  const handleSelectCampaign = (campaignId: string) => {
+    if (campaignId === activeCampaignId) {
+      setIsOpen(false);
+      return;
+    }
+    const name = campaigns.find((c) => c.id === campaignId)?.name ?? 'that campaign';
+    void applySwitch(name, () => setActiveCampaign(campaignId));
+  };
+
+  /** Restore the group and campaign that were active before the last switch. */
+  const handleUndo = async () => {
+    if (!undoTarget) return;
+    const { groupId, campaignId } = undoTarget;
+    setUndoError(null);
+
+    try {
+      if (groupId && groupId !== activeGroupId) {
+        await setActiveGroup(groupId);
+      }
+      if (campaignId && campaignId !== activeCampaignId) {
+        await setActiveCampaign(campaignId);
+      }
+      setUndoTarget(null);
+    } catch (error) {
+      setUndoError(
+        error instanceof Error ? error.message : 'Could not switch back.'
+      );
     }
   };
-  
+
   return (
     <>
       <div className="relative w-full" ref={dropdownRef}>
@@ -172,7 +149,7 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
             setIsOpen={setIsOpen}
           />
         )}
-        
+
         {/* Dropdown or expanded content */}
         {isOpen && (
           <div className={clsx(
@@ -180,60 +157,51 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
             !inDialog && `dropdown`
           )}>
             {/* Groups Section */}
-            <GroupSelector 
+            <GroupSelector
               activeGroupId={activeGroupId}
-              selectedGroupId={selectedGroupId}
-              onSelectGroup={setSelectedGroupId}
+              onSelectGroup={handleSelectGroup}
               showJoinGroupDialog={() => setShowJoinGroupDialog(true)}
             />
-            
+
             {/* Campaigns Section */}
             <CampaignSelector
-              selectedGroupId={selectedGroupId}
+              activeGroupId={activeGroupId}
               activeCampaignId={activeCampaignId}
-              selectedCampaignId={selectedCampaignId}
-              campaigns={visibleCampaigns}
-              onSelectCampaign={setSelectedCampaignId}
+              campaigns={campaigns}
+              onSelectCampaign={handleSelectCampaign}
             />
+          </div>
+        )}
 
-            {/* Action Buttons for Dialog Mode */}
-            {inDialog && (
-              <>
-                {applyError && (
-                  <div className="px-3 pt-3">
-                    <Typography variant="body-sm" color="error">
-                      {applyError}
-                    </Typography>
-                  </div>
-                )}
-                <div className="p-3 border-t flex justify-end gap-2">
-                  <Button
-                    onClick={handleApplyChanges}
-                    disabled={!hasChanges}
-                  >
-                    Apply Changes
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleReset}
-                  >
-                    Close Without Applying
-                  </Button>
-                </div>
-              </>
-            )}
+        {switchError && (
+          <div className="absolute left-0 top-full mt-1 w-full z-20 px-3 py-2 dropdown">
+            <Typography variant="body-sm" color="error">
+              {switchError}
+            </Typography>
+          </div>
+        )}
+
+        {undoTarget && (
+          <div className="absolute left-0 top-full mt-2 w-full z-20">
+            <UndoToast
+              label={undoTarget.label}
+              error={undoError}
+              onUndo={handleUndo}
+              onDismiss={() => {
+                setUndoTarget(null);
+                setUndoError(null);
+              }}
+            />
           </div>
         )}
       </div>
-      
+
       {/* Join Group Dialog */}
       <JoinGroupDialog
         open={showJoinGroupDialog}
         onClose={() => setShowJoinGroupDialog(false)}
         onSuccess={() => {
           setShowJoinGroupDialog(false);
-          // Reload the page immediately when joining a new group
-          window.location.reload();
         }}
       />
     </>
@@ -250,16 +218,16 @@ const ContextButton: React.FC<{
   const { activeGroup } = useGroups();
   const { activeCampaign } = useCampaigns();
   const { loading } = useGroups();
-  
+
   // Generate the display text based on selected context
   const contextText = useMemo(() => {
     if (loading) return 'Loading...';
-    
+
     if (!activeGroup) return 'Select Group';
     if (!activeCampaign) return `${truncateText(activeGroup.name, 15)} / No Campaign`;
     return `${truncateText(activeGroup.name, 15)} / ${truncateText(activeCampaign.name, 15)}`;
   }, [activeGroup, activeCampaign, loading]);
-  
+
   return (
     <Button
       variant="ghost"
@@ -281,23 +249,21 @@ const ContextButton: React.FC<{
  */
 const GroupSelector: React.FC<{
   activeGroupId: string | null;
-  selectedGroupId: string | null;
   onSelectGroup: (groupId: string) => void;
   showJoinGroupDialog: () => void;
-}> = ({ 
-  activeGroupId, 
-  selectedGroupId, 
-  onSelectGroup, 
-  showJoinGroupDialog 
+}> = ({
+  activeGroupId,
+  onSelectGroup,
+  showJoinGroupDialog
 }) => {
   const { groups, loading: groupsLoading } = useGroups();
-  
+
   return (
     <div className="p-2">
       <Typography variant="body-sm" color="secondary" className="px-3 py-1">
         Select Group
       </Typography>
-      
+
       <div className="mt-1 max-h-48 overflow-y-auto">
         {/* Loading State */}
         {groupsLoading ? (
@@ -305,18 +271,17 @@ const GroupSelector: React.FC<{
         ) : groups.length > 0 ? (
           /* Group List */
           groups.map(group => {
-            // Determine the item's state 
+            // With staged selection gone, "active" and "selected" are one
+            // state -- the row carries the tint and the check together.
             const isActive = group.id === activeGroupId;
-            const isSelected = group.id === selectedGroupId;
-            
+
             return (
               <button
                 key={group.id}
                 onClick={() => onSelectGroup(group.id)}
                 className={clsx(
                   "flex items-center justify-between px-3 py-2 w-full text-left rounded-md",
-                  isSelected ? `dropdown-item-active` : 
-                  `dropdown-item`
+                  isActive ? `dropdown-item-active` : `dropdown-item`
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -325,7 +290,7 @@ const GroupSelector: React.FC<{
                     {group.name}
                   </Typography>
                 </div>
-                
+
                 {/* Show active indicator */}
                 {isActive && (
                   <Check className="w-4 h-4" />
@@ -339,7 +304,7 @@ const GroupSelector: React.FC<{
             <Typography color="secondary">No groups available</Typography>
           </div>
         )}
-        
+
         {/* Join Group Option */}
         <button
           onClick={showJoinGroupDialog}
@@ -357,44 +322,39 @@ const GroupSelector: React.FC<{
  * Component for selecting campaigns
  */
 const CampaignSelector: React.FC<{
-  selectedGroupId: string | null;
+  activeGroupId: string | null;
   activeCampaignId: string | null;
-  selectedCampaignId: string | null;
   campaigns: Campaign[];
   onSelectCampaign: (campaignId: string) => void;
 }> = ({
-  selectedGroupId,
+  activeGroupId,
   activeCampaignId,
-  selectedCampaignId,
   campaigns,
   onSelectCampaign
 }) => {
-  // Only show once a group is selected -- the list belongs to the SELECTED
-  // group, so gating on the ACTIVE one was part of the bug.
-  if (!selectedGroupId) return null;
-  
+  // Only show once a group is active -- there is no selected-but-not-active
+  // group anymore, so this is simply "is there a group at all".
+  if (!activeGroupId) return null;
+
   return (
     <div className="p-2 border-t">
       <Typography variant="body-sm" color="secondary" className="px-3 py-1">
         Select Campaign
       </Typography>
-      
+
       <div className="mt-1 max-h-48 overflow-y-auto">
         {campaigns.length > 0 ? (
           /* Campaign List */
           campaigns.map(campaign => {
-            // Determine the item's state
             const isActive = campaign.id === activeCampaignId;
-            const isSelected = campaign.id === selectedCampaignId;
-            
+
             return (
               <button
                 key={campaign.id}
                 onClick={() => onSelectCampaign(campaign.id)}
                 className={clsx(
                   "flex items-center justify-between px-3 py-2 w-full text-left rounded-md",
-                  isSelected ? `dropdown-item-active` : 
-                  `dropdown-item`
+                  isActive ? `dropdown-item-active` : `dropdown-item`
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -403,7 +363,7 @@ const CampaignSelector: React.FC<{
                     {campaign.name}
                   </Typography>
                 </div>
-                
+
                 {/* Show active indicator */}
                 {isActive && (
                   <Check className="w-4 h-4" />
@@ -426,7 +386,7 @@ const CampaignSelector: React.FC<{
  * Loading state component
  */
 const LoadingState: React.FC<{ text: string }> = ({ text }) => {
-  
+
   return (
     <div className="px-3 py-2 flex items-center justify-center">
       <div className="animate-spin w-4 h-4 border-2 border-t-transparent rounded-full mr-2 primary" />
