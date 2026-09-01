@@ -14,9 +14,23 @@ const mockGetCampaigns = jest.fn();
 jest.mock('@/features/user-management', () => ({
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
+  get JoinGroupDialog() {
+    return require('@/features/user-management/groups/components/JoinGroupDialog').default;
+  },
 }));
 
 const { useGroups, useCampaigns } = require('@/features/user-management');
+
+// ContextSwitcher must not mount this itself -- Header owns the single
+// mount. This stub is what `queryByTestId('join-group-dialog')` would find
+// if ContextSwitcher ever reintroduced its own <JoinGroupDialog>; without
+// this mock, a reintroduced import would resolve to `undefined` from the
+// barrel stub above and crash the render instead of being asserted on.
+jest.mock('@/features/user-management/groups/components/JoinGroupDialog', () => ({
+  __esModule: true,
+  default: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
 
 // ---------------------------------------------------------------------------
 // CampaignStep now pulls in useStory() / useNPCs(), both of which THROW
@@ -110,8 +124,8 @@ function makeCampaignsMock(overrides = {}) {
   };
 }
 
-function renderContextSwitcher() {
-  return render(<ContextSwitcher onJoinGroup={mockOnJoinGroup} />);
+function renderContextSwitcher(props: { onJoinGroup?: () => void } = {}) {
+  return render(<ContextSwitcher onJoinGroup={props.onJoinGroup ?? mockOnJoinGroup} />);
 }
 
 /** Open the popover from its trigger. */
@@ -513,6 +527,23 @@ describe('ContextSwitcher', () => {
       openSwitcher();
       fireEvent.click(screen.getByText('Join a group with an invite code'));
       expect(mockOnJoinGroup).toHaveBeenCalled();
+    });
+
+    test('does not mount a join dialog of its own', async () => {
+      const onJoinGroup = jest.fn();
+      renderContextSwitcher({ onJoinGroup });
+      openSwitcher();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('menuitem', { name: /join a group/i }));
+      });
+
+      // Header owns the single mount. A second one here is what gave the
+      // same action two different outcomes depending on which door the user
+      // came through, so the switcher must delegate and render nothing
+      // itself.
+      expect(onJoinGroup).toHaveBeenCalledTimes(1);
+      expect(screen.queryByTestId('join-group-dialog')).not.toBeInTheDocument();
     });
   });
 
