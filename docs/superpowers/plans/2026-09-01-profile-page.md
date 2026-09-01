@@ -88,6 +88,10 @@ npm run build
 `baseUrl` but ignores `paths`, so an `@/…` import passes `tsc` and jest and then fails the
 production build.
 
+Run it early as well as at the end whenever a batch **deletes modules or changes the barrel** — a
+stale import survives `tsc` far less often than it survives jest, but the bundle is the only place
+a resolver disagreement actually shows up. Run after 5b: clean, and the bundle shrank 1.66 kB.
+
 **Baseline: 0 failed / 2 skipped / 4543 passed / 4545 total across 209 suites**, measured on `main`
 at `b73232a` during batch 1. Any red is a regression.
 
@@ -99,6 +103,8 @@ against what the diffs actually added. A delta that does not reconcile is a find
 | baseline | 209 | 4543 | 4545 | — | — |
 | 1 (tasks 1, 3) | 209 | 4548 | 4550 | +5 | GroupService +1, UserService +3, Header +1 |
 | 2 (tasks 2, 4) | 211 | 4565 | 4567 | +17 | UserProfile +5, ProfilePage +8, ProfileSectionRail +3, App +1 |
+| 3a (task 5a) | 222 | 4630 | 4632 | +65 | 11 new card/hook suites +64, ProfilePage +1 |
+| 3b (task 5b) | 220 | 4573 | 4575 | -57 | UserProfile -44, UserProfileButton -14, Header -1 +2 |
 
 > CLAUDE.md records 4538/4540 for this commit and is **stale** — it was measured on
 > `redesign/context-switcher` before that branch merged. Task 11 corrects it. Compare against the
