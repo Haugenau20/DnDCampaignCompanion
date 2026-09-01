@@ -9,7 +9,7 @@ import Button from 'core/components/Button';
 import Card from 'core/components/Card';
 import { Edit, Check, X, Loader2, AlertCircle, PlusCircle, Trash2, ChevronDown, Star, LogOut } from 'lucide-react';
 import { CharacterNameEntry } from 'core/types/user';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import firebaseServices from 'core/services/firebase';
 import Dialog from 'core/components/Dialog';
 import { useTheme } from 'core/themes/ThemeContext';
 import { themes } from 'core/themes/definitions';
@@ -27,7 +27,7 @@ const generateId = (): string => {
 
 const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
   const { user, signOut } = useAuth();
-  const { activeGroup, activeGroupUserProfile, activeGroupId, refreshGroups } = useGroups();
+  const { activeGroup, activeGroupUserProfile, refreshGroups } = useGroups();
   const { validateUsername, updateGroupUserProfile } = useUser();
   
   const { theme, setTheme } = useTheme();
@@ -133,16 +133,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
     try {
       setLeavingGroup(true);
       setError(null);
-      
-      // Use dedicated function for group leaving
-      const functions = getFunctions();
-      const removeUserFn = httpsCallable(functions, 'removeUserFromGroup');
-      
-      await removeUserFn({ 
-        groupId: activeGroupId, 
-        userId: user.uid 
-      });
-      
+
+      // Use the service's regioned Functions instance rather than a bare
+      // getFunctions(), which resolves us-central1 and reaches nothing.
+      await firebaseServices.group.removeUserFromGroup(activeGroup.id, user.uid);
+
       setShowGroupLeaveDialog(false);
       
       // After successful group leave, redirect to group selection
@@ -168,13 +163,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
     try {
       setDeletingAccount(true);
       setError(null);
-      
-      // Call the cloud function
-      const functions = getFunctions();
-      const deleteUserFn = httpsCallable(functions, 'deleteUser');
-      
-      await deleteUserFn({ userId: user.uid });
-      
+
+      // Use the service's regioned Functions instance rather than a bare
+      // getFunctions(), which resolves us-central1 and reaches nothing.
+      await firebaseServices.user.deleteAccount(user.uid);
+
       setShowAccountDeleteDialog(false);
       
       // After successful account deletion, show confirmation

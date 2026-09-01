@@ -29,16 +29,6 @@ jest.mock('../../hooks/useUser', () => require('@/features/user-management'));
 const { useAuth, useGroups, useUser } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------
-// Mock Firebase functions (getFunctions / httpsCallable)
-// ---------------------------------------------------------------------------
-const mockCallable = jest.fn();
-
-jest.mock('firebase/functions', () => ({
-  getFunctions: jest.fn(() => ({})),
-  httpsCallable: jest.fn(() => mockCallable),
-}));
-
-// ---------------------------------------------------------------------------
 // Mock ThemeContext
 // ---------------------------------------------------------------------------
 const mockSetTheme = jest.fn();
@@ -69,7 +59,23 @@ jest.mock('@/core/components/Dialog', () => {
 // ---------------------------------------------------------------------------
 // Mock firebase services
 // ---------------------------------------------------------------------------
-jest.mock('@/core/services/firebase', () => ({ default: {} }));
+// The leave-group and delete-account handlers go through these two service
+// methods (each bound to the regioned Functions instance), not a bare
+// getFunctions()/httpsCallable() pair -- see GroupService/UserService.
+const mockRemoveUserFromGroup = jest.fn();
+const mockDeleteAccount = jest.fn();
+
+jest.mock('@/core/services/firebase', () => ({
+  __esModule: true,
+  default: {
+    group: {
+      removeUserFromGroup: (...args: unknown[]) => mockRemoveUserFromGroup(...args),
+    },
+    user: {
+      deleteAccount: (...args: unknown[]) => mockDeleteAccount(...args),
+    },
+  },
+}));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -129,7 +135,8 @@ describe('UserProfile', () => {
     setupMocks();
     mockValidateUsername.mockResolvedValue({ isValid: true, isAvailable: true });
     mockUpdateGroupUserProfile.mockResolvedValue(undefined);
-    mockCallable.mockResolvedValue(undefined);
+    mockRemoveUserFromGroup.mockResolvedValue(undefined);
+    mockDeleteAccount.mockResolvedValue(undefined);
   });
 
   // -------------------------------------------------------------------------
@@ -337,15 +344,15 @@ describe('UserProfile', () => {
       expect(screen.queryByRole('dialog', { name: /confirm group leave/i })).not.toBeInTheDocument();
     });
 
-    test('should call the leave group callable when confirmed', async () => {
-      mockCallable.mockResolvedValue(undefined);
+    test('should call the leave-group service when confirmed', async () => {
+      mockRemoveUserFromGroup.mockResolvedValue(undefined);
       render(<UserProfile />);
       await userEvent.click(screen.getByRole('button', { name: /leave group/i }));
       const dialog = screen.getByRole('dialog', { name: /confirm group leave/i });
       const leaveBtn = within(dialog).getByRole('button', { name: /leave group/i });
       await userEvent.click(leaveBtn);
       await waitFor(() => {
-        expect(mockCallable).toHaveBeenCalled();
+        expect(mockRemoveUserFromGroup).toHaveBeenCalledWith(mockGroup.id, mockUser.uid);
       });
     });
   });
@@ -519,8 +526,8 @@ describe('UserProfile', () => {
   // Delete Account dialog
   // -------------------------------------------------------------------------
   describe('delete account', () => {
-    test('should call httpsCallable deleteUser when Delete My Account is confirmed', async () => {
-      mockCallable.mockResolvedValue(undefined);
+    test('should call the delete-account service when Delete My Account is confirmed', async () => {
+      mockDeleteAccount.mockResolvedValue(undefined);
       render(<UserProfile />);
       await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
 
@@ -532,12 +539,12 @@ describe('UserProfile', () => {
       await userEvent.click(deleteBtn!);
 
       await waitFor(() => {
-        expect(mockCallable).toHaveBeenCalled();
+        expect(mockDeleteAccount).toHaveBeenCalledWith(mockUser.uid);
       });
     });
 
     test('should show error when account deletion fails', async () => {
-      mockCallable.mockRejectedValue(new Error('Deletion failed'));
+      mockDeleteAccount.mockRejectedValue(new Error('Deletion failed'));
       render(<UserProfile />);
       await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
 

@@ -146,10 +146,13 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
       }
       
       try {
-        // Call the Cloud Function instead of attempting to modify data directly
-        const functions = getFunctions();
-        const removeUserFn = httpsCallable(functions, 'removeUserFromGroup');
-        
+        // Call the Cloud Function instead of attempting to modify data directly.
+        // Uses `this.functions` -- the instance BaseFirebaseService bound to
+        // `europe-west1`, where this function is deployed, and to the emulator
+        // in development -- rather than a bare getFunctions(), which resolves
+        // the default `us-central1` region and reaches nothing.
+        const removeUserFn = httpsCallable(this.functions, 'removeUserFromGroup');
+
         const result = await removeUserFn({ groupId, userId });
         console.log('User removal result:', result.data);
       } catch (err) {
