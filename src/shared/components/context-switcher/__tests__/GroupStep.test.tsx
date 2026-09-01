@@ -144,4 +144,14 @@ describe("GroupStep", () => {
       )
     ).toBeInTheDocument();
   });
+
+  // Finding 4 of the 2026-09-01 review: a bare `border-b` draws Tailwind
+  // preflight's hardcoded grey rather than a theme colour -- must pair with
+  // `card-divider` (the codebase's colour-only class for this).
+  test("the back button's divider uses the theme border colour", () => {
+    renderStep();
+    expect(
+      screen.getByRole("menuitem", { name: /choose a group/i })
+    ).toHaveClass("border-b", "card-divider");
+  });
 });

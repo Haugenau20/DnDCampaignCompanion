@@ -249,13 +249,21 @@ and `UserProfileButton.tsx:115` (success → `refreshGroups`). The third is unre
 
 Both live entrances are inside `Header`, so `Header` is the common owner. It keeps the one
 mount; `ContextSwitcher` takes an `onJoinGroup` callback prop and renders the row that calls
-it. The single success behaviour is: refresh groups, switch to the newly joined group, show
-the undo toast, no reload.
+it. The single success behaviour is: refresh groups, switch to the newly joined group, no
+reload.
 
 `joinGroupWithToken` returns `void` and no group id reaches the caller, so the new group is
 identified by diffing the group list across `refreshGroups()` — the id that appears is the
-one just joined. If no id appears (a re-join, or a race), the flow refreshes and shows no
-toast rather than guessing.
+one just joined. If no id appears (a re-join, or a race), the flow refreshes and shows
+nothing rather than guessing.
+
+**Amended 2026-09-01: no undo toast on this path.** The toast exists to recover a mis-click
+on a selection that switches on click; joining a group is a deliberate multi-step act (find
+an invite code, open the dialog, submit it), not a mis-click, so there is nothing here for
+undo to be recovering from. "Undo" of a join is also ambiguous in a way a switch is not —
+leave the group entirely, or merely switch back to the one you were in? — and switching back
+is already one click away in the switcher, which makes resolving that ambiguity pure
+speculative complexity for no behaviour a user asked for.
 
 `UserProfileButton` is left untouched. Deleting an unrendered component and its test suite
 is a defensible call but a separate one, and this PR already carries a context-interface

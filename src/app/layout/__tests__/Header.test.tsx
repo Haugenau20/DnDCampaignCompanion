@@ -523,5 +523,40 @@ describe("Header", () => {
       expect(mockSetActiveGroup).toHaveBeenCalledWith("g2");
       expect(mockReload).not.toHaveBeenCalled();
     });
+
+    // Finding 3 of the 2026-09-01 review: JoinGroupDialog's stub above calls
+    // onSuccess() fire-and-forget (no await, no catch), and useGroups().
+    // setActiveGroup re-throws after recording its own failure -- so a
+    // rejection here used to become an unhandled promise rejection with
+    // nothing shown to the user. The group refresh has already succeeded by
+    // this point, so this only has to confirm the rejection is actually
+    // handled (not just that this test doesn't fail).
+    test("reports rather than throws when landing in the newly joined group fails", async () => {
+      const user = userEvent.setup();
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      setupMocks({
+        user: { uid: "u1" },
+        activeGroup: { id: "g1", name: "The Fellowship" },
+        groups: [{ id: "g1", name: "The Fellowship" }],
+      });
+      mockRefreshGroups.mockResolvedValue([
+        { id: "g1", name: "The Fellowship" },
+        { id: "g2", name: "The Council of Elrond" },
+      ]);
+      mockSetActiveGroup.mockRejectedValue(new Error("Switch failed"));
+      render(<Header />);
+
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      await user.click(screen.getByRole("button", { name: /join group/i }));
+
+      await act(async () => {
+        await user.click(screen.getByTestId("trigger-join-success"));
+      });
+
+      expect(mockSetActiveGroup).toHaveBeenCalledWith("g2");
+      expect(consoleErrorSpy).toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
   });
 });

@@ -64,9 +64,15 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({ onJoinGroup }) => {
   usePopoverKeys({ isOpen, panelRef, triggerRef, onClose: closePopover });
 
   // Reset to the campaign step whenever the popover closes, so it never
-  // reopens mid-flow on the group step the user left it on.
+  // reopens mid-flow on the group step the user left it on. The switch error
+  // is cleared the same way: it renders inside this popover (see below), so
+  // once the popover is gone there is nothing left for it to sit under, and
+  // it must not resurface stale the next time the popover opens.
   useEffect(() => {
-    if (!isOpen) setStep('campaigns');
+    if (!isOpen) {
+      setStep('campaigns');
+      setSwitchError(null);
+    }
   }, [isOpen]);
 
   // Close when clicking outside
@@ -142,17 +148,31 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({ onJoinGroup }) => {
     void applySwitch(name, () => setActiveCampaign(campaignId));
   };
 
-  /** Restore the group and campaign that were active before the last switch. */
+  /**
+   * Restore the group and campaign that were active before the last switch.
+   *
+   * When the switch being undone changed the group, restoring the campaign
+   * too would run against THIS closure's `setActiveCampaign`, which is bound
+   * to a `switchCampaign` whose captured `activeGroupId` is still the group
+   * being undone away from -- so it would write the old group's campaign id
+   * onto the group undo is restoring, the exact cross-group pairing this
+   * switcher exists to prevent. It is also unnecessary: `setActiveGroup`
+   * goes through `setActiveGroupContext`, which already loads the restored
+   * group's campaigns and re-activates that group's own stored
+   * `activeCampaignId`. So a group undo restores the campaign only as a
+   * side effect of restoring the group; the campaign branch below runs only
+   * when undo is not also changing the group.
+   */
   const handleUndo = async () => {
     if (!undoTarget) return;
     const { groupId, campaignId } = undoTarget;
     setUndoError(null);
 
     try {
-      if (groupId && groupId !== activeGroupId) {
+      const groupChanged = groupId !== null && groupId !== activeGroupId;
+      if (groupChanged) {
         await setActiveGroup(groupId);
-      }
-      if (campaignId && campaignId !== activeCampaignId) {
+      } else if (campaignId && campaignId !== activeCampaignId) {
         await setActiveCampaign(campaignId);
       }
       setUndoTarget(null);
@@ -190,14 +210,20 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({ onJoinGroup }) => {
               onBack={() => setStep('campaigns')}
             />
           )}
-        </div>
-      )}
 
-      {switchError && (
-        <div className="absolute left-0 top-full mt-1 w-[23.5rem] max-w-[calc(100vw-2rem)] z-20 px-3 py-2 dropdown">
-          <Typography variant="body-sm" color="error">
-            {switchError}
-          </Typography>
+          {/* A failed switch is reported inside the popover it happened in,
+              not as a same-position sibling overlay -- the previous overlay
+              painted over the still-open popover (a failed switch never
+              closes it) and had no owner to clear it on Escape or
+              click-outside, so it hung under the header until the next
+              switch attempt. */}
+          {switchError && (
+            <div role="none" className="px-4 py-2 border-t card-divider">
+              <Typography variant="body-sm" color="error">
+                {switchError}
+              </Typography>
+            </div>
+          )}
         </div>
       )}
 

@@ -80,7 +80,7 @@ const GroupStep: React.FC<GroupStepProps> = ({ onSelectGroup, onBack }) => {
         type="button"
         role="menuitem"
         onClick={onBack}
-        className="flex items-center gap-2 px-4 py-3 w-full text-left border-b dropdown-item"
+        className="flex items-center gap-2 px-4 py-3 w-full text-left border-b card-divider dropdown-item"
       >
         <ArrowLeft className="w-4 h-4 flex-shrink-0" />
         <Typography className="font-semibold">Choose a group</Typography>

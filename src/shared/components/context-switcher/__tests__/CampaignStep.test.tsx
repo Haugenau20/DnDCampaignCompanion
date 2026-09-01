@@ -143,4 +143,21 @@ describe("CampaignStep", () => {
     renderStep();
     expect(screen.queryByText(/last opened/i)).not.toBeInTheDocument();
   });
+
+  // Finding 4 of the 2026-09-01 review: a bare `border-b`/`border-t` draws
+  // Tailwind preflight's hardcoded grey rather than a theme colour. Both
+  // dividers in this component must pair the width utility with
+  // `card-divider` (the codebase's colour-only class for this, see
+  // `NoteEditor`/`NotesList`).
+  test("the group header and the join-row divider use the theme border colour", () => {
+    renderStep();
+    const groupHeading = screen.getByText("Group");
+    const groupHeader = groupHeading.closest('[role="none"]');
+    expect(groupHeader).toHaveClass("border-b", "card-divider");
+
+    const joinDivider = screen
+      .getByRole("menuitem", { name: /join a group with an invite code/i })
+      .previousElementSibling;
+    expect(joinDivider).toHaveClass("border-t", "card-divider");
+  });
 });

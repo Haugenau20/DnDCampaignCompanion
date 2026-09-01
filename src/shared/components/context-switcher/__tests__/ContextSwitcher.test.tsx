@@ -350,6 +350,52 @@ describe('ContextSwitcher', () => {
       expect(screen.getByText(/Campaign write failed/)).toBeInTheDocument();
       expect(mockReload).not.toHaveBeenCalled();
     });
+
+    // Finding 2 of the 2026-09-01 review: the error used to render as a
+    // same-position sibling overlay that painted over the still-open popover
+    // (a failed switch never closes it) rather than inside it. Scoping the
+    // query to the menu itself is what would have caught that -- a sibling
+    // element positioned on top of the popover still satisfies a bare
+    // `screen.getByText`.
+    test('reports the failure inside the still-open popover', async () => {
+      mockSetActiveCampaign.mockRejectedValue(new Error('Campaign write failed'));
+      renderContextSwitcher();
+      openSwitcher();
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Hogwarts Campaign'));
+      });
+
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+      expect(
+        within(screen.getByRole('menu')).getByText(/Campaign write failed/)
+      ).toBeInTheDocument();
+    });
+
+    // The error used to be cleared only inside applySwitch, so it survived
+    // Escape and click-outside and hung under the header until the next
+    // switch attempt. It must instead die with the popover it belongs to.
+    test('clears the switch error once the popover closes, and does not resurface on reopen', async () => {
+      mockSetActiveCampaign.mockRejectedValue(new Error('Campaign write failed'));
+      renderContextSwitcher();
+      openSwitcher();
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Hogwarts Campaign'));
+      });
+      expect(screen.getByText(/Campaign write failed/)).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.keyDown(document, { key: 'Escape' });
+      });
+      await waitFor(() => {
+        expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      });
+      expect(screen.queryByText(/Campaign write failed/)).not.toBeInTheDocument();
+
+      openSwitcher();
+      expect(screen.queryByText(/Campaign write failed/)).not.toBeInTheDocument();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -454,12 +500,24 @@ describe('ContextSwitcher', () => {
 
     // Correction 1: a bare mock-return-value swap does not itself trigger a
     // re-render, so handleUndo would otherwise run against the PREVIOUS
-    // render's closure -- activeGroupId still 'group-1' -- and both of its
-    // `!== active` guards would be false, calling neither setter. `rerender`
+    // render's closure -- activeGroupId still 'group-1' -- and its
+    // `!== active` guard would be false, calling neither setter. `rerender`
     // forces the component to actually see the post-switch values before
     // Undo is clicked, so this genuinely exercises undo across a group
-    // switch (both setters called).
-    test('undo restores the previous group and campaign pair', async () => {
+    // switch.
+    //
+    // This test used to assert BOTH setters were called -- that was the bug
+    // this suite failed to catch (finding 1 of the 2026-09-01 review):
+    // `setActiveGroup(previousGroupId)` already restores group-1's own
+    // stored campaign via `setActiveGroupContext`, so a follow-up
+    // `setActiveCampaign` call runs against THIS closure's still-stale
+    // `activeGroupId` ('group-2', the group being undone away from) and
+    // writes group-1's campaign onto group-2's profile -- the exact
+    // cross-group pairing this switcher exists to prevent, arriving through
+    // undo. `setActiveCampaign` being a bare `jest.fn()` made both setters
+    // firing look like success. It must NOT be called when undo also
+    // switches the group.
+    test('undo of a group switch restores only the group, not the campaign', async () => {
       const { rerender } = renderContextSwitcher();
       openSwitcher();
       await openGroupStep();
@@ -485,7 +543,7 @@ describe('ContextSwitcher', () => {
       });
 
       expect(mockSetActiveGroup).toHaveBeenCalledWith('group-1');
-      expect(mockSetActiveCampaign).toHaveBeenCalledWith('campaign-1');
+      expect(mockSetActiveCampaign).not.toHaveBeenCalled();
     });
 
     // As above: `rerender` with the post-switch `activeCampaignId` is what

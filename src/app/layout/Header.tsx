@@ -117,6 +117,14 @@ const Header: React.FC = () => {
    * at a list they had just changed. joinGroupWithToken returns void and no id
    * reaches us, so the new group is the one that appears in the list; if none
    * does -- a re-join, or a race -- refresh and say nothing rather than guess.
+   *
+   * `JoinGroupDialog` calls `onSuccess()` fire-and-forget, so a rejection here
+   * would otherwise be an unhandled promise rejection. The group refresh has
+   * already succeeded by this point -- the user is not stranded, only left in
+   * whichever group they were already in -- and the switcher is a one-click
+   * way back to the group they just joined, so this logs rather than
+   * inventing new error UI for a landing failure, the same way
+   * `handleSignOut` reports its own failures.
    */
   const handleJoinedGroup = async () => {
     setShowJoinGroup(false);
@@ -124,7 +132,11 @@ const Header: React.FC = () => {
     const after = await refreshGroups();
     const joined = after?.find((group) => !before.has(group.id));
     if (joined) {
-      await setActiveGroup(joined.id);
+      try {
+        await setActiveGroup(joined.id);
+      } catch (err) {
+        console.error('Error switching to the newly joined group:', err);
+      }
     }
   };
 

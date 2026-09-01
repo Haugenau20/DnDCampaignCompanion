@@ -71,7 +71,7 @@ const CampaignStep: React.FC<CampaignStepProps> = ({
     <div role="none">
       {/* Group header -- pure layout wrapper around a single menuitem, so it
           carries role="none" rather than participating in the menu tree. */}
-      <div role="none" className="flex items-center justify-between px-4 py-3 bg-secondary border-b">
+      <div role="none" className="flex items-center justify-between px-4 py-3 bg-secondary border-b card-divider">
         <div className="min-w-0">
           <Typography variant="caption" color="muted" className="uppercase tracking-wide">
             Group
@@ -144,7 +144,7 @@ const CampaignStep: React.FC<CampaignStepProps> = ({
       </div>
 
       {/* Joining a group is not one of the choices above it */}
-      <div className="mx-4 border-t" />
+      <div className="mx-4 border-t card-divider" />
       <button
         type="button"
         role="menuitem"
