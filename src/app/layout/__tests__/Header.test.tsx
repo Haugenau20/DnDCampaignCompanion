@@ -77,7 +77,7 @@ jest.mock("shared/components/ThemeSelector", () => ({
   default: () => <div data-testid="theme-selector" />,
 }));
 
-jest.mock("shared/components/ContextSwitcher", () => ({
+jest.mock("shared/components/context-switcher/ContextSwitcher", () => ({
   __esModule: true,
   default: () => <div data-testid="context-switcher" />,
 }));

@@ -14,7 +14,7 @@ import {
   SignInForm
 } from 'features/user-management';
 import { Menu, X, LogOut, ShieldAlert, UserPlus, User, Book, ChevronDown, Users, LogIn, Bug } from 'lucide-react';
-import ContextSwitcher from 'shared/components/ContextSwitcher';
+import ContextSwitcher from 'shared/components/context-switcher/ContextSwitcher';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import Dialog from 'core/components/Dialog';
@@ -430,10 +430,7 @@ const Header: React.FC = () => {
         maxWidth="max-w-md"
       >
         <div className="p-4">
-          <ContextSwitcher 
-            inDialog={true} 
-            onClose={() => setShowContextSwitcher(false)} 
-          />
+          <ContextSwitcher />
         </div>
       </Dialog>
       

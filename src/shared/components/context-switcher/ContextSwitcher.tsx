@@ -1,13 +1,12 @@
-// components/shared/ContextSwitcher.tsx
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+// shared/components/context-switcher/ContextSwitcher.tsx
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useGroups, useCampaigns, JoinGroupDialog } from 'features/user-management';
-import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import type { Campaign } from 'core/types/user';
-import UndoToast from 'shared/components/context-switcher/UndoToast';
+import UndoToast from './UndoToast';
+import ContextTrigger from './ContextTrigger';
+import { usePopoverKeys } from './usePopoverKeys';
 import {
-  ChevronDown,
-  Settings,
   Users,
   BookOpen,
   PlusCircle,
@@ -15,32 +14,22 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 
-interface ContextSwitcherProps {
-  inDialog?: boolean;
-  onClose?: () => void;
-}
-
 /**
- * ContextSwitcher is a component that allows users to switch between groups and campaigns.
- * It supports two modes:
- * 1. Header mode: Shows as a dropdown in the header
- * 2. Dialog mode: Shows as an expanded list in a dialog
+ * Lets the user see and change the active group and campaign.
+ *
+ * A popover anchored to the header chip, not a modal. The modal it replaced
+ * covered the dashboard it was about to change and repeated its own two
+ * section labels in its title.
  *
  * Selecting a group or campaign switches to it immediately -- there is no
  * staged selection and no Apply step. A mis-click is recovered through the
  * undo toast rather than a pre-commit confirmation.
  */
-const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
-  inDialog = false,
-  onClose
-}) => {
+const ContextSwitcher: React.FC = () => {
   const { activeGroupId, setActiveGroup, groups } = useGroups();
   const { activeCampaignId, setActiveCampaign, campaigns } = useCampaigns();
 
-  // Still initialised from `inDialog`, which Task 5 removes. Until then the
-  // Header dialog is the one caller that passes it, and it must keep opening
-  // to the lists rather than to a trigger button inside a modal.
-  const [isOpen, setIsOpen] = useState(inDialog);
+  const [isOpen, setIsOpen] = useState(false);
   const [showJoinGroupDialog, setShowJoinGroupDialog] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
   /**
@@ -54,20 +43,24 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
   } | null>(null);
   const [undoError, setUndoError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  // Close dropdown when clicking outside (only in header mode)
+  const closePopover = useCallback(() => setIsOpen(false), []);
+
+  usePopoverKeys({ isOpen, panelRef, triggerRef, onClose: closePopover });
+
+  // Close when clicking outside
   useEffect(() => {
-    if (inDialog) return;
-
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        if (!inDialog) setIsOpen(false);
+        setIsOpen(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [inDialog]);
+  }, []);
 
   /**
    * Apply a switch and offer to take it back.
@@ -89,10 +82,7 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
 
     try {
       await change();
-      // Dialog mode renders no ContextButton to reopen the lists with, so
-      // closing here would strand the user with an empty dialog and a
-      // toast. Task 5 deletes `inDialog` and this guard along with it.
-      if (!inDialog) setIsOpen(false);
+      setIsOpen(false);
       setUndoTarget({ ...previous, label });
     } catch (error) {
       setSwitchError(
@@ -105,7 +95,7 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
 
   const handleSelectGroup = (groupId: string) => {
     if (groupId === activeGroupId) {
-      if (!inDialog) setIsOpen(false);
+      setIsOpen(false);
       return;
     }
     const name = groups.find((g) => g.id === groupId)?.name ?? 'that group';
@@ -114,7 +104,7 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
 
   const handleSelectCampaign = (campaignId: string) => {
     if (campaignId === activeCampaignId) {
-      if (!inDialog) setIsOpen(false);
+      setIsOpen(false);
       return;
     }
     const name = campaigns.find((c) => c.id === campaignId)?.name ?? 'that campaign';
@@ -144,21 +134,20 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
 
   return (
     <>
-      <div className="relative w-full" ref={dropdownRef}>
-        {/* Header button - only shown in header mode */}
-        {!inDialog && (
-          <ContextButton
-            isOpen={isOpen}
-            setIsOpen={setIsOpen}
-          />
-        )}
+      <div className="relative" ref={dropdownRef}>
+        <ContextTrigger
+          ref={triggerRef}
+          isOpen={isOpen}
+          onToggle={() => setIsOpen(!isOpen)}
+        />
 
-        {/* Dropdown or expanded content */}
         {isOpen && (
-          <div className={clsx(
-            inDialog ? "" : "absolute left-0 top-full mt-1 w-full rounded-md shadow-lg z-20",
-            !inDialog && `dropdown`
-          )}>
+          <div
+            ref={panelRef}
+            role="menu"
+            aria-label="Group and campaign"
+            className="dropdown absolute left-0 top-full mt-1 w-[23.5rem] max-w-[calc(100vw-2rem)] rounded-md shadow-lg z-20"
+          >
             {/* Groups Section */}
             <GroupSelector
               activeGroupId={activeGroupId}
@@ -177,7 +166,7 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
         )}
 
         {switchError && (
-          <div className="absolute left-0 top-full mt-1 w-full z-20 px-3 py-2 dropdown">
+          <div className="absolute left-0 top-full mt-1 w-[23.5rem] max-w-[calc(100vw-2rem)] z-20 px-3 py-2 dropdown">
             <Typography variant="body-sm" color="error">
               {switchError}
             </Typography>
@@ -185,7 +174,7 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
         )}
 
         {undoTarget && (
-          <div className="absolute left-0 top-full mt-2 w-full z-20">
+          <div className="absolute left-0 top-full mt-2 w-[23.5rem] max-w-[calc(100vw-2rem)] z-20">
             <UndoToast
               label={undoTarget.label}
               error={undoError}
@@ -208,42 +197,6 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
         }}
       />
     </>
-  );
-};
-
-/**
- * Button shown in the header to toggle the context switcher
- */
-const ContextButton: React.FC<{
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
-}> = ({ isOpen, setIsOpen }) => {
-  const { activeGroup } = useGroups();
-  const { activeCampaign } = useCampaigns();
-  const { loading } = useGroups();
-
-  // Generate the display text based on selected context
-  const contextText = useMemo(() => {
-    if (loading) return 'Loading...';
-
-    if (!activeGroup) return 'Select Group';
-    if (!activeCampaign) return `${truncateText(activeGroup.name, 15)} / No Campaign`;
-    return `${truncateText(activeGroup.name, 15)} / ${truncateText(activeCampaign.name, 15)}`;
-  }, [activeGroup, activeCampaign, loading]);
-
-  return (
-    <Button
-      variant="ghost"
-      onClick={() => setIsOpen(!isOpen)}
-      className="flex items-center gap-2"
-      endIcon={<ChevronDown className="w-4 h-4 flex-shrink-0" />}
-      startIcon={<Settings className="w-5 h-5 flex-shrink-0" />}
-      disabled={loading}
-    >
-      <Typography variant="body" color="primary">
-        {contextText}
-      </Typography>
-    </Button>
   );
 };
 
@@ -281,6 +234,7 @@ const GroupSelector: React.FC<{
             return (
               <button
                 key={group.id}
+                role="menuitem"
                 onClick={() => onSelectGroup(group.id)}
                 className={clsx(
                   "flex items-center justify-between px-3 py-2 w-full text-left rounded-md",
@@ -310,6 +264,7 @@ const GroupSelector: React.FC<{
 
         {/* Join Group Option */}
         <button
+          role="menuitem"
           onClick={showJoinGroupDialog}
           className="flex items-center gap-2 px-3 py-2 w-full text-left rounded-md dropdown-item"
         >
@@ -354,6 +309,7 @@ const CampaignSelector: React.FC<{
             return (
               <button
                 key={campaign.id}
+                role="menuitem"
                 onClick={() => onSelectCampaign(campaign.id)}
                 className={clsx(
                   "flex items-center justify-between px-3 py-2 w-full text-left rounded-md",
@@ -399,12 +355,5 @@ const LoadingState: React.FC<{ text: string }> = ({ text }) => {
     </div>
   );
 };
-
-/**
- * Helper function to truncate text with ellipsis
- */
-function truncateText(text: string, maxLength: number): string {
-  return text?.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
-}
 
 export default ContextSwitcher;

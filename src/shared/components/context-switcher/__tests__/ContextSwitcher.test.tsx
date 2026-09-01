@@ -1,7 +1,7 @@
-// src/shared/components/__tests__/ContextSwitcher.test.tsx
+// src/shared/components/context-switcher/__tests__/ContextSwitcher.test.tsx
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, within, fireEvent, waitFor, act } from '@testing-library/react';
 import ContextSwitcher from '../ContextSwitcher';
 
 // ---------------------------------------------------------------------------
@@ -81,10 +81,8 @@ function makeCampaignsMock(overrides = {}) {
   };
 }
 
-function renderContextSwitcher(
-  props: { onClose?: jest.Mock; inDialog?: boolean } = {}
-) {
-  return render(<ContextSwitcher {...props} />);
+function renderContextSwitcher() {
+  return render(<ContextSwitcher />);
 }
 
 /** Open the popover from its trigger. */
@@ -133,8 +131,9 @@ describe('ContextSwitcher', () => {
     test('lists the campaigns once open', () => {
       renderContextSwitcher();
       openSwitcher();
-      expect(screen.getByText('Middle Earth Adventures')).toBeInTheDocument();
-      expect(screen.getByText('Hogwarts Campaign')).toBeInTheDocument();
+      const menu = screen.getByRole('menu');
+      expect(within(menu).getByText('Middle Earth Adventures')).toBeInTheDocument();
+      expect(within(menu).getByText('Hogwarts Campaign')).toBeInTheDocument();
     });
 
     test('closes when clicking outside', async () => {
@@ -259,7 +258,7 @@ describe('ContextSwitcher', () => {
       openSwitcher();
 
       await act(async () => {
-        fireEvent.click(screen.getByText('Middle Earth Adventures'));
+        fireEvent.click(within(screen.getByRole('menu')).getByText('Middle Earth Adventures'));
       });
 
       expect(mockSetActiveCampaign).not.toHaveBeenCalled();
@@ -451,38 +450,6 @@ describe('ContextSwitcher', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Important 2: in dialog mode there is no ContextButton to reopen the
-  // lists with, so a switch collapsing them would strand the user with an
-  // empty dialog and a toast. A later task deletes `inDialog` (and this
-  // guard) entirely; until then it must not regress.
-  // -------------------------------------------------------------------------
-  describe('dialog mode', () => {
-    test('switching inside the dialog does not collapse the lists', async () => {
-      renderContextSwitcher({ inDialog: true });
-      expect(screen.getByText('Select Group')).toBeInTheDocument();
-
-      await act(async () => {
-        fireEvent.click(screen.getByText('Hogwarts Campaign'));
-      });
-
-      expect(screen.getByText('Select Group')).toBeInTheDocument();
-      expect(screen.getByText('Select Campaign')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /undo/i })).toBeInTheDocument();
-    });
-
-    test('clicking the active group in the dialog is a no-op that keeps the lists open', async () => {
-      renderContextSwitcher({ inDialog: true });
-
-      await act(async () => {
-        fireEvent.click(screen.getByText('Fellowship of the Ring'));
-      });
-
-      expect(mockSetActiveGroup).not.toHaveBeenCalled();
-      expect(screen.getByText('Select Group')).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
   describe('joining a group', () => {
     test('offers a way to join a group', () => {
       renderContextSwitcher();
@@ -499,10 +466,12 @@ describe('ContextSwitcher', () => {
   });
 
   // -------------------------------------------------------------------------
-  describe('trigger text', () => {
-    test('names the active group and campaign', () => {
+  describe('trigger', () => {
+    test('names the active campaign', () => {
       renderContextSwitcher();
-      expect(screen.getByText(/Fellowship of t/)).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Active campaign: Middle Earth Adventures/ })
+      ).toBeInTheDocument();
     });
 
     test('says so when no group is active', () => {
@@ -518,7 +487,36 @@ describe('ContextSwitcher', () => {
         makeCampaignsMock({ activeCampaignId: null, activeCampaign: null })
       );
       renderContextSwitcher();
-      expect(screen.getByText(/No Campaign/)).toBeInTheDocument();
+      expect(screen.getByText('No Campaign')).toBeInTheDocument();
+    });
+
+    test('reports the popover state to assistive technology', () => {
+      renderContextSwitcher();
+      const trigger = screen.getAllByRole('button')[0];
+      expect(trigger).toHaveAttribute('aria-expanded', 'false');
+      expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+
+      fireEvent.click(trigger);
+      expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe('keyboard', () => {
+    test('Escape closes the popover and returns focus to the trigger', async () => {
+      renderContextSwitcher();
+      const trigger = screen.getAllByRole('button')[0];
+      fireEvent.click(trigger);
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.keyDown(document, { key: 'Escape' });
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      });
+      expect(trigger).toHaveFocus();
     });
   });
 });
