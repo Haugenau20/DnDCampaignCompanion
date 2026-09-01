@@ -29,7 +29,6 @@ export { default as SessionManager } from './auth/components/SessionManager';
 export { default as SessionTimeoutWarning } from './auth/components/SessionTimeoutWarning';
 export { default as PrivacyNotice } from './auth/components/PrivacyNotice';
 export { default as SignInForm } from './auth/components/SignInForm';
-export { default as UserProfile } from './profiles/components/UserProfile';
 export { default as AccountCard } from './profiles/components/AccountCard';
 export { default as GroupMembershipCard } from './profiles/components/GroupMembershipCard';
 export { default as CharactersCard } from './profiles/components/CharactersCard';

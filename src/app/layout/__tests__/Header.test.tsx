@@ -55,9 +55,6 @@ jest.mock("@/features/user-management", () => ({
   get AdminPanel() {
     return require("@/features/user-management/admin/components/AdminPanel").default;
   },
-  get UserProfile() {
-    return require("@/features/user-management/profiles/components/UserProfile").default;
-  },
   get SignInForm() {
     return require("@/features/user-management/auth/components/SignInForm").default;
   },
@@ -111,11 +108,6 @@ jest.mock("@/features/user-management/groups/components/JoinGroupDialog", () => 
 jest.mock("@/features/user-management/admin/components/AdminPanel", () => ({
   __esModule: true,
   default: () => <div data-testid="admin-panel" />,
-}));
-
-jest.mock("@/features/user-management/profiles/components/UserProfile", () => ({
-  __esModule: true,
-  default: () => <div data-testid="user-profile" />,
 }));
 
 jest.mock("@/features/user-management/auth/components/SignInForm", () => ({
@@ -482,35 +474,30 @@ describe("Header", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Profile dialog title
+  // Profile navigation -- the profile dialog is gone; the menu item now
+  // navigates to the profile page instead of opening a dialog over it.
   // -------------------------------------------------------------------------
-  describe("profile dialog title", () => {
-    test("the profile dialog is not titled undefined's profile before the profile loads", async () => {
+  describe("profile navigation", () => {
+    test("the Profile menu item navigates to /profile", async () => {
       const user = userEvent.setup();
       setupMocks({ user: { uid: "u1" } });
-      // The profile hasn't loaded yet: activeGroupUserProfile is still null
-      // even though the user is signed in.
-      (useGroups as jest.Mock).mockReturnValue({
-        activeGroupUserProfile: null,
-        refreshGroups: mockRefreshGroups,
-        setActiveGroup: mockSetActiveGroup,
-        activeGroup: null,
-        groups: [],
-      });
       render(<Header />);
 
       await user.click(screen.getByRole("button", { name: /menu/i }));
       await user.click(screen.getByRole("button", { name: /^profile$/i }));
 
-      expect(
-        screen.getByRole("dialog", { name: "Your profile" })
-      ).toBeInTheDocument();
-      // Asserted against the accessible name rather than the text: the Dialog
-      // mock above renders `title` only as aria-label, so a queryByText for
-      // /undefined/ would pass against the broken code too.
-      expect(
-        screen.queryByRole("dialog", { name: /undefined/i })
-      ).not.toBeInTheDocument();
+      expect(mockNavigate).toHaveBeenCalledWith("/profile");
+    });
+
+    test("mounts no profile dialog", async () => {
+      const user = userEvent.setup();
+      setupMocks({ user: { uid: "u1" } });
+      render(<Header />);
+
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      await user.click(screen.getByRole("button", { name: /^profile$/i }));
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 
