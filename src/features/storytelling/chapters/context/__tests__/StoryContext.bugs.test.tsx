@@ -18,12 +18,14 @@ import { Chapter } from 'features/storytelling/chapters/types';
 // Mock Firebase dependencies
 const mockUseAuth = jest.fn();
 const mockUseUser = jest.fn();
+const mockUseCampaigns = jest.fn();
 const mockUseChapterData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
 jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
+  useCampaigns: () => mockUseCampaigns(),
 }));
 
 jest.mock('features/storytelling/chapters/hooks/useChapterData', () => ({
@@ -93,8 +95,8 @@ describe('StoryContext Bug Discovery Tests', () => {
 
     mockUseUser.mockReturnValue({
       userProfile: { name: 'Test User' },
-      activeGroupUserProfile: { 
-        userId: 'test-user', 
+      activeGroupUserProfile: {
+        userId: 'test-user',
         username: 'Test User',
         role: 'member',
         joinedAt: '2025-06-15T00:00:00.000Z',
@@ -103,6 +105,10 @@ describe('StoryContext Bug Discovery Tests', () => {
           { id: 'char-1', name: 'Test Character' }
         ]
       },
+    });
+
+    mockUseCampaigns.mockReturnValue({
+      activeCampaignId: 'campaign-1',
     });
 
     mockUseChapterData.mockReturnValue({

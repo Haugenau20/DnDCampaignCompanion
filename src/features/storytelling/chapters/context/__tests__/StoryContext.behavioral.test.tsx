@@ -21,6 +21,7 @@ import { Chapter } from 'features/storytelling/chapters/types';
 // Mock Firebase dependencies
 const mockUseAuth = jest.fn();
 const mockUseUser = jest.fn();
+const mockUseCampaigns = jest.fn();
 const mockUseChapterData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
@@ -28,6 +29,7 @@ const mockUseFirebaseData = jest.fn();
 jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
+  useCampaigns: () => mockUseCampaigns(),
 }));
 
 // Mock the data hooks
@@ -104,6 +106,10 @@ describe('StoryContext Behavioral Testing', () => {
     mockUseUser.mockReturnValue({
       userProfile: null,
       activeGroupUserProfile: null,
+    });
+
+    mockUseCampaigns.mockReturnValue({
+      activeCampaignId: null,
     });
 
     mockUseChapterData.mockReturnValue({
