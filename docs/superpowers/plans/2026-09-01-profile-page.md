@@ -48,7 +48,7 @@ what lets the orchestrator stage each task's paths into its own commit afterward
 |---|---|---|---|
 | 1 | 1, 3 | Yes | Task 1 owns the services + `UserProfile.tsx` handlers; Task 3 owns `Header.tsx` + `UserProfileButton.tsx` |
 | 2 | 2, 4 | Yes | Task 2 owns `UserProfile.tsx` validation; Task 4 creates `pages/profile/` and adds one route line |
-| 3 | 5 | No | The split touches every profile file at once |
+| 3 | 5a, then 5b | No, sequential | The split touches every profile file at once. Dispatched as two briefs: **5a** extracts hooks + cards and composes them on the page; **5b** deletes `UserProfile.tsx` and fixes the two consumers that breaks |
 | 4 | 6, 7 | Yes | Task 6 owns `AccountCard` + `GroupMembershipCard` + the join hook; Task 7 owns `AppearanceCard` + `SessionManager` + `core/types/user.ts` |
 | 5 | 8, 9 | Yes | Task 8 owns `CharacterRow` + `useCharacterRoster`; Task 9 owns the danger zone + `DocumentService` |
 | 6 | 10 | No | Rewrites the header and deletes two files |
@@ -695,8 +695,24 @@ npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="(profiles|ProfileP
       `GroupMembershipCard` (+ `UsernameEditor`), `CharactersCard` (+ `CharacterRow`),
       `AppearanceCard`, `DangerZoneCard` (+ `LeaveGroupDialog`, `DeleteAccountDialog`).
 
-- [ ] **Step 4: Compose them in `ProfilePage`.** Delete `UserProfile.tsx`, delete its test, remove
-      the barrel's `UserProfile` export, add the cards to the barrel.
+- [ ] **Step 4 (5a): Compose them in `ProfilePage`**, each card in a section carrying the `id` its
+      rail entry links to. Add the cards to the barrel. `UserProfile.tsx` and its test stay untouched
+      and still pass -- the old and new surfaces coexist for one commit, which is what keeps 5a
+      reviewable on its own.
+
+- [ ] **Step 5 (5b): Delete `UserProfile.tsx` and its test**, remove the barrel export, and fix the
+      two consumers that deletion breaks:
+
+      - `Header.tsx` mounts it in a dialog. The Profile button navigates to `/profile` instead, and
+        the dialog mount goes. This is the DoD line "the profile dialog is gone"; it lands here
+        rather than in Task 10 because the deletion forces it.
+      - `UserProfileButton.tsx` imports it and is dead code. Deleted here, with its test, for the
+        same reason -- Task 10 would otherwise inherit a file that no longer compiles.
+
+      **The `Close` button disappears in 5b, not Task 9.** It exists only because `onCancel` is a
+      dialog prop, and a page has no dialog to close, so the three `close button` tests lose their
+      subject the moment the composition moves onto the page. `onSaved` -- the dead prop in PR
+      section 7 -- goes with it. Task 9 then only has to keep it gone.
 
 - [ ] **Step 5: Check the line budget**
 
