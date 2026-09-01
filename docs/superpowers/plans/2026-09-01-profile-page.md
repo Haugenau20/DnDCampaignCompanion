@@ -88,8 +88,12 @@ npm run build
 `baseUrl` but ignores `paths`, so an `@/…` import passes `tsc` and jest and then fails the
 production build.
 
-**Baseline: 0 failed / 2 skipped / 4538 passed across 209 suites**, on `main` at `b73232a`. Any red
-is a regression. The count moves only as this plan's own suites are added or its two doomed suites
+**Baseline: 0 failed / 2 skipped / 4543 passed / 4545 total across 209 suites**, measured on `main`
+at `b73232a` during batch 1. Any red is a regression.
+
+> CLAUDE.md records 4538/4540 for this commit and is **stale** — it was measured on
+> `redesign/context-switcher` before that branch merged. Task 11 corrects it. Compare against the
+> number above, and against the previous batch's number thereafter. The count moves only as this plan's own suites are added or its two doomed suites
 are deleted; every batch gate compares against the previous batch's number, not against 4538
 forever.
 
@@ -133,11 +137,33 @@ that has to go looking for the rules will invent them instead.
 > 4. **Inside `features/user-management/`, import siblings directly.** Importing that domain's own
 >    `index.ts` from inside it is a circular import.
 > 5. **Double quotes** (ESLint). **JSDoc** on every exported component, hook and function.
-> 6. **Do not run any `git` command.** Leave your work in the working tree and report.
+> 6. **Do not run any `git` command.** Leave your work in the working tree and report. To capture a
+>    failing run you never need one: write the test, run it, *then* write the implementation. If you
+>    have already written the implementation and want the failure, comment your change out, run, put
+>    it back — never `git stash`, which in a shared tree can carry off another agent's work.
 > 7. **Touch only the files in your allow-list.** If the task appears to need another file, stop and
 >    report rather than widening.
 > 8. **Run only your task's targeted tests**, with the command in your brief. The orchestrator runs
 >    the full suite.
+
+### Known test-infrastructure traps
+
+Found the hard way during this plan's own execution. Each one produces a test that **passes while
+proving nothing**, which is the failure mode this whole review structure exists to catch.
+
+- **Mocking `core/services/firebase` needs `__esModule: true`.** A component doing
+  `import firebaseServices from "core/services/firebase"` goes through TypeScript's
+  `__importDefault` interop helper. Without `__esModule: true` on the mock factory's return, the
+  helper double-wraps it and `firebaseServices.group` is `undefined` inside the component —
+  swallowed by the handler's `try/catch` and surfaced as an unrelated error message rather than a
+  crash. It looks fine from a `require(...).default` in a debug line, because that bypasses the
+  helper. `shared/components/context-switcher/__tests__/ContextSwitcher.test.tsx` has the correct
+  pattern. *(Found in Task 1.)*
+- **`Header.test.tsx`'s `Dialog` mock renders `title` as `aria-label` only**, never as text. Assert
+  on the accessible name (`getByRole("dialog", { name: … })`); a `queryByText` for the title passes
+  against broken code too. *(Found reviewing Task 3 — the agent's own assertion had this bug.)*
+- **`IntersectionObserver` does not exist in jsdom.** Anything using it needs a shim or a
+  feature-detected fallback. *(Relevant to Task 4.)*
 
 ---
 
