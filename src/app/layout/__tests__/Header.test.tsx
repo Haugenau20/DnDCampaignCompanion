@@ -147,7 +147,7 @@ jest.mock("core/components/Dialog", () => ({
 function setupMocks({
   user = null as null | { uid: string },
   isAdmin = false,
-  activeGroup = null as null | { name: string },
+  activeGroup = null as null | { id?: string; name: string },
   activeCampaignId = null as null | string,
   campaigns = [] as Array<{ id: string; name: string }>,
   pathname = "/dashboard",
@@ -360,39 +360,6 @@ describe("Header", () => {
   // Campaign context display
   // -------------------------------------------------------------------------
   describe("campaign context", () => {
-    test("should display No Group Selected when no active group", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" }, activeGroup: null });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      expect(screen.getByText("No Group Selected")).toBeInTheDocument();
-    });
-
-    test("should display active group name when available", async () => {
-      const user = userEvent.setup();
-      setupMocks({
-        user: { uid: "u1" },
-        activeGroup: { name: "Fellowship of the Ring" },
-      });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      expect(screen.getByText("Fellowship of the Ring")).toBeInTheDocument();
-    });
-
-    test("should display No Campaign Selected when no active campaign", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" }, activeCampaignId: null, campaigns: [] });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      expect(screen.getByText("No Campaign Selected")).toBeInTheDocument();
-    });
-
     test("should display active campaign name when available", async () => {
       const user = userEvent.setup();
       setupMocks({
@@ -404,48 +371,43 @@ describe("Header", () => {
 
       await user.click(screen.getByRole("button", { name: /menu/i }));
 
-      // The name now appears twice: in the always-visible header chip and in the
-      // menu's Campaign section.
-      expect(screen.getAllByText("The Dark Campaign")).toHaveLength(2);
+      // The menu's read-only Campaign section is gone: the switcher chip is
+      // the one place the active campaign is shown, and the one door onto
+      // changing it.
+      expect(screen.queryByText("The Dark Campaign")).not.toBeInTheDocument();
     });
 
-    test("shows the active campaign in the bar without opening the menu", () => {
+    test("hosts the context switcher in the bar", () => {
       setupMocks({
         user: { uid: "u1" },
+        activeGroup: { id: "g1", name: "The Fellowship" },
         activeCampaignId: "camp-1",
         campaigns: [{ id: "camp-1", name: "The Dark Campaign" }],
       });
       render(<Header />);
 
-      // Which campaign you are in was previously only discoverable by opening the
-      // hamburger menu.
-      expect(
-        screen.getByRole("button", { name: /Active campaign: The Dark Campaign/ })
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("context-switcher")).toBeInTheDocument();
     });
 
-    test("omits the campaign chip when there is no active campaign", () => {
-      setupMocks({ user: { uid: "u1" }, activeCampaignId: null, campaigns: [] });
+    test("omits the switcher when there is no active group", () => {
+      setupMocks({ user: { uid: "u1" }, activeGroup: null, campaigns: [] });
       render(<Header />);
 
-      expect(
-        screen.queryByRole("button", { name: /Active campaign:/ })
-      ).not.toBeInTheDocument();
+      // Nothing to switch between, and nothing to name.
+      expect(screen.queryByTestId("context-switcher")).not.toBeInTheDocument();
     });
 
-    test("opens the context switcher from the campaign chip", async () => {
-      const user = userEvent.setup();
+    test("keeps the switcher when a group has no campaigns yet", () => {
       setupMocks({
         user: { uid: "u1" },
-        activeCampaignId: "camp-1",
-        campaigns: [{ id: "camp-1", name: "The Dark Campaign" }],
+        activeGroup: { id: "g1", name: "The Fellowship" },
+        activeCampaignId: null,
+        campaigns: [],
       });
       render(<Header />);
 
-      await user.click(
-        screen.getByRole("button", { name: /Active campaign: The Dark Campaign/ })
-      );
-
+      // The chip is now the only entrance to switching, so a group with no
+      // campaigns must not strand the user without one.
       expect(screen.getByTestId("context-switcher")).toBeInTheDocument();
     });
   });
