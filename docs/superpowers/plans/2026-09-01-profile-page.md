@@ -102,9 +102,7 @@ against what the diffs actually added. A delta that does not reconcile is a find
 
 > CLAUDE.md records 4538/4540 for this commit and is **stale** — it was measured on
 > `redesign/context-switcher` before that branch merged. Task 11 corrects it. Compare against the
-> number above, and against the previous batch's number thereafter. The count moves only as this plan's own suites are added or its two doomed suites
-are deleted; every batch gate compares against the previous batch's number, not against 4538
-forever.
+> number above, and against the previous batch's number thereafter.
 
 ### Review checklist — what the orchestrator checks on every returned diff
 
