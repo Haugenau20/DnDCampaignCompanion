@@ -26,7 +26,11 @@ jest.mock("features/user-management", () => ({
   useAuth: () => ({ user: mockUser }),
   useCampaigns: () => mockCampaigns,
   useGroups: () => mockGroups,
-  UserProfile: () => <div data-testid="user-profile" />,
+  AccountCard: () => <div data-testid="account-card" />,
+  GroupMembershipCard: () => <div data-testid="group-membership-card" />,
+  CharactersCard: () => <div data-testid="characters-card" />,
+  AppearanceCard: () => <div data-testid="appearance-card" />,
+  DangerZoneCard: () => <div data-testid="danger-zone-card" />,
   SignInForm: ({ onSuccess }: any) => (
     <div data-testid="sign-in-form">
       <button type="button" onClick={onSuccess}>
@@ -109,7 +113,7 @@ describe("ProfilePage", () => {
     expect(
       screen.getByText(/you need to be signed in to see your profile/i)
     ).toBeInTheDocument();
-    expect(screen.queryByTestId("user-profile")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("account-card")).not.toBeInTheDocument();
     expect(mockNavigateToPage).not.toHaveBeenCalled();
   });
 
@@ -127,6 +131,32 @@ describe("ProfilePage", () => {
       "Leaving and deleting",
     ]);
     expect(within(nav).queryByText("Characters")).not.toBeInTheDocument();
+
+    expect(screen.getByTestId("account-card")).toBeInTheDocument();
+    expect(screen.queryByTestId("group-membership-card")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("characters-card")).not.toBeInTheDocument();
+    expect(screen.getByTestId("appearance-card")).toBeInTheDocument();
+    expect(screen.getByTestId("danger-zone-card")).toBeInTheDocument();
+  });
+
+  it("renders every card in its own section, wired to the rail's ids", () => {
+    renderPage();
+
+    expect(
+      document.getElementById("account")?.contains(screen.getByTestId("account-card"))
+    ).toBe(true);
+    expect(
+      document.getElementById("group")?.contains(screen.getByTestId("group-membership-card"))
+    ).toBe(true);
+    expect(
+      document.getElementById("characters")?.contains(screen.getByTestId("characters-card"))
+    ).toBe(true);
+    expect(
+      document.getElementById("appearance")?.contains(screen.getByTestId("appearance-card"))
+    ).toBe(true);
+    expect(
+      document.getElementById("danger")?.contains(screen.getByTestId("danger-zone-card"))
+    ).toBe(true);
   });
 
   it("renders a loading state while groups are still loading", () => {
@@ -135,13 +165,12 @@ describe("ProfilePage", () => {
     renderPage();
 
     expect(screen.getByTestId("profile-loading-state")).toBeInTheDocument();
-    expect(screen.queryByTestId("user-profile")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("account-card")).not.toBeInTheDocument();
   });
 
-  // Guards the SHELL only. `UserProfile` is stubbed above, so this cannot see
-  // the Close button that still sits under Delete Account inside it -- the real
-  // guard for that Definition-of-Done line belongs to the danger-zone card's
-  // own suite, once the split gives it one. Kept because the shell is where a
+  // Guards the SHELL only. Every card is stubbed above, so this cannot see
+  // inside the danger zone -- the real guard for that Definition-of-Done line
+  // lives in DangerZoneCard's own suite. Kept because the shell is where a
   // stray page-level "Close" would most plausibly be added later.
   it("adds no Close button of its own to the page shell", () => {
     renderPage();

@@ -10,7 +10,11 @@ import {
   useAuth,
   useGroups,
   useCampaigns,
-  UserProfile,
+  AccountCard,
+  GroupMembershipCard,
+  CharactersCard,
+  AppearanceCard,
+  DangerZoneCard,
   SignInForm,
 } from "features/user-management";
 import LoadingState from "pages/layouts/common/components/LoadingState";
@@ -19,19 +23,22 @@ import ProfileSectionRail, { ProfileSection } from "./ProfileSectionRail";
 /**
  * The profile page at `/profile`.
  *
- * For this commit the right-hand column mounts the existing `UserProfile`
- * component unchanged — the point of this page is to make the route itself
- * reachable and linkable before the eight-section monolith is split into
- * per-section cards. That split happens in a later change; this page does
- * not touch `UserProfile` at all.
+ * The right-hand column now composes the per-section cards that used to be
+ * the eight sections of one `UserProfile` monolith: an account-scoped card,
+ * a group-scoped card, characters, appearance, and the danger zone. Each
+ * card sits in its own `<section>`, carrying the `id` its rail entry links
+ * to and an `aria-labelledby` pointing at the card's own heading.
+ * `UserProfile` itself still exists and still passes its own tests -- a
+ * follow-up change deletes it and fixes its two remaining consumers.
  *
  * Three states, driven by auth and group loading rather than a redirect —
  * the URL must stay linkable even when signed out:
  * - Signed out: the shell plus a single card inviting sign-in.
  * - Signed in, groups still loading: the shell plus a skeleton.
- * - Signed in: the section rail alongside `UserProfile`. Group-scoped rail
- *   entries (the group's own name, Characters) only appear once a group is
- *   active; "Leaving and deleting" (account deletion) does not depend on one.
+ * - Signed in: the section rail alongside the cards. Group-scoped cards
+ *   (the group's own name, Characters) only render once a group is active;
+ *   the danger zone renders regardless, since account deletion does not
+ *   depend on one.
  */
 const ProfilePage: React.FC = () => {
   const { navigateToPage } = useNavigation();
@@ -94,7 +101,28 @@ const ProfilePage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              <UserProfile />
+              <section id="account" aria-labelledby="account-heading">
+                <AccountCard />
+              </section>
+
+              {activeGroup && (
+                <>
+                  <section id="group" aria-labelledby="group-heading">
+                    <GroupMembershipCard />
+                  </section>
+                  <section id="characters" aria-labelledby="characters-heading">
+                    <CharactersCard />
+                  </section>
+                </>
+              )}
+
+              <section id="appearance" aria-labelledby="appearance-heading">
+                <AppearanceCard />
+              </section>
+
+              <section id="danger" aria-labelledby="danger-heading">
+                <DangerZoneCard />
+              </section>
             </div>
           )}
         </div>
