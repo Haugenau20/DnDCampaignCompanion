@@ -11,16 +11,9 @@ const mockSetActiveGroup = jest.fn();
 const mockSetActiveCampaign = jest.fn();
 const mockGetCampaigns = jest.fn();
 
-// ContextSwitcher consumes JoinGroupDialog through the domain barrel, so the
-// barrel mock re-exports the component stub defined further down.
 jest.mock('@/features/user-management', () => ({
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
-  get JoinGroupDialog() {
-    // the stub below returns the component directly, not a { default } module
-    const mod = require('@/features/user-management/groups/components/JoinGroupDialog');
-    return mod.default || mod;
-  },
 }));
 
 const { useGroups, useCampaigns } = require('@/features/user-management');
@@ -73,24 +66,13 @@ jest.mock('@/core/services/firebase', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mock JoinGroupDialog to avoid deep dependency chain
-// ---------------------------------------------------------------------------
-jest.mock('@/features/user-management/groups/components/JoinGroupDialog', () => {
-  const MockJoinGroupDialog: React.FC<{
-    open: boolean;
-    onClose: () => void;
-    onSuccess: () => void;
-  }> = ({ open }) => {
-    if (!open) return null;
-    return <div data-testid="join-group-dialog">Join Group Dialog</div>;
-  };
-  return MockJoinGroupDialog;
-});
-
-// ---------------------------------------------------------------------------
 // window.location.reload must never be called by this component again
 // ---------------------------------------------------------------------------
 const mockReload = jest.fn();
+
+// ContextSwitcher no longer mounts JoinGroupDialog itself -- its owner does,
+// through this callback.
+const mockOnJoinGroup = jest.fn();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -129,7 +111,7 @@ function makeCampaignsMock(overrides = {}) {
 }
 
 function renderContextSwitcher() {
-  return render(<ContextSwitcher />);
+  return render(<ContextSwitcher onJoinGroup={mockOnJoinGroup} />);
 }
 
 /** Open the popover from its trigger. */
@@ -394,7 +376,7 @@ describe('ContextSwitcher', () => {
           activeCampaign: null,
         })
       );
-      rerender(<ContextSwitcher />);
+      rerender(<ContextSwitcher onJoinGroup={mockOnJoinGroup} />);
 
       // The switch closed the popover; reopen it to act on the new list. The
       // reopened panel lands back on the campaign step (the popover-close
@@ -447,7 +429,7 @@ describe('ContextSwitcher', () => {
         makeCampaignsMock({ activeCampaignId: 'campaign-2', activeCampaign: mockCampaigns[1] })
       );
       mockSetActiveCampaign.mockClear();
-      rerender(<ContextSwitcher />);
+      rerender(<ContextSwitcher onJoinGroup={mockOnJoinGroup} />);
 
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: /undo/i }));
@@ -482,7 +464,7 @@ describe('ContextSwitcher', () => {
       mockSetActiveGroup.mockClear();
       mockSetActiveCampaign.mockClear();
 
-      rerender(<ContextSwitcher />);
+      rerender(<ContextSwitcher onJoinGroup={mockOnJoinGroup} />);
 
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: /undo/i }));
@@ -506,7 +488,7 @@ describe('ContextSwitcher', () => {
       (useCampaigns as jest.Mock).mockReturnValue(
         makeCampaignsMock({ activeCampaignId: 'campaign-2', activeCampaign: mockCampaigns[1] })
       );
-      rerender(<ContextSwitcher />);
+      rerender(<ContextSwitcher onJoinGroup={mockOnJoinGroup} />);
 
       mockSetActiveCampaign.mockRejectedValue(new Error('Could not switch back'));
 
@@ -526,11 +508,11 @@ describe('ContextSwitcher', () => {
       expect(screen.getByText('Join a group with an invite code')).toBeInTheDocument();
     });
 
-    test('opens the join dialog', () => {
+    test('calls onJoinGroup when the join row is clicked', () => {
       renderContextSwitcher();
       openSwitcher();
       fireEvent.click(screen.getByText('Join a group with an invite code'));
-      expect(screen.getByTestId('join-group-dialog')).toBeInTheDocument();
+      expect(mockOnJoinGroup).toHaveBeenCalled();
     });
   });
 

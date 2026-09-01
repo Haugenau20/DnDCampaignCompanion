@@ -38,6 +38,10 @@ const { useNavigate, useLocation } = require("react-router-dom");
 // Mock Firebase context hooks
 // ---------------------------------------------------------------------------
 const mockSignOut = jest.fn();
+// useGroups' refreshGroups and setActiveGroup, hoisted so tests can configure
+// and assert on them -- the join-success handler calls both.
+const mockRefreshGroups = jest.fn();
+const mockSetActiveGroup = jest.fn();
 
 // Header consumes these components through the domain barrel, so the barrel
 // mock re-exports the component stubs defined further down.
@@ -96,8 +100,12 @@ jest.mock("../Navigation", () => ({
 // ---------------------------------------------------------------------------
 jest.mock("@/features/user-management/groups/components/JoinGroupDialog", () => ({
   __esModule: true,
-  default: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="join-group-dialog" /> : null,
+  default: ({ open, onSuccess }: { open: boolean; onSuccess: () => void }) =>
+    open ? (
+      <button data-testid="trigger-join-success" onClick={onSuccess}>
+        Join
+      </button>
+    ) : null,
 }));
 
 jest.mock("@/features/user-management/admin/components/AdminPanel", () => ({
@@ -148,6 +156,7 @@ function setupMocks({
   user = null as null | { uid: string },
   isAdmin = false,
   activeGroup = null as null | { id?: string; name: string },
+  groups = [] as Array<{ id: string; name: string }>,
   activeCampaignId = null as null | string,
   campaigns = [] as Array<{ id: string; name: string }>,
   pathname = "/dashboard",
@@ -159,8 +168,10 @@ function setupMocks({
     activeGroupUserProfile: user
       ? { role: isAdmin ? "admin" : "member", username: "TestUser" }
       : null,
-    refreshGroups: jest.fn(),
+    refreshGroups: mockRefreshGroups,
+    setActiveGroup: mockSetActiveGroup,
     activeGroup,
+    groups,
   });
   (useCampaigns as jest.Mock).mockReturnValue({
     activeCampaignId,
@@ -168,10 +179,18 @@ function setupMocks({
   });
 }
 
+// window.location.reload must never be called by the join-success handler.
+const mockReload = jest.fn();
+
 describe("Header", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRefreshGroups.mockResolvedValue([]);
     setupMocks();
+    Object.defineProperty(window, "location", {
+      value: { reload: mockReload },
+      writable: true,
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -459,6 +478,50 @@ describe("Header", () => {
         "data-variant",
         "inline"
       );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Joining a group -- the sole mount, and its one success behaviour
+  // -------------------------------------------------------------------------
+  describe("joining a group", () => {
+    test("mounts the join dialog exactly once", async () => {
+      const user = userEvent.setup();
+      setupMocks({
+        user: { uid: "u1" },
+        activeGroup: { id: "g1", name: "The Fellowship" },
+      });
+      render(<Header />);
+
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      await user.click(screen.getByRole("button", { name: /join group/i }));
+
+      expect(screen.getAllByTestId("trigger-join-success")).toHaveLength(1);
+    });
+
+    test("switches to a group the user has just joined", async () => {
+      const user = userEvent.setup();
+      setupMocks({
+        user: { uid: "u1" },
+        activeGroup: { id: "g1", name: "The Fellowship" },
+        groups: [{ id: "g1", name: "The Fellowship" }],
+      });
+      // refreshGroups resolves with the list as it is AFTER joining
+      mockRefreshGroups.mockResolvedValue([
+        { id: "g1", name: "The Fellowship" },
+        { id: "g2", name: "The Council of Elrond" },
+      ]);
+      render(<Header />);
+
+      await user.click(screen.getByRole("button", { name: /menu/i }));
+      await user.click(screen.getByRole("button", { name: /join group/i }));
+      await user.click(screen.getByTestId("trigger-join-success"));
+
+      // joinGroupWithToken returns void, so the new group is the one that
+      // appears in the list. Landing the user in it is the whole point of
+      // having just joined it.
+      expect(mockSetActiveGroup).toHaveBeenCalledWith("g2");
+      expect(mockReload).not.toHaveBeenCalled();
     });
   });
 });

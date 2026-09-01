@@ -1,12 +1,27 @@
 // shared/components/context-switcher/ContextSwitcher.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useGroups, useCampaigns, JoinGroupDialog } from 'features/user-management';
+import { useGroups, useCampaigns } from 'features/user-management';
 import Typography from 'core/components/Typography';
 import UndoToast from './UndoToast';
 import ContextTrigger from './ContextTrigger';
 import CampaignStep from './CampaignStep';
 import GroupStep from './GroupStep';
 import { usePopoverKeys } from './usePopoverKeys';
+
+/**
+ * Props for {@link ContextSwitcher}.
+ */
+interface ContextSwitcherProps {
+  /**
+   * Open the join-a-group dialog.
+   *
+   * The dialog is mounted by the owner rather than here, because the header
+   * menu offers the same action -- and mounting it in both places gave the
+   * same action two different outcomes depending on which door the user came
+   * through.
+   */
+  onJoinGroup: () => void;
+}
 
 /**
  * Lets the user see and change the active group and campaign.
@@ -19,7 +34,7 @@ import { usePopoverKeys } from './usePopoverKeys';
  * staged selection and no Apply step. A mis-click is recovered through the
  * undo toast rather than a pre-commit confirmation.
  */
-const ContextSwitcher: React.FC = () => {
+const ContextSwitcher: React.FC<ContextSwitcherProps> = ({ onJoinGroup }) => {
   const { activeGroupId, setActiveGroup, groups } = useGroups();
   const { activeCampaignId, setActiveCampaign, campaigns } = useCampaigns();
 
@@ -29,7 +44,6 @@ const ContextSwitcher: React.FC = () => {
    * reached behind `Change` on the campaign step.
    */
   const [step, setStep] = useState<'campaigns' | 'groups'>('campaigns');
-  const [showJoinGroupDialog, setShowJoinGroupDialog] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
   /**
    * The group and campaign to go back to, plus what we switched to. Held only
@@ -150,68 +164,57 @@ const ContextSwitcher: React.FC = () => {
   };
 
   return (
-    <>
-      <div className="relative" ref={dropdownRef}>
-        <ContextTrigger
-          ref={triggerRef}
-          isOpen={isOpen}
-          onToggle={() => setIsOpen(!isOpen)}
-        />
-
-        {isOpen && (
-          <div
-            ref={panelRef}
-            role="menu"
-            aria-label="Group and campaign"
-            className="dropdown absolute left-0 top-full mt-1 w-[23.5rem] max-w-[calc(100vw-2rem)] rounded-md shadow-lg z-20"
-          >
-            {step === 'campaigns' ? (
-              <CampaignStep
-                onSelectCampaign={handleSelectCampaign}
-                onChangeGroup={() => setStep('groups')}
-                onJoinGroup={() => setShowJoinGroupDialog(true)}
-              />
-            ) : (
-              <GroupStep
-                onSelectGroup={handleSelectGroup}
-                onBack={() => setStep('campaigns')}
-              />
-            )}
-          </div>
-        )}
-
-        {switchError && (
-          <div className="absolute left-0 top-full mt-1 w-[23.5rem] max-w-[calc(100vw-2rem)] z-20 px-3 py-2 dropdown">
-            <Typography variant="body-sm" color="error">
-              {switchError}
-            </Typography>
-          </div>
-        )}
-
-        {undoTarget && (
-          <div className="absolute left-0 top-full mt-2 w-[23.5rem] max-w-[calc(100vw-2rem)] z-20">
-            <UndoToast
-              label={undoTarget.label}
-              error={undoError}
-              onUndo={handleUndo}
-              onDismiss={() => {
-                setUndoTarget(null);
-                setUndoError(null);
-              }}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Join Group Dialog */}
-      <JoinGroupDialog
-        open={showJoinGroupDialog}
-        onClose={() => setShowJoinGroupDialog(false)}
-        onSuccess={() => {
-          setShowJoinGroupDialog(false);
-        }}
+    <div className="relative" ref={dropdownRef}>
+      <ContextTrigger
+        ref={triggerRef}
+        isOpen={isOpen}
+        onToggle={() => setIsOpen(!isOpen)}
       />
-    </>
+
+      {isOpen && (
+        <div
+          ref={panelRef}
+          role="menu"
+          aria-label="Group and campaign"
+          className="dropdown absolute left-0 top-full mt-1 w-[23.5rem] max-w-[calc(100vw-2rem)] rounded-md shadow-lg z-20"
+        >
+          {step === 'campaigns' ? (
+            <CampaignStep
+              onSelectCampaign={handleSelectCampaign}
+              onChangeGroup={() => setStep('groups')}
+              onJoinGroup={onJoinGroup}
+            />
+          ) : (
+            <GroupStep
+              onSelectGroup={handleSelectGroup}
+              onBack={() => setStep('campaigns')}
+            />
+          )}
+        </div>
+      )}
+
+      {switchError && (
+        <div className="absolute left-0 top-full mt-1 w-[23.5rem] max-w-[calc(100vw-2rem)] z-20 px-3 py-2 dropdown">
+          <Typography variant="body-sm" color="error">
+            {switchError}
+          </Typography>
+        </div>
+      )}
+
+      {undoTarget && (
+        <div className="absolute left-0 top-full mt-2 w-[23.5rem] max-w-[calc(100vw-2rem)] z-20">
+          <UndoToast
+            label={undoTarget.label}
+            error={undoError}
+            onUndo={handleUndo}
+            onDismiss={() => {
+              setUndoTarget(null);
+              setUndoError(null);
+            }}
+          />
+        </div>
+      )}
+    </div>
   );
 };
 

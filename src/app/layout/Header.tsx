@@ -25,7 +25,7 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useAuth();
-  const { activeGroupUserProfile, refreshGroups, activeGroup } = useGroups();
+  const { activeGroupUserProfile, refreshGroups, activeGroup, groups, setActiveGroup } = useGroups();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -109,7 +109,25 @@ const Header: React.FC = () => {
     setShowJoinGroup(true);
     setMenuOpen(false);
   };
-  
+
+  /**
+   * One success behaviour for joining a group, from either entrance.
+   *
+   * Refreshing alone left the user in the group they were already in, staring
+   * at a list they had just changed. joinGroupWithToken returns void and no id
+   * reaches us, so the new group is the one that appears in the list; if none
+   * does -- a re-join, or a race -- refresh and say nothing rather than guess.
+   */
+  const handleJoinedGroup = async () => {
+    setShowJoinGroup(false);
+    const before = new Set(groups.map((group) => group.id));
+    const after = await refreshGroups();
+    const joined = after?.find((group) => !before.has(group.id));
+    if (joined) {
+      await setActiveGroup(joined.id);
+    }
+  };
+
   // Handle admin click
   const handleAdminClick = () => {
     setShowAdmin(true);
@@ -152,7 +170,7 @@ const Header: React.FC = () => {
                   aria-hidden="true"
                   className="w-px h-6 self-center opacity-40 bg-secondary"
                 ></span>
-                <ContextSwitcher />
+                <ContextSwitcher onJoinGroup={() => setShowJoinGroup(true)} />
               </>
             )}
 
@@ -335,15 +353,12 @@ const Header: React.FC = () => {
         />
       </Dialog>
       
-      {/* Join Group Dialog */}
+      {/* Join Group Dialog -- the sole mount; ContextSwitcher's chip opens it
+          through the `onJoinGroup` callback rather than mounting its own. */}
       <JoinGroupDialog
         open={showJoinGroup}
         onClose={() => setShowJoinGroup(false)}
-        onSuccess={() => {
-          if (refreshGroups) {
-            refreshGroups();
-          }
-        }}
+        onSuccess={handleJoinedGroup}
       />
       
       {/* Admin Panel Dialog */}
