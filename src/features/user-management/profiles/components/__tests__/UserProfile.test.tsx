@@ -251,6 +251,120 @@ describe('UserProfile', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Username validation gating Save
+  // -------------------------------------------------------------------------
+  describe('username validation', () => {
+    test('Save is disabled immediately after the editor opens', async () => {
+      render(<UserProfile />);
+      await userEvent.click(screen.getByRole('button', { name: /change/i }));
+
+      const usernameInput = screen.getAllByRole('textbox')[0];
+      fireEvent.change(usernameInput, { target: { value: 'validname1' } });
+
+      // Immediately after typing -- before the 500ms debounce has had a
+      // chance to fire and check this name -- Save must not be enabled
+      // against a name nothing has validated yet.
+      const saveBtn = screen.getByRole('button', { name: /save/i });
+      expect(saveBtn).toBeDisabled();
+
+      // Let the debounced check settle so it doesn't leak a pending timer
+      // into the next test.
+      await waitFor(() => expect(mockValidateUsername).toHaveBeenCalledWith('validname1'), { timeout: 2000 });
+    });
+
+    test('Save is disabled while a check is in flight', async () => {
+      let resolveCheck: (value: { isValid: boolean; isAvailable: boolean }) => void = () => {};
+      mockValidateUsername.mockImplementation(
+        () => new Promise((resolve) => { resolveCheck = resolve; })
+      );
+
+      render(<UserProfile />);
+      await userEvent.click(screen.getByRole('button', { name: /change/i }));
+
+      const usernameInput = screen.getAllByRole('textbox')[0];
+      fireEvent.change(usernameInput, { target: { value: 'validname1' } });
+
+      await waitFor(() => expect(mockValidateUsername).toHaveBeenCalledWith('validname1'), { timeout: 2000 });
+
+      // The check has started but its promise has not resolved yet -- Save
+      // must stay disabled until a result comes back.
+      const saveBtn = screen.getByRole('button', { name: /save/i });
+      expect(saveBtn).toBeDisabled();
+
+      resolveCheck({ isValid: true, isAvailable: true });
+      await waitFor(() => expect(saveBtn).not.toBeDisabled());
+    });
+
+    test('Save enables only once a check has come back valid and available', async () => {
+      mockValidateUsername.mockResolvedValue({ isValid: true, isAvailable: true });
+
+      render(<UserProfile />);
+      await userEvent.click(screen.getByRole('button', { name: /change/i }));
+
+      const usernameInput = screen.getAllByRole('textbox')[0];
+      fireEvent.change(usernameInput, { target: { value: 'validname1' } });
+
+      const saveBtn = screen.getByRole('button', { name: /save/i });
+
+      await waitFor(() => expect(mockValidateUsername).toHaveBeenCalledWith('validname1'), { timeout: 2000 });
+      await waitFor(() => expect(saveBtn).not.toBeDisabled());
+    });
+
+    test('Save is disabled in the debounce window after editing a passed name', async () => {
+      mockValidateUsername.mockResolvedValue({ isValid: true, isAvailable: true });
+
+      render(<UserProfile />);
+      await userEvent.click(screen.getByRole('button', { name: /change/i }));
+
+      const usernameInput = screen.getAllByRole('textbox')[0];
+      fireEvent.change(usernameInput, { target: { value: 'validname1' } });
+
+      const saveBtn = screen.getByRole('button', { name: /save/i });
+      await waitFor(() => expect(mockValidateUsername).toHaveBeenCalledWith('validname1'), { timeout: 2000 });
+      await waitFor(() => expect(saveBtn).not.toBeDisabled());
+
+      // The window this guards is the 500ms BEFORE the next check starts:
+      // `checking` is still false and the previous name's verdict is still
+      // in state, so only resetting the verdict on edit keeps Save disabled.
+      // Asserted synchronously -- any await here would let the debounce fire
+      // and the assertion would pass for the wrong reason.
+      fireEvent.change(usernameInput, { target: { value: 'validname2' } });
+      expect(saveBtn).toBeDisabled();
+
+      await waitFor(() => expect(mockValidateUsername).toHaveBeenCalledWith('validname2'), { timeout: 2000 });
+    });
+
+    test('Save is disabled again when the name is edited after a passing check', async () => {
+      mockValidateUsername.mockResolvedValueOnce({ isValid: true, isAvailable: true });
+
+      render(<UserProfile />);
+      await userEvent.click(screen.getByRole('button', { name: /change/i }));
+
+      const usernameInput = screen.getAllByRole('textbox')[0];
+      fireEvent.change(usernameInput, { target: { value: 'validname1' } });
+
+      const saveBtn = screen.getByRole('button', { name: /save/i });
+      await waitFor(() => expect(mockValidateUsername).toHaveBeenCalledWith('validname1'), { timeout: 2000 });
+      await waitFor(() => expect(saveBtn).not.toBeDisabled());
+
+      // Edit the now-passing name further -- the earlier pass must not stay
+      // on screen while the new value is (re-)checked.
+      let resolveSecondCheck: (value: { isValid: boolean; isAvailable: boolean }) => void = () => {};
+      mockValidateUsername.mockImplementation(
+        () => new Promise((resolve) => { resolveSecondCheck = resolve; })
+      );
+
+      fireEvent.change(usernameInput, { target: { value: 'validname2' } });
+
+      await waitFor(() => expect(mockValidateUsername).toHaveBeenCalledWith('validname2'), { timeout: 2000 });
+      expect(saveBtn).toBeDisabled();
+
+      resolveSecondCheck({ isValid: true, isAvailable: true });
+      await waitFor(() => expect(saveBtn).not.toBeDisabled());
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Character management
   // -------------------------------------------------------------------------
   describe('character management', () => {

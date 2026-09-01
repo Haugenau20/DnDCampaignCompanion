@@ -89,9 +89,14 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
 
   // Username validation with debounce
   useEffect(() => {
+    // null means "not yet checked" -- distinct from the true/false a real
+    // check produces. Save's disabled expression treats null as falsy, so
+    // leaving these unset here (rather than defaulting to true) is what
+    // keeps Save disabled against a name nothing has actually validated,
+    // including the moment the editor first opens.
     if (!isEditingUsername || !newUsername || !activeGroup || newUsername === activeGroupUserProfile?.username) {
-      setUsernameValid(true);
-      setUsernameAvailable(true);
+      setUsernameValid(null);
+      setUsernameAvailable(null);
       setUsernameError(null);
       return;
     }
@@ -102,6 +107,15 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
       setUsernameError('Username must be at least 3 characters');
       return;
     }
+
+    // This name has not been checked yet, so say so straight away rather than
+    // when the debounced check starts 500ms later. Otherwise editing a name
+    // that already passed leaves the PREVIOUS name's verdict on screen for the
+    // length of the debounce -- `checking` is still false, both flags are still
+    // true, and Save is enabled against a name nothing has validated.
+    setUsernameValid(null);
+    setUsernameAvailable(null);
+    setUsernameError(null);
 
     const checkUsername = async () => {
       setChecking(true);
@@ -467,7 +481,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onCancel }) => {
               <Button
                 type="submit"
                 size="sm"
-                disabled={saving || !usernameValid || !usernameAvailable || newUsername === activeGroupUserProfile.username}
+                disabled={saving || checking || !usernameValid || !usernameAvailable || newUsername === activeGroupUserProfile.username}
                 isLoading={saving}
               >
                 Save
