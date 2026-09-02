@@ -105,6 +105,7 @@ against what the diffs actually added. A delta that does not reconcile is a find
 | 2 (tasks 2, 4) | 211 | 4565 | 4567 | +17 | UserProfile +5, ProfilePage +8, ProfileSectionRail +3, App +1 |
 | 3a (task 5a) | 222 | 4630 | 4632 | +65 | 11 new card/hook suites +64, ProfilePage +1 |
 | 3b (task 5b) | 220 | 4573 | 4575 | -57 | UserProfile -44, UserProfileButton -14, Header -1 +2 |
+| 4 (tasks 6, 7) | 222 | 4592 | 4594 | +19 | AccountCard +5, GroupMembershipCard +6, AppearanceCard +2, CharactersCard +1, UsernameEditor +1, 2 new hook suites +6, Header -1, SessionManager -1 |
 
 > CLAUDE.md records 4538/4540 for this commit and is **stale** — it was measured on
 > `redesign/context-switcher` before that branch merged. Task 11 corrects it. Compare against the
@@ -185,6 +186,16 @@ proving nothing**, which is the failure mode this whole review structure exists 
 - **The App routing suite is `src/__tests__/App.test.tsx`**, not `src/app/__tests__/`. It asserts an
   **exact** `EXPECTED_ROUTES` list and mocks every page module, so adding a route requires adding
   both a `jest.mock` and a list entry, or the suite fails. *(Task 4.)*
+- **A brief that forbids a file can still demand a change inside it.** Task 6 was told to relabel
+  the username row *and* not to touch `UsernameEditor.tsx`, which is where that label lives. The
+  agent correctly refused to write an unachievable test and reported the contradiction instead of
+  working around it. When writing an allow-list, check that every instruction in the brief is
+  reachable from it. *(Batch 4.)*
+- **`SessionManager`'s migration effect depends on the whole `userProfile` object**, so a profile
+  state change between the write firing and the refresh landing can fire a second write. It is
+  idempotent -- same value, same document -- and the migration is best-effort, so this is recorded
+  rather than guarded; adding a ref would reintroduce the flag the same task just removed.
+  *(Observed reviewing Task 7.)*
 - **A `checking`-style in-flight flag does not cover a debounce window.** Between a keystroke and
   the debounced call, nothing is in flight and the previous verdict is still in state. Reset the
   verdict when the input changes, not when the request starts. *(Task 2 — its own author flagged
