@@ -102,7 +102,7 @@ against what the diffs actually added. A delta that does not reconcile is a find
 |---|---|---|---|---|---|
 | baseline | 227 | 4615 | 4617 | — | — |
 | 1 (tasks 1, 2) | 226 | 4607 | 4609 | −1 suite, −8 | `SearchService.test.ts` 24 → 40 (+16); deleted `shared/utils/__tests__/search.test.ts` (−1 suite, −24). 4615 + 16 − 24 = 4607 ✓ |
-| 2 (tasks 3, 4) | | | | | |
+| 2 (tasks 3, 4) | 226 | 4620 | 4622 | +13 | `SearchContext.behavioral` + `useSearch` measured together: 43 → 56. Nothing changed elsewhere |
 | 3a (task 5a) | | | | | |
 | 3b (task 5b) | | | | | |
 
@@ -379,6 +379,18 @@ console to diagnose it by.
       `initializeIndex` replaces the index wholesale, so calling it repeatedly is safe. Keep the
       existing dependency array (`[searchService, chapters, quests, npcs, locations, rumors]`) —
       it is what makes the rebuild-on-arrival behaviour work.
+> **Decision made during batch 2 — why `handleSearch` awaits a synchronous call.** Task 3 changed
+> `searchService.search(q)` to `await searchService.search(q)`. `search()` returns an array, so the
+> `await` only defers by a microtask. It was queried in review and kept, because the alternative is
+> worse: with no await point anywhere in `handleSearch`, the whole body runs synchronously, two
+> calls can never interleave, and the stale-response guard is **unreachable by construction** —
+> dead code that no test can honestly exercise. The agent correctly reported that a test written
+> against the synchronous version passes with or without the guard. The `await` makes the guard
+> live and testable at the cost of one microtask, and React 18 batches across microtasks in the
+> same tick, so `isSearching` does not flash an extra render. It also matches what PR 6's palette
+> will need when search becomes genuinely async. The forward-looking test mocks `search()` as
+> returning a promise — a shape the real service does not produce today, which is the point.
+
 - [ ] **Discard stale responses.** Add a `useRef<number>` request counter in the provider.
       `handleSearch` increments it, captures the value, and applies `setResults` / `setIsSearching`
       only when the captured value is still the latest. `SearchService.search` is synchronous
@@ -443,6 +455,17 @@ one.
 - [ ] In the auto-search effect, add the missing `else`: when `debouncedQuery` is shorter than
       `options.minQueryLength`, clear the results rather than leaving the previous query's on
       screen. Do not clear the query itself — the user is still typing.
+
+> **Brief correction, made during batch 2.** "Clear the results" must **not** be triggered by
+> `results.length > 0`. That puts `results` in the effect's dependency array while the sibling
+> branch *sets* results, and the provider returns a brand-new array from every search — so the
+> effect re-fires on its own output, unbounded. The delivered implementation did exactly this and
+> its tests could not see it, because the suite mocks the context with a fixed `results: []`. The
+> orchestrator replaced it with a `hasSearched` ref (also reset in `onClearSearch`) and added a
+> test that pins the dependency contract — a change in results identity alone must not re-run the
+> search — which fails against the `results`-based version with two calls where one is expected.
+> **General lesson for later briefs: when a hook's effect both reads and writes the same context
+> state, say which of the two it may depend on.**
 - [ ] Add `isQueryTooShort` to the hook's return value:
       `query.trim().length > 0 && query.trim().length < options.minQueryLength`. Derive it from
       `query`, not `debouncedQuery`, so the hint appears as the user types rather than 180 ms
