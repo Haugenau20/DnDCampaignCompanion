@@ -4,20 +4,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AppearanceCard from "../AppearanceCard";
 
+const mockSetAccountTheme = jest.fn();
 const mockUpdateGroupUserProfile = jest.fn();
-const mockSetTheme = jest.fn();
-
-jest.mock("@/features/user-management", () => ({
-  useAuth: jest.fn(),
-  useGroups: jest.fn(),
-  useUser: jest.fn(),
-}));
-
-jest.mock("../../../auth/hooks/useAuth", () => require("@/features/user-management"));
-jest.mock("../../../groups/hooks/useGroups", () => require("@/features/user-management"));
-jest.mock("../../hooks/useUser", () => require("@/features/user-management"));
-
-const { useAuth, useGroups, useUser } = require("@/features/user-management");
 
 jest.mock("@/core/themes/ThemeContext", () => ({
   useTheme: jest.fn(),
@@ -25,46 +13,94 @@ jest.mock("@/core/themes/ThemeContext", () => ({
 
 const { useTheme } = require("@/core/themes/ThemeContext");
 
-const mockUser = { uid: "user-1" };
-const mockGroup = { id: "group-1", name: "Test Campaign" };
-const mockProfile = { preferences: { theme: "light" } };
+jest.mock("../../hooks/useAccountTheme", () => ({
+  useAccountTheme: jest.fn(),
+}));
+
+const { useAccountTheme } = require("../../hooks/useAccountTheme");
+
+// updateGroupUserProfile must never be reached by this component any more --
+// mock the domain barrel so a regression that goes back to calling it would
+// be visible as a mock invocation this suite explicitly asserts against.
+jest.mock("@/features/user-management", () => ({
+  useUser: jest.fn(),
+}));
+
+jest.mock("../../hooks/useUser", () => require("@/features/user-management"));
+
+const { useUser } = require("@/features/user-management");
+
+function setupMocks(currentThemeName: string = "light") {
+  useTheme.mockReturnValue({
+    theme: { name: currentThemeName, colors: { primary: "#0000ff" } },
+    setTheme: jest.fn(),
+  });
+  useAccountTheme.mockReturnValue({
+    setAccountTheme: mockSetAccountTheme,
+    error: null,
+    saving: false,
+  });
+  useUser.mockReturnValue({ updateGroupUserProfile: mockUpdateGroupUserProfile });
+}
 
 describe("AppearanceCard", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    useAuth.mockReturnValue({ user: mockUser });
-    useGroups.mockReturnValue({ activeGroup: mockGroup, activeGroupUserProfile: mockProfile });
-    useUser.mockReturnValue({ updateGroupUserProfile: mockUpdateGroupUserProfile });
-    useTheme.mockReturnValue({
-      theme: { name: "light", colors: { primary: "#0000ff" } },
-      setTheme: mockSetTheme,
-    });
-    mockUpdateGroupUserProfile.mockResolvedValue(undefined);
+    setupMocks();
+    mockSetAccountTheme.mockResolvedValue(undefined);
   });
 
-  test("should display Theme Preference section", () => {
+  test("renders one option per theme, each with a swatch", () => {
     render(<AppearanceCard />);
-    expect(screen.getByText(/theme preference/i)).toBeInTheDocument();
+
+    expect(screen.getByText(/^light$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^dark$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^medieval$/i)).toBeInTheDocument();
+
+    // Three option buttons, one per theme.
+    const options = screen.getAllByRole("button");
+    expect(options).toHaveLength(3);
   });
 
-  test("should toggle theme dropdown on button click", async () => {
+  test("marks the current theme as selected", () => {
+    setupMocks("dark");
     render(<AppearanceCard />);
-    const themeToggle = screen.getByText(/light theme/i).closest("button");
-    expect(themeToggle).toBeInTheDocument();
-    await userEvent.click(themeToggle!);
-    expect(screen.getAllByText(/dark|medieval|light/i).length).toBeGreaterThan(1);
+
+    const darkOption = screen.getByText(/^dark$/i).closest("button")!;
+    expect(darkOption).toHaveAttribute("aria-pressed", "true");
+
+    const lightOption = screen.getByText(/^light$/i).closest("button")!;
+    expect(lightOption).toHaveAttribute("aria-pressed", "false");
   });
 
-  test("should call updateGroupUserProfile with new theme when a theme option is clicked", async () => {
+  test("switching theme goes through the account writer, not updateGroupUserProfile", async () => {
     render(<AppearanceCard />);
-    const themeToggle = screen.getByText(/light theme/i).closest("button");
-    await userEvent.click(themeToggle!);
-    const darkOption = screen.getAllByText(/dark/i).find((el) => el.tagName === "SPAN");
-    expect(darkOption).toBeTruthy();
-    await userEvent.click(darkOption!.closest("button")!);
-    expect(mockUpdateGroupUserProfile).toHaveBeenCalledWith(
-      "user-1",
-      expect.objectContaining({ preferences: expect.objectContaining({ theme: "dark" }) })
-    );
+
+    const darkOption = screen.getByText(/^dark$/i).closest("button")!;
+    await userEvent.click(darkOption);
+
+    expect(mockSetAccountTheme).toHaveBeenCalledWith("dark");
+    expect(mockUpdateGroupUserProfile).not.toHaveBeenCalled();
+  });
+
+  test("is subtitled with the account-scope explanation", () => {
+    render(<AppearanceCard />);
+
+    expect(
+      screen.getByText(/stored on your account, not per group/i)
+    ).toBeInTheDocument();
+  });
+
+  test("renders no dropdown toggle", () => {
+    render(<AppearanceCard />);
+
+    // The old dropdown rendered a toggle button reading "<Theme> Theme"
+    // (e.g. "Light Theme") with an aria-expanded state. Neither should
+    // exist any more -- the toggle must be gone, not merely hidden.
+    expect(screen.queryByText(/^light theme$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^dark theme$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^medieval theme$/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { expanded: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { expanded: false })).not.toBeInTheDocument();
   });
 });
