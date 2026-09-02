@@ -101,7 +101,7 @@ against what the diffs actually added. A delta that does not reconcile is a find
 | After batch | Suites | Passed | Total | Delta | Accounted for by |
 |---|---|---|---|---|---|
 | baseline | 227 | 4615 | 4617 | — | — |
-| 1 (tasks 1, 2) | | | | | |
+| 1 (tasks 1, 2) | 226 | 4607 | 4609 | −1 suite, −8 | `SearchService.test.ts` 24 → 40 (+16); deleted `shared/utils/__tests__/search.test.ts` (−1 suite, −24). 4615 + 16 − 24 = 4607 ✓ |
 | 2 (tasks 3, 4) | | | | | |
 | 3a (task 5a) | | | | | |
 | 3b (task 5b) | | | | | |
