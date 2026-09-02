@@ -68,6 +68,7 @@ const mockResults: SearchResult[] = [
     title: 'Gandalf',
     content: 'A wizard',
     matches: ['Gandalf the Grey'],
+    matchCount: 1,
   },
   {
     id: 'quest-1',
@@ -75,6 +76,7 @@ const mockResults: SearchResult[] = [
     title: 'Destroy the Ring',
     content: 'Main quest',
     matches: ['Ring of Power'],
+    matchCount: 1,
   },
 ];
 
@@ -296,6 +298,7 @@ describe('SearchBar', () => {
           title: 'The Fellowship',
           content: 'A tale',
           matches: ['fellowship'],
+          matchCount: 1,
         },
       ];
       (useSearch as jest.Mock).mockReturnValue(
@@ -320,6 +323,7 @@ describe('SearchBar', () => {
           title: 'Rivendell',
           content: 'Elven city',
           matches: ['rivendell'],
+          matchCount: 1,
         },
       ];
       (useSearch as jest.Mock).mockReturnValue(
@@ -344,6 +348,7 @@ describe('SearchBar', () => {
           title: 'The Dragon Stirs',
           content: 'A rumor',
           matches: ['dragon'],
+          matchCount: 1,
         },
       ];
       (useSearch as jest.Mock).mockReturnValue(
