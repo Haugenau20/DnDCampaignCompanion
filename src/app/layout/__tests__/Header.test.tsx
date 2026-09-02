@@ -77,8 +77,19 @@ const mockCompleteJoin = jest.fn();
 // ---------------------------------------------------------------------------
 // Mock shared components used inside Header
 // ---------------------------------------------------------------------------
-jest.mock("shared/components/SearchBar", () => ({
-  SearchBar: () => <div data-testid="search-bar" />,
+jest.mock("shared/components/command-palette/SearchTrigger", () => ({
+  __esModule: true,
+  default: React.forwardRef<HTMLButtonElement, { onOpen: () => void }>(
+    ({ onOpen }, ref) => (
+      <button ref={ref} type="button" aria-label="Search" onClick={onOpen} />
+    )
+  ),
+}));
+
+jest.mock("shared/components/command-palette/CommandPalette", () => ({
+  __esModule: true,
+  default: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="command-palette" /> : null,
 }));
 
 jest.mock("shared/components/ThemeSelector", () => ({
@@ -200,6 +211,19 @@ function setupMocks({
   (useJoinGroupCompletion as jest.Mock).mockReturnValue(mockCompleteJoin);
 }
 
+// A signed-in user for the search-affordance tests below -- same shape as
+// the `{ uid: ... }` stand-ins used throughout this file.
+const mockUser = { uid: "user-1" };
+
+/**
+ * Configures `useAuth` (and its dependent mocks) via {@link setupMocks} and
+ * renders `<Header />` in one step, for the search-affordance suite.
+ */
+function renderHeader({ user = null as null | { uid: string } } = {}) {
+  setupMocks({ user });
+  render(<Header />);
+}
+
 // window.location.reload must never be called by the join-success handler.
 const mockReload = jest.fn();
 
@@ -222,11 +246,6 @@ describe("Header", () => {
     test("should render a <header> element", () => {
       render(<Header />);
       expect(screen.getByRole("banner")).toBeInTheDocument();
-    });
-
-    test("should render the SearchBar", () => {
-      render(<Header />);
-      expect(screen.getByTestId("search-bar")).toBeInTheDocument();
     });
 
     test("should render the app title link", () => {
@@ -414,6 +433,44 @@ describe("Header", () => {
       expect(mockCompleteJoin).toHaveBeenCalled();
       expect(screen.queryByTestId("trigger-join-success")).not.toBeInTheDocument();
       expect(mockReload).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Search affordance -- the fixed trigger and command palette replacing the
+  // old field-and-dropdown search bar. Both the trigger and the global
+  // Meta/Control+K shortcut are gated on `user`: searching an index that was
+  // never built is what put results in the signed-out screenshots.
+  // -------------------------------------------------------------------------
+  describe("search affordance", () => {
+    it("offers the trigger to a signed-in user", () => {
+      renderHeader({ user: mockUser });
+      expect(screen.getByRole("button", { name: /search/i })).toBeInTheDocument();
+    });
+
+    it("hides the trigger entirely when signed out", () => {
+      renderHeader({ user: null });
+      expect(
+        screen.queryByRole("button", { name: /search/i })
+      ).not.toBeInTheDocument();
+    });
+
+    it("opens the palette on the meta shortcut", async () => {
+      renderHeader({ user: mockUser });
+      await userEvent.keyboard("{Meta>}k{/Meta}");
+      expect(screen.getByTestId("command-palette")).toBeInTheDocument();
+    });
+
+    it("opens the palette on the control shortcut", async () => {
+      renderHeader({ user: mockUser });
+      await userEvent.keyboard("{Control>}k{/Control}");
+      expect(screen.getByTestId("command-palette")).toBeInTheDocument();
+    });
+
+    it("leaves the shortcut inert when signed out", async () => {
+      renderHeader({ user: null });
+      await userEvent.keyboard("{Control>}k{/Control}");
+      expect(screen.queryByTestId("command-palette")).not.toBeInTheDocument();
     });
   });
 });
