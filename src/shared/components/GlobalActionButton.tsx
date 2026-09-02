@@ -1,94 +1,65 @@
 // Updated components/features/dashboard/GlobalActionButton.tsx
 
 import React, { useState } from 'react';
-import { useNavigation } from '../context/NavigationContext';
-import { useCreateNote } from 'features/collaboration';
-import { Plus, BookOpen, User, Scroll, MessageSquare, MapPin, FileText, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import Button from 'core/components/Button';
 import clsx from 'clsx';
+import { useCreateActions } from 'shared/hooks/useCreateActions';
+import type { CreateAction } from 'shared/hooks/useCreateActions';
 
 /**
  * GlobalActionButton component that provides a floating action button for creating content
  */
 const GlobalActionButton: React.FC = () => {
-  const { navigateToPage } = useNavigation();
-  const { createAndOpen } = useCreateNote();
+  const actions = useCreateActions();
 
   // State for open/closed
   const [isOpen, setIsOpen] = useState(false);
 
-  /**
-   * Handle creating a new note
-   * Creates the note and navigates to it via the shared useCreateNote hook,
-   * then closes the menu.
-   */
-  const handleCreateNote = async () => {
-    await createAndOpen();
-    setIsOpen(false); // Close menu after creation
-  };
-  
-  // Navigation actions
-  const actions = [
-    {
-      label: 'New Note',
-      icon: <FileText className="w-5 h-5" />,
-      onClick: handleCreateNote
-    },
-    {
-      label: 'New Location',
-      icon: <MapPin className="w-5 h-5" />,
-      onClick: () => navigateToPage('/locations/create')
-    },
-    {
-      label: 'New NPC',
-      icon: <User className="w-5 h-5" />,
-      onClick: () => navigateToPage('/npcs/create')
-    },
-    {
-      label: 'New Rumor',
-      icon: <MessageSquare className="w-5 h-5" />,
-      onClick: () => navigateToPage('/rumors/create')
-    },
-    {
-      label: 'New Quest',
-      icon: <Scroll className="w-5 h-5" />,
-      onClick: () => navigateToPage('/quests/create')
-    },
-    {
-      label: 'New Chapter',
-      icon: <BookOpen className="w-5 h-5" />,
-      onClick: () => navigateToPage('/story/chapters/create')
-    }
-  ];
-  
   // Toggle open/closed
   const toggleOpen = () => {
     setIsOpen(!isOpen);
   };
-  
-  // Handle action click
-  const handleActionClick = (onClick: () => void) => {
-    onClick();
-    setIsOpen(false);
+
+  /**
+   * Run a create action and close the menu afterwards.
+   *
+   * The five navigating actions run synchronously, and the menu must close
+   * in that same click's render pass. The note action is async (it writes
+   * the note before navigating to it), so its close waits for that promise.
+   * Unconditionally `await`-ing here would defer *every* close by a
+   * microtask -- including the synchronous ones -- which is a real, visible
+   * behaviour change, not just an implementation detail.
+   */
+  const handleActionClick = (action: CreateAction) => {
+    const result = action.run();
+    if (result && typeof (result as Promise<void>).then === 'function') {
+      (result as Promise<void>).then(() => setIsOpen(false));
+    } else {
+      setIsOpen(false);
+    }
   };
-  
+
   return (
     <div className="fixed right-6 bottom-6 z-40">
       {/* Action menu */}
       {isOpen && (
         <div className="mb-4 flex flex-col-reverse gap-3">
-          {actions.map((action, index) => (
-            <Button
-              variant='primary'
-              startIcon={action.icon}
-              key={index}
-              onClick={() => handleActionClick(action.onClick)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg shadow-md transition-all duration-200 animate-fadeIn"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <span>{action.label}</span>
-            </Button>
-          ))}
+          {actions.map((action, index) => {
+            const Icon = action.icon;
+            return (
+              <Button
+                variant='primary'
+                startIcon={<Icon className="w-5 h-5" />}
+                key={action.id}
+                onClick={() => handleActionClick(action)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg shadow-md transition-all duration-200 animate-fadeIn"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <span>{`New ${action.entityLabel}`}</span>
+              </Button>
+            );
+          })}
         </div>
       )}
       
