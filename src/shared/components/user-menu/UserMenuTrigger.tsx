@@ -52,7 +52,7 @@ const UserMenuTrigger = forwardRef<HTMLButtonElement, UserMenuTriggerProps>(
         <span className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-secondary">
           <User size={16} className="accent" />
         </span>
-        <Typography variant="body-sm" className="truncate font-semibold">
+        <Typography variant="body-sm" className="hidden nav:inline truncate font-semibold">
           {displayName}
         </Typography>
         <ChevronDown size={14} className="flex-shrink-0" />
