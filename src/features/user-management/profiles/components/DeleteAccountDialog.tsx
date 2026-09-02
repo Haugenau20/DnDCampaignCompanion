@@ -1,8 +1,10 @@
 // src/features/user-management/profiles/components/DeleteAccountDialog.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Typography from "core/components/Typography";
 import Button from "core/components/Button";
 import Dialog from "core/components/Dialog";
+import Input from "core/components/Input";
 import { Trash2, AlertCircle } from "lucide-react";
 import { useAuth } from "../../auth/hooks/useAuth";
 import firebaseServices from "core/services/firebase";
@@ -17,34 +19,46 @@ interface DeleteAccountDialogProps {
 /**
  * Confirmation dialog for permanently deleting the signed-in account.
  *
- * A behaviour-preserving extraction of the account-deletion dialog that used
- * to be nested inside `UserProfile.tsx`, over the same
- * `firebaseServices.user.deleteAccount` call (already regioned correctly).
- * A typed-email confirmation gate arrives in a later change.
+ * The confirm button stays disabled until the typed text matches the
+ * account's own email, compared case-insensitively after trimming -- the
+ * email is already on screen in the account card above, so this is a speed
+ * bump against a stray click, not a memory test. On success this awaits the
+ * delete-account service call, then awaits `signOut()`, then navigates
+ * home, in that order.
  */
 const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = ({ open, onClose }) => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmText, setConfirmText] = useState("");
+
+  // Start clean each time the dialog is reopened.
+  useEffect(() => {
+    if (!open) {
+      setConfirmText("");
+      setError(null);
+    }
+  }, [open]);
+
+  const accountEmail = user?.email ?? "";
+  const isConfirmed =
+    accountEmail !== "" && confirmText.trim().toLowerCase() === accountEmail.trim().toLowerCase();
 
   const handleConfirm = async () => {
-    if (!user || deleting) return;
+    if (!user || deleting || !isConfirmed) return;
 
     try {
       setDeleting(true);
       setError(null);
 
       await firebaseServices.user.deleteAccount(user.uid);
-
-      onClose();
-
       await signOut();
 
-      window.location.href = "/";
+      navigate("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete account");
-    } finally {
       setDeleting(false);
     }
   };
@@ -59,6 +73,13 @@ const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = ({ open, onClose
           <li>Delete all your user profiles and settings</li>
           <li>This action is permanent and cannot be undone</li>
         </ul>
+        <Input
+          label={`Type ${accountEmail} to confirm`}
+          value={confirmText}
+          onChange={(e) => setConfirmText(e.target.value)}
+          placeholder={accountEmail}
+          disabled={deleting}
+        />
         <div className="flex justify-end gap-4 mt-6">
           <Button variant="ghost" onClick={onClose} disabled={deleting}>
             Cancel
@@ -68,6 +89,7 @@ const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = ({ open, onClose
             color="error"
             onClick={handleConfirm}
             isLoading={deleting}
+            disabled={!isConfirmed}
             startIcon={<Trash2 size={16} />}
           >
             Delete My Account

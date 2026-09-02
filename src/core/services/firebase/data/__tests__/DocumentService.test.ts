@@ -14,6 +14,7 @@ const mockUpdateDoc = jest.fn();
 const mockDeleteDoc = jest.fn();
 const mockGetDoc = jest.fn();
 const mockGetDocs = jest.fn();
+const mockGetCountFromServer = jest.fn();
 const mockQuery = jest.fn((_ref: any, ...args: any[]) => ({ ref: _ref, constraints: args }));
 const mockWhere = jest.fn((...args: any[]) => ({ type: 'where', args }));
 const mockWriteBatch = jest.fn();
@@ -45,6 +46,7 @@ jest.mock('firebase/firestore', () => ({
   doc: function() { return (mockDoc as Function).apply(null, arguments); },
   getDoc: function() { return (mockGetDoc as Function).apply(null, arguments); },
   getDocs: function() { return (mockGetDocs as Function).apply(null, arguments); },
+  getCountFromServer: function() { return (mockGetCountFromServer as Function).apply(null, arguments); },
   setDoc: function() { return (mockSetDoc as Function).apply(null, arguments); },
   updateDoc: function() { return (mockUpdateDoc as Function).apply(null, arguments); },
   deleteDoc: function() { return (mockDeleteDoc as Function).apply(null, arguments); },
@@ -123,6 +125,7 @@ describe('DocumentService', () => {
       doc: function() { return (mockDoc as Function).apply(null, arguments); },
       getDoc: function() { return (mockGetDoc as Function).apply(null, arguments); },
       getDocs: function() { return (mockGetDocs as Function).apply(null, arguments); },
+      getCountFromServer: function() { return (mockGetCountFromServer as Function).apply(null, arguments); },
       setDoc: function() { return (mockSetDoc as Function).apply(null, arguments); },
       updateDoc: function() { return (mockUpdateDoc as Function).apply(null, arguments); },
       deleteDoc: function() { return (mockDeleteDoc as Function).apply(null, arguments); },
@@ -162,7 +165,7 @@ describe('DocumentService', () => {
       },
     }));
 
-    [mockSetDoc, mockUpdateDoc, mockDeleteDoc, mockGetDoc, mockGetDocs,
+    [mockSetDoc, mockUpdateDoc, mockDeleteDoc, mockGetDoc, mockGetDocs, mockGetCountFromServer,
      mockBatchSet, mockBatchUpdate, mockBatchDelete, mockBatchCommit].forEach(m => m.mockReset());
     mockWriteBatch.mockReturnValue(mockBatchObj);
     mockBatchCommit.mockResolvedValue(undefined);
@@ -678,6 +681,34 @@ describe('DocumentService', () => {
   });
 
   // ─── collection path construction ───────────────────────────────────────────
+
+  // ─── getCollectionCount ───────────────────────────────────────────────────
+
+  describe('getCollectionCount', () => {
+    test('counts a collection at a full path', async () => {
+      mockGetCountFromServer.mockResolvedValueOnce({ data: () => ({ count: 7 }) });
+
+      const svc = DocumentService.getInstance();
+      const count = await svc.getCollectionCount('groups/g1/users/u1/notes');
+
+      expect(count).toBe(7);
+      expect(mockCollection).toHaveBeenCalledWith(
+        expect.anything(),
+        'groups/g1/users/u1/notes'
+      );
+      expect(mockGetCountFromServer).toHaveBeenCalledTimes(1);
+    });
+
+    test('propagates a failure rather than returning 0', async () => {
+      mockGetCountFromServer.mockRejectedValueOnce(new Error('permission denied'));
+
+      const svc = DocumentService.getInstance();
+
+      await expect(svc.getCollectionCount('groups/g1/users/u1/notes')).rejects.toThrow(
+        'permission denied'
+      );
+    });
+  });
 
   describe('collection path construction', () => {
     test('should use full path directly when collection name contains "/"', async () => {

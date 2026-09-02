@@ -1,5 +1,6 @@
 // src/features/user-management/profiles/components/LeaveGroupDialog.tsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Typography from "core/components/Typography";
 import Button from "core/components/Button";
 import Dialog from "core/components/Dialog";
@@ -18,15 +19,18 @@ interface LeaveGroupDialogProps {
 /**
  * Confirmation dialog for leaving the active group.
  *
- * A behaviour-preserving extraction of the group-leave dialog that used to
- * be nested inside `UserProfile.tsx`, over the same
- * `firebaseServices.group.removeUserFromGroup` call (already regioned
- * correctly). The `refreshGroups()` / `window.location.href` sequence is
- * unchanged here -- a later change replaces it with a proper navigation.
+ * On confirm, this awaits the group-leave service call, then awaits
+ * `refreshGroups()`, then navigates home -- in that order. The earlier
+ * version closed the dialog and started a hard `window.location.href`
+ * navigation immediately after firing the request, discarding the awaited
+ * refresh one line after awaiting it and throwing away the whole SPA in the
+ * process. Navigating only after both the service call and the refresh have
+ * completed is what makes the landing page correct without a reload.
  */
 const LeaveGroupDialog: React.FC<LeaveGroupDialogProps> = ({ open, onClose }) => {
   const { user } = useAuth();
   const { activeGroup, refreshGroups } = useGroups();
+  const navigate = useNavigate();
 
   const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,16 +44,13 @@ const LeaveGroupDialog: React.FC<LeaveGroupDialogProps> = ({ open, onClose }) =>
 
       await firebaseServices.group.removeUserFromGroup(activeGroup.id, user.uid);
 
-      onClose();
-
       if (refreshGroups) {
         await refreshGroups();
       }
 
-      window.location.href = "/";
+      navigate("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to leave group");
-    } finally {
       setLeaving(false);
     }
   };
