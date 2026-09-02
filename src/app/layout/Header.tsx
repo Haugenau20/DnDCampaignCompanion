@@ -1,9 +1,9 @@
 // app/layout/Header.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SearchBar } from 'shared/components/SearchBar';
 import ThemeSelector from 'shared/components/ThemeSelector';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   useAuth,
   useGroups,
@@ -12,8 +12,9 @@ import {
   AdminPanel,
   SignInForm
 } from 'features/user-management';
-import { Menu, X, LogOut, ShieldAlert, UserPlus, User, LogIn, Bug } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import ContextSwitcher from 'shared/components/context-switcher/ContextSwitcher';
+import UserMenu from 'shared/components/user-menu/UserMenu';
 import Button from 'core/components/Button';
 import Dialog from 'core/components/Dialog';
 import Navigation from './Navigation';
@@ -23,93 +24,14 @@ import Navigation from './Navigation';
  */
 const Header: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user, signOut } = useAuth();
-  const { activeGroupUserProfile, activeGroup } = useGroups();
+  const { user } = useAuth();
+  const { activeGroup } = useGroups();
   const completeJoin = useJoinGroupCompletion();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const menuContainerRef = useRef<HTMLDivElement>(null);
-
-  // Check if user is admin
-  const isAdmin = activeGroupUserProfile?.role === 'admin' || false;
 
   // Dialog states
   const [showJoinGroup, setShowJoinGroup] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        menuOpen &&
-        menuRef.current &&
-        !menuRef.current.contains(event.target as Node) &&
-        menuButtonRef.current &&
-        !menuButtonRef.current.contains(event.target as Node)
-      ) {
-        setMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [menuOpen]);
-
-  // Position the menu under the hamburger button
-  useEffect(() => {
-    if (menuOpen && menuButtonRef.current && menuContainerRef.current) {
-      const buttonRect = menuButtonRef.current.getBoundingClientRect();
-      // Position the menu below the button
-      menuContainerRef.current.style.top = `${buttonRect.bottom}px`;
-      menuContainerRef.current.style.right = `${window.innerWidth - buttonRect.right}px`;
-    }
-  }, [menuOpen]);
-
-  // Handle sign out
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      setMenuOpen(false); // Close menu after signing out
-    } catch (err) {
-      console.error('Error signing out:', err);
-    }
-  };
-
-  // Toggle menu
-  const toggleMenu = () => {
-    setMenuOpen(!menuOpen);
-  };
-  
-  // Handle profile click -- navigates to the profile page rather than
-  // opening a dialog, the same way handleReportProblem navigates to /contact.
-  const handleProfileClick = () => {
-    setMenuOpen(false);
-    navigate('/profile');
-  };
-
-  /**
-   * Open the contact page as a problem report, carrying where the user was.
-   *
-   * TODO(PR 4): this moves into the profile menu when that lands. The
-   * `?from=` parameter must survive the move -- it is the only way the
-   * report knows which page the problem was on, since by the time the form
-   * renders the current path is always "/contact".
-   */
-  const handleReportProblem = () => {
-    setMenuOpen(false);
-    navigate(`/contact?from=${encodeURIComponent(location.pathname)}`);
-  };
-
-  // Handle join group click
-  const handleJoinGroupClick = () => {
-    setShowJoinGroup(true);
-    setMenuOpen(false);
-  };
 
   /**
    * Closes the dialog and lands the user in the group they just joined.
@@ -125,16 +47,9 @@ const Header: React.FC = () => {
     await completeJoin();
   };
 
-  // Handle admin click
-  const handleAdminClick = () => {
-    setShowAdmin(true);
-    setMenuOpen(false);
-  };
-
   // Handle sign in click
   const handleSignInClick = () => {
     setShowSignIn(true);
-    setMenuOpen(false);
   };
 
   return (
@@ -179,164 +94,33 @@ const Header: React.FC = () => {
               <SearchBar />
             </div>
 
-            {/* Right side - Menu Button + Sign In/Out */}
+            {/* Right side - Account */}
             <div className="flex items-center justify-center gap-2">
-              {/* Menu Button */}
-              <button
-              ref={menuButtonRef}
-              onClick={toggleMenu}
-              className="p-2 rounded-md button-ghost"
-              aria-label="Menu"
-              aria-expanded={menuOpen}
-              aria-controls="header-menu"
-              >
-              {menuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
-              
-              {/* Sign Out Button - Always visible on desktop when logged in */}
               {user ? (
-              <Button
-                variant="ghost"
-                onClick={handleSignOut}
-                startIcon={<LogOut className="w-5 h-5" />}
-                className="hidden md:flex"
-              >
-                <span className="hidden lg:inline">Sign Out</span>
-              </Button>
+                /* One named menu carries everything the hamburger used to:
+                   profile, group members, report a problem, admin panel and
+                   sign out, plus the posting-as switch and the account
+                   theme. */
+                <UserMenu onOpenAdmin={() => setShowAdmin(true)} />
               ) : (
-              /* Sign In Button - Always visible on desktop when not logged in */
-              <Button
-                variant="ghost"
-                onClick={handleSignInClick}
-                startIcon={<LogIn className="w-5 h-5" />}
-                className="hidden md:flex"
-              >
-                <span className="hidden lg:inline">Sign In</span>
-              </Button>
+                <>
+                  {/* Theme stays reachable without an account -- the
+                      hamburger used to carry this for signed-out users too. */}
+                  <ThemeSelector />
+                  <Button
+                    variant="ghost"
+                    onClick={handleSignInClick}
+                    startIcon={<LogIn className="w-5 h-5" />}
+                  >
+                    <span>Sign In</span>
+                  </Button>
+                </>
               )}
             </div>
           </div>
-          
-          {/* Menu Dropdown */}
-          {menuOpen && (
-            <div 
-              ref={menuContainerRef}
-              className="fixed" 
-              style={{ zIndex: 50 }}
-            >
-              <div 
-                id="header-menu"
-                ref={menuRef}
-                className="mt-2 p-4 rounded-lg shadow-lg w-72 card"
-              >
-                <div className="flex flex-col space-y-4">
-                  {user ? (
-                    /* Account section - only when logged in */
-                    <div>
-                      <h3 className="mb-3 font-medium typography">
-                        Account
-                      </h3>
-                      
-                      {/* Icon Buttons Row */}
-                      <div className="flex gap-4 justify-center">
-                        {/* Profile Button */}
-                        <Button
-                          variant="ghost"
-                          startIcon={<User size={24} className="primary" />}
-                          iconPosition="top"
-                          onClick={handleProfileClick}
-                          className="flex flex-col items-center gap-1 button-ghost typography"
-                          aria-label="Profile"
-                        >
-                          <span className="text-xs font-medium typography">Profile</span>
-                        </Button>
-
-                        {/* Report a problem — contact is where bug reports
-                            come from, and the footer was its only entrance */}
-                        <Button
-                          variant="ghost"
-                          startIcon={<Bug size={24} className="primary" />}
-                          iconPosition="top"
-                          onClick={handleReportProblem}
-                          className="flex flex-col items-center gap-1 button-ghost typography"
-                          aria-label="Report a problem"
-                        >
-                          <span className="text-xs font-medium typography">Report</span>
-                        </Button>
-
-                        {/* Join Group Button */}
-                        <Button
-                          variant="ghost"
-                          startIcon={<UserPlus size={24} className="primary" />}
-                          iconPosition="top"
-                          onClick={handleJoinGroupClick}
-                          className="flex flex-col items-center gap-1 button-ghost typography"
-                          aria-label="Join Group"
-                        >
-                          <span className="text-xs font-medium typography">Groups</span>
-                        </Button>
-                        
-                        {/* Admin Button - only if admin */}
-                        {isAdmin && (
-                          <Button
-                            variant="ghost"
-                            startIcon={<ShieldAlert size={24} className="primary" />}
-                            iconPosition="top"
-                            onClick={handleAdminClick}
-                            className="flex flex-col items-center gap-1 button-ghost typography"
-                            aria-label="Admin"
-                          >
-                            <span className="text-xs font-medium typography">Admin</span>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    /* Sign In Section - Only when not logged in */
-                    <div>
-                      <h3 className="mb-3 font-medium lg:hidden md:hidden typography">
-                        Account
-                      </h3>
-                      <Button
-                        onClick={handleSignInClick}
-                        startIcon={<LogIn className="w-5 h-5" />}
-                        className="w-full lg:hidden md:hidden"
-                      >
-                        Sign In
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {/* Appearance Section - Always visible */}
-                  <div className="pt-4">
-                    <h3 className="mb-3 font-medium typography">
-                      Appearance
-                    </h3>
-                    <div className="flex items-center justify-between">
-                      <span className="typography">Theme</span>
-                        <ThemeSelector />
-                    </div>
-                  </div>
-                  
-                  {/* Sign Out button - Mobile only */}
-                  {user && (
-                    <div className="pt-3">
-                      <Button
-                        onClick={handleSignOut}
-                        startIcon={<LogOut className="w-5 h-5" />}
-                        className="w-full md:hidden"
-                      >
-                        Sign Out
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
-      
+
       {/* Join Group Dialog -- the sole mount; ContextSwitcher's chip opens it
           through the `onJoinGroup` callback rather than mounting its own. */}
       <JoinGroupDialog
@@ -344,19 +128,19 @@ const Header: React.FC = () => {
         onClose={() => setShowJoinGroup(false)}
         onSuccess={handleJoinedGroup}
       />
-      
-      {/* Admin Panel Dialog */}
+
+      {/* Admin Panel Dialog -- opened by the account menu */}
       <Dialog
         open={showAdmin}
         onClose={() => setShowAdmin(false)}
         title="Admin Panel"
         maxWidth="max-w-4xl"
       >
-        <AdminPanel 
+        <AdminPanel
           onClose={() => setShowAdmin(false)}
         />
       </Dialog>
-      
+
       {/* Sign In Dialog */}
       <Dialog
         open={showSignIn}
@@ -364,8 +148,8 @@ const Header: React.FC = () => {
         title="Sign In"
         maxWidth="max-w-md"
       >
-        <SignInForm 
-          onSuccess={() => setShowSignIn(false)} 
+        <SignInForm
+          onSuccess={() => setShowSignIn(false)}
         />
       </Dialog>
     </header>

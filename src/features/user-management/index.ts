@@ -22,6 +22,7 @@ export { useGroups } from './groups/hooks/useGroups';
 export { useJoinGroupCompletion } from './groups/hooks/useJoinGroupCompletion';
 export { useInvitations } from './groups/hooks/useInvitations';
 export { useCampaigns } from './groups/hooks/useCampaigns';
+export { useAccountTheme } from './profiles/hooks/useAccountTheme';
 export { useFirestore } from './shared/hooks/useFirestore';
 export { useUsernameLookup } from './shared/hooks/useUsernameLookup';
 

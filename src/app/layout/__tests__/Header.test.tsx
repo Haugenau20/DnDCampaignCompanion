@@ -88,7 +88,14 @@ jest.mock("shared/components/ThemeSelector", () => ({
 
 jest.mock("shared/components/context-switcher/ContextSwitcher", () => ({
   __esModule: true,
-  default: () => <div data-testid="context-switcher" />,
+  // Renders a real trigger for `onJoinGroup` so Header's own dialog-mounting
+  // behaviour can still be exercised without opening the (now-deleted)
+  // hamburger menu to reach it.
+  default: ({ onJoinGroup }: { onJoinGroup: () => void }) => (
+    <div data-testid="context-switcher">
+      <button onClick={onJoinGroup}>Join Group</button>
+    </div>
+  ),
 }));
 
 // Header now hosts the desktop navigation inline, replacing the second
@@ -97,6 +104,19 @@ jest.mock("../Navigation", () => ({
   __esModule: true,
   default: ({ variant }: any) => (
     <div data-testid="navigation" data-variant={variant} />
+  ),
+}));
+
+// The account menu -- one named chip replacing the hamburger -- has its own
+// suite (UserMenu.test.tsx and its four child suites). Here it is a stub
+// that exposes just enough to prove Header wires `onOpenAdmin` through to
+// the admin dialog it still owns.
+jest.mock("shared/components/user-menu/UserMenu", () => ({
+  __esModule: true,
+  default: ({ onOpenAdmin }: { onOpenAdmin: () => void }) => (
+    <div data-testid="user-menu">
+      <button onClick={onOpenAdmin}>Open Admin</button>
+    </div>
   ),
 }));
 
@@ -209,18 +229,22 @@ describe("Header", () => {
       expect(screen.getByTestId("search-bar")).toBeInTheDocument();
     });
 
-    test("should render the menu toggle button", () => {
-      render(<Header />);
-      expect(
-        screen.getByRole("button", { name: /menu/i })
-      ).toBeInTheDocument();
-    });
-
     test("should render the app title link", () => {
       render(<Header />);
       // Title uses responsive text — either "D&D Campaign Companion" or "D&D Companion"
       const titleLink = screen.getByRole("link", { name: /D&D/i });
       expect(titleLink).toBeInTheDocument();
+    });
+
+    // Successor to "should render the menu toggle button": the hamburger this
+    // task deletes is gone, and there is nothing left in Header that a
+    // button named "menu" could refer to.
+    test("renders no hamburger button", () => {
+      setupMocks({ user: { uid: "u1" } });
+      render(<Header />);
+      expect(
+        screen.queryByRole("button", { name: /^menu$/i })
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -230,25 +254,27 @@ describe("Header", () => {
   describe("when user is NOT authenticated", () => {
     beforeEach(() => setupMocks({ user: null }));
 
-    test("should show a Sign In button when not logged in", () => {
+    // Successor to "should show a Sign In button when not logged in": the
+    // hamburger used to carry a second, mobile-only Sign In button; now
+    // there is exactly one, visible at every width.
+    test("shows a Sign In button at every width when signed out", () => {
       render(<Header />);
-      // At least one Sign In button/link should be visible
-      const signInBtns = screen.getAllByRole("button").filter((b) =>
-        /sign in/i.test(b.textContent ?? "")
-      );
-      // The desktop Sign In button uses a Button component
-      expect(signInBtns.length).toBeGreaterThanOrEqual(0);
-      // Better: check aria-label or text
-      // The hidden md:flex Sign In button is in the DOM
-      expect(document.body.textContent).toMatch(/Sign In/);
+      const signInButton = screen.getByRole("button", { name: /sign in/i });
+      expect(signInButton).toBeInTheDocument();
+      expect(signInButton.className).not.toMatch(/hidden/);
     });
 
-    test("should NOT show a Sign Out button when not logged in", () => {
+    // Successor to "should NOT show a Sign Out button when not logged in":
+    // Sign out now lives only inside the user menu, which does not render
+    // at all when signed out.
+    test("renders no user menu when signed out", () => {
       render(<Header />);
-      const signOutBtns = screen.queryAllByRole("button").filter((b) =>
-        /sign out/i.test(b.textContent ?? "")
-      );
-      expect(signOutBtns).toHaveLength(0);
+      expect(screen.queryByTestId("user-menu")).not.toBeInTheDocument();
+    });
+
+    test("still offers the theme selector when signed out", () => {
+      render(<Header />);
+      expect(screen.getByTestId("theme-selector")).toBeInTheDocument();
     });
   });
 
@@ -256,124 +282,35 @@ describe("Header", () => {
   // Authenticated state
   // -------------------------------------------------------------------------
   describe("when user IS authenticated", () => {
-    beforeEach(() =>
-      setupMocks({ user: { uid: "user-1" } })
-    );
+    beforeEach(() => setupMocks({ user: { uid: "user-1" } }));
 
-    test("should show a Sign Out button when logged in", () => {
+    // Successor to "should show a Sign Out button when logged in": sign out
+    // is now a row inside the user menu (see UserMenuLinks's own suite);
+    // Header's job is only to mount the menu.
+    test("renders the account menu when signed in", () => {
       render(<Header />);
-      // At least one button with 'sign out' text (desktop or mobile)
-      const btns = screen
-        .getAllByRole("button")
-        .filter((b) => /sign out/i.test(b.textContent ?? ""));
-      // Desktop button has text "Sign Out" (lg:inline) — may be in DOM as hidden
-      // We check the DOM text globally
-      expect(document.body.textContent).toMatch(/Sign Out/i);
+      expect(screen.getByTestId("user-menu")).toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Menu toggle
+  // Admin panel wiring
   // -------------------------------------------------------------------------
-  describe("menu toggle", () => {
-    test("should NOT show the dropdown menu before toggling", () => {
-      setupMocks({ user: { uid: "u1" } });
-      render(<Header />);
-      // Menu content: "Account" section
-      expect(screen.queryByText("Account")).not.toBeInTheDocument();
-    });
-
-    test("should show the dropdown menu after clicking the menu button", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" } });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      expect(screen.getByText("Account")).toBeInTheDocument();
-    });
-
-    test("should show the Appearance section in the menu", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" } });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      expect(screen.getByText("Appearance")).toBeInTheDocument();
-    });
-
-    test("should show the ThemeSelector in the open menu", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" } });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      expect(screen.getByTestId("theme-selector")).toBeInTheDocument();
-    });
-
-    test("should close the menu when clicking menu button again", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" } });
-      render(<Header />);
-
-      const menuBtn = screen.getByRole("button", { name: /menu/i });
-      await user.click(menuBtn);
-      expect(screen.getByText("Account")).toBeInTheDocument();
-
-      await user.click(menuBtn);
-      expect(screen.queryByText("Account")).not.toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Admin visibility
-  // -------------------------------------------------------------------------
-  describe("admin visibility", () => {
-    test("should NOT show Admin button for non-admin users", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" }, isAdmin: false });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      expect(screen.queryByRole("button", { name: /admin/i })).not.toBeInTheDocument();
-    });
-
-    test("should show Admin button for admin users", async () => {
+  describe("admin panel", () => {
+    // Successor to "should NOT/should show Admin button for ...": which
+    // users see the Admin panel row is now UserMenuLinks's concern (its own
+    // suite: "shows Admin panel only for admins"). What Header still owns is
+    // opening its Dialog when the menu asks it to.
+    test("opens the admin panel when the menu asks to", async () => {
       const user = userEvent.setup();
       setupMocks({ user: { uid: "u1" }, isAdmin: true });
       render(<Header />);
 
-      await user.click(screen.getByRole("button", { name: /menu/i }));
+      await user.click(screen.getByRole("button", { name: /open admin/i }));
 
-      expect(screen.getByRole("button", { name: /admin/i })).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Sign out
-  // -------------------------------------------------------------------------
-  describe("sign out", () => {
-    test("should call signOut when Sign Out button is clicked", async () => {
-      const user = userEvent.setup();
-      mockSignOut.mockResolvedValue(undefined);
-      setupMocks({ user: { uid: "u1" } });
-      render(<Header />);
-
-      // Open menu to access mobile sign out
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      // Find all Sign Out buttons (mobile one inside menu)
-      const signOutBtns = screen
-        .getAllByRole("button")
-        .filter((b) => /sign out/i.test(b.textContent ?? ""));
-
-      if (signOutBtns.length > 0) {
-        await user.click(signOutBtns[0]);
-        expect(mockSignOut).toHaveBeenCalled();
-      }
+      expect(
+        screen.getByRole("dialog", { name: "Admin Panel" })
+      ).toBeInTheDocument();
     });
   });
 
@@ -381,23 +318,6 @@ describe("Header", () => {
   // Campaign context display
   // -------------------------------------------------------------------------
   describe("campaign context", () => {
-    test("should display active campaign name when available", async () => {
-      const user = userEvent.setup();
-      setupMocks({
-        user: { uid: "u1" },
-        activeCampaignId: "camp-1",
-        campaigns: [{ id: "camp-1", name: "The Dark Campaign" }],
-      });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      // The menu's read-only Campaign section is gone: the switcher chip is
-      // the one place the active campaign is shown, and the one door onto
-      // changing it.
-      expect(screen.queryByText("The Dark Campaign")).not.toBeInTheDocument();
-    });
-
     test("hosts the context switcher in the bar", () => {
       setupMocks({
         user: { uid: "u1" },
@@ -434,40 +354,6 @@ describe("Header", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Report a problem
-  // -------------------------------------------------------------------------
-  describe("report a problem", () => {
-    test("offers a way to report a problem", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" } });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-
-      expect(
-        screen.getByRole("button", { name: /Report a problem/i })
-      ).toBeInTheDocument();
-    });
-
-    test("carries the current route to the contact page as context", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" }, pathname: "/dashboard" });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-      await user.click(
-        screen.getByRole("button", { name: /Report a problem/i })
-      );
-
-      // The originating route is what makes a bug report actionable; by the
-      // time the form renders, the current path is only ever "/contact".
-      expect(mockNavigate).toHaveBeenCalledWith(
-        expect.stringContaining("/contact?from=")
-      );
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // Navigation consolidation
   // -------------------------------------------------------------------------
   describe("navigation", () => {
@@ -484,35 +370,10 @@ describe("Header", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Profile navigation -- the profile dialog is gone; the menu item now
-  // navigates to the profile page instead of opening a dialog over it.
-  // -------------------------------------------------------------------------
-  describe("profile navigation", () => {
-    test("the Profile menu item navigates to /profile", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" } });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-      await user.click(screen.getByRole("button", { name: /^profile$/i }));
-
-      expect(mockNavigate).toHaveBeenCalledWith("/profile");
-    });
-
-    test("mounts no profile dialog", async () => {
-      const user = userEvent.setup();
-      setupMocks({ user: { uid: "u1" } });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-      await user.click(screen.getByRole("button", { name: /^profile$/i }));
-
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Joining a group -- the sole mount, and its one success behaviour
+  // Joining a group -- the sole mount, and its one success behaviour. The
+  // trigger moved from the hamburger's "Groups" button to the context
+  // switcher's own `onJoinGroup` callback (mocked above as a plain button),
+  // but Header's own dialog-mounting behaviour is unchanged.
   // -------------------------------------------------------------------------
   describe("joining a group", () => {
     test("mounts the join dialog exactly once", async () => {
@@ -523,7 +384,6 @@ describe("Header", () => {
       });
       render(<Header />);
 
-      await user.click(screen.getByRole("button", { name: /menu/i }));
       await user.click(screen.getByRole("button", { name: /join group/i }));
 
       expect(screen.getAllByTestId("trigger-join-success")).toHaveLength(1);
@@ -546,7 +406,6 @@ describe("Header", () => {
       });
       render(<Header />);
 
-      await user.click(screen.getByRole("button", { name: /menu/i }));
       await user.click(screen.getByRole("button", { name: /join group/i }));
       expect(screen.getByTestId("trigger-join-success")).toBeInTheDocument();
 
