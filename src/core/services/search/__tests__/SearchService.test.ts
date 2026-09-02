@@ -232,13 +232,17 @@ describe('SearchService', () => {
   // ─── fuzzy matching ────────────────────────────────────────────────────────
 
   describe('fuzzyMatch option', () => {
-    test('should find results when fuzzyMatch=true and query characters appear in order', () => {
+    // Rewritten: subsequence matching now applies to titles only, never to
+    // content. The original test put the subsequence in `content`, which is
+    // exactly the unanchored `.*`-chain-over-chapter-bodies behaviour this
+    // task removes. See report for before/after.
+    test('should find results when fuzzyMatch=true and query characters appear in order in the title', () => {
       const svc = makeService({ fuzzyMatch: true });
-      // 'grdn' should fuzzy-match 'Gandalf' if g,r,d,n appear in sequence
-      // Actually 'Gandalf': g-a-n-d-a-l-f → 'gn' should match
-      svc.addDocument(makeDoc('n1', 'npc', 'Gandalf the Grey', 'Gandalf'));
-      const results = svc.search('gndf'); // g..n..d..f in Gandalf
+      // 'gndf' is a subsequence of the title 'Gandalf the Grey' (g..n..d..f)
+      svc.addDocument(makeDoc('n1', 'npc', 'A wizard of some renown', 'Gandalf the Grey'));
+      const results = svc.search('gndf');
       expect(results.length).toBeGreaterThan(0);
+      expect(results[0].id).toBe('n1');
     });
 
     test('should not find results with fuzzyMatch=false for non-substring query', () => {
@@ -248,12 +252,63 @@ describe('SearchService', () => {
       const results = svc.search('gndf');
       expect(results).toEqual([]);
     });
+
+    test('should not apply subsequence matching to content, even with fuzzyMatch=true', () => {
+      const svc = makeService({ fuzzyMatch: true });
+      // 'gndf' is a subsequence of the *content* but not the title, and is not
+      // a real word-prefix match either - it must not match.
+      svc.addDocument(makeDoc('n1', 'npc', 'Gandalf the Grey', 'Unrelated Title'));
+      const results = svc.search('gndf');
+      expect(results).toEqual([]);
+    });
+
+    test('a long scattered-letter content match is rejected (no .*-chain over content)', () => {
+      const svc = makeService({ fuzzyMatch: true });
+      // Build 2000+ chars of prose containing d, r, o, o, p in order but never
+      // adjacent and never forming the word "droop".
+      const filler = 'The party rested quietly near the river bank. '.repeat(50);
+      const content =
+        filler.slice(0, 200) +
+        'A drawing of a rope lay on the ground, orbiting owls hooted, ' +
+        filler.slice(200);
+      expect(content.length).toBeGreaterThanOrEqual(2000);
+      svc.addDocument(makeDoc('n1', 'npc', content, 'Unrelated Title'));
+      const results = svc.search('droop');
+      expect(results.find(r => r.id === 'n1')).toBeUndefined();
+    });
+  });
+
+  // ─── regex-special characters in query ────────────────────────────────────
+
+  describe('regex-special characters', () => {
+    test('a lone "(" in the query does not throw', () => {
+      const svc = makeService();
+      svc.addDocument(makeDoc('n1', 'npc', 'Gandalf the Grey', 'Gandalf'));
+      expect(() => svc.search('(')).not.toThrow();
+    });
+
+    test('"a[" in the query does not throw', () => {
+      const svc = makeService();
+      svc.addDocument(makeDoc('n1', 'npc', 'Gandalf the Grey', 'Gandalf'));
+      expect(() => svc.search('a[')).not.toThrow();
+    });
+
+    test.each(['(', '[', '*', '+', '?', '\\'])(
+      'query containing %s does not throw and returns an array',
+      (char) => {
+        const svc = makeService();
+        svc.addDocument(makeDoc('n1', 'npc', 'Gandalf the Grey', 'Gandalf'));
+        let results: unknown;
+        expect(() => { results = svc.search(`a${char}b`); }).not.toThrow();
+        expect(Array.isArray(results)).toBe(true);
+      }
+    );
   });
 
   // ─── extractMatches / contextLength ───────────────────────────────────────
 
   describe('match extraction', () => {
-    test('should include matching context snippets in matches array', () => {
+    test('should include a matching context snippet in matches array', () => {
       const svc = makeService({ fuzzyMatch: false, contextLength: 10 });
       svc.addDocument(
         makeDoc('n1', 'npc', 'The wizard Gandalf defeated the Balrog', 'Gandalf')
@@ -264,28 +319,95 @@ describe('SearchService', () => {
       expect(result.matches.some(m => m.toLowerCase().includes('gandalf'))).toBe(true);
     });
 
-    test('should deduplicate identical match snippets', () => {
+    // Content is assembled by the document builders as `${title} ${body} ...`,
+    // so a document whose leading field is empty genuinely starts with
+    // whitespace. Occurrence indices must therefore be computed against
+    // untrimmed text -- trimming shifts every index left and the snippet gets
+    // sliced in the wrong place.
+    test('should slice the snippet correctly when content has leading whitespace', () => {
       const svc = makeService({ fuzzyMatch: false, contextLength: 5 });
-      // "cat cat cat" → multiple occurrences of "cat"
+      // One leading space, as `${title} ${body}` produces when title is empty.
+      // "Gandalf" starts at index 12 of the raw string, but at index 11 of a
+      // trimmed copy -- so an implementation that indexes the trimmed text and
+      // slices the raw text is off by exactly one character.
+      svc.addDocument(
+        makeDoc('n1', 'npc', ' The wizard Gandalf defeated the Balrog', 'Gandalf')
+      );
+      const [result] = svc.search('Gandalf');
+      expect(result.matches[0]).toBe('zard Gandalf defe');
+    });
+
+    // Rewritten: there is now at most one snippet, so "deduplication" is
+    // vacuous. Replaced with a cap assertion plus a matchCount assertion.
+    // See report for before/after.
+    test('should cap matches at one snippet and report the true occurrence count', () => {
+      const svc = makeService({ fuzzyMatch: false, contextLength: 5 });
+      // "cat cat cat" → three occurrences of "cat"
       svc.addDocument(makeDoc('n1', 'npc', 'cat cat cat', 'Cats'));
       const [result] = svc.search('cat');
-      // Matches should not contain duplicates (lodash _.uniq is applied)
-      const unique = [...new Set(result.matches)];
-      expect(result.matches.length).toBe(unique.length);
+      expect(result.matches.length).toBeLessThanOrEqual(1);
+      expect(result.matchCount).toBe(3);
+    });
+
+    test('a document with content matching the query 20 times returns one snippet and matchCount 20', () => {
+      const svc = makeService({ fuzzyMatch: false, contextLength: 10 });
+      const content = Array.from({ length: 20 }, () => 'obelisk').join(' stands near the ');
+      svc.addDocument(makeDoc('n1', 'npc', content, 'Ruins'));
+      const [result] = svc.search('obelisk');
+      expect(result.matches.length).toBe(1);
+      expect(result.matchCount).toBe(20);
+    });
+
+    test('word-prefix content match: "obel" matches "the obelisk hums"', () => {
+      const svc = makeService({ fuzzyMatch: false });
+      svc.addDocument(makeDoc('n1', 'npc', 'the obelisk hums', 'Ruins'));
+      const results = svc.search('obel');
+      expect(results.length).toBe(1);
+      expect(results[0].id).toBe('n1');
+    });
+
+    test('mid-word content match is not found: "belisk" does not match "the obelisk hums"', () => {
+      const svc = makeService({ fuzzyMatch: false });
+      svc.addDocument(makeDoc('n1', 'npc', 'the obelisk hums', 'Unrelated'));
+      const results = svc.search('belisk');
+      expect(results).toEqual([]);
+    });
+
+    test('a document with no title match and no content snippet is dropped, not returned empty', () => {
+      const svc = makeService({ fuzzyMatch: false });
+      svc.addDocument(makeDoc('n1', 'npc', 'nothing relevant here', 'Also unrelated'));
+      const results = svc.search('sauron');
+      expect(results).toEqual([]);
     });
   });
 
   // ─── relevance scoring ────────────────────────────────────────────────────
 
   describe('relevance scoring', () => {
+    // Strengthened: the original test only had two npc documents, so it could
+    // pass even if scoring were wrong but grouping/order happened to line up.
+    // Now scored explicitly against the query rather than a match snippet.
     test('title matches should rank higher than content-only matches', () => {
       const svc = makeService({ fuzzyMatch: false });
       // doc1: query only in content; doc2: query in title
       svc.addDocument(makeDoc('doc1', 'npc', 'Sauron is the dark lord', 'Villain'));
       svc.addDocument(makeDoc('doc2', 'npc', 'Some unrelated text here', 'Sauron'));
       const results = svc.search('Sauron');
+      expect(results).toHaveLength(2);
       // doc2 has title match so should appear first
       expect(results[0].id).toBe('doc2');
+    });
+
+    test('a title match outranks a body mention globally, across different types', () => {
+      const svc = makeService({ fuzzyMatch: false });
+      // location document only mentions "droop" in content
+      svc.addDocument(makeDoc('loc1', 'location', 'Droop was seen near this cave once', 'Hidden Cave'));
+      // npc document has "Droop" as its title
+      svc.addDocument(makeDoc('npc1', 'npc', 'A nervous gnome tinkerer', 'Droop'));
+      const results = svc.search('droop');
+      expect(results.length).toBeGreaterThanOrEqual(2);
+      expect(results[0].id).toBe('npc1');
+      expect(results[0].type).toBe('npc');
     });
   });
 });
