@@ -33,6 +33,7 @@ import { RumorsPage, RumorCreatePage, RumorEditPage } from 'pages/rumors';
 import { NotesPage, NotePage } from 'pages/notes';
 import PrivacyPolicyPage from 'pages/PrivacyPolicyPage';
 import ContactPage from 'pages/ContactPage';
+import { ProfilePage } from 'pages/profile';
 
 const App: React.FC = () => {
   return (
@@ -81,6 +82,7 @@ const App: React.FC = () => {
                                 <Route path="/notes/:noteId" element={<NotePage />} />
                                 <Route path="/privacy" element={<PrivacyPolicyPage />} />
                                 <Route path="/contact" element={<ContactPage />} />
+                                <Route path="/profile" element={<ProfilePage />} />
                               </Routes>
                             </Layout>
                           </SearchProvider>

@@ -35,6 +35,12 @@ export interface UserProfile {
   lastLogin: Date | string;
   /** Timestamp when the account was created */
   createdAt: Date | string;
+  /** Account-scoped preferences. Theme lives here, not on a membership, so it
+   *  cannot depend on which group was active at sign-in. */
+  preferences?: {
+    theme?: string;
+    [key: string]: unknown;
+  };
 }
 
 /**

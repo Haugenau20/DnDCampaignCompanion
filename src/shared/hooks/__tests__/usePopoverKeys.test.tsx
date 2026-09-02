@@ -1,4 +1,4 @@
-// src/shared/components/context-switcher/__tests__/usePopoverKeys.test.tsx
+// src/shared/hooks/__tests__/usePopoverKeys.test.tsx
 
 import React, { useRef, useState } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";

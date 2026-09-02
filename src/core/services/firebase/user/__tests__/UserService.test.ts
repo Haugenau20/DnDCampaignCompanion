@@ -14,6 +14,15 @@ const mockUpdateDoc = jest.fn();
 const mockSetDoc = jest.fn();
 const mockRunTransaction = jest.fn();
 const mockDoc = jest.fn((db: any, ...segments: string[]) => ({ path: segments.join('/') }));
+const mockHttpsCallable = jest.fn();
+
+// Distinguishes BaseFirebaseService's regioned getFunctions(app, 'europe-west1')
+// call (made once, at construction) from a bare getFunctions() call made from
+// inside a method -- the defect this suite guards against.
+const REGIONED_FUNCTIONS_INSTANCE = { __label: 'regioned-functions' };
+const mockGetFunctions = jest.fn((...args: any[]) =>
+  args[1] === 'europe-west1' ? REGIONED_FUNCTIONS_INSTANCE : { __label: 'bare-functions' }
+);
 
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
@@ -32,8 +41,9 @@ jest.mock('firebase/auth', () => ({
 }));
 jest.mock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
 jest.mock('firebase/functions', () => ({
-  getFunctions: jest.fn(() => ({})),
+  getFunctions: function() { return (mockGetFunctions as Function).apply(null, arguments); },
   connectFunctionsEmulator: jest.fn(),
+  httpsCallable: function() { return (mockHttpsCallable as Function).apply(null, arguments); },
 }));
 jest.mock('@/core/services/firebase/config/firebaseConfig', () => ({
   firebaseConfig: { apiKey: 'test', projectId: 'test' },
@@ -73,8 +83,9 @@ describe('UserService', () => {
     }));
     jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
     jest.doMock('firebase/functions', () => ({
-      getFunctions: jest.fn(() => ({})),
+      getFunctions: function() { return (mockGetFunctions as Function).apply(null, arguments); },
       connectFunctionsEmulator: jest.fn(),
+      httpsCallable: function() { return (mockHttpsCallable as Function).apply(null, arguments); },
     }));
     jest.doMock('@/core/services/firebase/config/firebaseConfig', () => ({
       firebaseConfig: { apiKey: 'test', projectId: 'test' },
@@ -87,6 +98,8 @@ describe('UserService', () => {
     mockUpdateDoc.mockReset();
     mockSetDoc.mockReset();
     mockRunTransaction.mockReset();
+    mockHttpsCallable.mockReset();
+    mockGetFunctions.mockClear();
     mockDoc.mockImplementation((_db: any, ...segments: string[]) => ({
       path: segments.join('/'),
     }));
@@ -117,6 +130,26 @@ describe('UserService', () => {
       const svc = UserService.getInstance();
       const result = await svc.getUserProfile('uid-1');
       expect(result).toBeNull();
+    });
+
+    // The mapping is field-by-field, so a field nobody names here is dropped
+    // on the way out of Firestore. That is how the account theme came to be
+    // written correctly and never read back: every load looked like an account
+    // with no theme, and re-migrated the stale group value over it.
+    test('returns account preferences, so a stored theme survives the round trip', async () => {
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, {
+          email: 'test@example.com',
+          groups: ['g1'],
+          activeGroupId: 'g1',
+          lastLogin: new Date(),
+          createdAt: new Date(),
+          preferences: { theme: 'medieval' },
+        })
+      );
+      const svc = UserService.getInstance();
+      const profile = await svc.getUserProfile('uid-1');
+      expect(profile?.preferences?.theme).toBe('medieval');
     });
 
     test('should return a UserProfile when the document exists', async () => {
@@ -380,6 +413,48 @@ describe('UserService', () => {
       const svc = UserService.getInstance();
       await svc.changeGroupUsername('group-1', 'uid-1', 'Sam');
       expect(mockRunTransaction).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ─── deleteAccount ──────────────────────────────────────────────────────────
+
+  describe('deleteAccount', () => {
+    test('invokes the deleteUser callable with the user id', async () => {
+      const mockCallable = jest.fn().mockResolvedValueOnce({ data: { success: true } });
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      const svc = UserService.getInstance();
+      await svc.deleteAccount('uid-1');
+
+      expect(mockHttpsCallable).toHaveBeenCalledWith(expect.anything(), 'deleteUser');
+      expect(mockCallable).toHaveBeenCalledWith({ userId: 'uid-1' });
+    });
+
+    test("uses the service's regioned Functions instance", async () => {
+      const mockCallable = jest.fn().mockResolvedValueOnce({ data: { success: true } });
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      // Construct the singleton first -- this is the ONE legitimate call to
+      // getFunctions(app, 'europe-west1'), made by BaseFirebaseService itself.
+      const svc = UserService.getInstance();
+      mockGetFunctions.mockClear();
+      mockHttpsCallable.mockClear();
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      await svc.deleteAccount('uid-1');
+
+      // The method itself must not call getFunctions() again -- that is
+      // exactly the bare, wrongly-regioned call this fix removes.
+      expect(mockGetFunctions).not.toHaveBeenCalled();
+      expect(mockHttpsCallable).toHaveBeenCalledWith(REGIONED_FUNCTIONS_INSTANCE, 'deleteUser');
+    });
+
+    test("propagates the callable's error", async () => {
+      const mockCallable = jest.fn().mockRejectedValueOnce(new Error('permission-denied'));
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      const svc = UserService.getInstance();
+      await expect(svc.deleteAccount('uid-1')).rejects.toThrow('permission-denied');
     });
   });
 });

@@ -19,8 +19,10 @@ export {
 export { useAuth } from './auth/hooks/useAuth';
 export { useUser } from './profiles/hooks/useUser';
 export { useGroups } from './groups/hooks/useGroups';
+export { useJoinGroupCompletion } from './groups/hooks/useJoinGroupCompletion';
 export { useInvitations } from './groups/hooks/useInvitations';
 export { useCampaigns } from './groups/hooks/useCampaigns';
+export { useAccountTheme } from './profiles/hooks/useAccountTheme';
 export { useFirestore } from './shared/hooks/useFirestore';
 export { useUsernameLookup } from './shared/hooks/useUsernameLookup';
 
@@ -29,6 +31,10 @@ export { default as SessionManager } from './auth/components/SessionManager';
 export { default as SessionTimeoutWarning } from './auth/components/SessionTimeoutWarning';
 export { default as PrivacyNotice } from './auth/components/PrivacyNotice';
 export { default as SignInForm } from './auth/components/SignInForm';
-export { default as UserProfile } from './profiles/components/UserProfile';
+export { default as AccountCard } from './profiles/components/AccountCard';
+export { default as GroupMembershipCard } from './profiles/components/GroupMembershipCard';
+export { default as CharactersCard } from './profiles/components/CharactersCard';
+export { default as AppearanceCard } from './profiles/components/AppearanceCard';
+export { default as DangerZoneCard } from './profiles/components/DangerZoneCard';
 export { default as JoinGroupDialog } from './groups/components/JoinGroupDialog';
 export { default as AdminPanel } from './admin/components/AdminPanel';

@@ -1,4 +1,4 @@
-﻿// src/features/user-management/auth/components/__tests__/SessionManager.test.tsx
+// src/features/user-management/auth/components/__tests__/SessionManager.test.tsx
 
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
@@ -9,8 +9,6 @@ import SessionManager from '../SessionManager';
 // The component imports via: import useSessionManager from '../hooks/useSessionManager'
 // The hook file exports: export default useSessionManager;
 // ---------------------------------------------------------------------------
-const mockUseSessionManagerFn = jest.fn().mockReturnValue({ checkSession: jest.fn() });
-
 jest.mock('../../hooks/useSessionManager', () => {
   const mockFn = jest.fn().mockReturnValue({ checkSession: jest.fn() });
   return {
@@ -23,20 +21,26 @@ jest.mock('../../hooks/useSessionManager', () => {
 const useSessionManagerModule = require('../../hooks/useSessionManager');
 
 // ---------------------------------------------------------------------------
-// Mock context/firebase
+// Mock context/firebase -- SessionManager reads the account profile and the
+// account writer from useUser, the active group's membership from useGroups,
+// and the signed-in user from useAuth. All three live behind the domain
+// barrel; sibling imports are re-pointed at the same mock so every hook
+// resolves to one shared set of jest.fn()s.
 // ---------------------------------------------------------------------------
 const mockSetTheme = jest.fn();
+const mockUpdateUserProfile = jest.fn();
 
 jest.mock('@/features/user-management', () => ({
+  useAuth: jest.fn(),
   useGroups: jest.fn(),
+  useUser: jest.fn(),
 }));
 
-// These components import their hooks directly (importing the domain barrel
-// from inside the domain would be a circular import), so point those modules
-// at the barrel mock defined above.
+jest.mock('../../hooks/useAuth', () => require('@/features/user-management'));
 jest.mock('../../../groups/hooks/useGroups', () => require('@/features/user-management'));
+jest.mock('../../../profiles/hooks/useUser', () => require('@/features/user-management'));
 
-const { useGroups } = require('@/features/user-management');
+const { useAuth, useGroups, useUser } = require('@/features/user-management');
 
 // ---------------------------------------------------------------------------
 // Mock ThemeContext
@@ -51,12 +55,22 @@ const { useTheme } = require('@/core/themes/ThemeContext');
 // Helpers
 // ---------------------------------------------------------------------------
 
+const mockUser = { uid: 'user-1' };
+
 function setupMocks(
+  userProfile: any = null,
   activeGroupUserProfile: any = null,
   theme: any = { name: 'light', colors: { primary: '#fff' } }
 ) {
+  useAuth.mockReturnValue({ user: mockUser });
+
   useGroups.mockReturnValue({
     activeGroupUserProfile,
+  });
+
+  useUser.mockReturnValue({
+    userProfile,
+    updateUserProfile: mockUpdateUserProfile,
   });
 
   useTheme.mockReturnValue({
@@ -72,6 +86,7 @@ function setupMocks(
 describe('SessionManager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUpdateUserProfile.mockResolvedValue(undefined);
     setupMocks();
   });
 
@@ -111,14 +126,12 @@ describe('SessionManager', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Theme synchronization
+  // Theme synchronization -- account-scoped, with a one-time migration from
+  // whichever group happens to be active when it runs.
   // -------------------------------------------------------------------------
   describe('theme synchronization', () => {
-    test('should call setTheme with the user profile theme preference on mount', () => {
-      setupMocks(
-        { preferences: { theme: 'dark' } },
-        { name: 'light', colors: { primary: '#fff' } }
-      );
+    test('applies the account theme when one is stored', () => {
+      setupMocks({ id: 'user-1', preferences: { theme: 'dark' } }, null);
 
       render(
         <SessionManager>
@@ -127,46 +140,15 @@ describe('SessionManager', () => {
       );
 
       expect(mockSetTheme).toHaveBeenCalledWith('dark');
+      // No migration write is needed -- the account already has a theme.
+      expect(mockUpdateUserProfile).not.toHaveBeenCalled();
     });
 
-    test('should not call setTheme when activeGroupUserProfile is null', () => {
-      setupMocks(null);
-
-      render(
-        <SessionManager>
-          <div />
-        </SessionManager>
+    test("with no account theme, applies the active group's theme", () => {
+      setupMocks(
+        { id: 'user-1' },
+        { preferences: { theme: 'medieval' } }
       );
-
-      expect(mockSetTheme).not.toHaveBeenCalled();
-    });
-
-    test('should not call setTheme when user profile has no theme preference', () => {
-      setupMocks({ preferences: {} });
-
-      render(
-        <SessionManager>
-          <div />
-        </SessionManager>
-      );
-
-      expect(mockSetTheme).not.toHaveBeenCalled();
-    });
-
-    test('should not call setTheme for invalid theme name', () => {
-      setupMocks({ preferences: { theme: 'rainbow' } });
-
-      render(
-        <SessionManager>
-          <div />
-        </SessionManager>
-      );
-
-      expect(mockSetTheme).not.toHaveBeenCalled();
-    });
-
-    test('should accept "medieval" as a valid theme name', () => {
-      setupMocks({ preferences: { theme: 'medieval' } });
 
       render(
         <SessionManager>
@@ -177,8 +159,37 @@ describe('SessionManager', () => {
       expect(mockSetTheme).toHaveBeenCalledWith('medieval');
     });
 
-    test('should accept "light" as a valid theme name', () => {
-      setupMocks({ preferences: { theme: 'light' } });
+    test("with no account theme, writes the group's theme up to the account exactly once", () => {
+      setupMocks(
+        { id: 'user-1' },
+        { preferences: { theme: 'medieval' } }
+      );
+
+      const { rerender } = render(
+        <SessionManager>
+          <div />
+        </SessionManager>
+      );
+
+      expect(mockUpdateUserProfile).toHaveBeenCalledTimes(1);
+      expect(mockUpdateUserProfile).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({ preferences: expect.objectContaining({ theme: 'medieval' }) })
+      );
+
+      // A re-render with the exact same profiles (nothing about the stored
+      // theme values changed) must not repeat the write.
+      rerender(
+        <SessionManager>
+          <div />
+        </SessionManager>
+      );
+
+      expect(mockUpdateUserProfile).toHaveBeenCalledTimes(1);
+    });
+
+    test('with neither, leaves the theme on its localStorage value', () => {
+      setupMocks({ id: 'user-1' }, null);
 
       render(
         <SessionManager>
@@ -186,41 +197,50 @@ describe('SessionManager', () => {
         </SessionManager>
       );
 
-      expect(mockSetTheme).toHaveBeenCalledWith('light');
+      expect(mockSetTheme).not.toHaveBeenCalled();
+      expect(mockUpdateUserProfile).not.toHaveBeenCalled();
     });
 
-    test('should apply theme only once even when profile updates', () => {
+    test('does not re-apply a theme when the active group changes', () => {
+      setupMocks(
+        { id: 'user-1', preferences: { theme: 'dark' } },
+        { id: 'membership-a', preferences: { theme: 'dark' } }
+      );
+
       const { rerender } = render(
         <SessionManager>
           <div />
         </SessionManager>
       );
 
-      // First render: no profile
+      expect(mockSetTheme).toHaveBeenCalledTimes(1);
+
+      // Switch group: a different membership object, same account theme.
+      useGroups.mockReturnValue({
+        activeGroupUserProfile: { id: 'membership-b', preferences: { theme: 'medieval' } },
+      });
+
+      rerender(
+        <SessionManager>
+          <div />
+        </SessionManager>
+      );
+
+      // The account theme already wins, so the group's value (even a
+      // different one) must not cause another application.
+      expect(mockSetTheme).toHaveBeenCalledTimes(1);
+    });
+
+    test('ignores an unrecognised stored theme name', () => {
+      setupMocks({ id: 'user-1', preferences: { theme: 'rainbow' } }, null);
+
+      render(
+        <SessionManager>
+          <div />
+        </SessionManager>
+      );
+
       expect(mockSetTheme).not.toHaveBeenCalled();
-
-      // Profile loads with theme
-      useGroups.mockReturnValue({ activeGroupUserProfile: { preferences: { theme: 'dark' } } });
-
-      rerender(
-        <SessionManager>
-          <div />
-        </SessionManager>
-      );
-
-      expect(mockSetTheme).toHaveBeenCalledTimes(1);
-
-      // Profile updates again (should NOT apply theme again after initial apply)
-      useGroups.mockReturnValue({ activeGroupUserProfile: { preferences: { theme: 'dark' } } });
-
-      rerender(
-        <SessionManager>
-          <div />
-        </SessionManager>
-      );
-
-      // Still only called once (ref prevents re-application)
-      expect(mockSetTheme).toHaveBeenCalledTimes(1);
     });
   });
 

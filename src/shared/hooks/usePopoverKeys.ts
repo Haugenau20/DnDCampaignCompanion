@@ -1,4 +1,4 @@
-// src/shared/components/context-switcher/usePopoverKeys.ts
+// src/shared/hooks/usePopoverKeys.ts
 import { useEffect } from "react";
 
 /**

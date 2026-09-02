@@ -184,6 +184,11 @@ jest.mock("../pages/ContactPage", () => ({
   default: () => <div data-testid="page-contact" />,
 }));
 
+jest.mock("../pages/profile", () => ({
+  __esModule: true,
+  ProfilePage: () => <div data-testid="page-profile" />,
+}));
+
 // ---------------------------------------------------------------------------
 // Import App after all mocks are registered
 // ---------------------------------------------------------------------------
@@ -218,6 +223,7 @@ const EXPECTED_ROUTES = [
   "/notes/:noteId",
   "/privacy",
   "/contact",
+  "/profile",
 ];
 
 // ---------------------------------------------------------------------------

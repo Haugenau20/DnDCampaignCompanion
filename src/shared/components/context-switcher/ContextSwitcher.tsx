@@ -6,7 +6,7 @@ import UndoToast from './UndoToast';
 import ContextTrigger from './ContextTrigger';
 import CampaignStep from './CampaignStep';
 import GroupStep from './GroupStep';
-import { usePopoverKeys } from './usePopoverKeys';
+import { usePopoverKeys } from 'shared/hooks/usePopoverKeys';
 
 /**
  * Props for {@link ContextSwitcher}.
