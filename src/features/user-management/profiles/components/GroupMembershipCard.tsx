@@ -34,9 +34,6 @@ const GroupMembershipCard: React.FC = () => {
               {isAdmin ? "Administrator" : "Member"}
             </span>
           </div>
-          <Typography variant="body-sm" color="secondary">
-            Only for this group. Your other group keeps its own name and characters.
-          </Typography>
         </div>
 
         <UsernameEditor />

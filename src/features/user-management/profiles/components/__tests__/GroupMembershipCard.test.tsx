@@ -80,13 +80,6 @@ describe("GroupMembershipCard", () => {
     expect(screen.getByText("Administrator")).toHaveClass("tag");
   });
 
-  test("is subtitled with the other-group caveat", () => {
-    render(<GroupMembershipCard />);
-    expect(
-      screen.getByText("Only for this group. Your other group keeps its own name and characters.")
-    ).toBeInTheDocument();
-  });
-
   test("hosts the username editor", () => {
     render(<GroupMembershipCard />);
     expect(screen.getByText("testuser")).toBeInTheDocument();

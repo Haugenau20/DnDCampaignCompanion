@@ -4,7 +4,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  getCountFromServer,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -339,28 +338,6 @@ class DocumentService extends BaseFirebaseService {
       console.error(`Error getting collection ${collectionName}:`, error);
       return [];
     }
-  }
-
-  /**
-   * Server-side count of the documents in a collection.
-   *
-   * Uses `getCountFromServer`, which bills one read regardless of how many
-   * documents the collection holds and never transfers a single document
-   * body -- the same aggregation-query shape
-   * `CampaignService.getCampaignCounts` already relies on. Unlike
-   * `getCollection`, a rejected count is not swallowed into an empty
-   * result: the caller decides what a failed count means (typically:
-   * "leave this clause out"), so the promise is left to reject.
-   *
-   * @param path Collection name or full path -- resolved the same way as
-   *   every other method here, via `getCollectionRef`. A path containing
-   *   `/` (e.g. `"groups/g1/users/u1/notes"`) is used exactly as written.
-   * @returns The number of documents in the collection.
-   */
-  public async getCollectionCount(path: string): Promise<number> {
-    const collectionRef = this.getCollectionRef(path);
-    const snapshot = await getCountFromServer(collectionRef);
-    return snapshot.data().count;
   }
 
   /**

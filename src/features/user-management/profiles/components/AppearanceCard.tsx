@@ -27,11 +27,6 @@ const AppearanceCard: React.FC = () => {
     <Card>
       <Card.Content className="space-y-3">
         <Typography id="appearance-heading" variant="h4">Appearance</Typography>
-        <Typography variant="body-sm" color="secondary">
-          Stored on your account, not per group — so the app can't change colour when you
-          switch group.
-        </Typography>
-
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {Object.values(themes).map((t) => {
             const isSelected = theme.name === t.name;
@@ -48,10 +43,25 @@ const AppearanceCard: React.FC = () => {
                   isSelected ? "selected-item" : "selectable-item"
                 )}
               >
+                {/* The swatch shows the theme's PAGE background, with its
+                    accent as the inner dot. Showing the accent alone made
+                    "Dark" render lighter than "Light", because the dark
+                    theme's accent is a brighter blue than the light theme's --
+                    the swatch was answering a question nobody was asking. The
+                    inner dot is what still separates Light from Medieval,
+                    which are both pale. */}
                 <div
-                  className="w-8 h-8 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: t.colors.primary }}
-                />
+                  className="w-8 h-8 rounded-full flex-shrink-0 border flex items-center justify-center"
+                  style={{
+                    backgroundColor: t.colors.background.primary,
+                    borderColor: t.colors.card.border,
+                  }}
+                >
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: t.colors.primary }}
+                  />
+                </div>
                 <span className="flex items-center gap-1 capitalize">
                   <Typography>{t.name}</Typography>
                   {isSelected && <Check className="w-4 h-4 success-icon" />}

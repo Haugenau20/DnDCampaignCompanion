@@ -7,112 +7,77 @@ import { LogOut, Trash2 } from "lucide-react";
 import LeaveGroupDialog from "./LeaveGroupDialog";
 import DeleteAccountDialog from "./DeleteAccountDialog";
 import { useGroups } from "../../groups/hooks/useGroups";
-import { useGroupFootprint, GroupFootprint } from "../hooks/useGroupFootprint";
+import { useCampaigns } from "../../groups/hooks/useCampaigns";
 
 /**
- * Joins clause strings with normal list grammar: `"A"`, `"A and B"`, or
- * `"A, B and C"`.
+ * What leaving this group costs, in terms of access rather than destruction:
+ * leaving removes your access, it does not delete the group's content for
+ * anyone else.
+ *
+ * Only the campaign count is quoted. Counting chapters and notes as well was
+ * both noisier to read and more expensive to produce -- it needed a
+ * per-campaign fan-out of count queries -- without changing the decision the
+ * sentence exists to inform.
+ *
+ * @param campaignCount Campaigns in the group, or null while unknown
  */
-function joinClauses(parts: string[]): string {
-  if (parts.length === 0) return "";
-  if (parts.length === 1) return parts[0];
-  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
-  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+function buildLeaveSentence(campaignCount: number | null): string {
+  const scope =
+    campaignCount === null
+      ? "this group"
+      : `${campaignCount} campaign${campaignCount === 1 ? "" : "s"} in this group`;
+
+  return `You'll lose access to ${scope}. Your account stays as it is.`;
 }
 
 /**
- * The "what leaving costs" sentence, built from whichever of the three
- * footprint counts resolved. A count that is `null` -- still loading, or
- * its query rejected -- is dropped rather than guessed at; if none
- * resolved, only the reassurance half of the sentence survives.
- */
-function buildLeaveSentence(footprint: GroupFootprint, groupCount: number | null): string {
-  const clauses: string[] = [];
-
-  if (footprint.campaigns !== null) {
-    clauses.push(`${footprint.campaigns} campaign${footprint.campaigns === 1 ? "" : "s"}`);
-  }
-  if (footprint.chapters !== null) {
-    clauses.push(`${footprint.chapters} chapter${footprint.chapters === 1 ? "" : "s"}`);
-  }
-  if (footprint.notes !== null) {
-    clauses.push(`${footprint.notes} of your own notes`);
-  }
-
-  // The reassurance half has to survive any number of memberships. The mock
-  // says "your other group" because its user has exactly two; saying that to
-  // someone leaving their only group would be false, and to someone in four
-  // it would be wrong about the rest.
-  const staysPut =
-    groupCount === null
-      ? "Your account and any other groups you're in stay as they are."
-      : groupCount <= 1
-        ? "Your account stays as it is."
-        : groupCount === 2
-          ? "Your account and your other group stay as they are."
-          : "Your account and your other groups stay as they are.";
-
-  if (clauses.length === 0) {
-    return staysPut;
-  }
-
-  return `You lose access to ${joinClauses(clauses)} in this group. ${staysPut}`;
-}
-
-/**
- * The "what deleting the account costs" sentence. Phrased from the real
- * number of groups the user belongs to where that count is known; otherwise
- * falls back to wording that stays true for any number.
+ * What deleting the account costs. Phrased from the real number of
+ * memberships where it is known, and as access lost rather than an inventory
+ * of everything destroyed.
+ *
+ * @param groupCount Groups the user belongs to, or null while unknown
  */
 function buildDeleteSentence(groupCount: number | null): string {
-  const groupsClause =
-    groupCount !== null
-      ? `all ${groupCount} group${groupCount === 1 ? "" : "s"} you're in`
-      : "every group you're in";
+  const scope =
+    groupCount === null
+      ? "every group you're in"
+      : `${groupCount} group${groupCount === 1 ? "" : "s"}`;
 
-  return (
-    `Removes you from ${groupsClause} and deletes every profile, character and note you own. ` +
-    "Permanent. You'll be asked to type your email to confirm."
-  );
+  return `You'll lose access to ${scope} and everything in them. This can't be undone.`;
 }
 
 /**
  * The two destructive actions on the profile page -- leaving the active
- * group and deleting the account -- each stating what it actually affects
- * before its button, so the two are never mistaken for equivalent choices.
+ * group and deleting the account -- each saying what it affects before its
+ * button, so the two are never mistaken for equivalent choices.
  *
- * Counts come from {@link useGroupFootprint} and are fetched as soon as this
- * card mounts; each is optional and simply omitted from the sentence when
- * it has not resolved. This card has no `Close` button: that control
- * existed only because `UserProfile` could be mounted inside a dialog,
- * which this page composition never does.
+ * Both counts come from context the page already holds, so this card issues
+ * no queries of its own. This card has no `Close` button: that control
+ * existed only because `UserProfile` could be mounted inside a dialog, which
+ * this page composition never does.
  */
 const DangerZoneCard: React.FC = () => {
   const { activeGroup, groups } = useGroups();
-  const footprint = useGroupFootprint(activeGroup?.id ?? null);
+  const { campaigns } = useCampaigns();
 
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const groupName = activeGroup?.name ?? "this group";
   const groupCount = groups ? groups.length : null;
+  const campaignCount = campaigns ? campaigns.length : null;
 
   return (
     <div className="rounded-lg" style={{ border: "2px solid var(--status-failed)" }}>
       <Card>
         <Card.Content className="space-y-6">
-          <div>
-            <Typography id="danger-heading" variant="h4" color="error">
-              Leaving and deleting
-            </Typography>
-            <Typography color="secondary" className="mt-1">
-              Two different scopes. Read the line, not the button.
-            </Typography>
-          </div>
+          <Typography id="danger-heading" variant="h4" color="error">
+            Leaving and deleting
+          </Typography>
 
           <div className="space-y-2">
             <Typography className="font-semibold">Leave {groupName}</Typography>
-            <Typography color="secondary">{buildLeaveSentence(footprint, groupCount)}</Typography>
+            <Typography color="secondary">{buildLeaveSentence(campaignCount)}</Typography>
             <Button
               variant="outline"
               className="typography-error w-full"
@@ -127,9 +92,9 @@ const DangerZoneCard: React.FC = () => {
               is the app's QUIET delete affordance -- every theme sets
               --delete-button-bg to transparent -- so it renders lighter than
               the outlined Leave button beside it, inverting the hierarchy.
-              --status-failed / --status-text are the error pair that is solid
-              in all three themes. `.error-bg` is transparent in all three too,
-              so the tinted ground comes from bg-secondary. */}
+              `.button-danger` is the filled error pair. `.error-bg` is
+              transparent in all three themes, so the tint comes from
+              bg-secondary. */}
           <div className="space-y-2 bg-secondary rounded-lg p-3">
             <Typography className="font-semibold">Delete your account</Typography>
             <Typography color="secondary">{buildDeleteSentence(groupCount)}</Typography>

@@ -46,10 +46,6 @@ const CharactersCard: React.FC = () => {
             posting as, and each row below carries its own star and marker --
             three places saying one thing is what this redesign removed. */}
         <Typography id="characters-heading" variant="h4">Characters</Typography>
-        <Typography variant="body-sm" color="secondary">
-          The one marked &apos;posting as&apos; is used when you create content in this group.
-        </Typography>
-
         {characters.length > 0 ? (
           <div className="space-y-2">
             {characters.map((character) => (

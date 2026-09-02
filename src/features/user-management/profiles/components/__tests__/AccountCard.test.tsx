@@ -61,11 +61,6 @@ describe("AccountCard", () => {
     expect(screen.getByText("test@test.com")).toBeInTheDocument();
   });
 
-  test("is subtitled 'Applies everywhere, in every group.'", () => {
-    render(<AccountCard />);
-    expect(screen.getByText("Applies everywhere, in every group.")).toBeInTheDocument();
-  });
-
   test("shows the email with a 'used to sign in' note", () => {
     render(<AccountCard />);
     expect(screen.getByText("test@test.com")).toBeInTheDocument();

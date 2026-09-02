@@ -83,14 +83,6 @@ describe("AppearanceCard", () => {
     expect(mockUpdateGroupUserProfile).not.toHaveBeenCalled();
   });
 
-  test("is subtitled with the account-scope explanation", () => {
-    render(<AppearanceCard />);
-
-    expect(
-      screen.getByText(/stored on your account, not per group/i)
-    ).toBeInTheDocument();
-  });
-
   test("renders no dropdown toggle", () => {
     render(<AppearanceCard />);
 

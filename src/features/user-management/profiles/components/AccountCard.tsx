@@ -38,9 +38,6 @@ const AccountCard: React.FC = () => {
       <Card.Content className="space-y-4">
         <div className="space-y-1">
           <Typography id="account-heading" variant="h4">Account</Typography>
-          <Typography variant="body-sm" color="secondary">
-            Applies everywhere, in every group.
-          </Typography>
         </div>
 
         <div className="grid grid-cols-[170px_1fr_auto] items-center gap-x-3 gap-y-3">

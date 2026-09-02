@@ -36,15 +36,6 @@ describe("CharactersCard", () => {
     mockUpdateGroupUserProfile.mockResolvedValue(undefined);
   });
 
-  test("is subtitled with what 'posting as' means", () => {
-    render(<CharactersCard />);
-    expect(
-      screen.getByText(
-        "The one marked 'posting as' is used when you create content in this group."
-      )
-    ).toBeInTheDocument();
-  });
-
   // "No active character selected" now belongs to the group card's posting-as
   // row, and is asserted in GroupMembershipCard.test.tsx. This card must NOT
   // repeat it: the duplicate display is what the redesign removed.

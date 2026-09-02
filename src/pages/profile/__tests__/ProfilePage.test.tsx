@@ -55,17 +55,21 @@ describe("ProfilePage", () => {
     };
   });
 
-  it("renders the heading and the save-as-you-go subtitle", () => {
+  it("renders the heading", () => {
     renderPage();
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Your profile" })
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Changes save as you make them. Nothing here needs a save button."
-      )
-    ).toBeInTheDocument();
+  });
+
+  // The page used to explain its own save behaviour to the reader. That is
+  // developer rationale, not product copy, and it does not belong on screen.
+  it("does not narrate how the page saves", () => {
+    renderPage();
+
+    expect(screen.queryByText(/save button/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/changes save as you make them/i)).not.toBeInTheDocument();
   });
 
   it("the back link names the active campaign", () => {
@@ -86,23 +90,12 @@ describe("ProfilePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the section rail with all six entries", () => {
+  // Five short cards do not need an index alongside them; the rail cost more
+  // width than it saved scrolling, so the page is a single column.
+  it("renders no section rail", () => {
     renderPage();
 
-    const nav = screen.getByRole("navigation", { name: /profile sections/i });
-    const links = within(nav).getAllByRole("link");
-
-    // Five linkable sections (Account, the group's own name, Characters,
-    // Appearance, Leaving and deleting) plus the rule drawn before the
-    // error-toned entry make up the six rendered nodes.
-    expect(links.map((link) => link.textContent)).toEqual([
-      "Account",
-      "The Fellowship",
-      "Characters",
-      "Appearance",
-      "Leaving and deleting",
-    ]);
-    expect(nav.querySelector("hr")).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: /profile sections/i })).not.toBeInTheDocument();
   });
 
   it("tells a signed-out visitor to sign in, and does not redirect", () => {
@@ -117,20 +110,10 @@ describe("ProfilePage", () => {
     expect(mockNavigateToPage).not.toHaveBeenCalled();
   });
 
-  it("renders the account sections but no group sections when there is no active group", () => {
+  it("renders the account cards but no group cards when there is no active group", () => {
     mockGroups = { activeGroup: null, loading: false };
 
     renderPage();
-
-    const nav = screen.getByRole("navigation", { name: /profile sections/i });
-    const links = within(nav).getAllByRole("link");
-
-    expect(links.map((link) => link.textContent)).toEqual([
-      "Account",
-      "Appearance",
-      "Leaving and deleting",
-    ]);
-    expect(within(nav).queryByText("Characters")).not.toBeInTheDocument();
 
     expect(screen.getByTestId("account-card")).toBeInTheDocument();
     expect(screen.queryByTestId("group-membership-card")).not.toBeInTheDocument();
@@ -139,7 +122,9 @@ describe("ProfilePage", () => {
     expect(screen.getByTestId("danger-zone-card")).toBeInTheDocument();
   });
 
-  it("renders every card in its own section, wired to the rail's ids", () => {
+  // The ids outlived the rail: they are what makes /profile#characters
+  // linkable, which the dialog this page replaced could never be.
+  it("renders every card in its own section, each with a linkable id", () => {
     renderPage();
 
     expect(

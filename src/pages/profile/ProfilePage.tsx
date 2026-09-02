@@ -1,5 +1,5 @@
 // src/pages/profile/ProfilePage.tsx
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import Typography from "core/components/Typography";
 import Card from "core/components/Card";
@@ -18,27 +18,21 @@ import {
   SignInForm,
 } from "features/user-management";
 import LoadingState from "pages/layouts/common/components/LoadingState";
-import ProfileSectionRail, { ProfileSection } from "./ProfileSectionRail";
 
 /**
  * The profile page at `/profile`.
  *
- * The right-hand column now composes the per-section cards that used to be
- * the eight sections of one `UserProfile` monolith: an account-scoped card,
- * a group-scoped card, characters, appearance, and the danger zone. Each
- * card sits in its own `<section>`, carrying the `id` its rail entry links
- * to and an `aria-labelledby` pointing at the card's own heading.
- * `UserProfile` itself still exists and still passes its own tests -- a
- * follow-up change deletes it and fixes its two remaining consumers.
+ * One column. There was a sticky section rail down the left; it was dropped
+ * because five short cards on a page you can take in at a glance do not need
+ * an index, and it cost more width than it saved scrolling.
  *
- * Three states, driven by auth and group loading rather than a redirect —
+ * Three states, driven by auth and group loading rather than a redirect --
  * the URL must stay linkable even when signed out:
  * - Signed out: the shell plus a single card inviting sign-in.
  * - Signed in, groups still loading: the shell plus a skeleton.
- * - Signed in: the section rail alongside the cards. Group-scoped cards
- *   (the group's own name, Characters) only render once a group is active;
- *   the danger zone renders regardless, since account deletion does not
- *   depend on one.
+ * - Signed in: the cards. Group-scoped cards (the group's own name,
+ *   Characters) only render once a group is active; the danger zone renders
+ *   regardless, since account deletion does not depend on one.
  */
 const ProfilePage: React.FC = () => {
   const { navigateToPage } = useNavigation();
@@ -51,22 +45,8 @@ const ProfilePage: React.FC = () => {
     ? `Back to ${activeCampaign.name}`
     : "Back to the campaign";
 
-  const sections = useMemo<ProfileSection[]>(() => {
-    const entries: ProfileSection[] = [{ id: "account", label: "Account" }];
-
-    if (activeGroup) {
-      entries.push({ id: "group", label: activeGroup.name });
-      entries.push({ id: "characters", label: "Characters" });
-    }
-
-    entries.push({ id: "appearance", label: "Appearance" });
-    entries.push({ id: "danger", label: "Leaving and deleting", tone: "error" });
-
-    return entries;
-  }, [activeGroup]);
-
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
       <button
         type="button"
         onClick={() => navigateToPage("/")}
@@ -76,12 +56,7 @@ const ProfilePage: React.FC = () => {
         {backLabel}
       </button>
 
-      <div className="space-y-3">
-        <Typography variant="h1">Your profile</Typography>
-        <Typography color="secondary">
-          Changes save as you make them. Nothing here needs a save button.
-        </Typography>
-      </div>
+      <Typography variant="h1">Your profile</Typography>
 
       {!user ? (
         <Card>
@@ -92,39 +67,34 @@ const ProfilePage: React.FC = () => {
             <Button onClick={() => setShowSignIn(true)}>Sign in</Button>
           </Card.Content>
         </Card>
+      ) : loading ? (
+        <div data-testid="profile-loading-state">
+          <LoadingState type="skeleton" count={4} height="h-24" />
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-[212px_1fr] gap-7">
-          <ProfileSectionRail sections={sections} />
-          {loading ? (
-            <div data-testid="profile-loading-state">
-              <LoadingState type="skeleton" count={4} height="h-24" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <section id="account" aria-labelledby="account-heading">
-                <AccountCard />
-              </section>
+        <div className="space-y-4">
+          <section id="account" aria-labelledby="account-heading">
+            <AccountCard />
+          </section>
 
-              {activeGroup && (
-                <>
-                  <section id="group" aria-labelledby="group-heading">
-                    <GroupMembershipCard />
-                  </section>
-                  <section id="characters" aria-labelledby="characters-heading">
-                    <CharactersCard />
-                  </section>
-                </>
-              )}
-
-              <section id="appearance" aria-labelledby="appearance-heading">
-                <AppearanceCard />
+          {activeGroup && (
+            <>
+              <section id="group" aria-labelledby="group-heading">
+                <GroupMembershipCard />
               </section>
-
-              <section id="danger" aria-labelledby="danger-heading">
-                <DangerZoneCard />
+              <section id="characters" aria-labelledby="characters-heading">
+                <CharactersCard />
               </section>
-            </div>
+            </>
           )}
+
+          <section id="appearance" aria-labelledby="appearance-heading">
+            <AppearanceCard />
+          </section>
+
+          <section id="danger" aria-labelledby="danger-heading">
+            <DangerZoneCard />
+          </section>
         </div>
       )}
 

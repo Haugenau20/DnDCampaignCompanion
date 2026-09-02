@@ -682,33 +682,6 @@ describe('DocumentService', () => {
 
   // ─── collection path construction ───────────────────────────────────────────
 
-  // ─── getCollectionCount ───────────────────────────────────────────────────
-
-  describe('getCollectionCount', () => {
-    test('counts a collection at a full path', async () => {
-      mockGetCountFromServer.mockResolvedValueOnce({ data: () => ({ count: 7 }) });
-
-      const svc = DocumentService.getInstance();
-      const count = await svc.getCollectionCount('groups/g1/users/u1/notes');
-
-      expect(count).toBe(7);
-      expect(mockCollection).toHaveBeenCalledWith(
-        expect.anything(),
-        'groups/g1/users/u1/notes'
-      );
-      expect(mockGetCountFromServer).toHaveBeenCalledTimes(1);
-    });
-
-    test('propagates a failure rather than returning 0', async () => {
-      mockGetCountFromServer.mockRejectedValueOnce(new Error('permission denied'));
-
-      const svc = DocumentService.getInstance();
-
-      await expect(svc.getCollectionCount('groups/g1/users/u1/notes')).rejects.toThrow(
-        'permission denied'
-      );
-    });
-  });
 
   describe('collection path construction', () => {
     test('should use full path directly when collection name contains "/"', async () => {

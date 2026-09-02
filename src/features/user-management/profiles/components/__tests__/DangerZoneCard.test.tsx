@@ -17,14 +17,14 @@ const { useNavigate } = require("react-router-dom");
 jest.mock("@/features/user-management", () => ({
   useAuth: jest.fn(),
   useGroups: jest.fn(),
-  useGroupFootprint: jest.fn(),
+  useCampaigns: jest.fn(),
 }));
 
 jest.mock("../../../auth/hooks/useAuth", () => require("@/features/user-management"));
 jest.mock("../../../groups/hooks/useGroups", () => require("@/features/user-management"));
-jest.mock("../../hooks/useGroupFootprint", () => require("@/features/user-management"));
+jest.mock("../../../groups/hooks/useCampaigns", () => require("@/features/user-management"));
 
-const { useAuth, useGroups, useGroupFootprint } = require("@/features/user-management");
+const { useAuth, useGroups, useCampaigns } = require("@/features/user-management");
 
 jest.mock("@/core/components/Dialog", () => {
   const Dialog = ({ open, onClose, title, children }: any) => {
@@ -58,15 +58,17 @@ describe("DangerZoneCard", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useAuth.mockReturnValue({ user: mockUser, signOut: mockSignOut });
-    // Two memberships by default, matching the design mock's user: the
-    // reassurance half of the leave sentence is phrased from this count, so
-    // the suite has to state it rather than leave it undefined.
+    // Two memberships and two campaigns by default: both sentences are
+    // phrased from these counts, so the suite has to state them rather than
+    // leave them undefined.
     useGroups.mockReturnValue({
       activeGroup: mockGroup,
       refreshGroups: mockRefreshGroups,
       groups: [mockGroup, { id: "group-2", name: "The Council of Elrond" }],
     });
-    useGroupFootprint.mockReturnValue({ campaigns: null, chapters: null, notes: null });
+    useCampaigns.mockReturnValue({
+      campaigns: [{ id: "c1", name: "One" }, { id: "c2", name: "Two" }],
+    });
     (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
     mockRemoveUserFromGroup.mockResolvedValue(undefined);
     mockDeleteAccount.mockResolvedValue(undefined);
@@ -119,67 +121,36 @@ describe("DangerZoneCard", () => {
     expect(screen.queryByRole("button", { name: /^close$/i })).not.toBeInTheDocument();
   });
 
-  test("states what leaving costs, with real counts", () => {
-    useGroupFootprint.mockReturnValue({ campaigns: 2, chapters: 39, notes: 14 });
+  test("says what leaving costs, in access rather than destruction", () => {
     render(<DangerZoneCard />);
     expect(
       screen.getByText(
-        "You lose access to 2 campaigns, 39 chapters and 14 of your own notes in this group. Your account and your other group stay as they are."
+        "You'll lose access to 2 campaigns in this group. Your account stays as it is."
       )
     ).toBeInTheDocument();
   });
 
-  // The mock in the design shows a user with exactly two groups, and the
-  // sentence was written for that user. It has to stay true for everyone else.
-  test("phrases what survives leaving from the real number of memberships", () => {
-    useGroupFootprint.mockReturnValue({ campaigns: 2, chapters: 39, notes: 14 });
-
-    useGroups.mockReturnValue({
-      activeGroup: mockGroup,
-      refreshGroups: mockRefreshGroups,
-      groups: [mockGroup],
-    });
-    const { unmount } = render(<DangerZoneCard />);
-    expect(screen.getByText(/Your account stays as it is\./)).toBeInTheDocument();
-    expect(screen.queryByText(/your other group/)).not.toBeInTheDocument();
-    unmount();
-
-    useGroups.mockReturnValue({
-      activeGroup: mockGroup,
-      refreshGroups: mockRefreshGroups,
-      groups: [mockGroup, { id: "g2", name: "Two" }, { id: "g3", name: "Three" }],
-    });
-    render(<DangerZoneCard />);
-    expect(
-      screen.getByText(/Your account and your other groups stay as they are\./)
-    ).toBeInTheDocument();
-  });
-
-  test("omits the chapter clause when that count is unavailable", () => {
-    useGroupFootprint.mockReturnValue({ campaigns: 2, chapters: null, notes: 14 });
+  test("names the group rather than a campaign count when campaigns are unknown", () => {
+    useCampaigns.mockReturnValue({ campaigns: null });
     render(<DangerZoneCard />);
     expect(
       screen.getByText(
-        "You lose access to 2 campaigns and 14 of your own notes in this group. Your account and your other group stay as they are."
+        "You'll lose access to this group. Your account stays as it is."
       )
     ).toBeInTheDocument();
   });
 
-  test("keeps the sentence grammatical when only one count resolved", () => {
-    useGroupFootprint.mockReturnValue({ campaigns: 2, chapters: null, notes: null });
+  test("quotes no chapter or note counts", () => {
     render(<DangerZoneCard />);
-    expect(
-      screen.getByText(
-        "You lose access to 2 campaigns in this group. Your account and your other group stay as they are."
-      )
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/chapter/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/notes/i)).not.toBeInTheDocument();
   });
 
-  test("states that deleting removes you from every group, permanently", () => {
+  test("says deleting costs access to every group, permanently", () => {
     const { unmount } = render(<DangerZoneCard />);
     expect(
       screen.getByText(
-        "Removes you from all 2 groups you're in and deletes every profile, character and note you own. Permanent. You'll be asked to type your email to confirm."
+        "You'll lose access to 2 groups and everything in them. This can't be undone."
       )
     ).toBeInTheDocument();
     unmount();
@@ -193,10 +164,12 @@ describe("DangerZoneCard", () => {
     render(<DangerZoneCard />);
     expect(
       screen.getByText(
-        "Removes you from every group you're in and deletes every profile, character and note you own. Permanent. You'll be asked to type your email to confirm."
+        "You'll lose access to every group you're in and everything in them. This can't be undone."
       )
     ).toBeInTheDocument();
   });
+
+
 
   // Asserted on what actually renders, not on class names. The first version
   // of this test checked for the `delete-button` class and passed while the
