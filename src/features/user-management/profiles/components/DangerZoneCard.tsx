@@ -123,12 +123,19 @@ const DangerZoneCard: React.FC = () => {
             </Button>
           </div>
 
-          <div className="space-y-2">
+          {/* The heavier of the two, and it has to look it. `.delete-button`
+              is the app's QUIET delete affordance -- every theme sets
+              --delete-button-bg to transparent -- so it renders lighter than
+              the outlined Leave button beside it, inverting the hierarchy.
+              --status-failed / --status-text are the error pair that is solid
+              in all three themes. `.error-bg` is transparent in all three too,
+              so the tinted ground comes from bg-secondary. */}
+          <div className="space-y-2 bg-secondary rounded-lg p-3">
             <Typography className="font-semibold">Delete your account</Typography>
             <Typography color="secondary">{buildDeleteSentence(groupCount)}</Typography>
             <Button
               variant="ghost"
-              className="delete-button w-full"
+              className="button-danger w-full"
               onClick={() => setShowDeleteDialog(true)}
               startIcon={<Trash2 size={16} />}
             >

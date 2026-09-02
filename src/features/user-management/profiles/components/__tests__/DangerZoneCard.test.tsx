@@ -198,14 +198,23 @@ describe("DangerZoneCard", () => {
     ).toBeInTheDocument();
   });
 
-  test("renders leave as an outlined button and delete as a solid one", () => {
+  // Asserted on what actually renders, not on class names. The first version
+  // of this test checked for the `delete-button` class and passed while the
+  // button was transparent: every theme sets --delete-button-bg to
+  // transparent, because that class is the app's QUIET delete affordance. The
+  // delete action read as lighter than the outlined Leave button beside it --
+  // the opposite of the intent -- and only the running app showed it.
+  test("renders delete as the heavier of the two actions", () => {
     render(<DangerZoneCard />);
     const leaveBtn = screen.getByRole("button", { name: /^leave group$/i });
     const deleteBtn = screen.getByRole("button", { name: /^delete account$/i });
 
     expect(leaveBtn).toHaveAttribute("data-variant", "outline");
-    expect(deleteBtn).toHaveAttribute("data-variant", "ghost");
-    expect(deleteBtn.className).toEqual(expect.stringContaining("delete-button"));
-    expect(leaveBtn.className).not.toEqual(expect.stringContaining("delete-button"));
+    expect(leaveBtn.className).not.toEqual(expect.stringContaining("button-danger"));
+
+    // `.button-danger` is the filled error pair; `.delete-button` is the quiet
+    // one this used to use, and is transparent in every theme.
+    expect(deleteBtn.className).toEqual(expect.stringContaining("button-danger"));
+    expect(deleteBtn.className).not.toEqual(expect.stringContaining("delete-button"));
   });
 });

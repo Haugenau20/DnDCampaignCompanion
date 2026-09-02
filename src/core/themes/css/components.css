@@ -988,3 +988,21 @@
   border-radius: var(--border-radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
+
+/* ====== DESTRUCTIVE ACTION (solid) ====== */
+/*
+  The heavy destructive action. `.delete-button` is the QUIET one -- every
+  theme sets --delete-button-bg to transparent, which is right for a delete
+  icon in a list but renders lighter than an outlined button beside it. Where
+  two destructive actions sit together and one is meant to read as heavier
+  (the profile's danger zone), this is the filled treatment: the error pair
+  that is solid in all three themes.
+*/
+.button-danger {
+  background-color: var(--status-failed);
+  color: var(--status-text);
+}
+
+.button-danger:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
