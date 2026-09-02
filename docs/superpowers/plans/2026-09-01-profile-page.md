@@ -106,6 +106,7 @@ against what the diffs actually added. A delta that does not reconcile is a find
 | 3a (task 5a) | 222 | 4630 | 4632 | +65 | 11 new card/hook suites +64, ProfilePage +1 |
 | 3b (task 5b) | 220 | 4573 | 4575 | -57 | UserProfile -44, UserProfileButton -14, Header -1 +2 |
 | 4 (tasks 6, 7) | 222 | 4592 | 4594 | +19 | AccountCard +5, GroupMembershipCard +6, AppearanceCard +2, CharactersCard +1, UsernameEditor +1, 2 new hook suites +6, Header -1, SessionManager -1 |
+| 5 (tasks 8, 9) | 223 | 4616 | 4618 | +24 | CharacterRow +3, CharactersCard +2, useCharacterRoster +1, DocumentService +2, DangerZoneCard +6, LeaveGroupDialog +3, DeleteAccountDialog +4, useGroupFootprint +3 |
 
 > CLAUDE.md records 4538/4540 for this commit and is **stale** — it was measured on
 > `redesign/context-switcher` before that branch merged. Task 11 corrects it. Compare against the
@@ -186,6 +187,21 @@ proving nothing**, which is the failure mode this whole review structure exists 
 - **The App routing suite is `src/__tests__/App.test.tsx`**, not `src/app/__tests__/`. It asserts an
   **exact** `EXPECTED_ROUTES` list and mocks every page module, so adding a route requires adding
   both a `jest.mock` and a list entry, or the suite fails. *(Task 4.)*
+- **Work can fall between two briefs and land in neither.** Task 6 added the group card's
+  posting-as row, which the design says *replaces* the Characters card's "Active Character" block --
+  but `CharactersCard` was not in Task 6's allow-list, and Task 8's brief never mentioned the block.
+  Both agents behaved correctly and the page still ended up stating the same fact twice, with the
+  identical sentence in two cards. When a change in one file obsoletes something in another, name
+  the removal in one of the two briefs. *(Caught reviewing Task 8, which flagged it rather than
+  acting outside its remit.)*
+- **A row that unmounts on failure makes a captured element reference hang the test.** A failed
+  removal optimistically unmounts the row and remounts it on rollback; a test holding
+  `getByTestId(...)` from before the click then queries a detached node and waits forever, even
+  though the live DOM updated correctly. Re-query at each step. *(Found by Task 8.)*
+- **Copy written from a design mock inherits that mock's user.** "Your account and your other group
+  stay as they are" is true only for someone in exactly two groups. Sentences quoting counts or
+  memberships need to be derived, not transcribed. *(Caught reviewing Task 9, which had generalised
+  the neighbouring delete sentence but not this one.)*
 - **A brief that forbids a file can still demand a change inside it.** Task 6 was told to relabel
   the username row *and* not to touch `UsernameEditor.tsx`, which is where that label lives. The
   agent correctly refused to write an unachievable test and reported the contradiction instead of
