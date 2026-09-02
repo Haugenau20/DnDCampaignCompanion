@@ -107,6 +107,8 @@ against what the diffs actually added. A delta that does not reconcile is a find
 | 3b (task 5b) | 220 | 4573 | 4575 | -57 | UserProfile -44, UserProfileButton -14, Header -1 +2 |
 | 4 (tasks 6, 7) | 222 | 4592 | 4594 | +19 | AccountCard +5, GroupMembershipCard +6, AppearanceCard +2, CharactersCard +1, UsernameEditor +1, 2 new hook suites +6, Header -1, SessionManager -1 |
 | 5 (tasks 8, 9) | 223 | 4616 | 4618 | +24 | CharacterRow +3, CharactersCard +2, useCharacterRoster +1, DocumentService +2, DangerZoneCard +6, LeaveGroupDialog +3, DeleteAccountDialog +4, useGroupFootprint +3 |
+| 6 (task 10) | 228 | 4623 | 4625 | +7 | 5 new user-menu suites +18, Header 26 -> 15 |
+| theme fix | 229 | 4625 | 4627 | +2 | SessionManager.theme-switch +2 |
 
 > CLAUDE.md records 4538/4540 for this commit and is **stale** — it was measured on
 > `redesign/context-switcher` before that branch merged. Task 11 corrects it. Compare against the
@@ -187,6 +189,14 @@ proving nothing**, which is the failure mode this whole review structure exists 
 - **The App routing suite is `src/__tests__/App.test.tsx`**, not `src/app/__tests__/`. It asserts an
   **exact** `EXPECTED_ROUTES` list and mocks every page module, so adding a route requires adding
   both a `jest.mock` and a list entry, or the suite fails. *(Task 4.)*
+- **A mocked dependency can be stabler than the real one, and hide a bug behind it.**
+  `SessionManager`'s suite mocks `useTheme`, so its `setTheme` is a single stable `jest.fn()`. The
+  real `ThemeContext` builds `setTheme` and its context value inline on every render, so both change
+  identity whenever the theme changes -- which re-ran an effect that depended on `setTheme` and made
+  it re-apply the stored theme over the one the user had just picked. Ten passing tests, and theme
+  switching was broken in the running app. When an effect depends on a function from context, check
+  whether that function is memoised before trusting a test that mocks it.
+  *(Reported from the app after batch 6; fixed in `a080973`.)*
 - **Work can fall between two briefs and land in neither.** Task 6 added the group card's
   posting-as row, which the design says *replaces* the Characters card's "Active Character" block --
   but `CharactersCard` was not in Task 6's allow-list, and Task 8's brief never mentioned the block.
