@@ -103,8 +103,8 @@ against what the diffs actually added. A delta that does not reconcile is a find
 | baseline | 227 | 4615 | 4617 | — | — |
 | 1 (tasks 1, 2) | 226 | 4607 | 4609 | −1 suite, −8 | `SearchService.test.ts` 24 → 40 (+16); deleted `shared/utils/__tests__/search.test.ts` (−1 suite, −24). 4615 + 16 − 24 = 4607 ✓ |
 | 2 (tasks 3, 4) | 226 | 4620 | 4622 | +13 | `SearchContext.behavioral` + `useSearch` measured together: 43 → 56. Nothing changed elsewhere |
-| 3a (task 5a) | | | | | |
-| 3b (task 5b) | | | | | |
+| 3a (task 5a) | — | — | — | — | Not gated separately: `tsc` is red between 5a and 5b by design |
+| 3b (task 5b) | 226 | 4629 | 4631 | +9 | `SearchContext.behavioral` + `SearchBar` measured together: 61 → 70. `SearchService.test.ts` count unchanged (`note: []` additions only) |
 
 > CLAUDE.md records 4538/4540 measured on `redesign/context-switcher`, and the profile-page plan
 > records 4543/4545 — both are stale. The baseline row above is the measured truth for this
@@ -557,7 +557,17 @@ green again.**
 ```
 src/shared/components/SearchBar.tsx
 src/shared/components/__tests__/SearchBar.test.tsx
+src/core/services/search/__tests__/SearchService.test.ts
 ```
+
+> **Brief correction, made during batch 3.** The allow-list originally held only the two `SearchBar`
+> files, on the assumption that its two `Record<SearchResultType, …>` maps were the only things
+> `'note'` would break. Task 5a found a second casualty and correctly refused to touch it:
+> `SearchService.test.ts` passes 11 object literals to `initializeIndex` typed
+> `Record<SearchResultType, SearchDocument[]>`, each of which now needs a `note` key. Neither task
+> owned it, so `tsc` could not have gone green. Folded into 5b, whose job is precisely "make the
+> build green again". **Lesson: when widening a union, grep for every exhaustive `Record<TheUnion, …>`
+> in the tree before writing the allow-list — the compiler finds them, but only after the fact.**
 
 This PR changes **nothing else** about how results are presented. The `⌘K` palette, the header
 layout, and the "+2 more mentions" affordance are all PR 6. Do not restyle anything, do not
@@ -616,6 +626,43 @@ reorder anything, do not add anything the steps below do not name.
       4538/4540 is stale, as is the profile plan's 4543/4545. The measured baseline on this branch
       is 227 suites / 4615 passed / 2 skipped / 4617 total.
 - [ ] Record the outcome in this file: what the deltas were, and anything a brief got wrong.
+
+### Task 6 outcome — live verification, 2026-09-02
+
+Run against the maintainer's already-running dev server and Chrome, not a fresh start.
+
+**The dataset does not contain Phandelver** — that campaign is on the production server. The dev
+emulator holds two Lord of the Rings groups (The Fellowship, The Council of Elrond) with four
+campaigns, and `manage-dev-data.ps1 -Action generate` populates *every* collection, so no campaign
+reproduced the "0 rumors" condition out of the box. **With the maintainer's explicit permission to
+delete dev entries, the condition was reproduced directly**: all 5 rumors were deleted from The
+Silmarillion Chronicles, leaving 10 chapters / 10 NPCs / 5 locations / 5 quests / **0 rumors**.
+
+| Claim | Result |
+|---|---|
+| Index builds with a collection empty | ✅ With 0 rumors, `gondolin` returned 6 results. On `main` the all-or-nothing guard leaves the index empty and this returns nothing |
+| Relevance from the query, title beats body, **across types** | ✅ Order was `Gondolin` (location, exact title) → `The Fall of Gondolin` (quest, title contains) → `Beleriand` (location) → 3 NPCs — interleaved by score, not grouped by type |
+| Regex metacharacters cannot throw | ✅ `a[(*+?\` and `Gondolin (the` returned cleanly. Console captured 927 messages including page load, with **zero** `SyntaxError` and zero `Search error for query:` — the catch block never fired |
+| One-character query | ✅ Reads "Keep typing…" |
+| Notes searchable, own notes only | ✅ A note created in-app was found by a term unique to it, rendered with the `Note` label and icon |
+| Note navigation | ✅ Clicking the note result went to `/notes/note-1` — a path segment, not `?highlight=` |
+| No render loop from the `useSearch` fix | ✅ No `Maximum update depth exceeded` across a session of live typing |
+| Console clean | ✅ Zero errors or exceptions for the whole session |
+
+**Dev data modified (recreate with `.\scripts\manage-dev-data.ps1 -Action generate`):** 5 rumors
+deleted from The Silmarillion Chronicles; one note, "Palantir watch notes", created in that
+campaign as `note-1`.
+
+**Two observations for PR 6, both pre-existing and out of scope here:**
+
+1. **The header search field is badly width-constrained**, and the dropdown inherits its width
+   (`w-full`). With a long username in the account menu the input compresses to roughly 50px and
+   result titles clip to a few characters — "Keep typing…" wrapped onto two lines. Nothing in this
+   PR caused it and nothing in this PR fixes it; the palette in PR 6 replaces this dropdown
+   wholesale, which is the right place to solve it.
+2. **Deleting 5 rumors froze the renderer for several seconds** (CDP screenshot timed out twice
+   before recovering). The deletes and their cascading relationship updates are evidently
+   synchronous/serial. Unrelated to search — worth its own tracker entry rather than a fix here.
 
 ---
 
