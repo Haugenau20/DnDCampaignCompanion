@@ -11,6 +11,8 @@ import { NPC } from 'features/campaign-entities';
 import type { Location } from 'features/campaign-entities';
 import { Rumor } from 'features/campaign-entities';
 import { useRumorData } from 'features/campaign-entities';
+import { useNotes } from 'features/collaboration';
+import type { Note } from 'features/collaboration';
 
 interface SearchContextData {
   query: string;
@@ -101,6 +103,20 @@ const createRumorSearchDocuments = (rumors: Rumor[]): SearchDocument[] => {
 };
 
 /**
+ * Convert notes to search documents
+ */
+const createNoteSearchDocuments = (notes: Note[]): SearchDocument[] => {
+  return notes.map(note => ({
+    id: note.id,
+    type: 'note' as SearchResultType,
+    content: `${note.title} ${note.content}`,
+    metadata: {
+      title: note.title
+    }
+  }));
+};
+
+/**
  * Provider component for global search functionality
  */
 export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -114,6 +130,7 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const { locations } = useLocationData();
   const { quests } = useQuests();
   const { rumors } = useRumorData();
+  const { notes } = useNotes();
 
   // Initialize SearchService with options
   const searchService = useMemo(() => new SearchService({
@@ -132,7 +149,8 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           quest: createQuestSearchDocuments(quests),
           npc: createNPCSearchDocuments(npcs),
           location: createLocationSearchDocuments(locations),
-          rumors: createRumorSearchDocuments(rumors)
+          rumors: createRumorSearchDocuments(rumors),
+          note: createNoteSearchDocuments(notes)
         };
 
         searchService.initializeIndex(searchDocuments);
@@ -148,12 +166,12 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // index as soon as there is any data, and let it rebuild (safe: it
     // replaces the index wholesale) whenever a collection's contents change,
     // including a collection that started empty and later arrives with data.
-    const totalDocs = chapters.length + quests.length + npcs.length + locations.length + rumors.length;
+    const totalDocs = chapters.length + quests.length + npcs.length + locations.length + rumors.length + notes.length;
     if (totalDocs === 0) {
       return;
     }
     initializeSearch();
-  }, [searchService, chapters, quests, npcs, locations, rumors]);
+  }, [searchService, chapters, quests, npcs, locations, rumors, notes]);
 
   // Tracks the most recently issued search request so a response to an
   // older, superseded query cannot overwrite a newer query's results.

@@ -1,6 +1,6 @@
 // src/core/types/search.ts
 /** The domain a search result belongs to. */
-export type SearchResultType = 'story' | 'quest' | 'npc' | 'location' | 'rumors';
+export type SearchResultType = 'story' | 'quest' | 'npc' | 'location' | 'rumors' | 'note';
 
 /**
  * A single search result surfaced to the UI: at most one context snippet

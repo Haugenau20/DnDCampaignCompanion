@@ -13,7 +13,7 @@ import { SearchProvider, useSearch } from "../../SearchContext";
  *
  * STRATEGY:
  * - Use real SearchProvider wrapping a renderHook consumer
- * - Mock useChapterData, useNPCData, useLocationData, useQuests, useRumorData
+ * - Mock useChapterData, useNPCData, useLocationData, useQuests, useRumorData, useNotes
  * - Mock SearchService (injected via module-level mock) to control search results
  * - Assert on observable state: query, results, isSearching
  */
@@ -26,6 +26,7 @@ const mockUseNPCData = jest.fn();
 const mockUseLocationData = jest.fn();
 const mockUseQuests = jest.fn();
 const mockUseRumorData = jest.fn();
+const mockUseNotes = jest.fn();
 
 jest.mock("features/storytelling", () => ({
   useChapterData: () => mockUseChapterData(),
@@ -36,6 +37,10 @@ jest.mock("features/campaign-entities", () => ({
   useQuests: () => mockUseQuests(),
   useLocationData: () => mockUseLocationData(),
   useRumorData: () => mockUseRumorData(),
+}));
+
+jest.mock("features/collaboration", () => ({
+  useNotes: () => mockUseNotes(),
 }));
 
 // ---------------------------------------------------------------------------
@@ -105,6 +110,13 @@ const defaultRumors = [
     status: "unverified",
   },
 ];
+const defaultNotes = [
+  {
+    id: "note-1",
+    title: "Session recap",
+    content: "The party arrived at the inn",
+  },
+];
 
 function setupDefaultMocks() {
   mockUseChapterData.mockReturnValue({ chapters: defaultChapters });
@@ -112,6 +124,7 @@ function setupDefaultMocks() {
   mockUseLocationData.mockReturnValue({ locations: defaultLocations });
   mockUseQuests.mockReturnValue({ quests: defaultQuests });
   mockUseRumorData.mockReturnValue({ rumors: defaultRumors });
+  mockUseNotes.mockReturnValue({ notes: defaultNotes });
   mockSearch.mockReturnValue([]);
 }
 
@@ -431,6 +444,7 @@ describe("SearchContext Behavioral Testing", () => {
       mockUseLocationData.mockReturnValue({ locations: [] });
       mockUseQuests.mockReturnValue({ quests: [] });
       mockUseRumorData.mockReturnValue({ rumors: [] });
+      mockUseNotes.mockReturnValue({ notes: [] });
 
       renderHook(() => useSearch(), { wrapper });
 
@@ -471,12 +485,13 @@ describe("SearchContext Behavioral Testing", () => {
 
       const [indexArg] = mockInitializeIndex.mock.calls[0];
 
-      // BEHAVIOR: all five search result types must be present
+      // BEHAVIOR: all six search result types must be present
       expect(indexArg).toHaveProperty("story");
       expect(indexArg).toHaveProperty("quest");
       expect(indexArg).toHaveProperty("npc");
       expect(indexArg).toHaveProperty("location");
       expect(indexArg).toHaveProperty("rumors");
+      expect(indexArg).toHaveProperty("note");
 
       // BEHAVIOR: each collection maps to an array of search documents
       expect(Array.isArray(indexArg.story)).toBe(true);
@@ -484,6 +499,78 @@ describe("SearchContext Behavioral Testing", () => {
       expect(Array.isArray(indexArg.npc)).toBe(true);
       expect(Array.isArray(indexArg.location)).toBe(true);
       expect(Array.isArray(indexArg.rumors)).toBe(true);
+      expect(Array.isArray(indexArg.note)).toBe(true);
+    });
+
+    test("should map note title to search document title metadata and cover title + content", async () => {
+      renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => expect(mockInitializeIndex).toHaveBeenCalledTimes(1));
+
+      const [indexArg] = mockInitializeIndex.mock.calls[0];
+      const noteDoc = indexArg.note[0];
+
+      expect(noteDoc.id).toBe("note-1");
+      expect(noteDoc.type).toBe("note");
+      expect(noteDoc.metadata.title).toBe("Session recap");
+      expect(noteDoc.content).toContain("Session recap");
+      expect(noteDoc.content).toContain("The party arrived at the inn");
+    });
+
+    test("should build the index from notes alone when every other collection is empty", async () => {
+      // A campaign whose only content is notes must still be searchable.
+      mockUseChapterData.mockReturnValue({ chapters: [] });
+      mockUseNPCData.mockReturnValue({ npcs: [] });
+      mockUseLocationData.mockReturnValue({ locations: [] });
+      mockUseQuests.mockReturnValue({ quests: [] });
+      mockUseRumorData.mockReturnValue({ rumors: [] });
+      mockUseNotes.mockReturnValue({ notes: defaultNotes });
+
+      renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => {
+        expect(mockInitializeIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const [indexArg] = mockInitializeIndex.mock.calls[0];
+      expect(indexArg.note).toHaveLength(1);
+      expect(indexArg.note[0].id).toBe("note-1");
+    });
+
+    test("should index only the signed-in user's own notes, never another member's", async () => {
+      // useNotes() is scoped to the signed-in user by its Firestore path
+      // (groups/{groupId}/users/{uid}/notes). SearchProvider must index
+      // exactly what useNotes() returns and nothing else.
+      const userANotes = [
+        { id: "note-a1", title: "User A note one", content: "Only A can see this" },
+        { id: "note-a2", title: "User A note two", content: "Also only A" },
+      ];
+      mockUseNotes.mockReturnValue({ notes: userANotes });
+
+      renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => {
+        expect(mockInitializeIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const [indexArg] = mockInitializeIndex.mock.calls[0];
+      const indexedIds = indexArg.note.map((doc: { id: string }) => doc.id);
+      expect(indexedIds).toEqual(["note-a1", "note-a2"]);
+      expect(indexedIds).not.toContain("note-b1");
+    });
+
+    test("should index zero notes when useNotes returns none, rather than a stale set", async () => {
+      // Signed out, or no active group: useNotes() returns an empty array.
+      mockUseNotes.mockReturnValue({ notes: [] });
+
+      renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => {
+        expect(mockInitializeIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const [indexArg] = mockInitializeIndex.mock.calls[0];
+      expect(indexArg.note).toEqual([]);
     });
 
     test("should map NPC name to search document title metadata", async () => {
