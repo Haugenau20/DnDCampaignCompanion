@@ -25,6 +25,8 @@ const mockProfile = {
   username: "testuser",
   role: "member" as const,
   joinedAt: "2024-01-01T00:00:00.000Z",
+  characters: [],
+  activeCharacterId: null,
 };
 
 function setupMocks(overrides: { profile?: any } = {}) {
@@ -52,6 +54,12 @@ describe("GroupMembershipCard", () => {
     expect(screen.getByText("Test Campaign")).toBeInTheDocument();
   });
 
+  test("is titled with the group's own name", () => {
+    render(<GroupMembershipCard />);
+    const heading = screen.getByRole("heading", { name: "Test Campaign" });
+    expect(heading).toHaveAttribute("id", "group-heading");
+  });
+
   test('should display role as "Member" for member role', () => {
     render(<GroupMembershipCard />);
     expect(screen.getByText("Member")).toBeInTheDocument();
@@ -63,9 +71,66 @@ describe("GroupMembershipCard", () => {
     expect(screen.getByText("Administrator")).toBeInTheDocument();
   });
 
+  test("shows an Administrator pill for an admin and a Member pill for a member", () => {
+    render(<GroupMembershipCard />);
+    expect(screen.getByText("Member")).toHaveClass("tag");
+
+    setupMocks({ profile: { ...mockProfile, role: "admin" } });
+    render(<GroupMembershipCard />);
+    expect(screen.getByText("Administrator")).toHaveClass("tag");
+  });
+
+  test("is subtitled with the other-group caveat", () => {
+    render(<GroupMembershipCard />);
+    expect(
+      screen.getByText("Only for this group. Your other group keeps its own name and characters.")
+    ).toBeInTheDocument();
+  });
+
   test("hosts the username editor", () => {
     render(<GroupMembershipCard />);
     expect(screen.getByText("testuser")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /change/i })).toBeInTheDocument();
+  });
+
+  test("shows the posting-as character with the attribution explanation", () => {
+    setupMocks({
+      profile: {
+        ...mockProfile,
+        activeCharacterId: "char-1",
+        characters: [{ id: "char-1", name: "Gandalf" }],
+      },
+    });
+    render(<GroupMembershipCard />);
+
+    expect(screen.getByText("Gandalf")).toBeInTheDocument();
+    expect(
+      screen.getByText(/new chapters, quests and rumours are credited to this name/i)
+    ).toBeInTheDocument();
+  });
+
+  test("says no character is active when none is", () => {
+    render(<GroupMembershipCard />);
+    expect(
+      screen.getByText(/no active character selected\. actions will use your username\./i)
+    ).toBeInTheDocument();
+  });
+
+  test("offers no control to change the posting-as character", () => {
+    setupMocks({
+      profile: {
+        ...mockProfile,
+        activeCharacterId: "char-1",
+        characters: [{ id: "char-1", name: "Gandalf" }],
+      },
+    });
+    render(<GroupMembershipCard />);
+
+    // The only button on the card is the username editor's own "Change" --
+    // posting-as is display-only here; changing it happens in the
+    // Characters card or the header menu.
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAccessibleName(/change/i);
   });
 });

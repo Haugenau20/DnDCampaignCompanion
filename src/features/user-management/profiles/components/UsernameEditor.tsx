@@ -7,7 +7,7 @@ import { Edit, Check, X, Loader2, AlertCircle } from "lucide-react";
 import { useUsernameEditor } from "../hooks/useUsernameEditor";
 
 /**
- * The inline "Username in this Group" editor: its Change/Cancel toggle, the
+ * The inline "Name in this group" editor: its Change/Cancel toggle, the
  * validated input, and the Save button gated on a debounced availability
  * check.
  *
@@ -35,7 +35,7 @@ const UsernameEditor: React.FC = () => {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Typography variant="body-sm" color="secondary">Username in this Group</Typography>
+        <Typography variant="body-sm" color="secondary">Name in this group</Typography>
         {!isEditing ? (
           <Button
             type="button"

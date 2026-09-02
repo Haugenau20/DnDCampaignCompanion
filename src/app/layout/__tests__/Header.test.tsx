@@ -49,6 +49,7 @@ jest.mock("@/features/user-management", () => ({
   useAuth: jest.fn(),
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
+  useJoinGroupCompletion: jest.fn(),
   get JoinGroupDialog() {
     return require("@/features/user-management/groups/components/JoinGroupDialog").default;
   },
@@ -64,7 +65,14 @@ const {
   useAuth,
   useGroups,
   useCampaigns,
+  useJoinGroupCompletion,
 } = require("@/features/user-management");
+
+// The shared join-completion behaviour (useJoinGroupCompletion) now owns the
+// refresh/find/switch/log sequence -- Header only closes its own dialog and
+// calls it. Its own suite (useJoinGroupCompletion.test.tsx) covers what the
+// callback actually does; here we only need a stub to hand back.
+const mockCompleteJoin = jest.fn();
 
 // ---------------------------------------------------------------------------
 // Mock shared components used inside Header
@@ -169,6 +177,7 @@ function setupMocks({
     activeCampaignId,
     campaigns,
   });
+  (useJoinGroupCompletion as jest.Mock).mockReturnValue(mockCompleteJoin);
 }
 
 // window.location.reload must never be called by the join-success handler.
@@ -178,6 +187,7 @@ describe("Header", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRefreshGroups.mockResolvedValue([]);
+    mockCompleteJoin.mockResolvedValue(undefined);
     setupMocks();
     Object.defineProperty(window, "location", {
       value: { reload: mockReload },
@@ -519,64 +529,32 @@ describe("Header", () => {
       expect(screen.getAllByTestId("trigger-join-success")).toHaveLength(1);
     });
 
-    test("switches to a group the user has just joined", async () => {
+    // The refresh/find/switch/log sequence itself moved into
+    // useJoinGroupCompletion (see useJoinGroupCompletion.test.tsx, which pins
+    // "switches to the group that appeared", "stays put when none does" and
+    // "logs rather than throwing when the switch fails" -- the three cases
+    // this suite used to cover directly). What Header owns now is just:
+    // close its own dialog, then hand off to that shared callback -- the
+    // exact same one AccountCard's "Join another" entrance calls, which is
+    // the invariant this test protects.
+    test("closes the dialog and calls the shared completion hook -- the same path AccountCard's 'Join another' uses", async () => {
       const user = userEvent.setup();
       setupMocks({
         user: { uid: "u1" },
         activeGroup: { id: "g1", name: "The Fellowship" },
         groups: [{ id: "g1", name: "The Fellowship" }],
       });
-      // refreshGroups resolves with the list as it is AFTER joining
-      mockRefreshGroups.mockResolvedValue([
-        { id: "g1", name: "The Fellowship" },
-        { id: "g2", name: "The Council of Elrond" },
-      ]);
       render(<Header />);
 
       await user.click(screen.getByRole("button", { name: /menu/i }));
       await user.click(screen.getByRole("button", { name: /join group/i }));
+      expect(screen.getByTestId("trigger-join-success")).toBeInTheDocument();
+
       await user.click(screen.getByTestId("trigger-join-success"));
 
-      // joinGroupWithToken returns void, so the new group is the one that
-      // appears in the list. Landing the user in it is the whole point of
-      // having just joined it.
-      expect(mockSetActiveGroup).toHaveBeenCalledWith("g2");
+      expect(mockCompleteJoin).toHaveBeenCalled();
+      expect(screen.queryByTestId("trigger-join-success")).not.toBeInTheDocument();
       expect(mockReload).not.toHaveBeenCalled();
-    });
-
-    // Finding 3 of the 2026-09-01 review: JoinGroupDialog's stub above calls
-    // onSuccess() fire-and-forget (no await, no catch), and useGroups().
-    // setActiveGroup re-throws after recording its own failure -- so a
-    // rejection here used to become an unhandled promise rejection with
-    // nothing shown to the user. The group refresh has already succeeded by
-    // this point, so this only has to confirm the rejection is actually
-    // handled (not just that this test doesn't fail).
-    test("reports rather than throws when landing in the newly joined group fails", async () => {
-      const user = userEvent.setup();
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-      setupMocks({
-        user: { uid: "u1" },
-        activeGroup: { id: "g1", name: "The Fellowship" },
-        groups: [{ id: "g1", name: "The Fellowship" }],
-      });
-      mockRefreshGroups.mockResolvedValue([
-        { id: "g1", name: "The Fellowship" },
-        { id: "g2", name: "The Council of Elrond" },
-      ]);
-      mockSetActiveGroup.mockRejectedValue(new Error("Switch failed"));
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /menu/i }));
-      await user.click(screen.getByRole("button", { name: /join group/i }));
-
-      await act(async () => {
-        await user.click(screen.getByTestId("trigger-join-success"));
-      });
-
-      expect(mockSetActiveGroup).toHaveBeenCalledWith("g2");
-      expect(consoleErrorSpy).toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
     });
   });
 });

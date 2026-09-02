@@ -19,6 +19,7 @@ export {
 export { useAuth } from './auth/hooks/useAuth';
 export { useUser } from './profiles/hooks/useUser';
 export { useGroups } from './groups/hooks/useGroups';
+export { useJoinGroupCompletion } from './groups/hooks/useJoinGroupCompletion';
 export { useInvitations } from './groups/hooks/useInvitations';
 export { useCampaigns } from './groups/hooks/useCampaigns';
 export { useFirestore } from './shared/hooks/useFirestore';

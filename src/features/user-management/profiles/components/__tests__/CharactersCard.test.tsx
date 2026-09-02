@@ -36,6 +36,15 @@ describe("CharactersCard", () => {
     mockUpdateGroupUserProfile.mockResolvedValue(undefined);
   });
 
+  test("is subtitled with what 'posting as' means", () => {
+    render(<CharactersCard />);
+    expect(
+      screen.getByText(
+        "The one marked 'posting as' is used when you create content in this group."
+      )
+    ).toBeInTheDocument();
+  });
+
   test("should display message when no active character", () => {
     render(<CharactersCard />);
     expect(screen.getByText(/no active character selected/i)).toBeInTheDocument();

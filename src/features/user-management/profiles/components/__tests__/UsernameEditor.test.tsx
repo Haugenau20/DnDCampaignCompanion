@@ -53,6 +53,15 @@ describe("UsernameEditor", () => {
     expect(screen.getByRole("button", { name: /change/i })).toBeInTheDocument();
   });
 
+  // "Username in this Group" said which system field it was; "Name in this
+  // group" says which scope it applies to, which is what the card around it
+  // is organised by.
+  test('labels the row "Name in this group"', () => {
+    render(<UsernameEditor />);
+    expect(screen.getByText("Name in this group")).toBeInTheDocument();
+    expect(screen.queryByText(/username in this group/i)).not.toBeInTheDocument();
+  });
+
   test("should display username", () => {
     render(<UsernameEditor />);
     expect(screen.getByText("testuser")).toBeInTheDocument();

@@ -76,7 +76,7 @@ const CharactersCard: React.FC = () => {
 
         <Typography id="characters-heading" variant="h4">Characters</Typography>
         <Typography variant="body-sm" color="secondary">
-          Add and select characters to use for creating content
+          The one marked &apos;posting as&apos; is used when you create content in this group.
         </Typography>
 
         <div className="flex gap-2">
