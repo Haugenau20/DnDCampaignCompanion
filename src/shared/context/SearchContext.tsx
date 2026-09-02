@@ -1,5 +1,5 @@
 // context/SearchContext.tsx
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { SearchResult, SearchResultType, SearchDocument } from 'core/types/search';
 import { SearchService } from 'core/services/search/SearchService';
 import { useChapterData } from 'features/storytelling';
@@ -141,25 +141,44 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
 
-    // Only initialize if we have all the data
-    if (chapters.length && quests.length && npcs.length && locations.length && rumors.length) {
-      initializeSearch();
+    // Collections load asynchronously and independently — the Phandelver
+    // campaign, for example, has 0 rumors while every other collection is
+    // populated. Gating on every collection being non-empty meant the index
+    // was never built at all for a campaign missing just one type. Build the
+    // index as soon as there is any data, and let it rebuild (safe: it
+    // replaces the index wholesale) whenever a collection's contents change,
+    // including a collection that started empty and later arrives with data.
+    const totalDocs = chapters.length + quests.length + npcs.length + locations.length + rumors.length;
+    if (totalDocs === 0) {
+      return;
     }
+    initializeSearch();
   }, [searchService, chapters, quests, npcs, locations, rumors]);
+
+  // Tracks the most recently issued search request so a response to an
+  // older, superseded query cannot overwrite a newer query's results.
+  const latestRequestId = useRef(0);
 
   /**
    * Handle search query execution
    */
   const handleSearch = useCallback(async (searchQuery: string) => {
+    const requestId = ++latestRequestId.current;
     setIsSearching(true);
     try {
-      const searchResults = searchService.search(searchQuery);
-      setResults(searchResults);
+      const searchResults = await searchService.search(searchQuery);
+      if (requestId === latestRequestId.current) {
+        setResults(searchResults);
+      }
     } catch (error) {
-      console.error('Search error:', error);
-      setResults([]);
+      console.error('Search error for query:', searchQuery, error);
+      if (requestId === latestRequestId.current) {
+        setResults([]);
+      }
     } finally {
-      setIsSearching(false);
+      if (requestId === latestRequestId.current) {
+        setIsSearching(false);
+      }
     }
   }, [searchService]);
 

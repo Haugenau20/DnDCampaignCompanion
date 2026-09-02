@@ -277,6 +277,58 @@ describe("SearchContext Behavioral Testing", () => {
       expect(result.current.isSearching).toBe(false);
     });
 
+    test("should not let a stale search response overwrite a newer one", async () => {
+      // The older query's underlying service call is the one still in flight
+      // when the newer query's already resolved — deliberately out-of-order
+      // resolution, the case a debounced/overlapping caller can produce.
+      // The stale response must not clobber the results the fresh one set.
+      const staleResult = {
+        id: "stale-1",
+        type: "npc",
+        title: "Stale",
+        content: "old",
+        matches: [],
+        matchCount: 1,
+      };
+      const freshResult = {
+        id: "fresh-1",
+        type: "npc",
+        title: "Fresh",
+        content: "new",
+        matches: [],
+        matchCount: 1,
+      };
+
+      let resolveStale!: (value: unknown) => void;
+      const stalePromise = new Promise((resolve) => {
+        resolveStale = resolve;
+      });
+
+      mockSearch
+        .mockImplementationOnce(() => stalePromise)
+        .mockImplementationOnce(() => [freshResult]);
+
+      const { result } = renderHook(() => useSearch(), { wrapper });
+
+      let staleCall!: Promise<void>;
+      await act(async () => {
+        staleCall = result.current.handleSearch("old-query");
+        await result.current.handleSearch("new-query");
+      });
+
+      // The fresh (newer) query already resolved and set its results.
+      expect(result.current.results).toEqual([freshResult]);
+
+      // Now let the stale (older) query's response arrive late.
+      await act(async () => {
+        resolveStale([staleResult]);
+        await staleCall;
+      });
+
+      // It must not have overwritten the fresh results.
+      expect(result.current.results).toEqual([freshResult]);
+    });
+
     test("should return multiple results from multiple types", async () => {
       const multiTypeResults = [
         { id: "npc-1", type: "npc", title: "Gandalf", content: "wizard", matches: [] },
@@ -354,15 +406,60 @@ describe("SearchContext Behavioral Testing", () => {
       });
     });
 
-    test("should NOT call initializeIndex when any collection is empty", async () => {
-      // Quests empty
+    test("should call initializeIndex when one collection is empty but others have data", async () => {
+      // Regression test: the Phandelver campaign has 0 rumors, but chapters, quests,
+      // npcs and locations are all populated. The index must still build so that,
+      // for example, an NPC like "Droop" remains searchable.
+      mockUseRumorData.mockReturnValue({ rumors: [] });
+
+      renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => {
+        expect(mockInitializeIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const [indexArg] = mockInitializeIndex.mock.calls[0];
+      expect(indexArg.rumors).toEqual([]);
+      expect(indexArg.npc).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: "npc-1", type: "npc" })])
+      );
+    });
+
+    test("should NOT call initializeIndex when every collection is empty", async () => {
+      mockUseChapterData.mockReturnValue({ chapters: [] });
+      mockUseNPCData.mockReturnValue({ npcs: [] });
+      mockUseLocationData.mockReturnValue({ locations: [] });
       mockUseQuests.mockReturnValue({ quests: [] });
+      mockUseRumorData.mockReturnValue({ rumors: [] });
 
       renderHook(() => useSearch(), { wrapper });
 
       // Short settle — initializeIndex should not be called
       await new Promise((r) => setTimeout(r, 50));
       expect(mockInitializeIndex).not.toHaveBeenCalled();
+    });
+
+    test("should call initializeIndex again when a previously-empty collection arrives later", async () => {
+      // Collections load asynchronously and independently — a collection that
+      // starts empty (still fetching) and later arrives with data must trigger
+      // a rebuild rather than being permanently excluded from the index.
+      mockUseRumorData.mockReturnValue({ rumors: [] });
+
+      const { rerender } = renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => {
+        expect(mockInitializeIndex).toHaveBeenCalledTimes(1);
+      });
+
+      mockUseRumorData.mockReturnValue({ rumors: defaultRumors });
+      rerender();
+
+      await waitFor(() => {
+        expect(mockInitializeIndex).toHaveBeenCalledTimes(2);
+      });
+
+      const [secondIndexArg] = mockInitializeIndex.mock.calls[1];
+      expect(secondIndexArg.rumors).toHaveLength(1);
     });
 
     test("should pass correctly shaped search documents to initializeIndex", async () => {
