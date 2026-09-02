@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import useSessionManager from '../hooks/useSessionManager';
 import { useAuth } from '../hooks/useAuth';
 import { useGroups } from '../../groups/hooks/useGroups';
@@ -42,13 +42,32 @@ const SessionManager: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const accountThemeName = userProfile?.preferences?.theme;
   const groupThemeName = activeGroupUserProfile?.preferences?.theme;
 
+  /**
+   * The theme value this component last applied itself.
+   *
+   * `ThemeContext` builds `setTheme` and its context value inline on every
+   * render, so both change identity whenever the theme changes. Without this,
+   * a user picking a theme re-runs the effects below -- their `setTheme`
+   * dependency just changed -- and they re-apply the STORED theme over the
+   * one that was just chosen, snapping the UI back before the write to the
+   * account has even landed.
+   *
+   * This is not the `initialThemeApplied` flag that used to live here. That
+   * one applied a theme once per session and then ignored the profile
+   * forever; this records the value applied, so a genuine change to the
+   * stored theme is still honoured while a no-op re-run is not.
+   */
+  const lastApplied = useRef<string | null>(null);
+
   // Kept in its own effect, depending only on the account theme, so that a
   // later group switch (which changes `groupThemeName`, not this) never
   // re-triggers an application the account has already settled.
   useEffect(() => {
     if (!accountThemeName) return;
+    if (lastApplied.current === accountThemeName) return;
 
     if (isValidTheme(accountThemeName)) {
+      lastApplied.current = accountThemeName;
       setTheme(accountThemeName);
     } else {
       console.warn('Invalid theme found in account preferences:', accountThemeName);
@@ -66,7 +85,13 @@ const SessionManager: React.FC<{ children: React.ReactNode }> = ({ children }) =
       return;
     }
 
+    // Same guard as above, for the same reason: without it, picking a theme
+    // while the account still has none re-runs this effect, re-applies the
+    // membership's theme over the choice, and fires the migration write again.
+    if (lastApplied.current === groupThemeName) return;
+
     if (isValidTheme(groupThemeName)) {
+      lastApplied.current = groupThemeName;
       setTheme(groupThemeName);
 
       // Carry the theme of whichever group is active right now up to the
