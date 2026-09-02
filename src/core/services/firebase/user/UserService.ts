@@ -50,7 +50,15 @@ import {
             groups: userData.groups || [],
             activeGroupId: userData.activeGroupId || null,
             lastLogin: userData.lastLogin || new Date(),
-            createdAt: userData.createdAt || new Date()
+            createdAt: userData.createdAt || new Date(),
+            // Account-scoped preferences (theme lives here). This mapping is
+            // field-by-field rather than a spread, so anything not named here
+            // is silently dropped on the way out of Firestore -- which is what
+            // happened to `preferences`: the theme was written to the account
+            // correctly and then never read back, so every load behaved as if
+            // the account had no theme and re-migrated the stale group value
+            // over it.
+            preferences: userData.preferences || undefined
             };
         }
         

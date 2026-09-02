@@ -132,6 +132,26 @@ describe('UserService', () => {
       expect(result).toBeNull();
     });
 
+    // The mapping is field-by-field, so a field nobody names here is dropped
+    // on the way out of Firestore. That is how the account theme came to be
+    // written correctly and never read back: every load looked like an account
+    // with no theme, and re-migrated the stale group value over it.
+    test('returns account preferences, so a stored theme survives the round trip', async () => {
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, {
+          email: 'test@example.com',
+          groups: ['g1'],
+          activeGroupId: 'g1',
+          lastLogin: new Date(),
+          createdAt: new Date(),
+          preferences: { theme: 'medieval' },
+        })
+      );
+      const svc = UserService.getInstance();
+      const profile = await svc.getUserProfile('uid-1');
+      expect(profile?.preferences?.theme).toBe('medieval');
+    });
+
     test('should return a UserProfile when the document exists', async () => {
       mockGetDoc.mockResolvedValueOnce(
         makeDocSnapshot(true, {

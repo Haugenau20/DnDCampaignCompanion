@@ -85,6 +85,50 @@ describe("SessionManager theme switching, against the real ThemeContext", () => 
     expect(screen.getByTestId("current-theme")).toHaveTextContent("dark");
   });
 
+  // The account profile loads asynchronously. Every existing test hands
+  // SessionManager both profiles at once, so none of them can see the window
+  // where the membership has loaded and the account has not -- which is every
+  // page load in the real app.
+  test("does not migrate a membership theme while the account profile is still loading", async () => {
+    useGroups.mockReturnValue({
+      activeGroupUserProfile: { preferences: { theme: "dark" } },
+    });
+    useUser.mockReturnValue({
+      userProfile: null, // not loaded yet -- says nothing about preferences
+      updateUserProfile: mockUpdateUserProfile,
+    });
+
+    const { rerender } = render(
+      <ThemeProvider>
+        <SessionManager>
+          <ThemeProbe />
+        </SessionManager>
+      </ThemeProvider>
+    );
+
+    // Nothing may be written on the strength of a profile that has not arrived.
+    expect(mockUpdateUserProfile).not.toHaveBeenCalled();
+
+    // The account arrives, and it has a theme of its own: that wins, and the
+    // stale membership value must not be written over it.
+    useUser.mockReturnValue({
+      userProfile: { id: "user-1", preferences: { theme: "light" } },
+      updateUserProfile: mockUpdateUserProfile,
+    });
+
+    await act(async () => {
+      rerender(
+        <ThemeProvider>
+          <SessionManager>
+            <ThemeProbe />
+          </SessionManager>
+        </ThemeProvider>
+      );
+    });
+
+    expect(mockUpdateUserProfile).not.toHaveBeenCalled();
+  });
+
   test("the account theme is still applied on mount", () => {
     render(
       <ThemeProvider>

@@ -78,6 +78,15 @@ const SessionManager: React.FC<{ children: React.ReactNode }> = ({ children }) =
   // of its own yet. Once the write above lands and `accountThemeName`
   // becomes truthy, this effect's own early return takes over permanently.
   useEffect(() => {
+    // The account profile loads asynchronously, and until it arrives
+    // `accountThemeName` is undefined for a reason that has nothing to do with
+    // the user's preferences. Migrating on that would apply the membership's
+    // stale theme AND write it over the account -- which is exactly what
+    // happened: every reload silently reverted the chosen theme and destroyed
+    // the stored one. "No account theme" is only knowable once there is an
+    // account profile to look at.
+    if (!userProfile) return;
+
     if (accountThemeName || !groupThemeName) {
       // Either the account already has a theme (handled above), or there is
       // neither an account nor a group theme -- leave ThemeContext on
