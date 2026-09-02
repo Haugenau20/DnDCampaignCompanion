@@ -22,22 +22,21 @@ const GlobalActionButton: React.FC = () => {
   };
 
   /**
-   * Run a create action and close the menu afterwards.
+   * Run a create action and close the menu immediately, in this same click's
+   * render pass -- for all six actions, including the note.
    *
-   * The five navigating actions run synchronously, and the menu must close
-   * in that same click's render pass. The note action is async (it writes
-   * the note before navigating to it), so its close waits for that promise.
-   * Unconditionally `await`-ing here would defer *every* close by a
-   * microtask -- including the synchronous ones -- which is a real, visible
-   * behaviour change, not just an implementation detail.
+   * `action.run()` is deliberately fire-and-forget here, not awaited: the
+   * note action writes the note and navigates to it in the background, after
+   * the menu has already closed. This matches the pre-refactor behaviour
+   * exactly (see `git show d4addb0:src/shared/components/GlobalActionButton.tsx`),
+   * where `onClick()` was called without awaiting and `setIsOpen(false)` ran
+   * unconditionally on the next line. Do not "helpfully" add an `await` --
+   * that defers the close for every action, which is a real, user-visible
+   * regression, not a cleanup.
    */
   const handleActionClick = (action: CreateAction) => {
-    const result = action.run();
-    if (result && typeof (result as Promise<void>).then === 'function') {
-      (result as Promise<void>).then(() => setIsOpen(false));
-    } else {
-      setIsOpen(false);
-    }
+    action.run();
+    setIsOpen(false);
   };
 
   return (
