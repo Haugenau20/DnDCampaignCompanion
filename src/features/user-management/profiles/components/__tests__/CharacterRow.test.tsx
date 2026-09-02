@@ -6,89 +6,115 @@ import CharacterRow from "../CharacterRow";
 
 const character = { id: "char-1", name: "Gandalf" };
 
+/**
+ * Renders `CharacterRow` with sensible defaults, overridable per test.
+ */
+function renderRow(overrides: Partial<React.ComponentProps<typeof CharacterRow>> = {}) {
+  const props: React.ComponentProps<typeof CharacterRow> = {
+    character,
+    isActive: false,
+    isRenaming: false,
+    renameDisabled: false,
+    saving: false,
+    onSetActive: jest.fn(),
+    onStartRename: jest.fn(),
+    onConfirmRename: jest.fn(),
+    onCancelRename: jest.fn(),
+    onRemove: jest.fn(),
+    ...overrides,
+  };
+  render(<CharacterRow {...props} />);
+  return props;
+}
+
 describe("CharacterRow", () => {
-  test("renders the character's name", () => {
-    render(
+  test("renders Post as this, Rename and Remove as labelled controls", () => {
+    renderRow();
+    expect(screen.getByRole("button", { name: "Post as this" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rename" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+  });
+
+  test("omits 'Post as this' on the row that is already posting", () => {
+    renderRow({ isActive: true });
+    expect(screen.queryByRole("button", { name: "Post as this" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rename" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+  });
+
+  test("marks the posting row with a star and a 'posting as' marker", () => {
+    const { container } = render(
       <CharacterRow
         character={character}
-        isActive={false}
-        isEditingOther={false}
+        isActive
+        isRenaming={false}
+        renameDisabled={false}
         saving={false}
         onSetActive={jest.fn()}
-        onEdit={jest.fn()}
-        onDelete={jest.fn()}
+        onStartRename={jest.fn()}
+        onConfirmRename={jest.fn()}
+        onCancelRename={jest.fn()}
+        onRemove={jest.fn()}
       />
     );
-    expect(screen.getByText("Gandalf")).toBeInTheDocument();
+    expect(screen.getByText(/posting as/i)).toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeInTheDocument();
   });
 
-  test("shows a Set Active button when not the active character", async () => {
-    const onSetActive = jest.fn();
-    render(
-      <CharacterRow
-        character={character}
-        isActive={false}
-        isEditingOther={false}
-        saving={false}
-        onSetActive={onSetActive}
-        onEdit={jest.fn()}
-        onDelete={jest.fn()}
-      />
-    );
-    await userEvent.click(screen.getByRole("button", { name: /set active/i }));
-    expect(onSetActive).toHaveBeenCalledTimes(1);
-  });
-
-  test("hides Set Active when this row is already the active character", () => {
+  test("carries no accent ring on the active row", () => {
     render(
       <CharacterRow
         character={character}
         isActive
-        isEditingOther={false}
+        isRenaming={false}
+        renameDisabled={false}
         saving={false}
         onSetActive={jest.fn()}
-        onEdit={jest.fn()}
-        onDelete={jest.fn()}
+        onStartRename={jest.fn()}
+        onConfirmRename={jest.fn()}
+        onCancelRename={jest.fn()}
+        onRemove={jest.fn()}
       />
     );
-    expect(screen.queryByRole("button", { name: /set active/i })).not.toBeInTheDocument();
+    const row = screen.getByTestId("character-row-char-1");
+    expect(row.querySelector(".selected-item")).toBeNull();
   });
 
-  test("calls onEdit and onDelete for their respective buttons", async () => {
-    const onEdit = jest.fn();
-    const onDelete = jest.fn();
-    render(
-      <CharacterRow
-        character={character}
-        isActive={false}
-        isEditingOther={false}
-        saving={false}
-        onSetActive={jest.fn()}
-        onEdit={onEdit}
-        onDelete={onDelete}
-      />
-    );
-    const buttons = screen.getAllByRole("button");
-    // Edit is the icon button before Delete (last button in the row).
-    await userEvent.click(buttons[buttons.length - 2]);
-    expect(onEdit).toHaveBeenCalledTimes(1);
-    await userEvent.click(buttons[buttons.length - 1]);
-    expect(onDelete).toHaveBeenCalledTimes(1);
+  test("Remove asks for confirmation before removing", async () => {
+    const onRemove = jest.fn();
+    renderRow({ onRemove });
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    expect(onRemove).not.toHaveBeenCalled();
+    expect(screen.getByText(/remove gandalf\?/i)).toBeInTheDocument();
   });
 
-  test("disables its edit button while another row is being edited", () => {
-    render(
-      <CharacterRow
-        character={character}
-        isActive={false}
-        isEditingOther
-        saving={false}
-        onSetActive={jest.fn()}
-        onEdit={jest.fn()}
-        onDelete={jest.fn()}
-      />
-    );
-    const buttons = screen.getAllByRole("button");
-    expect(buttons[buttons.length - 2]).toBeDisabled();
+  test("Cancel on the confirmation leaves the character in place", async () => {
+    const onRemove = jest.fn();
+    renderRow({ onRemove });
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onRemove).not.toHaveBeenCalled();
+    expect(screen.queryByText(/remove gandalf\?/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+  });
+
+  test("renames in the row, without touching the add field", async () => {
+    const onConfirmRename = jest.fn();
+    renderRow({ isRenaming: true, onConfirmRename });
+
+    const input = screen.getByLabelText(/rename gandalf/i);
+    await userEvent.clear(input);
+    await userEvent.type(input, "Saruman");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(onConfirmRename).toHaveBeenCalledWith("Saruman");
+    // Renaming is entirely self-contained on the row -- there is no add
+    // field anywhere near it to hijack.
+    expect(screen.queryByPlaceholderText(/add a character/i)).not.toBeInTheDocument();
+  });
+
+  test("renders its own failure message under the row that failed", () => {
+    renderRow({ error: "Save failed" });
+    expect(screen.getByText("Save failed")).toBeInTheDocument();
   });
 });

@@ -74,6 +74,26 @@ describe("useCharacterRoster", () => {
     );
   });
 
+  test("keys errors by character id", async () => {
+    setupMocks({
+      activeCharacterId: "char-1",
+      characters: [
+        { id: "char-1", name: "Gandalf" },
+        { id: "char-2", name: "Frodo" },
+      ],
+    });
+    mockUpdateGroupUserProfile.mockRejectedValueOnce(new Error("Save failed"));
+
+    const { result } = renderHook(() => useCharacterRoster());
+
+    await act(async () => {
+      await result.current.rename("char-1", "Saruman");
+    });
+
+    expect(result.current.rowErrors["char-1"]).toMatch(/save failed/i);
+    expect(result.current.rowErrors["char-2"]).toBeUndefined();
+  });
+
   test("rolls local state back when a mutation fails, keyed by character id", async () => {
     setupMocks({
       activeCharacterId: "char-1",
