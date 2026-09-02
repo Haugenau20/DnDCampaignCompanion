@@ -5,24 +5,29 @@ import { SearchResult, SearchResultType } from 'core/types/search';
 import Typography from 'core/components/Typography';
 import { useNavigation } from '../context/NavigationContext';
 import { clsx } from 'clsx';
-import { 
-  Search as SearchIcon, 
-  X, 
+import {
+  Search as SearchIcon,
+  X,
   Loader2,
   Book,
   Scroll,
   Users,
   MapPin,
-  MessageSquare
+  MessageSquare,
+  StickyNote
 } from 'lucide-react';
 
-// Map of icons for each result type
+// Map of icons for each result type. `note` uses `StickyNote` to match the
+// icon `src/app/layout/Navigation.tsx` already uses for the `/notes` nav
+// item -- the same destination should not change icon between the nav and
+// the search results.
 const resultTypeIcons: Record<SearchResultType, JSX.Element> = {
   story: <Book className="w-4 h-4" />,
   quest: <Scroll className="w-4 h-4" />,
   npc: <Users className="w-4 h-4" />,
   location: <MapPin className="w-4 h-4" />,
-  rumors: <MessageSquare className="w-4 h-4" />
+  rumors: <MessageSquare className="w-4 h-4" />,
+  note: <StickyNote className="w-4 h-4" />
 };
 
 // Labels for each result type
@@ -31,19 +36,21 @@ const resultTypeLabels: Record<SearchResultType, string> = {
   quest: 'Quest',
   npc: 'NPC',
   location: 'Location',
-  rumors: 'Rumor'
+  rumors: 'Rumor',
+  note: 'Note'
 };
 
 /**
  * Search bar component with real-time search functionality and results dropdown
  */
 export const SearchBar: React.FC = () => {
-  const { 
-    query, 
-    results, 
-    isSearching, 
-    onSearch, 
-    onClearSearch 
+  const {
+    query,
+    results,
+    isSearching,
+    isQueryTooShort,
+    onSearch,
+    onClearSearch
   } = useSearch();
   
   const [isFocused, setIsFocused] = useState(false);
@@ -70,6 +77,16 @@ export const SearchBar: React.FC = () => {
         break;
       case 'rumors':
         navigateToPage(createPath('/rumors', {}, { highlight: result.id }));
+        break;
+      case 'note':
+        // `createPath` cannot express this: its `params` argument is carried
+        // on the returned NavigationPath but never substituted into `.path`,
+        // and `navigateToPage` only reads `.path` and `.query` (see
+        // shared/context/NavigationContext.tsx), so `createPath('/notes/:noteId', ...)`
+        // would navigate to the literal string "/notes/:noteId". A note is a
+        // real route (`/notes/:noteId` in src/app/App.tsx), so its id belongs
+        // in the path, not in a query string -- call navigateToPage directly.
+        navigateToPage(`/notes/${result.id}`);
         break;
     }
   }, [navigateToPage, createPath]);
@@ -235,7 +252,7 @@ export const SearchBar: React.FC = () => {
           ) : (
             <div className="p-4 text-center">
               <Typography color="secondary">
-                {isSearching ? 'Searching...' : 'No results found'}
+                {isSearching ? 'Searching...' : isQueryTooShort ? 'Keep typing…' : 'No results found'}
               </Typography>
             </div>
           )}

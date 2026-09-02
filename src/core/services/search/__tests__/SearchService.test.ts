@@ -52,6 +52,7 @@ describe('SearchService', () => {
           quest: [],
           story: [],
           rumors: [],
+          note: [],
         })
       ).not.toThrow();
     });
@@ -64,6 +65,7 @@ describe('SearchService', () => {
         quest: [],
         story: [],
         rumors: [],
+        note: [],
       });
       const results = svc.search('aragorn');
       expect(results.length).toBeGreaterThan(0);
@@ -75,13 +77,13 @@ describe('SearchService', () => {
   describe('search', () => {
     test('should return empty array for empty query', () => {
       const svc = makeService();
-      svc.initializeIndex({ npc: [makeDoc('n1', 'npc', 'Gandalf')], location: [], quest: [], story: [], rumors: [] });
+      svc.initializeIndex({ npc: [makeDoc('n1', 'npc', 'Gandalf')], location: [], quest: [], story: [], rumors: [], note: [] });
       expect(svc.search('')).toEqual([]);
     });
 
     test('should return empty array when query is shorter than minQueryLength (default 2)', () => {
       const svc = makeService();
-      svc.initializeIndex({ npc: [makeDoc('n1', 'npc', 'Gandalf')], location: [], quest: [], story: [], rumors: [] });
+      svc.initializeIndex({ npc: [makeDoc('n1', 'npc', 'Gandalf')], location: [], quest: [], story: [], rumors: [], note: [] });
       expect(svc.search('G')).toEqual([]);
     });
 
@@ -89,7 +91,7 @@ describe('SearchService', () => {
       const svc = makeService();
       svc.initializeIndex({
         npc: [makeDoc('n1', 'npc', 'Gandalf the Grey', 'Gandalf')],
-        location: [], quest: [], story: [], rumors: [],
+        location: [], quest: [], story: [], rumors: [], note: [],
       });
       const results = svc.search('Ga');
       expect(results.length).toBeGreaterThan(0);
@@ -97,7 +99,7 @@ describe('SearchService', () => {
 
     test('should respect custom minQueryLength option', () => {
       const svc = makeService({ minQueryLength: 4 });
-      svc.initializeIndex({ npc: [makeDoc('n1', 'npc', 'Gandalf')], location: [], quest: [], story: [], rumors: [] });
+      svc.initializeIndex({ npc: [makeDoc('n1', 'npc', 'Gandalf')], location: [], quest: [], story: [], rumors: [], note: [] });
       // 3-char query is below threshold
       expect(svc.search('Gan')).toEqual([]);
       // 4-char query meets threshold
@@ -112,6 +114,7 @@ describe('SearchService', () => {
         quest: [],
         story: [],
         rumors: [],
+        note: [],
       });
       const results = svc.search('dragon');
       const types = results.map(r => r.type);
@@ -127,6 +130,7 @@ describe('SearchService', () => {
         quest: [],
         story: [],
         rumors: [],
+        note: [],
       });
       const results = svc.search('Sauron');
       expect(results).toEqual([]);
@@ -135,7 +139,7 @@ describe('SearchService', () => {
     test('should perform title match (title matches are prioritised)', () => {
       const svc = makeService({ fuzzyMatch: false });
       const doc = makeDoc('n1', 'npc', 'Some unrelated content', 'Frodo Baggins');
-      svc.initializeIndex({ npc: [doc], location: [], quest: [], story: [], rumors: [] });
+      svc.initializeIndex({ npc: [doc], location: [], quest: [], story: [], rumors: [], note: [] });
       const results = svc.search('Frodo');
       expect(results).toHaveLength(1);
       expect(results[0].id).toBe('n1');
@@ -145,7 +149,7 @@ describe('SearchService', () => {
       const svc = makeService({ fuzzyMatch: false });
       svc.initializeIndex({
         npc: [makeDoc('n1', 'npc', 'Hobbit from the Shire', 'Frodo')],
-        location: [], quest: [], story: [], rumors: [],
+        location: [], quest: [], story: [], rumors: [], note: [],
       });
       const [result] = svc.search('Frodo');
       expect(result).toHaveProperty('id', 'n1');
@@ -161,7 +165,7 @@ describe('SearchService', () => {
       const docs = Array.from({ length: 10 }, (_, i) =>
         makeDoc(`n${i}`, 'npc', `warrior hero ${i}`, `Hero ${i}`)
       );
-      svc.initializeIndex({ npc: docs, location: [], quest: [], story: [], rumors: [] });
+      svc.initializeIndex({ npc: docs, location: [], quest: [], story: [], rumors: [], note: [] });
       const results = svc.search('hero');
       // Should be at most 2 for npc type
       const npcResults = results.filter(r => r.type === 'npc');

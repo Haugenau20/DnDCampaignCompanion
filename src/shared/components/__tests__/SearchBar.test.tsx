@@ -46,6 +46,7 @@ const defaultSearchState = {
   query: '',
   results: [] as SearchResult[],
   isSearching: false,
+  isQueryTooShort: false,
   onSearch: mockOnSearch,
   onClearSearch: mockOnClearSearch,
 };
@@ -229,6 +230,41 @@ describe('SearchBar', () => {
       });
     });
 
+    test('should show "Keep typing…" instead of "No results found" when isQueryTooShort is true and there are no results', async () => {
+      (useSearch as jest.Mock).mockReturnValue(
+        makeSearchMock({ query: 'g', results: [], isQueryTooShort: true })
+      );
+      render(<SearchBar />);
+      fireEvent.focus(screen.getByRole('searchbox'));
+      await waitFor(() => {
+        expect(screen.getByText('Keep typing…')).toBeInTheDocument();
+        expect(screen.queryByText(/no results found/i)).not.toBeInTheDocument();
+      });
+    });
+
+    test('should still show "No results found" when isQueryTooShort is false and results are empty', async () => {
+      (useSearch as jest.Mock).mockReturnValue(
+        makeSearchMock({ query: 'zzznoresults', results: [], isQueryTooShort: false })
+      );
+      render(<SearchBar />);
+      fireEvent.focus(screen.getByRole('searchbox'));
+      await waitFor(() => {
+        expect(screen.getByText(/no results found/i)).toBeInTheDocument();
+      });
+    });
+
+    test('should show "Searching..." even when isQueryTooShort is true (isSearching wins)', async () => {
+      (useSearch as jest.Mock).mockReturnValue(
+        makeSearchMock({ query: 'g', results: [], isQueryTooShort: true, isSearching: true })
+      );
+      render(<SearchBar />);
+      fireEvent.focus(screen.getByRole('searchbox'));
+      await waitFor(() => {
+        expect(screen.getByText(/searching/i)).toBeInTheDocument();
+        expect(screen.queryByText('Keep typing…')).not.toBeInTheDocument();
+      });
+    });
+
     test('should render result type labels', async () => {
       (useSearch as jest.Mock).mockReturnValue(
         makeSearchMock({ query: 'gandalf', results: mockResults })
@@ -363,6 +399,55 @@ describe('SearchBar', () => {
       expect(mockNavigateToPage).toHaveBeenCalledWith(
         expect.stringContaining('/rumors')
       );
+    });
+
+    test('should render a note result with its title and the "Note" type label', async () => {
+      const noteResults: SearchResult[] = [
+        {
+          id: 'note-1',
+          type: 'note',
+          title: 'Session 3 recap',
+          content: 'We fought a dragon',
+          matches: ['fought a dragon'],
+          matchCount: 1,
+        },
+      ];
+      (useSearch as jest.Mock).mockReturnValue(
+        makeSearchMock({ query: 'dragon', results: noteResults })
+      );
+      render(<SearchBar />);
+      fireEvent.focus(screen.getByRole('searchbox'));
+      await waitFor(() => {
+        expect(screen.getByText('Session 3 recap')).toBeInTheDocument();
+        expect(screen.getByText('Note')).toBeInTheDocument();
+      });
+    });
+
+    test('should navigate to /notes/<id> (a path segment, not a ?highlight= query) when a note result is clicked', async () => {
+      const noteResults: SearchResult[] = [
+        {
+          id: 'note-1',
+          type: 'note',
+          title: 'Session 3 recap',
+          content: 'We fought a dragon',
+          matches: ['fought a dragon'],
+          matchCount: 1,
+        },
+      ];
+      (useSearch as jest.Mock).mockReturnValue(
+        makeSearchMock({ query: 'dragon', results: noteResults })
+      );
+      render(<SearchBar />);
+      fireEvent.focus(screen.getByRole('searchbox'));
+      await waitFor(() => {
+        expect(screen.getByText('Session 3 recap')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('Session 3 recap'));
+      expect(mockNavigateToPage).toHaveBeenCalledWith(
+        expect.stringContaining('/notes/note-1')
+      );
+      const navigatedPath = mockNavigateToPage.mock.calls[0][0];
+      expect(navigatedPath).not.toContain('highlight');
     });
 
     test('should update selected index on mouse enter over a result', async () => {
