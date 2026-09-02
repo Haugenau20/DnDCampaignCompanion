@@ -23,9 +23,13 @@ const DEFAULT_OPTIONS = {
 /**
  * Custom hook for handling debounced search functionality
  * Builds on top of the SearchContext to provide additional features
- * 
+ *
  * @param options - Configuration options for search behavior
- * @returns Object containing search handlers and state
+ * @returns Object containing search handlers and state, including
+ * `isIndexReady` -- whether the search index has been built at least once.
+ * Before it has, an empty `results` array cannot be distinguished from a
+ * genuine no-match, so callers (e.g. the command palette) use this flag to
+ * render a loading state instead of "no results".
  */
 export const useSearch = (userOptions: UseSearchOptions = {}) => {
   // Merge default options with user options
@@ -35,13 +39,14 @@ export const useSearch = (userOptions: UseSearchOptions = {}) => {
   };
 
   // Get base search functionality from context
-  const { 
-    query, 
-    setQuery, 
-    handleSearch, 
+  const {
+    query,
+    setQuery,
+    handleSearch,
     clearSearch,
     results,
-    isSearching 
+    isSearching,
+    isIndexReady
   } = useSearchContext();
 
   // State for debounced query
@@ -104,6 +109,7 @@ export const useSearch = (userOptions: UseSearchOptions = {}) => {
     debouncedQuery,
     results,
     isSearching,
+    isIndexReady,
     isQueryTooShort,
 
     // Search handlers

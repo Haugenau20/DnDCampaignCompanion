@@ -22,6 +22,7 @@ const defaultContextValue = () => ({
   clearSearch: mockClearSearch,
   results: [],
   isSearching: false,
+  isIndexReady: true,
 });
 
 // ---------------------------------------------------------------------------
@@ -81,6 +82,12 @@ describe('useSearch', () => {
 
       const { result } = renderHook(() => useSearch());
       expect(result.current.isSearching).toBe(true);
+    });
+
+    it("passes the index-ready flag through from the context", () => {
+      useSearchContext.mockReturnValue({ ...defaultContextValue(), isIndexReady: false });
+      const { result } = renderHook(() => useSearch());
+      expect(result.current.isIndexReady).toBe(false);
     });
   });
 

@@ -19,6 +19,7 @@ interface SearchContextData {
   setQuery: (query: string) => void;
   results: SearchResult[];
   isSearching: boolean;
+  isIndexReady: boolean;
   handleSearch: (query: string) => Promise<void>;
   clearSearch: () => void;
 }
@@ -123,6 +124,10 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  // Whether the index has been built at least once. Before it has, an empty
+  // `results` array is indistinguishable from a genuine miss -- which is the
+  // state the palette must render as a skeleton rather than as "no results".
+  const [isIndexReady, setIsIndexReady] = useState(false);
 
   // Get data from all our collections
   const { chapters } = useChapterData();
@@ -154,6 +159,7 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         };
 
         searchService.initializeIndex(searchDocuments);
+        setIsIndexReady(true);
       } catch (error) {
         console.error('Error initializing search index:', error);
       }
@@ -214,9 +220,10 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setQuery,
     results,
     isSearching,
+    isIndexReady,
     handleSearch,
     clearSearch
-  }), [query, results, isSearching, handleSearch, clearSearch]);
+  }), [query, results, isSearching, isIndexReady, handleSearch, clearSearch]);
 
   return (
     <SearchContext.Provider value={value}>
