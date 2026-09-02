@@ -281,11 +281,12 @@ the tree.
 - **Use test failures to improve code quality before major refactoring**
 
 ### Current State
-- **Testing Infrastructure**: Jest + React Testing Library, **4,540 tests across 209 suites**
+- **Testing Infrastructure**: Jest + React Testing Library, **4,631 tests across 226 suites**
 - **Coverage**: **91.96% statements / 92.42% lines / 85.77% functions / 84.05% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-31 on `design-handoff/dashboard-1a`)
-- **Baseline**: **0 failed / 2 skipped / 4538 passed / 4540 total across 209 suites.** The 2 skips are #901's, closed as testability-only. **Any red is a regression.**
+- **Baseline**: **0 failed / 2 skipped / 4629 passed / 4631 total across 226 suites.** The 2 skips are #901's, closed as testability-only. **Any red is a regression.**
   - The previously recorded baseline of 7 failures — the ID-collision markers #002/#004/#009/#012 in the four `*Context.bugs` suites — is **obsolete**: that cluster was fixed 2026-07-28 and those four suites now pass 29/29. If you find advice anywhere telling you to tolerate reds, check `docs/testing/bug-tracking/README.md` before believing it.
-  - Measured on the `redesign/context-switcher` branch, which is ahead of `main`. On `main` expect roughly 182 suites / 4043 tests, also fully green.
+  - Measured 2026-09-02 on `fix/search-index-and-relevance`. `main` at `fef0f09` was 227 suites / 4617 tests, also fully green; this branch is -1 suite (deleted the duplicate `shared/utils/search.ts` and its test) and +14 tests net.
+  - **Recording a new baseline: measure it, don't carry one forward.** The figure above replaced one that had been stale for over a month because it was taken on a branch that later merged. If your run disagrees with this line, run the suites you touched alone and reconcile the delta before assuming a regression.
   - To prove "the same suites failed", run the suspect suites alone and match counts against the full run; piping a full run through `tail` discards the earlier failures' names.
 - **Firebase Testing**: Emulator integration available but underutilized
 

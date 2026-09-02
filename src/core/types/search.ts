@@ -1,22 +1,22 @@
 // src/core/types/search.ts
-export type SearchResultType = 'story' | 'quest' | 'npc' | 'location' | 'rumors';
+/** The domain a search result belongs to. */
+export type SearchResultType = 'story' | 'quest' | 'npc' | 'location' | 'rumors' | 'note';
 
+/**
+ * A single search result surfaced to the UI: at most one context snippet
+ * (`matches`), plus the total number of content occurrences found (`matchCount`).
+ */
 export interface SearchResult {
   id: string;
   type: SearchResultType;
   title: string;
   content: string;
   matches: string[];
+  /** Total number of content occurrences found, of which `matches` carries at most one. */
+  matchCount: number;
 }
 
-export interface SearchIndex {
-  story: SearchDocument[];
-  quests: SearchDocument[];
-  npcs: SearchDocument[];
-  locations: SearchDocument[];
-  rumors: SearchDocument[];
-}
-
+/** A document as stored in the in-memory search index, before scoring. */
 export interface SearchDocument {
   id: string;
   type: SearchResultType;

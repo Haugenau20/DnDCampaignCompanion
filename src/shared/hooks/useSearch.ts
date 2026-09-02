@@ -1,5 +1,5 @@
 // hooks/useSearch.ts
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearch as useSearchContext } from '../context/SearchContext';
 
 /**
@@ -16,7 +16,7 @@ interface UseSearchOptions {
  * Default options for search configuration
  */
 const DEFAULT_OPTIONS = {
-  debounceMs: 300,
+  debounceMs: 180,
   minQueryLength: 2
 } as const;
 
@@ -53,10 +53,22 @@ export const useSearch = (userOptions: UseSearchOptions = {}) => {
     return () => clearTimeout(timer);
   }, [query, options.debounceMs]);
 
-  // Perform search when debounced query changes
+  // Whether a search has actually run for the current typing session. This is
+  // deliberately a ref rather than a check on `results.length`: the provider
+  // returns a brand-new array from every search, so depending on `results`
+  // here would re-fire this effect on its own result and loop forever.
+  const hasSearched = useRef(false);
+
+  // Perform search when debounced query changes. Below the minimum length,
+  // clear any results left over from a previous, longer query instead of
+  // leaving them on screen under a query that no longer matches them.
   useEffect(() => {
     if (debouncedQuery && debouncedQuery.length >= options.minQueryLength) {
+      hasSearched.current = true;
       handleSearch(debouncedQuery);
+    } else if (hasSearched.current) {
+      hasSearched.current = false;
+      handleSearch('');
     }
   }, [debouncedQuery, handleSearch, options.minQueryLength]);
 
@@ -73,7 +85,18 @@ export const useSearch = (userOptions: UseSearchOptions = {}) => {
   const onClearSearch = useCallback(() => {
     clearSearch();
     setDebouncedQuery('');
+    // `clearSearch` already emptied the results, so the next sub-minimum query
+    // has nothing left over to clear.
+    hasSearched.current = false;
   }, [clearSearch]);
+
+  /**
+   * True while the user has typed something, but not yet enough characters
+   * to meet `minQueryLength`. Derived from the live `query` (not the
+   * debounced one) so a "keep typing" hint can appear immediately rather
+   * than waiting out the debounce delay.
+   */
+  const isQueryTooShort = query.trim().length > 0 && query.trim().length < options.minQueryLength;
 
   return {
     // Search state
@@ -81,6 +104,7 @@ export const useSearch = (userOptions: UseSearchOptions = {}) => {
     debouncedQuery,
     results,
     isSearching,
+    isQueryTooShort,
 
     // Search handlers
     onSearch,

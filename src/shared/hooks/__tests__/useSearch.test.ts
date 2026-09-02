@@ -298,7 +298,7 @@ describe('useSearch', () => {
   // Default options
   // -------------------------------------------------------------------------
   describe('default options', () => {
-    test('should use 300ms debounce and minQueryLength=2 by default', async () => {
+    test('should use 180ms debounce and minQueryLength=2 by default', async () => {
       (useSearchContext as jest.Mock).mockReturnValue({
         ...defaultContextValue(),
         query: 'ab',
@@ -306,14 +306,217 @@ describe('useSearch', () => {
 
       renderHook(() => useSearch());
 
-      // Should trigger after 300ms with 2 chars
+      // Should trigger after 180ms with 2 chars
       act(() => {
-        jest.advanceTimersByTime(300);
+        jest.advanceTimersByTime(180);
       });
 
       await waitFor(() => {
         expect(mockHandleSearch).toHaveBeenCalledWith('ab');
       });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Default debounce boundary (180ms)
+  // -------------------------------------------------------------------------
+  describe('default debounce boundary', () => {
+    test('should NOT call handleSearch after only 179ms following a query change', () => {
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: '',
+      });
+
+      const { rerender } = renderHook(() => useSearch());
+
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: 'dragon',
+      });
+      rerender();
+
+      act(() => {
+        jest.advanceTimersByTime(179);
+      });
+
+      expect(mockHandleSearch).not.toHaveBeenCalled();
+    });
+
+    test('should call handleSearch once 180ms have elapsed following a query change', async () => {
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: '',
+      });
+
+      const { rerender } = renderHook(() => useSearch());
+
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: 'dragon',
+      });
+      rerender();
+
+      act(() => {
+        jest.advanceTimersByTime(180);
+      });
+
+      await waitFor(() => {
+        expect(mockHandleSearch).toHaveBeenCalledWith('dragon');
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Clearing stale results below minQueryLength
+  // -------------------------------------------------------------------------
+  describe('clearing results below minQueryLength', () => {
+    test('should clear results when the query drops below minQueryLength', async () => {
+      const staleResults = [
+        { id: '1', type: 'npc' as const, title: 'Dragon', content: '', matches: [], matchCount: 1 },
+      ];
+
+      // Start with a query that meets the minimum, and let the debounce fire
+      // so a search actually runs -- that is what leaves results on screen.
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: 'dragon',
+        results: [],
+      });
+
+      const { rerender } = renderHook(() => useSearch());
+
+      act(() => {
+        jest.advanceTimersByTime(180);
+      });
+      await waitFor(() => {
+        expect(mockHandleSearch).toHaveBeenCalledWith('dragon');
+      });
+
+      // User deletes down to a single character, still showing the old results.
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: 'd',
+        results: staleResults,
+      });
+      rerender();
+
+      act(() => {
+        jest.advanceTimersByTime(180);
+      });
+
+      // The clearing path calls handleSearch('') to reset results in context
+      // without touching the query itself.
+      await waitFor(() => {
+        expect(mockHandleSearch).toHaveBeenCalledWith('');
+      });
+      expect(mockSetQuery).not.toHaveBeenCalled();
+    });
+
+    test('should NOT attempt to clear when no search has run yet', async () => {
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: 'd',
+        results: [],
+      });
+
+      renderHook(() => useSearch());
+
+      await act(async () => {
+        jest.runAllTimers();
+      });
+
+      expect(mockHandleSearch).not.toHaveBeenCalled();
+    });
+
+    // The real SearchProvider returns a brand-new array from every search, so
+    // an effect that both triggers a search and depends on `results` re-fires
+    // on its own output -- an infinite loop in the app that a mocked context
+    // with a fixed `results` array cannot reveal. Pin the dependency contract
+    // instead: a change in results identity alone must not re-run the search.
+    test('should not re-run the search when only the results identity changes', async () => {
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: 'dragon',
+        results: [],
+      });
+
+      const { rerender } = renderHook(() => useSearch());
+
+      act(() => {
+        jest.advanceTimersByTime(180);
+      });
+      await waitFor(() => {
+        expect(mockHandleSearch).toHaveBeenCalledTimes(1);
+      });
+
+      // Same query, new results array -- exactly what the provider produces
+      // when the search this effect just started comes back.
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: 'dragon',
+        results: [
+          { id: '1', type: 'npc' as const, title: 'Dragon', content: '', matches: [], matchCount: 1 },
+        ],
+      });
+      rerender();
+      rerender();
+
+      expect(mockHandleSearch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // isQueryTooShort
+  // -------------------------------------------------------------------------
+  describe('isQueryTooShort', () => {
+    test('should be false when the query is empty', () => {
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: '',
+      });
+
+      const { result } = renderHook(() => useSearch());
+      expect(result.current.isQueryTooShort).toBe(false);
+    });
+
+    test('should be true when the trimmed query is non-empty and shorter than minQueryLength', () => {
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: 'd',
+      });
+
+      const { result } = renderHook(() => useSearch());
+      expect(result.current.isQueryTooShort).toBe(true);
+    });
+
+    test('should be false when the query meets minQueryLength', () => {
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: 'dr',
+      });
+
+      const { result } = renderHook(() => useSearch());
+      expect(result.current.isQueryTooShort).toBe(false);
+    });
+
+    test('should respect a custom minQueryLength', () => {
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: 'dr',
+      });
+
+      const { result } = renderHook(() => useSearch({ minQueryLength: 3 }));
+      expect(result.current.isQueryTooShort).toBe(true);
+    });
+
+    test('should be false for a query that is only whitespace', () => {
+      (useSearchContext as jest.Mock).mockReturnValue({
+        ...defaultContextValue(),
+        query: '  ',
+      });
+
+      const { result } = renderHook(() => useSearch());
+      expect(result.current.isQueryTooShort).toBe(false);
     });
   });
 });
