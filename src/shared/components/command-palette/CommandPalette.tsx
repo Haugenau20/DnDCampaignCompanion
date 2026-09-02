@@ -1,5 +1,5 @@
 // src/shared/components/command-palette/CommandPalette.tsx
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { clsx } from "clsx";
 import { Book, MapPin, MessageSquare, Plus, Scroll, Search, StickyNote, Users, X } from "lucide-react";
@@ -11,6 +11,7 @@ import { useNavigation } from "shared/context/NavigationContext";
 import { useCampaigns } from "features/user-management";
 import { flattenGroups, groupResultsByType } from "shared/utils/searchPresentation";
 import HighlightedText from "./HighlightedText";
+import { useCommandPaletteKeys } from "./useCommandPaletteKeys";
 
 /** Props for {@link CommandPalette}. */
 interface CommandPaletteProps {
@@ -43,11 +44,13 @@ const optionId = (result: SearchResult): string => `cmdk-option-${result.type}-$
  * {@link SearchTrigger}, replacing the header's field-and-dropdown search bar.
  *
  * It owns query display, grouped/highlighted results, the create-new
- * commands, and the loading/empty/too-short states. Keyboard navigation is
- * Task 4 -- here `selectedIndex` is plain state driven only by `onMouseEnter`,
- * and `typeFilter` exists but is not yet wired to anything.
+ * commands, the loading/empty/too-short states, and the keyboard contract
+ * (`useCommandPaletteKeys`): arrow keys move a **virtual** selection --
+ * `aria-activedescendant`, not real DOM focus, which stays in the input the
+ * whole time -- Enter commits it, Tab cycles the type filter, and Escape
+ * closes and returns focus to the trigger.
  */
-const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
+const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, triggerRef }) => {
   const {
     query,
     results,
@@ -113,11 +116,54 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
     [flatResults, createActions]
   );
 
-  // Reset the selection whenever the result set changes, so an index left
-  // over from a longer list never points past the end of a shorter one.
+  // The Tab cycle's universe of types, always derived from the *unfiltered*
+  // results -- so cycling can still reach every type once a filter narrows
+  // `filteredGroups` down to one of them.
+  const availableTypes = useMemo(() => groups.map((g) => g.type), [groups]);
+
+  const cycleFilter = useCallback(() => {
+    setTypeFilter((current) => {
+      if (availableTypes.length === 0) return null;
+      if (current === null) return availableTypes[0];
+      const next = availableTypes.indexOf(current) + 1;
+      return next >= availableTypes.length ? null : availableTypes[next];
+    });
+  }, [availableTypes]);
+
+  const commit = useCallback(() => {
+    const item = navigableItems[selectedIndex];
+    if (!item) return;
+    if (item.kind === "result") {
+      navigateToResult(item.result);
+    } else {
+      // Fire-and-forget, matching the floating action button: awaiting here
+      // would defer the close by a microtask, a real user-visible difference.
+      void item.action.run();
+    }
+    onClose();
+  }, [navigableItems, selectedIndex, navigateToResult, onClose]);
+
+  // Reset the selection whenever the *navigable* list changes -- not just
+  // when `results` changes. `navigableItems` is derived from `filteredGroups`,
+  // which also shrinks when `typeFilter` changes with `results` untouched;
+  // omitting `typeFilter` here would leave `selectedIndex` pointing past the
+  // end of a freshly filtered, shorter list, orphaning `aria-activedescendant`.
   useEffect(() => {
     setSelectedIndex(0);
-  }, [results]);
+  }, [results, typeFilter]);
+
+  useCommandPaletteKeys({
+    isOpen,
+    itemCount: navigableItems.length,
+    selectedIndex,
+    onMove: setSelectedIndex,
+    onCommit: commit,
+    onFilterCycle: cycleFilter,
+    onClose: () => {
+      onClose();
+      triggerRef.current?.focus();
+    },
+  });
 
   if (!isOpen) {
     return null;
@@ -274,25 +320,36 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
           <>
             <hr className="card-divider" />
             <div role="listbox">
-              {createActions.map((action) => {
+              {createActions.map((action, actionIndex) => {
                 const Icon = action.icon;
+                const index = flatResults.length + actionIndex;
+                const isSelected = index === selectedIndex;
                 return (
                   <div
                     key={action.id}
                     id={`cmdk-create-${action.id}`}
                     role="option"
-                    aria-selected={false}
+                    aria-selected={isSelected}
+                    onMouseEnter={() => setSelectedIndex(index)}
                     onClick={() => {
                       action.run();
                       onClose();
                     }}
-                    className="flex items-center gap-3 px-4 py-2.5 cursor-pointer search-result"
+                    className={clsx(
+                      "flex items-center gap-3 px-4 py-2.5 cursor-pointer border-l-[3px]",
+                      isSelected ? "search-result-selected border-accent" : "search-result border-transparent"
+                    )}
                   >
                     <Plus className="w-4 h-4 flex-shrink-0 primary" />
                     <Icon className="w-4 h-4 flex-shrink-0 primary" />
                     <Typography variant="body-sm">
                       {`New ${action.entityLabel} named "${query}"`}
                     </Typography>
+                    {isSelected && (
+                      <Typography variant="body-sm" color="secondary" className="flex-shrink-0 ml-auto">
+                        ↵ open
+                      </Typography>
+                    )}
                   </div>
                 );
               })}

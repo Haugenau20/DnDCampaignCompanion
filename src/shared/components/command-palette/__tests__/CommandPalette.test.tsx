@@ -170,3 +170,91 @@ describe("CommandPalette", () => {
     expect(document.getElementById(active!)).toHaveAttribute("role", "option");
   });
 });
+
+describe("CommandPalette keyboard", () => {
+  it("keeps focus in the input while the arrow keys move the selection", async () => {
+    open();
+    const input = screen.getByRole("combobox");
+    const first = input.getAttribute("aria-activedescendant");
+    await userEvent.keyboard("{ArrowDown}");
+    expect(input).toHaveFocus();
+    expect(input.getAttribute("aria-activedescendant")).not.toBe(first);
+  });
+
+  it("resolves aria-activedescendant to a real option after moving", async () => {
+    open();
+    await userEvent.keyboard("{ArrowDown}");
+    const active = screen.getByRole("combobox").getAttribute("aria-activedescendant");
+    expect(document.getElementById(active!)).toHaveAttribute("role", "option");
+  });
+
+  it("clamps at the top rather than wrapping", async () => {
+    open();
+    const input = screen.getByRole("combobox");
+    const first = input.getAttribute("aria-activedescendant");
+    await userEvent.keyboard("{ArrowUp}");
+    expect(input.getAttribute("aria-activedescendant")).toBe(first);
+  });
+
+  it("falls from the last result into the create commands", async () => {
+    open();
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+    const active = screen.getByRole("combobox").getAttribute("aria-activedescendant");
+    expect(active).toBe("cmdk-create-npc");
+  });
+
+  it("opens the selected result on Enter", async () => {
+    open();
+    await userEvent.keyboard("{Enter}");
+    expect(mockNavigateToPage).toHaveBeenCalled();
+  });
+
+  it("closes on Escape and hands focus back to the trigger", async () => {
+    const onClose = jest.fn();
+    const trigger = document.createElement("button");
+    document.body.appendChild(trigger);
+    const triggerRef = { current: trigger } as React.RefObject<HTMLButtonElement>;
+    render(<CommandPalette isOpen onClose={onClose} triggerRef={triggerRef} />);
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalled();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("cycles Tab only through the types present in the results", async () => {
+    open();
+    await userEvent.keyboard("{Tab}");
+    expect(screen.getByText("NPCS")).toBeInTheDocument();
+    expect(screen.queryByText("STORY")).not.toBeInTheDocument();
+    await userEvent.keyboard("{Tab}");
+    expect(screen.getByText("STORY")).toBeInTheDocument();
+    await userEvent.keyboard("{Tab}");
+    // Back to unfiltered.
+    expect(screen.getByText("NPCS")).toBeInTheDocument();
+    expect(screen.getByText("STORY")).toBeInTheDocument();
+  });
+
+  it("has no blur timer", () => {
+    const source = require("fs").readFileSync(
+      require("path").join(__dirname, "../CommandPalette.tsx"), "utf8"
+    );
+    expect(source).not.toContain("setTimeout");
+  });
+
+  it("keeps aria-activedescendant valid when Tab narrows the list out from under a later selection", async () => {
+    // Select the last navigable row (a create action, past both results) so
+    // `selectedIndex` sits at an index that a Tab-narrowed list will not have.
+    open();
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+    const input = screen.getByRole("combobox");
+    expect(input.getAttribute("aria-activedescendant")).toBe("cmdk-create-npc");
+
+    // Narrow to a single type -- the navigable list shrinks even though
+    // `results` itself never changed.
+    await userEvent.keyboard("{Tab}");
+
+    const active = input.getAttribute("aria-activedescendant");
+    expect(active).toBeTruthy();
+    expect(document.getElementById(active!)).toBeInTheDocument();
+    expect(document.getElementById(active!)).toHaveAttribute("role", "option");
+  });
+});
