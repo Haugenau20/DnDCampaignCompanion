@@ -27,6 +27,11 @@ Every task's requirements implicitly include this section.
   Claude-Session: https://claude.ai/code/session_018q6ZmutUhSJ8cAi3aEMJ9a
   ```
 - **Do not push, do not open a PR, do not merge to main.** The orchestrator handles integration.
+- **Stage explicit file paths, never `git add <directory>/`.** Two implementers share one working
+  tree and one git index in a batch; a directory glob lets whichever commits second sweep up the
+  other's half-finished files. If `git commit` fails on `index.lock`, wait a moment and retry once.
+- **Never edit a file outside your task's Files list.** If you believe one needs changing, say so in
+  your report instead — the other implementer in your batch may be inside it right now.
 - Run a single suite fast with:
   `npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="<pattern>"`
 
@@ -37,6 +42,7 @@ Every task's requirements implicitly include this section.
 | File | Responsibility |
 |---|---|
 | `src/shared/components/gated/gated-page-copy.ts` | The only module in `src/` holding gated-state wording. Seven page entries + the shared footnote. |
+| `src/shared/components/gated/types.ts` | `CampaignOption`, shared by the panel, the fetch hook and the wrapper. |
 | `src/shared/components/gated/usePageGate.ts` | The five-state ladder. Reads `useAuth` + `useCampaignContextStatus`, returns `PageGate`. |
 | `src/shared/components/gated/GatedPageState.tsx` | The 560px panel, both variants. Presentational — no data hooks, no services. |
 | `src/shared/components/gated/useSelectableCampaigns.ts` | Cross-group campaign list for the pick-campaign variant. |
@@ -56,11 +62,33 @@ Every task's requirements implicitly include this section.
 
 **Files:**
 - Create: `src/shared/components/gated/gated-page-copy.ts`
+- Create: `src/shared/components/gated/types.ts`
 - Test: `src/shared/components/gated/__tests__/gated-page-copy.test.ts`
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `GatedPageKey`, `GatedContextRequirement`, `GatedPageCopy`, `GATED_COPY`, `GATED_FOOTNOTE`, `gatedHeading(copy, mode)`.
+- Produces: `GatedPageKey`, `GatedContextRequirement`, `GatedPageCopy`, `GATED_COPY`, `GATED_FOOTNOTE`, `gatedHeading(copy, mode)`, and `CampaignOption` from `types.ts`.
+
+`types.ts` holds the one type three later tasks share. It lives here, in the batch that precedes
+all of them, so Tasks 4, 5 and 6 each import it rather than negotiating who defines it:
+
+```ts
+// src/shared/components/gated/types.ts
+
+/**
+ * One campaign the signed-in user could switch to, and the group it lives in.
+ *
+ * The group travels with the campaign rather than being a grouping header,
+ * because two campaigns in different groups can share a name and the row has
+ * to be unambiguous on its own.
+ */
+export interface CampaignOption {
+  campaignId: string;
+  campaignName: string;
+  groupId: string;
+  groupName: string;
+}
+```
 
 - [ ] **Step 1: Write the failing test**
 
@@ -310,7 +338,9 @@ Expected: PASS, 8 tests
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/shared/components/gated/
+git add src/shared/components/gated/gated-page-copy.ts \
+        src/shared/components/gated/types.ts \
+        src/shared/components/gated/__tests__/gated-page-copy.test.ts
 git commit -m "feat(gated): put every gated-state sentence in one module"
 ```
 
@@ -593,7 +623,8 @@ Expected: PASS, 13 tests
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/shared/components/gated/
+git add src/shared/components/gated/usePageGate.ts \
+        src/shared/components/gated/__tests__/usePageGate.test.ts
 git commit -m "feat(gated): collapse auth and campaign context into one page gate"
 ```
 
@@ -777,19 +808,8 @@ git commit -m "feat(shell): render page title and subtitle in every state"
 - Test: `src/shared/components/gated/__tests__/GatedPageState.test.tsx`
 
 **Interfaces:**
-- Consumes: `Button` from `core/components/Button`, `Typography` from `core/components/Typography`, `GATED_FOOTNOTE` from `./gated-page-copy`, `Link` from `react-router-dom`, `Lock` from `lucide-react`.
-- Produces: `CampaignOption`, `GatedPageStateProps`, default export `GatedPageState`.
-
-**`CampaignOption` is defined here and re-used by Task 5 and Task 6 — do not redefine it:**
-
-```ts
-export interface CampaignOption {
-  campaignId: string;
-  campaignName: string;
-  groupId: string;
-  groupName: string;
-}
-```
+- Consumes: `Button` from `core/components/Button`, `Typography` from `core/components/Typography`, `GATED_FOOTNOTE` from `./gated-page-copy`, **`CampaignOption` from `./types`** (Task 1 created it — import it, do not redefine it), `Link` from `react-router-dom`, `Lock` from `lucide-react`.
+- Produces: `GatedPageStateProps`, default export `GatedPageState`. Re-export the type for convenience: `export type { CampaignOption } from "./types";`
 
 **This component is presentational.** It calls no data hook and no Firebase service. Everything arrives as props. That is what lets its test render it with a plain object instead of standing up the auth/group/campaign mock chain.
 
@@ -968,20 +988,9 @@ import { Lock } from "lucide-react";
 import Button from "core/components/Button";
 import Typography from "core/components/Typography";
 import { GATED_FOOTNOTE } from "./gated-page-copy";
+import type { CampaignOption } from "./types";
 
-/**
- * One campaign the signed-in user could switch to, and the group it lives in.
- *
- * The group is part of the option rather than a grouping header because two
- * campaigns in different groups can share a name, and the row has to be
- * unambiguous on its own.
- */
-export interface CampaignOption {
-  campaignId: string;
-  campaignName: string;
-  groupId: string;
-  groupName: string;
-}
+export type { CampaignOption } from "./types";
 
 /** Props for {@link GatedPageState}. */
 export interface GatedPageStateProps {
@@ -1160,7 +1169,8 @@ If `Typography` rejects `variant="body-sm"`, check the union in `src/core/compon
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/shared/components/gated/
+git add src/shared/components/gated/GatedPageState.tsx \
+        src/shared/components/gated/__tests__/GatedPageState.test.tsx
 git commit -m "feat(gated): one panel for signed-out and no-campaign, on every page"
 ```
 
@@ -1173,11 +1183,8 @@ git commit -m "feat(gated): one panel for signed-out and no-campaign, on every p
 - Test: `src/shared/components/gated/__tests__/useSelectableCampaigns.test.ts`
 
 **Interfaces:**
-- Consumes: `useGroups()` from `features/user-management`; `firebaseServices` (default export) from `core/services/firebase`; `CampaignOption` from `./GatedPageState` (Task 4 defines it — import the type, do not redeclare it).
+- Consumes: `useGroups()` from `features/user-management`; `firebaseServices` (default export) from `core/services/firebase`; **`CampaignOption` from `./types`** — Task 1 created that file, so it exists before you start. Import it; do not redeclare it, and do not import it from `./GatedPageState`, which another implementer may be writing right now.
 - Produces: `SelectableCampaigns`, `useSelectableCampaigns(enabled)`.
-
-**If Task 4 has not landed yet**, define `CampaignOption` locally *only* long enough to compile, then switch the import in your final commit. The shape is fixed:
-`{ campaignId: string; campaignName: string; groupId: string; groupName: string }`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1301,7 +1308,7 @@ Expected: FAIL — `Cannot find module '../useSelectableCampaigns'`
 import { useEffect, useMemo, useState } from "react";
 import { useGroups } from "features/user-management";
 import firebaseServices from "core/services/firebase";
-import type { CampaignOption } from "./GatedPageState";
+import type { CampaignOption } from "./types";
 
 /** What {@link useSelectableCampaigns} returns. */
 export interface SelectableCampaigns {
@@ -1412,7 +1419,7 @@ Expected: PASS, 6 tests
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/shared/components/gated/
+git add src/shared/components/gated/useSelectableCampaigns.ts \n        src/shared/components/gated/__tests__/useSelectableCampaigns.test.ts
 git commit -m "feat(gated): list campaigns across every group for the picker"
 ```
 
@@ -1642,7 +1649,8 @@ import {
 import Dialog from "core/components/Dialog";
 import Button from "core/components/Button";
 import Typography from "core/components/Typography";
-import GatedPageState, { CampaignOption } from "./GatedPageState";
+import GatedPageState from "./GatedPageState";
+import type { CampaignOption } from "./types";
 import { useSelectableCampaigns } from "./useSelectableCampaigns";
 import type { PageGate } from "./usePageGate";
 
@@ -1792,7 +1800,8 @@ export {
   gatedHeading,
 } from "./gated-page-copy";
 export type { GatedContentProps } from "./GatedContent";
-export type { CampaignOption, GatedPageStateProps } from "./GatedPageState";
+export type { GatedPageStateProps } from "./GatedPageState";
+export type { CampaignOption } from "./types";
 export type { GateState, PageGate, PageGateOptions } from "./usePageGate";
 export type {
   GatedContextRequirement,
@@ -1809,7 +1818,7 @@ Expected: PASS — all four gated suites, 41 tests total
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/shared/components/gated/
+git add src/shared/components/gated/GatedContent.tsx \n        src/shared/components/gated/index.ts \n        src/shared/components/gated/__tests__/GatedContent.test.tsx
 git commit -m "feat(gated): render the whole gated ladder from one wrapper"
 ```
 
@@ -1919,7 +1928,10 @@ describe("SignedOutHome", () => {
 
   it("says a campaign is private to its group and joining is by invite", () => {
     renderHome();
-    expect(screen.getByText(/invite/i)).toBeInTheDocument();
+    // Scoped to the prose element: "invite" also appears on the secondary
+    // button, and an unscoped getByText would match both and throw.
+    expect(screen.getByTestId("home-blurb")).toHaveTextContent(/invite-only/i);
+    expect(screen.getByTestId("home-blurb")).toHaveTextContent(/nothing is public/i);
   });
 
   it("offers signing in and an invite link", () => {
@@ -1983,9 +1995,13 @@ describe("SignedOutHome", () => {
 
   it("lists the three things the product does, in words", () => {
     renderHome();
-    expect(screen.getByText(/chapter log/i)).toBeInTheDocument();
-    expect(screen.getByText(/rumors/i)).toBeInTheDocument();
-    expect(screen.getByText(/private/i)).toBeInTheDocument();
+    // Scoped to the list: "rumors" and "private" also appear in the blurb
+    // above, so unscoped queries would match several elements and throw.
+    const lines = screen.getByTestId("product-lines");
+    expect(lines).toHaveTextContent(/chapter log/i);
+    expect(lines).toHaveTextContent(/rumors/i);
+    expect(lines).toHaveTextContent(/private session notes/i);
+    expect(lines.querySelectorAll("li")).toHaveLength(3);
   });
 });
 ```
@@ -2116,7 +2132,11 @@ const SignedOutHome: React.FC = () => {
             Everything your table agreed happened, in one place
           </Typography>
 
-          <Typography color="secondary" className="mb-8">
+          <Typography
+            color="secondary"
+            className="mb-8"
+            data-testid="home-blurb"
+          >
             Chapters, quests, NPCs, locations, rumors and private notes for one
             campaign — written by whoever is at the table, credited to the
             character they play. Invite-only: a DM sends a join link, and
@@ -2132,7 +2152,7 @@ const SignedOutHome: React.FC = () => {
             </Button>
           </div>
 
-          <ul className="space-y-2">
+          <ul className="space-y-2" data-testid="product-lines">
             {PRODUCT_LINES.map((line) => (
               <li key={line}>
                 <Typography color="secondary">· {line}</Typography>
@@ -2250,6 +2270,75 @@ Both tasks follow the identical recipe. Read it once:
 3. Gate every control that acts on data with `gate.canAct` — not `user`.
 4. **Keep the page's existing title and subtitle strings verbatim.** This PR changes states, not page names.
 5. Update the suite: keep every existing behaviour test that still applies, and add the four new ones listed in each task.
+
+### The page-suite mock — required by Tasks 8 through 13
+
+Every page now renders `GatedContent`, which calls members the existing page suites do not mock.
+Without this block a suite dies at render and the failure looks like a code defect. Apply it to
+**every** page suite you touch, adapting only the fixture values.
+
+```tsx
+import { MemoryRouter } from "react-router-dom";
+
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  // `loading` is the flag useCampaignContextStatus reads for `isResolving`.
+  // Mocked here rather than mocking the status hook itself, so the real
+  // "still restoring vs. resolved to nothing" logic stays under test -- that
+  // distinction is bug #1413 and the reason state 1 exists.
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId ? { id: mockActiveCampaignId, name: "Phandelver" } : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: { getCampaigns: jest.fn().mockResolvedValue([]) },
+  },
+}));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockUser = { uid: "user-1" };
+  mockIsResolving = false;
+  mockActiveGroupId = "group-1";
+  mockActiveCampaignId = "campaign-1";
+  mockGroups = [{ id: "group-1", name: "The Fellowship" }];
+});
+```
+
+Two consequences:
+
+- **Wrap every `render(...)` in the suite in `<MemoryRouter>`**, including the tests that already
+  exist. The signed-out panel renders a `Link`, which throws outside a router.
+- **There is no `mockMissingContext`.** The gate derives the state from the real hook, so drive it
+  with the fixtures: `mockActiveCampaignId = null` puts the page in `pick-campaign` for a page that
+  needs a campaign; `mockActiveGroupId = null` does it for any page; `mockUser = null` gives
+  `signed-out`; `mockIsResolving = true` gives `resolving`. Where a test snippet below says
+  `mockMissingContext = "campaign"`, set `mockActiveCampaignId = null` instead.
 
 ### Task 8: Quests, Rumors, NPCs, Locations *(subagent A)*
 
@@ -2725,6 +2814,8 @@ git commit -m "feat(pages): gate chapters and notes the same way as the rest"
 
 ## Batch 4 — Home and story routes (2 subagents, parallel)
 
+**Apply the page-suite mock block from Batch 3 to every suite in this batch.**
+
 ### Task 10: `HomePage` *(subagent A)*
 
 **Files:**
@@ -2907,6 +2998,8 @@ git commit -m "feat(story): gate the chapter, saga and detail routes consistentl
 ---
 
 ## Batch 5 — create and edit routes (2 subagents, parallel)
+
+**Apply the page-suite mock block from Batch 3 to every suite in this batch.**
 
 ### Task 12: Quest, NPC and rumor create/edit *(subagent A)*
 
