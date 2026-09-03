@@ -630,6 +630,30 @@ describe('ContextSwitcher', () => {
       expect(screen.getByText('No Campaign')).toBeInTheDocument();
     });
 
+    // The header row crowds this chip under flex pressure (see the
+    // header-command-palette design doc §6: the campaign chip is the
+    // designated shrink point, since the search trigger next to it never
+    // yields). A flex item cannot shrink below its content width without
+    // `min-w-0` even when it also carries `max-w-*` and `truncate` -- the
+    // `max-w-*` caps its preferred size but does nothing for the automatic
+    // minimum size the browser floors it at otherwise.
+    test('allows the chip to shrink below its content width under flex pressure', () => {
+      renderContextSwitcher();
+      const trigger = screen.getAllByRole('button')[0];
+      expect(trigger.className).toMatch(/\bmin-w-0\b/);
+    });
+
+    // `min-w-0` on the trigger button is inert if the wrapper it sits in
+    // (this component's own root, a direct flex item of the header row)
+    // still has the default `min-width: auto` -- the automatic minimum size
+    // the browser floors a flex item at, absent `min-w-0`, is derived from
+    // the item's own overflow property, not a descendant's, so the wrapper
+    // needs the same class for the shrink to actually reach the chip.
+    test('allows its own root to shrink, so the chip\'s min-w-0 is not stranded', () => {
+      const { container } = renderContextSwitcher();
+      expect(container.firstElementChild?.className).toMatch(/\bmin-w-0\b/);
+    });
+
     test('reports the popover state to assistive technology', () => {
       renderContextSwitcher();
       const trigger = screen.getAllByRole('button')[0];

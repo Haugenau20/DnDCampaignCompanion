@@ -472,5 +472,20 @@ describe("Header", () => {
       await userEvent.keyboard("{Control>}k{/Control}");
       expect(screen.queryByTestId("command-palette")).not.toBeInTheDocument();
     });
+
+    // Regression coverage for the overlap defect found by measuring the
+    // running app: `flex-1 min-w-0` on the trigger's wrapper let it collapse
+    // below the trigger's intrinsic width under flex pressure, so the
+    // (non-shrinking) trigger overflowed its own wrapper and, being
+    // `justify-end`, painted leftward on top of the last nav item. Per the
+    // header's declared shrink order, the search trigger never yields --
+    // the wrapper must reserve its full width (`shrink-0`) rather than
+    // being allowed to shrink (`min-w-0`).
+    it("reserves the search trigger's width instead of letting its wrapper shrink", () => {
+      renderHeader({ user: mockUser });
+      const wrapper = screen.getByRole("button", { name: /search/i }).parentElement;
+      expect(wrapper?.className).toMatch(/\bshrink-0\b/);
+      expect(wrapper?.className).not.toMatch(/\bmin-w-0\b/);
+    });
   });
 });

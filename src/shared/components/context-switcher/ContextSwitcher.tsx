@@ -184,7 +184,7 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({ onJoinGroup }) => {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative min-w-0" ref={dropdownRef}>
       <ContextTrigger
         ref={triggerRef}
         isOpen={isOpen}

@@ -117,11 +117,16 @@ const Header: React.FC = () => {
             <Navigation variant="inline" />
 
             {/* Middle - Search: a fixed-width trigger onto the command palette,
-                replacing the field-and-dropdown search bar. The wrapper keeps
-                `flex-1 ml-auto` so the account controls stay pinned to the
-                right whether or not the trigger itself renders -- it's
-                gated on `user` (see the shortcut effect above for why). */}
-            <div className="flex-1 min-w-0 ml-auto flex justify-end px-1">
+                replacing the field-and-dropdown search bar. Per the shrink
+                order in docs/superpowers/specs/2026-09-02-header-command-palette-design.md
+                §6, the trigger never yields width under pressure -- `shrink-0`
+                (not `flex-1 min-w-0`) reserves its full width instead of
+                letting the wrapper collapse below it and overflow leftward
+                over the nav. `ml-auto` still pins the wrapper (and the
+                account controls after it) to the right whether or not the
+                trigger itself renders -- it's gated on `user` (see the
+                shortcut effect above for why). */}
+            <div className="shrink-0 ml-auto flex justify-end px-1">
               {user && (
                 <SearchTrigger
                   ref={searchTriggerRef}
