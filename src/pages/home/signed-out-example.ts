@@ -6,8 +6,8 @@
  * still until it is a second implementation of the dashboard.
  */
 export interface ExampleStat {
-  label: string;
-  value: number;
+  readonly label: string;
+  readonly value: number;
 }
 
 /**
@@ -20,17 +20,17 @@ export interface ExampleStat {
  * means a future contributor cannot add one without deleting this comment.
  */
 export interface ExampleUpdate {
-  date: string;
-  title: string;
-  kind: "chapter" | "quest" | "npc";
+  readonly date: string;
+  readonly title: string;
+  readonly kind: "chapter" | "quest" | "npc";
 }
 
 /** The whole example panel, in one value. */
 export interface SignedOutExample {
-  campaignTitle: string;
-  subtitle: string;
-  stats: readonly ExampleStat[];
-  updates: readonly ExampleUpdate[];
+  readonly campaignTitle: string;
+  readonly subtitle: string;
+  readonly stats: readonly ExampleStat[];
+  readonly updates: readonly ExampleUpdate[];
 }
 
 /**
@@ -45,24 +45,33 @@ export interface SignedOutExample {
 export const SIGNED_OUT_EXAMPLE: SignedOutExample = Object.freeze({
   campaignTitle: "The Sunless Citadel",
   subtitle: "Started 12/03/2025 · Chapter 14",
+  // Object.freeze is shallow, so the containing array is frozen here and
+  // each element is frozen individually below -- otherwise
+  // SIGNED_OUT_EXAMPLE.stats[0].value = 999 would type-check as `readonly`
+  // but still succeed silently at runtime, contradicting "this is a fixed
+  // picture" above.
   stats: Object.freeze([
-    { label: "Chapters", value: 14 },
-    { label: "NPCs", value: 23 },
-    { label: "Locations", value: 9 },
-    { label: "Open quests", value: 4 },
+    Object.freeze({ label: "Chapters", value: 14 }),
+    Object.freeze({ label: "NPCs", value: 23 }),
+    Object.freeze({ label: "Locations", value: 9 }),
+    Object.freeze({ label: "Open quests", value: 4 }),
   ]),
   updates: Object.freeze([
-    {
+    Object.freeze({
       date: "12/03/2025",
       title: "The Twig Blights of Oakhurst",
       kind: "chapter" as const,
-    },
-    {
+    }),
+    Object.freeze({
       date: "10/03/2025",
       title: "Find the missing Hucrele heirs",
       kind: "quest" as const,
-    },
-    { date: "09/03/2025", title: "Kerowyn Hucrele", kind: "npc" as const },
+    }),
+    Object.freeze({
+      date: "09/03/2025",
+      title: "Kerowyn Hucrele",
+      kind: "npc" as const,
+    }),
   ]),
 }) as SignedOutExample;
 

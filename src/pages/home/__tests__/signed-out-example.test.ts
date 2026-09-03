@@ -49,5 +49,13 @@ describe("SIGNED_OUT_EXAMPLE", () => {
 
   it("is frozen, so nothing can mutate it into live data", () => {
     expect(Object.isFrozen(SIGNED_OUT_EXAMPLE)).toBe(true);
+    expect(Object.isFrozen(SIGNED_OUT_EXAMPLE.stats)).toBe(true);
+    expect(Object.isFrozen(SIGNED_OUT_EXAMPLE.updates)).toBe(true);
+    // Object.freeze is shallow: freezing the arrays does not freeze the
+    // objects inside them. Assert at least one of each is frozen too, so a
+    // regression to "only the containers are frozen" fails here rather than
+    // surfacing as a silent runtime mutation later.
+    expect(Object.isFrozen(SIGNED_OUT_EXAMPLE.stats[0])).toBe(true);
+    expect(Object.isFrozen(SIGNED_OUT_EXAMPLE.updates[0])).toBe(true);
   });
 });
