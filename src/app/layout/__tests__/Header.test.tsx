@@ -3,7 +3,7 @@
 // Header pulls in many contexts and feature components — mock aggressively.
 
 import React from "react";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Header from "../Header";
 
@@ -77,8 +77,19 @@ const mockCompleteJoin = jest.fn();
 // ---------------------------------------------------------------------------
 // Mock shared components used inside Header
 // ---------------------------------------------------------------------------
-jest.mock("shared/components/SearchBar", () => ({
-  SearchBar: () => <div data-testid="search-bar" />,
+jest.mock("shared/components/command-palette/SearchTrigger", () => ({
+  __esModule: true,
+  default: React.forwardRef<HTMLButtonElement, { onOpen: () => void }>(
+    ({ onOpen }, ref) => (
+      <button ref={ref} type="button" aria-label="Search" onClick={onOpen} />
+    )
+  ),
+}));
+
+jest.mock("shared/components/command-palette/CommandPalette", () => ({
+  __esModule: true,
+  default: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="command-palette" /> : null,
 }));
 
 jest.mock("shared/components/ThemeSelector", () => ({
@@ -200,6 +211,19 @@ function setupMocks({
   (useJoinGroupCompletion as jest.Mock).mockReturnValue(mockCompleteJoin);
 }
 
+// A signed-in user for the search-affordance tests below -- same shape as
+// the `{ uid: ... }` stand-ins used throughout this file.
+const mockUser = { uid: "user-1" };
+
+/**
+ * Configures `useAuth` (and its dependent mocks) via {@link setupMocks} and
+ * renders `<Header />` in one step, for the search-affordance suite.
+ */
+function renderHeader({ user = null as null | { uid: string } } = {}) {
+  setupMocks({ user });
+  render(<Header />);
+}
+
 // window.location.reload must never be called by the join-success handler.
 const mockReload = jest.fn();
 
@@ -222,11 +246,6 @@ describe("Header", () => {
     test("should render a <header> element", () => {
       render(<Header />);
       expect(screen.getByRole("banner")).toBeInTheDocument();
-    });
-
-    test("should render the SearchBar", () => {
-      render(<Header />);
-      expect(screen.getByTestId("search-bar")).toBeInTheDocument();
     });
 
     test("should render the app title link", () => {
@@ -414,6 +433,88 @@ describe("Header", () => {
       expect(mockCompleteJoin).toHaveBeenCalled();
       expect(screen.queryByTestId("trigger-join-success")).not.toBeInTheDocument();
       expect(mockReload).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Search affordance -- the fixed trigger and command palette replacing the
+  // old field-and-dropdown search bar. Both the trigger and the global
+  // Meta/Control+K shortcut are gated on `user`: searching an index that was
+  // never built is what put results in the signed-out screenshots.
+  // -------------------------------------------------------------------------
+  describe("search affordance", () => {
+    it("offers the trigger to a signed-in user", () => {
+      renderHeader({ user: mockUser });
+      expect(screen.getByRole("button", { name: /search/i })).toBeInTheDocument();
+    });
+
+    it("hides the trigger entirely when signed out", () => {
+      renderHeader({ user: null });
+      expect(
+        screen.queryByRole("button", { name: /search/i })
+      ).not.toBeInTheDocument();
+    });
+
+    it("opens the palette on the meta shortcut", async () => {
+      renderHeader({ user: mockUser });
+      await userEvent.keyboard("{Meta>}k{/Meta}");
+      expect(screen.getByTestId("command-palette")).toBeInTheDocument();
+    });
+
+    it("opens the palette on the control shortcut", async () => {
+      renderHeader({ user: mockUser });
+      await userEvent.keyboard("{Control>}k{/Control}");
+      expect(screen.getByTestId("command-palette")).toBeInTheDocument();
+    });
+
+    it("leaves the shortcut inert when signed out", async () => {
+      renderHeader({ user: null });
+      await userEvent.keyboard("{Control>}k{/Control}");
+      expect(screen.queryByTestId("command-palette")).not.toBeInTheDocument();
+    });
+
+    // Regression coverage for the overlap defect found by measuring the
+    // running app: `flex-1 min-w-0` on the trigger's wrapper let it collapse
+    // below the trigger's intrinsic width under flex pressure, so the
+    // (non-shrinking) trigger overflowed its own wrapper and, being
+    // `justify-end`, painted leftward on top of the last nav item. Per the
+    // header's declared shrink order, the search trigger never yields --
+    // the wrapper must reserve its full width (`shrink-0`) rather than
+    // being allowed to shrink (`min-w-0`).
+    it("reserves the search trigger's width instead of letting its wrapper shrink", () => {
+      renderHeader({ user: mockUser });
+      const wrapper = screen.getByRole("button", { name: /search/i }).parentElement;
+      expect(wrapper?.className).toMatch(/\bshrink-0\b/);
+      expect(wrapper?.className).not.toMatch(/\bmin-w-0\b/);
+    });
+
+    it("closes the palette when the signed-in user becomes null (e.g. sign-out)", async () => {
+      setupMocks({ user: mockUser });
+      const { rerender } = render(<Header />);
+
+      await userEvent.click(screen.getByRole("button", { name: /search/i }));
+      expect(screen.getByTestId("command-palette")).toBeInTheDocument();
+
+      setupMocks({ user: null });
+      rerender(<Header />);
+
+      expect(screen.queryByTestId("command-palette")).not.toBeInTheDocument();
+    });
+
+    // AltGr on European keyboard layouts sets both `ctrlKey` and `altKey` on
+    // the same keydown, so a matcher that only checks `ctrlKey`/`metaKey`
+    // would swallow a character the user meant to type (e.g. AltGr+K on a
+    // layout where that combination produces a printable character).
+    it("leaves AltGr+K (ctrlKey and altKey together) inert", () => {
+      renderHeader({ user: mockUser });
+      fireEvent.keyDown(document, { key: "k", ctrlKey: true, altKey: true });
+      expect(screen.queryByTestId("command-palette")).not.toBeInTheDocument();
+    });
+
+    it("leaves Ctrl+Shift+K inert", () => {
+      renderHeader({ user: mockUser });
+      fireEvent.keyDown(document, { key: "k", ctrlKey: true, shiftKey: true });
+      expect(screen.queryByTestId("command-palette")).not.toBeInTheDocument();
     });
   });
 });

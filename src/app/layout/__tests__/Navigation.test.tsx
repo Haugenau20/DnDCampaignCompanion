@@ -2,7 +2,7 @@
 // Behavioral tests for Navigation component.
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Navigation, { navItems } from "../Navigation";
 
@@ -253,6 +253,50 @@ describe("Navigation", () => {
       expect(keyWarning).toBe(false);
 
       errorSpy.mockRestore();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Overflow -- the last two destinations fold into a "More" menu below `nav`
+  // -------------------------------------------------------------------------
+  describe("Navigation overflow", () => {
+    it("keeps the last two destinations out of the inline row below the nav breakpoint", () => {
+      render(<Navigation variant="inline" />);
+      const locations = screen.getByRole("button", { name: "Locations" });
+      expect(locations.className).toContain("hidden");
+      expect(locations.className).toContain("nav:block");
+    });
+
+    it("offers a More menu holding exactly the two folded destinations", async () => {
+      render(<Navigation variant="inline" />);
+      await userEvent.click(screen.getByRole("button", { name: /more/i }));
+      const menu = screen.getByRole("menu", { name: "More destinations" });
+      const items = within(menu).getAllByRole("menuitem");
+      expect(items.map((i) => i.textContent)).toEqual(["Locations", "Notes"]);
+    });
+
+    it("navigates from a More menu item", async () => {
+      render(<Navigation variant="inline" />);
+      await userEvent.click(screen.getByRole("button", { name: /more/i }));
+      await userEvent.click(screen.getByRole("menuitem", { name: "Notes" }));
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/notes");
+    });
+
+    it("hides the More button's wrapper (button and panel together) at and above the nav breakpoint", () => {
+      // Relocated from the button itself: leaving the class on the button
+      // left an empty `div.relative` as a flex item in the nav row above the
+      // breakpoint, costing dead `gap` space and keeping an open panel
+      // rendered (just invisible) if the viewport widened past `nav` while
+      // it was open. The wrapper now carries the class instead.
+      render(<Navigation variant="inline" />);
+      const moreButton = screen.getByRole("button", { name: /more/i });
+      expect(moreButton.parentElement?.className).toContain("nav:hidden");
+      expect(moreButton.className).not.toContain("nav:hidden");
+    });
+
+    it("leaves the mobile strip carrying all seven destinations", () => {
+      render(<Navigation variant="mobile" />);
+      expect(screen.getAllByRole("button")).toHaveLength(7);
     });
   });
 });

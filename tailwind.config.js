@@ -5,6 +5,16 @@ module.exports = {
   ],
   theme: {
     extend: {
+      // Named for what yields at them, because the header's shrink order is the
+      // point: the title shortens at `title`, the last two nav items fold at
+      // `nav`. Tailwind's defaults cannot express this -- the definition of done
+      // requires 1024px to be a *folded* width, which `lg` (>=1024) cannot be.
+      // Both control `display` on elements no `xl:` rule touches, so the
+      // append-after-defaults cascade order does not bite.
+      screens: {
+        nav: "1080px",
+        title: "1200px",
+      },
       colors: {
         primary: 'var(--color-primary)',
         secondary: 'var(--color-secondary)',

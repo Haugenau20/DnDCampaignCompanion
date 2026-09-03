@@ -65,4 +65,24 @@ describe("UserMenuTrigger", () => {
     rerender(<UserMenuTrigger isOpen={true} onToggle={mockOnToggle} />);
     expect(button).toHaveAttribute("aria-expanded", "true");
   });
+
+  test("hides the account name below the nav breakpoint but never shrinks the avatar or chevron", () => {
+    setupMocks({
+      username: "playerOne",
+      characters: [{ id: "c1", name: "Elandra" }],
+      activeCharacterId: "c1",
+    });
+
+    render(<UserMenuTrigger isOpen={false} onToggle={mockOnToggle} />);
+
+    const name = screen.getByText("Elandra");
+    expect(name).toHaveClass("hidden", "nav:inline");
+
+    const button = screen.getByRole("button");
+    const avatar = button.querySelector("span.rounded-full");
+    expect(avatar).toHaveClass("flex-shrink-0");
+
+    const chevron = button.querySelector("svg.lucide-chevron-down");
+    expect(chevron).toHaveClass("flex-shrink-0");
+  });
 });

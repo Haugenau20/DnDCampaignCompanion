@@ -1,7 +1,8 @@
 // app/layout/Header.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { SearchBar } from 'shared/components/SearchBar';
+import SearchTrigger from 'shared/components/command-palette/SearchTrigger';
+import CommandPalette from 'shared/components/command-palette/CommandPalette';
 import ThemeSelector from 'shared/components/ThemeSelector';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -32,6 +33,46 @@ const Header: React.FC = () => {
   const [showJoinGroup, setShowJoinGroup] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+
+  // Command palette state -- the trigger and shortcut both gate on `user`
+  // (see the effect below), so this state has no visible effect while
+  // signed out.
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
+
+  /**
+   * Global `Meta+K` / `Control+K` shortcut that toggles the command palette.
+   *
+   * Gated on `user` for the same reason the trigger is: searching an index
+   * that was never built is what put results in the signed-out screenshots.
+   * A hidden trigger with a live shortcut would open a palette over an empty
+   * index with no visible way to have got there.
+   */
+  useEffect(() => {
+    if (!user) {
+      // Signing out with the palette open must not leave it open for
+      // whoever (or whichever account) signs back in next.
+      setPaletteOpen(false);
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      // `altKey` and `shiftKey` are excluded because AltGr on European
+      // keyboard layouts sets both `ctrlKey` and `altKey` together, so
+      // `AltGr+K` -- a character the user meant to type -- would otherwise
+      // also match, swallow the keystroke and toggle the palette.
+      if (
+        event.key.toLowerCase() === 'k' &&
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey
+      ) {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [user]);
 
   /**
    * Closes the dialog and lands the user in the group they just joined.
@@ -69,8 +110,8 @@ const Header: React.FC = () => {
               }}
               className="text-xl font-bold whitespace-nowrap header-title"
             >
-              <span className="lg:inline hidden">D&D Campaign Companion</span>
-              <span className="lg:hidden">D&D Companion</span>
+              <span className="title:inline hidden">D&D Campaign Companion</span>
+              <span className="title:hidden">D&D Companion</span>
             </Link>
 
             {/* Campaign context, and the door onto changing it. Previously a
@@ -89,9 +130,23 @@ const Header: React.FC = () => {
             {/* Desktop navigation, inline rather than a second full-height row */}
             <Navigation variant="inline" />
 
-            {/* Middle - Search */}
-            <div className="flex-1 min-w-0 max-w-xs ml-auto px-1">
-              <SearchBar />
+            {/* Middle - Search: a fixed-width trigger onto the command palette,
+                replacing the field-and-dropdown search bar. Per the shrink
+                order in docs/superpowers/specs/2026-09-02-header-command-palette-design.md
+                §6, the trigger never yields width under pressure -- `shrink-0`
+                (not `flex-1 min-w-0`) reserves its full width instead of
+                letting the wrapper collapse below it and overflow leftward
+                over the nav. `ml-auto` still pins the wrapper (and the
+                account controls after it) to the right whether or not the
+                trigger itself renders -- it's gated on `user` (see the
+                shortcut effect above for why). */}
+            <div className="shrink-0 ml-auto flex justify-end px-1">
+              {user && (
+                <SearchTrigger
+                  ref={searchTriggerRef}
+                  onOpen={() => setPaletteOpen(true)}
+                />
+              )}
             </div>
 
             {/* Right side - Account */}
@@ -120,6 +175,16 @@ const Header: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Command Palette -- gated on `user` for the same reason the trigger
+          and shortcut are (see the effect above). */}
+      {user && (
+        <CommandPalette
+          isOpen={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          triggerRef={searchTriggerRef}
+        />
+      )}
 
       {/* Join Group Dialog -- the sole mount; ContextSwitcher's chip opens it
           through the `onJoinGroup` callback rather than mounting its own. */}
