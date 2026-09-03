@@ -20,14 +20,18 @@ export interface CreateAction {
   entityLabel: string;
   /** The icon component. Callers size it themselves. */
   icon: LucideIcon;
+  /** The section this entity lives in, e.g. "/quests". Picks the contextual row. */
+  sectionPath: string;
+  /** Single-letter shortcut, active only while the create menu is open. */
+  shortcut: string;
   /** Perform the action. Async for the note, which is written before it opens. */
   run: () => void | Promise<void>;
 }
 
 /**
- * The six create commands, in the order the floating action button renders
- * them. That order is load-bearing: the button lays them out with
- * `flex-col-reverse`, so reordering this array silently reorders its menu.
+ * The six create commands, in literal top-to-bottom display order. Both
+ * consuming surfaces — the create menu and the command palette — render this
+ * array unreversed, so its order is exactly what each one shows.
  */
 export function useCreateActions(): CreateAction[] {
   const { navigateToPage } = useNavigation();
@@ -35,12 +39,12 @@ export function useCreateActions(): CreateAction[] {
 
   return useMemo(
     () => [
-      { id: "note", entityLabel: "Note", icon: FileText, run: () => createAndOpen() },
-      { id: "location", entityLabel: "Location", icon: MapPin, run: () => navigateToPage("/locations/create") },
-      { id: "npc", entityLabel: "NPC", icon: User, run: () => navigateToPage("/npcs/create") },
-      { id: "rumor", entityLabel: "Rumor", icon: MessageSquare, run: () => navigateToPage("/rumors/create") },
-      { id: "quest", entityLabel: "Quest", icon: Scroll, run: () => navigateToPage("/quests/create") },
-      { id: "chapter", entityLabel: "Chapter", icon: BookOpen, run: () => navigateToPage("/story/chapters/create") },
+      { id: "note", entityLabel: "Note", icon: FileText, sectionPath: "/notes", shortcut: "N", run: () => createAndOpen() },
+      { id: "chapter", entityLabel: "Chapter", icon: BookOpen, sectionPath: "/story", shortcut: "C", run: () => navigateToPage("/story/chapters/create") },
+      { id: "npc", entityLabel: "NPC", icon: User, sectionPath: "/npcs", shortcut: "P", run: () => navigateToPage("/npcs/create") },
+      { id: "location", entityLabel: "Location", icon: MapPin, sectionPath: "/locations", shortcut: "L", run: () => navigateToPage("/locations/create") },
+      { id: "rumor", entityLabel: "Rumor", icon: MessageSquare, sectionPath: "/rumors", shortcut: "R", run: () => navigateToPage("/rumors/create") },
+      { id: "quest", entityLabel: "Quest", icon: Scroll, sectionPath: "/quests", shortcut: "Q", run: () => navigateToPage("/quests/create") },
     ],
     [navigateToPage, createAndOpen]
   );

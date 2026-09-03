@@ -1,230 +1,301 @@
-// src/components/shared/__tests__/GlobalActionButton.test.tsx
+// src/shared/components/__tests__/GlobalActionButton.test.tsx
 
-import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import GlobalActionButton from '../GlobalActionButton';
+import React from "react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { FileText, Scroll } from "lucide-react";
+import GlobalActionButton from "../GlobalActionButton";
+import type { CreateAction } from "shared/hooks/useCreateActions";
 
 // ---------------------------------------------------------------------------
-// Mock NavigationContext
+// Mocks
 // ---------------------------------------------------------------------------
-const mockNavigateToPage = jest.fn();
-const mockCreatePath = jest.fn((path: string) => path);
 
-jest.mock('../../context/NavigationContext', () => ({
-  useNavigation: jest.fn(),
+const mockUseCampaignContextStatus = jest.fn();
+jest.mock("shared/hooks/useCampaignContextStatus", () => ({
+  useCampaignContextStatus: () => mockUseCampaignContextStatus(),
 }));
 
-const { useNavigation } = require('../../context/NavigationContext');
-
-// ---------------------------------------------------------------------------
-// Mock useCreateNote
-// ---------------------------------------------------------------------------
-const mockCreateAndOpen = jest.fn();
-
-jest.mock('features/collaboration', () => ({
-  useCreateNote: jest.fn(),
+const mockUseCreateActions = jest.fn();
+jest.mock("shared/hooks/useCreateActions", () => ({
+  useCreateActions: () => mockUseCreateActions(),
 }));
 
-const { useCreateNote } = require('features/collaboration');
+const mockUseCampaigns = jest.fn();
+const mockUseGroups = jest.fn();
+jest.mock("features/user-management", () => ({
+  useCampaigns: () => mockUseCampaigns(),
+  useGroups: () => mockUseGroups(),
+}));
+
+// A light stub standing in for the card another agent is building
+// concurrently. It renders just enough structure -- a `role="menu"` and one
+// `role="menuitem"` button per action -- to exercise GlobalActionButton's own
+// behaviour (gating, keyboard, route promotion, the trigger), and surfaces
+// every prop it was handed as text/data attributes so tests can assert on
+// them without depending on the real card's markup, which is tested
+// separately in CreateMenuCard's own suite.
+jest.mock("shared/components/create-menu/CreateMenuCard", () => ({
+  __esModule: true,
+  default: React.forwardRef(function CreateMenuCardStub(
+    { actions, promotedId, isOnPromotedSection, campaignName, creditedName, onSelect }: any,
+    ref: any
+  ) {
+    return (
+      <div
+        ref={ref}
+        role="menu"
+        data-promoted-id={promotedId}
+        data-on-promoted-section={String(isOnPromotedSection)}
+        data-campaign-name={campaignName}
+        data-credited-name={creditedName}
+      >
+        {actions.map((action: CreateAction) => (
+          <button key={action.id} role="menuitem" onClick={() => onSelect(action)}>
+            {action.entityLabel}
+          </button>
+        ))}
+      </div>
+    );
+  }),
+}));
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Fixtures
 // ---------------------------------------------------------------------------
 
-function makeNavMock(overrides = {}) {
-  return {
-    navigateToPage: mockNavigateToPage,
-    createPath: mockCreatePath,
-    ...overrides,
-  };
+const mockRunNote = jest.fn();
+const mockRunQuest = jest.fn();
+
+const actions: CreateAction[] = [
+  {
+    id: "note",
+    entityLabel: "Note",
+    icon: FileText,
+    sectionPath: "/notes",
+    shortcut: "N",
+    run: mockRunNote,
+  },
+  {
+    id: "quest",
+    entityLabel: "Quest",
+    icon: Scroll,
+    sectionPath: "/quests",
+    shortcut: "Q",
+    run: mockRunQuest,
+  },
+];
+
+function renderButton(initialEntry = "/") {
+  return render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <GlobalActionButton />
+    </MemoryRouter>
+  );
 }
 
-function makeCreateNoteMock(overrides = {}) {
-  return {
-    createAndOpen: mockCreateAndOpen,
-    ...overrides,
-  };
+function openMenu(initialEntry = "/") {
+  const utils = renderButton(initialEntry);
+  fireEvent.click(screen.getByRole("button", { name: "Create content" }));
+  return utils;
 }
 
-function renderGlobalActionButton() {
-  return render(<GlobalActionButton />);
-}
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockUseCampaignContextStatus.mockReturnValue({ hasRequiredContext: true });
+  mockUseCreateActions.mockReturnValue(actions);
+  mockUseCampaigns.mockReturnValue({ activeCampaign: { id: "c1", name: "Phandelver" } });
+  mockUseGroups.mockReturnValue({
+    activeGroupUserProfile: { username: "someuser", characters: [], activeCharacterId: null },
+  });
+});
 
 // ---------------------------------------------------------------------------
-// Tests
+// Gating
 // ---------------------------------------------------------------------------
 
-describe('GlobalActionButton', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    (useNavigation as jest.Mock).mockReturnValue(makeNavMock());
-    (useCreateNote as jest.Mock).mockReturnValue(makeCreateNoteMock());
-    mockCreateAndOpen.mockResolvedValue(undefined);
+describe("GlobalActionButton gating", () => {
+  it("renders nothing for a signed-out visitor or a user with no campaign selected (bug fix)", () => {
+    mockUseCampaignContextStatus.mockReturnValue({ hasRequiredContext: false });
+    const { container } = renderButton();
+    expect(container).toBeEmptyDOMElement();
   });
 
-  // -------------------------------------------------------------------------
-  // Main toggle button
-  // -------------------------------------------------------------------------
-  describe('main toggle button', () => {
-    test('should render the main action button', () => {
-      renderGlobalActionButton();
-      expect(
-        screen.getByRole('button', { name: /open action menu/i })
-      ).toBeInTheDocument();
-    });
+  it("renders the trigger once context is resolved and both a group and campaign are selected", () => {
+    renderButton();
+    expect(screen.getByRole("button", { name: "Create content" })).toBeInTheDocument();
+  });
+});
 
-    test('should start in closed state (no action menu visible)', () => {
-      renderGlobalActionButton();
-      expect(screen.queryByText('New Note')).not.toBeInTheDocument();
-    });
+// ---------------------------------------------------------------------------
+// The trigger
+// ---------------------------------------------------------------------------
 
-    test('should open the action menu when main button is clicked', () => {
-      renderGlobalActionButton();
-      fireEvent.click(screen.getByRole('button', { name: /open action menu/i }));
-      expect(screen.getByText('New Note')).toBeInTheDocument();
-    });
-
-    test('should change aria-label to "Close action menu" when open', () => {
-      renderGlobalActionButton();
-      fireEvent.click(screen.getByRole('button', { name: /open action menu/i }));
-      expect(
-        screen.getByRole('button', { name: /close action menu/i })
-      ).toBeInTheDocument();
-    });
-
-    test('should close the action menu when main button is clicked again', () => {
-      renderGlobalActionButton();
-      const toggleBtn = screen.getByRole('button', { name: /open action menu/i });
-      fireEvent.click(toggleBtn);
-      expect(screen.getByText('New Note')).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: /close action menu/i }));
-      expect(screen.queryByText('New Note')).not.toBeInTheDocument();
-    });
+describe("GlobalActionButton trigger", () => {
+  it("is 48px (w-12 h-12), not the old 56px", () => {
+    renderButton();
+    const trigger = screen.getByRole("button", { name: "Create content" });
+    expect(trigger.className).toContain("w-12");
+    expect(trigger.className).toContain("h-12");
   });
 
-  // -------------------------------------------------------------------------
-  // Action items when open
-  // -------------------------------------------------------------------------
-  describe('action items when open', () => {
-    function openMenu() {
-      renderGlobalActionButton();
-      fireEvent.click(screen.getByRole('button', { name: /open action menu/i }));
-    }
+  it("rotates its single icon 45 degrees when open, with no second icon appearing", () => {
+    renderButton();
+    const trigger = screen.getByRole("button", { name: "Create content" });
+    const icon = trigger.querySelector("svg");
+    expect(icon).not.toHaveClass("rotate-45");
 
-    test('should display "New Note" action', () => {
-      openMenu();
-      expect(screen.getByText('New Note')).toBeInTheDocument();
-    });
-
-    test('should display "New Location" action', () => {
-      openMenu();
-      expect(screen.getByText('New Location')).toBeInTheDocument();
-    });
-
-    test('should display "New NPC" action', () => {
-      openMenu();
-      expect(screen.getByText('New NPC')).toBeInTheDocument();
-    });
-
-    test('should display "New Rumor" action', () => {
-      openMenu();
-      expect(screen.getByText('New Rumor')).toBeInTheDocument();
-    });
-
-    test('should display "New Quest" action', () => {
-      openMenu();
-      expect(screen.getByText('New Quest')).toBeInTheDocument();
-    });
-
-    test('should display "New Chapter" action', () => {
-      openMenu();
-      expect(screen.getByText('New Chapter')).toBeInTheDocument();
-    });
-
-    test('should display all 6 action items', () => {
-      openMenu();
-      const expectedActions = ['New Note', 'New Location', 'New NPC', 'New Rumor', 'New Quest', 'New Chapter'];
-      expectedActions.forEach((label) => {
-        expect(screen.getByText(label)).toBeInTheDocument();
-      });
-    });
+    fireEvent.click(trigger);
+    expect(trigger.querySelectorAll("svg").length).toBe(1);
+    expect(trigger.querySelector("svg")).toHaveClass("rotate-45");
   });
 
-  // -------------------------------------------------------------------------
-  // Navigation actions
-  // -------------------------------------------------------------------------
-  describe('navigation actions', () => {
-    function openMenu() {
-      renderGlobalActionButton();
-      fireEvent.click(screen.getByRole('button', { name: /open action menu/i }));
-    }
+  it("tracks aria-expanded and aria-label with open state", () => {
+    renderButton();
+    const trigger = screen.getByRole("button", { name: "Create content" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
 
-    test('should navigate to /locations/create when "New Location" is clicked', () => {
-      openMenu();
-      fireEvent.click(screen.getByText('New Location'));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/locations/create');
-    });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("button", { name: "Close create menu" })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
+  });
+});
 
-    test('should navigate to /npcs/create when "New NPC" is clicked', () => {
-      openMenu();
-      fireEvent.click(screen.getByText('New NPC'));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/npcs/create');
-    });
+// ---------------------------------------------------------------------------
+// Route-contextual promotion
+// ---------------------------------------------------------------------------
 
-    test('should navigate to /rumors/create when "New Rumor" is clicked', () => {
-      openMenu();
-      fireEvent.click(screen.getByText('New Rumor'));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/rumors/create');
-    });
-
-    test('should navigate to /quests/create when "New Quest" is clicked', () => {
-      openMenu();
-      fireEvent.click(screen.getByText('New Quest'));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/quests/create');
-    });
-
-    test('should navigate to /story/chapters/create when "New Chapter" is clicked', () => {
-      openMenu();
-      fireEvent.click(screen.getByText('New Chapter'));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/story/chapters/create');
-    });
-
-    test('should close the menu after a navigation action', () => {
-      openMenu();
-      fireEvent.click(screen.getByText('New Location'));
-      expect(screen.queryByText('New Location')).not.toBeInTheDocument();
-    });
+describe("GlobalActionButton route promotion", () => {
+  it("promotes the quest action and marks it 'on section' on /quests", () => {
+    openMenu("/quests");
+    const menu = screen.getByRole("menu");
+    expect(menu).toHaveAttribute("data-promoted-id", "quest");
+    expect(menu).toHaveAttribute("data-on-promoted-section", "true");
   });
 
-  // -------------------------------------------------------------------------
-  // New Note action
-  // -------------------------------------------------------------------------
-  describe('"New Note" action', () => {
-    function openMenu() {
-      renderGlobalActionButton();
-      fireEvent.click(screen.getByRole('button', { name: /open action menu/i }));
-    }
+  it("falls back to the note action on Home, not marked 'on section'", () => {
+    openMenu("/");
+    const menu = screen.getByRole("menu");
+    expect(menu).toHaveAttribute("data-promoted-id", "note");
+    expect(menu).toHaveAttribute("data-on-promoted-section", "false");
+  });
 
-    test('should call createAndOpen when "New Note" is clicked', async () => {
-      openMenu();
-      await act(async () => {
-        fireEvent.click(screen.getByText('New Note'));
-      });
-      expect(mockCreateAndOpen).toHaveBeenCalled();
+  it("still promotes the quest action on a nested quest route", () => {
+    openMenu("/quests/some-id");
+    const menu = screen.getByRole("menu");
+    expect(menu).toHaveAttribute("data-promoted-id", "quest");
+    expect(menu).toHaveAttribute("data-on-promoted-section", "true");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Identity passthrough
+// ---------------------------------------------------------------------------
+
+describe("GlobalActionButton identity", () => {
+  it("passes the active campaign name and the active character's name through", () => {
+    mockUseGroups.mockReturnValue({
+      activeGroupUserProfile: {
+        username: "someuser",
+        characters: [{ id: "char1", name: "Elminster" }],
+        activeCharacterId: "char1",
+      },
     });
+    openMenu();
+    const menu = screen.getByRole("menu");
+    expect(menu).toHaveAttribute("data-campaign-name", "Phandelver");
+    expect(menu).toHaveAttribute("data-credited-name", "Elminster");
+  });
 
-    test('should close the menu after note creation', async () => {
-      openMenu();
-      await act(async () => {
-        fireEvent.click(screen.getByText('New Note'));
-      });
-      await waitFor(() => {
-        expect(screen.queryByText('New Note')).not.toBeInTheDocument();
-      });
+  it("falls back to the username when there is no active character", () => {
+    mockUseGroups.mockReturnValue({
+      activeGroupUserProfile: { username: "someuser", characters: [], activeCharacterId: null },
     });
+    openMenu();
+    expect(screen.getByRole("menu")).toHaveAttribute("data-credited-name", "someuser");
+  });
 
-    // Failure handling for note creation itself (logging, not navigating) now
-    // lives entirely in useCreateNote -- see useCreateNote.test.ts -- since
-    // createAndOpen already catches its own errors and never rejects.
+  it("falls back to 'you' when there is neither a character nor a username", () => {
+    mockUseGroups.mockReturnValue({ activeGroupUserProfile: null });
+    openMenu();
+    expect(screen.getByRole("menu")).toHaveAttribute("data-credited-name", "you");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Selection and closing
+// ---------------------------------------------------------------------------
+
+describe("GlobalActionButton selection", () => {
+  it("runs the clicked action and closes the menu", () => {
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Quest" }));
+    expect(mockRunQuest).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("closes on Escape and returns focus to the trigger", () => {
+    openMenu();
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create content" })).toHaveFocus();
+  });
+
+  it("closes on a click outside the wrapper", () => {
+    openMenu();
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("does not close on a click inside the panel", () => {
+    openMenu();
+    fireEvent.mouseDown(screen.getByRole("menu"));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Letter shortcuts
+// ---------------------------------------------------------------------------
+
+describe("GlobalActionButton letter shortcuts", () => {
+  it("runs the matching action and closes the menu on a bare letter key", () => {
+    openMenu();
+    fireEvent.keyDown(document, { key: "q" });
+    expect(mockRunQuest).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("matches the shortcut case-insensitively", () => {
+    openMenu();
+    fireEvent.keyDown(document, { key: "Q" });
+    expect(mockRunQuest).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores the shortcut when ctrlKey is held", () => {
+    openMenu();
+    fireEvent.keyDown(document, { key: "q", ctrlKey: true });
+    expect(mockRunQuest).not.toHaveBeenCalled();
+  });
+
+  it("ignores the shortcut when metaKey is held", () => {
+    openMenu();
+    fireEvent.keyDown(document, { key: "q", metaKey: true });
+    expect(mockRunQuest).not.toHaveBeenCalled();
+  });
+
+  it("ignores the shortcut when altKey is held", () => {
+    openMenu();
+    fireEvent.keyDown(document, { key: "q", altKey: true });
+    expect(mockRunQuest).not.toHaveBeenCalled();
+  });
+
+  it("does nothing while the menu is closed", () => {
+    renderButton();
+    fireEvent.keyDown(document, { key: "q" });
+    expect(mockRunQuest).not.toHaveBeenCalled();
   });
 });

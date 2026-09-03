@@ -22,17 +22,17 @@ beforeEach(() => {
 });
 
 describe("useCreateActions", () => {
-  it("returns the six create actions in the order the action button renders them", () => {
+  it("returns the six create actions in display order", () => {
     const { result } = renderHook(() => useCreateActions());
     expect(result.current.map((a) => a.entityLabel)).toEqual([
-      "Note", "Location", "NPC", "Rumor", "Quest", "Chapter",
+      "Note", "Chapter", "NPC", "Location", "Rumor", "Quest",
     ]);
   });
 
   it("gives every action a stable id and an icon component", () => {
     const { result } = renderHook(() => useCreateActions());
     expect(result.current.map((a) => a.id)).toEqual([
-      "note", "location", "npc", "rumor", "quest", "chapter",
+      "note", "chapter", "npc", "location", "rumor", "quest",
     ]);
     result.current.forEach((action) => {
       // lucide-react icons are React.forwardRef exotic components, so
@@ -70,5 +70,23 @@ describe("useCreateActions", () => {
     });
     expect(mockCreateAndOpen).toHaveBeenCalledTimes(1);
     expect(mockNavigateToPage).not.toHaveBeenCalled();
+  });
+
+  it("gives every action a non-empty sectionPath rooted at the app's top level", () => {
+    const { result } = renderHook(() => useCreateActions());
+    result.current.forEach((action) => {
+      expect(action.sectionPath).toEqual(expect.any(String));
+      expect(action.sectionPath.length).toBeGreaterThan(0);
+      expect(action.sectionPath.startsWith("/")).toBe(true);
+    });
+  });
+
+  it("gives every action a single-letter shortcut, all distinct", () => {
+    const { result } = renderHook(() => useCreateActions());
+    const shortcuts = result.current.map((a) => a.shortcut);
+    shortcuts.forEach((shortcut) => {
+      expect(shortcut).toHaveLength(1);
+    });
+    expect(new Set(shortcuts).size).toBe(shortcuts.length);
   });
 });
