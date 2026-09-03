@@ -124,7 +124,20 @@ they are the only two claims on the page whose truth is not in this repository.
 | Orphaned notes | **Fix the cascade in this PR.** See §2.3. |
 | Hosting region | **`europe-west1`**, named explicitly. |
 | OpenAI retention wording | Write what is true of a standard platform API account: **not used to train models; retained by OpenAI for up to 30 days for abuse monitoring, then deleted.** The maintainer confirmed in the OpenAI dashboard that data sharing is disabled for the org, which corroborates the no-training half. |
-| OpenAI DPA | **Not yet accepted.** The transfers sentence is therefore written *without* naming a safeguard, and the DPA sentence sits behind a single constant (`OPENAI_DPA_ACCEPTED`) so it can be switched on in a one-line change once accepted. Accepting it is logged as a follow-up, not a blocker. |
+| OpenAI DPA | **Not in place, and not obtainable on the current account.** The transfers sentence is therefore written *without* naming a safeguard, and the DPA sentence sits behind a single constant (`OPENAI_DPA_ACCEPTED`). See the correction below. |
+
+**Correction, 2026-09-03.** This table originally logged "accept the OpenAI DPA" as a quick
+follow-up. That was wrong, and the maintainer found it by looking: **OpenAI does not offer a DPA to
+personal accounts at all.** The "Execute Data Processing Agreement" control at the foot of
+`openai.com/policies/data-processing-addendum` requires a business/Team organization, a legal entity
+name and an organization ID. The org's data-controls *settings* (data sharing disabled) are a
+different thing entirely — they are what make the "not used to train their models" claim true, and
+they are not a substitute for an Art. 28 processor contract.
+
+So the follow-up is not a click; it is a decision between upgrading to a business account and
+knowingly operating without the contract. **This is a compliance decision for the maintainer, not a
+copy change, and this document does not make it.** The page as written is correct under either
+outcome: it states the US transfer plainly and claims no safeguard it does not have.
 
 ### Not legal advice
 
@@ -185,5 +198,9 @@ by decision because the page's deletion copy would otherwise be false.
 
 ## 6. Follow-ups logged, not done here
 
-1. Accept the OpenAI DPA in the platform dashboard, then flip `OPENAI_DPA_ACCEPTED`.
+1. **Decide** whether to move to an OpenAI business/Team account in order to execute the DPA — see
+   the correction in §3. If one is ever signed, flip `OPENAI_DPA_ACCEPTED` and bump
+   `PRIVACY_LAST_UPDATED`. Not a one-line change until that decision is made.
 2. Consider whether `gpt-3.5-turbo` is still the right default model.
+3. The header overflows horizontally below ~380px on every route (pre-existing, unrelated to this
+   PR). Fix by extending the header's shrink order, not by patching a page.
