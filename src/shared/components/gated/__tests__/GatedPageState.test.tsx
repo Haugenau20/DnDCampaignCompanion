@@ -35,7 +35,7 @@ const renderPanel = (props: Partial<React.ComponentProps<typeof GatedPageState>>
 describe("GatedPageState, signed out", () => {
   it("labels the page as a private campaign", () => {
     renderPanel();
-    expect(screen.getByText(/private campaign/i)).toBeInTheDocument();
+    expect(screen.getByTestId("gated-eyebrow")).toHaveTextContent(/private campaign/i);
   });
 
   it("renders the page's heading and blurb", () => {

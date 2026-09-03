@@ -35,7 +35,10 @@ const Eyebrow: React.FC<{ icon?: React.ReactNode; children: React.ReactNode }> =
 }) => (
   <div className="flex items-center gap-2 mb-4">
     {icon}
-    <span className="text-xs font-semibold uppercase tracking-widest typography-muted">
+    <span
+      data-testid="gated-eyebrow"
+      className="text-xs font-semibold uppercase tracking-widest typography-muted"
+    >
       {children}
     </span>
   </div>
@@ -95,7 +98,7 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
     <div className="mx-auto w-full max-w-[560px] rounded-lg p-8 card">
       {isSignedOut ? (
         <Eyebrow icon={<Lock className="w-4 h-4 typography-muted" aria-hidden="true" />}>
-          Private
+          Private campaign
         </Eyebrow>
       ) : (
         <Eyebrow>Signed in · no campaign chosen</Eyebrow>
