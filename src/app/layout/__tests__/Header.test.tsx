@@ -3,7 +3,7 @@
 // Header pulls in many contexts and feature components — mock aggressively.
 
 import React from "react";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Header from "../Header";
 
@@ -486,6 +486,35 @@ describe("Header", () => {
       const wrapper = screen.getByRole("button", { name: /search/i }).parentElement;
       expect(wrapper?.className).toMatch(/\bshrink-0\b/);
       expect(wrapper?.className).not.toMatch(/\bmin-w-0\b/);
+    });
+
+    it("closes the palette when the signed-in user becomes null (e.g. sign-out)", async () => {
+      setupMocks({ user: mockUser });
+      const { rerender } = render(<Header />);
+
+      await userEvent.click(screen.getByRole("button", { name: /search/i }));
+      expect(screen.getByTestId("command-palette")).toBeInTheDocument();
+
+      setupMocks({ user: null });
+      rerender(<Header />);
+
+      expect(screen.queryByTestId("command-palette")).not.toBeInTheDocument();
+    });
+
+    // AltGr on European keyboard layouts sets both `ctrlKey` and `altKey` on
+    // the same keydown, so a matcher that only checks `ctrlKey`/`metaKey`
+    // would swallow a character the user meant to type (e.g. AltGr+K on a
+    // layout where that combination produces a printable character).
+    it("leaves AltGr+K (ctrlKey and altKey together) inert", () => {
+      renderHeader({ user: mockUser });
+      fireEvent.keyDown(document, { key: "k", ctrlKey: true, altKey: true });
+      expect(screen.queryByTestId("command-palette")).not.toBeInTheDocument();
+    });
+
+    it("leaves Ctrl+Shift+K inert", () => {
+      renderHeader({ user: mockUser });
+      fireEvent.keyDown(document, { key: "k", ctrlKey: true, shiftKey: true });
+      expect(screen.queryByTestId("command-palette")).not.toBeInTheDocument();
     });
   });
 });

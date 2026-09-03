@@ -49,9 +49,23 @@ const Header: React.FC = () => {
    * index with no visible way to have got there.
    */
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // Signing out with the palette open must not leave it open for
+      // whoever (or whichever account) signs back in next.
+      setPaletteOpen(false);
+      return;
+    }
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
+      // `altKey` and `shiftKey` are excluded because AltGr on European
+      // keyboard layouts sets both `ctrlKey` and `altKey` together, so
+      // `AltGr+K` -- a character the user meant to type -- would otherwise
+      // also match, swallow the keystroke and toggle the palette.
+      if (
+        event.key.toLowerCase() === 'k' &&
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey
+      ) {
         event.preventDefault();
         setPaletteOpen((open) => !open);
       }
