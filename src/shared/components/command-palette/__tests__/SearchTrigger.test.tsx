@@ -21,4 +21,9 @@ describe("SearchTrigger", () => {
     render(<SearchTrigger onOpen={jest.fn()} />);
     expect(screen.getByRole("button", { name: /search/i }).className).toContain("shrink-0");
   });
+
+  it("reserves a fixed 120px width at and above md", () => {
+    render(<SearchTrigger onOpen={jest.fn()} />);
+    expect(screen.getByRole("button", { name: /search/i }).className).toContain("md:w-[7.5rem]");
+  });
 });
