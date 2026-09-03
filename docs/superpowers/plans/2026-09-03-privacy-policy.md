@@ -751,7 +751,7 @@ export default PrivacyDataTable;
 npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="privacy/__tests__/PrivacyDataTable"
 ```
 
-Expected: PASS, 8 tests.
+Expected: PASS, 9 tests.
 
 If the column-header assertion fails because `Typography` is unmocked and wraps text in
 a `div`, note that this suite deliberately does **not** mock `Typography` — it renders
