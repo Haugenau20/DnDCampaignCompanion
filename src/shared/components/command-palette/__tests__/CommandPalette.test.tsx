@@ -114,10 +114,36 @@ describe("CommandPalette", () => {
     expect(screen.getByText("Keep typing…")).toBeInTheDocument();
   });
 
+  it("prioritizes the too-short prompt over the debounced skeleton (spec §5.3 order)", () => {
+    // Both flags true at once is exactly what a debounce firing on a
+    // 1-character query looks like -- `isQueryTooShort` must win, not flash
+    // a skeleton first.
+    useSearch.mockReturnValue(
+      searchState({ query: "d", results: [], isQueryTooShort: true, isSearching: true })
+    );
+    open();
+    expect(screen.getByText("Keep typing…")).toBeInTheDocument();
+    expect(screen.queryByTestId("palette-skeleton")).not.toBeInTheDocument();
+  });
+
   it("names the campaign in the empty state", () => {
     useSearch.mockReturnValue(searchState({ results: [] }));
     open();
     expect(screen.getByText("No results in Phandelver")).toBeInTheDocument();
+  });
+
+  it("prompts to start typing on an untouched empty query, instead of claiming no results", () => {
+    useSearch.mockReturnValue(searchState({ query: "", results: [] }));
+    open();
+    expect(screen.queryByText(/No results/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^0 results?/)).not.toBeInTheDocument();
+    expect(screen.getByText("Start typing to search…")).toBeInTheDocument();
+  });
+
+  it("suppresses the result-count label while the query is empty", () => {
+    useSearch.mockReturnValue(searchState({ query: "", results: [] }));
+    open();
+    expect(screen.queryByText(/result/i)).not.toBeInTheDocument();
   });
 
   it("offers a create command carrying the typed query", () => {
@@ -168,6 +194,66 @@ describe("CommandPalette", () => {
     expect(active).toBeTruthy();
     expect(document.getElementById(active!)).toBeInTheDocument();
     expect(document.getElementById(active!)).toHaveAttribute("role", "option");
+  });
+
+  it("owns every option, including the create commands, in a single listbox matching aria-controls", async () => {
+    open();
+    const listboxes = screen.getAllByRole("listbox");
+    expect(listboxes).toHaveLength(1);
+    const listbox = listboxes[0];
+    expect(listbox).toHaveAttribute("id", "palette-results");
+    expect(screen.getByRole("combobox")).toHaveAttribute("aria-controls", "palette-results");
+
+    // Move onto a create command and confirm it still resolves inside that
+    // same listbox -- the create commands used to sit in a second, id-less
+    // `role="listbox"` outside the element `aria-controls` named.
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+    const activeId = screen.getByRole("combobox").getAttribute("aria-activedescendant");
+    expect(activeId).toBe("cmdk-create-npc");
+    expect(listbox.contains(document.getElementById(activeId!))).toBe(true);
+  });
+
+  it("wraps each result group in role=group rather than a bare div", () => {
+    open();
+    const npcGroup = screen.getByRole("group", { name: "NPCS" });
+    expect(within(npcGroup).getByText("Droop")).toBeInTheDocument();
+    const storyGroup = screen.getByRole("group", { name: "STORY" });
+    expect(within(storyGroup).getByText("Chapter 12 — Cragmaw Hideout")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["the skeleton state", searchState({ results: [], isIndexReady: false })],
+    ["the too-short-query state", searchState({ query: "d", results: [], isQueryTooShort: true })],
+    ["the empty-query state", searchState({ query: "", results: [] })],
+    ["the no-results state", searchState({ results: [] })],
+  ])("renders #palette-results even in %s, so aria-controls never dangles", (_label, state) => {
+    useSearch.mockReturnValue(state);
+    open();
+    expect(document.getElementById("palette-results")).toBeInTheDocument();
+    expect(document.getElementById("palette-results")).toHaveAttribute("role", "listbox");
+  });
+
+  it("falls back to the unfiltered groups once the type filter no longer matches any result", async () => {
+    const onClose = jest.fn();
+    const { rerender } = render(
+      <CommandPalette isOpen onClose={onClose} triggerRef={React.createRef()} />
+    );
+
+    // Filter down to STORY (npc first, then story -- see the Tab-cycle test).
+    await userEvent.keyboard("{Tab}{Tab}");
+    expect(screen.getByText("STORY")).toBeInTheDocument();
+    expect(screen.queryByText("NPCS")).not.toBeInTheDocument();
+
+    // The query changes underneath the filter to one whose only hit is an
+    // NPC -- no STORY group exists any more for `typeFilter` to match.
+    useSearch.mockReturnValue(searchState({ query: "goblin", results: [npc] }));
+    rerender(<CommandPalette isOpen onClose={onClose} triggerRef={React.createRef()} />);
+
+    // Previously: filteredGroups === [], an empty listbox with no rows and
+    // no empty state, while the header still claimed a nonzero count.
+    expect(screen.getByText("NPCS")).toBeInTheDocument();
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    expect(screen.getByText("1 result in Phandelver")).toBeInTheDocument();
   });
 });
 

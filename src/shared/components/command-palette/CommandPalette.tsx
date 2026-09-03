@@ -103,8 +103,16 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
   );
 
   const groups = useMemo(() => groupResultsByType(results), [results]);
+  // Falls back to the unfiltered groups once `typeFilter` no longer matches
+  // any group present -- e.g. the query changed underneath a Tab-narrowed
+  // filter and the new results contain no result of that type. Without this,
+  // `filteredGroups` goes to `[]` and the listbox renders with no rows and no
+  // empty state, while the header count label still reports the real total.
   const filteredGroups = useMemo(
-    () => (typeFilter ? groups.filter((group) => group.type === typeFilter) : groups),
+    () =>
+      typeFilter && groups.some((group) => group.type === typeFilter)
+        ? groups.filter((group) => group.type === typeFilter)
+        : groups,
     [groups, typeFilter]
   );
   const flatResults = useMemo(() => flattenGroups(filteredGroups), [filteredGroups]);
@@ -171,27 +179,45 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
 
   const activeDescendant = navigableItems[selectedIndex]?.id;
   const campaignName = activeCampaign?.name ?? null;
+  const trimmedQuery = query.trim();
   const resultCountLabel = campaignName
     ? `${results.length} result${results.length === 1 ? "" : "s"} in ${campaignName}`
     : `${results.length} result${results.length === 1 ? "" : "s"}`;
 
-  let body: React.ReactNode;
-  if (!isIndexReady || isSearching) {
-    body = (
-      <div data-testid="palette-skeleton" className="p-4 flex flex-col gap-2.5 animate-pulse">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="rounded-md journal-loading h-12" />
-        ))}
-      </div>
-    );
+  const skeleton = (
+    <div data-testid="palette-skeleton" className="p-4 flex flex-col gap-2.5 animate-pulse">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="rounded-md journal-loading h-12" />
+      ))}
+    </div>
+  );
+
+  // Priority order per spec §5.3: the index-not-ready check comes first --
+  // that precedence is deliberate and load-bearing -- then the too-short
+  // query, then a search in flight, then an untouched empty query (this
+  // component's own addition: `isQueryTooShort` requires length > 0, so a
+  // length-0 query falls through it and would otherwise hit the "no
+  // results" branch below on the very first open), then genuinely empty
+  // results, then the results themselves.
+  let resultsBody: React.ReactNode;
+  if (!isIndexReady) {
+    resultsBody = skeleton;
   } else if (isQueryTooShort) {
-    body = (
+    resultsBody = (
       <div className="p-8 text-center">
         <Typography color="secondary">Keep typing…</Typography>
       </div>
     );
+  } else if (isSearching) {
+    resultsBody = skeleton;
+  } else if (trimmedQuery.length === 0) {
+    resultsBody = (
+      <div className="p-8 text-center">
+        <Typography color="secondary">Start typing to search…</Typography>
+      </div>
+    );
   } else if (results.length === 0) {
-    body = (
+    resultsBody = (
       <div className="p-8 text-center">
         <Typography color="secondary">
           {campaignName ? `No results in ${campaignName}` : "No results"}
@@ -199,65 +225,61 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
       </div>
     );
   } else {
-    body = (
-      <div id="palette-results" role="listbox">
-        {filteredGroups.map((group) => (
-          <div key={group.type}>
-            <Typography
-              variant="body-sm"
-              color="secondary"
-              className="px-4 pt-3 pb-1 text-xs font-semibold tracking-wide uppercase"
+    resultsBody = filteredGroups.map((group) => (
+      <div key={group.type} role="group" aria-label={group.label}>
+        <Typography
+          variant="body-sm"
+          color="secondary"
+          className="px-4 pt-3 pb-1 text-xs font-semibold tracking-wide uppercase"
+        >
+          {group.label}
+        </Typography>
+        {group.results.map((result) => {
+          const index = flatResults.indexOf(result);
+          const Icon = resultTypeIcons[result.type];
+          const isSelected = index === selectedIndex;
+          return (
+            <div
+              key={optionId(result)}
+              id={optionId(result)}
+              role="option"
+              aria-selected={isSelected}
+              onMouseEnter={() => setSelectedIndex(index)}
+              onClick={() => {
+                navigateToResult(result);
+                onClose();
+              }}
+              className={clsx(
+                "flex items-start gap-3 px-4 py-2.5 cursor-pointer border-l-[3px]",
+                isSelected ? "search-result-selected border-accent" : "search-result border-transparent"
+              )}
             >
-              {group.label}
-            </Typography>
-            {group.results.map((result) => {
-              const index = flatResults.indexOf(result);
-              const Icon = resultTypeIcons[result.type];
-              const isSelected = index === selectedIndex;
-              return (
-                <div
-                  key={optionId(result)}
-                  id={optionId(result)}
-                  role="option"
-                  aria-selected={isSelected}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                  onClick={() => {
-                    navigateToResult(result);
-                    onClose();
-                  }}
-                  className={clsx(
-                    "flex items-start gap-3 px-4 py-2.5 cursor-pointer border-l-[3px]",
-                    isSelected ? "search-result-selected border-accent" : "search-result border-transparent"
-                  )}
-                >
-                  <Icon className="w-4 h-4 mt-0.5 flex-shrink-0 primary" />
-                  <div className="min-w-0 flex-1">
-                    <Typography className="font-medium">
-                      <HighlightedText text={result.title} query={query} />
-                    </Typography>
-                    {result.matches[0] && (
-                      <Typography variant="body-sm" color="secondary">
-                        …<HighlightedText text={result.matches[0]} query={query} />…
-                      </Typography>
-                    )}
-                  </div>
-                  {result.matchCount > 1 && (
-                    <Typography variant="body-sm" color="secondary" className="flex-shrink-0">
-                      {`+${result.matchCount - 1} more mentions`}
-                    </Typography>
-                  )}
-                  {isSelected && (
-                    <Typography variant="body-sm" color="secondary" className="flex-shrink-0">
-                      ↵ open
-                    </Typography>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+              <Icon className="w-4 h-4 mt-0.5 flex-shrink-0 primary" />
+              <div className="min-w-0 flex-1">
+                <Typography className="font-medium">
+                  <HighlightedText text={result.title} query={query} />
+                </Typography>
+                {result.matches[0] && (
+                  <Typography variant="body-sm" color="secondary">
+                    …<HighlightedText text={result.matches[0]} query={query} />…
+                  </Typography>
+                )}
+              </div>
+              {result.matchCount > 1 && (
+                <Typography variant="body-sm" color="secondary" className="flex-shrink-0">
+                  {`+${result.matchCount - 1} more mentions`}
+                </Typography>
+              )}
+              {isSelected && (
+                <Typography variant="body-sm" color="secondary" className="flex-shrink-0">
+                  ↵ open
+                </Typography>
+              )}
+            </div>
+          );
+        })}
       </div>
-    );
+    ));
   }
 
   return createPortal(
@@ -293,9 +315,11 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
             placeholder="Search stories, quests, NPCs..."
             className="flex-1 min-w-0 bg-transparent border-0 outline-none focus:outline-none focus:ring-0"
           />
-          <Typography variant="body-sm" color="secondary" className="flex-shrink-0">
-            {resultCountLabel}
-          </Typography>
+          {trimmedQuery.length > 0 && (
+            <Typography variant="body-sm" color="secondary" className="flex-shrink-0">
+              {resultCountLabel}
+            </Typography>
+          )}
           {query && (
             <button
               type="button"
@@ -314,12 +338,21 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
           </span>
         </div>
 
-        {body}
+        {/* One listbox for the whole session, in every state -- `aria-controls`
+            above names this id unconditionally, so it must exist even while
+            showing the skeleton, the too-short prompt or the empty state, or
+            `aria-expanded="true"` would point at nothing. Create commands are
+            rendered as further options of this same listbox rather than a
+            second, id-less one: a listbox may own only `option`/`group`
+            children, and a sibling listbox left `aria-activedescendant`
+            pointing outside the element `aria-controls` names whenever a
+            create row was selected. */}
+        <div id="palette-results" role="listbox">
+          {resultsBody}
 
-        {createActions.length > 0 && (
-          <>
-            <hr className="card-divider" />
-            <div role="listbox">
+          {createActions.length > 0 && (
+            <>
+              <hr aria-hidden="true" className="card-divider" />
               {createActions.map((action, actionIndex) => {
                 const Icon = action.icon;
                 const index = flatResults.length + actionIndex;
@@ -353,9 +386,9 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
                   </div>
                 );
               })}
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
 
         <div className="flex items-center justify-between px-4 py-2 border-t card-divider">
           <Typography variant="body-sm" color="secondary">
