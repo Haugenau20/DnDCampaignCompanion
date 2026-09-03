@@ -93,10 +93,28 @@ import {
 } from "../privacy";
 
 describe("privacy constants", () => {
-  it("pins the last-updated date to a literal, not to today", () => {
-    const today = new Date().toISOString().slice(0, 10);
-    expect(PRIVACY_LAST_UPDATED).not.toBe(today);
+  it("is shaped like an ISO date", () => {
     expect(PRIVACY_LAST_UPDATED).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("does not move when the clock does", () => {
+    // The bug this file exists to prevent was `new Date()` in the render path,
+    // so the page re-dated itself daily. Asserting "the constant is not today"
+    // would be a proxy that passes by luck and fails on the very day the policy
+    // is genuinely updated. Re-evaluating the module under a faked clock tests
+    // the real property: the value is a literal, not a computation.
+    jest.useFakeTimers().setSystemTime(new Date("2031-01-15T12:00:00Z"));
+
+    let reloaded: string | undefined;
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      reloaded = require("../privacy").PRIVACY_LAST_UPDATED;
+    });
+
+    jest.useRealTimers();
+
+    expect(reloaded).toBe(PRIVACY_LAST_UPDATED);
+    expect(reloaded).not.toMatch(/^2031/);
   });
 
   it("parses as a real calendar date", () => {
@@ -324,7 +342,7 @@ export const PRIVACY_SECTIONS: readonly PrivacySection[] = [
 npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="constants/__tests__/privacy"
 ```
 
-Expected: PASS, 9 tests.
+Expected: PASS, 10 tests.
 
 **Note on the `SESSION_DURATIONS` sentinel** in the `session` row's `howLong`: the page
 replaces it at render time with the two time constants, so the durations keep exactly one
