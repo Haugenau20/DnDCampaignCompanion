@@ -184,7 +184,13 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({ onJoinGroup }) => {
   };
 
   return (
-    <div className="relative min-w-0" ref={dropdownRef}>
+    // `flex` is load-bearing, not cosmetic: `min-w-0` lets this wrapper shrink
+    // as a flex item of the header row, but while it stayed a block the trigger
+    // inside it was sized shrink-to-fit up to its own `max-w-[14rem]` and simply
+    // overflowed the shrunken wrapper, painting over the first nav item. Making
+    // this a flex container makes the trigger a flex item, so its own `min-w-0`
+    // applies and its label's `truncate` finally does the work.
+    <div className="relative min-w-0 flex" ref={dropdownRef}>
       <ContextTrigger
         ref={triggerRef}
         isOpen={isOpen}

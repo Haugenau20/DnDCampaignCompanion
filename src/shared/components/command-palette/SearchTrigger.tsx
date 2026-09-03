@@ -43,7 +43,7 @@ const SearchTrigger = forwardRef<HTMLButtonElement, SearchTriggerProps>(
       </Typography>
       <span
         aria-hidden="true"
-        className="hidden md:inline ml-auto px-1.5 py-0.5 rounded text-xs search"
+        className="hidden md:inline ml-auto px-1.5 py-0.5 rounded text-xs search whitespace-nowrap"
       >
         {isApplePlatform() ? "⌘K" : "Ctrl K"}
       </span>

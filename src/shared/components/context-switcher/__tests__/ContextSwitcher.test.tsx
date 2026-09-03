@@ -654,6 +654,17 @@ describe('ContextSwitcher', () => {
       expect(container.firstElementChild?.className).toMatch(/\bmin-w-0\b/);
     });
 
+    // ...and the root must also be a flex container. Letting the root shrink is
+    // only half the job: while it was a plain block, the trigger inside it was
+    // still sized shrink-to-fit up to its own `max-w-[14rem]`, so a shrunken
+    // root did not shrink the chip -- the chip simply overflowed it and painted
+    // over the first navigation item. Only as a flex item does the chip's own
+    // `min-w-0` apply and its label's `truncate` engage.
+    test('makes its root a flex container, so the chip shrinks with it rather than overflowing', () => {
+      const { container } = renderContextSwitcher();
+      expect(container.firstElementChild?.className).toMatch(/\bflex\b/);
+    });
+
     test('reports the popover state to assistive technology', () => {
       renderContextSwitcher();
       const trigger = screen.getAllByRole('button')[0];
