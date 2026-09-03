@@ -282,9 +282,16 @@ describe("Navigation", () => {
       expect(mockNavigateToPage).toHaveBeenCalledWith("/notes");
     });
 
-    it("hides the More button at and above the nav breakpoint", () => {
+    it("hides the More button's wrapper (button and panel together) at and above the nav breakpoint", () => {
+      // Relocated from the button itself: leaving the class on the button
+      // left an empty `div.relative` as a flex item in the nav row above the
+      // breakpoint, costing dead `gap` space and keeping an open panel
+      // rendered (just invisible) if the viewport widened past `nav` while
+      // it was open. The wrapper now carries the class instead.
       render(<Navigation variant="inline" />);
-      expect(screen.getByRole("button", { name: /more/i }).className).toContain("nav:hidden");
+      const moreButton = screen.getByRole("button", { name: /more/i });
+      expect(moreButton.parentElement?.className).toContain("nav:hidden");
+      expect(moreButton.className).not.toContain("nav:hidden");
     });
 
     it("leaves the mobile strip carrying all seven destinations", () => {

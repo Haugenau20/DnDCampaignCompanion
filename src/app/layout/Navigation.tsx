@@ -179,7 +179,14 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
       {inlineItems.map((item) => renderNavButton(item))}
       {overflowItems.map((item) => renderNavButton(item, 'hidden nav:block'))}
 
-      <div className="relative" ref={moreContainerRef}>
+      {/* `nav:hidden` lives on this wrapper, not the button: at and above the
+          `nav` breakpoint the button itself used to go `display:none` while
+          this `div.relative` stayed a flex item, costing dead `gap-1 lg:gap-2`
+          space in the nav row and leaving an open panel rendered (just
+          invisible) if the viewport widened past `nav` while it was open.
+          Hiding the wrapper removes it from the flex layout entirely and
+          takes the panel with it. */}
+      <div className="relative nav:hidden" ref={moreContainerRef}>
         <button
           ref={moreTriggerRef}
           type="button"
@@ -187,7 +194,7 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
           aria-haspopup="menu"
           aria-expanded={isMoreOpen}
           className={clsx(
-            'nav:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-md whitespace-nowrap transition-colors',
+            'flex items-center gap-1 px-2.5 py-1.5 rounded-md whitespace-nowrap transition-colors',
             isMoreOpen ? 'dropdown-item-active' : 'button-ghost'
           )}
         >
