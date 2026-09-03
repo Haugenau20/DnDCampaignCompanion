@@ -6,6 +6,7 @@ import { useNotes } from "../context/NoteContext";
 import { useNoteReferences, normalizeTextForComparison } from "./NoteReferences";
 import Typography from "../../../../core/components/Typography";
 import Button from "../../../../core/components/Button";
+import { EXTRACTION_FACTS } from "../../../../core/constants/privacy";
 import { useEntityExtractor } from "../../entity-extraction/hooks/useEntityExtractor";
 import { useNavigation } from "shared/hooks/useNavigation";
 import { useNPCs, useLocations, useQuests, useRumors } from "features/campaign-entities";
@@ -380,6 +381,19 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
           Scan note
         </Button>
       </div>
+
+      {/*
+        The disclosure belongs where the decision is made, not only on the
+        privacy page. One line: what leaves, and where it goes. Unconditional --
+        the button's disabled state says nothing about where the text travels
+        once it is usable again.
+      */}
+      <Typography variant="body-sm" color="muted" className="mt-2">
+        Sends this note's text to {EXTRACTION_FACTS.provider} to look for names.{" "}
+        <a href="/privacy#entity-extraction" className="underline">
+          How this works
+        </a>
+      </Typography>
 
       {looksUnscanned && (
         <Typography variant="body-sm" color="muted" className="mt-4">
