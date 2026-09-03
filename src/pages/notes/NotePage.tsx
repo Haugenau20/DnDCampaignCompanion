@@ -5,6 +5,8 @@ import Typography from "../../core/components/Typography";
 import Button from "../../core/components/Button";
 import Dialog from "core/components/Dialog";
 import { useNavigation } from "shared/hooks/useNavigation";
+import { usePageGate, GatedContent } from "shared/components/gated";
+import PageShell from "shared/components/page-shell/PageShell";
 import { useNotes, NoteEditor, NoteEditorRef, CampaignLinksPanel, UsageMeter, Note } from "features/collaboration";
 import { useCampaigns } from "features/user-management";
 import { ArrowLeft, AlertCircle, ExternalLink } from 'lucide-react';
@@ -12,16 +14,24 @@ import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups } from "features/user-management";
 
 /**
- * Page for viewing and editing an individual user note
- * Handles campaign context and cross-campaign note access
+ * Page for viewing and editing an individual user note.
+ *
+ * Uses the `notes` page key, same as `NotesPage` — a member with a group but
+ * no campaign chosen can still open a note. `usePageGate`/`GatedContent` own
+ * the signed-out and still-resolving states; everything below (invalid id,
+ * cross-campaign fetch, not-found) is this note's own business, handled only
+ * once the gate says `ready`.
  */
 const NotePage: React.FC = () => {
   const { noteId } = useParams<{ noteId: string }>();
   const { navigateToPage } = useNavigation();
-  const { deleteNote, getNoteById, archiveNote } = useNotes();
+  const { deleteNote, getNoteById, archiveNote, isLoading } = useNotes();
   const { activeCampaignId, activeCampaign, campaigns } = useCampaigns();
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
+
+  const gate = usePageGate("notes", { loading: isLoading });
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [crossCampaignNote, setCrossCampaignNote] = useState<Note | null>(null);
@@ -95,11 +105,16 @@ const NotePage: React.FC = () => {
     }
   };
 
+  // An invalid route is its own case, ahead of the note-lookup logic below --
+  // narrows `noteId` to `string` for the rest of the component, same as the
+  // guard this replaces used to.
   if (!noteId) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <Typography color="error">Invalid note ID</Typography>
-      </div>
+      <PageShell title="Note">
+        <GatedContent gate={gate}>
+          <Typography color="error">Invalid note ID</Typography>
+        </GatedContent>
+      </PageShell>
     );
   }
 
@@ -150,107 +165,106 @@ const NotePage: React.FC = () => {
     }
   };
 
-  // Loading state for cross-campaign note
-  if (isLoadingCrossCampaignNote && !currentCampaignNote) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-center py-8">
-          <Typography color="secondary">Loading note...</Typography>
-        </div>
-      </div>
-    );
-  }
-
-  // Note not found state
-  if (!noteToDisplay) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={handleBackClick}
-            className={`back-button`}
-            startIcon={<ArrowLeft className="w-5 h-5" />}
-          >
-            Back to Notes
-          </Button>
-        </div>
-        
-        <div className="text-center py-12">
-          <AlertCircle className="w-12 h-12 mx-auto mb-4 status-failed" />
-          <Typography variant="h3" className="mb-2">
-            Note Not Found
-          </Typography>
-          <Typography color="secondary">
-            The note you're looking for doesn't exist or you don't have access to it.
-          </Typography>
-        </div>
-      </div>
-    );
-  }
+  // A generic fallback carries the h1 through the states where no note has
+  // loaded yet (invalid id, still fetching, not found) -- PageShell renders
+  // a title in every state, this one just isn't always a note's own.
+  const pageTitle = noteToDisplay?.title || "Note";
 
   return (
-    <div className={`max-w-7xl mx-auto px-4 py-8 note-page`}>
-      {/* Warning banner for cross-campaign notes */}
-      {isFromDifferentCampaign && (
-        <div className="mb-6 p-4 rounded-lg border-l-4 status-unknown">
-          <div className="flex items-start gap-3">
-            <ExternalLink className="w-5 h-5 mt-0.5 flex-shrink-0" />
-            <div>
-              <Typography variant="body" className="font-medium mb-1">
-                Note from Different Campaign
+    <PageShell title={pageTitle}>
+      <GatedContent gate={gate}>
+        {isLoadingCrossCampaignNote && !currentCampaignNote ? (
+          <div className="flex items-center justify-center py-8">
+            <Typography color="secondary">Loading note...</Typography>
+          </div>
+        ) : !noteToDisplay ? (
+          <>
+            <div className="mb-8">
+              <Button
+                variant="ghost"
+                onClick={handleBackClick}
+                className={`back-button`}
+                startIcon={<ArrowLeft className="w-5 h-5" />}
+              >
+                Back to Notes
+              </Button>
+            </div>
+
+            <div className="text-center py-12">
+              <AlertCircle className="w-12 h-12 mx-auto mb-4 status-failed" />
+              <Typography variant="h3" className="mb-2">
+                Note Not Found
               </Typography>
-              <Typography variant="body-sm" color="secondary">
-                This note belongs to <span className="font-medium">{noteCampaign?.name || 'Unknown Campaign'}</span>,
-                not your currently active campaign ({activeCampaign?.name}).
-                You can view it but some features like entity extraction may not work as expected.
+              <Typography color="secondary">
+                The note you're looking for doesn't exist or you don't have access to it.
               </Typography>
             </div>
+          </>
+        ) : (
+          <div className="note-page">
+            {/* Warning banner for cross-campaign notes */}
+            {isFromDifferentCampaign && (
+              <div className="mb-6 p-4 rounded-lg border-l-4 status-unknown">
+                <div className="flex items-start gap-3">
+                  <ExternalLink className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <Typography variant="body" className="font-medium mb-1">
+                      Note from Different Campaign
+                    </Typography>
+                    <Typography variant="body-sm" color="secondary">
+                      This note belongs to <span className="font-medium">{noteCampaign?.name || 'Unknown Campaign'}</span>,
+                      not your currently active campaign ({activeCampaign?.name}).
+                      You can view it but some features like entity extraction may not work as expected.
+                    </Typography>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
+              <NoteEditor
+                ref={noteEditorRef}
+                noteId={noteId}
+                readOnly={isFromDifferentCampaign} // Make cross-campaign notes read-only
+                onBack={handleBackClick}
+                onArchive={handleArchiveNote}
+                onDelete={() => setIsDeleteDialogOpen(true)}
+              />
+
+              <div className="space-y-4">
+                {/* Only show campaign links for notes in the active campaign */}
+                {!isFromDifferentCampaign && (
+                  <CampaignLinksPanel
+                    noteId={noteId}
+                    getCurrentEditorContent={getCurrentEditorContent}
+                    saveCurrentEditorContent={saveCurrentEditorContent}
+                  />
+                )}
+                <UsageMeter />
+              </div>
+            </div>
+
+            <Dialog
+              open={isDeleteDialogOpen}
+              onClose={() => setIsDeleteDialogOpen(false)}
+              title="Delete this note?"
+            >
+              <Typography color="secondary" className="mb-4">
+                This permanently removes the note and everything in it. This cannot be undone.
+              </Typography>
+              <div className="flex justify-end gap-3">
+                <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" onClick={handleConfirmDelete} disabled={isDeleting}>
+                  Delete note
+                </Button>
+              </div>
+            </Dialog>
           </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
-        <NoteEditor
-          ref={noteEditorRef}
-          noteId={noteId}
-          readOnly={isFromDifferentCampaign} // Make cross-campaign notes read-only
-          onBack={handleBackClick}
-          onArchive={handleArchiveNote}
-          onDelete={() => setIsDeleteDialogOpen(true)}
-        />
-
-        <div className="space-y-4">
-          {/* Only show campaign links for notes in the active campaign */}
-          {!isFromDifferentCampaign && (
-            <CampaignLinksPanel
-              noteId={noteId}
-              getCurrentEditorContent={getCurrentEditorContent}
-              saveCurrentEditorContent={saveCurrentEditorContent}
-            />
-          )}
-          <UsageMeter />
-        </div>
-      </div>
-
-      <Dialog
-        open={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        title="Delete this note?"
-      >
-        <Typography color="secondary" className="mb-4">
-          This permanently removes the note and everything in it. This cannot be undone.
-        </Typography>
-        <div className="flex justify-end gap-3">
-          <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={handleConfirmDelete} disabled={isDeleting}>
-            Delete note
-          </Button>
-        </div>
-      </Dialog>
-    </div>
+        )}
+      </GatedContent>
+    </PageShell>
   );
 };
 

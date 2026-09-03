@@ -7,7 +7,8 @@ import {
   filterChapters,
 } from 'features/storytelling/chapters/utils/chapter-progress';
 import { useNavigation } from 'shared/context/NavigationContext';
-import { useAuth } from 'features/user-management';
+import { usePageGate, GatedContent } from 'shared/components/gated';
+import PageShell from 'shared/components/page-shell/PageShell';
 import Typography from 'core/components/Typography';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import Button from 'core/components/Button';
@@ -45,6 +46,10 @@ function normaliseFilterMode(stored: string | null): FilterMode {
  * Also serves as the `/story` landing route (see `app/App.tsx`) now that
  * the dedicated selection page is gone — the segmented control
  * (`StoryViewTabs`) is what lets a visitor get to the saga from here.
+ *
+ * The five gated states (signed-out, no campaign chosen, still resolving,
+ * error, ready) live in `usePageGate`/`GatedContent`; this page describes
+ * only itself — its title, its header controls and its own content.
  */
 const ChaptersPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
@@ -57,7 +62,8 @@ const ChaptersPage: React.FC = () => {
 
   const { chapters, storyProgress, isLoading } = useStory();
   const { navigateToPage } = useNavigation();
-  const { user } = useAuth();
+
+  const gate = usePageGate('story', { loading: isLoading });
 
   useEffect(() => {
     localStorage.setItem(VIEW_PREFERENCE_KEY, viewMode);
@@ -122,34 +128,26 @@ const ChaptersPage: React.FC = () => {
     navigateToPage(`/story/chapters/${chapterId}`);
   };
 
-  if (isLoading) {
-    return <Typography>Loading chapters...</Typography>;
-  }
-
   return (
-    <div className="min-h-screen p-4 content">
-      <div className="max-w-7xl mx-auto">
-        <Breadcrumb items={breadcrumbItems} className="mb-4" />
-
-        <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-          <Typography variant="h2" className="typography-heading">
-            Session Chronicles
-          </Typography>
-
-          <div className="flex items-center gap-3">
+    <PageShell
+      title="Session Chronicles"
+      breadcrumb={<Breadcrumb items={breadcrumbItems} className="mb-4" />}
+      actions={
+        gate.canAct && (
+          <>
             <StoryViewTabs />
-            {user && (
-              <Button
-                variant="primary"
-                startIcon={<Plus />}
-                onClick={handleCreateChapter}
-              >
-                New Chapter
-              </Button>
-            )}
-          </div>
-        </div>
-
+            <Button
+              variant="primary"
+              startIcon={<Plus />}
+              onClick={handleCreateChapter}
+            >
+              New Chapter
+            </Button>
+          </>
+        )
+      }
+    >
+      <GatedContent gate={gate}>
         <ResumeBar summary={summary} onResume={handleResume} />
 
         {chapters.length === 0 ? (
@@ -236,20 +234,20 @@ const ChaptersPage: React.FC = () => {
                 items={visibleItems}
                 onChapterSelect={handleChapterSelect}
                 onEditChapter={handleEditChapter}
-                isAdmin={!!user}
+                isAdmin={gate.canAct}
               />
             ) : (
               <BookshelfView
                 items={visibleItems}
                 onChapterSelect={handleChapterSelect}
                 onEditChapter={handleEditChapter}
-                isAdmin={!!user}
+                isAdmin={gate.canAct}
               />
             )}
           </>
         )}
-      </div>
-    </div>
+      </GatedContent>
+    </PageShell>
   );
 };
 
