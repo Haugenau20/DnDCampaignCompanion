@@ -102,4 +102,33 @@ describe("useSelectableCampaigns", () => {
       "Zephyr",
     ]);
   });
+
+  it("settles loading when disabled while a fetch is still in flight", async () => {
+    // Reproduces the stuck-loading bug: GatedContent flips `enabled` to false
+    // the moment the user picks a campaign, which can happen before the
+    // group fetches resolve. `loading` must not be left stranded at `true`.
+    let resolveFetch: (campaigns: Array<{ id: string; name: string }>) => void =
+      () => {};
+    const pending = new Promise<Array<{ id: string; name: string }>>(
+      (resolve) => {
+        resolveFetch = resolve;
+      }
+    );
+    mockGetCampaigns.mockImplementation(() => pending);
+
+    const { result, rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) => useSelectableCampaigns(enabled),
+      { initialProps: { enabled: true } }
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(true));
+
+    rerender({ enabled: false });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // Let the in-flight fetch resolve after the disable, so it doesn't leak
+    // an unhandled rejection/act warning into a later test.
+    resolveFetch([{ id: "c-1", name: "Phandelver" }]);
+  });
 });

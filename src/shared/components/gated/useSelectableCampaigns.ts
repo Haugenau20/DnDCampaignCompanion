@@ -41,7 +41,16 @@ export function useSelectableCampaigns(enabled: boolean): SelectableCampaigns {
   const key = groups.map((group) => group.id).join(",");
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      // Disabling mid-fetch must still let `loading` settle: the cleanup below
+      // (from the previous, enabled run) already flips `cancelled`, so the
+      // in-flight fetch's `.then` is a no-op. Without this, a consumer that
+      // disables while a fetch is in flight — e.g. the user picks a campaign
+      // before the list finishes loading — would see `loading` stuck `true`
+      // forever, since nothing else would ever flip it back.
+      setLoading(false);
+      return;
+    }
 
     if (!key) {
       setByGroup({});
