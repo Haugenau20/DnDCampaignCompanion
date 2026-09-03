@@ -131,12 +131,46 @@ rm -rf node_modules/.cache        # default-development, babel-loader, tsconfig.
 then restart the dev server. Confirm first that the export/symbol really is missing — check the file
 on disk and run `npx tsc --noEmit` — before assuming either answer.
 
+**A `git checkout` of another branch while the dev server runs is a reliable way to cause this** —
+files vanish and reappear under the watcher, and the resulting errors name files from whatever
+branch you visited rather than the ones you changed. Measuring a baseline on `main` mid-session is
+enough to trigger it. Clear the cache and restart before believing the overlay.
+
+Two environment gotchas that both fail silently:
+
+- `start-dev.ps1 -Action restart` can report "Firebase emulators failed to start within 45 seconds"
+  when they *did* start — the readiness probe times out, not the emulators. Check the ports
+  (4000/5001/8080/9099) before retrying. `-Action stop` can also leave an orphaned `react-scripts`
+  tree holding port 3000 that `-Action status` reports as "not running".
+- Responsive checks: a maximized Chrome window silently ignores resize below its minimum width.
+  Render the app in a 320px-wide iframe instead — media queries evaluate against the iframe's own
+  viewport, so this is a real test rather than a simulation.
+- **Known, pre-existing: the header overflows horizontally below ~380px on every route.** The logo
+  and the account block both sit at `min-width: auto` and neither yields, so a 320px viewport needs
+  ~348px for a 276px row. Confirmed identical on `/`, `/contact` and `/privacy` — if a page you are
+  working on "overflows at 320px", check whether the offending elements are inside `header`/`footer`
+  before attributing it to your own change. The fix is to extend the header's documented shrink
+  order (`title` at 1200px, `nav` at 1080px in `tailwind.config.js`), not to patch one page.
+
 ### Testing Commands
 - Run test suite: `npm test` (jest)
 - Coverage: `npm run test:coverage` — CI floor is a uniform **80%** in `jest.config.ts` (lowered from 85/81 during Phase 4 batch 3, at the user's direction)
 - Behavioural suites only: `npm run test:behavioral`
 - HTML report: `npm run test:html`
 - Single file, fast: `npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="<pattern>"`
+
+#### `firebase/functions` is not covered by any of that
+
+No jest, no test script, no test files — root `npm test` never touches the Cloud Functions. Verify a
+change there against the emulator, or with a throwaway Node script requiring the `firebase-admin` in
+`firebase/functions/node_modules` with `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`. Write a **control**
+into such a script — reproduce the old broken behaviour alongside the fix — or it only proves the new
+code runs, not that it changed anything.
+
+`npm run lint` there reports ~1,983 pre-existing problems, nearly all `linebreak-style` (Windows
+`core.autocrlf` writes CRLF; `eslint-config-google` demands LF) plus `no-trailing-spaces`. It is
+therefore **not a usable pass/fail gate** — stash, capture a baseline, and diff the output instead of
+reading the total.
 
 **The suite is expected to be fully green — any red is a regression.** This reverses long-standing
 advice in this file, which said a non-zero failure count was normal because the behavioural suites
@@ -281,10 +315,15 @@ the tree.
 - **Use test failures to improve code quality before major refactoring**
 
 ### Current State
-- **Testing Infrastructure**: Jest + React Testing Library, **4,675 tests across 230 suites**
+- **Testing Infrastructure**: Jest + React Testing Library, **4,717 tests across 235 suites**
 - **Coverage**: **91.96% statements / 92.42% lines / 85.77% functions / 84.05% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-31 on `design-handoff/dashboard-1a`)
-- **Baseline**: **0 failed / 2 skipped / 4673 passed / 4675 total across 230 suites.** The 2 skips are #901's, closed as testability-only. **Any red is a regression.**
+- **Baseline**: **0 failed / 2 skipped / 4715 passed / 4717 total across 235 suites.** The 2 skips are #901's, closed as testability-only. **Any red is a regression.**
   - The previously recorded baseline of 7 failures — the ID-collision markers #002/#004/#009/#012 in the four `*Context.bugs` suites — is **obsolete**: that cluster was fixed 2026-07-28 and those four suites now pass 29/29. If you find advice anywhere telling you to tolerate reds, check `docs/testing/bug-tracking/README.md` before believing it.
+  - Measured 2026-09-03 on `redesign/privacy-policy`. **`main` measured 231 suites / 4688 tests at the
+    same moment** — this branch adds 4 suites and 29 tests. The figure this replaced (230 / 4675) was
+    itself taken on a branch that predated the create-menu merge, which is exactly the staleness the
+    "measure it, don't carry one forward" rule below exists to catch; it was wrong about `main` by
+    1 suite and 13 tests. The previous entry read:
   - Measured 2026-09-03 on `redesign/header-command-palette`, after the final whole-branch review's fix wave (typeFilter reset, the empty-query state, the combobox ARIA ownership chain, `<mark>` contrast, state-priority order, the `More` button's `nav:hidden` wrapper, palette reset on sign-out, the AltGr/Shift shortcut guard, the trigger-width assertion). The prior baseline on this same branch was 229 suites / 4655 tests, also fully green; this pass is +1 suite (`HighlightedText.test.tsx` added) and +19 tests net, all new coverage for the findings above — no suite was deleted or renamed.
   - **Recording a new baseline: measure it, don't carry one forward.** The figure above replaced one that had been stale for over a month because it was taken on a branch that later merged. If your run disagrees with this line, run the suites you touched alone and reconcile the delta before assuming a regression.
   - To prove "the same suites failed", run the suspect suites alone and match counts against the full run; piping a full run through `tail` discards the earlier failures' names.

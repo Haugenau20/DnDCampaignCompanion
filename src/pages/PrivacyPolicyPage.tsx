@@ -1,333 +1,293 @@
-import React from 'react';
-import Typography from '../core/components/Typography';
-import Card from '../core/components/Card';
-import Button from '../core/components/Button';
-import { Shield, Clock, Database, UserCheck, Lock, ScrollText, Mail, ExternalLink } from 'lucide-react';
-import { 
-  INACTIVITY_TIMEOUT_TEXT, 
-  REMEMBER_ME_TEXT 
-} from '../core/constants/time';
-import { useNavigation } from 'shared/hooks/useNavigation';
+// src/pages/PrivacyPolicyPage.tsx
+import React from "react";
+import { Database, EyeOff, Trash2 } from "lucide-react";
+import Typography from "core/components/Typography";
+import Card from "core/components/Card";
+import Button from "core/components/Button";
+import { useNavigation } from "shared/hooks/useNavigation";
+import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from "core/constants/time";
+import {
+  PRIVACY_CONTROLLER,
+  PRIVACY_HOSTING_REGION,
+  EXTRACTION_FACTS,
+  OPENAI_DPA_ACCEPTED,
+} from "core/constants/privacy";
+import PrivacyLastUpdated from "./privacy/PrivacyLastUpdated";
+import PrivacyDataTable from "./privacy/PrivacyDataTable";
+import PrivacySectionNav from "./privacy/PrivacySectionNav";
 
 /**
- * Privacy Policy page component
+ * One section of the full policy text.
+ *
+ * Sections are hairline-separated rather than boxed: the page reserves cards
+ * for the three things a reader can act on, so that a box means "there is a
+ * button in here" instead of meaning nothing.
+ */
+const Section: React.FC<{
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}> = ({ id, title, children }) => (
+  <section
+    id={id}
+    className="scroll-mt-24 py-6 border-t card-divider first:border-t-0 first:pt-0"
+  >
+    <Typography variant="h2" className="mb-3 text-xl">
+      {title}
+    </Typography>
+    <div className="space-y-3">{children}</div>
+  </section>
+);
+
+/**
+ * The privacy policy.
+ *
+ * Ordered so the answers come before the prose: three summary cards, then the
+ * at-a-glance table, then the full text beside a sticky anchor list. Every
+ * factual claim below is traceable to code -- see
+ * docs/superpowers/specs/2026-09-03-privacy-policy-design.md -- and anything
+ * that could not be traced was cut rather than softened.
  */
 const PrivacyPolicyPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
 
-  const handleContactClick = () => {
-    navigateToPage('/contact');
-  };
-
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <Typography variant="h1" className="mb-6">Privacy Policy</Typography>
-      
-      <Typography color="secondary" className="mb-8">
-        Last updated: {new Date().toLocaleDateString('en-uk', { year: 'numeric', month: 'long', day: 'numeric' })}
-      </Typography>
-      
-      <Card className="mb-8">
-        <Card.Content>
-          <div className="flex items-start gap-3 mb-4">
-            <ScrollText className="mt-1 primary" />
-            <Typography variant="h3">Overview</Typography>
-          </div>
-          <Typography className="mb-4">
-            This Privacy Policy explains how D&D Campaign Companion ("we", "us", or "our") collects, uses, and protects 
-            your information when you use our application. We value your privacy and are committed to 
-            protecting your personal data.
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      {/* ---- Heading and revision date ---- */}
+      <div className="sm:flex sm:items-start sm:justify-between gap-6 mb-8">
+        <div>
+          <Typography variant="h1" className="mb-2">
+            Privacy
           </Typography>
-          <Typography>
-            By using the D&D Campaign Companion, you consent to the data practices described in this policy.
+          <Typography color="secondary">
+            What the Companion keeps about you, why, and how to get rid of it.
           </Typography>
-        </Card.Content>
-      </Card>
-      
-      <Typography variant="h2" className="mb-4">Information We Collect</Typography>
-      
-      <Card className="mb-6">
-        <Card.Content>
-          <div className="flex items-start gap-3 mb-4">
-            <UserCheck className="mt-1 primary" />
-            <Typography variant="h3">Account Information</Typography>
-          </div>
-          <Typography className="mb-2">When you create an account, we collect:</Typography>
-          <ul className="list-disc pl-6 mb-4 space-y-2">
-            <li>
-              <Typography>Email address (for authentication)</Typography>
-            </li>
-            <li>
-              <Typography>Username (for display and identification within the application)</Typography>
-            </li>
-            <li>
-              <Typography>Account creation date</Typography>
-            </li>
-          </ul>
-          <Typography>
-            We use this information to create and maintain your account, identify you within the application, 
-            and provide our services to you.
-          </Typography>
-        </Card.Content>
-      </Card>
-      
-      <Card className="mb-6">
-        <Card.Content>
-          <div className="flex items-start gap-3 mb-4">
-            <Mail className="mt-1 primary" />
-            <Typography variant="h3">Contact Form Information</Typography>
-          </div>
-          <Typography className="mb-2">
-            When you submit information through our contact form, we collect:
-          </Typography>
-          <ul className="list-disc pl-6 mb-4 space-y-2">
-            <li>
-              <Typography>Your name</Typography>
-            </li>
-            <li>
-              <Typography>Email address</Typography>
-            </li>
-            <li>
-              <Typography>Subject of your message (if provided)</Typography>
-            </li>
-            <li>
-              <Typography>Content of your message</Typography>
-            </li>
-          </ul>
-          <Typography className="mb-2">
-            This information is processed to:
-          </Typography>
-          <ul className="list-disc pl-6 mb-4 space-y-2">
-            <li>
-              <Typography>Respond to your inquiries or feedback</Typography>
-            </li>
-            <li>
-              <Typography>Provide customer support</Typography>
-            </li>
-            <li>
-              <Typography>Process and address your suggestions or concerns</Typography>
-            </li>
-          </ul>
-          <Typography>
-            When you submit a contact form, your information is sent through a secure cloud function to our 
-            email address. We retain this information only as long as necessary to address your inquiry.
-          </Typography>
-        </Card.Content>
-      </Card>
-      
-      <Card className="mb-6">
-        <Card.Content>
-          <div className="flex items-start gap-3 mb-4">
-            <Clock className="mt-1 primary" />
-            <Typography variant="h3">Session Information</Typography>
-          </div>
-          <Typography className="mb-2">
-            To maintain your login state and provide security, we collect and store:
-          </Typography>
-          <ul className="list-disc pl-6 mb-4 space-y-2">
-            <li>
-              <Typography>Login timestamps (date and time of sign-in)</Typography>
-            </li>
-            <li>
-              <Typography>Session activity information (to extend your session)</Typography>
-            </li>
-            <li>
-              <Typography>Session preferences (such as "Remember me" settings)</Typography>
-            </li>
-          </ul>
-          <Typography className="mb-4">
-            We track session activity to extend your session while you're using the application. 
-            Your session will expire after {INACTIVITY_TIMEOUT_TEXT} of inactivity, or after {REMEMBER_ME_TEXT} if 
-            "Remember me" is enabled.
-          </Typography>
-          <Typography>
-            We do not track specific actions you take within the application or collect browsing history. 
-            We only detect activity to maintain your login state.
-          </Typography>
-        </Card.Content>
-      </Card>
-      
-      <Card className="mb-8">
-        <Card.Content>
-          <div className="flex items-start gap-3 mb-4">
-            <Database className="mt-1 primary" />
-            <Typography variant="h3">Campaign Content</Typography>
-          </div>
-          <Typography className="mb-2">
-            When you use our application to manage your campaign, we store:
-          </Typography>
-          <ul className="list-disc pl-6 mb-4 space-y-2">
-            <li>
-              <Typography>Content you create (NPCs, locations, rumors, etc.)</Typography>
-            </li>
-            <li>
-              <Typography>Associations between your user account and your content</Typography>
-            </li>
-            <li>
-              <Typography>Metadata about content creation and modification</Typography>
-            </li>
-          </ul>
-          <Typography>
-            This information is stored to provide the core functionality of our application and is associated 
-            with your account to enable proper access control and attribution.
-          </Typography>
-        </Card.Content>
-      </Card>
-      
-      <Typography variant="h2" className="mb-4">How We Use Your Information</Typography>
-      
-      <Card className="mb-8">
-        <Card.Content>
-          <Typography className="mb-4">We use the information we collect to:</Typography>
-          <ul className="list-disc pl-6 space-y-2">
-            <li>
-              <Typography>Provide, maintain, and improve our application</Typography>
-            </li>
-            <li>
-              <Typography>Create and maintain your user account</Typography>
-            </li>
-            <li>
-              <Typography>Ensure secure authentication and authorization</Typography>
-            </li>
-            <li>
-              <Typography>Maintain appropriate session management</Typography>
-            </li>
-            <li>
-              <Typography>Associate your campaign content with your account</Typography>
-            </li>
-            <li>
-              <Typography>Respond to your inquiries and provide support</Typography>
-            </li>
-            <li>
-              <Typography>Identify and resolve technical issues</Typography>
-            </li>
-            <li>
-              <Typography>Protect against unauthorized access to user accounts</Typography>
-            </li>
-          </ul>
-        </Card.Content>
-      </Card>
-      
-      <Typography variant="h2" className="mb-4">Data Storage and Security</Typography>
-      
-      <Card className="mb-8">
-        <Card.Content>
-          <div className="flex items-start gap-3 mb-4">
-            <Lock className="mt-1 primary" />
-            <Typography variant="h3">How We Protect Your Data</Typography>
-          </div>
-          <Typography className="mb-4">
-            We use Firebase, a Google Cloud service, to store and manage your data securely. We implement 
-            industry-standard security measures to protect your personal information from unauthorized access, 
-            alteration, disclosure, or destruction.
-          </Typography>
-          <Typography className="mb-2">Our security measures include:</Typography>
-          <ul className="list-disc pl-6 mb-4 space-y-2">
-            <li>
-              <Typography>Secure authentication through Firebase Authentication</Typography>
-            </li>
-            <li>
-              <Typography>Data encryption in transit and at rest</Typography>
-            </li>
-            <li>
-              <Typography>Access controls and authorization rules</Typography>
-            </li>
-            <li>
-              <Typography>Automatic session timeouts for inactive users</Typography>
-            </li>
-            <li>
-              <Typography>Secure processing of contact form submissions</Typography>
-            </li>
-            <li>
-              <Typography>Regular security assessments</Typography>
-            </li>
-          </ul>
-          <Typography>
-            While we implement safeguards to protect your information, no internet-based service can 
-            guarantee 100% security. We strive to use commercially acceptable means to protect your 
-            personal information.
-          </Typography>
-        </Card.Content>
-      </Card>
-      
-      <Typography variant="h2" className="mb-4">Data Retention</Typography>
-      
-      <Card className="mb-8">
-        <Card.Content>
-          <Typography className="mb-4">
-            We retain your account information and campaign content for as long as your account is active
-            or as needed to provide you with our services.
-          </Typography>
-          <Typography className="mb-4">
-            For contact form submissions, we retain the information only as long as necessary to respond to
-            and resolve your inquiry. We do not use this information for marketing purposes.
-          </Typography>
-          <Typography>
-            If you wish to delete your account, you can contact us to request account deletion.
-            When an account is deleted, we will remove all personal information associated with that account
-            while preserving campaign data for other users' reference where appropriate.
-          </Typography>
-        </Card.Content>
-      </Card>
-      
-      <Typography variant="h2" className="mb-4">Your Rights</Typography>
-      
-      <Card className="mb-8">
-        <Card.Content>
-          <Typography className="mb-4">Depending on your location, you may have the right to:</Typography>
-          <ul className="list-disc pl-6 space-y-2">
-            <li>
-              <Typography>Access the personal information we hold about you</Typography>
-            </li>
-            <li>
-              <Typography>Request correction of inaccurate information</Typography>
-            </li>
-            <li>
-              <Typography>Request deletion of your personal information</Typography>
-            </li>
-            <li>
-              <Typography>Object to our processing of your information</Typography>
-            </li>
-            <li>
-              <Typography>Request restriction of processing</Typography>
-            </li>
-            <li>
-              <Typography>Request transfer of your information</Typography>
-            </li>
-          </ul>
-        </Card.Content>
-      </Card>
-      
-      <Typography variant="h2" className="mb-4">Changes to This Policy</Typography>
-      
-      <Card className="mb-8">
-        <Card.Content>
-          <Typography>
-            We may update our Privacy Policy from time to time. We will notify you of any changes by posting 
-            the new Privacy Policy on this page and updating the "Last updated" date. You are advised to 
-            review this Privacy Policy periodically for any changes.
-          </Typography>
-        </Card.Content>
-      </Card>
-      
-      <Typography variant="h2" className="mb-4">Contact Us</Typography>
-      
-      <Card className="mb-8">
-        <Card.Content>
-          <Typography className="mb-4">
-            If you have any questions about this Privacy Policy or our data practices, please contact us 
-            through our contact form.
-          </Typography>
-          
-          <Button 
-            onClick={handleContactClick}
-            startIcon={<Mail />}
-            className="mt-2"
-          >
-            Contact Us
-          </Button>
-        </Card.Content>
-      </Card>
+        </div>
+        <PrivacyLastUpdated />
+      </div>
+
+      {/* ---- Three summary cards ---- */}
+      <div className="grid gap-4 sm:grid-cols-3 mb-8">
+        <Card>
+          <Card.Content>
+            <div className="flex items-center gap-2 mb-2">
+              <Database className="w-4 h-4 primary" aria-hidden="true" />
+              <Typography variant="h3" className="text-base">
+                Who holds your data
+              </Typography>
+            </div>
+            <Typography variant="body-sm" color="secondary">
+              {PRIVACY_CONTROLLER.name}, {PRIVACY_CONTROLLER.country}, is
+              responsible for it. Stored in Google Firebase, in{" "}
+              {PRIVACY_HOSTING_REGION}.
+            </Typography>
+            <Button
+              variant="link"
+              size="sm"
+              className="mt-2 px-0"
+              onClick={() => navigateToPage(PRIVACY_CONTROLLER.contactPath)}
+            >
+              Ask a question
+            </Button>
+          </Card.Content>
+        </Card>
+
+        <Card>
+          <Card.Content>
+            <div className="flex items-center gap-2 mb-2">
+              <EyeOff className="w-4 h-4 primary" aria-hidden="true" />
+              <Typography variant="h3" className="text-base">
+                No tracking, no ads
+              </Typography>
+            </div>
+            <Typography variant="body-sm" color="secondary">
+              No analytics, no advertising, nothing sold or shared with anyone
+              for their own purposes. Signing in and "remember me" are kept on
+              your own device.
+            </Typography>
+          </Card.Content>
+        </Card>
+
+        <Card>
+          <Card.Content>
+            <div className="flex items-center gap-2 mb-2">
+              <Trash2 className="w-4 h-4 primary" aria-hidden="true" />
+              <Typography variant="h3" className="text-base">
+                Delete it yourself
+              </Typography>
+            </div>
+            <Typography variant="body-sm" color="secondary">
+              Leaving a group and deleting your account are both buttons on your
+              profile. You don't have to ask anyone.
+            </Typography>
+            <Button
+              variant="link"
+              size="sm"
+              className="mt-2 px-0"
+              onClick={() => navigateToPage("/profile")}
+            >
+              Go to your profile
+            </Button>
+          </Card.Content>
+        </Card>
+      </div>
+
+      {/* ---- The at-a-glance table ---- */}
+      <div className="mb-12">
+        <PrivacyDataTable />
+      </div>
+
+      {/* ---- The full text ---- */}
+      <div className="lg:grid lg:grid-cols-[14rem_1fr] lg:gap-10">
+        <PrivacySectionNav />
+
+        <div>
+          <Section id="your-rights" title="Your rights">
+            <Typography>
+              You can see what we hold, correct it, take it with you, or delete
+              it. Two of those are buttons rather than requests: your profile
+              page lets you edit what you have written and delete your account
+              outright. For the rest, ask and a person will answer.
+            </Typography>
+            <Typography>
+              You can also object to how we use your data, or ask us to restrict
+              it. If you think we have handled your data badly, you can complain
+              to Datatilsynet, the Danish data protection authority — you don't
+              need to go through us first.
+            </Typography>
+          </Section>
+
+          <Section id="what-we-collect" title="What we collect">
+            <Typography>
+              An email address and a username, so you can sign in and so your
+              work can be credited to you. Session state, so you stay signed in
+              between visits: your session ends after{" "}
+              {INACTIVITY_TIMEOUT_TEXT} of inactivity, or lasts{" "}
+              {REMEMBER_ME_TEXT} if you asked to be remembered.
+            </Typography>
+            <Typography>
+              Everything you write in a campaign — chapters, quests, NPCs,
+              locations, rumors and your own notes — along with who wrote it and
+              when. That is the app; there is no version of it that does not
+              store what you type into it.
+            </Typography>
+            <Typography>
+              We do not record which pages you visit or what you click. Session
+              activity is detected only to decide whether you are still there.
+            </Typography>
+          </Section>
+
+          <Section id="groups-and-sharing" title="Groups and sharing">
+            <Typography>
+              Everything you write in a campaign is visible to the other members
+              of that group, credited to the character you were posting as. Your
+              private notes are not — they are yours until you share them.
+            </Typography>
+            <Typography>
+              If you leave a group, or delete your account, the chapters,
+              quests, NPCs and locations you wrote stay with the group for the
+              rest of the table; your name, your characters and your private
+              notes are deleted.
+            </Typography>
+          </Section>
+
+          <Section id="entity-extraction" title="Entity extraction">
+            <Typography>
+              When you press <strong>Scan note</strong>, the text of that note is
+              sent to {EXTRACTION_FACTS.provider} to be read once and returned
+              as suggested NPCs, places and quests. It happens only when you
+              press that button — never in the background, and never to anything
+              you have not asked about.
+            </Typography>
+            <Typography>
+              Only the text of that note leaves the app: not its title, not your
+              other notes, and none of your campaign content. The request goes
+              through {EXTRACTION_FACTS.product}, whose terms are that your text
+              is not used to train their models. It is{" "}
+              {EXTRACTION_FACTS.retention}, and it is{" "}
+              {EXTRACTION_FACTS.transfer}
+              {OPENAI_DPA_ACCEPTED
+                ? ", under their data processing addendum and standard contractual clauses."
+                : "."}
+            </Typography>
+            <Typography>
+              Scanning is capped at {EXTRACTION_FACTS.caps}. Don't paste
+              anything into a note that you would not want processed this way.
+            </Typography>
+          </Section>
+
+          <Section id="device-storage" title="On your device">
+            <Typography>
+              Your session preferences — whether you asked to be remembered, and
+              which group you were last looking at — are kept on your own
+              device, in your browser, not on our servers. There are no
+              tracking cookies, because there is nothing tracking you: no
+              analytics, no advertising, and no third-party scripts watching
+              you read.
+            </Typography>
+          </Section>
+
+          <Section id="security" title="Security">
+            <Typography>
+              Sign-in runs through Firebase Authentication, so we never see or
+              store your password. Access to campaign data is decided by
+              rules on the database itself rather than by the app asking
+              politely, and everything is encrypted in transit and at rest by
+              Google. Sessions time out on their own after{" "}
+              {INACTIVITY_TIMEOUT_TEXT} of inactivity.
+            </Typography>
+            <Typography>
+              No service on the internet can promise perfect security, and we
+              won't. What we can say is which measures are actually in place —
+              the four above — rather than describing an audit programme that
+              does not exist.
+            </Typography>
+          </Section>
+
+          <Section id="retention" title="Retention and deletion">
+            <Typography>
+              Your account and everything in it stays until you delete it. There
+              is a <strong>Delete account</strong> button in the danger zone of
+              your profile page; it removes your account, your profile in every
+              group you belong to, your usernames and your private notes, and it
+              cannot be undone. You do not need to email anyone to make that
+              happen.
+            </Typography>
+            <Typography>
+              The campaign content you wrote stays with the group, so you don't
+              take the table's shared history with you when you go. Messages you
+              send through the contact form are kept only until your question is
+              resolved, and are never used to market anything at you.
+            </Typography>
+          </Section>
+
+          <Section id="legal-basis" title="Legal basis">
+            <Typography>
+              We process your account details and campaign content to give you
+              the service you signed up for — that is <em>performance of a
+              contract</em>. Session handling and access control rest on our{" "}
+              <em>legitimate interest</em> in keeping accounts secure. Sending a
+              note for entity extraction happens on your <em>consent</em>,
+              expressed by pressing the button, and you can simply not press it.
+            </Typography>
+            <Typography>
+              Data is held in Google Firebase in {PRIVACY_HOSTING_REGION}. Two
+              things reach outside the EU: entity extraction, described above,
+              and Google's own operation of the platform, which can involve
+              support access from other countries.
+            </Typography>
+          </Section>
+
+          <Section id="changes" title="Changes to this page">
+            <Typography>
+              When this policy changes, the date at the top changes with it and
+              the change is listed under "What changed". The date is written by
+              hand for exactly that reason — a page that re-dates itself every
+              time you open it records nothing at all.
+            </Typography>
+          </Section>
+        </div>
+      </div>
     </div>
   );
 };

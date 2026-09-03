@@ -1,0 +1,206 @@
+# Privacy policy redesign — design brief and verified facts
+
+**PR 8** · branch `redesign/privacy-policy` · design reference: screenshot `8c`.
+
+This document is the spec the implementation plan
+(`docs/superpowers/plans/2026-09-03-privacy-policy.md`) argues from. It carries the
+designer's brief, the facts established by reading the code on 2026-09-03, and the
+decisions taken with the maintainer where the brief guessed.
+
+---
+
+## 1. The problem
+
+`src/pages/PrivacyPolicyPage.tsx` has three classes of defect.
+
+**A wrong date.** The page renders
+`new Date().toLocaleDateString('en-uk', …)`, so it claims a revision every day it is
+viewed — defeating its own promise to "notify you of any changes by … updating the
+'Last updated' date". `'en-uk'` is also not a locale tag (`en-GB` is), so it silently
+falls back to the browser locale.
+
+**Structure that carries no meaning.** Thirteen `Card`s, one per section, so the boxes
+signal nothing. `h2`s float outside the cards while `h3`s sit inside them. Three cards —
+"How We Use Your Information", "Data Retention", "Your Rights" — have no heading of
+their own at all. No section has an `id`, so no part of the policy can be linked to.
+
+**Content that is wrong, vague, or missing.**
+
+- **Entity extraction is not mentioned anywhere.** This is the most consequential
+  omission: note text leaves the product and goes to a third party in a third country.
+- "If you wish to delete your account, you can contact us to request account deletion"
+  contradicts the working self-service Delete Account flow on `/profile`.
+- "preserving campaign data for other users' reference where appropriate" is the
+  sentence that decides what outlives you, and the vaguest on the page.
+- "Regular security assessments" is unverifiable and nobody performs them.
+- No controller identity, no legal basis, no hosting region, no transfers statement,
+  no right to complain, no device-storage disclosure.
+
+---
+
+## 2. Facts established by reading the code (2026-09-03)
+
+Every claim the new page makes is traceable to one of these. Verified by opening the
+files, not inferred.
+
+### 2.1 Entity extraction
+
+| Fact | Source |
+|---|---|
+| Trigger is the **"Scan note"** button | `src/features/collaboration/notes/components/CampaignLinksPanel.tsx:367-381` |
+| Only the note **body** is sent — `contentToExtract`, never the title, never other notes, never campaign content | `CampaignLinksPanel.tsx:230-253` |
+| Path: `useEntityExtractor` → `EntityExtractionService.extractEntities` → callable `extractEntities` | `src/features/collaboration/entity-extraction/hooks/useEntityExtractor.ts:51` |
+| Cloud Function region **`europe-west1`** | `firebase/functions/src/entityExtraction.ts:327,359` |
+| Provider is the **OpenAI platform API** — `openai` npm SDK with `process.env.OPENAI_API_KEY` | `firebase/functions/src/entityExtraction.ts:5,396-404` |
+| Default model `gpt-3.5-turbo` | `firebase/functions/src/entityExtraction.ts:370` |
+| Caps are **10/day, 30/week, 100/month** — three caps, not one | `firebase/functions/src/entityExtraction.ts:41-45` |
+| Client-side content cap: 10,000 characters | `useEntityExtractor.ts:45` |
+
+**The brief said "capped per month".** It is capped three ways. The page says so.
+
+### 2.2 Sessions
+
+`src/core/constants/time.ts` exports `INACTIVITY_TIMEOUT_TEXT = "24 hours"` and
+`REMEMBER_ME_TEXT = "30 days"`.
+
+**Screenshot `8c` shows "30 days, or 2 hours idle". That is wrong** — the real
+inactivity timeout is 24 hours. The page reuses the constants, as the brief instructs,
+so the screenshot's number is overridden by the code's.
+
+### 2.3 Account deletion and leaving a group
+
+- Self-service deletion is real: `/profile` → `DangerZoneCard` → `DeleteAccountDialog`
+  → the `deleteUser` callable.
+- `firebase/functions/src/userManagement/deleteUser.ts:65-103` batch-deletes the
+  username reservation, the group-user profile, the global user doc, and the Firebase
+  Auth record.
+- Campaign content (chapters, quests, NPCs, locations, rumors) is **not** touched, so
+  it does stay with the group. The brief's claim here is correct.
+
+**Defect found while verifying:** notes live at
+`groups/{groupId}/users/{userId}/notes` — a **subcollection** of the group-user doc
+(`NoteContext.tsx:59`). Firestore does not cascade-delete subcollections, so
+`batch.delete(groupUserRef)` **orphans every private note** rather than deleting it.
+`removeUserFromGroup.ts:112` has the same defect.
+
+`notes` is the only per-user subcollection, so the fix is bounded to one collection in
+two functions. **Decision: fix it in this PR** (§3), so the page's deletion copy is
+true when it ships.
+
+### 2.4 Contact and hosting
+
+- The contact form posts to a callable that mails a hidden `CONTACT_EMAIL` via
+  nodemailer (`firebase/functions/src/contact.ts:54,247-248`). The channel works and
+  the maintainer's address is not exposed.
+- No custom domain: `dnd-campaign-companion.firebaseapp.com`
+  (`src/core/services/firebase/config/firebaseConfig.ts:8-9`). A `privacy@` alias is
+  therefore not available without buying one.
+- All Cloud Functions are `europe-west1`; the maintainer confirms the Firestore and
+  hosting resources are in the same region.
+
+### 2.5 Third-party platform facts, which code cannot establish
+
+Added 2026-09-03 during implementation review. The rule in §4.2 — never write a
+claim §2 does not support — was drafted assuming every claim would be about *our*
+code. Two sentences on the page are about Google's platform instead, and the agent
+implementing the page correctly flagged that they had no entry here. They are true
+and publicly documented, so the fix is to record them, not to delete them.
+
+| Claim on the page | Basis |
+|---|---|
+| "everything is encrypted in transit and at rest by Google" | Google Cloud encrypts all customer data at rest by default across its services, Firestore included; this is documented platform behaviour, not a configuration this repo sets. The previous version of the page already claimed it. |
+| "Google's own operation of the platform, which can involve support access from other countries" | Google's Cloud DPA and sub-processor disclosures cover international support access. Hedged with "can" deliberately. **Under-disclosing a transfer is the larger GDPR risk**, so this stays. |
+
+Neither is code-derivable. Both should be re-checked if Google's terms change —
+they are the only two claims on the page whose truth is not in this repository.
+
+---
+
+## 3. Decisions taken with the maintainer
+
+| Question | Decision |
+|---|---|
+| Controller identity and contact | **Name + contact form, no email on the page.** "Søren Haug, Denmark" as controller; `/contact` as the channel, with one line stating it reaches the controller directly and is the route for data requests. GDPR Art. 13(1)(a) leaves no substitute for identity, but the contact *details* may be a form that demonstrably reaches the controller — and this one does. |
+| Orphaned notes | **Fix the cascade in this PR.** See §2.3. |
+| Hosting region | **`europe-west1`**, named explicitly. |
+| OpenAI retention wording | Write what is true of a standard platform API account: **not used to train models; retained by OpenAI for up to 30 days for abuse monitoring, then deleted.** The maintainer confirmed in the OpenAI dashboard that data sharing is disabled for the org, which corroborates the no-training half. |
+| OpenAI DPA | **Not in place, and not obtainable on the current account.** The transfers sentence is therefore written *without* naming a safeguard, and the DPA sentence sits behind a single constant (`OPENAI_DPA_ACCEPTED`). See the correction below. |
+
+**Correction, 2026-09-03.** This table originally logged "accept the OpenAI DPA" as a quick
+follow-up. That was wrong, and the maintainer found it by looking: **OpenAI does not offer a DPA to
+personal accounts at all.** The "Execute Data Processing Agreement" control at the foot of
+`openai.com/policies/data-processing-addendum` requires a business/Team organization, a legal entity
+name and an organization ID. The org's data-controls *settings* (data sharing disabled) are a
+different thing entirely — they are what make the "not used to train their models" claim true, and
+they are not a substitute for an Art. 28 processor contract.
+
+So the follow-up is not a click; it is a decision between upgrading to a business account and
+knowingly operating without the contract. **This is a compliance decision for the maintainer, not a
+copy change, and this document does not make it.** The page as written is correct under either
+outcome: it states the US transfer plainly and claims no safeguard it does not have.
+
+### Not legal advice
+
+The wording below is drafted to match what the code does. It has not been reviewed by a
+lawyer. Every factual claim is traceable to §2; anything not traceable there was cut
+rather than guessed.
+
+---
+
+## 4. The new page
+
+### 4.1 Order
+
+1. `h1` **Privacy** + one line: *What the Companion keeps about you, why, and how to get rid of it.*
+2. Right-aligned `Last updated {date}` + a `What changed` disclosure.
+3. **Three summary cards** — *Who holds your data* · *No tracking, no ads* · *Delete it yourself*.
+4. **The at-a-glance table** — the centrepiece. Columns `What we keep` · `Why` ·
+   `Where it goes` · `How long`. Five rows. Semantic `<table>`; stacks to cards under `sm`.
+5. **The full text** in two columns: a sticky anchor list left, hairline-separated
+   sections right. **No cards in this half** — a card is for something you can act on.
+
+### 4.2 Rules
+
+- Every section carries an `id`, so `/privacy#retention` works, and every `id` appears
+  in the anchor list.
+- Icons are decorative: `aria-hidden="true"`.
+- **No hardcoded colours.** The highlighted extraction row uses the existing
+  `card-subtle` class (`--bg-secondary`); there is no yellow token in
+  `src/core/themes/`, and the design's yellow is a mock, not an instruction.
+- Hairlines use `card-divider` + a directional Tailwind width (`border-t`), per the
+  comment at `src/core/themes/css/components.css:106-118`.
+- Readable at 320px: the table stacks, nothing overflows.
+
+### 4.3 Content that must be present
+
+- Entity extraction, its own section: that it happens only on the button; that only the
+  note body is sent; OpenAI named, and the platform API named; the three caps; the
+  retention position; the US transfer.
+- The same disclosure at the point of use — one line under the **Scan note** button.
+- Deletion: that it is a button on `/profile`, and what survives.
+- Groups and sharing: content you wrote stays with the group; your name, characters and
+  private notes go.
+- Legal basis per purpose; hosting region; transfers; retention in real time units,
+  reusing `INACTIVITY_TIMEOUT_TEXT` and `REMEMBER_ME_TEXT`.
+- Datatilsynet, and that the user need not come to the controller first.
+- Device storage: session preferences and "remember me" live in the browser; no
+  analytics, no advertising, nothing sold.
+- Security: only the specifics that are true — Firebase Auth, rules-based access
+  control, session timeouts, transport encryption. **"Regular security assessments" is cut.**
+
+---
+
+## 5. Out of scope
+
+`PrivacyNotice.tsx` (the sign-in consent toast), the contact form itself, and any change
+to what the app collects — **except** the notes-cascade fix in §2.3, which is in scope
+by decision because the page's deletion copy would otherwise be false.
+
+## 6. Follow-ups logged, not done here
+
+1. **Decide** whether to move to an OpenAI business/Team account in order to execute the DPA — see
+   the correction in §3. If one is ever signed, flip `OPENAI_DPA_ACCEPTED` and bump
+   `PRIVACY_LAST_UPDATED`. Not a one-line change until that decision is made.
+2. Consider whether `gpt-3.5-turbo` is still the right default model.
+3. The header overflows horizontally below ~380px on every route (pre-existing, unrelated to this
+   PR). Fix by extending the header's shrink order, not by patching a page.
