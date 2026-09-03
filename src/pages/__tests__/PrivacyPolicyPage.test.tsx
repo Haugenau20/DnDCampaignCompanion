@@ -1,11 +1,16 @@
 // src/pages/__tests__/PrivacyPolicyPage.test.tsx
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import PrivacyPolicyPage from "../PrivacyPolicyPage";
+import {
+  PRIVACY_LAST_UPDATED,
+  PRIVACY_SECTIONS,
+  PRIVACY_CONTROLLER,
+  PRIVACY_HOSTING_REGION,
+} from "core/constants/privacy";
+import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from "core/constants/time";
 
-// ---------------------------------------------------------------------------
-// hook mock — PrivacyPolicyPage uses hooks/useNavigation (not context directly)
-// ---------------------------------------------------------------------------
 const mockNavigateToPage = jest.fn();
 
 jest.mock("shared/hooks/useNavigation", () => ({
@@ -14,321 +19,215 @@ jest.mock("shared/hooks/useNavigation", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 
-// useNavigation hook internally uses react-router-dom useLocation
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
   useLocation: () => ({ pathname: "/privacy", search: "", hash: "" }),
 }));
 
-// useNavigation also uses NavigationContext underneath
 jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage, state: {} }),
 }));
 
-// ---------------------------------------------------------------------------
-// Child component mocks
-// ---------------------------------------------------------------------------
-jest.mock("../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, variant, color }: any) => (
-    <div
-      data-testid={
-        color
-          ? `typography-${color}`
-          : variant
-          ? `typography-${variant}`
-          : "typography-default"
-      }
-    >
-      {children}
-    </div>
-  ),
-}));
-
-jest.mock("../../core/components/Card", () => {
-  const Card = ({ children }: any) => (
-    <div data-testid="card">{children}</div>
-  );
-  Card.Content = ({ children }: any) => (
-    <div data-testid="card-content">{children}</div>
-  );
-  return { __esModule: true, default: Card };
+beforeEach(() => {
+  mockNavigateToPage.mockClear();
 });
 
-jest.mock("../../core/components/Button", () => ({
-  __esModule: true,
-  default: ({ children, onClick, startIcon }: any) => (
-    <button
-      data-testid={`button-${String(children).trim().replace(/\s+/g, "-").toLowerCase()}`}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  ),
-}));
-
-jest.mock("lucide-react", () => ({
-  Shield: () => <span data-testid="shield-icon" />,
-  Clock: () => <span data-testid="clock-icon" />,
-  Database: () => <span data-testid="database-icon" />,
-  UserCheck: () => <span data-testid="user-check-icon" />,
-  Lock: () => <span data-testid="lock-icon" />,
-  ScrollText: () => <span data-testid="scroll-text-icon" />,
-  Mail: () => <span data-testid="mail-icon" />,
-  ExternalLink: () => <span data-testid="external-link-icon" />,
-}));
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-function renderPage() {
-  return render(<PrivacyPolicyPage />);
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-describe("PrivacyPolicyPage", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+describe("PrivacyPolicyPage — the date", () => {
+  it("renders the constant, not today", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    expect(container.querySelector("time")).toHaveAttribute(
+      "dateTime",
+      PRIVACY_LAST_UPDATED
+    );
   });
 
-  // -------------------------------------------------------------------------
-  // Rendering
-  // -------------------------------------------------------------------------
-  describe("rendering", () => {
-    it("renders without crashing", () => {
-      const { container } = renderPage();
-      expect(container).toBeInTheDocument();
-    });
+  it("does not change when the clock does", () => {
+    jest.useFakeTimers().setSystemTime(new Date("2031-01-15T12:00:00Z"));
+    const { container } = render(<PrivacyPolicyPage />);
+    expect(container.querySelector("time")?.textContent).not.toMatch(/2031/);
+    expect(container.querySelector("time")).toHaveAttribute(
+      "dateTime",
+      PRIVACY_LAST_UPDATED
+    );
+    jest.useRealTimers();
+  });
+});
 
-    it("renders 'Privacy Policy' main heading", () => {
-      renderPage();
-      expect(screen.getByTestId("typography-h1")).toHaveTextContent(
-        "Privacy Policy"
-      );
-    });
-
-    it("renders 'Last updated' date line", () => {
-      renderPage();
-      expect(screen.getByText(/Last updated:/i)).toBeInTheDocument();
-    });
+describe("PrivacyPolicyPage — structure", () => {
+  it("leads with one h1", () => {
+    render(<PrivacyPolicyPage />);
+    const h1s = screen.getAllByRole("heading", { level: 1 });
+    expect(h1s).toHaveLength(1);
+    expect(h1s[0]).toHaveTextContent("Privacy");
   });
 
-  // -------------------------------------------------------------------------
-  // Section headings
-  // -------------------------------------------------------------------------
-  describe("section headings", () => {
-    it("renders 'Overview' section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h3");
-      const overview = headings.find((el) => el.textContent?.includes("Overview"));
-      expect(overview).toBeInTheDocument();
-    });
-
-    it("renders 'Information We Collect' section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h2");
-      const heading = headings.find((el) =>
-        el.textContent?.includes("Information We Collect")
-      );
-      expect(heading).toBeInTheDocument();
-    });
-
-    it("renders 'Account Information' sub-section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h3");
-      const heading = headings.find((el) =>
-        el.textContent?.includes("Account Information")
-      );
-      expect(heading).toBeInTheDocument();
-    });
-
-    it("renders 'Contact Form Information' sub-section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h3");
-      const heading = headings.find((el) =>
-        el.textContent?.includes("Contact Form Information")
-      );
-      expect(heading).toBeInTheDocument();
-    });
-
-    it("renders 'Session Information' sub-section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h3");
-      const heading = headings.find((el) =>
-        el.textContent?.includes("Session Information")
-      );
-      expect(heading).toBeInTheDocument();
-    });
-
-    it("renders 'Campaign Content' sub-section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h3");
-      const heading = headings.find((el) =>
-        el.textContent?.includes("Campaign Content")
-      );
-      expect(heading).toBeInTheDocument();
-    });
-
-    it("renders 'How We Use Your Information' section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h2");
-      const heading = headings.find((el) =>
-        el.textContent?.includes("How We Use Your Information")
-      );
-      expect(heading).toBeInTheDocument();
-    });
-
-    it("renders 'Data Storage and Security' section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h2");
-      const heading = headings.find((el) =>
-        el.textContent?.includes("Data Storage and Security")
-      );
-      expect(heading).toBeInTheDocument();
-    });
-
-    it("renders 'How We Protect Your Data' sub-section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h3");
-      const heading = headings.find((el) =>
-        el.textContent?.includes("How We Protect Your Data")
-      );
-      expect(heading).toBeInTheDocument();
-    });
-
-    it("renders 'Data Retention' section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h2");
-      const heading = headings.find((el) =>
-        el.textContent?.includes("Data Retention")
-      );
-      expect(heading).toBeInTheDocument();
-    });
-
-    it("renders 'Your Rights' section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h2");
-      const heading = headings.find((el) =>
-        el.textContent?.includes("Your Rights")
-      );
-      expect(heading).toBeInTheDocument();
-    });
-
-    it("renders 'Changes to This Policy' section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h2");
-      const heading = headings.find((el) =>
-        el.textContent?.includes("Changes to This Policy")
-      );
-      expect(heading).toBeInTheDocument();
-    });
-
-    it("renders 'Contact Us' section", () => {
-      renderPage();
-      const headings = screen.getAllByTestId("typography-h2");
-      const heading = headings.find((el) =>
-        el.textContent?.includes("Contact Us")
-      );
-      expect(heading).toBeInTheDocument();
-    });
+  it("puts the summary table above the prose", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    const table = container.querySelector("table");
+    const firstSection = container.querySelector(
+      `#${PRIVACY_SECTIONS[0].id}`
+    );
+    expect(table).not.toBeNull();
+    expect(firstSection).not.toBeNull();
+    expect(
+      table!.compareDocumentPosition(firstSection!) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
-  // -------------------------------------------------------------------------
-  // Key content
-  // -------------------------------------------------------------------------
-  describe("key content", () => {
-    it("mentions Firebase as data storage provider", () => {
-      renderPage();
-      const matches = screen.getAllByText(/Firebase/i);
-      expect(matches.length).toBeGreaterThan(0);
-    });
-
-    it("mentions inactivity timeout", () => {
-      renderPage();
-      // Comes from INACTIVITY_TIMEOUT_TEXT constant = "24 hours"
-      expect(screen.getByText(/24 hours/i)).toBeInTheDocument();
-    });
-
-    it("mentions Remember Me duration", () => {
-      renderPage();
-      // Comes from REMEMBER_ME_TEXT constant = "30 days"
-      expect(screen.getByText(/30 days/i)).toBeInTheDocument();
-    });
-
-    it("explains that data is encrypted in transit and at rest", () => {
-      renderPage();
+  it("gives every section an id that its anchor link targets", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    PRIVACY_SECTIONS.forEach((section) => {
+      expect(container.querySelector(`#${section.id}`)).not.toBeNull();
       expect(
-        screen.getByText(/Data encryption in transit and at rest/i)
-      ).toBeInTheDocument();
-    });
-
-    it("explains that consent is given by using the app", () => {
-      renderPage();
-      expect(
-        screen.getByText(/consent to the data practices described in this policy/i)
-      ).toBeInTheDocument();
-    });
-
-    it("lists email address as account information collected", () => {
-      renderPage();
-      expect(
-        screen.getByText(/Email address \(for authentication\)/i)
-      ).toBeInTheDocument();
-    });
-
-    it("lists username as account information collected", () => {
-      renderPage();
-      expect(
-        screen.getByText(/Username \(for display and identification/i)
-      ).toBeInTheDocument();
+        container.querySelector(`a[href="#${section.id}"]`)
+      ).not.toBeNull();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Contact Us button
-  // -------------------------------------------------------------------------
-  describe("contact us button", () => {
-    it("renders 'Contact Us' button at the bottom of the page", () => {
-      renderPage();
-      expect(screen.getByTestId("button-contact-us")).toBeInTheDocument();
-    });
-
-    it("navigates to /contact when 'Contact Us' button is clicked", () => {
-      renderPage();
-      fireEvent.click(screen.getByTestId("button-contact-us"));
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/contact");
+  it("does not box the prose — cards are for things you can act on", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    PRIVACY_SECTIONS.forEach((section) => {
+      const el = container.querySelector(`#${section.id}`);
+      expect(el?.closest(".card")).toBeNull();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Icons
-  // -------------------------------------------------------------------------
-  describe("icons", () => {
-    it("renders ScrollText icon for Overview section", () => {
-      renderPage();
-      expect(screen.getByTestId("scroll-text-icon")).toBeInTheDocument();
-    });
+  it("renders exactly the three summary cards", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    expect(container.querySelectorAll(".card")).toHaveLength(3);
+  });
 
-    it("renders UserCheck icon for Account Information section", () => {
-      renderPage();
-      expect(screen.getByTestId("user-check-icon")).toBeInTheDocument();
+  it("hides decorative icons from assistive technology", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    container.querySelectorAll("svg").forEach((icon) => {
+      expect(icon.getAttribute("aria-hidden")).toBe("true");
     });
+  });
+});
 
-    it("renders Clock icon for Session Information section", () => {
-      renderPage();
-      expect(screen.getByTestId("clock-icon")).toBeInTheDocument();
-    });
+describe("PrivacyPolicyPage — content that must be there", () => {
+  it("names the controller and their country", () => {
+    render(<PrivacyPolicyPage />);
+    expect(
+      screen.getByText(new RegExp(PRIVACY_CONTROLLER.name))
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(PRIVACY_CONTROLLER.country))
+    ).toBeInTheDocument();
+  });
 
-    it("renders Database icon for Campaign Content section", () => {
-      renderPage();
-      expect(screen.getByTestId("database-icon")).toBeInTheDocument();
-    });
+  it("publishes no email address", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    expect(container.textContent ?? "").not.toMatch(/@[\w.-]+\.\w{2,}/);
+    expect(container.querySelector('a[href^="mailto:"]')).toBeNull();
+  });
 
-    it("renders Lock icon for Data Security section", () => {
-      renderPage();
-      expect(screen.getByTestId("lock-icon")).toBeInTheDocument();
-    });
+  it("discloses entity extraction, naming the provider", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    const section = container.querySelector("#entity-extraction");
+    expect(section).not.toBeNull();
+    expect(section!.textContent).toContain("OpenAI");
+    expect(section!.textContent).toMatch(/only the text of that note/i);
+    expect(section!.textContent).toMatch(/30 days/);
+    expect(section!.textContent).toMatch(/United States/);
+  });
+
+  it("states the three extraction caps, not just a monthly one", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    const section = container.querySelector("#entity-extraction");
+    expect(section!.textContent).toMatch(/10 scans a day/);
+    expect(section!.textContent).toMatch(/100 a month/);
+  });
+
+  it("describes deletion as a button, and links to the profile page", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    const section = container.querySelector("#retention");
+    expect(section!.textContent).toMatch(/Delete account/);
+    expect(section!.textContent).not.toMatch(/contact us to request/i);
+  });
+
+  it("routes the delete-it-yourself card to the profile page", async () => {
+    render(<PrivacyPolicyPage />);
+    await userEvent.click(
+      screen.getByRole("button", { name: /go to your profile/i })
+    );
+    expect(mockNavigateToPage).toHaveBeenCalledWith("/profile");
+  });
+
+  it("routes the contact affordance to the contact page", async () => {
+    render(<PrivacyPolicyPage />);
+    await userEvent.click(screen.getByRole("button", { name: /ask a question/i }));
+    expect(mockNavigateToPage).toHaveBeenCalledWith("/contact");
+  });
+
+  it("says concretely what survives leaving a group", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    const section = container.querySelector("#groups-and-sharing");
+    expect(section!.textContent).toMatch(/stay(s)? (behind )?with the group/i);
+    expect(section!.textContent).not.toMatch(/where appropriate/i);
+  });
+
+  it("names the hosting region, in the summary card and in the legal basis", () => {
+    render(<PrivacyPolicyPage />);
+    // getAllByText, not getByText: the region is deliberately stated twice --
+    // once where a skimmer will see it and once where the transfers claim needs
+    // it -- and getByText throws on more than one match.
+    expect(
+      screen.getAllByText(new RegExp(PRIVACY_HOSTING_REGION.split(" ")[0]))
+    ).toHaveLength(2);
+  });
+
+  it("names Datatilsynet and says you need not come to us first", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    expect(container.textContent).toContain("Datatilsynet");
+    expect(container.textContent).toMatch(/don't need to go through us first/i);
+  });
+
+  it("reuses the session constants rather than restating durations", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    expect(container.textContent).toContain(INACTIVITY_TIMEOUT_TEXT);
+    expect(container.textContent).toContain(REMEMBER_ME_TEXT);
+  });
+
+  it("claims no analytics and no advertising", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    expect(container.textContent).toMatch(/no analytics/i);
+    expect(container.textContent).toMatch(/no advertising/i);
+  });
+
+  it("has dropped the claims nobody can stand behind", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/regular security assessments/i);
+    expect(text).not.toMatch(/where appropriate/i);
+    expect(text).not.toMatch(/industry-standard/i);
+  });
+
+  it("keeps the specific security measures that are true", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    const section = container.querySelector("#security");
+    expect(section!.textContent).toMatch(/Firebase Authentication/);
+    expect(section!.textContent).toMatch(/encrypted in transit/i);
+  });
+
+  it("states a legal basis", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    const section = container.querySelector("#legal-basis");
+    expect(section).not.toBeNull();
+    expect(section!.textContent).toMatch(/legitimate interest|contract|consent/i);
+  });
+
+  it("discloses browser-side storage", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    const section = container.querySelector("#device-storage");
+    expect(section!.textContent).toMatch(/your own device|your browser/i);
+  });
+
+  it("no longer ends with a Contact Us card", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    const cards = Array.from(container.querySelectorAll(".card"));
+    const last = cards[cards.length - 1];
+    expect(last?.textContent).not.toMatch(/^Contact Us/);
   });
 });
