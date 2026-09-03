@@ -78,6 +78,11 @@ describe("Footer", () => {
         screen.getByRole("link", { name: /contact us/i })
       ).toBeInTheDocument();
     });
+
+    test("reserves space at the bottom so the floating create button cannot cover the links", () => {
+      render(<Footer />);
+      expect(screen.getByRole("contentinfo")).toHaveClass("pb-20");
+    });
   });
 
   // -------------------------------------------------------------------------
