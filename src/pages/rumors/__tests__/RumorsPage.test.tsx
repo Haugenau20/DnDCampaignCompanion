@@ -61,11 +61,28 @@ let mockRumorContext: RumorContextMock = {
   error: null,
 };
 
+// The mocked RumorDirectory below mirrors the controls the real component
+// genuinely owns (src/features/campaign-entities/rumors/components/
+// RumorDirectory.tsx), so that a test asserting their absence is proving
+// something about GatedContent's children-gating rather than about an empty
+// div nothing ever populates. Checked against the real component's actual
+// accessible surface, not guessed:
+//   - RosterStatusBar's total line -- "N rumors gathered" (no ARIA
+//     `progressbar` role; it's a plain proportional bar, so this is queried
+//     by its real text instead of an invented role).
+//   - RosterFilterBar's search field -- a bare `<Input placeholder="Search
+//     rumors...">` with no `type` or `aria-label`, so its real role is
+//     "textbox", not "searchbox"; queried by its real placeholder text.
+//   - The "Select Rumors" button -- a real `<Button>`, role "button", name
+//     "Select Rumors" exactly as guessed.
 jest.mock("features/campaign-entities", () => ({
   useRumors: () => mockRumorContext,
   RumorDirectory: (props: any) => (
     <div data-testid="rumor-directory">
       <span data-testid="rumor-directory-count">{props.rumors?.length}</span>
+      <span>{props.rumors?.length ?? 0} rumors gathered</span>
+      <input placeholder="Search rumors..." />
+      <button type="button">Select Rumors</button>
     </div>
   ),
 }));
@@ -155,15 +172,34 @@ describe("RumorsPage", () => {
       expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
     });
 
+    // Positive half of the pair below: proves the mocked RumorDirectory's
+    // controls genuinely render (and are queryable the way the assertions
+    // below look for them) once the gate reaches "ready", so their absence
+    // in the signed-out test cannot be vacuously true.
+    it("shows the rumor directory's controls once the gate is ready", () => {
+      renderPage();
+      expect(screen.getByText(/rumors gathered/i)).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Search rumors...")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /select rumors/i })
+      ).toBeInTheDocument();
+    });
+
     // The DoD line this PR was written for: nothing that cannot act renders
     // for a signed-out visitor, not even by accident through a directory
-    // that used to be handed an empty array.
+    // that used to be handed an empty array. Paired with the "ready" test
+    // above -- these controls are real, so their absence here is a real
+    // assertion about GatedContent's children-gating.
     it("shows no control that cannot act while signed out", () => {
       mockUser = null;
       renderPage();
       expect(screen.queryByTestId("rumor-directory")).not.toBeInTheDocument();
-      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-      expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+      expect(screen.queryByText(/rumors gathered/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("Search rumors...")
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: /select rumors/i })
       ).not.toBeInTheDocument();

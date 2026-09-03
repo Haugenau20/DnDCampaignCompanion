@@ -243,5 +243,17 @@ describe("LocationsPage", () => {
       fireEvent.click(screen.getByText("Add Location"));
       expect(mockNavigateToPage).toHaveBeenCalledWith("/locations/create");
     });
+
+    // Restores coverage dropped from the pre-gate suite's "does NOT render
+    // 'Add Location' button when context is not ready". It matters on its
+    // own: the button lives in PageShell's `actions` prop, outside
+    // GatedContent's children-gating, so `gate.canAct` is the only thing
+    // hiding it here -- no structural guarantee backs it up the way the
+    // directory's absence is backed by GatedContent only rendering `ready`.
+    it("does NOT render 'Add Location' button when no campaign is selected", () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(screen.queryByText("Add Location")).not.toBeInTheDocument();
+    });
   });
 });
