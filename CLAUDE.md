@@ -281,9 +281,9 @@ the tree.
 - **Use test failures to improve code quality before major refactoring**
 
 ### Current State
-- **Testing Infrastructure**: Jest + React Testing Library, **4,674 tests across 230 suites**
+- **Testing Infrastructure**: Jest + React Testing Library, **4,675 tests across 230 suites**
 - **Coverage**: **91.96% statements / 92.42% lines / 85.77% functions / 84.05% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-31 on `design-handoff/dashboard-1a`)
-- **Baseline**: **0 failed / 2 skipped / 4672 passed / 4674 total across 230 suites.** The 2 skips are #901's, closed as testability-only. **Any red is a regression.**
+- **Baseline**: **0 failed / 2 skipped / 4673 passed / 4675 total across 230 suites.** The 2 skips are #901's, closed as testability-only. **Any red is a regression.**
   - The previously recorded baseline of 7 failures — the ID-collision markers #002/#004/#009/#012 in the four `*Context.bugs` suites — is **obsolete**: that cluster was fixed 2026-07-28 and those four suites now pass 29/29. If you find advice anywhere telling you to tolerate reds, check `docs/testing/bug-tracking/README.md` before believing it.
   - Measured 2026-09-03 on `redesign/header-command-palette`, after the final whole-branch review's fix wave (typeFilter reset, the empty-query state, the combobox ARIA ownership chain, `<mark>` contrast, state-priority order, the `More` button's `nav:hidden` wrapper, palette reset on sign-out, the AltGr/Shift shortcut guard, the trigger-width assertion). The prior baseline on this same branch was 229 suites / 4655 tests, also fully green; this pass is +1 suite (`HighlightedText.test.tsx` added) and +19 tests net, all new coverage for the findings above — no suite was deleted or renamed.
   - **Recording a new baseline: measure it, don't carry one forward.** The figure above replaced one that had been stale for over a month because it was taken on a branch that later merged. If your run disagrees with this line, run the suites you touched alone and reconcile the delta before assuming a regression.
