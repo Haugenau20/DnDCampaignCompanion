@@ -1,117 +1,60 @@
-import React, { useMemo } from 'react';
-import Typography from '../../core/components/Typography';
-import Button from '../../core/components/Button';
-import Card from '../../core/components/Card';
-import { NPCDirectory, useNPCData } from 'features/campaign-entities';
-import { useAuth } from 'features/user-management';
-import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
-import { useNavigation } from 'shared/context/NavigationContext';
-import { Plus, Loader2, AlertCircle } from 'lucide-react';
+// src/pages/npcs/NPCsPage.tsx
+import React from "react";
+import Button from "core/components/Button";
+import { NPCDirectory, useNPCData } from "features/campaign-entities";
+import { usePageGate, GatedContent } from "shared/components/gated";
+import PageShell from "shared/components/page-shell/PageShell";
+import { useNavigation } from "shared/context/NavigationContext";
+import { Plus } from "lucide-react";
 
+/**
+ * NPCs index.
+ *
+ * The `contextError` memo that used to live here — and, identically, in
+ * `NPCContext` — is gone: the page renders whatever `usePageGate` says the
+ * state is, and the words come from `gated-page-copy`. The retry handler is
+ * wired through so the shared error panel's "Try again" button re-fetches
+ * this page's own data instead of only the generic gate.
+ */
 const NPCsPage: React.FC = () => {
-  // Hooks
-  const { user } = useAuth();
-  const { npcs, loading, error, refreshNPCs } = useNPCData();
-  // Single shared source of truth for "still resolving vs. genuinely no
-  // selection" (bug #1413) -- see the hook's doc comment. `loading` above
-  // already has auth/group/campaign restoration folded in, so this can't
-  // fire while a real selection is still being restored on page load.
-  const { missingContext } = useCampaignContextStatus();
   const { navigateToPage } = useNavigation();
+  const { npcs, loading, error, refreshNPCs } = useNPCData();
 
-  const contextError = useMemo(() => {
-    if (missingContext === 'group') return "Please select a group to view NPCs";
-    if (missingContext === 'campaign') return "Please select a campaign to view NPCs";
-    return null;
-  }, [missingContext]);
+  const gate = usePageGate("npcs", {
+    loading,
+    error,
+    onRetry: () => {
+      void refreshNPCs();
+    },
+  });
 
-  // Handle NPC update
-  const handleNPCUpdate = async () => {
+  const handleNPCChanged = async () => {
     await refreshNPCs();
   };
-
-  // Handle NPC deletion
-  const handleNPCDelete = async () => {
-    await refreshNPCs();
-  };
-
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8">
-          <div className="flex items-center gap-4">
-            <Loader2 className="w-6 h-6 animate-spin primary" />
-            <Typography>Loading NPCs...</Typography>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  // Show context error state
-  if (contextError) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8">
-          <div className="flex flex-col items-center gap-4">
-            <AlertCircle className="w-12 h-12 status-failed" />
-            <Typography variant="h3">{contextError}</Typography>
-            <Typography color="secondary">
-              You must select a group and campaign to view and manage NPCs.
-            </Typography>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8">
-          <Typography color="error">
-            Error Loading NPCs. Sign in to view content.
-          </Typography>
-        </Card>
-      </div>
-    );
-  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Page Header */}
-      <div className="mb-8 flex flex-col md:flex-row justify-between items-start gap-4">
-        <div>
-          <Typography variant="h1" className="mb-2">
-            NPCs
-          </Typography>
-          <Typography color="secondary">
-            Keep track of all the characters you've met in your adventures
-          </Typography>
-        </div>
-
-        {/* Auth actions */}
-        {user && (
-          <div className="flex gap-2">
-            <Button
-              onClick={() => navigateToPage('/npcs/create')}
-              startIcon={<Plus className="w-5 h-5" />}
-            >
-              Add NPC
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* NPC Directory */}
-      <NPCDirectory 
-        npcs={npcs}
-        onNPCUpdate={handleNPCUpdate}
-        onNPCDelete={handleNPCDelete}
-      />
-    </div>
+    <PageShell
+      title="NPCs"
+      subtitle="Keep track of all the characters you've met in your adventures"
+      actions={
+        gate.canAct && (
+          <Button
+            onClick={() => navigateToPage("/npcs/create")}
+            startIcon={<Plus className="w-5 h-5" />}
+          >
+            Add NPC
+          </Button>
+        )
+      }
+    >
+      <GatedContent gate={gate}>
+        <NPCDirectory
+          npcs={npcs}
+          onNPCUpdate={handleNPCChanged}
+          onNPCDelete={handleNPCChanged}
+        />
+      </GatedContent>
+    </PageShell>
   );
 };
 

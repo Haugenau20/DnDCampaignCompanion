@@ -1,37 +1,66 @@
-﻿// src/pages/locations/__tests__/LocationsPage.test.tsx
+// src/pages/locations/__tests__/LocationsPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import LocationsPage from "../LocationsPage";
 
 // ---------------------------------------------------------------------------
-// react-router-dom mocks
+// GatedContent and usePageGate are exercised for real (not mocked), so the
+// features/user-management mock below is extended with everything
+// GatedContent needs — see .superpowers/sdd/2026-09-03-gated-page-states/
+// page-suite-mock.md.
 // ---------------------------------------------------------------------------
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-  useLocation: () => ({ pathname: "/locations", search: "", hash: "" }),
+
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
 }));
 
-// ---------------------------------------------------------------------------
-// Context mocks
-// ---------------------------------------------------------------------------
-let mockUser: any = { uid: "user-1" };
-
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: mockUser }),
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: { getCampaigns: jest.fn().mockResolvedValue([]) },
+  },
 }));
 
+// `hasRequiredContext` is deliberately absent from this mock: LocationsPage
+// no longer reads it (usePageGate supersedes it).
 interface LocationContextMock {
   locations: any[];
   isLoading: boolean;
   error: string | null;
-  hasRequiredContext: boolean;
 }
 
 let mockLocationContext: LocationContextMock = {
   locations: [],
   isLoading: false,
   error: null,
-  hasRequiredContext: true,
 };
 
 jest.mock("features/campaign-entities", () => ({
@@ -50,47 +79,7 @@ const mockNavigateToPage = jest.fn();
 jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({
     navigateToPage: mockNavigateToPage,
-    state: {},
   }),
-}));
-
-// ---------------------------------------------------------------------------
-// Child component mocks
-// ---------------------------------------------------------------------------
-
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, variant, color }: any) => {
-    const testId = variant
-      ? `typography-${variant}`
-      : color
-      ? `typography-${color}`
-      : "typography";
-    return <div data-testid={testId}>{children}</div>;
-  },
-}));
-
-jest.mock("../../../core/components/Button", () => ({
-  __esModule: true,
-  default: ({ children, onClick }: any) => (
-    <button onClick={onClick}>{children}</button>
-  ),
-}));
-
-jest.mock("../../../core/components/Card", () => {
-  const Card = ({ children }: any) => <div data-testid="card">{children}</div>;
-  Card.Content = ({ children }: any) => (
-    <div data-testid="card-content">{children}</div>
-  );
-  return { __esModule: true, default: Card };
-});
-
-jest.mock("lucide-react", () => ({
-  Map: () => <span data-testid="map-icon" />,
-  MapPin: () => <span data-testid="map-pin-icon" />,
-  Eye: () => <span data-testid="eye-icon" />,
-  EyeOff: () => <span data-testid="eye-off-icon" />,
-  Plus: () => <span data-testid="plus-icon" />,
 }));
 
 // ---------------------------------------------------------------------------
@@ -107,7 +96,11 @@ const sampleLocations = [
 // Helpers
 // ---------------------------------------------------------------------------
 function renderPage() {
-  return render(<LocationsPage />);
+  return render(
+    <MemoryRouter>
+      <LocationsPage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -117,93 +110,92 @@ describe("LocationsPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUser = { uid: "user-1" };
+    mockIsResolving = false;
+    mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockLocationContext = {
       locations: [...sampleLocations],
       isLoading: false,
       error: null,
-      hasRequiredContext: true,
     };
   });
 
   // -------------------------------------------------------------------------
-  // Loading state
+  // Gated states
   // -------------------------------------------------------------------------
-  describe("loading state", () => {
-    beforeEach(() => {
-      mockLocationContext = { ...mockLocationContext, isLoading: true };
-    });
-
-    it("renders loading indicator", () => {
-      renderPage();
-      expect(screen.getByText("Loading locations...")).toBeInTheDocument();
-    });
-
-    it("does NOT render location directory while loading", () => {
-      renderPage();
-      expect(
-        screen.queryByTestId("location-directory")
-      ).not.toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Error state
-  // -------------------------------------------------------------------------
-  describe("error state", () => {
-    beforeEach(() => {
-      mockLocationContext = { ...mockLocationContext, error: "Firebase error" };
-    });
-
-    it("renders error message", () => {
-      renderPage();
-      expect(
-        screen.getByText("Error Loading Locations. Sign in to view content.")
-      ).toBeInTheDocument();
-    });
-
-    it("does NOT render location directory on error", () => {
-      renderPage();
-      expect(
-        screen.queryByTestId("location-directory")
-      ).not.toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // No context state
-  // -------------------------------------------------------------------------
-  describe("when hasRequiredContext is false", () => {
-    beforeEach(() => {
-      mockLocationContext = {
-        ...mockLocationContext,
-        hasRequiredContext: false,
-      };
-    });
-
-    it("renders 'No Active Group or Campaign' message", () => {
-      renderPage();
-      expect(
-        screen.getByText("No Active Group or Campaign")
-      ).toBeInTheDocument();
-    });
-
-    it("does NOT render location directory", () => {
-      renderPage();
-      expect(
-        screen.queryByTestId("location-directory")
-      ).not.toBeInTheDocument();
-    });
-
-    it("renders 'Select Group & Campaign' button when user is authenticated", () => {
-      renderPage();
-      expect(screen.getByText("Select Group & Campaign")).toBeInTheDocument();
-    });
-
-    it("does NOT render 'Select Group & Campaign' button when user is not authenticated", () => {
+  describe("gated states", () => {
+    it("renders the page title and subtitle while signed out", () => {
       mockUser = null;
       renderPage();
       expect(
+        screen.getByRole("heading", { level: 1, name: "Locations" })
+      ).toBeInTheDocument();
+    });
+
+    it("asks a signed-out visitor to sign in, and never to select a group", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", {
+          name: /sign in to see where your party has been/i,
+        })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    it("hides the create action while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.queryByRole("button", { name: /add location/i })
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    });
+
+    // Rewritten: the pre-gate suite asserted this page's own
+    // "No Active Group or Campaign" copy, driven by `hasRequiredContext`
+    // (dropped from this page — see the note above the mock). usePageGate
+    // now derives the state and GatedContent renders the shared
+    // pick-campaign panel.
+    it("shows the shared pick-campaign panel, not the old copy, when context is missing", () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(
+        screen.queryByText("No Active Group or Campaign")
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/please select a group and campaign/i)
+      ).not.toBeInTheDocument();
+      expect(
         screen.queryByText("Select Group & Campaign")
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("gated-eyebrow")).toHaveTextContent(
+        /no campaign chosen/i
+      );
+      expect(
+        screen.queryByTestId("location-directory")
+      ).not.toBeInTheDocument();
+    });
+
+    // Rewritten: the old inline error copy is gone; GatedContent's error
+    // panel names the noun and the real error message instead.
+    it("shows the shared error panel, not the old inline copy, on a fetch error", () => {
+      mockLocationContext = { ...mockLocationContext, error: "Firebase error" };
+      renderPage();
+      expect(
+        screen.queryByText("Error Loading Locations. Sign in to view content.")
+      ).not.toBeInTheDocument();
+      expect(screen.getByText(/couldn't load locations/i)).toBeInTheDocument();
+      expect(screen.getByText("Firebase error")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("location-directory")
       ).not.toBeInTheDocument();
     });
   });
@@ -219,9 +211,9 @@ describe("LocationsPage", () => {
 
     it("renders the page heading 'Locations'", () => {
       renderPage();
-      expect(screen.getByTestId("typography-h1")).toHaveTextContent(
-        "Locations"
-      );
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Locations" })
+      ).toBeInTheDocument();
     });
 
     it("renders the location directory", () => {
@@ -241,7 +233,7 @@ describe("LocationsPage", () => {
   // Create button
   // -------------------------------------------------------------------------
   describe("Add Location button", () => {
-    it("renders 'Add Location' button when user is authenticated and context is ready", () => {
+    it("renders 'Add Location' button for a ready user", () => {
       renderPage();
       expect(screen.getByText("Add Location")).toBeInTheDocument();
     });
@@ -250,22 +242,6 @@ describe("LocationsPage", () => {
       renderPage();
       fireEvent.click(screen.getByText("Add Location"));
       expect(mockNavigateToPage).toHaveBeenCalledWith("/locations/create");
-    });
-
-    it("does NOT render 'Add Location' button when user is not authenticated", () => {
-      mockUser = null;
-      renderPage();
-      expect(screen.queryByText("Add Location")).not.toBeInTheDocument();
-    });
-
-    it("does NOT render 'Add Location' button when context is not ready", () => {
-      mockLocationContext = {
-        ...mockLocationContext,
-        hasRequiredContext: false,
-      };
-      renderPage();
-      // In the no-context guard screen (not the main layout), there is no Add Location button
-      expect(screen.queryByText("Add Location")).not.toBeInTheDocument();
     });
   });
 });
