@@ -1622,13 +1622,27 @@ Same change. Add the import:
 import {deleteGroupUserDocument} from "../shared/deleteUserSubtree";
 ```
 
-Remove `batch.delete(userProfileRef);` (line ~112), and after the batch commit add:
+Remove `batch.delete(userProfileRef);` (line ~112), and **before** `await batch.commit()` add:
 
 ```ts
       // Leaving a group takes your private notes with you; they live in a
       // subcollection of this document, which a batched delete would orphan.
+      //
+      // This runs BEFORE the commit, mirroring deleteUser, and the ordering is
+      // load-bearing. The batch strips this group from the user's global
+      // `groups` array, so committing first and failing here would leave the
+      // notes orphaned with no way back: the leave-group path no longer sees
+      // the membership, so nothing would retry the subtree deletion. Failing
+      // before the commit leaves the user in the group and the operation
+      // retryable. The username was already read above, so deleting the
+      // profile document here costs the batch nothing.
       await deleteGroupUserDocument(groupId, userId);
 ```
+
+**Corrected 2026-09-03**: this step originally placed the call *after*
+`batch.commit()`, which reintroduced the very failure the task exists to close —
+narrowed to a window rather than removed. Both call sites now delete the subtree
+before their batch commits.
 
 Match the surrounding code's variable names — read the file rather than assuming
 `groupId` / `userId` are what they are called there.
