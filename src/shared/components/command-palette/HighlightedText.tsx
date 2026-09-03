@@ -19,7 +19,7 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({ text, query }) => (
   <>
     {splitOnMatch(text, query).map((segment, index) =>
       segment.isMatch ? (
-        <mark key={index} className="bg-accent rounded-sm px-0.5">
+        <mark key={index} className="bg-accent text-primary rounded-sm px-0.5">
           {segment.text}
         </mark>
       ) : (
