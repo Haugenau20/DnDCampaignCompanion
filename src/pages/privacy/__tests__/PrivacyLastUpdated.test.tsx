@@ -17,21 +17,21 @@ describe("PrivacyLastUpdated", () => {
     expect(screen.getByText(/3 September 2026/)).toBeInTheDocument();
   });
 
-  it("does not render today's date when today is not the constant", () => {
-    const today = new Date().toLocaleDateString("en-GB", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+  it("does not follow the clock", () => {
+    // This replaces a version guarded by `if (today !== rendered)`, which made
+    // the assertion inside it tautological -- and which would have gone quiet
+    // on precisely the day someone genuinely updates the policy. Moving the
+    // clock instead tests the real property: the rendered date is a constant,
+    // not a computation. This is the bug the whole file exists to prevent.
+    jest.useFakeTimers().setSystemTime(new Date("2031-06-01T12:00:00Z"));
+
     const { container } = render(<PrivacyLastUpdated />);
-    const rendered = container.querySelector("time")?.textContent ?? "";
-    if (today !== rendered) {
-      expect(rendered).not.toBe(today);
-    }
-    expect(container.querySelector("time")).toHaveAttribute(
-      "dateTime",
-      PRIVACY_LAST_UPDATED
-    );
+    const time = container.querySelector("time");
+
+    expect(time).toHaveAttribute("dateTime", PRIVACY_LAST_UPDATED);
+    expect(time?.textContent).not.toMatch(/2031/);
+
+    jest.useRealTimers();
   });
 
   it("keeps the changelog collapsed until asked", () => {

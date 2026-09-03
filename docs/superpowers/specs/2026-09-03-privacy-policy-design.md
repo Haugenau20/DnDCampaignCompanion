@@ -98,6 +98,22 @@ true when it ships.
 - All Cloud Functions are `europe-west1`; the maintainer confirms the Firestore and
   hosting resources are in the same region.
 
+### 2.5 Third-party platform facts, which code cannot establish
+
+Added 2026-09-03 during implementation review. The rule in §4.2 — never write a
+claim §2 does not support — was drafted assuming every claim would be about *our*
+code. Two sentences on the page are about Google's platform instead, and the agent
+implementing the page correctly flagged that they had no entry here. They are true
+and publicly documented, so the fix is to record them, not to delete them.
+
+| Claim on the page | Basis |
+|---|---|
+| "everything is encrypted in transit and at rest by Google" | Google Cloud encrypts all customer data at rest by default across its services, Firestore included; this is documented platform behaviour, not a configuration this repo sets. The previous version of the page already claimed it. |
+| "Google's own operation of the platform, which can involve support access from other countries" | Google's Cloud DPA and sub-processor disclosures cover international support access. Hedged with "can" deliberately. **Under-disclosing a transfer is the larger GDPR risk**, so this stays. |
+
+Neither is code-derivable. Both should be re-checked if Google's terms change —
+they are the only two claims on the page whose truth is not in this repository.
+
 ---
 
 ## 3. Decisions taken with the maintainer
