@@ -3,6 +3,7 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import HomePage from "../HomePage";
+import firebaseServices from "core/services/firebase";
 
 // ---------------------------------------------------------------------------
 // GatedContent and usePageGate are exercised for real (not mocked), so the
@@ -332,6 +333,40 @@ describe("HomePage", () => {
       expect(
         screen.queryByRole("group", { name: /choose a view/i })
       ).not.toBeInTheDocument();
+    });
+
+    // Closes a gap the review flagged: every gated page suite (this one
+    // included, in the "no campaign to pick one" test above) mocks
+    // `getCampaigns` to resolve `[]`, so the "choose" sub-state -- where the
+    // fetched campaigns actually reach the panel and render as choices -- has
+    // never been exercised end to end, even though GatedPageState.test.tsx
+    // proves the panel renders correctly *given* a campaigns prop. This test
+    // drives the real chain: useSelectableCampaigns -> firebaseServices
+    // .campaign.getCampaigns -> GatedContent -> GatedPageState.
+    it("lists the user's actual campaigns as clickable choices once they arrive", async () => {
+      mockActiveCampaignId = null;
+      (firebaseServices.campaign.getCampaigns as jest.Mock).mockResolvedValueOnce([
+        { id: "campaign-1", name: "Phandelver" },
+      ]);
+      renderPage();
+
+      // The fetch is async, so this must be awaited rather than queried
+      // synchronously -- the panel starts in "No campaigns yet" and only
+      // reaches "choose" once the promise resolves.
+      expect(
+        await screen.findByRole("heading", { name: /which campaign\?/i })
+      ).toBeInTheDocument();
+
+      // The choice is a real, clickable button in the panel itself -- not
+      // just text naming the campaign -- because the whole design point was
+      // that the choice is made here, not by sending the user elsewhere.
+      const campaignChoice = screen.getByRole("button", {
+        name: /phandelver/i,
+      });
+      expect(campaignChoice).toBeInTheDocument();
+      // The row also names the group the campaign lives in, which is what
+      // disambiguates two same-named campaigns in different groups.
+      expect(campaignChoice).toHaveTextContent(mockGroups[0].name);
     });
 
     it("shows a skeleton and no panel while context is resolving", () => {
