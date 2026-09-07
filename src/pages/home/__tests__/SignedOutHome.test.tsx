@@ -25,12 +25,32 @@ describe("SignedOutHome", () => {
     );
   });
 
-  it("says a campaign is private to its group and joining is by invite", () => {
+  // Rewritten with the copy pass that took the access model out of the
+  // product's voice. The blurb used to say "Invite-only: a DM sends a join
+  // link, and nothing is public" -- two claims a player already assumes, one
+  // of which named the wrong person, since any player can be the group admin.
+  // What survives is the only part a stranger cannot work out for themselves:
+  // an account alone gets you nowhere, you need someone to send you a link.
+  // Home is now the only place in `src/` that says so (`GATED_FOOTNOTE` used
+  // to repeat it on twenty routes), so this assertion is what keeps a
+  // signed-out visitor from being told to create an account and nothing else.
+  it("tells a stranger they need a join link, without naming the DM", () => {
     renderHome();
     // Scoped to the prose element: "invite" also appears on the secondary
     // button, and an unscoped getByText would match both and throw.
-    expect(screen.getByTestId("home-blurb")).toHaveTextContent(/invite-only/i);
-    expect(screen.getByTestId("home-blurb")).toHaveTextContent(/nothing is public/i);
+    const blurb = screen.getByTestId("home-blurb");
+    expect(blurb).toHaveTextContent(/join link/i);
+    expect(blurb).toHaveTextContent(/whoever set up your campaign/i);
+    expect(blurb).not.toHaveTextContent(/\bDM\b/);
+  });
+
+  it("pitches the AI extraction a stranger has no other way to discover", () => {
+    renderHome();
+    // The notes line is the product's most persuasive feature and the only
+    // one a signed-out visitor cannot infer from the entity names above it.
+    expect(screen.getByTestId("product-lines")).toHaveTextContent(
+      /AI pulls out the NPCs/i
+    );
   });
 
   it("offers signing in and an invite link", () => {
@@ -61,9 +81,19 @@ describe("SignedOutHome", () => {
     expect(chip.closest("[aria-hidden='true']")).toBeNull();
   });
 
-  it("says the panel is a picture rather than a demo", () => {
+  // Replaces "says the panel is a picture rather than a demo", which pinned
+  // the caption "a picture, not a demo — nothing here is clickable". That
+  // sentence described the implementation rather than the product, so it was
+  // removed. Nothing is lost: the promise it made is enforced for real by
+  // "puts nothing clickable or focusable inside the example panel" below,
+  // which checks the DOM instead of asking the reader to take our word for
+  // it. This test guards the replacement -- the chip alone is the caption.
+  it("captions the example with the chip alone, no explanatory prose", () => {
     renderHome();
-    expect(screen.getByText(/nothing here is clickable/i)).toBeInTheDocument();
+    const chip = screen.getByText(/example campaign/i);
+    const captionRow = chip.parentElement as HTMLElement;
+    expect(captionRow).not.toBeNull();
+    expect(captionRow.textContent?.trim()).toBe("Example campaign");
   });
 
   it("hides the example panel from assistive technology", () => {
@@ -94,12 +124,15 @@ describe("SignedOutHome", () => {
 
   it("lists the three things the product does, in words", () => {
     renderHome();
-    // Scoped to the list: "rumors" and "private" also appear in the blurb
+    // Scoped to the list: "rumors" and "notes" also appear in the blurb
     // above, so unscoped queries would match several elements and throw.
     const lines = screen.getByTestId("product-lines");
     expect(lines).toHaveTextContent(/chapter log/i);
     expect(lines).toHaveTextContent(/rumors/i);
-    expect(lines).toHaveTextContent(/private session notes/i);
+    // Was /private session notes/i. The line no longer leads with "private" --
+    // a player assumes their own notes are their own -- and leads with the
+    // extraction pitch instead; see "pitches the AI extraction" above.
+    expect(lines).toHaveTextContent(/session notes/i);
     expect(lines.querySelectorAll("li")).toHaveLength(3);
   });
 });

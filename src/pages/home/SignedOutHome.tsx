@@ -9,7 +9,7 @@ import { SIGNED_OUT_EXAMPLE } from "./signed-out-example";
 const PRODUCT_LINES = [
   "A chapter log the whole group can add to, in play order",
   "Quests with objectives, and rumors you can mark true or false",
-  "Private session notes, and NPCs pulled out of them for you",
+  "Your own session notes — AI pulls out the NPCs, locations and quests it finds",
 ];
 
 /**
@@ -44,10 +44,9 @@ const SignedOutHome: React.FC = () => {
             className="mb-8"
             data-testid="home-blurb"
           >
-            Chapters, quests, NPCs, locations, rumors and private notes for one
-            campaign — written by whoever is at the table, credited to the
-            character they play. Invite-only: a DM sends a join link, and
-            nothing is public.
+            Chapters, quests, NPCs, locations, rumors and your own notes —
+            written by whoever is at the table, credited to the character they
+            play. To get in, ask whoever set up your campaign for a join link.
           </Typography>
 
           <div className="flex flex-wrap gap-3 mb-10">
@@ -70,13 +69,16 @@ const SignedOutHome: React.FC = () => {
 
         {/* Right: the example. */}
         <div>
+          {/* The chip is the whole caption. It used to be followed by "a
+              picture, not a demo — nothing here is clickable", which told the
+              reader about the implementation instead of about the product;
+              "Example campaign" already sets the expectation, and nothing in
+              the panel is focusable, so nobody discovers the difference the
+              hard way. */}
           <div className="flex flex-wrap items-baseline gap-3 mb-3">
             <span className="px-2 py-1 rounded text-xs font-semibold uppercase tracking-widest chip">
               Example campaign
             </span>
-            <Typography variant="body-sm" color="secondary">
-              a picture, not a demo — nothing here is clickable
-            </Typography>
           </div>
 
           {/* aria-hidden because every fact inside is already stated in the

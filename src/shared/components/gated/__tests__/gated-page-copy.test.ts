@@ -53,13 +53,43 @@ describe("GATED_COPY", () => {
     expect(new Set(headings).size).toBe(headings.length);
   });
 
-  it("tells every reader that a campaign is private to its group", () => {
-    // The one promise the panel must make on each entity page.
-    ["quests", "npcs", "locations", "rumors", "story"].forEach((key) => {
-      expect(GATED_COPY[key as GatedPageKey].blurb).toMatch(
-        /visible only to the group/i
-      );
+  // Replaces "tells every reader that a campaign is private to its group",
+  // which required every entity blurb to end with "each campaign is visible
+  // only to the group that plays it". That was the access model narrated in
+  // the product's voice: players already assume a campaign is theirs, so the
+  // sentence spent the panel's one paragraph explaining the back of the
+  // application instead of giving a reason to come in. The inverted test is
+  // the one worth keeping -- it stops the phrasing coming back.
+  it("never explains the access model in a blurb", () => {
+    ALL_KEYS.forEach((key) => {
+      expect(GATED_COPY[key].blurb).not.toMatch(/visible only|nobody else/i);
     });
+  });
+
+  // Any player can be the group admin, and a campaign here works whether or
+  // not the DM ever signs in -- a missing player costs the record more than a
+  // missing DM does. Copy that routes people to "your DM" is therefore wrong
+  // for a real share of groups, not merely off-tone. `\b` on both sides so
+  // this cannot be tripped by an unrelated word that happens to contain "dm".
+  it("never sends the reader to the DM", () => {
+    ALL_KEYS.forEach((key) => {
+      const copy = GATED_COPY[key];
+      expect(copy.blurb).not.toMatch(/\bDMs?\b|dungeon master/i);
+      expect(copy.heading).not.toMatch(/\bDMs?\b|dungeon master/i);
+      expect(copy.writeHeading ?? "").not.toMatch(/\bDMs?\b|dungeon master/i);
+    });
+    expect(GATED_FOOTNOTE).not.toMatch(/\bDMs?\b|dungeon master/i);
+  });
+
+  it("pitches extraction on the notes page, naming only what it returns", () => {
+    // The four nouns are the `ExtractedEntity` union in `notes/types.ts`; a
+    // fifth here would be a promise the extractor cannot keep.
+    const { blurb } = GATED_COPY.notes;
+    expect(blurb).toMatch(/AI/);
+    ["NPCs", "locations", "quests", "rumors"].forEach((noun) => {
+      expect(blurb).toContain(noun);
+    });
+    expect(blurb).not.toMatch(/\bchapters?\b|\bsagas?\b/i);
   });
 });
 
@@ -82,7 +112,12 @@ describe("gatedHeading", () => {
 });
 
 describe("GATED_FOOTNOTE", () => {
-  it("explains that joining is by invite", () => {
-    expect(GATED_FOOTNOTE).toMatch(/join link/i);
+  // Was "explains that joining is by invite", asserting /join link/. The
+  // footnote no longer explains anything: it opens the question and the link
+  // beside it goes to Home, which answers it once instead of twenty times.
+  // `SignedOutHome.test.tsx` now owns the join-link assertion.
+  it("opens the question and leaves the answer to Home", () => {
+    expect(GATED_FOOTNOTE).toMatch(/new here/i);
+    expect(GATED_FOOTNOTE).not.toMatch(/join link|invite-only|private/i);
   });
 });

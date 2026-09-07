@@ -47,10 +47,13 @@ export type GatedPageKey =
  *
  * Shared rather than per-page: it answers "what is this site?", which is the
  * same question regardless of which URL a stranger happened to land on.
+ *
+ * Deliberately just the question, with the "What it does" link beside it
+ * carrying the answer. This used to explain the invite model here as well,
+ * on all twenty gated routes; that explanation now lives once, on Home,
+ * where a stranger who needs it is already headed.
  */
-export const GATED_FOOTNOTE =
-  "New here? The Companion is a private campaign record for one group at a " +
-  "time — a DM invites you with a join link.";
+export const GATED_FOOTNOTE = "New here?";
 
 /**
  * The single source of gated wording in `src/`.
@@ -60,14 +63,23 @@ export const GATED_FOOTNOTE =
  * cannot tell a signed-out visitor from a member between campaigns, half of
  * them named a group switcher the visitor had no way to see. A context returns
  * a *state*; this module holds the words; the panel renders them.
+ *
+ * Voice: say what the page is *for*, in the language of someone at the table.
+ * Every blurb here used to end with a variant of "each campaign is visible
+ * only to the group that plays it", and `notes` opened by explaining who
+ * could not read it -- true, but nobody wonders. Players already assume a
+ * campaign is theirs and their notes are theirs; spelling out the access
+ * model reads like a tour of the back of the application rather than a
+ * reason to come in. Nor does anything here name the DM: a group admin is
+ * as likely to be a player, and the record works whether or not the DM ever
+ * signs in.
  */
 export const GATED_COPY: Record<GatedPageKey, GatedPageCopy> = {
   home: {
     heading: "Sign in to open your campaign",
     blurb:
-      "The Companion keeps one campaign's chapters, quests, NPCs, locations, " +
-      "rumors and private notes in one place. Each campaign is visible only " +
-      "to the group that plays it.",
+      "Chapters, quests, NPCs, locations, rumors and your own notes — " +
+      "everything your party has pieced together, in one place.",
     noun: "your campaign",
     requires: "campaign",
   },
@@ -76,8 +88,7 @@ export const GATED_COPY: Record<GatedPageKey, GatedPageCopy> = {
     writeHeading: "Sign in to write a chapter",
     blurb:
       "The chapter log is the campaign told in order — one entry a session, " +
-      "written by whoever was at the table. Each campaign is visible only to " +
-      "the group that plays it.",
+      "written by whoever was at the table.",
     noun: "chapters",
     requires: "campaign",
   },
@@ -86,8 +97,7 @@ export const GATED_COPY: Record<GatedPageKey, GatedPageCopy> = {
     writeHeading: "Sign in to add a quest",
     blurb:
       "Quests are the open threads of a campaign — who asked for what, which " +
-      "objectives are done, and what the party still owes. Each campaign is " +
-      "visible only to the group that plays it.",
+      "objectives are done, and what the party still owes.",
     noun: "quests",
     requires: "campaign",
   },
@@ -96,8 +106,7 @@ export const GATED_COPY: Record<GatedPageKey, GatedPageCopy> = {
     writeHeading: "Sign in to add an NPC",
     blurb:
       "NPCs are everyone the party has dealt with: allies, patrons, rivals, " +
-      "and the ones nobody trusts yet. Each campaign is visible only to the " +
-      "group that plays it.",
+      "and the ones nobody trusts yet.",
     noun: "NPCs",
     requires: "campaign",
   },
@@ -106,8 +115,7 @@ export const GATED_COPY: Record<GatedPageKey, GatedPageCopy> = {
     writeHeading: "Sign in to add a location",
     blurb:
       "Locations are the places the party has visited, heard of, or is still " +
-      "trying to find, and what happened at each. Each campaign is visible " +
-      "only to the group that plays it.",
+      "trying to find, and what happened at each.",
     noun: "locations",
     requires: "campaign",
   },
@@ -116,18 +124,22 @@ export const GATED_COPY: Record<GatedPageKey, GatedPageCopy> = {
     writeHeading: "Sign in to record a rumor",
     blurb:
       "Rumors are the leads a party picks up in taverns and on notice boards " +
-      "— some true, some not, all worth writing down. Each campaign is " +
-      "visible only to the group that plays it.",
+      "— some true, some not, all worth writing down.",
     noun: "rumors",
     requires: "campaign",
   },
   notes: {
     heading: "Sign in to read your notes",
     writeHeading: "Sign in to write a note",
+    // The one blurb that sells rather than describes: extraction is the
+    // product's most persuasive feature and a stranger has no other way to
+    // learn it exists. The four nouns are the exact union `ExtractedEntity`
+    // returns (`notes/types.ts`, `core/services/openai/types.ts`) -- do not
+    // add a fifth here without adding it there first.
     blurb:
-      "Notes are yours alone; nobody else in the group can read them, not " +
-      "even the DM. NPCs you mention can be lifted out into the shared " +
-      "record when you're ready.",
+      "Write down what happened while it's fresh — then let AI read it back " +
+      "and pull out the NPCs, locations, quests and rumors, ready for the " +
+      "party's records.",
     noun: "notes",
     // Was "group": the spec assumed a member with a group but no campaign
     // chosen has notes to read, because `NoteContext` "fetches on

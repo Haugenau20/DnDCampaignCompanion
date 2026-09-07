@@ -94,21 +94,27 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
     pickSituation === "no-groups"
       ? "Join a group"
       : pickSituation === "loading"
-      ? "Looking for your campaigns"
+      ? "Finding your campaigns"
       : pickSituation === "no-campaigns"
       ? "No campaigns yet"
       : "Which campaign?";
 
+  // Player-facing wording, not a description of the data model. These lines
+  // used to say "The Companion is invite-only. Ask your DM for a join link."
+  // and "A group admin creates the first campaign" -- both name roles the
+  // reader may not have (any player can be the group admin, and a campaign
+  // here works whether or not the DM ever signs in), and both explain the
+  // system rather than telling the reader what to do next.
   const pickLine =
     pickSituation === "no-groups"
-      ? "The Companion is invite-only. Ask your DM for a join link."
+      ? "Ask whoever set up your campaign for a join link."
       : pickSituation === "loading"
-      ? "Checking your groups for campaigns…"
+      ? "One moment…"
       : pickSituation === "no-campaigns"
-      ? "A group admin creates the first campaign; once there is one, it appears here."
+      ? "Your first campaign will appear here as soon as it's created."
       : `You're in ${campaigns.length === 1 ? "one campaign" : `${campaigns.length} campaigns`}. ` +
-        "Pick one and this page fills in — you can change it any time from the " +
-        "campaign name in the header.";
+        "Pick one to carry on — you can switch any time from the campaign " +
+        "name in the header.";
 
   return (
     <div className="mx-auto w-full max-w-[560px] rounded-lg p-8 card">
@@ -144,7 +150,7 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
           <Typography variant="body-sm" color="secondary">
             {GATED_FOOTNOTE}{" "}
             <Link to="/" className="font-semibold primary">
-              What it does
+              See what the Companion does
             </Link>
           </Typography>
         </>

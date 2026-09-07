@@ -71,13 +71,18 @@ describe("GatedPageState, signed out", () => {
     expect(onJoinGroup).toHaveBeenCalledTimes(1);
   });
 
-  it("explains the product to a newcomer and links to the explainer", () => {
+  // The footnote used to explain the invite model itself ("a DM invites you
+  // with a join link") on every one of the twenty gated routes. It now only
+  // opens the question, and the link carries the reader to Home, which is the
+  // single place that answers it -- so what this test must protect is the
+  // route out, not a sentence. Without the link working, the newcomer the
+  // footnote addresses has nowhere to go.
+  it("asks the newcomer's question and links to Home for the answer", () => {
     renderPanel();
-    expect(screen.getByText(/join link/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /what it does/i })).toHaveAttribute(
-      "href",
-      "/"
-    );
+    expect(screen.getByText(/new here/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /what the companion does/i })
+    ).toHaveAttribute("href", "/");
   });
 
   it("never lists campaigns", () => {
@@ -156,7 +161,10 @@ describe("GatedPageState, pick campaign", () => {
       screen.queryByRole("heading", { name: /no campaigns yet/i })
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByText(/a group admin creates the first campaign/i)
+      // Was /a group admin creates the first campaign/, reworded away from
+      // naming a role the reader may not have; this still targets the
+      // "no-campaigns" line specifically, which is what the guard needs.
+      screen.queryByText(/your first campaign will appear here/i)
     ).not.toBeInTheDocument();
   });
 
