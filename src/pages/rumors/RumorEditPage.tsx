@@ -30,17 +30,20 @@ const RumorEditPage: React.FC = () => {
   const gate = usePageGate('rumors', { loading: isLoading, error, mode: 'write' });
 
   return (
-    <PageShell title={editingRumor ? `Edit ${editingRumor.title}` : 'Edit Rumor'}>
-      <div className="mb-8 flex items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={() => navigateToPage('/rumors')}
-          startIcon={<ArrowLeft />}
-        >
-          Back to Rumors
-        </Button>
-      </div>
-
+    <PageShell
+      title={editingRumor ? `Edit ${editingRumor.title}` : 'Edit Rumor'}
+      breadcrumb={
+        <div className="mb-8 flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigateToPage('/rumors')}
+            startIcon={<ArrowLeft />}
+          >
+            Back to Rumors
+          </Button>
+        </div>
+      }
+    >
       <GatedContent gate={gate}>
         {editingRumor ? (
           <RumorForm
