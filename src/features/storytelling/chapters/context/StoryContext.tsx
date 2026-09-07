@@ -740,15 +740,19 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const isLoading = chaptersLoading || isUpdating;
 
-  // Prepare appropriate error message. Gated on `!isLoading` so that a fresh
-  // page load -- where the group/campaign have not been restored yet -- renders
-  // the loading state instead of claiming the user selected nothing (#1413).
-  // `useChapterData`'s `loading` folds in `useCampaignContextStatus().isResolving`,
-  // so "still loading" already covers "still restoring the selection", and the
-  // error is reached only once resolution has settled on nothing. This mirrors
-  // what LocationsPage/LocationEditPage get structurally by checking their
-  // loading branch before their context branch.
-  const contextError = chaptersError || (!isLoading && !hasRequiredContext ? 'Please select a group and campaign' : null);
+  // `error` carries real fetch failures only. It used to also carry
+  // 'Please select a group and campaign' whenever the selection was absent,
+  // which put a selection prompt into an error channel: StoryPage renders
+  // `error` directly, so a signed-out visitor was shown that sentence through
+  // the error branch -- told to use a group switcher `Header` only renders for
+  // signed-in members.
+  //
+  // Missing context is a state, and this context already publishes it as
+  // `hasRequiredContext` in the value below. What to SAY about it depends on
+  // whether the visitor is signed out, still resolving, or simply between
+  // campaigns, and only the page can tell those apart -- `usePageGate` makes
+  // the distinction and `gated-page-copy.ts` holds the words.
+  const contextError = chaptersError;
 
   const value: StoryContextValue = {
     chapters,

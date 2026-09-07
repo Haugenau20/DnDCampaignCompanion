@@ -1,10 +1,52 @@
 // src/pages/story/__tests__/ChaptersPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import ChaptersPage from "../ChaptersPage";
 
 // ---------------------------------------------------------------------------
-// Context / hook mocks
+// Page-suite gate mock (shared across Tasks 8-13 -- see page-suite-mock.md)
+// ---------------------------------------------------------------------------
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: { getCampaigns: jest.fn().mockResolvedValue([]) },
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// Story-specific mocks
 // ---------------------------------------------------------------------------
 const mockNavigateToPage = jest.fn();
 
@@ -26,14 +68,11 @@ let mockStoryContext: StoryContextMock = {
   isLoading: false,
 };
 
-// `features/storytelling`'s barrel is mocked here — but the utils import
+// `features/storytelling`'s barrel is mocked here -- but the utils import
 // (`features/storytelling/chapters/utils/chapter-progress`) is deliberately
 // left real, since ChaptersPage's filtering/derivation behaviour is exactly
 // what these tests exercise, and that module already has its own test suite
 // backing its contract.
-//
-// `ChapterList` doesn't exist yet (a parallel change is adding it); this stub
-// stands in so ChaptersPage's own tests aren't blocked on that landing.
 jest.mock("features/storytelling", () => ({
   useStory: () => mockStoryContext,
   BookshelfView: (props: any) => (
@@ -88,32 +127,9 @@ jest.mock("features/storytelling", () => ({
   ),
 }));
 
-let mockUser: { uid: string } | null = { uid: "user-1" };
-
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: mockUser }),
-}));
-
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, variant, color }: any) => (
-    <div
-      data-testid={
-        color
-          ? `typography-${color}`
-          : variant
-          ? `typography-${variant}`
-          : "typography-default"
-      }
-    >
-      {children}
-    </div>
-  ),
-}));
-
 jest.mock("shared/components/Breadcrumb", () => ({
   __esModule: true,
   default: (props: any) => (
@@ -127,27 +143,9 @@ jest.mock("shared/components/Breadcrumb", () => ({
   ),
 }));
 
-jest.mock("core/components/Button", () => ({
-  __esModule: true,
-  default: ({ children, onClick }: any) => (
-    <button
-      data-testid={`button-${String(children).trim().replace(/\s+/g, "-").toLowerCase()}`}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  ),
-}));
-
 jest.mock("../components/StoryViewTabs", () => ({
   __esModule: true,
   default: () => <div data-testid="story-view-tabs" />,
-}));
-
-jest.mock("lucide-react", () => ({
-  Plus: () => <span data-testid="plus-icon" />,
-  List: () => <span data-testid="list-icon" />,
-  Grid: () => <span data-testid="grid-icon" />,
 }));
 
 // Suppress localStorage warnings in tests
@@ -187,7 +185,11 @@ const PROGRESS_STARTED = {
 };
 
 function renderPage() {
-  return render(<ChaptersPage />);
+  return render(
+    <MemoryRouter>
+      <ChaptersPage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -198,6 +200,10 @@ describe("ChaptersPage", () => {
     jest.clearAllMocks();
     localStorageMock.clear();
     mockUser = { uid: "user-1" };
+    mockIsResolving = false;
+    mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockStoryContext = {
       chapters: CHAPTERS,
       storyProgress: NO_PROGRESS,
@@ -206,22 +212,54 @@ describe("ChaptersPage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Loading state
+  // Gated states (the four standard tests every page suite adds -- Task 8
+  // Step 1)
   // -------------------------------------------------------------------------
-  describe("loading state", () => {
-    it("shows loading message while chapters are loading", () => {
-      mockStoryContext = { ...mockStoryContext, isLoading: true, chapters: [] };
+  describe("gated states", () => {
+    it("renders the page title while signed out", () => {
+      mockUser = null;
       renderPage();
-      expect(screen.getByTestId("typography-default")).toHaveTextContent(
-        "Loading chapters..."
-      );
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Session Chronicles" })
+      ).toBeInTheDocument();
     });
 
-    it("does NOT render bookshelf or list view while loading", () => {
-      mockStoryContext = { ...mockStoryContext, isLoading: true, chapters: [] };
+    it("asks a signed-out visitor to sign in, and never to select a group", () => {
+      mockUser = null;
       renderPage();
-      expect(screen.queryByTestId("bookshelf-view")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("chapter-list")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: /sign in to read your campaign's story/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    it("hides the create action while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.queryByRole("button", { name: /new chapter/i })
+      ).not.toBeInTheDocument();
+    });
+
+    // Rewritten: this used to assert StoryViewTabs was hidden along with the
+    // create action while signed out. That was wrong -- StoryViewTabs is pure
+    // navigation between story views, not a control that acts on data, and
+    // the gated-states spec says navigation stays visible in every state
+    // because it is how someone arrives at these pages in the first place.
+    it("keeps StoryViewTabs visible while signed out, unlike the create action", () => {
+      mockUser = null;
+      renderPage();
+      expect(screen.getByTestId("story-view-tabs")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /new chapter/i })
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
     });
   });
 
@@ -236,9 +274,11 @@ describe("ChaptersPage", () => {
       expect(screen.getByTestId("breadcrumb-item-2")).toHaveTextContent("Chapters");
     });
 
-    it("renders page heading 'Session Chronicles'", () => {
+    it("renders page heading 'Session Chronicles' as the h1", () => {
       renderPage();
-      expect(screen.getByTestId("typography-h2")).toHaveTextContent("Session Chronicles");
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Session Chronicles" })
+      ).toBeInTheDocument();
     });
 
     it("renders StoryViewTabs in the header", () => {
@@ -271,7 +311,9 @@ describe("ChaptersPage", () => {
   describe("resume bar wiring", () => {
     it("shows 'Start reading' when nothing has been read", () => {
       renderPage();
-      expect(screen.getByTestId("typography-h4")).toHaveTextContent("Start reading");
+      expect(
+        screen.getByRole("heading", { name: "Start reading" })
+      ).toBeInTheDocument();
     });
 
     it("shows the current chapter when progress exists", () => {
@@ -283,7 +325,7 @@ describe("ChaptersPage", () => {
     it("navigates to the resume chapter when Resume is clicked", () => {
       mockStoryContext = { ...mockStoryContext, storyProgress: PROGRESS_STARTED };
       renderPage();
-      fireEvent.click(screen.getByText("Resume"));
+      fireEvent.click(screen.getByRole("button", { name: "Resume" }));
       expect(mockNavigateToPage).toHaveBeenCalledWith("/story/chapters/chapter-02");
     });
   });
@@ -292,20 +334,20 @@ describe("ChaptersPage", () => {
   // User controls
   // -------------------------------------------------------------------------
   describe("user controls", () => {
-    it("renders 'New Chapter' button when user is signed in", () => {
+    it("renders 'New Chapter' button when signed in with a campaign", () => {
       renderPage();
-      expect(screen.getByTestId("button-new-chapter")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /new chapter/i })).toBeInTheDocument();
     });
 
-    it("does NOT render 'New Chapter' button when user is not signed in", () => {
+    it("does NOT render 'New Chapter' button when the page is not ready", () => {
       mockUser = null;
       renderPage();
-      expect(screen.queryByTestId("button-new-chapter")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /new chapter/i })).not.toBeInTheDocument();
     });
 
     it("navigates to /story/chapters/create on 'New Chapter' click", () => {
       renderPage();
-      fireEvent.click(screen.getByTestId("button-new-chapter"));
+      fireEvent.click(screen.getByRole("button", { name: /new chapter/i }));
       expect(mockNavigateToPage).toHaveBeenCalledWith("/story/chapters/create");
     });
   });
@@ -441,15 +483,9 @@ describe("ChaptersPage", () => {
       expect(mockNavigateToPage).toHaveBeenCalledWith("/story/chapters/edit/chapter-01");
     });
 
-    it("passes isAdmin=true to child views when signed in", () => {
+    it("passes isAdmin=true to child views when the page is ready", () => {
       renderPage();
       expect(screen.getByTestId("bookshelf-view")).toHaveAttribute("data-is-admin", "true");
-    });
-
-    it("passes isAdmin=false to child views when signed out", () => {
-      mockUser = null;
-      renderPage();
-      expect(screen.getByTestId("bookshelf-view")).toHaveAttribute("data-is-admin", "false");
     });
 
     it("passes the full item count to BookshelfView", () => {

@@ -1,11 +1,10 @@
 // src/features/campaign-entities/npcs/context/NPCContext.tsx
-import React, { createContext, useContext, useCallback, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { NPC, NPCContextValue, NPCRelationship, NPCNote } from '../types';
 import { DomainData } from 'core/types/common';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser } from 'features/user-management';
-import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
 import { generateUniqueEntityId } from 'core/utils/entity-id';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { Location } from '../../locations/types';
@@ -15,9 +14,6 @@ const NPCContext = createContext<NPCContextValue | undefined>(undefined);
 export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use the NPCData hook for basic CRUD operations
   const { npcs, loading, error, refreshNPCs, hasRequiredContext } = useNPCData();
-  // Single shared source of truth for "still resolving vs. genuinely no
-  // selection" (bug #1413) -- see the hook's doc comment.
-  const { missingContext } = useCampaignContextStatus();
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();
   
@@ -184,17 +180,6 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await refreshNPCs();
   }, [hasRequiredContext, user, deleteData, refreshNPCs]);
 
-  // Error message for missing context. `missingContext` is only ever
-  // 'group'/'campaign' once resolution has actually finished (bug #1413) --
-  // while it's still in flight this stays null and `isLoading` below (which
-  // already has `isResolving` folded into it by `useNPCData`) carries the
-  // spinner instead.
-  const contextError = useMemo(() => {
-    if (missingContext === 'group') return "Please select a group to view NPCs";
-    if (missingContext === 'campaign') return "Please select a campaign to view NPCs";
-    return null;
-  }, [missingContext]);
-
   const value: NPCContextValue = {
     npcs,
     isLoading: loading,
@@ -204,7 +189,13 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // key at all, which makes this expression `undefined` and violates the
     // `string | null` contract consumers rely on. Cheap to keep, and it means the
     // contract holds regardless of how the hook is supplied.
-    error: contextError || error || writeError || null,
+    // Missing group/campaign is a STATE, not an error, and this no longer
+    // fabricates a sentence out of it. A context can see that `activeGroupId`
+    // is absent, but not WHY -- signed out, still resolving, or simply between
+    // campaigns are three different situations needing three different things
+    // said, and only the page knows which one it is in. `usePageGate` makes
+    // that distinction and `gated-page-copy.ts` holds the words.
+    error: error || writeError || null,
     getNPCById,
     getNPCsByQuest,
     getNPCsByLocation,

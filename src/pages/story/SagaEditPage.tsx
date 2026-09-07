@@ -6,22 +6,35 @@ import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import { useNavigation } from 'shared/context/NavigationContext';
-import { useAuth } from 'features/user-management';
 import { useSagaData, useStory } from 'features/storytelling';
 import type { SagaContentInput } from 'features/storytelling';
-import { Book, Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
+import { Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
 import { exportChaptersAsText } from 'shared/utils/export-utils';
 import Dialog from '../../core/components/Dialog';
+import { usePageGate, GatedContent } from 'shared/components/gated';
+import PageShell from 'shared/components/page-shell/PageShell';
 
 // Constants for default content if none exists
 const SAGA_DEFAULT_OPENING = "In a realm where magic weaves through the fabric of reality and ancient powers stir from long slumber, a group of unlikely heroes finds their fates intertwined by destiny's unseen hand.";
 
+/**
+ * Saga editor.
+ *
+ * Write route ("story", `mode: "write"`) -- a signed-out visitor now sees
+ * "Sign in to write a chapter" (the shared write-mode heading for this page
+ * key) with the title still in place, instead of the old `!user` redirect
+ * effect that silently bounced them back to `/story/saga` before the page
+ * ever said why. `handleSubmit`'s guard drops both `!user` and
+ * `!hasRequiredContext` in favour of `!gate.canAct`, which already folds in
+ * both of those plus the fetch error.
+ */
 const SagaEditPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
-  const { user } = useAuth();
   const { chapters } = useStory();
-  const { saga, loading, error, hasRequiredContext, saveSaga } = useSagaData();
-  
+  const { saga, loading, error, saveSaga } = useSagaData();
+
+  const gate = usePageGate('story', { loading, error, mode: 'write' });
+
   const [title, setTitle] = useState('The Campaign Saga');
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
@@ -34,18 +47,11 @@ const SagaEditPage: React.FC = () => {
     if (saga) {
       setTitle(saga.title);
       setContent(saga.content);
-    } else if (!loading && hasRequiredContext) {
+    } else if (gate.canAct) {
       // Initialize with default content
       setContent(SAGA_DEFAULT_OPENING);
     }
-  }, [saga, loading, hasRequiredContext]);
-
-  // Redirect if not signed in
-  useEffect(() => {
-    if (!loading && !user) {
-      navigateToPage('/story/saga');
-    }
-  }, [loading, user, navigateToPage]);
+  }, [saga, gate.canAct]);
 
   // Breadcrumb items
   const breadcrumbItems = [
@@ -57,23 +63,23 @@ const SagaEditPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!user || saving || !hasRequiredContext) return;
-    
+
+    if (!gate.canAct || saving) return;
+
     setLocalError(null);
     setSuccess(null);
     setSaving(true);
-    
+
     try {
       // Validate inputs
       if (!title.trim()) {
         throw new Error('Title is required');
       }
-      
+
       if (!content.trim()) {
         throw new Error('Content is required');
       }
-      
+
       // Update or create saga document. Attribution (created*/modified*) is not a
       // page concern — useSagaData computes it from the acting user and group
       // profile (see bug #1203).
@@ -83,12 +89,12 @@ const SagaEditPage: React.FC = () => {
         lastUpdated: new Date().toISOString(),
         version: '1.0' // Simple versioning for now
       };
-      
+
       const success = await saveSaga(sagaData);
-      
+
       if (success) {
         setSuccess('Saga updated successfully');
-        
+
         // Automatically navigate back after short delay
         setTimeout(() => {
           navigateToPage('/story/saga');
@@ -96,7 +102,7 @@ const SagaEditPage: React.FC = () => {
       } else {
         throw new Error('Failed to save saga');
       }
-      
+
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'An error occurred while saving');
     } finally {
@@ -114,7 +120,7 @@ const SagaEditPage: React.FC = () => {
       setLocalError('No chapters available to export');
       return;
     }
-    
+
     try {
       exportChaptersAsText(chapters);
     } catch (err) {
@@ -123,64 +129,13 @@ const SagaEditPage: React.FC = () => {
     }
   };
 
-  // Loading is checked BEFORE the context error on purpose (bug #1413).
-  // `loading` now folds in "auth/campaign still restoring", so a fresh page
-  // load renders the spinner rather than claiming no campaign is selected while
-  // the selection is still being restored.
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Typography>Loading...</Typography>
-      </div>
-    );
-  }
-
-  // Handle context errors
-  if (!hasRequiredContext) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8 card">
-          <Typography className={`typography`}>
-            Please select a group and campaign to edit the saga.
-          </Typography>
-        </Card>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8 card">
-          <Typography color="error">
-            {error}
-          </Typography>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null; // Will be redirected by useEffect
-  }
-
   return (
-    <div className="min-h-screen p-4 content">
-      <div className="max-w-7xl mx-auto">
-        {/* Breadcrumb Navigation */}
-        <Breadcrumb items={breadcrumbItems} className="mb-4" />
-        
-        {/* Page Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Book className="w-6 h-6 primary" />
-            <Typography variant="h2" className="typography-heading">
-              Edit Campaign Saga
-            </Typography>
-          </div>
-          
-          {/* Export button - subtle placement in the header */}
-          <div className="flex items-center gap-2">
+    <PageShell
+      title="Edit Campaign Saga"
+      breadcrumb={<Breadcrumb items={breadcrumbItems} className="mb-4" />}
+      actions={
+        gate.canAct && (
+          <>
             <Button
               variant="outline"
               size="sm"
@@ -190,15 +145,17 @@ const SagaEditPage: React.FC = () => {
             >
               Export Chapter Content
             </Button>
-            <button 
+            <button
               className="hover:opacity-80 typography-secondary"
               onClick={() => setShowExportInfo(true)}
             >
               <HelpCircle className="w-4 h-4" />
             </button>
-          </div>
-        </div>
-        
+          </>
+        )
+      }
+    >
+      <GatedContent gate={gate}>
         {/* Edit Form */}
         <Card>
           <form onSubmit={handleSubmit}>
@@ -209,13 +166,13 @@ const SagaEditPage: React.FC = () => {
                   <Typography color="error">{localError}</Typography>
                 </div>
               )}
-              
+
               {success && (
                 <div className="p-4 mb-4 rounded-md success-icon-bg">
                   <Typography color="success">{success}</Typography>
                 </div>
               )}
-              
+
               {/* Form Fields */}
               <Input
                 label="Saga Title"
@@ -224,7 +181,7 @@ const SagaEditPage: React.FC = () => {
                 fullWidth
                 required
               />
-              
+
               <Input
                 label="Saga Content"
                 value={content}
@@ -236,7 +193,7 @@ const SagaEditPage: React.FC = () => {
                 helperText="Press Enter for new paragraphs. Tell the epic story of your campaign!"
               />
             </Card.Content>
-            
+
             <Card.Footer className="flex justify-between">
               <Button
                 variant="outline"
@@ -246,7 +203,7 @@ const SagaEditPage: React.FC = () => {
               >
                 Cancel
               </Button>
-              
+
               <Button
                 variant="primary"
                 startIcon={<Save />}
@@ -258,53 +215,53 @@ const SagaEditPage: React.FC = () => {
             </Card.Footer>
           </form>
         </Card>
-      </div>
-      
-      {/* Export Info Dialog */}
-      <Dialog
-        open={showExportInfo}
-        onClose={() => setShowExportInfo(false)}
-        title="About Chapter Export"
-      >
-        <div className="space-y-4">
-          <Typography>
-            The "Export Chapter Content" feature creates a text file containing all your chapters in order.
-          </Typography>
-          
-          <Typography>
-            This can be useful when:
-          </Typography>
-          
-          <ul className="list-disc pl-5 space-y-1">
-            <li>
-              <Typography>
-                You want to reference all chapter content while writing your saga
-              </Typography>
-            </li>
-            <li>
-              <Typography>
-                You need to create a backup of all your chapter content
-              </Typography>
-            </li>
-            <li>
-              <Typography>
-                You want to use the content in another application
-              </Typography>
-            </li>
-          </ul>
-          
-          <Typography>
-            The exported file will be downloaded to your device automatically.
-          </Typography>
-          
-          <div className="flex justify-end mt-4">
-            <Button onClick={() => setShowExportInfo(false)}>
-              Close
-            </Button>
+
+        {/* Export Info Dialog */}
+        <Dialog
+          open={showExportInfo}
+          onClose={() => setShowExportInfo(false)}
+          title="About Chapter Export"
+        >
+          <div className="space-y-4">
+            <Typography>
+              The "Export Chapter Content" feature creates a text file containing all your chapters in order.
+            </Typography>
+
+            <Typography>
+              This can be useful when:
+            </Typography>
+
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <Typography>
+                  You want to reference all chapter content while writing your saga
+                </Typography>
+              </li>
+              <li>
+                <Typography>
+                  You need to create a backup of all your chapter content
+                </Typography>
+              </li>
+              <li>
+                <Typography>
+                  You want to use the content in another application
+                </Typography>
+              </li>
+            </ul>
+
+            <Typography>
+              The exported file will be downloaded to your device automatically.
+            </Typography>
+
+            <div className="flex justify-end mt-4">
+              <Button onClick={() => setShowExportInfo(false)}>
+                Close
+              </Button>
+            </div>
           </div>
-        </div>
-      </Dialog>
-    </div>
+        </Dialog>
+      </GatedContent>
+    </PageShell>
   );
 };
 

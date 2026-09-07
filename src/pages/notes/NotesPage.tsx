@@ -1,50 +1,46 @@
 // src/pages/notes/NotesPage.tsx
 import React from "react";
-import Typography from "../../core/components/Typography";
-import Button from "../../core/components/Button";
+import Button from "core/components/Button";
 import { NotesList, useNotes, useCreateNote } from "features/collaboration";
 import { useCampaigns } from "features/user-management";
-import { Plus, AlertCircle } from "lucide-react";
+import { usePageGate, GatedContent } from "shared/components/gated";
+import PageShell from "shared/components/page-shell/PageShell";
+import { Plus } from "lucide-react";
 
 /**
- * Notes index: the page header, then the list itself.
+ * Notes index.
  *
- * `isLoading` is read purely to suppress the "no campaign selected" warning
- * while auth/campaign context is still being restored (bug #1413).
- * NoteContext already folds `useCampaignContextStatus().isResolving` into it,
- * so this needs no additional hook here — which also keeps NotesPage off the
- * `useAuth`/`useGroups` surface its test does not mock.
+ * Uses the `notes` page key, whose `requires` is `"campaign"` — `NoteContext`
+ * sets `filteredNotes = []` whenever there is no `activeCampaignId` ("If no
+ * active campaign, show no notes"), so a member with a group but no campaign
+ * chosen has nothing to read and belongs on the campaign picker, not here.
+ * (This page used to gate on `"group"` alone, on the mistaken belief that
+ * `NoteContext` only *filtered* by campaign rather than discarding everything
+ * without one.)
+ *
+ * The header action is additionally gated on `activeCampaignId`, which is now
+ * redundant with the page-level gate above but kept as a direct guard on the
+ * write path itself.
  */
 const NotesPage: React.FC = () => {
   const { isLoading } = useNotes();
   const { activeCampaignId, activeCampaign } = useCampaigns();
   const { createAndOpen } = useCreateNote();
 
+  const gate = usePageGate("notes", { loading: isLoading });
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 notes-page">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <Typography variant="h2" className="typography-heading">
-            Notes
-          </Typography>
-
-          {activeCampaign && (
-            <Typography variant="body" color="secondary" className="mt-1">
-              Your private notes for {activeCampaign.name}. Only you can read them.
-            </Typography>
-          )}
-
-          {!isLoading && !activeCampaignId && (
-            <div className="flex items-center mt-2 gap-2">
-              <AlertCircle className="w-4 h-4 status-unknown" />
-              <Typography variant="body-sm" color="secondary">
-                No campaign selected - select a campaign to view and create notes
-              </Typography>
-            </div>
-          )}
-        </div>
-
-        {activeCampaignId && (
+    <PageShell
+      className="notes-page"
+      title="Notes"
+      subtitle={
+        activeCampaign
+          ? `Your private notes for ${activeCampaign.name}. Only you can read them.`
+          : "Your private notes. Only you can read them."
+      }
+      actions={
+        gate.canAct &&
+        activeCampaignId && (
           <Button
             onClick={createAndOpen}
             variant="primary"
@@ -53,11 +49,13 @@ const NotesPage: React.FC = () => {
           >
             New note
           </Button>
-        )}
-      </div>
-
-      <NotesList />
-    </div>
+        )
+      }
+    >
+      <GatedContent gate={gate}>
+        <NotesList />
+      </GatedContent>
+    </PageShell>
   );
 };
 

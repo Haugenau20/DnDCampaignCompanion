@@ -1,0 +1,61 @@
+import { SIGNED_OUT_EXAMPLE } from "../signed-out-example";
+
+describe("SIGNED_OUT_EXAMPLE", () => {
+  it("names the campaign and its progress", () => {
+    expect(SIGNED_OUT_EXAMPLE.campaignTitle).toBe("The Sunless Citadel");
+    expect(SIGNED_OUT_EXAMPLE.subtitle.length).toBeGreaterThan(0);
+  });
+
+  it("has a four-cell stat strip", () => {
+    expect(SIGNED_OUT_EXAMPLE.stats).toHaveLength(4);
+    SIGNED_OUT_EXAMPLE.stats.forEach((stat) => {
+      expect(stat.label.length).toBeGreaterThan(0);
+      expect(Number.isInteger(stat.value)).toBe(true);
+    });
+  });
+
+  it("has three recent rows, each typed as real content", () => {
+    expect(SIGNED_OUT_EXAMPLE.updates).toHaveLength(3);
+    SIGNED_OUT_EXAMPLE.updates.forEach((update) => {
+      expect(["chapter", "quest", "npc"]).toContain(update.kind);
+      expect(update.title.length).toBeGreaterThan(0);
+      expect(update.date.length).toBeGreaterThan(0);
+    });
+  });
+
+  // The constraint that matters. Attribution is what the product's
+  // credibility rests on, so the example must not model fake people writing
+  // things -- and the check is structural rather than a string match, so it
+  // still fails if someone adds a differently-worded author field later.
+  it("carries no authorship anywhere in the fixture", () => {
+    const forbidden =
+      /author|createdby|modifiedby|username|character|player|writtenby|by$/i;
+
+    const walk = (value: unknown, path: string): void => {
+      if (Array.isArray(value)) {
+        value.forEach((item, index) => walk(item, `${path}[${index}]`));
+        return;
+      }
+      if (value && typeof value === "object") {
+        Object.entries(value as Record<string, unknown>).forEach(([key, child]) => {
+          expect(key).not.toMatch(forbidden);
+          walk(child, `${path}.${key}`);
+        });
+      }
+    };
+
+    walk(SIGNED_OUT_EXAMPLE, "SIGNED_OUT_EXAMPLE");
+  });
+
+  it("is frozen, so nothing can mutate it into live data", () => {
+    expect(Object.isFrozen(SIGNED_OUT_EXAMPLE)).toBe(true);
+    expect(Object.isFrozen(SIGNED_OUT_EXAMPLE.stats)).toBe(true);
+    expect(Object.isFrozen(SIGNED_OUT_EXAMPLE.updates)).toBe(true);
+    // Object.freeze is shallow: freezing the arrays does not freeze the
+    // objects inside them. Assert at least one of each is frozen too, so a
+    // regression to "only the containers are frozen" fails here rather than
+    // surfacing as a silent runtime mutation later.
+    expect(Object.isFrozen(SIGNED_OUT_EXAMPLE.stats[0])).toBe(true);
+    expect(Object.isFrozen(SIGNED_OUT_EXAMPLE.updates[0])).toBe(true);
+  });
+});

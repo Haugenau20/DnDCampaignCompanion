@@ -1,25 +1,63 @@
 // src/pages/quests/__tests__/QuestsPage.test.tsx
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import QuestsPage from '../QuestsPage';
+import React from "react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import QuestsPage from "../QuestsPage";
 
 // ---------------------------------------------------------------------------
 // Since the roster moved out of this page and into QuestDirectory, the page's
-// job is exactly what the other three entity pages' is: the header, the create
-// action, the context guards and the loading/error branches. The directory is
-// mocked here the same way NPCDirectory/RumorDirectory/LocationDirectory are in
-// their pages' suites — the roster's own behaviour is covered by
+// job is the header, the create action and wiring usePageGate/GatedContent.
+// The directory is mocked here the same way NPCDirectory/RumorDirectory/
+// LocationDirectory are in their pages' suites — the roster's own behaviour is
+// covered by
 // features/campaign-entities/quests/components/__tests__/QuestDirectory.test.tsx.
+//
+// GatedContent and usePageGate are exercised for real (not mocked), so the
+// features/user-management mock below is extended with everything
+// GatedContent needs — see .superpowers/sdd/2026-09-03-gated-page-states/
+// page-suite-mock.md.
 // ---------------------------------------------------------------------------
 
-let mockUser: { uid: string } | null = { uid: 'user-1' };
-let mockActiveGroupId: string | null = 'group-1';
-let mockActiveCampaignId: string | null = 'campaign-1';
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
 
-jest.mock('features/user-management', () => ({
-  useAuth: () => ({ user: mockUser }),
-  useGroups: () => ({ activeGroupId: mockActiveGroupId }),
-  useCampaigns: () => ({ activeCampaignId: mockActiveCampaignId }),
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  // `loading` is the flag useCampaignContextStatus reads for `isResolving`.
+  // Mocked here rather than mocking the status hook itself, so the real
+  // "still restoring vs. resolved to nothing" logic stays under test -- that
+  // distinction is bug #1413 and the reason state 1 exists.
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: { getCampaigns: jest.fn().mockResolvedValue([]) },
+  },
 }));
 
 interface QuestContextMock {
@@ -34,7 +72,7 @@ let mockQuestContext: QuestContextMock = {
   error: null,
 };
 
-jest.mock('features/campaign-entities', () => ({
+jest.mock("features/campaign-entities", () => ({
   useQuests: () => mockQuestContext,
   QuestDirectory: (props: { quests?: unknown[] }) => (
     <div data-testid="quest-directory">
@@ -45,107 +83,162 @@ jest.mock('features/campaign-entities', () => ({
 
 const mockNavigateToPage = jest.fn();
 
-jest.mock('shared/hooks/useNavigation', () => ({
+jest.mock("shared/hooks/useNavigation", () => ({
   useNavigation: () => ({
     navigateToPage: mockNavigateToPage,
   }),
 }));
 
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <QuestsPage />
+    </MemoryRouter>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-describe('QuestsPage', () => {
+describe("QuestsPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUser = { uid: 'user-1' };
-    mockActiveGroupId = 'group-1';
-    mockActiveCampaignId = 'campaign-1';
+    mockUser = { uid: "user-1" };
+    mockIsResolving = false;
+    mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockQuestContext = {
-      quests: [{ id: 'q1' }, { id: 'q2' }, { id: 'q3' }],
+      quests: [{ id: "q1" }, { id: "q2" }, { id: "q3" }],
       loading: false,
       error: null,
     };
   });
 
   // -------------------------------------------------------------------------
-  // Context guards
+  // Gated states
   // -------------------------------------------------------------------------
-  describe('context guards', () => {
-    it('renders "No Group Selected" when no group is active', () => {
-      mockActiveGroupId = null;
-      render(<QuestsPage />);
-      expect(screen.getByText('No Group Selected')).toBeInTheDocument();
-      expect(screen.queryByTestId('quest-directory')).not.toBeInTheDocument();
-    });
-
-    it('renders "No Campaign Selected" when a group is active but no campaign is', () => {
-      mockActiveCampaignId = null;
-      render(<QuestsPage />);
-      expect(screen.getByText('No Campaign Selected')).toBeInTheDocument();
-      expect(screen.queryByTestId('quest-directory')).not.toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Loading / error states
-  // -------------------------------------------------------------------------
-  describe('loading state', () => {
-    it('renders a loading indicator instead of the directory', () => {
-      mockQuestContext = { ...mockQuestContext, loading: true, quests: [] };
-      render(<QuestsPage />);
-      expect(screen.getByText('Loading quests...')).toBeInTheDocument();
-      expect(screen.queryByTestId('quest-directory')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('error state', () => {
-    it('renders the error message instead of the directory', () => {
-      mockQuestContext = { ...mockQuestContext, error: 'Firebase error', quests: [] };
-      render(<QuestsPage />);
+  describe("gated states", () => {
+    it("renders the page title and subtitle while signed out", () => {
+      mockUser = null;
+      renderPage();
       expect(
-        screen.getByText('Error Loading Quests. Sign in to view content.')
+        screen.getByRole("heading", { level: 1, name: "Campaign Quests" })
       ).toBeInTheDocument();
-      expect(screen.queryByTestId('quest-directory')).not.toBeInTheDocument();
+    });
+
+    it("asks a signed-out visitor to sign in, and never to select a group", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", {
+          name: /sign in to see your party's quests/i,
+        })
+      ).toBeInTheDocument();
+      // The bug: Header only renders ContextSwitcher for members, so this page
+      // used to name a control the visitor could not see.
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    it("hides the create action while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.queryByRole("button", { name: /create quest/i })
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    });
+
+    // Rewritten: the pre-gate suite asserted the page's own "No Campaign
+    // Selected" / "No Group Selected" copy here. That was the layering
+    // mistake this PR removes -- usePageGate now derives the state and
+    // GatedContent renders the shared pick-campaign panel instead.
+    it("shows the shared pick-campaign panel, not the old copy, when no campaign is selected", () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(
+        screen.queryByText("No Campaign Selected")
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/please select a campaign within your group/i)
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("gated-eyebrow")).toHaveTextContent(
+        /no campaign chosen/i
+      );
+      expect(screen.queryByTestId("quest-directory")).not.toBeInTheDocument();
+    });
+
+    it("shows the shared pick-campaign panel, not the old copy, when no group is selected", () => {
+      mockActiveGroupId = null;
+      renderPage();
+      expect(screen.queryByText("No Group Selected")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/please select a group to view quests/i)
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("gated-eyebrow")).toHaveTextContent(
+        /no campaign chosen/i
+      );
+    });
+
+    // Rewritten: the pre-gate suite asserted the page's own inline error
+    // copy ("Error Loading Quests. Sign in to view content.") here.
+    // GatedContent now owns the error panel and names the noun and the
+    // real error message instead.
+    it("shows the shared error panel, not the old inline copy, on a fetch error", () => {
+      mockQuestContext = {
+        ...mockQuestContext,
+        error: "Firebase error",
+        quests: [],
+      };
+      renderPage();
+      expect(
+        screen.queryByText("Error Loading Quests. Sign in to view content.")
+      ).not.toBeInTheDocument();
+      expect(screen.getByText(/couldn't load quests/i)).toBeInTheDocument();
+      expect(screen.getByText("Firebase error")).toBeInTheDocument();
+      expect(screen.queryByTestId("quest-directory")).not.toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
   // Page header / create action
   // -------------------------------------------------------------------------
-  describe('page header', () => {
-    it('renders the heading and subtitle', () => {
-      render(<QuestsPage />);
-      expect(screen.getByText('Campaign Quests')).toBeInTheDocument();
+  describe("page header", () => {
+    it("renders the heading and subtitle", () => {
+      renderPage();
+      expect(screen.getByText("Campaign Quests")).toBeInTheDocument();
       expect(
         screen.getByText("Track your party's epic adventures and missions")
       ).toBeInTheDocument();
     });
 
-    it('shows "Create Quest" for an authenticated user and navigates on click', () => {
-      render(<QuestsPage />);
-      fireEvent.click(screen.getByText('Create Quest'));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/quests/create');
-    });
-
-    it('hides "Create Quest" when there is no user', () => {
-      mockUser = null;
-      render(<QuestsPage />);
-      expect(screen.queryByText('Create Quest')).not.toBeInTheDocument();
+    it('shows "Create Quest" for a ready user and navigates on click', () => {
+      renderPage();
+      fireEvent.click(screen.getByText("Create Quest"));
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/quests/create");
     });
   });
 
   // -------------------------------------------------------------------------
   // Directory handoff
   // -------------------------------------------------------------------------
-  describe('quest directory', () => {
-    it('renders the directory once group, campaign and data are all ready', () => {
-      render(<QuestsPage />);
-      expect(screen.getByTestId('quest-directory')).toBeInTheDocument();
+  describe("quest directory", () => {
+    it("renders the directory once group, campaign and data are all ready", () => {
+      renderPage();
+      expect(screen.getByTestId("quest-directory")).toBeInTheDocument();
     });
 
-    it('passes every quest through, unfiltered — filtering is the directory\'s job', () => {
-      render(<QuestsPage />);
-      expect(screen.getByTestId('quest-directory-count')).toHaveTextContent('3');
+    it("passes every quest through, unfiltered — filtering is the directory's job", () => {
+      renderPage();
+      expect(screen.getByTestId("quest-directory-count")).toHaveTextContent(
+        "3"
+      );
     });
   });
 });

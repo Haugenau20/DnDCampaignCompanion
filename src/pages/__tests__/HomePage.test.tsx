@@ -1,19 +1,54 @@
-﻿// src/pages/__tests__/HomePage.test.tsx
+// src/pages/__tests__/HomePage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import HomePage from "../HomePage";
+import firebaseServices from "core/services/firebase";
 
 // ---------------------------------------------------------------------------
-// Context / hook mocks
+// GatedContent and usePageGate are exercised for real (not mocked), so the
+// features/user-management mock below is extended with everything
+// GatedContent (and SignedOutHome) need — see .superpowers/sdd/
+// 2026-09-03-gated-page-states/page-suite-mock.md.
 // ---------------------------------------------------------------------------
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: mockUser }),
-  useGroups: () => ({ activeGroupId: mockActiveGroupId }),
-  useCampaigns: () => ({ activeCampaignId: "campaign-1" }),
-}));
 
 let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
 let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: { getCampaigns: jest.fn().mockResolvedValue([]) },
+  },
+}));
 
 jest.mock("features/storytelling", () => ({
   useStory: () => ({
@@ -40,11 +75,6 @@ jest.mock("features/campaign-entities", () => ({
     isLoading: mockIsLoading,
   }),
 }));
-
-// ---------------------------------------------------------------------------
-// Service / utility mocks
-// ---------------------------------------------------------------------------
-jest.mock("core/services/firebase", () => ({}));
 
 jest.mock("shared/utils/attribution-utils", () => ({
   determineAttributionActor: (_item: any, _map: any) => "Unknown",
@@ -87,18 +117,6 @@ jest.mock("pages/layouts/journal/JournalLayout", () => ({
   ),
 }));
 
-jest.mock("../../core/components/Button", () => ({
-  __esModule: true,
-  default: ({ children, onClick, startIcon }: any) => (
-    <button
-      data-testid={`button-${String(children).trim().replace(/\s+/g, "-").toLowerCase()}`}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  ),
-}));
-
 jest.mock("pages/layouts/common/hooks/useLayoutData", () => ({
   __esModule: true,
   default: (props: any) => ({
@@ -114,6 +132,7 @@ jest.mock("pages/layouts/common/hooks/useLayoutData", () => ({
 jest.mock("lucide-react", () => ({
   Book: () => <span data-testid="book-icon" />,
   LayoutDashboard: () => <span data-testid="layout-dashboard-icon" />,
+  Lock: () => <span data-testid="lock-icon" />,
 }));
 
 // ---------------------------------------------------------------------------
@@ -186,7 +205,11 @@ let mockLocations: any[] = [
 // Helpers
 // ---------------------------------------------------------------------------
 function renderPage() {
-  return render(<HomePage />);
+  return render(
+    <MemoryRouter>
+      <HomePage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -195,9 +218,12 @@ function renderPage() {
 describe("HomePage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockIsLoading = false;
     mockUser = { uid: "user-1" };
+    mockIsResolving = false;
     mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
+    mockIsLoading = false;
     mockChapters = [
       {
         id: "ch-1",
@@ -257,7 +283,115 @@ describe("HomePage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Rendering
+  // Gated states
+  // -------------------------------------------------------------------------
+  describe("gated states", () => {
+    // Rewritten from "renders DashboardLayout by default" for a signed-out
+    // user: the old behaviour (a dashboard of zeros) is exactly what this
+    // change removes. `getByRole("heading", { level: 1 })` is scoped to the
+    // level-1 heading deliberately -- SignedOutHome's body prose repeats
+    // words ("campaign", "chapters") that also appear elsewhere in the page,
+    // so an unscoped text query would be ambiguous.
+    it("explains the product instead of a dashboard of zeros while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { level: 1 })
+      ).toHaveTextContent(/everything your table agreed happened/i);
+      expect(screen.queryByTestId("dashboard-layout")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("journal-layout")).not.toBeInTheDocument();
+    });
+
+    it("hides the dashboard/journal toggle while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.queryByRole("group", { name: /choose a view/i })
+      ).not.toBeInTheDocument();
+    });
+
+    // Adapted from the brief: with the shared mock's `getCampaigns` resolving
+    // to `[]` (nobody's campaign list is populated), the pick-campaign panel
+    // lands on its "no campaigns yet" wording rather than "Which campaign?" --
+    // both are the same panel and are asserted the way LocationsPage/NPCsPage
+    // already do, via the eyebrow text that is common to every pick-campaign
+    // sub-state, rather than by guessing which sub-state the empty fixture
+    // produces.
+    it("asks a signed-in member with no campaign to pick one, not a dashboard", () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(screen.getByTestId("gated-eyebrow")).toHaveTextContent(
+        /no campaign chosen/i
+      );
+      expect(screen.queryByTestId("dashboard-layout")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("journal-layout")).not.toBeInTheDocument();
+    });
+
+    it("hides the dashboard/journal toggle when nothing can act on data", () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(
+        screen.queryByRole("group", { name: /choose a view/i })
+      ).not.toBeInTheDocument();
+    });
+
+    // Closes a gap the review flagged: every gated page suite (this one
+    // included, in the "no campaign to pick one" test above) mocks
+    // `getCampaigns` to resolve `[]`, so the "choose" sub-state -- where the
+    // fetched campaigns actually reach the panel and render as choices -- has
+    // never been exercised end to end, even though GatedPageState.test.tsx
+    // proves the panel renders correctly *given* a campaigns prop. This test
+    // drives the real chain: useSelectableCampaigns -> firebaseServices
+    // .campaign.getCampaigns -> GatedContent -> GatedPageState.
+    it("lists the user's actual campaigns as clickable choices once they arrive", async () => {
+      mockActiveCampaignId = null;
+      (firebaseServices.campaign.getCampaigns as jest.Mock).mockResolvedValueOnce([
+        { id: "campaign-1", name: "Phandelver" },
+      ]);
+      renderPage();
+
+      // The fetch is async, so this must be awaited rather than queried
+      // synchronously -- the panel starts in "No campaigns yet" and only
+      // reaches "choose" once the promise resolves.
+      expect(
+        await screen.findByRole("heading", { name: /which campaign\?/i })
+      ).toBeInTheDocument();
+
+      // The choice is a real, clickable button in the panel itself -- not
+      // just text naming the campaign -- because the whole design point was
+      // that the choice is made here, not by sending the user elsewhere.
+      const campaignChoice = screen.getByRole("button", {
+        name: /phandelver/i,
+      });
+      expect(campaignChoice).toBeInTheDocument();
+      // The row also names the group the campaign lives in, which is what
+      // disambiguates two same-named campaigns in different groups.
+      expect(campaignChoice).toHaveTextContent(mockGroups[0].name);
+    });
+
+    it("shows a skeleton and no panel while context is resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/which campaign/i)).not.toBeInTheDocument();
+      expect(screen.queryByTestId("dashboard-layout")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("journal-layout")).not.toBeInTheDocument();
+    });
+
+    // PageShell renders its own `h1` ("Campaign Home") in the non-ready,
+    // non-signed-out states, so the page never loses its identity while
+    // resolving or waiting on a campaign pick.
+    it("still shows a page heading while resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Campaign Home" })
+      ).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Rendering (ready state)
   // -------------------------------------------------------------------------
   describe("rendering", () => {
     it("renders without crashing", () => {
@@ -514,10 +648,15 @@ describe("HomePage", () => {
       );
     });
 
-    it("renders without crashing when all contexts are loading", () => {
+    // Rewritten: a content fetch in flight now folds into the gate's
+    // `resolving` state (via `usePageGate("home", { loading: ... })`), so the
+    // page shows the shared skeleton instead of mounting DashboardLayout with
+    // `loading=true`.
+    it("shows the shared skeleton, not DashboardLayout, when content is loading", () => {
       mockIsLoading = true;
-      const { container } = renderPage();
-      expect(container).toBeInTheDocument();
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByTestId("dashboard-layout")).not.toBeInTheDocument();
     });
   });
 

@@ -3,12 +3,11 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChapterRail, ChapterReader, useStory } from 'features/storytelling';
 import { deriveChapterProgress } from 'features/storytelling/chapters/utils/chapter-progress';
-import Typography from '../../core/components/Typography';
-import Card from '../../core/components/Card';
 import Button from '../../core/components/Button';
 import { useNavigation } from 'shared/context/NavigationContext';
-import { useAuth } from 'features/user-management';
-import { Menu, Loader2 } from 'lucide-react';
+import { usePageGate, GatedContent } from 'shared/components/gated';
+import PageShell from 'shared/components/page-shell/PageShell';
+import { Menu } from 'lucide-react';
 
 /**
  * The chapter reader.
@@ -22,6 +21,16 @@ import { Menu, Loader2 } from 'lucide-react';
  *
  * "Back to Chapters" is gone for the same reason: the persistent rail carries
  * an "All chapters" control, so a second one here would be a duplicate exit.
+ *
+ * Wrapped in `usePageGate`/`GatedContent` ("story", read mode) so a
+ * signed-out visitor or one with no campaign selected sees the shared panel
+ * with the page's title still in place, rather than this page's own ad hoc
+ * loading/error cards. This is also the ordering hazard the gated-states
+ * redesign spec called out by name: `StoryContext.error` used to carry a
+ * "please select a group and campaign" sentence, which has since been
+ * removed now that this gate exists — without it, that removal would have
+ * left this page rendering a blank screen in the no-campaign case instead of
+ * the shared picker.
  */
 const StoryPage: React.FC = () => {
   const { chapterId } = useParams();
@@ -35,7 +44,8 @@ const StoryPage: React.FC = () => {
     updateChapterProgress,
     updateCurrentChapter,
   } = useStory();
-  const { user } = useAuth();
+
+  const gate = usePageGate('story', { loading: isLoading, error });
 
   const [currentChapter, setCurrentChapter] = useState(
     chapterId ? getChapterById(chapterId) : undefined
@@ -143,76 +153,62 @@ const StoryPage: React.FC = () => {
     }
   };
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8 card">
-          <div className="flex items-center gap-4">
-            <Loader2 className="w-6 h-6 animate-spin primary" />
-            <Typography>Loading chapter...</Typography>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8 card">
-          <Typography color="error">
-            {error}
-          </Typography>
-        </Card>
-      </div>
-    );
-  }
+  // No fixed page title exists here on purpose -- the reader IS the page, so
+  // its own chapter title doubles as this page's `h1` (PageShell renders
+  // whatever string it's given as the document's h1; the reader's own
+  // heading, one level down, is an `h3`). "Chapter" is only ever seen for the
+  // instant before the redirect effect above picks a real chapter.
+  const pageTitle = currentChapter
+    ? `${currentChapter.order}. ${currentChapter.title}`
+    : 'Chapter';
 
   return (
-    <div className="min-h-screen content">
-      <div className="flex">
-        <ChapterRail
-          items={railItems}
-          currentChapterId={currentChapter?.id}
-          onChapterSelect={handleChapterSelect}
-          onBackToIndex={() => navigateToPage('/story')}
-          isOpen={isChaptersOpen}
-          onClose={() => setChaptersOpen(false)}
-        />
+    <PageShell title={pageTitle}>
+      <GatedContent gate={gate}>
+        <div className="min-h-screen content">
+          <div className="flex">
+            <ChapterRail
+              items={railItems}
+              currentChapterId={currentChapter?.id}
+              onChapterSelect={handleChapterSelect}
+              onBackToIndex={() => navigateToPage('/story')}
+              isOpen={isChaptersOpen}
+              onClose={() => setChaptersOpen(false)}
+            />
 
-        <div className="flex-1 min-w-0 p-4">
-          {/* Below `lg` the rail is a drawer, so it needs a trigger. Above it the
-              rail is always on screen and this button would open nothing. */}
-          <div className="lg:hidden mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setChaptersOpen(true)}
-              startIcon={<Menu />}
-            >
-              Chapters
-            </Button>
+            <div className="flex-1 min-w-0 p-4">
+              {/* Below `lg` the rail is a drawer, so it needs a trigger. Above it the
+                  rail is always on screen and this button would open nothing. */}
+              <div className="lg:hidden mb-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setChaptersOpen(true)}
+                  startIcon={<Menu />}
+                >
+                  Chapters
+                </Button>
+              </div>
+
+              <ChapterReader
+                content={currentChapter?.content || ''}
+                title={currentChapter ? `${currentChapter.order}. ${currentChapter.title}` : ''}
+                position={restoredPosition.current}
+                chapterNumber={chapterNumber}
+                chapterCount={chapters.length}
+                nextChapterTitle={nextChapter?.title}
+                onProgressChange={handleProgressChange}
+                onNextChapter={() => nextChapter && handleChapterSelect(nextChapter.id)}
+                onPreviousChapter={() => previousChapter && handleChapterSelect(previousChapter.id)}
+                hasNextChapter={!!nextChapter}
+                hasPreviousChapter={!!previousChapter}
+                onEdit={gate.canAct ? handleEditChapter : undefined}
+              />
+            </div>
           </div>
-
-          <ChapterReader
-            content={currentChapter?.content || ''}
-            title={currentChapter ? `${currentChapter.order}. ${currentChapter.title}` : ''}
-            position={restoredPosition.current}
-            chapterNumber={chapterNumber}
-            chapterCount={chapters.length}
-            nextChapterTitle={nextChapter?.title}
-            onProgressChange={handleProgressChange}
-            onNextChapter={() => nextChapter && handleChapterSelect(nextChapter.id)}
-            onPreviousChapter={() => previousChapter && handleChapterSelect(previousChapter.id)}
-            hasNextChapter={!!nextChapter}
-            hasPreviousChapter={!!previousChapter}
-            onEdit={user ? handleEditChapter : undefined}
-          />
         </div>
-      </div>
-    </div>
+      </GatedContent>
+    </PageShell>
   );
 };
 

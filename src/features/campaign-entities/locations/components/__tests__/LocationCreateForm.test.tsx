@@ -96,27 +96,27 @@ describe('LocationCreateForm', () => {
   // Use getByText() for labels and getAllByRole('textbox') for inputs.
 
   // -------------------------------------------------------------------------
-  // No required context
+  // Gated state moved to the page
+  //
+  // This form used to render its own "No Active Group or Campaign" card when
+  // group/campaign context was missing. That assertion encoded a layering
+  // mistake: a form cannot tell a signed-out visitor from one still
+  // resolving from one simply between campaigns. The gated state now lives
+  // on LocationCreatePage (via usePageGate/GatedContent) -- see that page's
+  // suite for the moved assertions -- and this form renders its fields
+  // whenever it reaches its own render at all, regardless of
+  // activeGroupId/activeCampaignId, since a form that gets here has the
+  // context it needs by construction.
   // -------------------------------------------------------------------------
-  describe('missing context', () => {
-    test('should show "No Active Group or Campaign" when group/campaign missing', () => {
+  describe('rendering regardless of group/campaign context', () => {
+    // Bug #251: the Input component renders labels without htmlFor/id
+    // association, so getByLabelText() does not work here -- use getByText()
+    // against the visible label instead, matching the rest of this suite.
+    test('renders its fields whenever it is rendered at all', () => {
       setupMocks({ activeGroupId: null, activeCampaignId: null });
       render(<LocationCreateForm />);
-      expect(screen.getByText('No Active Group or Campaign')).toBeInTheDocument();
-    });
-
-    test('should show Go Back button when context is missing', () => {
-      setupMocks({ activeGroupId: null, activeCampaignId: null });
-      render(<LocationCreateForm />);
-      expect(screen.getByRole('button', { name: /go back/i })).toBeInTheDocument();
-    });
-
-    test('should call onCancel when Go Back is clicked in missing context state', () => {
-      setupMocks({ activeGroupId: null, activeCampaignId: null });
-      const onCancel = jest.fn();
-      render(<LocationCreateForm onCancel={onCancel} />);
-      fireEvent.click(screen.getByRole('button', { name: /go back/i }));
-      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Name *')).toBeInTheDocument();
+      expect(screen.getByText('Description *')).toBeInTheDocument();
     });
   });
 

@@ -1,6 +1,7 @@
 // src/pages/notes/__tests__/NotePage.test.tsx
 import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import NotePage from "../NotePage";
 
 // ---------------------------------------------------------------------------
@@ -14,27 +15,53 @@ jest.mock("react-router-dom", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Context mocks
+// Page-suite gate mock (shared across Tasks 8-13 -- see page-suite-mock.md),
+// extended with `activeCampaign`/`campaigns` as separately settable fixtures:
+// NotePage's cross-campaign lookup needs the full `campaigns` list (not just
+// the active one), which the base block doesn't carry.
 // ---------------------------------------------------------------------------
-let mockUser: any = { uid: "user-1" };
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
 let mockActiveGroupId: string | null = "group-1";
-
-interface CampaignsMock {
-  activeCampaignId: string | null;
-  activeCampaign: { id: string; name: string } | null;
-  campaigns: any[];
-}
-
-let mockCampaigns: CampaignsMock = {
-  activeCampaignId: "campaign-1",
-  activeCampaign: { id: "campaign-1", name: "The Fellowship" },
-  campaigns: [{ id: "campaign-1", name: "The Fellowship" }],
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockActiveCampaign: { id: string; name: string } | null = {
+  id: "campaign-1",
+  name: "The Fellowship",
 };
+let mockCampaignsList: Array<{ id: string; name: string }> = [
+  { id: "campaign-1", name: "The Fellowship" },
+];
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
 
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: mockUser }),
-  useGroups: () => ({ activeGroupId: mockActiveGroupId }),
-  useCampaigns: () => mockCampaigns,
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaign,
+    campaigns: mockCampaignsList,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: { getCampaigns: jest.fn().mockResolvedValue([]) },
+  },
 }));
 
 const mockDeleteNote = jest.fn().mockResolvedValue(undefined);
@@ -51,7 +78,7 @@ jest.mock("shared/hooks/useNavigation", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// DocumentService mock — used for cross-campaign note fetching
+// DocumentService mock -- used for cross-campaign note fetching
 // ---------------------------------------------------------------------------
 const mockGetDocument = jest.fn().mockResolvedValue(null);
 
@@ -72,7 +99,7 @@ jest.mock("core/services/firebase/data/DocumentService", () => ({
 // so they are mocked together in a single factory. FloatingUsageIndicator
 // stays mocked (and asserted absent) even though NotePage no longer renders
 // it -- the component itself is untouched and still exported.
-jest.mock("@/features/collaboration", () => {
+jest.mock("features/collaboration", () => {
   const React = require("react");
   const NoteEditorMock = React.forwardRef((props: any, _ref: any) => (
     <div data-testid="note-editor" data-readonly={props.readOnly ? "true" : "false"}>
@@ -123,39 +150,10 @@ jest.mock("@/features/collaboration", () => {
       deleteNote: mockDeleteNote,
       archiveNote: mockArchiveNote,
       getNoteById: mockGetNoteById,
+      isLoading: false,
     }),
   };
 });
-
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, variant, color }: any) => {
-    const testId = variant
-      ? `typography-${variant}`
-      : color
-      ? `typography-${color}`
-      : "typography";
-    return <div data-testid={testId}>{children}</div>;
-  },
-}));
-
-jest.mock("../../../core/components/Button", () => ({
-  __esModule: true,
-  default: ({ children, onClick, disabled }: any) => (
-    <button onClick={onClick} disabled={disabled}>
-      {children}
-    </button>
-  ),
-}));
-
-jest.mock("lucide-react", () => ({
-  ArrowLeft: () => <span data-testid="arrow-left-icon" />,
-  Trash2: () => <span data-testid="trash-icon" />,
-  AlertCircle: () => <span data-testid="alert-circle-icon" />,
-  ExternalLink: () => <span data-testid="external-link-icon" />,
-  // Dialog (real, not mocked) renders its own close icon.
-  X: () => <span data-testid="x-icon" />,
-}));
 
 // ---------------------------------------------------------------------------
 // Sample notes
@@ -173,7 +171,11 @@ const sampleNote = {
 // Helpers
 // ---------------------------------------------------------------------------
 function renderPage() {
-  return render(<NotePage />);
+  return render(
+    <MemoryRouter>
+      <NotePage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -184,16 +186,52 @@ describe("NotePage", () => {
     jest.clearAllMocks();
     mockNoteId = "note-1";
     mockUser = { uid: "user-1" };
+    mockIsResolving = false;
     mockActiveGroupId = "group-1";
-    mockCampaigns = {
-      activeCampaignId: "campaign-1",
-      activeCampaign: { id: "campaign-1", name: "The Fellowship" },
-      campaigns: [{ id: "campaign-1", name: "The Fellowship" }],
-    };
+    mockActiveCampaignId = "campaign-1";
+    mockActiveCampaign = { id: "campaign-1", name: "The Fellowship" };
+    mockCampaignsList = [{ id: "campaign-1", name: "The Fellowship" }];
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockGetNoteById.mockReturnValue(sampleNote);
     mockGetDocument.mockResolvedValue(null);
     mockDeleteNote.mockResolvedValue(undefined);
     mockArchiveNote.mockResolvedValue(undefined);
+  });
+
+  // -------------------------------------------------------------------------
+  // Gated states (the standard tests every page suite adds -- Task 8 Step 1,
+  // adapted: NotePage has no header action to hide, so the third standard
+  // test is replaced with proof that the editor itself doesn't render).
+  // -------------------------------------------------------------------------
+  describe("gated states", () => {
+    it("renders the note's own title as the page heading", () => {
+      renderPage();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Meeting with Gandalf" })
+      ).toBeInTheDocument();
+    });
+
+    it("asks a signed-out visitor to sign in, and never to select a group", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { name: /sign in to read your notes/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    it("does not render the note editor while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(screen.queryByTestId("note-editor")).not.toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -302,14 +340,12 @@ describe("NotePage", () => {
     beforeEach(() => {
       mockGetNoteById.mockReturnValue(undefined);
       mockGetDocument.mockResolvedValue(crossCampaignNote);
-      mockCampaigns = {
-        activeCampaignId: "campaign-1",
-        activeCampaign: { id: "campaign-1", name: "The Fellowship" },
-        campaigns: [
-          { id: "campaign-1", name: "The Fellowship" },
-          { id: "campaign-other", name: "Side Campaign" },
-        ],
-      };
+      mockActiveCampaignId = "campaign-1";
+      mockActiveCampaign = { id: "campaign-1", name: "The Fellowship" };
+      mockCampaignsList = [
+        { id: "campaign-1", name: "The Fellowship" },
+        { id: "campaign-other", name: "Side Campaign" },
+      ];
     });
 
     it("shows cross-campaign warning banner", async () => {
@@ -446,7 +482,7 @@ describe("NotePage", () => {
   // active campaign (line 71), setCrossCampaignNote(null) is a no-op because
   // crossCampaignNote is already null. crossCampaignNotFound is never set to
   // true, so the useEffect condition evaluates to true again and triggers
-  // another fetch — an infinite re-fetch loop. Loading spinner never resolves.
+  // another fetch -- an infinite re-fetch loop. Loading spinner never resolves.
   // Fix: set crossCampaignNotFound(true) in the same-campaign branch (line 71)
   // so the effect does not re-trigger.
   // -------------------------------------------------------------------------
@@ -489,7 +525,7 @@ describe("NotePage", () => {
   // BUG #1151: When getDocument throws, the catch block only logs the error and
   // sets isLoadingCrossCampaignNote=false. crossCampaignNotFound is never set
   // to true, so the useEffect condition is true again and triggers another fetch
-  // — an infinite re-fetch loop on every error. The "Note Not Found" state is
+  // -- an infinite re-fetch loop on every error. The "Note Not Found" state is
   // never reached; the loading spinner never resolves.
   // Fix: set crossCampaignNotFound(true) in the catch block so the effect
   // does not re-trigger after a fetch error.

@@ -25,6 +25,19 @@ interface LocationEditFormProps {
   onCancel?: () => void;
 }
 
+/**
+ * Form for editing an existing location.
+ *
+ * This form used to render its own "No Active Group or Campaign" card when
+ * `activeGroupId`/`activeCampaignId` were absent. A form is the wrong layer
+ * for that: it cannot tell a signed-out visitor from one whose context is
+ * still resolving from one simply between campaigns, so it said the same
+ * sentence to all three. That gated state now lives on `LocationEditPage`
+ * (via `usePageGate`/`GatedContent`), the only layer that actually knows
+ * which of those three is true -- so if this form is rendering at all, it
+ * has the context it needs by construction. Do not re-add a context guard
+ * here; add it to the page instead.
+ */
 const LocationEditForm: React.FC<LocationEditFormProps> = ({
     location,
     onSuccess,
@@ -50,9 +63,6 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
       new Set(location.connectedNPCs || [])
     );
 
-    // Check if we have required context
-    const hasRequiredContext = !!activeGroupId && !!activeCampaignId;
-  
     // Get NPCs data
     const { npcs } = useNPCs();
 
@@ -105,28 +115,6 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
         setLoading(false);
       }
     };
-
-    // If we don't have required context, show a message
-    if (!hasRequiredContext) {
-      return (
-        <Card>
-          <Card.Content className="text-center py-8">
-            <Typography variant="h3" className="mb-4">
-              No Active Group or Campaign
-            </Typography>
-            <Typography color="secondary" className="mb-4">
-              Please select a group and campaign to edit a location.
-            </Typography>
-            <Button
-              variant="ghost"
-              onClick={onCancel}
-            >
-              Go Back
-            </Button>
-          </Card.Content>
-        </Card>
-      );
-    }
 
     return (
       <Card>
