@@ -8,6 +8,9 @@ import { useNPCs } from 'features/campaign-entities';
 import { useLocations } from 'features/campaign-entities';
 import firebaseServices from 'core/services/firebase';
 import { determineAttributionActor, fetchAttributionUsernames } from 'shared/utils/attribution-utils';
+import { usePageGate, GatedContent } from 'shared/components/gated';
+import PageShell from 'shared/components/page-shell/PageShell';
+import SignedOutHome from 'pages/home/SignedOutHome';
 
 // Import layouts
 import DashboardLayout from 'pages/layouts/dashboard/DashboardLayout';
@@ -249,6 +252,27 @@ useEffect(() => {
       })}
     </div>
   );
+
+  const gate = usePageGate('home', { loading: layoutData.loading });
+
+  // Home is the one page allowed an example, and it is a different layout from
+  // the shared panel -- the h1 there is the product's headline, not a page
+  // title. See the spec, §5.
+  if (gate.state === 'signed-out') {
+    return <SignedOutHome />;
+  }
+
+  // CampaignBanner supplies the page's h1 in the ready state. PageShell
+  // supplies it here, where no banner renders -- which is exactly where "you
+  // can still see where you are" matters. Using both would put two h1s on one
+  // page.
+  if (gate.state !== 'ready') {
+    return (
+      <PageShell title="Campaign Home">
+        <GatedContent gate={gate}>{null}</GatedContent>
+      </PageShell>
+    );
+  }
 
   return (
     <div className='max-w-7xl mx-auto'>
