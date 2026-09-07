@@ -43,6 +43,19 @@ const generateLocationId = (name: string): string => {
     .replace(/^-+|-+$/g, '');
 };
 
+/**
+ * Form for creating a new location.
+ *
+ * This form used to render its own "No Active Group or Campaign" card when
+ * `activeGroupId`/`activeCampaignId` were absent. A form is the wrong layer
+ * for that: it cannot tell a signed-out visitor from one whose context is
+ * still resolving from one simply between campaigns, so it said the same
+ * sentence to all three. That gated state now lives on `LocationCreatePage`
+ * (via `usePageGate`/`GatedContent`), the only layer that actually knows
+ * which of those three is true -- so if this form is rendering at all, it
+ * has the context it needs by construction. Do not re-add a context guard
+ * here; add it to the page instead.
+ */
 const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
   initialData,
   onSuccess,
@@ -108,9 +121,6 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
   // Use LocationContext for creating
   const { createLocation } = useLocations();
   const { markEntityAsConverted } = useNotes();
-
-  // Check if we have required context
-  const hasRequiredContext = !!activeGroupId && !!activeCampaignId;
 
   // Handle basic input changes
   const handleInputChange = <K extends keyof Location>(
@@ -188,28 +198,6 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
       setLoading(false);
     }
   };
-
-  // If we don't have required context, show a message
-  if (!hasRequiredContext) {
-    return (
-      <Card>
-        <Card.Content className="text-center py-8">
-          <Typography variant="h3" className="mb-4">
-            No Active Group or Campaign
-          </Typography>
-          <Typography color="secondary" className="mb-4">
-            Please select a group and campaign to create a location.
-          </Typography>
-          <Button
-            variant="ghost"
-            onClick={onCancel}
-          >
-            Go Back
-          </Button>
-        </Card.Content>
-      </Card>
-    );
-  }
 
   return (
     <Card>
