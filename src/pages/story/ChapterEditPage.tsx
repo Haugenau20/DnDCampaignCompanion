@@ -6,23 +6,34 @@ import { ChapterForm, useStory } from 'features/storytelling';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import { useNavigation } from 'shared/context/NavigationContext';
-import { useAuth } from 'features/user-management';
-import { BookOpen } from 'lucide-react';
+import { usePageGate, GatedContent } from 'shared/components/gated';
+import PageShell from 'shared/components/page-shell/PageShell';
 
 /**
- * Page for editing an existing chapter
+ * Page for editing an existing chapter.
+ *
+ * Write route ("story", `mode: "write"`) so a signed-out visitor sees "Sign
+ * in to write a chapter" in place, rather than the old `!user` redirect
+ * effect that bounced them straight back to `/story` before the page could
+ * say why.
+ *
+ * The `isDeleted` redirect stays a bare early return, ahead of `PageShell` —
+ * it renders nothing (a `<Navigate>` has no visible output of its own to lose
+ * a title from), unlike the "chapter not found" case below, which is real
+ * content and lives inside `GatedContent`'s ready branch instead.
  */
 const ChapterEditPage: React.FC = () => {
   const { chapterId } = useParams<{ chapterId: string }>();
-  const { 
-    chapters, 
-    getChapterById, 
-    isLoading, 
-    deleteChapter 
+  const {
+    chapters,
+    getChapterById,
+    isLoading,
+    deleteChapter
   } = useStory();
   const { navigateToPage } = useNavigation();
-  const { user } = useAuth();
-  
+
+  const gate = usePageGate('story', { loading: isLoading, mode: 'write' });
+
   const [chapter, setChapter] = useState(chapterId ? getChapterById(chapterId) : undefined);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -34,17 +45,10 @@ const ChapterEditPage: React.FC = () => {
     }
   }, [chapterId, chapters, getChapterById]);
 
-  // Redirect if user is not signed in
-  useEffect(() => {
-    if (!isLoading && !user) {
-      navigateToPage('/story');
-    }
-  }, [isLoading, user, navigateToPage]);
-
   // Handle delete confirmation
   const handleDeleteConfirm = async () => {
     if (!chapter) return;
-    
+
     try {
       await deleteChapter(chapter.id);
       setIsDeleted(true);
@@ -67,57 +71,35 @@ const ChapterEditPage: React.FC = () => {
     return <Navigate to="/story" />;
   }
 
-  if (isLoading) {
-    return (
-      <div className="p-4">
-        <Typography>Loading...</Typography>
-      </div>
-    );
-  }
-
-  if (!chapter) {
-    return (
-      <div className="p-4">
-        <Typography>Chapter not found</Typography>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null; // Will be redirected by the useEffect
-  }
-
   return (
-    <div className="min-h-screen p-4 content">
-      <div className="max-w-7xl mx-auto">
-        {/* Breadcrumb Navigation */}
-        <Breadcrumb items={breadcrumbItems} className="mb-4" />
-        
-        {/* Page Header */}
-        <div className="mb-6 flex items-center gap-2">
-          <BookOpen className="w-6 h-6 primary" />
-          <Typography variant="h2" className="typography-heading">
-            Edit Chapter
-          </Typography>
-        </div>
-        
-        {/* Chapter Form */}
-        <ChapterForm 
-          mode="edit" 
-          chapter={chapter} 
-          onDeleteClick={() => setIsDeleteDialogOpen(true)} 
-        />
-        
-        {/* Delete Confirmation Dialog */}
-        <DeleteConfirmationDialog
-          isOpen={isDeleteDialogOpen}
-          itemName={`Chapter ${chapter.order}: ${chapter.title}`}
-          itemType="Chapter"
-          onConfirm={handleDeleteConfirm}
-          onClose={() => setIsDeleteDialogOpen(false)}
-        />
-      </div>
-    </div>
+    <PageShell
+      title="Edit Chapter"
+      breadcrumb={<Breadcrumb items={breadcrumbItems} className="mb-4" />}
+    >
+      <GatedContent gate={gate}>
+        {!chapter ? (
+          <Typography>Chapter not found</Typography>
+        ) : (
+          <>
+            {/* Chapter Form */}
+            <ChapterForm
+              mode="edit"
+              chapter={chapter}
+              onDeleteClick={() => setIsDeleteDialogOpen(true)}
+            />
+
+            {/* Delete Confirmation Dialog */}
+            <DeleteConfirmationDialog
+              isOpen={isDeleteDialogOpen}
+              itemName={`Chapter ${chapter.order}: ${chapter.title}`}
+              itemType="Chapter"
+              onConfirm={handleDeleteConfirm}
+              onClose={() => setIsDeleteDialogOpen(false)}
+            />
+          </>
+        )}
+      </GatedContent>
+    </PageShell>
   );
 };
 

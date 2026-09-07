@@ -4,10 +4,10 @@ import { BookViewer, useSagaData } from 'features/storytelling';
 import Typography from '../../core/components/Typography';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import Button from '../../core/components/Button';
-import Card from '../../core/components/Card';
-import { Edit, Loader2 } from 'lucide-react';
+import { Edit } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
-import { useAuth } from 'features/user-management';
+import { usePageGate, GatedContent } from 'shared/components/gated';
+import PageShell from 'shared/components/page-shell/PageShell';
 import StoryViewTabs from './components/StoryViewTabs';
 
 // Constants for saga default content and tips
@@ -20,10 +20,19 @@ const SAGA_WRITING_TIPS = [
   "Include major NPCs and significant locations that were central to your story"
 ];
 
+/**
+ * Campaign saga viewer.
+ *
+ * `hasRequiredContext` from `useSagaData()` is deliberately unused, same
+ * reasoning as every other gated page: on its own it cannot tell "no
+ * selection" from "still restoring" or from "signed out" -- `usePageGate`
+ * distinguishes all three from `useAuth`/`useCampaignContextStatus` directly.
+ */
 const SagaPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
-  const { user } = useAuth();
-  const { saga, loading, error, hasRequiredContext } = useSagaData();
+  const { saga, loading, error } = useSagaData();
+
+  const gate = usePageGate('story', { loading, error });
 
   // Breadcrumb items
   const breadcrumbItems = [
@@ -47,7 +56,7 @@ const SagaPage: React.FC = () => {
     if (saga && saga.content) {
       return saga.content;
     }
-    
+
     // If no saga exists, return default content with tips
     return `${SAGA_DEFAULT_OPENING}\n\n${getPlaceholderContent()}`;
   };
@@ -55,101 +64,52 @@ const SagaPage: React.FC = () => {
   // Generate placeholder content with tips
   const getPlaceholderContent = () => {
     let content = "Your campaign saga has not been written yet. Here are some tips to get started:\n\n";
-    
+
     // Add numbered tips
     SAGA_WRITING_TIPS.forEach((tip, index) => {
       content += `${index + 1}. ${tip}\n`;
     });
-    
+
     content += "\nClick the Edit button to start writing your campaign's epic tale!";
-    
+
     return content;
   };
 
-  // Get title
+  // Get title. Doubles as this page's `h1` (via PageShell) -- there was never
+  // a separate page-chrome title distinct from the saga's own, so reusing it
+  // avoids inventing a second name for the same thing (same reasoning as
+  // NotePage's `pageTitle`).
   const getSagaTitle = () => {
     return saga?.title || "The Campaign Saga";
   };
 
-  // Loading state. Checked BEFORE the context-missing state below (bug
-  // #1413): `loading` has auth/group/campaign restoration folded into it
-  // (see `useSagaData`), so on a fresh page load this stays true for the
-  // whole restore instead of `hasRequiredContext` -- which is briefly false
-  // during that same window regardless of what's actually selected --
-  // committing to a "please select..." message it has to retract seconds
-  // later.
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8 card">
-          <div className="flex items-center gap-4">
-            <Loader2 className="w-6 h-6 animate-spin primary" />
-            <Typography className="typography">Loading saga...</Typography>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  // Handle context errors
-  if (!hasRequiredContext) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8 card">
-          <Typography className={`typography`}>
-            Please select a group and campaign to view the saga.
-          </Typography>
-        </Card>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8 card">
-          <Typography color="error">
-            {error}
-          </Typography>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen p-4 content">
-      <div className="max-w-7xl mx-auto">
-        {/* Breadcrumb Navigation */}
-        <Breadcrumb items={breadcrumbItems} className="mb-4" />
-
-        {/* Page Header */}
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+    <PageShell
+      title={getSagaTitle()}
+      breadcrumb={<Breadcrumb items={breadcrumbItems} className="mb-4" />}
+      actions={
+        gate.canAct && (
+          <>
             <StoryViewTabs />
-            {saga && saga.lastUpdated && (
-              <Typography variant="body-sm" color="secondary" className="hidden md:block">
-                Last updated: {new Date(saga.lastUpdated).toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})}
-              </Typography>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            {/* Only show edit button for authenticated users */}
-            {user && (
-              <Button
-                variant="primary"
-                onClick={handleEditClick}
-                startIcon={<Edit />}
-              >
-                Edit Saga
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Book Viewer */}
+            <Button
+              variant="primary"
+              onClick={handleEditClick}
+              startIcon={<Edit />}
+            >
+              Edit Saga
+            </Button>
+          </>
+        )
+      }
+    >
+      <GatedContent gate={gate}>
         <div className="max-w-4xl mx-auto">
+          {saga && saga.lastUpdated && (
+            <Typography variant="body-sm" color="secondary" className="mb-4">
+              Last updated: {new Date(saga.lastUpdated).toLocaleDateString('en-uk', { year: 'numeric', day: '2-digit', month: '2-digit'})}
+            </Typography>
+          )}
+
           <BookViewer
             content={getSagaContent()}
             title={getSagaTitle()}
@@ -159,8 +119,8 @@ const SagaPage: React.FC = () => {
             hasPreviousChapter={false}
           />
         </div>
-      </div>
-    </div>
+      </GatedContent>
+    </PageShell>
   );
 };
 

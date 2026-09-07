@@ -1,6 +1,7 @@
-﻿// src/pages/story/__tests__/ChapterEditPage.test.tsx
+// src/pages/story/__tests__/ChapterEditPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import ChapterEditPage from "../ChapterEditPage";
 
 // ---------------------------------------------------------------------------
@@ -15,6 +16,51 @@ jest.mock("react-router-dom", () => ({
   Navigate: ({ to }: { to: string }) => {
     mockNavigateComponent(to);
     return <div data-testid="navigate-redirect" data-to={to} />;
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// Page-suite gate mock (shared across Tasks 8-13 -- see page-suite-mock.md)
+// ---------------------------------------------------------------------------
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: {
+      getCampaigns: jest
+        .fn()
+        .mockResolvedValue([{ id: "campaign-2", name: "Icespire Peak" }]),
+    },
   },
 }));
 
@@ -66,10 +112,6 @@ jest.mock("features/storytelling", () => ({
   ),
 }));
 
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: { uid: "user-1" } }),
-}));
-
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
@@ -101,22 +143,43 @@ jest.mock("shared/components/Breadcrumb", () => ({
   ),
 }));
 
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, variant }: any) => (
-    <div data-testid={`typography-${variant ?? "default"}`}>{children}</div>
-  ),
-}));
+// Typography is mapped to its real semantic tag (h1/h2/h3/h4, else `p`) so
+// that `getByRole("heading", ...)` works against both this page's own title
+// (via PageShell) and the shared gated panel's headings (via GatedPageState),
+// while still exposing the same `data-testid` scheme the existing assertions
+// below rely on.
+jest.mock("../../../core/components/Typography", () => {
+  const TAGS: Record<string, string> = { h1: "h1", h2: "h2", h3: "h3", h4: "h4" };
+  return {
+    __esModule: true,
+    default: ({ children, color, variant }: any) => {
+      const Tag = (TAGS[variant] || "p") as any;
+      return (
+        <Tag
+          data-testid={
+            color ? `typography-${color}` : `typography-${variant ?? "default"}`
+          }
+        >
+          {children}
+        </Tag>
+      );
+    },
+  };
+});
 
 jest.mock("lucide-react", () => ({
-  BookOpen: () => <span data-testid="book-open-icon" />,
+  Lock: () => <span data-testid="lock-icon" />,
 }));
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 function renderPage() {
-  return render(<ChapterEditPage />);
+  return render(
+    <MemoryRouter>
+      <ChapterEditPage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -126,6 +189,11 @@ describe("ChapterEditPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockChapterId = "chapter-01";
+    mockUser = { uid: "user-1" };
+    mockIsResolving = false;
+    mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockStoryContext = {
       isLoading: false,
       chapters: [
@@ -137,6 +205,62 @@ describe("ChapterEditPage", () => {
         mockStoryContext.chapters.find((c: any) => c.id === id),
     };
     mockDeleteChapter.mockResolvedValue(undefined);
+  });
+
+  // -------------------------------------------------------------------------
+  // Gated states
+  // -------------------------------------------------------------------------
+  describe("gated states", () => {
+    it("renders the page title while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Edit Chapter" })
+      ).toBeInTheDocument();
+    });
+
+    // Write route: the heading names writing a chapter and never suggests
+    // picking a group.
+    it("asks a signed-out visitor to sign in to write a chapter, and never to select a group", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { name: /sign in to write a chapter/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    it("hides the chapter form while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(screen.queryByTestId("chapter-form")).not.toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    });
+
+    it("shows the shared pick-campaign panel when context is missing", async () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(
+        await screen.findByRole("heading", { name: /which campaign/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("chapter-form")).not.toBeInTheDocument();
+    });
+
+    // Rewritten: the pre-gate page redirected a signed-out visitor straight
+    // back to /story via a `!user` effect, so they never saw why. The
+    // write-mode panel now shows in place instead -- see
+    // ChapterEditPage.tsx's file header.
+    it("does NOT redirect a signed-out visitor away from the page", () => {
+      mockUser = null;
+      renderPage();
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -156,11 +280,11 @@ describe("ChapterEditPage", () => {
       );
     });
 
-    it("renders the 'Edit Chapter' page heading", () => {
+    it("renders the 'Edit Chapter' page heading as the h1", () => {
       renderPage();
-      expect(screen.getByTestId("typography-h2")).toHaveTextContent(
-        "Edit Chapter"
-      );
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Edit Chapter" })
+      ).toBeInTheDocument();
     });
 
     it("renders ChapterForm in edit mode", () => {
@@ -176,11 +300,6 @@ describe("ChapterEditPage", () => {
       expect(
         screen.getByTestId("chapter-form-chapter-title")
       ).toHaveTextContent("The Beginning");
-    });
-
-    it("renders the BookOpen icon", () => {
-      renderPage();
-      expect(screen.getByTestId("book-open-icon")).toBeInTheDocument();
     });
 
     it("renders DeleteConfirmationDialog (closed by default)", () => {
@@ -211,6 +330,13 @@ describe("ChapterEditPage", () => {
       renderPage();
       expect(screen.queryByTestId("chapter-form")).not.toBeInTheDocument();
     });
+
+    it("still renders the page title", () => {
+      renderPage();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Edit Chapter" })
+      ).toBeInTheDocument();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -226,11 +352,11 @@ describe("ChapterEditPage", () => {
       };
     });
 
-    it("renders loading indicator", () => {
+    // Rewritten: `isLoading` now folds into the shared "resolving" state via
+    // `usePageGate`; the page's own bare "Loading..." text is gone.
+    it("shows a skeleton, not the page's own loading text", () => {
       renderPage();
-      expect(screen.getByTestId("typography-default")).toHaveTextContent(
-        "Loading..."
-      );
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
     });
 
     it("does NOT render ChapterForm while loading", () => {

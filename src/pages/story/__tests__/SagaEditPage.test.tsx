@@ -1,7 +1,53 @@
-﻿// src/pages/story/__tests__/SagaEditPage.test.tsx
+// src/pages/story/__tests__/SagaEditPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import SagaEditPage from "../SagaEditPage";
+
+// ---------------------------------------------------------------------------
+// Page-suite gate mock (shared across Tasks 8-13 -- see page-suite-mock.md)
+// ---------------------------------------------------------------------------
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: {
+      getCampaigns: jest
+        .fn()
+        .mockResolvedValue([{ id: "campaign-2", name: "Icespire Peak" }]),
+    },
+  },
+}));
 
 // ---------------------------------------------------------------------------
 // Context / hook mocks
@@ -12,22 +58,12 @@ jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 
-let mockUser: { uid: string; displayName: string } | null = {
-  uid: "user-1",
-  displayName: "TestUser",
-};
-
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: mockUser }),
-}));
-
 const mockSaveSaga = jest.fn();
 
 interface SagaDataMock {
   saga: { title: string; content: string; lastUpdated?: string } | null;
   loading: boolean;
   error: string | null;
-  hasRequiredContext: boolean;
   saveSaga: jest.Mock;
 }
 
@@ -35,7 +71,6 @@ let mockSagaData: SagaDataMock = {
   saga: null,
   loading: false,
   error: null,
-  hasRequiredContext: true,
   saveSaga: mockSaveSaga,
 };
 
@@ -59,22 +94,34 @@ jest.mock("shared/utils/export-utils", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, color, variant }: any) => (
-    <div
-      data-testid={
-        color
-          ? `typography-${color}`
-          : variant
-          ? `typography-${variant}`
-          : "typography-default"
-      }
-    >
-      {children}
-    </div>
-  ),
-}));
+// Typography is mapped to its real semantic tag (h1/h2/h3/h4, else `p`) so
+// that `getByRole("heading", ...)` works against both this page's own title
+// (via PageShell) and the shared gated panel's headings (via GatedPageState),
+// while still exposing the same `data-testid` scheme the existing assertions
+// below rely on.
+jest.mock("../../../core/components/Typography", () => {
+  const TAGS: Record<string, string> = { h1: "h1", h2: "h2", h3: "h3", h4: "h4" };
+  return {
+    __esModule: true,
+    default: ({ children, color, variant, className }: any) => {
+      const Tag = (TAGS[variant] || "p") as any;
+      return (
+        <Tag
+          data-testid={
+            color
+              ? `typography-${color}`
+              : variant
+              ? `typography-${variant}`
+              : "typography-default"
+          }
+          className={className}
+        >
+          {children}
+        </Tag>
+      );
+    },
+  };
+});
 
 jest.mock("shared/components/Breadcrumb", () => ({
   __esModule: true,
@@ -168,18 +215,22 @@ jest.mock("../../../core/components/Dialog", () => ({
 }));
 
 jest.mock("lucide-react", () => ({
-  Book: () => <span data-testid="book-icon" />,
   Save: () => <span data-testid="save-icon" />,
   ArrowLeft: () => <span data-testid="arrow-left-icon" />,
   FileDown: () => <span data-testid="file-down-icon" />,
   HelpCircle: () => <span data-testid="help-circle-icon" />,
+  Lock: () => <span data-testid="lock-icon" />,
 }));
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 function renderPage() {
-  return render(<SagaEditPage />);
+  return render(
+    <MemoryRouter>
+      <SagaEditPage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -188,7 +239,11 @@ function renderPage() {
 describe("SagaEditPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUser = { uid: "user-1", displayName: "TestUser" };
+    mockUser = { uid: "user-1" };
+    mockIsResolving = false;
+    mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockChapters = [
       { id: "ch-1", title: "Chapter 1", order: 1, content: "Content 1" },
     ];
@@ -196,29 +251,74 @@ describe("SagaEditPage", () => {
       saga: null,
       loading: false,
       error: null,
-      hasRequiredContext: true,
       saveSaga: mockSaveSaga,
     };
     mockSaveSaga.mockResolvedValue(true);
   });
 
   // -------------------------------------------------------------------------
-  // Context missing
+  // Gated states
   // -------------------------------------------------------------------------
-  describe("missing required context", () => {
-    it("shows context missing message when hasRequiredContext is false", () => {
-      mockSagaData = { ...mockSagaData, hasRequiredContext: false };
+  describe("gated states", () => {
+    it("renders the page title while signed out", () => {
+      mockUser = null;
       renderPage();
       expect(
-        screen.getByText(/Please select a group and campaign to edit the saga/i)
+        screen.getByRole("heading", { level: 1, name: "Edit Campaign Saga" })
       ).toBeInTheDocument();
     });
 
-    it("does NOT render the edit form inputs when context is missing", () => {
-      mockSagaData = { ...mockSagaData, hasRequiredContext: false };
+    // Write route: the heading names writing a chapter, the shared copy for
+    // this page key, and never suggests picking a group.
+    it("asks a signed-out visitor to sign in to write a chapter, and never to select a group", () => {
+      mockUser = null;
       renderPage();
+      expect(
+        screen.getByRole("heading", { name: /sign in to write a chapter/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    it("hides the export action while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.queryByTestId("button-export-chapter-content")
+      ).not.toBeInTheDocument();
       expect(screen.queryByTestId("input-saga-title")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("textarea-saga-content")).not.toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    });
+
+    // Rewritten: the pre-gate suite asserted this page's own
+    // "Please select a group and campaign to edit the saga" copy, driven by
+    // `hasRequiredContext` (dropped from this page's guard -- see the file
+    // header). `usePageGate` now derives the state and `GatedContent` renders
+    // the shared pick-campaign panel.
+    it("shows the shared pick-campaign panel, not the old copy, when context is missing", async () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(
+        screen.queryByText(/please select a group and campaign/i)
+      ).not.toBeInTheDocument();
+      expect(
+        await screen.findByRole("heading", { name: /which campaign/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("input-saga-title")).not.toBeInTheDocument();
+    });
+
+    // Rewritten: the pre-gate suite redirected a signed-out visitor straight
+    // back to /story/saga via a `!user` effect, so they never saw why. The
+    // write-mode panel now shows in place instead.
+    it("does NOT redirect a signed-out visitor away from the page", () => {
+      mockUser = null;
+      renderPage();
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
     });
   });
 
@@ -226,10 +326,12 @@ describe("SagaEditPage", () => {
   // Loading state
   // -------------------------------------------------------------------------
   describe("loading state", () => {
-    it("shows loading message while loading", () => {
+    // Rewritten: `loading` now folds into the shared "resolving" state via
+    // `usePageGate`; the page's own bare "Loading..." text is gone.
+    it("shows a skeleton, not the page's own loading text, while loading", () => {
       mockSagaData = { ...mockSagaData, loading: true };
       renderPage();
-      expect(screen.getByText(/Loading\.\.\./i)).toBeInTheDocument();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
     });
 
     it("does NOT render form while loading", () => {
@@ -253,18 +355,6 @@ describe("SagaEditPage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Unauthenticated — redirect
-  // -------------------------------------------------------------------------
-  describe("unauthenticated user", () => {
-    it("returns null (renders nothing) when user is null after loading", () => {
-      mockUser = null;
-      const { container } = renderPage();
-      // The component should render null and call navigateToPage for redirect
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/story/saga");
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // Main rendering
   // -------------------------------------------------------------------------
   describe("main rendering", () => {
@@ -273,11 +363,11 @@ describe("SagaEditPage", () => {
       expect(container).toBeInTheDocument();
     });
 
-    it("renders page heading 'Edit Campaign Saga'", () => {
+    it("renders page heading 'Edit Campaign Saga' as the h1", () => {
       renderPage();
-      expect(screen.getByTestId("typography-h2")).toHaveTextContent(
-        "Edit Campaign Saga"
-      );
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Edit Campaign Saga" })
+      ).toBeInTheDocument();
     });
 
     it("renders breadcrumb with correct items", () => {
