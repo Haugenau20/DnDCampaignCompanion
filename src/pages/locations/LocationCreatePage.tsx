@@ -55,25 +55,25 @@ const LocationCreatePage: React.FC = () => {
     <PageShell
       title="Create New Location"
       breadcrumb={
-        <>
-          <Breadcrumb
-            items={[
-              { label: "Locations", href: "/locations" },
-              { label: "Create" },
-            ]}
-            className="mb-4"
-          />
-          <Button
-            variant="ghost"
-            className="mb-4"
-            onClick={handleCancel}
-            startIcon={<ArrowLeft className="w-4 h-4" />}
-          >
-            Back to {noteId ? "Note" : "Locations"}
-          </Button>
-        </>
+        <Breadcrumb
+          items={[
+            { label: "Locations", href: "/locations" },
+            { label: "Create" },
+          ]}
+          className="mb-4"
+        />
       }
     >
+      <div className="mb-8">
+        <Button
+          variant="ghost"
+          onClick={handleCancel}
+          startIcon={<ArrowLeft className="w-4 h-4" />}
+        >
+          Back to {noteId ? "Note" : "Locations"}
+        </Button>
+      </div>
+
       <GatedContent gate={gate}>
         <LocationCreateForm
           initialData={formInitialData}
