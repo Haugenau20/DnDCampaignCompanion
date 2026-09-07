@@ -6,8 +6,24 @@ import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
 import { NPCEditForm, useNPCData } from 'features/campaign-entities';
 import { useNavigation } from 'shared/context/NavigationContext';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { usePageGate, GatedContent } from 'shared/components/gated';
+import PageShell from 'shared/components/page-shell/PageShell';
+import { ArrowLeft } from 'lucide-react';
 
+/**
+ * Page for editing an existing NPC.
+ *
+ * Write route ("npcs", `mode: "write"`) so a signed-out visitor sees "Sign in
+ * to add an NPC" in place, and the shared pick-campaign panel when no group or
+ * campaign is chosen yet -- this page previously had no context guard of its
+ * own at all, so a signed-out or context-less visitor fell straight through
+ * to a bare "NPC not found" or an empty form.
+ *
+ * `loading` (bug #1424) still folds into the gate's `resolving` state the
+ * same way it always did: `npcs` is an empty array while auth and the
+ * campaign are still restoring, and without this the page would render "NPC
+ * not found" for the found-but-not-yet-loaded case.
+ */
 const NPCsEditPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
   const { npcId } = useParams<{ npcId: string }>();
@@ -15,27 +31,10 @@ const NPCsEditPage: React.FC = () => {
 
   const editingNPC = npcs.find(npc => npc.id === npcId);
 
-  // Checked before the "not found" branch below, and the reason this page reads
-  // `loading` at all (bug #1424). `npcs` is an empty array while auth and the
-  // campaign are still restoring, which made `editingNPC` undefined and
-  // rendered a red "NPC not found" for ~4s on every reload of this page before
-  // the real form replaced it. That is #1413's defect wearing different words:
-  // a terminal error state committed while the context is still unsettled.
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8">
-          <div className="flex items-center gap-4">
-            <Loader2 className="w-6 h-6 animate-spin primary" />
-            <Typography>Loading NPC data...</Typography>
-          </div>
-        </Card>
-      </div>
-    );
-  }
+  const gate = usePageGate('npcs', { loading, mode: 'write' });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <PageShell title={editingNPC ? `Edit ${editingNPC.name}` : 'Edit NPC'}>
       <div className="mb-8 flex items-center gap-4">
         <Button
           variant="ghost"
@@ -44,26 +43,25 @@ const NPCsEditPage: React.FC = () => {
         >
           Back to NPCs
         </Button>
-        <Typography variant="h1">
-          {editingNPC ? `Edit ${editingNPC.name}` : 'Edit NPC'}
-        </Typography>
       </div>
 
-      {editingNPC ? (
-        <NPCEditForm
-          npc={editingNPC}
-          onSuccess={() => navigateToPage('/npcs')}
-          onCancel={() => navigateToPage('/npcs')}
-          existingNPCs={npcs}
-        />
-      ) : (
-        <Card>
-          <Card.Content>
-            <Typography color="error">NPC not found</Typography>
-          </Card.Content>
-        </Card>
-      )}
-    </div>
+      <GatedContent gate={gate}>
+        {editingNPC ? (
+          <NPCEditForm
+            npc={editingNPC}
+            onSuccess={() => navigateToPage('/npcs')}
+            onCancel={() => navigateToPage('/npcs')}
+            existingNPCs={npcs}
+          />
+        ) : (
+          <Card>
+            <Card.Content>
+              <Typography color="error">NPC not found</Typography>
+            </Card.Content>
+          </Card>
+        )}
+      </GatedContent>
+    </PageShell>
   );
 };
 

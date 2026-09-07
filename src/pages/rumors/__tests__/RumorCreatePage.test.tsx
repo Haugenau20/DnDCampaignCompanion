@@ -1,6 +1,7 @@
 // src/pages/rumors/__tests__/RumorCreatePage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import RumorCreatePage from "../RumorCreatePage";
 
 // ---------------------------------------------------------------------------
@@ -16,6 +17,51 @@ jest.mock("react-router-dom", () => ({
     state: mockLocationState,
     pathname: "/rumors/create",
   }),
+}));
+
+// ---------------------------------------------------------------------------
+// Page-suite gate mock (shared across Tasks 8-13 -- see page-suite-mock.md)
+// ---------------------------------------------------------------------------
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: {
+      getCampaigns: jest
+        .fn()
+        .mockResolvedValue([{ id: "campaign-2", name: "Icespire Peak" }]),
+    },
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -51,13 +97,6 @@ jest.mock("shared/components/Breadcrumb", () => ({
   ),
 }));
 
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, variant }: any) => (
-    <div data-testid={`typography-${variant ?? "default"}`}>{children}</div>
-  ),
-}));
-
 jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
   default: ({ children, onClick }: any) => (
@@ -67,13 +106,18 @@ jest.mock("../../../core/components/Button", () => ({
 
 jest.mock("lucide-react", () => ({
   ArrowLeft: () => <span data-testid="arrow-left" />,
+  Lock: () => <span data-testid="lock-icon" />,
 }));
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 function renderPage() {
-  return render(<RumorCreatePage />);
+  return render(
+    <MemoryRouter>
+      <RumorCreatePage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -83,6 +127,61 @@ describe("RumorCreatePage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockLocationState = {};
+    mockUser = { uid: "user-1" };
+    mockIsResolving = false;
+    mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
+  });
+
+  // -------------------------------------------------------------------------
+  // Gated states
+  // -------------------------------------------------------------------------
+  describe("gated states", () => {
+    it("renders the page title while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Create New Rumor" })
+      ).toBeInTheDocument();
+    });
+
+    it("asks a signed-out visitor to sign in to record a rumor, and never to select a group", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { name: /sign in to record a rumor/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    it("hides the rumor form while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(screen.queryByTestId("rumor-form")).not.toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    });
+
+    it("shows the shared pick-campaign panel when context is missing", async () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(
+        await screen.findByRole("heading", { name: /which campaign/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("rumor-form")).not.toBeInTheDocument();
+    });
+
+    it("does NOT redirect a signed-out visitor away from the page", () => {
+      mockUser = null;
+      renderPage();
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -104,11 +203,11 @@ describe("RumorCreatePage", () => {
       );
     });
 
-    it("renders the page heading", () => {
+    it("renders the page heading as the h1", () => {
       renderPage();
-      expect(screen.getByTestId("typography-h2")).toHaveTextContent(
-        "Create New Rumor"
-      );
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Create New Rumor" })
+      ).toBeInTheDocument();
     });
 
     it("renders RumorForm", () => {
