@@ -3,10 +3,13 @@
 /**
  * Which selection a page needs before it can show anything.
  *
- * Most pages read campaign-scoped collections and need both a group and a
- * campaign. `notes` is the exception: `NoteContext` fetches on `activeGroupId`
- * alone and applies `activeCampaignId` as a filter afterwards, so a member with
- * a group but no campaign chosen can still see notes.
+ * `"group"` exists for a page whose content is genuinely visible with only a
+ * group chosen. No current page qualifies: `notes` was believed to be that
+ * page (see the note on `GATED_COPY.notes` below) until `NoteContext` was
+ * read closely and turned out to discard everything without a campaign, so
+ * every page here is `"campaign"` today. The value is kept, with its branch
+ * in `usePageGate` still covered by tests, for the day a page's data
+ * genuinely only needs a group -- e.g. a group-wide notes view.
  */
 export type GatedContextRequirement = "group" | "campaign";
 
@@ -126,7 +129,18 @@ export const GATED_COPY: Record<GatedPageKey, GatedPageCopy> = {
       "even the DM. NPCs you mention can be lifted out into the shared " +
       "record when you're ready.",
     noun: "notes",
-    requires: "group",
+    // Was "group": the spec assumed a member with a group but no campaign
+    // chosen has notes to read, because `NoteContext` "fetches on
+    // `activeGroupId` alone and applies `activeCampaignId` as a filter
+    // afterwards". That premise is false -- `NoteContext.tsx` sets
+    // `filteredNotes = []` whenever there is no `activeCampaignId` ("If no
+    // active campaign, show no notes"), so that member has nothing to read.
+    // Gating on `pick-campaign` earlier is honest about that; without it, the
+    // member instead hit NotesList's "No Campaign Selected" dead end or, on
+    // NotePage, a "doesn't exist or you don't have access to it" message that
+    // was simply untrue. `"group"` stays a valid value (see
+    // `GatedContextRequirement`) for the day a group-wide notes view exists.
+    requires: "campaign",
   },
 };
 

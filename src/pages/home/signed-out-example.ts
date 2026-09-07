@@ -44,7 +44,11 @@ export interface SignedOutExample {
  */
 export const SIGNED_OUT_EXAMPLE: SignedOutExample = Object.freeze({
   campaignTitle: "The Sunless Citadel",
-  subtitle: "Started 12/03/2025 · Chapter 14",
+  // Start date corrected from 12/03/2025: that was the same day as the
+  // newest "since you last played" row below, which would mean the campaign
+  // started and reached chapter 14 on the same day. Every other value here
+  // (including the row dates) is unchanged.
+  subtitle: "Started 04/10/2024 · Chapter 14",
   // Object.freeze is shallow, so the containing array is frozen here and
   // each element is frozen individually below -- otherwise
   // SIGNED_OUT_EXAMPLE.stats[0].value = 999 would type-check as `readonly`

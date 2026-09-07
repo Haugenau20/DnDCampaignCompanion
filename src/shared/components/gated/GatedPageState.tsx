@@ -70,10 +70,22 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
 }) => {
   const isSignedOut = variant === "signed-out";
 
-  // Which of the three pick-campaign situations we are in. Kept as one value
+  // Which of the four pick-campaign situations we are in. Kept as one value
   // so the heading, the line and the actions cannot disagree with each other.
+  //
+  // "loading" guards against a real defect: `useSelectableCampaigns`
+  // initialises `loading: false` and only flips it true inside its effect, so
+  // on first paint -- and for the whole cross-group fetch after that --
+  // `campaigns` is `[]` for a reason that has nothing to do with whether the
+  // user has any. Falling through to "no-campaigns" there would tell a member
+  // who has campaigns, just not fetched yet, that there are none -- exactly
+  // the "claim something while the answer is unknown" defect this whole gated
+  // system exists to remove. A member with no group at all needs no fetch to
+  // know that (`hasGroups` is synchronous), so "no-groups" still wins first.
   const pickSituation = !hasGroups
     ? "no-groups"
+    : campaignsLoading && campaigns.length === 0
+    ? "loading"
     : campaigns.length === 0
     ? "no-campaigns"
     : "choose";
@@ -81,6 +93,8 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
   const pickHeading =
     pickSituation === "no-groups"
       ? "Join a group"
+      : pickSituation === "loading"
+      ? "Looking for your campaigns"
       : pickSituation === "no-campaigns"
       ? "No campaigns yet"
       : "Which campaign?";
@@ -88,6 +102,8 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
   const pickLine =
     pickSituation === "no-groups"
       ? "The Companion is invite-only. Ask your DM for a join link."
+      : pickSituation === "loading"
+      ? "Checking your groups for campaigns…"
       : pickSituation === "no-campaigns"
       ? "A group admin creates the first campaign; once there is one, it appears here."
       : `You're in ${campaigns.length === 1 ? "one campaign" : `${campaigns.length} campaigns`}. ` +

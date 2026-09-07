@@ -16,11 +16,15 @@ import { useAuth, useGroups } from "features/user-management";
 /**
  * Page for viewing and editing an individual user note.
  *
- * Uses the `notes` page key, same as `NotesPage` — a member with a group but
- * no campaign chosen can still open a note. `usePageGate`/`GatedContent` own
- * the signed-out and still-resolving states; everything below (invalid id,
- * cross-campaign fetch, not-found) is this note's own business, handled only
- * once the gate says `ready`.
+ * Uses the `notes` page key, same as `NotesPage` — `notes` now requires a
+ * campaign, since `NoteContext` returns nothing without one, so a member with
+ * a group but no campaign chosen is sent to the campaign picker rather than
+ * reaching this page's own "Note Not Found" copy (which used to be shown, and
+ * was untrue: the note wasn't missing, there was simply no campaign to look
+ * for it in). `usePageGate`/`GatedContent` own the signed-out and
+ * still-resolving states; everything below (invalid id, cross-campaign fetch,
+ * not-found) is this note's own business, handled only once the gate says
+ * `ready`.
  */
 const NotePage: React.FC = () => {
   const { noteId } = useParams<{ noteId: string }>();

@@ -241,10 +241,18 @@ describe("ChaptersPage", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("hides StoryViewTabs while signed out, alongside the create action", () => {
+    // Rewritten: this used to assert StoryViewTabs was hidden along with the
+    // create action while signed out. That was wrong -- StoryViewTabs is pure
+    // navigation between story views, not a control that acts on data, and
+    // the gated-states spec says navigation stays visible in every state
+    // because it is how someone arrives at these pages in the first place.
+    it("keeps StoryViewTabs visible while signed out, unlike the create action", () => {
       mockUser = null;
       renderPage();
-      expect(screen.queryByTestId("story-view-tabs")).not.toBeInTheDocument();
+      expect(screen.getByTestId("story-view-tabs")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /new chapter/i })
+      ).not.toBeInTheDocument();
     });
 
     it("shows a skeleton and no message while context is still resolving", () => {

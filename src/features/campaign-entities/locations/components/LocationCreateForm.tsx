@@ -14,7 +14,7 @@ import {
   RelatedQuestsSection
 } from './LocationFormSections';
 import { AlertCircle, Save, X } from 'lucide-react';
-import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
+import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 import { useLocations } from '../context/LocationContext';
 
 interface LocationCreateFormProps {
@@ -31,17 +31,6 @@ interface LocationCreateFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
 }
-
-/**
- * Generate location ID from name
- */
-const generateLocationId = (name: string): string => {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-};
 
 /**
  * Form for creating a new location.

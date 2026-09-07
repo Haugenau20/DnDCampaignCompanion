@@ -200,11 +200,16 @@ describe("SagaPage", () => {
       expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
     });
 
-    it("hides the Edit Saga action and the view tabs while signed out", () => {
+    // Rewritten: this used to assert the view tabs were hidden alongside the
+    // Edit Saga action while signed out. That was wrong -- StoryViewTabs is
+    // pure navigation between story views, not a control that acts on data,
+    // and the gated-states spec says navigation stays visible in every state
+    // because it is how someone arrives at these pages in the first place.
+    it("hides the Edit Saga action while signed out, but keeps the view tabs visible", () => {
       mockUser = null;
       renderPage();
       expect(screen.queryByTestId("button-edit-saga")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("story-view-tabs")).not.toBeInTheDocument();
+      expect(screen.getByTestId("story-view-tabs")).toBeInTheDocument();
     });
 
     it("shows a skeleton and no message while context is still resolving", () => {

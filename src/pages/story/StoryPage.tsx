@@ -26,10 +26,11 @@ import { Menu } from 'lucide-react';
  * signed-out visitor or one with no campaign selected sees the shared panel
  * with the page's title still in place, rather than this page's own ad hoc
  * loading/error cards. This is also the ordering hazard the gated-states
- * redesign spec calls out by name: `StoryContext.error` currently carries a
- * "please select a group and campaign" sentence that a later task removes —
- * without this gate, that removal would leave this page rendering a blank
- * screen in the no-campaign case instead of the shared picker.
+ * redesign spec called out by name: `StoryContext.error` used to carry a
+ * "please select a group and campaign" sentence, which has since been
+ * removed now that this gate exists — without it, that removal would have
+ * left this page rendering a blank screen in the no-campaign case instead of
+ * the shared picker.
  */
 const StoryPage: React.FC = () => {
   const { chapterId } = useParams();

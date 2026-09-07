@@ -28,14 +28,24 @@ describe("GATED_COPY", () => {
     expect(copy.noun.length).toBeGreaterThan(0);
   });
 
-  // Notes fetches on activeGroupId and treats activeCampaignId as a filter
-  // (NoteContext.tsx:51-73), so it is the one page that must not demand a
-  // campaign before it shows anything.
-  it("requires only a group for notes, and a campaign everywhere else", () => {
-    expect(GATED_COPY.notes.requires).toBe("group");
-    ALL_KEYS.filter((key) => key !== "notes").forEach((key) => {
+  // Rewritten: this used to assert `notes.requires === "group"` on the
+  // premise that `NoteContext` fetches on `activeGroupId` and only filters by
+  // `activeCampaignId` afterwards, so a member with a group but no campaign
+  // chosen would still have notes to read. That premise is false --
+  // `NoteContext.tsx` sets `filteredNotes = []` whenever `activeCampaignId` is
+  // absent ("If no active campaign, show no notes") -- so `notes` now
+  // requires a campaign like every other page. `"group"` remains a valid
+  // value of `GatedContextRequirement` (see its JSDoc) for a page that
+  // genuinely only needs one; this test just confirms none currently claims
+  // to be one, and that every `requires` field is one of the two valid values.
+  it("requires a campaign for every page", () => {
+    ALL_KEYS.forEach((key) => {
       expect(GATED_COPY[key].requires).toBe("campaign");
     });
+  });
+
+  it.each(ALL_KEYS)("%s's requires field is a valid GatedContextRequirement", (key) => {
+    expect(["group", "campaign"]).toContain(GATED_COPY[key].requires);
   });
 
   it("never repeats a heading between two pages", () => {

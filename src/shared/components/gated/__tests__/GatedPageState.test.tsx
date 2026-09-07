@@ -126,7 +126,7 @@ describe("GatedPageState, pick campaign", () => {
   });
 
   it("says there are no campaigns yet rather than showing an empty list", () => {
-    renderPanel({ ...pickProps, campaigns: [] });
+    renderPanel({ ...pickProps, campaigns: [], campaignsLoading: false });
     expect(
       screen.getByRole("heading", { name: /no campaigns yet/i })
     ).toBeInTheDocument();
@@ -134,6 +134,42 @@ describe("GatedPageState, pick campaign", () => {
 
   it("offers joining a group when the user belongs to none", () => {
     renderPanel({ ...pickProps, hasGroups: false, campaigns: [] });
+    expect(
+      screen.getByRole("heading", { name: /join a group/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /invite link/i })
+    ).toBeInTheDocument();
+  });
+
+  // FIX 1 -- the cross-group campaign fetch is still in flight, and
+  // `campaigns` is empty only because nothing has arrived yet, not because
+  // there is nothing to arrive. The panel must not claim "No campaigns yet"
+  // here: that is exactly the "claim something while the answer is unknown"
+  // defect the gated-states redesign exists to remove, reproduced inside its
+  // own panel. Verified to fail against the pre-fix code, which computed
+  // `pickSituation` from `campaigns.length` alone and rendered "No campaigns
+  // yet" here.
+  it("does not claim there are no campaigns while the campaign fetch is still in flight", () => {
+    renderPanel({ ...pickProps, campaigns: [], campaignsLoading: true });
+    expect(
+      screen.queryByRole("heading", { name: /no campaigns yet/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/a group admin creates the first campaign/i)
+    ).not.toBeInTheDocument();
+  });
+
+  // A member with no group at all needs no fetch to know that -- `hasGroups`
+  // is already known synchronously, so this case must not wait on
+  // `campaignsLoading` before offering the invite-link action.
+  it("still offers joining a group while campaigns are loading, when there are no groups", () => {
+    renderPanel({
+      ...pickProps,
+      hasGroups: false,
+      campaigns: [],
+      campaignsLoading: true,
+    });
     expect(
       screen.getByRole("heading", { name: /join a group/i })
     ).toBeInTheDocument();

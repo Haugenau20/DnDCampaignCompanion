@@ -88,9 +88,12 @@ const SagaPage: React.FC = () => {
       title={getSagaTitle()}
       breadcrumb={<Breadcrumb items={breadcrumbItems} className="mb-4" />}
       actions={
-        gate.canAct && (
-          <>
-            <StoryViewTabs />
+        <>
+          {/* Navigation, not a control that acts on data -- it is how a
+              visitor moves between story views, so unlike the edit button
+              below it stays visible in every gate state. */}
+          <StoryViewTabs />
+          {gate.canAct && (
             <Button
               variant="primary"
               onClick={handleEditClick}
@@ -98,8 +101,8 @@ const SagaPage: React.FC = () => {
             >
               Edit Saga
             </Button>
-          </>
-        )
+          )}
+        </>
       }
     >
       <GatedContent gate={gate}>

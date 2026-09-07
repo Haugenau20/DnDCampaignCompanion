@@ -103,7 +103,7 @@ const GatedContent: React.FC<GatedContentProps> = ({ gate, children }) => {
 
       {gate.state === "error" && (
         <div className="mx-auto w-full max-w-[560px] rounded-lg p-8 card">
-          <Typography variant="h3" className="mb-2">
+          <Typography variant="h2" className="mb-2">
             Couldn't load {gate.copy.noun}.
           </Typography>
           <Typography color="error" className="mb-6">

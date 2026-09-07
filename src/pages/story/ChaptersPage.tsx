@@ -133,9 +133,12 @@ const ChaptersPage: React.FC = () => {
       title="Session Chronicles"
       breadcrumb={<Breadcrumb items={breadcrumbItems} className="mb-4" />}
       actions={
-        gate.canAct && (
-          <>
-            <StoryViewTabs />
+        <>
+          {/* Navigation, not a control that acts on data -- it is how a
+              visitor moves between story views, so unlike the create button
+              below it stays visible in every gate state. */}
+          <StoryViewTabs />
+          {gate.canAct && (
             <Button
               variant="primary"
               startIcon={<Plus />}
@@ -143,8 +146,8 @@ const ChaptersPage: React.FC = () => {
             >
               New Chapter
             </Button>
-          </>
-        )
+          )}
+        </>
       }
     >
       <GatedContent gate={gate}>
