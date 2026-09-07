@@ -35,20 +35,17 @@ const QuestEditPage: React.FC = () => {
   const gate = usePageGate('quests', { loading, error, mode: 'write' });
 
   return (
-    <PageShell
-      title={editingQuest ? `Edit ${editingQuest.title}` : 'Edit Quest'}
-      breadcrumb={
-        <div className="mb-8 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigateToPage('/quests')}
-            startIcon={<ArrowLeft />}
-          >
-            Back to Quests
-          </Button>
-        </div>
-      }
-    >
+    <PageShell title={editingQuest ? `Edit ${editingQuest.title}` : 'Edit Quest'}>
+      <div className="mb-8 flex items-center gap-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigateToPage('/quests')}
+          startIcon={<ArrowLeft />}
+        >
+          Back to Quests
+        </Button>
+      </div>
+
       <GatedContent gate={gate}>
         {editingQuest ? (
           <QuestEditForm

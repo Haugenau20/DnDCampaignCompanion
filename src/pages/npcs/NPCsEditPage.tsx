@@ -34,20 +34,17 @@ const NPCsEditPage: React.FC = () => {
   const gate = usePageGate('npcs', { loading, mode: 'write' });
 
   return (
-    <PageShell
-      title={editingNPC ? `Edit ${editingNPC.name}` : 'Edit NPC'}
-      breadcrumb={
-        <div className="mb-8 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigateToPage('/npcs')}
-            startIcon={<ArrowLeft />}
-          >
-            Back to NPCs
-          </Button>
-        </div>
-      }
-    >
+    <PageShell title={editingNPC ? `Edit ${editingNPC.name}` : 'Edit NPC'}>
+      <div className="mb-8 flex items-center gap-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigateToPage('/npcs')}
+          startIcon={<ArrowLeft />}
+        >
+          Back to NPCs
+        </Button>
+      </div>
+
       <GatedContent gate={gate}>
         {editingNPC ? (
           <NPCEditForm

@@ -49,18 +49,17 @@ const LocationEditPage: React.FC = () => {
       title={
         editingLocation ? `Edit ${editingLocation.name}` : "Edit Location"
       }
-      breadcrumb={
-        <div className="mb-8 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigateToPage("/locations")}
-            startIcon={<ArrowLeft />}
-          >
-            Back to Locations
-          </Button>
-        </div>
-      }
     >
+      <div className="mb-8 flex items-center gap-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigateToPage("/locations")}
+          startIcon={<ArrowLeft />}
+        >
+          Back to Locations
+        </Button>
+      </div>
+
       <GatedContent gate={gate}>
         {editingLocation ? (
           <LocationEditForm
