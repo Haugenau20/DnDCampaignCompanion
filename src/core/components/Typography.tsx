@@ -65,15 +65,18 @@ const defaultElements: Record<TypographyVariant, keyof JSX.IntrinsicElements> = 
 /**
  * Base styles for each typography variant
  */
+// Line height is per-variant, never global. Titles may set tight; body copy
+// must not -- `leading-none` on a wrapping paragraph collides ascenders with
+// descenders on the line below. See design-language.md section 4.
 const variantStyles: Record<TypographyVariant, string> = {
-  h1: 'text-4xl font-bold tracking-tight',
-  h2: 'text-3xl font-semibold tracking-tight',
-  h3: 'text-2xl font-semibold tracking-tight',
-  h4: 'text-xl font-semibold tracking-tight',
-  'body-lg': 'text-lg',
-  body: 'text-base',
-  'body-sm': 'text-sm',
-  caption: 'text-sm'
+  h1: 'text-4xl font-bold tracking-tight leading-none',
+  h2: 'text-3xl font-semibold tracking-tight leading-none',
+  h3: 'text-2xl font-semibold tracking-tight leading-none',
+  h4: 'text-xl font-semibold tracking-tight leading-none',
+  'body-lg': 'text-lg leading-normal',
+  body: 'text-base leading-normal',
+  'body-sm': 'text-sm leading-normal',
+  caption: 'text-sm leading-normal'
 };
 
 /**
@@ -101,7 +104,6 @@ export const Typography = <C extends React.ElementType = 'p'>({
       // Base styles
       'max-w-full',
       'm-0',
-      'leading-none',
       
       // Variant styles
       variantStyles[variant],
