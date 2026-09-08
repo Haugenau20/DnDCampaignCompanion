@@ -184,15 +184,18 @@ export const lightTheme: Theme = {
         lg: '4px', // Thick border width
       },
     },
-    locationType: {
-      region: '#2563EB', // Strong blue for primary elements
-      city: '#1E40AF', // Deep, rich blue for contrast
-      town: '#3B82F6', // Bright sky blue for highlights
-      village: '#3B82F6', // Bright sky blue for highlights
-      dungeon: '#DC2626', // Bold red for errors
-      landmark: '#3B82F6', // Bright blue for active state
-      building: '#2563EB', // Strong blue for general status
-      poi: '#16A34A', // Strong green for success
-    },
+    // Eight hues at one OKLCH lightness and chroma, hue angle the only
+    // variable. Order is the contract: a mark's hue comes from its index.
+    entityPalette: [
+      '#FFD1CC',
+      '#F6D8B7',
+      '#DCE3BA',
+      '#C0EAD2',
+      '#B4E9EF',
+      '#C3E2FF',
+      '#E0D7FF',
+      '#F8D0EA',
+    ],
+    entityInk: '#1F2430',
   },
 };

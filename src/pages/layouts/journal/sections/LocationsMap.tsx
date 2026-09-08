@@ -111,6 +111,7 @@ const LocationsMap: React.FC<LocationsMapProps> = ({ locations, loading }) => {
                     
                     <div className="flex items-center gap-2 text-xs">
                       <span className={clsx(
+                        'px-2 py-0.5 rounded text-xs',
                         `location-type-${location.type || 'poi'}`
                       )}>
                         {getLocationType(location.type || 'poi')}

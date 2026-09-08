@@ -9,7 +9,9 @@
     "indirection -- it always equalled another token -- so consumers now name",
     "that token directly and the variable is gone.",
     "",
-    "The 38 names not listed here were already role-shaped and are unchanged."
+    "The 38 names not listed here were already role-shaped and are unchanged.",
+    "",
+    "The eight --location-type-* entries are a different kind of retirement from the rest: they were aliases of primary/secondary/accent/status, and their values deliberately change to palette hues. They are listed under retired for the manifest, and under revalued so the gate pins their new values."
   ],
   "renamed": {
     "--bg-primary": "--surface-page-bg",
@@ -70,7 +72,15 @@
     "--book-nav-bg": "--surface-sunken-bg",
     "--book-pagination-bg": "--surface-sunken-bg",
     "--spinner-border": "--field-border",
-    "--spinner-active": "--color-primary"
+    "--spinner-active": "--color-primary",
+    "--location-type-region": "--entity-palette-0",
+    "--location-type-city": "--entity-palette-1",
+    "--location-type-town": "--entity-palette-2",
+    "--location-type-village": "--entity-palette-3",
+    "--location-type-dungeon": "--entity-palette-4",
+    "--location-type-landmark": "--entity-palette-5",
+    "--location-type-building": "--entity-palette-6",
+    "--location-type-poi": "--entity-palette-7"
   },
   "_revalued_comment": [
     "Values deliberately changed after the baseline was taken. Listed per theme,",
@@ -91,6 +101,130 @@
         "to": "#171A21",
         "phase": 2,
         "why": "the footer is the same band as the header (D22)"
+      },
+      "--location-type-region": {
+        "to": "#FFD1CC",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-city": {
+        "to": "#F6D8B7",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-town": {
+        "to": "#DCE3BA",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-village": {
+        "to": "#C0EAD2",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-dungeon": {
+        "to": "#B4E9EF",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-landmark": {
+        "to": "#C3E2FF",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-building": {
+        "to": "#E0D7FF",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-poi": {
+        "to": "#F8D0EA",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      }
+    },
+    "dark": {
+      "--location-type-region": {
+        "to": "#68413E",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-city": {
+        "to": "#60482B",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-town": {
+        "to": "#4C512D",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-village": {
+        "to": "#315643",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-dungeon": {
+        "to": "#22565B",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-landmark": {
+        "to": "#354F6A",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-building": {
+        "to": "#4F4768",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-poi": {
+        "to": "#614157",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      }
+    },
+    "medieval": {
+      "--location-type-region": {
+        "to": "#EDC6C2",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-city": {
+        "to": "#E5CDB2",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-town": {
+        "to": "#CFD5B4",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-village": {
+        "to": "#B9DBC7",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-dungeon": {
+        "to": "#AFDADF",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-landmark": {
+        "to": "#BBD4EE",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-building": {
+        "to": "#D3CCEC",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--location-type-poi": {
+        "to": "#E6C6DA",
+        "phase": 3,
+        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
       }
     }
   }

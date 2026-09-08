@@ -294,6 +294,61 @@ Ghost buttons in the chrome are scoped the same way. That is a structural
 scope, not a theme-conditional patch: it says a ghost button on this surface
 takes this surface's values. Their accent ink measured 2.0:1 on the band.
 
+### D25 — Sigils are monogram chips; the palette is an ordered collection
+Date: 2026-09-08   Status: active   (settles Q1)
+Decision: an entity's mark is its name's initial on a chip whose hue comes from
+`hash(id) % SIGIL_BUCKET_COUNT`, indexing an ordered `entityPalette`. The
+palette becomes index-suffixed variables (`--entity-palette-0` …), not one
+joined value.
+Because: recognition wins over atmosphere, and a letter is read where an
+abstract glyph must be learned. Index suffixes let a manifest assert that a
+specific entry exists and let CSS name one entry without parsing a list, which
+is what Q1 was actually asking. The hue comes from the id and the letter from
+the name, deliberately: renaming an entity keeps its colour, because the id is
+what identity is anchored to.
+A type icon was ruled out -- the row already states its type once, and a
+coloured icon beside a coloured type chip is the redundant encoding section 8
+names as a reliable source of noise. Colouring the location icon was in fact
+exactly that, and it is now uncoloured.
+
+### D26 — The bucket count is a constant, not the palette length
+Date: 2026-09-08   Status: active
+Decision: `SIGIL_BUCKET_COUNT = 8`, declared independently of
+`entityPalette.length`. Themes must define at least that many entries.
+Because: the acceptance criteria require that appending a palette entry does
+not change existing marks, and `hash % palette.length` breaks that outright --
+adding a ninth hue would renumber every entity in every campaign on deploy.
+With a fixed count, appending is inert until the constant is raised, which
+makes growing the palette a visible decision rather than a side effect.
+Reordering still changes existing marks; that is the documented trade, and why
+order is part of the contract rather than an implementation detail.
+The hash is FNV-1a 32-bit: fully specified, dependency-free and identical in
+every engine, which is what "the same mark across reloads and devices"
+actually requires. Its outputs are pinned in a test, so a refactor that
+silently renumbered every mark would fail.
+
+### D27 — Palette values are generated in OKLCH, not hand-picked
+Date: 2026-09-08   Status: active
+Decision: each theme's eight hues are produced at one OKLCH lightness and
+chroma with only the hue angle varying, then written in as sRGB hex.
+Because: the design language asks for "a single narrow band of lightness and
+chroma", and that is a property you can either assert or actually have.
+Picking hexes by eye gets the first part and misses the second. Measured
+against each theme's ink: light 11.23-11.78:1, dark 6.95-7.37:1, medieval
+10.80-11.26:1 -- spreads of 0.55, 0.42 and 0.46, every entry clearing AA. A
+test asserts both the floor and the spread, so a future hand-edit that made one
+entry shout would fail rather than merely look wrong.
+
+### D28 — The mark carries no inline colour
+Date: 2026-09-08   Status: active
+Decision: `EntitySigil` renders `data-sigil-index`, and one CSS rule per index
+supplies the hue.
+Because: paint belongs where a theme can reach it. An inline
+`background-color` would put every mark in the product beyond the reach of the
+token system, which is the thing this whole project exists to establish. It
+also made the component testable in jsdom, which drops `var()` from inline
+styles -- a smaller reason, but it pointed at the right design.
+
 ---
 
 ## Revisions
@@ -388,4 +443,4 @@ Answer as the work reaches them; move to a decision when settled.
   `token-contrast.test.ts` so it cannot worsen. Fix in Phase 2 with the chrome,
   or as a dedicated contrast pass?
 
-Settled: **Q7** by D14, **Q8** by D15.
+Settled: **Q1** by D25, **Q7** by D14, **Q8** by D15.

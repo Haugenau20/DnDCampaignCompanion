@@ -74,7 +74,10 @@ const formatLocationType = (type: LocationType): string => {
 };
 
 const getTypeIcon = (type: LocationType) => {
-  const className = clsx('shrink-0', `location-type-${type}`);
+  // Deliberately uncoloured. The type chip in the same row already states the
+  // type, and colouring the icon as well encodes one fact twice -- which is
+  // among the most reliable sources of visual noise in a dense list.
+  const className = 'shrink-0';
   switch (type) {
     case 'region':
       return <Mountain size={16} className={className} />;
@@ -535,7 +538,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
           <Typography
             variant="body-sm"
             className={clsx(
-              'hidden md:inline-flex justify-self-start px-2.5 py-1 rounded-md text-xs font-semibold bg-secondary',
+              'hidden md:inline-flex justify-self-start px-2.5 py-1 rounded-md text-xs font-semibold',
               `location-type-${location.type}`
             )}
           >

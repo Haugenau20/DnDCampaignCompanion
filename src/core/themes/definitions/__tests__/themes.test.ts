@@ -22,11 +22,18 @@ const ALL: ReadonlyArray<[string, Theme]> = [
 
 /** Every leaf in a token tree, as dotted paths paired with their value. */
 function leaves(node: TokenTree, trail: string[] = []): Array<[string, string]> {
-  return Object.entries(node).flatMap(([key, value]) =>
-    typeof value === 'string'
-      ? [[[...trail, key].join('.'), value] as [string, string]]
-      : leaves(value, [...trail, key])
-  );
+  return Object.entries(node).flatMap(([key, value]) => {
+    const path = [...trail, key];
+    if (typeof value === 'string') return [[path.join('.'), value] as [string, string]];
+    // An ordered collection contributes one leaf per entry, indexed, so a
+    // missing or extra palette entry shows up as a path difference.
+    if (Array.isArray(value)) {
+      return value.map(
+        (entry, i) => [`${path.join('.')}[${i}]`, entry] as [string, string]
+      );
+    }
+    return leaves(value, path);
+  });
 }
 
 const treeOf = (theme: Theme) => theme.tokens as unknown as TokenTree;
