@@ -53,13 +53,13 @@ const AppearanceCard: React.FC = () => {
                 <div
                   className="w-8 h-8 rounded-full flex-shrink-0 border flex items-center justify-center"
                   style={{
-                    backgroundColor: t.colors.background.primary,
-                    borderColor: t.colors.card.border,
+                    backgroundColor: t.tokens.surface.page.bg,
+                    borderColor: t.tokens.surface.card.border,
                   }}
                 >
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: t.colors.primary }}
+                    style={{ backgroundColor: t.tokens.color.primary }}
                   />
                 </div>
                 <span className="flex items-center gap-1 capitalize">

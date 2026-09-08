@@ -213,14 +213,14 @@ describe('ThemeProvider — CSS variable application', () => {
     window.localStorage.setItem(STORAGE_KEY, 'dark');
     renderHook(() => useTheme(), { wrapper });
     const value = document.documentElement.style.getPropertyValue('--color-primary');
-    expect(value).toBe(themes.dark.colors.primary);
+    expect(value).toBe(themes.dark.tokens.color.primary);
   });
 
   test('sets --font-primary CSS variable matching the current theme', () => {
     window.localStorage.setItem(STORAGE_KEY, 'medieval');
     renderHook(() => useTheme(), { wrapper });
     const value = document.documentElement.style.getPropertyValue('--font-primary');
-    expect(value).toBe(themes.medieval.fonts.primary);
+    expect(value).toBe(themes.medieval.tokens.font.primary);
   });
 
   test('updates CSS variables when setTheme is called', () => {
@@ -229,7 +229,7 @@ describe('ThemeProvider — CSS variable application', () => {
       result.current.setTheme('medieval');
     });
     const value = document.documentElement.style.getPropertyValue('--color-primary');
-    expect(value).toBe(themes.medieval.colors.primary);
+    expect(value).toBe(themes.medieval.tokens.color.primary);
   });
 
   test('sets data-theme attribute on documentElement after mount', () => {
@@ -315,9 +315,13 @@ describe('ThemeContextState shape contract', () => {
     const { result } = renderHook(() => useTheme(), { wrapper });
     const { theme } = result.current;
     expect(theme).toHaveProperty('name');
-    expect(theme).toHaveProperty('colors');
-    expect(theme).toHaveProperty('fonts');
-    expect(theme).toHaveProperty('borders');
+    // One token tree replaces the old colors/fonts/borders trio. The groups
+    // below are the ones consumers reach for by name.
+    expect(theme).toHaveProperty('tokens');
+    expect(theme.tokens).toHaveProperty('color');
+    expect(theme.tokens).toHaveProperty('surface');
+    expect(theme.tokens).toHaveProperty('font');
+    expect(theme.tokens).toHaveProperty('border');
   });
 
   test('currentTheme || defaultTheme guard: context always provides a theme (line 199)', () => {
