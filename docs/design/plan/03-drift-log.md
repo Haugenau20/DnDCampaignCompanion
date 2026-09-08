@@ -291,6 +291,25 @@ has since merged. Measured fresh at the top of this phase, per that file's own
 Cost: none -- caught before any change was made, so the after-run had a true
 comparison. Post-Phase-0 run is identical: 243 / 4883, 0 failed.
 
+### R3 — revises D5's role in Phase 1
+Date: 2026-09-08
+Change: Phase 1 introduces **no** `var(--new, --old)` fallbacks. D5 stands as a
+rule for adding a token to a partially-migrated set; it simply had nothing to
+do here.
+Because: D5 exists to keep an unmigrated theme rendering while new tokens
+appear. All three themes were migrated in the same commit, so no unmigrated
+theme ever existed. The guarantee is now carried by something stronger than a
+fallback chain: `themes.test.ts` asserts that light, dark and medieval define
+exactly the same token paths as each other, so a theme cannot be missing a
+token for a fallback to rescue. A fallback would have been unreachable code
+asserting a state the tests forbid.
+Cost: none. If a future phase adds a token to one theme before the others --
+Phase 2's dark chrome is the likely case -- D5 applies again as written, and
+the parity test is what will force the question.
+Note also that fallbacks would have been actively unsafe here until D14: while
+`variables.css` declared every name as `--x: ;`, `var(--new, --old)` could not
+reach its fallback at all.
+
 ---
 
 ## Open questions
