@@ -188,6 +188,58 @@ Note this does not cover markup or layout drift. Phase 1 changes no markup, so
 that is in scope for the phase as written; if it starts to, the gate needs a
 second instrument.
 
+### D17 — Clean names now, all consumers migrated in one pass
+Date: 2026-09-08   Status: active
+Decision: traversal produces model-shaped variable names, and all consumer
+sites were rewritten in Phase 1. No aliases, no second pass.
+Because: chosen by the maintainer over two lower-risk alternatives (emitting
+legacy names alongside new ones, or bending the tree to reproduce today's
+names). The cost is the largest diff of the three and a big mechanical rename
+inside the phase whose value is being unchanged; the benefit is that the tree
+is shaped by the model rather than by history, and the work is finished rather
+than half-done across phases. 211 replacements across 6 files; a scan
+confirms zero references to any pre-rename name remain.
+Naming derivation: path segments join with `-`, and camelCase inside a segment
+splits on the same character, so `surface.card.onMuted` gives
+`--surface-card-on-muted`. `flattenTokens` throws on two paths deriving one
+name rather than letting key order decide the survivor.
+
+### D18 — Seven alias variables retired; the eight location-type ones kept
+Date: 2026-09-08   Status: active
+Decision: `--book-bg`, `--book-content-bg`, `--book-header-bg`,
+`--book-nav-bg`, `--book-pagination-bg`, `--spinner-border` and
+`--spinner-active` are gone; their consumers name the token they always
+equalled. The eight `--location-type-*` survive.
+Because: those seven were pure indirection -- each was defined as another
+token's value, so the variable added a name without adding a decision, and all
+were consumed only inside components.css. Retiring them is free and reduces
+the set. `--location-type-*` is different: the entity palette replaces it in
+Phase 3, and retiring it is a listed one-way door, so it stays until the
+palette exists to absorb it.
+
+### D19 — `chrome` and `footer` are separate surfaces for now
+Date: 2026-09-08   Status: active
+Decision: the surface group has both `chrome` and `footer`, rather than one
+chrome surface as the design language describes.
+Because: today the header is white and the footer is tinted. Collapsing them
+into one surface is a visual change, and Phase 1 makes none. Phase 2 merges
+them when the chrome becomes one dark band, which is the point at which the
+design language's description becomes true of the code.
+
+### D20 — Surface `on` roles repeat the page ink in Phase 1
+Date: 2026-09-08   Status: active
+Decision: every surface's `on`, `onMuted` and `border` currently hold the same
+values as the page's, and `--text-primary` / `--text-secondary` were renamed
+to `--surface-page-on` / `--surface-page-on-muted` everywhere rather than
+being split per surface.
+Because: there is one ink value in each theme today, so any split would be a
+rename with no visual consequence -- and choosing a surface for each of the 32
+usages is a judgement that only becomes real when a surface's ink actually
+differs from the page's. That happens in Phase 2 with the dark chrome. Doing
+it now would be unverifiable churn inside a phase gated on changing nothing.
+Cost of deferring: until then, text inside a card names the page's ink. The
+pair model is in place; it is not yet being exercised.
+
 ---
 
 ## Revisions

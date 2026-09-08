@@ -6,8 +6,8 @@
 
 /* Base theme styles */
 .theme {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--surface-page-bg);
+  color: var(--surface-page-on);
   font-family: var(--font-primary);
 }
 
@@ -24,15 +24,15 @@
 }
 
 .bg-primary {
-  background-color: var(--bg-primary);
+  background-color: var(--surface-page-bg);
 }
 
 .bg-secondary {
-  background-color: var(--bg-secondary);
+  background-color: var(--surface-sunken-bg);
 }
 
 .bg-accent {
-  background-color: var(--bg-accent);
+  background-color: var(--state-selected);
 }
 
 /* ====== BUTTON COMPONENT ====== */
@@ -44,64 +44,64 @@
 }
 
 .button-primary {
-  background-color: var(--button-primary-bg);
-  color: var(--button-primary-text);
+  background-color: var(--action-primary-bg);
+  color: var(--action-primary-text);
 }
 
 .button-primary:hover:not(:disabled) {
-  background-color: var(--button-primary-hover);
+  background-color: var(--action-primary-hover);
 }
 
 .button-secondary {
-  background-color: var(--button-secondary-bg);
-  color: var(--button-secondary-text);
+  background-color: var(--action-secondary-bg);
+  color: var(--action-secondary-text);
 }
 
 .button-secondary:hover:not(:disabled) {
-  background-color: var(--button-secondary-hover);
+  background-color: var(--action-secondary-hover);
 }
 
 .button-outline {
-  background-color: var(--button-outline-bg);
-  color: var(--button-outline-text);
-  border: var(--border-width-sm) solid var(--button-outline-border);
+  background-color: var(--action-outline-bg);
+  color: var(--action-outline-text);
+  border: var(--border-width-sm) solid var(--action-outline-border);
 }
 
 .button-outline:hover:not(:disabled) {
-  background-color: var(--button-outline-hover);
+  background-color: var(--action-outline-hover);
 }
 
 .button-ghost {
-  background-color: var(--button-ghost-bg);
-  color: var(--button-ghost-text);
+  background-color: var(--action-ghost-bg);
+  color: var(--action-ghost-text);
 }
 
 .button-ghost:hover:not(:disabled) {
-  background-color: var(--button-ghost-hover);
+  background-color: var(--action-ghost-hover);
 }
 
 .button-link {
-  background-color: var(--button-link-bg);
-  color: var(--button-link-text);
+  background-color: var(--action-link-bg);
+  color: var(--action-link-text);
   text-decoration: none;
 }
 
 .button-link:hover:not(:disabled) {
-  color: var(--button-link-hover);
+  color: var(--action-link-hover);
   text-decoration: underline;
 }
 
 /* ====== CARD COMPONENT ====== */
 .card {
-  border: var(--border-width-sm) solid var(--card-border);
+  border: var(--border-width-sm) solid var(--surface-card-border);
   border-radius: var(--border-radius-md);
-  background-color: var(--card-bg);
+  background-color: var(--surface-card-bg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
 }
 
 .card-border {
-  border: var(--border-width-sm) solid var(--card-border);
+  border: var(--border-width-sm) solid var(--surface-card-border);
 }
 
 /*
@@ -115,7 +115,7 @@
   it surfaced, as a rectangle around each inset row of the notes index.
 */
 .card-divider {
-  border-color: var(--card-border);
+  border-color: var(--surface-card-border);
 }
 
 .card:hover {
@@ -133,20 +133,20 @@
 
 .card-footer {
   padding: 0.75rem 1.5rem 1.5rem;
-  border-top: var(--border-width-sm) solid var(--card-border);
+  border-top: var(--border-width-sm) solid var(--surface-card-border);
   margin-top: 1rem;
 }
 
 .card-subtle {
-  background-color: var(--bg-secondary);
+  background-color: var(--surface-sunken-bg);
 }
 
 /* ====== DIALOG COMPONENT ====== */
 .dialog {
-  background-color: var(--card-bg);
+  background-color: var(--surface-card-bg);
   border-radius: var(--border-radius-lg);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  border: var(--border-width-sm) solid var(--card-border);
+  border: var(--border-width-sm) solid var(--surface-card-border);
 }
 
 .dialog-backdrop {
@@ -156,16 +156,16 @@
 /* ====== TYPOGRAPHY COMPONENT ====== */
 .typography {
   font-family: var(--font-primary);
-  color: var(--text-primary);
+  color: var(--surface-page-on);
 }
 
 .typography-heading {
   font-family: var(--font-heading);
-  color: var(--heading-color);
+  color: var(--color-heading);
 }
 
 .typography-secondary {
-  color: var(--text-secondary);
+  color: var(--surface-page-on-muted);
 }
 
 .typography-primary {
@@ -173,7 +173,7 @@
 }
 
 .typography-muted {
-  color: var(--text-secondary);
+  color: var(--surface-page-on-muted);
   opacity: 0.8;
 }
 
@@ -182,125 +182,125 @@
 }
 
 .typography-error {
-  color: var(--form-error-text);
+  color: var(--field-error-text);
 }
 
 .typography-success {
-  color: var(--form-success-text);
+  color: var(--field-success-text);
 }
 
 .typography-label {
-  color: var(--text-primary);
+  color: var(--surface-page-on);
   font-weight: 500;
 }
 
 /* ====== INPUT COMPONENT ====== */
 .input {
-  background-color: var(--input-bg);
-  border: var(--border-width-sm) solid var(--input-border);
-  color: var(--text-primary);
+  background-color: var(--field-bg);
+  border: var(--border-width-sm) solid var(--field-border);
+  color: var(--surface-page-on);
   transition: all 0.2s ease;
   border-radius: var(--border-radius-md);
 }
 
 .input:focus {
-  border-color: var(--input-border-focus);
-  box-shadow: 0 0 0 2px var(--input-ring-focus);
+  border-color: var(--field-border-focus);
+  box-shadow: 0 0 0 2px var(--field-ring-focus);
 }
 
 .input-error {
-  border-color: var(--input-error-border);
+  border-color: var(--field-error-border);
 }
 
 .input-error:focus {
-  border-color: var(--input-error-focus);
-  box-shadow: 0 0 0 2px var(--input-error-ring);
+  border-color: var(--field-error-focus);
+  box-shadow: 0 0 0 2px var(--field-error-ring);
 }
 
 .input-success {
-  border-color: var(--input-success-border);
+  border-color: var(--field-success-border);
 }
 
 .input-success:focus {
-  border-color: var(--input-success-focus);
-  box-shadow: 0 0 0 2px var(--input-success-ring);
+  border-color: var(--field-success-focus);
+  box-shadow: 0 0 0 2px var(--field-success-ring);
 }
 
 .input::placeholder {
-  color: var(--input-placeholder);
+  color: var(--field-placeholder);
 }
 
 .form-label {
-  color: var(--form-label-text);
+  color: var(--field-label-text);
 }
 
 .form-helper {
-  color: var(--form-helper-text);
+  color: var(--field-helper-text);
 }
 
 .form-error {
-  color: var(--form-error-text);
+  color: var(--field-error-text);
 }
 
 .form-success {
-  color: var(--form-success-text);
+  color: var(--field-success-text);
 }
 
 .input:disabled {
-  background-color: var(--form-disabled-bg);
+  background-color: var(--field-disabled-bg);
   opacity: 0.7;
 }
 
 /* ====== LAYOUT COMPONENTS ====== */
 .header {
-  background-color: var(--header-bg);
+  background-color: var(--surface-chrome-bg);
   /* A hairline separates the bar from the page. The drop shadow was doing that job
      for a coloured field; on a neutral surface a border is quieter and does not
      imply the bar is floating above the content. */
-  border-bottom: var(--border-width-sm) solid var(--card-border);
+  border-bottom: var(--border-width-sm) solid var(--surface-card-border);
 }
 
 .header-title {
-  color: var(--heading-color);
+  color: var(--color-heading);
   font-family: var(--font-heading);
 }
 
 .footer {
-  background-color: var(--footer-bg);
+  background-color: var(--surface-footer-bg);
 }
 
 .content {
-  background-color: var(--bg-primary);
+  background-color: var(--surface-page-bg);
 }
 
 /* ====== NAVIGATION ====== */
 .navigation {
-  background-color: var(--card-bg);
-  border-bottom: var(--border-width-sm) solid var(--card-border);
+  background-color: var(--surface-card-bg);
+  border-bottom: var(--border-width-sm) solid var(--surface-card-border);
 }
 
 .navigation-item {
-  color: var(--text-secondary);
+  color: var(--surface-page-on-muted);
   transition: all 0.2s ease;
 }
 
 /*
-  Ink darkens to `--text-primary` on hover rather than switching to the accent.
-  The accent on `--hover-light` measured 4.01:1 in the light theme -- the same
+  Ink darkens to `--surface-page-on` on hover rather than switching to the accent.
+  The accent on `--state-hover-light` measured 4.01:1 in the light theme -- the same
   defect as `.navigation-item-active` below, one tint lighter, and it fails AA
   the same way. Hover still reads as hover: the ground goes from nothing to
-  `--hover-light` and the ink strengthens from `--text-secondary`. Light
+  `--state-hover-light` and the ink strengthens from `--surface-page-on-muted`. Light
   13.8:1, dark 10.8:1, medieval 14.4:1.
 */
 .navigation-item:hover {
-  color: var(--text-primary);
-  background-color: var(--hover-light);
+  color: var(--surface-page-on);
+  background-color: var(--state-hover-light);
 }
 
 /*
-  Ink is `--text-primary`, not `--color-primary`. The accent on `--hover-medium`
+  Ink is `--surface-page-on`, not `--color-primary`. The accent on `--state-hover-medium`
   measured 2.86:1 in the light theme -- a legitimate colour in a legitimate slot,
-  wrong in relation to what sits behind it. No value of `--hover-medium` fixes
+  wrong in relation to what sits behind it. No value of `--state-hover-medium` fixes
   it: anything light enough to clear 4.5:1 against `#2563EB` is within ~1.1:1 of
   the page and the state stops being visible at all. Darkening the ink is the
   only move that works, and it passes in all three themes (light 9.9:1,
@@ -308,34 +308,34 @@
   and tint, not by hue alone.
 */
 .navigation-item-active {
-  color: var(--text-primary);
-  background-color: var(--hover-medium);
+  color: var(--surface-page-on);
+  background-color: var(--state-hover-medium);
   font-weight: 500;
 }
 
 /* ====== SIDEBAR ====== */
 .sidebar {
-  background-color: var(--card-bg);
-  border-right: var(--border-width-sm) solid var(--card-border);
+  background-color: var(--surface-card-bg);
+  border-right: var(--border-width-sm) solid var(--surface-card-border);
 }
 
 /* ====== SEARCH ====== */
 .search {
-  background-color: var(--input-bg);
-  border: var(--border-width-sm) solid var(--input-border);
-  color: var(--text-primary);
+  background-color: var(--field-bg);
+  border: var(--border-width-sm) solid var(--field-border);
+  color: var(--surface-page-on);
   transition: all 0.2s ease;
   border-radius: var(--border-radius-md);
 }
 
 .search:focus {
-  border-color: var(--input-border-focus);
-  box-shadow: 0 0 0 2px var(--input-ring-focus);
+  border-color: var(--field-border-focus);
+  box-shadow: 0 0 0 2px var(--field-ring-focus);
 }
 
 .search-results {
-  background-color: var(--card-bg);
-  border: var(--border-width-sm) solid var(--card-border);
+  background-color: var(--surface-card-bg);
+  border: var(--border-width-sm) solid var(--surface-card-border);
   border-radius: var(--border-radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -345,34 +345,34 @@
 }
 
 .search-result:hover {
-  background-color: var(--hover-light);
+  background-color: var(--state-hover-light);
 }
 
 .search-result-selected {
-  background-color: var(--hover-medium);
+  background-color: var(--state-hover-medium);
 }
 
 /* ====== DROPDOWN ====== */
 .dropdown {
-  background-color: var(--card-bg);
-  border: var(--border-width-sm) solid var(--card-border);
+  background-color: var(--surface-card-bg);
+  border: var(--border-width-sm) solid var(--surface-card-border);
   border-radius: var(--border-radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .dropdown-item {
-  color: var(--text-primary);
+  color: var(--surface-page-on);
   transition: background-color 0.1s ease;
 }
 
 .dropdown-item:hover {
-  background-color: var(--hover-light);
+  background-color: var(--state-hover-light);
 }
 
 /* Same failing pair as `.navigation-item-active` above, same fix. */
 .dropdown-item-active {
-  background-color: var(--hover-medium);
-  color: var(--text-primary);
+  background-color: var(--state-hover-medium);
+  color: var(--surface-page-on);
 }
 
 /* ====== STATUS INDICATORS ====== */
@@ -430,7 +430,7 @@
 }
 
 .progress-container {
-  background-color: var(--bg-secondary);
+  background-color: var(--surface-sunken-bg);
 }
 
 .progress-bar {
@@ -455,7 +455,7 @@
 }
 
 .objective-pending {
-  border-color: var(--bg-secondary);
+  border-color: var(--surface-sunken-bg);
 }
 
 /* ====== NPC CARD ====== */
@@ -516,15 +516,15 @@
 }
 
 .npc-relationship-neutral {
-  color: var(--text-secondary);
+  color: var(--surface-page-on-muted);
 }
 
 .npc-relationship-unknown {
-  color: var(--text-secondary);
+  color: var(--surface-page-on-muted);
 }
 
 .note {
-  background-color: var(--bg-secondary);
+  background-color: var(--surface-sunken-bg);
 }
 
 /* ====== LOCATION CARD ====== */
@@ -541,7 +541,7 @@
 }
 
 .location-card-known {
-  border-left: 4px solid var(--text-secondary);
+  border-left: 4px solid var(--surface-page-on-muted);
 }
 
 .location-status-explored {
@@ -549,7 +549,7 @@
 }
 
 .location-status-known {
-  color: var(--text-secondary);
+  color: var(--surface-page-on-muted);
 }
 
 .location-status-visited {
@@ -657,11 +657,11 @@
 }
 
 .selectable-item:hover {
-  background-color: var(--bg-accent);
+  background-color: var(--state-selected);
 }
 
 .selected-item {
-  background-color: var(--bg-accent);
+  background-color: var(--state-selected);
   outline: 2px solid var(--color-primary);
   outline-offset: -2px;
 }
@@ -669,71 +669,71 @@
 .highlighted-item {
   outline: 2px solid var(--color-primary);
   border-radius: var(--border-radius-lg);
-  box-shadow: 0 0 0 2px var(--bg-primary);
+  box-shadow: 0 0 0 2px var(--surface-page-bg);
 }
 
 /* ====== SUCCESS/ERROR STATES ====== */
 .success-icon-bg {
-  background-color: var(--input-success-ring);
+  background-color: var(--field-success-ring);
   opacity: 0.2;
 }
 
 .success-icon {
-  color: var(--form-success-text);
+  color: var(--field-success-text);
 }
 
 .error-bg {
-  background-color: var(--error-bg);
+  background-color: var(--danger-bg);
   color: var(--status-failed);
 }
 
 .delete-button {
-  background-color: var(--delete-button-bg);
-  color: var(--delete-button-text);
+  background-color: var(--danger-delete-bg);
+  color: var(--danger-delete-text);
 }
 
 .delete-button:hover {
-  background-color: var(--delete-button-hover);
+  background-color: var(--danger-delete-hover);
 }
 
 /* ====== DIVIDER ====== */
 .divider {
-  border-color: var(--card-border);
+  border-color: var(--surface-card-border);
 }
 
 /* ====== TAG ====== */
 .tag {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--card-border);
+  background-color: var(--surface-sunken-bg);
+  border: 1px solid var(--surface-card-border);
 }
 
 /* ====== HINT ====== */
 .hint {
-  background-color: var(--bg-accent);
+  background-color: var(--state-selected);
   color: var(--color-primary);
 }
 
 /* ====== SPINNER ====== */
 .spinner-border {
-  border-color: var(--spinner-border);
-  border-top-color: var(--spinner-active);
+  border-color: var(--field-border);
+  border-top-color: var(--color-primary);
 }
 
 /* ====== BOOK VIEWER ====== */
 .book {
-  background-color: var(--book-bg);
+  background-color: var(--surface-card-bg);
 }
 
 .book-header {
-  background-color: var(--book-header-bg);
+  background-color: var(--surface-sunken-bg);
 }
 
 .book-nav {
-  background-color: var(--book-nav-bg);
+  background-color: var(--surface-sunken-bg);
 }
 
 .book-content-area {
-  background-color: var(--book-content-bg);
+  background-color: var(--surface-card-bg);
 }
 
 .book-content {
@@ -741,12 +741,12 @@
 }
 
 .book-text {
-  color: var(--text-primary);
+  color: var(--surface-page-on);
   font-family: var(--font-primary);
 }
 
 .book-pagination {
-  background-color: var(--book-pagination-bg);
+  background-color: var(--surface-sunken-bg);
 }
 
 .page-nav-button {
@@ -754,7 +754,7 @@
 }
 
 .page-nav-button:hover {
-  background-color: var(--hover-light);
+  background-color: var(--state-hover-light);
 }
 
 /* ====== CHAPTER READER ====== */
@@ -773,7 +773,7 @@
    fixed, because the reading measure is a property of the reader rather than
    of the palette. Both families below are already loaded in public/index.html. */
 .reader-prose {
-  color: var(--text-primary);
+  color: var(--surface-page-on);
   font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
 }
 
@@ -799,8 +799,8 @@
 }
 
 .journal-page {
-  background-color: var(--card-bg);
-  color: var(--text-primary);
+  background-color: var(--surface-card-bg);
+  color: var(--surface-page-on);
 }
 
 .journal-page-left {
@@ -821,8 +821,8 @@
 }
 
 .journal-heading {
-  color: var(--text-primary);
-  border-bottom: 1px solid var(--card-border);
+  color: var(--surface-page-on);
+  border-bottom: 1px solid var(--surface-card-border);
   padding-bottom: 0.25rem;
 }
 
@@ -837,12 +837,12 @@
   left: 25%;
   right: 25%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--card-border), transparent);
+  background: linear-gradient(90deg, transparent, var(--surface-card-border), transparent);
   opacity: 0.5;
 }
 
 .journal-title {
-  color: var(--text-primary);
+  color: var(--surface-page-on);
 }
 
 .journal-character-card {
@@ -855,12 +855,12 @@
 }
 
 .journal-character-sketch {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--card-border);
+  background-color: var(--surface-sunken-bg);
+  border: 1px solid var(--surface-card-border);
 }
 
 .journal-character-name {
-  color: var(--text-primary);
+  color: var(--surface-page-on);
 }
 
 .journal-quest-item {
@@ -877,11 +877,11 @@
 }
 
 .journal-quest-title {
-  color: var(--text-primary);
+  color: var(--surface-page-on);
 }
 
 .journal-quest-note {
-  color: var(--text-secondary);
+  color: var(--surface-page-on-muted);
 }
 
 .journal-activity-item {
@@ -895,16 +895,16 @@
 }
 
 .journal-activity-icon-bg {
-  background-color: var(--bg-secondary);
+  background-color: var(--surface-sunken-bg);
   color: var(--color-primary);
 }
 
 .journal-activity-title {
-  color: var(--text-primary);
+  color: var(--surface-page-on);
 }
 
 .journal-activity-date {
-  color: var(--text-secondary);
+  color: var(--surface-page-on-muted);
 }
 
 .journal-activity-type {
@@ -912,20 +912,20 @@
 }
 
 .journal-activity-description {
-  color: var(--text-secondary);
+  color: var(--surface-page-on-muted);
 }
 
 .journal-activity-separator {
-  color: var(--text-secondary);
+  color: var(--surface-page-on-muted);
 }
 
 .journal-loading {
-  background-color: var(--bg-secondary);
+  background-color: var(--surface-sunken-bg);
   opacity: 0.3;
 }
 
 .journal-empty {
-  color: var(--text-secondary);
+  color: var(--surface-page-on-muted);
 }
 
 .journal-notes-area {
@@ -934,13 +934,13 @@
 }
 
 .journal-pagination {
-  background-color: var(--card-bg);
-  color: var(--text-primary);
+  background-color: var(--surface-card-bg);
+  color: var(--surface-page-on);
 }
 
 .journal-paper {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--card-border);
+  background-color: var(--surface-sunken-bg);
+  border: 1px solid var(--surface-card-border);
 }
 
 .journal-more-note {
@@ -959,15 +959,15 @@
   with `rounded-r-*` rather than `rounded-*` so the rule stays a square edge.
 
   This deliberately replaced an earlier "inverted surface" version that swapped
-  --text-primary and --bg-primary. Inverting those two keeps any theme legible,
+  --surface-page-on and --surface-page-bg. Inverting those two keeps any theme legible,
   which is why it looked sound, but legible is not the same as belonging: in
   the dark theme it produced a near-white #E0E0E0 slab that read as an alert
   rather than a note, and in the medieval theme a dark chocolate block on
-  parchment. --bg-accent is the token each theme already tuned for exactly this
+  parchment. --state-selected is the token each theme already tuned for exactly this
   job.
 */
 .callout-emphasis {
-  background-color: var(--bg-accent);
+  background-color: var(--state-selected);
   border-left: 4px solid var(--color-primary);
 }
 
@@ -982,20 +982,20 @@
   - `.card` is not a neutral surface. theme-effects.css gives medieval cards
     decorative ::before/::after corner flourishes and a thicker border, so
     every UNSELECTED chip arrived wearing card ornaments.
-  - `--button-primary-bg` is tuned for buttons sitting on a card. In medieval
+  - `--action-primary-bg` is tuned for buttons sitting on a card. In medieval
     it is #E8D0AA, pale tan, which on the #FDF5E6 parchment page is nearly the
     same value -- so the SELECTED chip was the faintest thing in the row.
 
   Together those inverted the hierarchy: selection read as less prominent than
   non-selection. Filling the selected chip with --color-primary and taking the
-  text from --bg-primary inverts the page's own two strongest tokens, which
+  text from --surface-page-bg inverts the page's own two strongest tokens, which
   every theme already guarantees contrast between: #2563EB, #8AB4F8 and
   #8B0000 against their respective page grounds.
 */
 .chip {
-  background-color: var(--card-bg);
-  border-color: var(--card-border);
-  color: var(--text-primary);
+  background-color: var(--surface-card-bg);
+  border-color: var(--surface-card-border);
+  color: var(--surface-page-on);
 }
 
 .chip:hover:not(:disabled) {
@@ -1005,7 +1005,7 @@
 .chip-selected {
   background-color: var(--color-primary);
   border-color: var(--color-primary);
-  color: var(--bg-primary);
+  color: var(--surface-page-bg);
 }
 
 /* ====== TOAST ====== */
@@ -1013,17 +1013,17 @@
   A transient confirmation carrying exactly one action.
 
   Deliberately NOT an inverted surface, although the mock draws one. The
-  contact callout tried `--text-primary` on `--bg-primary` on the reasoning
+  contact callout tried `--surface-page-on` on `--surface-page-bg` on the reasoning
   that every theme guarantees contrast between that pair, and it was legible
   everywhere and right nowhere: light gave a heavy slab, dark gave a near-white
   block that read as an alert rather than a confirmation, and medieval gave
-  dark chocolate on parchment. `--bg-accent` is the token each theme already
+  dark chocolate on parchment. `--state-selected` is the token each theme already
   tunes for a subtly emphasised surface, and `--color-primary` carries the
   action -- the same resolution the callout landed on.
 */
 .toast {
-  background-color: var(--bg-accent);
-  border: var(--border-width-sm) solid var(--card-border);
+  background-color: var(--state-selected);
+  border: var(--border-width-sm) solid var(--surface-card-border);
   border-radius: var(--border-radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -1031,7 +1031,7 @@
 /* ====== DESTRUCTIVE ACTION (solid) ====== */
 /*
   The heavy destructive action. `.delete-button` is the QUIET one -- every
-  theme sets --delete-button-bg to transparent, which is right for a delete
+  theme sets --danger-delete-bg to transparent, which is right for a delete
   icon in a list but renders lighter than an outlined button beside it. Where
   two destructive actions sit together and one is meant to read as heavier
   (the profile's danger zone), this is the filled treatment: the error pair
@@ -1039,7 +1039,7 @@
 */
 .button-danger {
   background-color: var(--status-failed);
-  color: var(--status-text);
+  color: var(--status-on);
 }
 
 .button-danger:hover:not(:disabled) {

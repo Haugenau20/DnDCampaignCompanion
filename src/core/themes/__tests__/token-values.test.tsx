@@ -24,6 +24,7 @@ import { themes } from "../definitions";
 import { ThemeName } from "../types";
 
 const BASELINE = path.join(__dirname, "token-values.baseline.json");
+const RENAME_MAP = path.join(__dirname, "token-rename-map.json");
 const THEME_NAMES = Object.keys(themes) as ThemeName[];
 
 type TokenMap = Record<string, string>;
@@ -76,21 +77,38 @@ describe("theme token values", () => {
   });
 
   describe.each(THEME_NAMES)("%s theme", (themeName) => {
-    test("no token in the baseline changed value or disappeared", () => {
+    test("every token from before the rename still resolves to the same value", () => {
       const baseline: Baseline = JSON.parse(fs.readFileSync(BASELINE, "utf8"));
+      const renameMap = JSON.parse(fs.readFileSync(RENAME_MAP, "utf8"));
       const expected = baseline[themeName] ?? {};
       const actual = current[themeName];
 
-      // Compare only the baseline's keys: new tokens are allowed, changed and
-      // missing ones are not. Building both objects over the same key set makes
-      // jest print a single readable diff instead of one failure per token.
-      const expectedSubset: TokenMap = {};
-      const actualSubset: TokenMap = {};
-      Object.keys(expected).sort().forEach((k) => {
-        expectedSubset[k] = expected[k];
-        actualSubset[k] = actual[k] ?? "<MISSING>";
+      // Resolve each pre-rename variable to whatever carries its value now: a
+      // renamed variable, the token a retired one was always an alias for, or
+      // itself where the name was already role-shaped. Comparing through this
+      // map is what lets a 336-site rename still prove nothing changed value.
+      const resolve = (name: string): string =>
+        renameMap.renamed[name] ?? renameMap.retired[name] ?? name;
+
+      const expectedByOldName: TokenMap = {};
+      const actualByOldName: TokenMap = {};
+      Object.keys(expected).sort().forEach((oldName) => {
+        expectedByOldName[oldName] = expected[oldName];
+        actualByOldName[oldName] = actual[resolve(oldName)] ?? "<MISSING>";
       });
-      expect(actualSubset).toEqual(expectedSubset);
+      expect(actualByOldName).toEqual(expectedByOldName);
     });
+  });
+
+  test("the rename map accounts for every pre-rename variable", () => {
+    const baseline: Baseline = JSON.parse(fs.readFileSync(BASELINE, "utf8"));
+    const renameMap = JSON.parse(fs.readFileSync(RENAME_MAP, "utf8"));
+    const unaccounted = Object.keys(baseline.light).filter(
+      (name) =>
+        !(name in renameMap.renamed) &&
+        !(name in renameMap.retired) &&
+        !(name in current.light)
+    );
+    expect(unaccounted).toEqual([]);
   });
 });

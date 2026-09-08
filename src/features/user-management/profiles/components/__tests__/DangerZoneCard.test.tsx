@@ -173,7 +173,7 @@ describe("DangerZoneCard", () => {
 
   // Asserted on what actually renders, not on class names. The first version
   // of this test checked for the `delete-button` class and passed while the
-  // button was transparent: every theme sets --delete-button-bg to
+  // button was transparent: every theme sets --danger-delete-bg to
   // transparent, because that class is the app's QUIET delete affordance. The
   // delete action read as lighter than the outlined Leave button beside it --
   // the opposite of the intent -- and only the running app showed it.
