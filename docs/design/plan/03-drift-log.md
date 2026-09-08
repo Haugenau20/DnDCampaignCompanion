@@ -349,6 +349,45 @@ token system, which is the thing this whole project exists to establish. It
 also made the component testable in jsdom, which drops `var()` from inline
 styles -- a smaller reason, but it pointed at the right design.
 
+### D29 — The hero is a band, and the campaign's sigil is its empty slot
+Date: 2026-09-08   Status: active
+Decision: the campaign header becomes a band on `surface.band`, one step
+lighter than the chrome (`#2A3242` against `#171A21`, 1.35:1). Its image slot
+is empty in this phase and its empty state is the campaign's own sigil,
+derived from the campaign id by the same function every entity mark uses.
+Because: value contrast belongs in the frame -- the chrome, the hero, the
+footer -- while the surfaces you scan every session stay quiet. A step of
+1.35:1 keeps the two reading as layers of one frame rather than one tall
+header; at 1.12:1 they merged into a single mass. The empty state is the real
+design here, since most slots will be empty most of the time and nothing on
+the page may depend on content a user might never add. Reusing the sigil costs
+nothing and ties the hero to the identity system rather than inventing a
+second one.
+
+### D30 — Surface-aware components are scoped, not duplicated
+Date: 2026-09-08   Status: active
+Decision: `.typography-heading` and the view toggle keep page-shaped defaults
+and are overridden inside `.hero-band`.
+Because: both appear on more than one surface -- the toggle sits on the band on
+the dashboard and on the page in the journal -- so neither can name one set of
+colours. `--color-heading` is a page-level notion (in the dark theme it is
+deliberately brighter than body ink) and is simply wrong on a surface whose ink
+differs; unscoped it rendered near-black on the dark band, and the toggle's
+active segment rendered the band's near-white ink on a white card, invisible.
+The rule is the same one the chrome's ghost buttons follow: the surface claims
+its own values, rather than every component learning about every surface.
+
+### D31 — The band stacks below `sm`
+Date: 2026-09-08   Status: active
+Decision: the hero's identity block and the view toggle stack vertically until
+the `sm` breakpoint.
+Because: side by side, the `shrink-0` toggle claims roughly 180px of a 320px
+viewport, which squeezed the title column to almost nothing and set the
+campaign name one character per line -- a vertical column of letters. Found by
+rendering Home in a 320px iframe, which is a real test where resizing a
+maximised window is not. Verified afterwards with a 96-character campaign name
+at both widths: no horizontal overflow, header still one line.
+
 ---
 
 ## Revisions
