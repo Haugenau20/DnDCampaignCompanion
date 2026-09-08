@@ -240,6 +240,21 @@ it now would be unverifiable churn inside a phase gated on changing nothing.
 Cost of deferring: until then, text inside a card names the page's ink. The
 pair model is in place; it is not yet being exercised.
 
+### D21 — Contrast is enforced on ink pairs, ratcheted on control boundaries
+Date: 2026-09-08   Status: active
+Decision: `token-contrast.test.ts` enforces 4.5:1 for every surface's `on` and
+`onMuted` against its own `bg`, in all three themes. Control boundaries
+(`action.outline.border`, `field.border`) are recorded at their measured
+ratios and asserted as a floor rather than against 3:1. A surface's own
+`border` is not checked.
+Because: the ink pairs all pass, so enforcing them costs nothing and locks
+them. The control boundaries do not pass and fixing them means changing colour
+values, which this phase does not do -- a floor makes the shortfall visible
+and prevents it worsening, without adding a red test to a suite whose contract
+is that red means regression. A card's hairline is deliberately quiet
+structure rather than the thing identifying a control, so WCAG 1.4.11 does not
+bind on it and asserting 3:1 there would be inventing a requirement.
+
 ---
 
 ## Revisions
@@ -298,5 +313,21 @@ Answer as the work reaches them; move to a decision when settled.
   changes precedence app-wide and inverts `theme-effects.css` against the
   utilities. Proposal: Phase 1, with the token restructure, where a screenshot
   gate would actually catch the fallout.
+
+- **Q9** — `action.outline.border` and `field.border` fail WCAG 1.4.11 (3:1
+  for boundaries that identify a control). Measured against the least
+  favourable of page and card:
+
+  | theme | action.outline.border | field.border |
+  |---|---|---|
+  | light | 1.71:1 | 1.40:1 |
+  | dark | 1.38:1 | 1.98:1 |
+  | medieval | 6.55:1 (ok) | 2.34:1 |
+
+  An outline button and a text input are identified by their borders, so this
+  is a real failure, not a quiet-hairline judgement call. Out of scope for
+  Phase 1, which changes no values; floors are recorded in
+  `token-contrast.test.ts` so it cannot worsen. Fix in Phase 2 with the chrome,
+  or as a dedicated contrast pass?
 
 Settled: **Q7** by D14, **Q8** by D15.
