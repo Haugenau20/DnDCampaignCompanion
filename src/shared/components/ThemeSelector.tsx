@@ -35,7 +35,7 @@ const ThemeSelector = () => {
             <div className="flex items-center gap-2">
               <div 
                 className="w-4 h-4 rounded-full"
-                style={{ backgroundColor: t.colors.primary }}
+                style={{ backgroundColor: t.tokens.color.primary }}
               />
               <span className="capitalize">{t.name}</span>
             </div>

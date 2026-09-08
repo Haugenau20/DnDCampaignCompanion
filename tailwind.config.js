@@ -22,17 +22,17 @@ module.exports = {
       },
       backgroundColor: {
         // Main background colors
-        primary: 'var(--bg-primary)',
-        secondary: 'var(--bg-secondary)',
-        accent: 'var(--bg-accent)',
+        primary: 'var(--surface-page-bg)',
+        secondary: 'var(--surface-sunken-bg)',
+        accent: 'var(--state-selected)',
         
         // UI element backgrounds
-        card: 'var(--card-bg)',
-        header: 'var(--header-bg)',
-        footer: 'var(--footer-bg)',
-        error: 'var(--error-bg)',
-        input: 'var(--input-bg)',
-        'form-disabled': 'var(--form-disabled-bg)',
+        card: 'var(--surface-card-bg)',
+        header: 'var(--surface-chrome-bg)',
+        footer: 'var(--surface-footer-bg)',
+        error: 'var(--danger-bg)',
+        input: 'var(--field-bg)',
+        'form-disabled': 'var(--field-disabled-bg)',
         
         // Status backgrounds for components
         'status-general': 'var(--status-general)',
@@ -42,51 +42,51 @@ module.exports = {
         'status-unknown': 'var(--status-unknown)',
         
         // Button backgrounds
-        'button-primary': 'var(--button-primary-bg)',
-        'button-secondary': 'var(--button-secondary-bg)',
-        'button-link': 'var(--button-link-bg)',
-        'button-outline': 'var(--button-outline-bg)',
-        'button-ghost': 'var(--button-ghost-bg)',
-        'delete-button': 'var(--delete-button-bg)',
+        'button-primary': 'var(--action-primary-bg)',
+        'button-secondary': 'var(--action-secondary-bg)',
+        'button-link': 'var(--action-link-bg)',
+        'button-outline': 'var(--action-outline-bg)',
+        'button-ghost': 'var(--action-ghost-bg)',
+        'delete-button': 'var(--danger-delete-bg)',
       },
       textColor: {
-        primary: 'var(--text-primary)',
-        secondary: 'var(--text-secondary)',
-        accent: 'var(--text-accent)',
-        heading: 'var(--heading-color)',
+        primary: 'var(--surface-page-on)',
+        secondary: 'var(--surface-page-on-muted)',
+        accent: 'var(--color-emphasis)',
+        heading: 'var(--color-heading)',
         
         // Form text colors
-        label: 'var(--form-label-text)',
-        helper: 'var(--form-helper-text)',
-        error: 'var(--form-error-text)',
-        success: 'var(--form-success-text)',
-        placeholder: 'var(--input-placeholder)',
+        label: 'var(--field-label-text)',
+        helper: 'var(--field-helper-text)',
+        error: 'var(--field-error-text)',
+        success: 'var(--field-success-text)',
+        placeholder: 'var(--field-placeholder)',
         
         // Status text colors
-        'status-text': 'var(--status-text)',
+        'status-text': 'var(--status-on)',
         
         // Button text colors
-        'button-primary': 'var(--button-primary-text)',
-        'button-secondary': 'var(--button-secondary-text)',
-        'button-link': 'var(--button-link-text)',
-        'button-outline': 'var(--button-outline-text)',
-        'button-ghost': 'var(--button-ghost-text)',
-        'delete-button': 'var(--delete-button-text)',
+        'button-primary': 'var(--action-primary-text)',
+        'button-secondary': 'var(--action-secondary-text)',
+        'button-link': 'var(--action-link-text)',
+        'button-outline': 'var(--action-outline-text)',
+        'button-ghost': 'var(--action-ghost-text)',
+        'delete-button': 'var(--danger-delete-text)',
       },
       borderColor: {
         primary: 'var(--color-primary)',
         secondary: 'var(--color-secondary)',
         accent: 'var(--color-accent)',
-        card: 'var(--card-border)',
+        card: 'var(--surface-card-border)',
         
         // Input borders
-        input: 'var(--input-border)',
-        'input-focus': 'var(--input-border-focus)',
-        'input-error': 'var(--input-error-border)',
-        'input-success': 'var(--input-success-border)',
+        input: 'var(--field-border)',
+        'input-focus': 'var(--field-border-focus)',
+        'input-error': 'var(--field-error-border)',
+        'input-success': 'var(--field-success-border)',
         
         // Button borders
-        'button-outline': 'var(--button-outline-border)',
+        'button-outline': 'var(--action-outline-border)',
         
         // Icon borders
         icon: 'var(--icon-border)',
@@ -107,12 +107,12 @@ module.exports = {
         lg: 'var(--border-width-lg)',
       },
       ringColor: {
-        focus: 'var(--input-ring-focus)',
-        error: 'var(--input-error-ring)',
-        success: 'var(--input-success-ring)',
+        focus: 'var(--field-ring-focus)',
+        error: 'var(--field-error-ring)',
+        success: 'var(--field-success-ring)',
       },
       outlineColor: {
-        focus: 'var(--input-border-focus)',
+        focus: 'var(--field-border-focus)',
       },
       // NOTE: hover is a Tailwind *variant*, not a colour namespace, so there is
       // no `hoverColors` theme key — a block here generated zero utilities and had

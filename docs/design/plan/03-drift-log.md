@@ -169,6 +169,92 @@ Hover still reads as hover: the ground goes from nothing to `--hover-light`
 and the ink strengthens from `--text-secondary`. Taken in Phase 0 rather than
 deferred to Phase 2 at the maintainer's direction.
 
+### D16 — Phase 1's gate is a token-value diff, not screenshots
+Date: 2026-09-08   Status: active
+Decision: Phase 1 is gated by `themes/__tests__/token-values.test.tsx`, which
+drives the real `ThemeProvider`, reads the variables it writes to the root
+element, and compares them against a baseline captured before any
+restructuring. Semantics: no existing token may change value or disappear;
+adding tokens passes.
+Because: the repo has no visual-regression tooling, and adding it is a project
+of its own that Phase 1 would have to finish first. A screenshot is also the
+weaker instrument here -- it cannot separate a value change from a rendering
+difference, and it needs a human to read it. What Phase 1 actually promises is
+narrower and exactly checkable: same values, new structure. Additions must
+pass, because introducing surface pairs is the point of the phase. Verified
+against a control: a one-hex-digit change to lightTheme's primary failed the
+light theme only and named the three affected tokens.
+Note this does not cover markup or layout drift. Phase 1 changes no markup, so
+that is in scope for the phase as written; if it starts to, the gate needs a
+second instrument.
+
+### D17 — Clean names now, all consumers migrated in one pass
+Date: 2026-09-08   Status: active
+Decision: traversal produces model-shaped variable names, and all consumer
+sites were rewritten in Phase 1. No aliases, no second pass.
+Because: chosen by the maintainer over two lower-risk alternatives (emitting
+legacy names alongside new ones, or bending the tree to reproduce today's
+names). The cost is the largest diff of the three and a big mechanical rename
+inside the phase whose value is being unchanged; the benefit is that the tree
+is shaped by the model rather than by history, and the work is finished rather
+than half-done across phases. 211 replacements across 6 files; a scan
+confirms zero references to any pre-rename name remain.
+Naming derivation: path segments join with `-`, and camelCase inside a segment
+splits on the same character, so `surface.card.onMuted` gives
+`--surface-card-on-muted`. `flattenTokens` throws on two paths deriving one
+name rather than letting key order decide the survivor.
+
+### D18 — Seven alias variables retired; the eight location-type ones kept
+Date: 2026-09-08   Status: active
+Decision: `--book-bg`, `--book-content-bg`, `--book-header-bg`,
+`--book-nav-bg`, `--book-pagination-bg`, `--spinner-border` and
+`--spinner-active` are gone; their consumers name the token they always
+equalled. The eight `--location-type-*` survive.
+Because: those seven were pure indirection -- each was defined as another
+token's value, so the variable added a name without adding a decision, and all
+were consumed only inside components.css. Retiring them is free and reduces
+the set. `--location-type-*` is different: the entity palette replaces it in
+Phase 3, and retiring it is a listed one-way door, so it stays until the
+palette exists to absorb it.
+
+### D19 — `chrome` and `footer` are separate surfaces for now
+Date: 2026-09-08   Status: active
+Decision: the surface group has both `chrome` and `footer`, rather than one
+chrome surface as the design language describes.
+Because: today the header is white and the footer is tinted. Collapsing them
+into one surface is a visual change, and Phase 1 makes none. Phase 2 merges
+them when the chrome becomes one dark band, which is the point at which the
+design language's description becomes true of the code.
+
+### D20 — Surface `on` roles repeat the page ink in Phase 1
+Date: 2026-09-08   Status: active
+Decision: every surface's `on`, `onMuted` and `border` currently hold the same
+values as the page's, and `--text-primary` / `--text-secondary` were renamed
+to `--surface-page-on` / `--surface-page-on-muted` everywhere rather than
+being split per surface.
+Because: there is one ink value in each theme today, so any split would be a
+rename with no visual consequence -- and choosing a surface for each of the 32
+usages is a judgement that only becomes real when a surface's ink actually
+differs from the page's. That happens in Phase 2 with the dark chrome. Doing
+it now would be unverifiable churn inside a phase gated on changing nothing.
+Cost of deferring: until then, text inside a card names the page's ink. The
+pair model is in place; it is not yet being exercised.
+
+### D21 — Contrast is enforced on ink pairs, ratcheted on control boundaries
+Date: 2026-09-08   Status: active
+Decision: `token-contrast.test.ts` enforces 4.5:1 for every surface's `on` and
+`onMuted` against its own `bg`, in all three themes. Control boundaries
+(`action.outline.border`, `field.border`) are recorded at their measured
+ratios and asserted as a floor rather than against 3:1. A surface's own
+`border` is not checked.
+Because: the ink pairs all pass, so enforcing them costs nothing and locks
+them. The control boundaries do not pass and fixing them means changing colour
+values, which this phase does not do -- a floor makes the shortfall visible
+and prevents it worsening, without adding a red test to a suite whose contract
+is that red means regression. A card's hairline is deliberately quiet
+structure rather than the thing identifying a control, so WCAG 1.4.11 does not
+bind on it and asserting 3:1 there would be inventing a requirement.
+
 ---
 
 ## Revisions
@@ -205,6 +291,25 @@ has since merged. Measured fresh at the top of this phase, per that file's own
 Cost: none -- caught before any change was made, so the after-run had a true
 comparison. Post-Phase-0 run is identical: 243 / 4883, 0 failed.
 
+### R3 — revises D5's role in Phase 1
+Date: 2026-09-08
+Change: Phase 1 introduces **no** `var(--new, --old)` fallbacks. D5 stands as a
+rule for adding a token to a partially-migrated set; it simply had nothing to
+do here.
+Because: D5 exists to keep an unmigrated theme rendering while new tokens
+appear. All three themes were migrated in the same commit, so no unmigrated
+theme ever existed. The guarantee is now carried by something stronger than a
+fallback chain: `themes.test.ts` asserts that light, dark and medieval define
+exactly the same token paths as each other, so a theme cannot be missing a
+token for a fallback to rescue. A fallback would have been unreachable code
+asserting a state the tests forbid.
+Cost: none. If a future phase adds a token to one theme before the others --
+Phase 2's dark chrome is the likely case -- D5 applies again as written, and
+the parity test is what will force the question.
+Note also that fallbacks would have been actively unsafe here until D14: while
+`variables.css` declared every name as `--x: ;`, `var(--new, --old)` could not
+reach its fallback at all.
+
 ---
 
 ## Open questions
@@ -227,5 +332,21 @@ Answer as the work reaches them; move to a decision when settled.
   changes precedence app-wide and inverts `theme-effects.css` against the
   utilities. Proposal: Phase 1, with the token restructure, where a screenshot
   gate would actually catch the fallout.
+
+- **Q9** — `action.outline.border` and `field.border` fail WCAG 1.4.11 (3:1
+  for boundaries that identify a control). Measured against the least
+  favourable of page and card:
+
+  | theme | action.outline.border | field.border |
+  |---|---|---|
+  | light | 1.71:1 | 1.40:1 |
+  | dark | 1.38:1 | 1.98:1 |
+  | medieval | 6.55:1 (ok) | 2.34:1 |
+
+  An outline button and a text input are identified by their borders, so this
+  is a real failure, not a quiet-hairline judgement call. Out of scope for
+  Phase 1, which changes no values; floors are recorded in
+  `token-contrast.test.ts` so it cannot worsen. Fix in Phase 2 with the chrome,
+  or as a dedicated contrast pass?
 
 Settled: **Q7** by D14, **Q8** by D15.

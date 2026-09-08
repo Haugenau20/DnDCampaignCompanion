@@ -90,7 +90,7 @@ const DangerZoneCard: React.FC = () => {
 
           {/* The heavier of the two, and it has to look it. `.delete-button`
               is the app's QUIET delete affordance -- every theme sets
-              --delete-button-bg to transparent -- so it renders lighter than
+              --danger-delete-bg to transparent -- so it renders lighter than
               the outlined Leave button beside it, inverting the hierarchy.
               `.button-danger` is the filled error pair. `.error-bg` is
               transparent in all three themes, so the tint comes from
