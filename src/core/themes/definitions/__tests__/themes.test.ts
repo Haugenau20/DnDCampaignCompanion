@@ -54,12 +54,15 @@ describe('theme definitions', () => {
       expect(() => flattenTokens(treeOf(theme))).not.toThrow();
     });
 
-    test('every surface defines all four roles', () => {
+    test('every surface defines every role', () => {
+      // No partial surfaces: a surface that omits a role forces the consumer
+      // to reach for another surface's value, which is how ink and background
+      // drift apart in the first place.
       Object.entries(theme.tokens.surface).forEach(([surfaceName, pair]) => {
-        expect(Object.keys(pair).sort()).toEqual(
-          ['bg', 'border', 'on', 'onMuted'].sort()
-        );
-        expect(surfaceName.length).toBeGreaterThan(0);
+        expect({ surface: surfaceName, roles: Object.keys(pair).sort() }).toEqual({
+          surface: surfaceName,
+          roles: ['bg', 'border', 'hover', 'on', 'onMuted', 'selected'].sort(),
+        });
       });
     });
   });
