@@ -172,16 +172,18 @@ export const medievalTheme: Theme = {
         lg: '4px',
       },
     },
-    locationType: {
-      // Rich, parchment-like colors with medieval feel
-      region: '#8B0000', // Deep red for primary actions
-      city: '#483C32', // Warm brown for secondary elements
-      town: '#DAA520', // Golden accent for highlights
-      village: '#DAA520', // Golden accent for highlights
-      dungeon: '#8B0000', // Deep red for failed status
-      landmark: '#1147bb',
-      building: '#1147bb',
-      poi: '#006400', // Deep green for completed status
-    },
+    // Eight hues at one OKLCH lightness and chroma, hue angle the only
+    // variable. Order is the contract: a mark's hue comes from its index.
+    entityPalette: [
+      '#EDC6C2',
+      '#E5CDB2',
+      '#CFD5B4',
+      '#B9DBC7',
+      '#AFDADF',
+      '#BBD4EE',
+      '#D3CCEC',
+      '#E6C6DA',
+    ],
+    entityInk: '#2C1810',
   },
 };

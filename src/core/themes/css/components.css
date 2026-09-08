@@ -612,37 +612,59 @@
   color: var(--status-unknown);
 }
 
-/* Location type colors */
+/*
+  Location type chips.
+
+  These were eight hand-written `--location-type-*` colours -- the entity
+  palette solved ad hoc, and solved badly: the eight types mapped onto only
+  three distinct values, so `town` and `village` were literally the same colour.
+  They now index the palette, which means one place tunes them per theme and
+  every entry is already verified legible against one ink.
+
+  A chip rather than coloured text: the palette entries are quiet backgrounds,
+  and a pale tint used as ink would fail contrast on a light ground.
+*/
+.location-type-region,
+.location-type-city,
+.location-type-town,
+.location-type-village,
+.location-type-dungeon,
+.location-type-landmark,
+.location-type-building,
+.location-type-poi {
+  color: var(--entity-ink);
+}
+
 .location-type-region {
-  color: var(--location-type-region);
+  background-color: var(--entity-palette-0);
 }
 
 .location-type-city {
-  color: var(--location-type-city);
+  background-color: var(--entity-palette-1);
 }
 
 .location-type-town {
-  color: var(--location-type-town);
+  background-color: var(--entity-palette-2);
 }
 
 .location-type-village {
-  color: var(--location-type-village);
+  background-color: var(--entity-palette-3);
 }
 
 .location-type-dungeon {
-  color: var(--location-type-dungeon);
+  background-color: var(--entity-palette-4);
 }
 
 .location-type-landmark {
-  color: var(--location-type-landmark);
+  background-color: var(--entity-palette-5);
 }
 
 .location-type-building {
-  color: var(--location-type-building);
+  background-color: var(--entity-palette-6);
 }
 
 .location-type-poi {
-  color: var(--location-type-poi);
+  background-color: var(--entity-palette-7);
 }
 
 /* ====== RUMOR CARD ====== */
@@ -685,6 +707,31 @@
 .rumor-status-border-false {
   border-color: var(--status-failed);
 }
+
+/* ====== ENTITY SIGIL ====== */
+/*
+  One ink for every mark, so the palette separates entities without any entry
+  shouting louder than the others. The hue is the only thing that varies.
+*/
+.entity-sigil {
+  color: var(--entity-ink);
+  font-family: var(--font-primary);
+  line-height: 1;
+}
+
+/*
+  One rule per palette index. The component says which entity it is; the
+  stylesheet says what that looks like, so a theme can retune every mark in the
+  product without touching a component.
+*/
+.entity-sigil[data-sigil-index="0"] { background-color: var(--entity-palette-0); }
+.entity-sigil[data-sigil-index="1"] { background-color: var(--entity-palette-1); }
+.entity-sigil[data-sigil-index="2"] { background-color: var(--entity-palette-2); }
+.entity-sigil[data-sigil-index="3"] { background-color: var(--entity-palette-3); }
+.entity-sigil[data-sigil-index="4"] { background-color: var(--entity-palette-4); }
+.entity-sigil[data-sigil-index="5"] { background-color: var(--entity-palette-5); }
+.entity-sigil[data-sigil-index="6"] { background-color: var(--entity-palette-6); }
+.entity-sigil[data-sigil-index="7"] { background-color: var(--entity-palette-7); }
 
 /* ====== SELECTABLE ITEM ====== */
 /*

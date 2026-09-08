@@ -6,8 +6,16 @@
 // The set is therefore enumerable, which is what makes it checkable against a
 // manifest -- see 01-token-model.md section 4.
 
-/** A token tree: nested plain objects with string leaves. */
-export type TokenTree = { [key: string]: string | TokenTree };
+/**
+ * A token tree: nested plain objects with string leaves, plus ordered
+ * collections.
+ *
+ * An array is a genuinely different shape from a record, not a convenience: the
+ * entity palette needs N hues whose *position* is meaningful, because a mark's
+ * colour is derived from an index. A record would make the order incidental and
+ * a reorder invisible.
+ */
+export type TokenTree = { [key: string]: string | string[] | TokenTree };
 
 /**
  * `surface.card.onMuted` -> `--surface-card-on-muted`.
@@ -36,6 +44,28 @@ export const flattenTokens = (tree: TokenTree): Record<string, string> => {
   const walk = (node: TokenTree, trail: string[]): void => {
     Object.entries(node).forEach(([key, value]) => {
       const nextTrail = [...trail, key];
+
+      // An ordered collection becomes index-suffixed variables:
+      // `entityPalette` -> `--entity-palette-0`, `-1`, ... Index suffixes
+      // rather than one joined value, because a manifest can then assert that
+      // a specific entry exists, and CSS can name one entry without parsing.
+      if (Array.isArray(value)) {
+        value.forEach((entry, index) => {
+          const name = variableNameFor([...nextTrail, String(index)]);
+          const joined = `${nextTrail.join(".")}[${index}]`;
+          if (name in out) {
+            throw new Error(
+              `Ambiguous token path: "${joined}" and "${sourcePath[name]}" both ` +
+                `derive the variable "${name}". Rename one; two paths must never ` +
+                `produce one name.`
+            );
+          }
+          out[name] = entry;
+          sourcePath[name] = joined;
+        });
+        return;
+      }
+
       if (typeof value === "string") {
         const name = variableNameFor(nextTrail);
         const joined = nextTrail.join(".");

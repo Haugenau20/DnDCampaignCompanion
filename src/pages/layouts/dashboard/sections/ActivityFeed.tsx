@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Typography from 'core/components/Typography';
 import Card from 'core/components/Card';
 import { RosterFilterPills, type RosterFilterOption } from 'core/components/Roster';
+import EntitySigil from 'core/components/EntitySigil';
 import clsx from 'clsx';
 import { Activity } from 'pages/HomePage';
 import { useActivityDisplay } from '../../../layouts/common/hooks/useActivityDisplay';
@@ -142,7 +143,17 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
                 {formatDate(activity.timestamp)}
               </Typography>
 
-              <div className="flex flex-col gap-1 min-w-0 col-start-1 row-start-1 sm:col-start-2">
+              {/* The mark leads the content column rather than taking a grid
+                  column of its own, so the row's three-column rhythm is
+                  unchanged and the sigil scans directly beside the title it
+                  identifies. */}
+              <div className="flex gap-3 min-w-0 col-start-1 row-start-1 sm:col-start-2">
+                <EntitySigil
+                  entityId={activity.id}
+                  name={activity.title}
+                  className="mt-0.5"
+                />
+                <div className="flex flex-col gap-1 min-w-0">
                 <Typography
                   variant="body-sm"
                   color="primary"
@@ -158,6 +169,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
                     {activity.actor}
                   </Typography>
                 )}
+                </div>
               </div>
 
               <Typography
