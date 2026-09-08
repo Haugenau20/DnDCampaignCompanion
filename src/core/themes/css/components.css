@@ -708,6 +708,99 @@
   border-color: var(--status-failed);
 }
 
+/* ====== HERO BAND ====== */
+/*
+  The campaign's identity, on the band surface. Its ink comes from the band
+  pair, so nothing inside it names a colour -- the same rule the chrome follows,
+  and the reason neither needs a per-theme patch.
+*/
+.hero-band {
+  background-color: var(--surface-band-bg);
+  color: var(--surface-band-on);
+  border-bottom: var(--border-width-sm) solid var(--surface-band-border);
+}
+
+/*
+  A heading on the band takes the band's ink.
+
+  `.typography-heading` names `--color-heading`, which is a page-level notion --
+  in the dark theme it is deliberately a touch brighter than body ink. On a
+  surface whose ink differs from the page's, that value is simply wrong, and on
+  this band it would render near-black on dark. Same shape as the chrome's ghost
+  buttons: the surface claims its own ink rather than every component learning
+  about every surface.
+*/
+.hero-band .typography-heading {
+  color: var(--surface-band-on);
+}
+
+.hero-muted {
+  color: var(--surface-band-on-muted);
+}
+
+.hero-eyebrow {
+  color: var(--surface-band-on-muted);
+}
+
+.hero-dot {
+  background-color: var(--surface-band-on-muted);
+}
+
+/*
+  The image slot. It is empty in this phase and will be empty for most campaigns
+  most of the time, so the border and radius are the design rather than a
+  placeholder outline waiting to be replaced.
+*/
+.hero-slot {
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  box-shadow: 0 0 0 var(--border-width-sm) var(--surface-band-border);
+}
+
+/* ====== VIEW TOGGLE ====== */
+/*
+  A segmented control that appears on two different surfaces: the hero band on
+  the dashboard, and the page in the journal. It cannot name one set of colours,
+  so it names roles and the surface supplies them -- default page values here,
+  band values below. Without this the active segment rendered the band's
+  near-white ink on a white card: invisible.
+*/
+.view-toggle {
+  background-color: var(--surface-sunken-bg);
+}
+
+.view-toggle-item {
+  color: var(--surface-page-on-muted);
+}
+
+.view-toggle-item:hover {
+  background-color: var(--surface-page-hover);
+  color: var(--surface-page-on);
+}
+
+.view-toggle-item-active {
+  background-color: var(--surface-card-bg);
+  color: var(--surface-page-on);
+}
+
+.hero-band .view-toggle {
+  background-color: var(--surface-band-hover);
+}
+
+.hero-band .view-toggle-item {
+  color: var(--surface-band-on-muted);
+}
+
+.hero-band .view-toggle-item:hover {
+  background-color: var(--surface-band-hover);
+  color: var(--surface-band-on);
+}
+
+.hero-band .view-toggle-item-active {
+  background-color: var(--surface-band-selected);
+  color: var(--surface-band-on);
+}
+
 /* ====== ENTITY SIGIL ====== */
 /*
   One ink for every mark, so the palette separates entities without any entry

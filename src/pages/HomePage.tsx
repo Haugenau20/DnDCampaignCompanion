@@ -223,7 +223,7 @@ useEffect(() => {
    */
   const viewToggle = (
     <div
-      className="inline-flex p-0.5 rounded-lg bg-secondary"
+      className="inline-flex p-0.5 rounded-lg view-toggle"
       role="group"
       aria-label="Choose a view"
     >
@@ -240,9 +240,8 @@ useEffect(() => {
             aria-pressed={isActive}
             className={clsx(
               'flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-sm transition-colors',
-              isActive
-                ? 'bg-card font-semibold shadow-sm'
-                : 'typography-secondary selectable-item'
+              'view-toggle-item',
+              isActive && 'view-toggle-item-active font-semibold shadow-sm'
             )}
           >
             <Icon size={15} aria-hidden="true" />

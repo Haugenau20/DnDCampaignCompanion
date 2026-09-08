@@ -68,12 +68,16 @@ export const lightTheme: Theme = {
       
       },
       band: {
-        bg: '#EBF0F7',
-        on: '#0F172A',
-        onMuted: '#5A6B87',
-        border: '#E4E9F2',
-        hover: '#D6E4F5',
-        selected: '#93C5FD',
+        // The hero. One step lighter than the chrome so the two read as layers
+        // of the same frame rather than one tall header, and dark enough that
+        // the warm page below lands as a change of material.
+        bg: '#2A3242',
+        on: '#F7F9FC',
+        onMuted: '#A7B0C0',
+        border: '#3A4557',
+        hover: 'rgba(255, 255, 255, 0.08)',
+        selected: 'rgba(255, 255, 255, 0.14)',
+      
       },
     },
     status: {
