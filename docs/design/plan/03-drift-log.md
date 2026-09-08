@@ -169,6 +169,25 @@ Hover still reads as hover: the ground goes from nothing to `--hover-light`
 and the ink strengthens from `--text-secondary`. Taken in Phase 0 rather than
 deferred to Phase 2 at the maintainer's direction.
 
+### D16 — Phase 1's gate is a token-value diff, not screenshots
+Date: 2026-09-08   Status: active
+Decision: Phase 1 is gated by `themes/__tests__/token-values.test.tsx`, which
+drives the real `ThemeProvider`, reads the variables it writes to the root
+element, and compares them against a baseline captured before any
+restructuring. Semantics: no existing token may change value or disappear;
+adding tokens passes.
+Because: the repo has no visual-regression tooling, and adding it is a project
+of its own that Phase 1 would have to finish first. A screenshot is also the
+weaker instrument here -- it cannot separate a value change from a rendering
+difference, and it needs a human to read it. What Phase 1 actually promises is
+narrower and exactly checkable: same values, new structure. Additions must
+pass, because introducing surface pairs is the point of the phase. Verified
+against a control: a one-hex-digit change to lightTheme's primary failed the
+light theme only and named the three affected tokens.
+Note this does not cover markup or layout drift. Phase 1 changes no markup, so
+that is in scope for the phase as written; if it starts to, the gate needs a
+second instrument.
+
 ---
 
 ## Revisions
