@@ -255,6 +255,45 @@ is that red means regression. A card's hairline is deliberately quiet
 structure rather than the thing identifying a control, so WCAG 1.4.11 does not
 bind on it and asserting 3:1 there would be inventing a requirement.
 
+### D22 — The chrome is one deep near-neutral band, header and footer together
+Date: 2026-09-08   Status: active   (completes D19)
+Decision: the light theme's chrome becomes `#171A21` with `#F7F9FC` ink and
+`#9AA4B5` muted ink. `surface.footer` is retired; the footer consumes the
+chrome pair. Dark and medieval keep their own chrome values.
+Because: value contrast belongs in the frame, and the surfaces you scan every
+session stay quiet -- the page and cards are untouched. The chrome's ink is the
+page's own ground, which ties the band to the paper rather than making it a
+separate visual system. D19 deferred the header/footer merge to the phase where
+the chrome became one band; this is that phase.
+
+### D23 — Surfaces gained `hover` and `selected` roles
+Date: 2026-09-08   Status: active
+Decision: `SurfacePair` is six roles, not four. Every surface defines its own
+feedback tints, and the two global `state.hover*` tokens no longer serve the
+chrome.
+Because: a tint is only meaningful relative to what it sits on. A dark chrome
+needs a light overlay where the light page needs a dark one, and no single
+value is both -- the light theme's opaque `#93C5FD` active pill would have been
+a bright slab on a near-black bar. This is token-model section 2 applied as
+written: when a component needs something the pair does not offer, the surface
+is under-specified, so the role goes on the surface rather than into a one-off
+token. Seeded from each theme's existing tints, so nothing outside the chrome
+changed.
+
+### D24 — `Typography` inherits its colour
+Date: 2026-09-08   Status: active
+Decision: `.typography` sets `color: inherit` instead of `--surface-page-on`.
+Because: it named an ink unconditionally, so every piece of text carried the
+page's colour regardless of the surface under it. That was invisible while all
+surfaces shared one ink, and became four unreadable labels the moment the
+chrome went dark -- the nav items, the campaign switcher and the footer links
+all rendered near-black on near-black. This is the exact defect the pair model
+exists to prevent, found by the first surface that stopped matching the page.
+`body` still sets the page ink, so the page and cards are unchanged.
+Ghost buttons in the chrome are scoped the same way. That is a structural
+scope, not a theme-conditional patch: it says a ghost button on this surface
+takes this surface's values. Their accent ink measured 2.0:1 on the band.
+
 ---
 
 ## Revisions

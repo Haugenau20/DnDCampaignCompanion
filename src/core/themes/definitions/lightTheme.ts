@@ -31,6 +31,8 @@ export const lightTheme: Theme = {
         // primary actions for the same "this is interactive" signal.
         onMuted: '#5A6B87', // Muted slate for subtext
         border: '#E4E9F2',
+        hover: '#D6E4F5',
+        selected: '#93C5FD',
       },
       card: {
         bg: '#FFFFFF', // Clean white for modern cards
@@ -39,33 +41,39 @@ export const lightTheme: Theme = {
         // A saturated blue hairline on white reads as an interactive outline, which
         // made every card look selected. Structure should be quieter than action.
         border: '#E4E9F2', // Neutral hairline for structure
+        hover: '#D6E4F5',
+        selected: '#93C5FD',
       },
       sunken: {
         bg: '#EBF0F7', // Light blue-gray for contrast sections
         on: '#0F172A',
         onMuted: '#5A6B87',
         border: '#E4E9F2',
+        hover: '#D6E4F5',
+        selected: '#93C5FD',
       },
       chrome: {
-        // The header now carries navigation, campaign context and search in one bar.
-        // A saturated blue field behind all of that fought with the primary actions
-        // inside it, so the bar is a surface and the accent is reserved for actions.
-        bg: '#FFFFFF', // Neutral surface for the single app bar
-        on: '#0F172A',
-        onMuted: '#5A6B87',
-        border: '#E4E9F2',
-      },
-      footer: {
-        bg: '#EBF0F7', // Soft blue-gray footer for balance
-        on: '#0F172A',
-        onMuted: '#5A6B87',
-        border: '#E4E9F2',
+        // The frame. Deep and near-neutral so value contrast lives in the
+        // chrome while the surfaces you scan every session stay quiet. Its ink
+        // is the page's own ground, which is what ties the band to the paper it
+        // sits above rather than making it a separate visual system.
+        bg: '#171A21',
+        on: '#F7F9FC',
+        onMuted: '#9AA4B5',
+        border: '#2A2F3A',
+        // Overlays rather than opaque tints: on a dark band the feedback has to
+        // lighten, where on the light page it has to darken.
+        hover: 'rgba(255, 255, 255, 0.08)',
+        selected: 'rgba(255, 255, 255, 0.14)',
+      
       },
       band: {
         bg: '#EBF0F7',
         on: '#0F172A',
         onMuted: '#5A6B87',
         border: '#E4E9F2',
+        hover: '#D6E4F5',
+        selected: '#93C5FD',
       },
     },
     status: {

@@ -121,7 +121,7 @@ const Header: React.FC = () => {
               <>
                 <span
                   aria-hidden="true"
-                  className="w-px h-6 self-center opacity-40 bg-secondary"
+                  className="w-px h-6 self-center opacity-40 bg-chrome-border"
                 ></span>
                 <ContextSwitcher onJoinGroup={() => setShowJoinGroup(true)} />
               </>

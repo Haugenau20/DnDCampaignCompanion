@@ -90,10 +90,18 @@ describe("theme token values", () => {
       const resolve = (name: string): string =>
         renameMap.renamed[name] ?? renameMap.retired[name] ?? name;
 
+      // A token whose value was deliberately changed is still pinned -- to its
+      // new value. Listing it here is not an exemption; it swaps which value
+      // the token is held to, and every other token stays locked to the
+      // baseline, so an accidental change anywhere else still fails.
+      const revalued: Record<string, { to: string }> =
+        (renameMap.revalued ?? {})[themeName] ?? {};
+
       const expectedByOldName: TokenMap = {};
       const actualByOldName: TokenMap = {};
       Object.keys(expected).sort().forEach((oldName) => {
-        expectedByOldName[oldName] = expected[oldName];
+        expectedByOldName[oldName] =
+          oldName in revalued ? revalued[oldName].to : expected[oldName];
         actualByOldName[oldName] = actual[resolve(oldName)] ?? "<MISSING>";
       });
       expect(actualByOldName).toEqual(expectedByOldName);

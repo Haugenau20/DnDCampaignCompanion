@@ -22,7 +22,7 @@
     "--card-bg": "--surface-card-bg",
     "--card-border": "--surface-card-border",
     "--header-bg": "--surface-chrome-bg",
-    "--footer-bg": "--surface-footer-bg",
+    "--footer-bg": "--surface-chrome-bg",
     "--status-text": "--status-on",
     "--hover-light": "--state-hover-light",
     "--hover-medium": "--state-hover-medium",
@@ -71,5 +71,27 @@
     "--book-pagination-bg": "--surface-sunken-bg",
     "--spinner-border": "--field-border",
     "--spinner-active": "--color-primary"
+  },
+  "_revalued_comment": [
+    "Values deliberately changed after the baseline was taken. Listed per theme,",
+    "with the old and new value, so the gate still pins them -- a token here is",
+    "asserted to hold its NEW value, not merely exempted from the check. Adding",
+    "an entry requires a drift-log decision saying why."
+  ],
+  "revalued": {
+    "light": {
+      "--header-bg": {
+        "from": "#FFFFFF",
+        "to": "#171A21",
+        "phase": 2,
+        "why": "the chrome becomes one deep near-neutral band (D22)"
+      },
+      "--footer-bg": {
+        "from": "#EBF0F7",
+        "to": "#171A21",
+        "phase": 2,
+        "why": "the footer is the same band as the header (D22)"
+      }
+    }
   }
 }

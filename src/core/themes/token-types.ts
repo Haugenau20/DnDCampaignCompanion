@@ -21,6 +21,19 @@ export interface SurfacePair {
   on: string;
   onMuted: string;
   border: string;
+  /**
+   * Feedback tints for something sitting ON this surface: `hover` for pointer
+   * feedback, `selected` for a resting chosen state.
+   *
+   * These belong to the pair rather than being two global tints because a tint
+   * is only meaningful relative to what it sits on -- a dark chrome needs a
+   * light overlay where a light page needs a dark one, and no single value can
+   * be both. That is section 2's rule applied literally: when a component needs
+   * something the pair does not offer, the surface is under-specified, so the
+   * role goes on the surface rather than into a one-off token.
+   */
+  hover: string;
+  selected: string;
 }
 
 /** One button variant. `border` is present only where the variant draws one. */
@@ -43,17 +56,17 @@ export interface ThemeTokens {
   };
 
   /**
-   * `chrome` and `footer` are separate surfaces here even though the design
-   * language treats the chrome as one band. Today the header is white and the
-   * footer is tinted; collapsing them is a visual change, and Phase 1 makes
-   * none. Phase 2 merges them when the chrome becomes one dark surface.
+   * `chrome` covers the header and the footer, which are one band. They were
+   * briefly separate surfaces while Phase 1 preserved the old white header and
+   * tinted footer; Phase 2 merged them, which is the change that makes the
+   * design language's description true of the code.
    */
   surface: {
     page: SurfacePair;
     card: SurfacePair;
     sunken: SurfacePair;
+    /** Header and footer are one band -- see the note above. */
     chrome: SurfacePair;
-    footer: SurfacePair;
     band: SurfacePair;
   };
 

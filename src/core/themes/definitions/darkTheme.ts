@@ -29,36 +29,40 @@ export const darkTheme: Theme = {
         on: '#E0E0E0', // Soft off-white for primary text
         onMuted: '#B0B0B0', // Muted gray for secondary text
         border: '#3B3B52',
+        hover: 'rgba(255, 255, 255, 0.05)',
+        selected: 'rgba(255, 255, 255, 0.1)',
       },
       card: {
         bg: '#252538', // Dark but not black for cards
         on: '#E0E0E0',
         onMuted: '#B0B0B0',
         border: '#3B3B52', // Subtle border for definition
+        hover: 'rgba(255, 255, 255, 0.05)',
+        selected: 'rgba(255, 255, 255, 0.1)',
       },
       sunken: {
         bg: '#2A2A3C', // Slightly lighter grayish-blue
         on: '#E0E0E0',
         onMuted: '#B0B0B0',
         border: '#3B3B52',
+        hover: 'rgba(255, 255, 255, 0.05)',
+        selected: 'rgba(255, 255, 255, 0.1)',
       },
       chrome: {
         bg: '#222222', // Slightly lighter than main background for headers
         on: '#E0E0E0',
         onMuted: '#B0B0B0',
         border: '#3B3B52',
-      },
-      footer: {
-        bg: '#222222', // Match header for consistency
-        on: '#E0E0E0',
-        onMuted: '#B0B0B0',
-        border: '#3B3B52',
+        hover: 'rgba(255, 255, 255, 0.05)',
+        selected: 'rgba(255, 255, 255, 0.1)',
       },
       band: {
         bg: '#2A2A3C',
         on: '#E0E0E0',
         onMuted: '#B0B0B0',
         border: '#3B3B52',
+        hover: 'rgba(255, 255, 255, 0.05)',
+        selected: 'rgba(255, 255, 255, 0.1)',
       },
     },
     status: {
