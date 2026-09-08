@@ -154,19 +154,21 @@ export interface ThemeTokens {
   };
 
   /**
-   * Location type colours, kept as a group of their own because they are
-   * eight aliases of other tokens -- the entity palette solved ad hoc. Phase 3
-   * replaces them with an ordered palette; retiring them is a one-way door
-   * (see 00-transition-plan.md section 6), so they survive this phase intact.
+   * The entity palette: an ordered collection, not a record.
+   *
+   * A mark's hue comes from its position, so order is meaningful and a reorder
+   * changes existing marks. Every entry is tuned to sit in one narrow band of
+   * lightness and chroma -- generated at a fixed OKLCH lightness and chroma
+   * with only the hue angle varying -- so the entries separate entities from
+   * each other while all sitting equally quiet against `entityInk`. Saturated
+   * jewel tones separate beautifully and shout; these do not.
+   *
+   * This replaces the eight hand-written location-type colours, which were
+   * this pattern already, solved ad hoc and mapping eight types onto only
+   * three distinct values.
    */
-  locationType: {
-    region: string;
-    city: string;
-    town: string;
-    village: string;
-    dungeon: string;
-    landmark: string;
-    building: string;
-    poi: string;
-  };
+  entityPalette: string[];
+
+  /** The single ink every palette entry is legible against. */
+  entityInk: string;
 }
