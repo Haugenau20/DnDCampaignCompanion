@@ -30,36 +30,40 @@ export const medievalTheme: Theme = {
         on: '#2C1810', // Deep brown for primary text
         onMuted: '#483C32', // Warm brown for secondary text
         border: '#8B4513',
+        hover: 'rgba(139, 69, 19, 0.05)',
+        selected: 'rgba(139, 69, 19, 0.1)',
       },
       card: {
         bg: '#FFF8DC', // Light parchment for cards
         on: '#2C1810',
         onMuted: '#483C32',
         border: '#8B4513', // Saddle brown for borders
+        hover: 'rgba(139, 69, 19, 0.05)',
+        selected: 'rgba(139, 69, 19, 0.1)',
       },
       sunken: {
         bg: '#F5E6D3', // Slightly darker parchment
         on: '#2C1810',
         onMuted: '#483C32',
         border: '#8B4513',
+        hover: 'rgba(139, 69, 19, 0.05)',
+        selected: 'rgba(139, 69, 19, 0.1)',
       },
       chrome: {
         bg: '#F5E6D3', // Slightly darker parchment for header
         on: '#2C1810',
         onMuted: '#483C32',
         border: '#8B4513',
-      },
-      footer: {
-        bg: '#F5E6D3', // Match header for consistency
-        on: '#2C1810',
-        onMuted: '#483C32',
-        border: '#8B4513',
+        hover: 'rgba(139, 69, 19, 0.05)',
+        selected: 'rgba(139, 69, 19, 0.1)',
       },
       band: {
         bg: '#F5E6D3',
         on: '#2C1810',
         onMuted: '#483C32',
         border: '#8B4513',
+        hover: 'rgba(139, 69, 19, 0.05)',
+        selected: 'rgba(139, 69, 19, 0.1)',
       },
     },
     status: {

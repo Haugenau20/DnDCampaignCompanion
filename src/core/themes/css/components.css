@@ -80,6 +80,27 @@
   background-color: var(--action-ghost-hover);
 }
 
+/*
+  Ghost buttons in the chrome take the chrome's ink and tints.
+
+  A ghost button's accent colour is a page affordance -- on a card it is how
+  you tell an action from body text. Inside the frame the nav sets the tone,
+  and the accent both fought with it and measured 2.0:1 against the dark band.
+  This is a structural scope, not a theme-conditional patch: it says a ghost
+  button on this surface takes this surface's values, which is the pair model
+  rather than an exception to it.
+*/
+.header .button-ghost,
+.footer .button-ghost {
+  color: var(--surface-chrome-on-muted);
+}
+
+.header .button-ghost:hover:not(:disabled),
+.footer .button-ghost:hover:not(:disabled) {
+  color: var(--surface-chrome-on);
+  background-color: var(--surface-chrome-hover);
+}
+
 .button-link {
   background-color: var(--action-link-bg);
   color: var(--action-link-text);
@@ -154,9 +175,22 @@
 }
 
 /* ====== TYPOGRAPHY COMPONENT ====== */
+/*
+  Typography inherits its colour rather than naming one.
+  
+  It used to set `--surface-page-on` unconditionally, which meant every piece
+  of text carried the page's ink no matter which surface it sat on. That was
+  invisible while every surface shared one ink; the moment the chrome became a
+  dark band, every label inside it -- nav items, the campaign switcher, the
+  footer links -- kept rendering near-black on near-black. Inheriting lets the
+  surface decide, which is the whole point of a pair.
+
+  `body` sets the page ink, so text on the page and on cards is unchanged; only
+  text inside a container that sets its own colour now follows that container.
+*/
 .typography {
   font-family: var(--font-primary);
-  color: var(--surface-page-on);
+  color: inherit;
 }
 
 .typography-heading {
@@ -257,16 +291,18 @@
   /* A hairline separates the bar from the page. The drop shadow was doing that job
      for a coloured field; on a neutral surface a border is quieter and does not
      imply the bar is floating above the content. */
-  border-bottom: var(--border-width-sm) solid var(--surface-card-border);
+  border-bottom: var(--border-width-sm) solid var(--surface-chrome-border);
 }
 
 .header-title {
-  color: var(--color-heading);
+  color: var(--surface-chrome-on);
   font-family: var(--font-heading);
 }
 
+/* The footer is the same band as the header, not a surface of its own. */
 .footer {
-  background-color: var(--surface-footer-bg);
+  background-color: var(--surface-chrome-bg);
+  color: var(--surface-chrome-on-muted);
 }
 
 .content {
@@ -279,8 +315,15 @@
   border-bottom: var(--border-width-sm) solid var(--surface-card-border);
 }
 
+/*
+  Navigation lives in the chrome, so it takes the chrome pair's ink and tints
+  rather than the page's. Before the chrome became a surface of its own these
+  were the same values, and the difference only shows up once the bar stops
+  matching the page -- which is exactly the patch-per-theme problem the pair
+  model exists to remove.
+*/
 .navigation-item {
-  color: var(--surface-page-on-muted);
+  color: var(--surface-chrome-on-muted);
   transition: all 0.2s ease;
 }
 
@@ -293,8 +336,8 @@
   13.8:1, dark 10.8:1, medieval 14.4:1.
 */
 .navigation-item:hover {
-  color: var(--surface-page-on);
-  background-color: var(--state-hover-light);
+  color: var(--surface-chrome-on);
+  background-color: var(--surface-chrome-hover);
 }
 
 /*
@@ -308,8 +351,8 @@
   and tint, not by hue alone.
 */
 .navigation-item-active {
-  color: var(--surface-page-on);
-  background-color: var(--state-hover-medium);
+  color: var(--surface-chrome-on);
+  background-color: var(--surface-chrome-selected);
   font-weight: 500;
 }
 
@@ -331,6 +374,19 @@
 .search:focus {
   border-color: var(--field-border-focus);
   box-shadow: 0 0 0 2px var(--field-ring-focus);
+}
+
+/*
+  The keyboard hint in the search trigger. It used to borrow `.search`, the
+  input-field style, so on the dark chrome it rendered as a bright white pill --
+  the loudest thing in the bar, for a hint you stop reading after the first
+  visit. It is now an overlay on whatever surface it sits on, one step up from
+  the ground rather than a slab against it.
+*/
+.search-shortcut {
+  background-color: var(--surface-chrome-hover);
+  color: var(--surface-chrome-on-muted);
+  border-radius: var(--border-radius-sm);
 }
 
 .search-results {

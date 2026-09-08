@@ -29,7 +29,8 @@ module.exports = {
         // UI element backgrounds
         card: 'var(--surface-card-bg)',
         header: 'var(--surface-chrome-bg)',
-        footer: 'var(--surface-footer-bg)',
+        footer: 'var(--surface-chrome-bg)',
+        'chrome-border': 'var(--surface-chrome-border)',
         error: 'var(--danger-bg)',
         input: 'var(--field-bg)',
         'form-disabled': 'var(--field-disabled-bg)',
