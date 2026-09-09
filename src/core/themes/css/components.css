@@ -984,21 +984,16 @@
 
   /* ====== SECTION STATES ====== */
   /*
-    The heading, empty and loading treatments shared by every dashboard section.
-    They carried the retired alternate layout's prefix because that layout
-    defined them first (D39); the dashboard was always the other consumer, so
-    they are now named for what they are.
+    The empty and loading treatments shared by every dashboard section. They
+    carried the retired alternate layout's prefix because that layout defined
+    them first (D39); the dashboard was always the other consumer, so they are
+    now named for what they are. The matching heading rule went with the layout
+    -- `SectionHeading` had no consumer outside it.
 
     An empty or loading region is designed, not blank: the loading state shows
     the rhythm of the rows that are coming rather than a spinner, and the empty
     state is muted ink on the page rather than an absence.
   */
-  .section-heading {
-    color: var(--surface-page-on);
-    border-bottom: 1px solid var(--surface-card-border);
-    padding-bottom: 0.25rem;
-  }
-
   .section-loading {
     background-color: var(--surface-sunken-bg);
     opacity: 0.3;

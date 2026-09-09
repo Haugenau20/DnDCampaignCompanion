@@ -501,10 +501,13 @@ question it was for. Its premise -- that someone files every entry under the
 right session -- is a maintenance burden that pays nothing the first time anyone
 forgets. Deleting it before the rest of Phase 6 means Phases 8, 9 and 11 never
 touch those files.
-Three of its classes were not its own: `.journal-heading`, `.journal-loading`
-and `.journal-empty` were shared with the dashboard from the start and carried
-the prefix only because that layout defined them first. They are renamed
-`.section-*`, which is what they always were.
+Two of its classes were not its own: `.journal-loading` and `.journal-empty`
+were shared with the dashboard from the start and carried the prefix only
+because that layout defined them first. They are renamed `.section-*`, which is
+what they always were. A third, `.journal-heading`, looked shared and was not --
+`SectionHeading` had exactly two consumers, both journal sections -- so the
+component, its test and its rule went with the mode. Found in the browser, after
+the change: the class rendered nowhere.
 Correction to the handoff: eleven tokens, not twelve. The handoff counted from
 memory; the baseline held 33 entries across three themes.
 
