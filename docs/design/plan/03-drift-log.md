@@ -1209,6 +1209,33 @@ place the design language permits a hue to carry meaning alone, since the
 legend is itself the key. That makes it the natural home for the `npc-status-*`
 family rather than dead weight. Deciding needs an owner; see Q15.
 
+### R19 — revises 04-rollout's and A3's account of Phase 8
+Date: 2026-09-09
+Change: Phase 8 is not "almost all consumption, not design", and its one open
+question is already closed. Measured across the eleven form files while writing
+the handoffs:
+- **There is no `Select` primitive**, and the forms render **11 raw
+  `<select>`** between them (RumorForm 4, NPCForm 2, NPCEditForm 2,
+  LocationFormSections 2, QuestFormSections 1). A3 says the `field.*` tokens
+  are complete so the phase is consumption — true of text fields, false here.
+  There is nothing to consume, so `08-0` builds one before anything else runs.
+- **17 hand-written labels are not associated with their controls** — all the
+  same line, `<label className="block text-sm font-medium mb-1 form-label">`
+  with no `htmlFor`, against 8 places in the same files that do it correctly.
+  Those controls are unnamed to a screen reader (WCAG 1.3.1, 4.1.2). It is the
+  form set's largest accessibility defect and nothing in the plan mentioned it,
+  because the plan was written about colour.
+- **The colour half is already done**: zero hardcoded hex values and zero
+  `[data-theme=…]` patches survive in any of the eleven files. The same shape
+  of correction R13 had to make for Phase 7 -- a phase scoped around repainting
+  arriving to find the paint already right and the structure wrong.
+- **"Whether a form sits on `card` or on `page`" is answered.** All eleven
+  render inside `<Card>`, unanimously. `08-3` ratifies it in a decision rather
+  than reopening it.
+Because: the plan's Phase 8 paragraph was written before Phases 3a-7 ran, and
+the token work those phases did is exactly what removed the colour problem it
+describes. Measuring first is what turned a repaint into an accessibility fix.
+
 ### R18 — revises 07-3: the image slot shipped inside 7.2.5
 Date: 2026-09-09
 Change: Phase 7 has no separate 7.3. The image slot -- the shared `ImageSlot`

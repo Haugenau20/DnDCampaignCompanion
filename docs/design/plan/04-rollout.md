@@ -112,10 +112,23 @@ no focal point (D44).
 ### Phase 8 — Forms & fields
 
 `NPCForm`, `NPCEditForm`, `LocationFormSections`, `LocationCreateForm`,
-`LocationEditForm`, `QuestFormSections`, `RumorForm`, `ChapterForm`,
-`SagaEditPage`, plus `Input` and `Dialog`. The `field.*` tokens already exist
-and are already 3a-tuned; this phase makes the forms consume them and settles
-one open question — whether a form sits on `card` or on `page`.
+`LocationEditForm`, `QuestFormSections`, `QuestCreateForm`, `QuestEditForm`,
+`RumorForm`, `ChapterForm`, `SagaEditPage`, plus `Input`, `Dialog` and a
+`Select` that does not exist yet.
+
+Four PRs, `handoff/08-0` … `08-3`. This paragraph used to say the phase was
+mostly consumption of the `field.*` tokens, and that it would settle whether a
+form sits on `card` or on `page`. Measured before writing the handoffs, both
+were wrong (R19): the colour work is already done — zero hardcoded hex and zero
+`[data-theme=…]` patches survive in any of the eleven files — and all eleven
+already sit on `Card`, so the question is closed by practice and `08-3` only
+ratifies it.
+
+What the measurement found instead is structural: **no `Select` primitive
+exists** while the forms render 11 raw `<select>` elements, and **17
+hand-written labels are not associated with their controls**, leaving them
+unnamed to a screen reader. Phase 8 is an accessibility phase wearing a
+repainting phase's description.
 
 ### Phase 9 — Reading surfaces
 
