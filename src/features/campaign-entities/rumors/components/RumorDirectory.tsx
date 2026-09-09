@@ -299,6 +299,8 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                   <RosterRow
                     key={rumor.id}
                     id={`rumor-${rumor.id}`}
+                    entityId={rumor.id}
+                    entityName={rumor.title}
                     gridClassName={ROW_GRID}
                     isFirst={index === 0}
                     highlighted={highlightedRumorId === rumor.id}

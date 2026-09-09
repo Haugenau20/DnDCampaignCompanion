@@ -253,6 +253,8 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                 <RosterRow
                   key={quest.id}
                   id={`quest-${quest.id}`}
+                  entityId={quest.id}
+                  entityName={quest.title}
                   gridClassName={ROW_GRID}
                   isFirst={index === 0}
                   highlighted={highlightedQuestId === quest.id}

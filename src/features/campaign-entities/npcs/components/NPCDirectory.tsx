@@ -230,6 +230,8 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                   <RosterRow
                     key={npc.id}
                     id={`npc-${npc.id}`}
+                    entityId={npc.id}
+                    entityName={npc.name}
                     gridClassName={ROW_GRID}
                     isFirst={index === 0}
                     highlighted={highlightedNpcId === npc.id}

@@ -339,6 +339,8 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
         <RosterRow
           key={location.id}
           id={`location-${location.id}`}
+          entityId={location.id}
+          entityName={location.name}
           gridClassName={ROW_GRID}
           isFirst={index === 0}
           highlighted={highlightedLocationId === location.id}

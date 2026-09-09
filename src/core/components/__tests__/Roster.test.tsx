@@ -360,6 +360,8 @@ describe('RosterRow', () => {
   const renderRow = (props: Partial<React.ComponentProps<typeof RosterRow>> = {}) =>
     render(
       <RosterRow
+        entityId="acar"
+        entityName="Acar"
         gridClassName="grid-cols-2"
         toggleLabel="Acar"
         expandedContent={<div>detail</div>}
@@ -390,6 +392,8 @@ describe('RosterRow', () => {
 
     rerender(
       <RosterRow
+        entityId="acar"
+        entityName="Acar"
         gridClassName="grid-cols-2"
         toggleLabel="Acar"
         expanded
@@ -409,11 +413,17 @@ describe('RosterRow', () => {
     expect(onToggle).toHaveBeenCalled();
   });
 
-  test('applies the caller\'s grid template, so columns align across groups', () => {
+  test("applies the caller’s grid template to the element holding the cells", () => {
+    // The template moved off the button when the row gained its identity mark:
+    // the button is now a flex row of [mark, grid], so the columns the caller
+    // sizes belong to the grid, not the button. Asserted on the element that
+    // actually contains the cells, so it cannot pass on an empty grid.
     renderRow();
-    expect(
-      screen.getByRole('button', { name: /Expand Acar/ }).className
-    ).toContain('grid-cols-2');
+    const button = screen.getByRole('button', { name: /Expand Acar/ });
+    const grid = button.querySelector('.grid');
+    expect(grid).not.toBeNull();
+    expect(grid!.className).toContain('grid-cols-2');
+    expect(grid!).toContainElement(screen.getByText('Acar'));
   });
 
   test('renders a leadingControl outside the expand button, not nested in it', () => {
@@ -473,5 +483,72 @@ describe('RosterField', () => {
   test('falls back to a default empty message', () => {
     render(<RosterField label="Race" />);
     expect(screen.getByText('Not recorded')).toBeInTheDocument();
+  });
+});
+
+describe('RosterRow identity mark', () => {
+  const renderRow = (
+    props: Partial<React.ComponentProps<typeof RosterRow>> = {}
+  ) =>
+    render(
+      <RosterRow
+        entityId="acar"
+        entityName="Acar"
+        gridClassName="grid-cols-2"
+        toggleLabel="Acar"
+        {...props}
+      >
+        <span>Acar</span>
+      </RosterRow>
+    );
+
+  test('renders exactly one mark per row', () => {
+    renderRow();
+    expect(screen.getAllByTestId('entity-sigil')).toHaveLength(1);
+  });
+
+  test('takes its letter from the name, not the id', () => {
+    // The id is a slug and may carry a disambiguating suffix; the reader should
+    // see the name's initial.
+    renderRow({ entityId: 'kerowyn-hucrele-2', entityName: 'Kerowyn Hucrele' });
+    expect(screen.getByTestId('entity-sigil')).toHaveTextContent('K');
+  });
+
+  test('the same entity keeps the same hue in a different roster', () => {
+    // This is the whole point of deriving from the id: an NPC looks like itself
+    // in the directory, in the activity feed, and anywhere else that adopts the
+    // mark later.
+    const { unmount } = renderRow({ entityId: 'thorin', entityName: 'Thorin' });
+    const first = screen.getByTestId('entity-sigil').getAttribute('data-sigil-index');
+    unmount();
+
+    // Same id, different display name and a different surrounding row.
+    renderRow({ entityId: 'thorin', entityName: 'Thorin Oakenshield', gridClassName: 'grid-cols-3' });
+    expect(screen.getByTestId('entity-sigil')).toHaveAttribute('data-sigil-index', first);
+  });
+
+  test('two different entities can land on different hues', () => {
+    // Not every pair will differ across an 8-bucket hash, so this asserts the
+    // index is a function of the id at all rather than a constant.
+    const seen = new Set<string | null>();
+    ['acar', 'thorin', 'balin', 'dwalin', 'gloin', 'oin', 'bifur', 'bofur'].forEach(id => {
+      const { unmount } = renderRow({ entityId: id, entityName: id });
+      seen.add(screen.getByTestId('entity-sigil').getAttribute('data-sigil-index'));
+      unmount();
+    });
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  test('is hidden from assistive technology, because the name is right beside it', () => {
+    renderRow();
+    expect(screen.getByTestId('entity-sigil')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  test('a row without an id fails loudly rather than rendering a mark', () => {
+    // A silent fallback would paint every id-less row the same hue, which reads
+    // as a grouping that does not exist.
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() => renderRow({ entityId: '' })).toThrow(/entityId is required/);
+    spy.mockRestore();
   });
 });
