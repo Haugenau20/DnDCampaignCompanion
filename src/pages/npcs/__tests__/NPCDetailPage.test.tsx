@@ -1,6 +1,6 @@
 // src/pages/npcs/__tests__/NPCDetailPage.test.tsx
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { MemoryRouter, matchRoutes } from "react-router-dom";
 import NPCDetailPage from "../NPCDetailPage";
 
@@ -107,11 +107,18 @@ let mockNPCDataReturn: { npcs: any[]; loading: boolean; error: any } = {
 };
 
 const mockGetQuestById = jest.fn();
+const mockUpdateNPC = jest.fn().mockResolvedValue(undefined);
+const mockUpdateNPCNote = jest.fn().mockResolvedValue(undefined);
+const mockRefreshNPCs = jest.fn().mockResolvedValue(undefined);
 
 const mockLocations = [{ id: "mines-of-moria", name: "Mines of Moria" }];
 
 jest.mock("features/campaign-entities", () => ({
-  useNPCData: () => ({ ...mockNPCDataReturn, refreshNPCs: jest.fn() }),
+  useNPCData: () => ({ ...mockNPCDataReturn, refreshNPCs: mockRefreshNPCs }),
+  useNPCs: () => ({
+    updateNPC: mockUpdateNPC,
+    updateNPCNote: mockUpdateNPCNote,
+  }),
   useQuests: () => ({ getQuestById: mockGetQuestById }),
   useLocations: () => ({ locations: mockLocations }),
   // The real resolver, not a stub: the page's contract is that it reuses the
@@ -184,14 +191,26 @@ jest.mock("../../../core/components/Typography", () => {
   };
 });
 
-jest.mock("../../../core/components/Button", () => ({
-  __esModule: true,
-  default: ({ children, onClick, variant }: any) => (
-    <button onClick={onClick} data-variant={variant ?? "primary"}>
-      {children}
-    </button>
-  ),
-}));
+// Forwards its ref, as the real Button now does -- the focus-return
+// assertions below are meaningless against a mock that swallows it.
+jest.mock("../../../core/components/Button", () => {
+  const React = jest.requireActual("react");
+  return {
+    __esModule: true,
+    default: React.forwardRef(
+      ({ children, onClick, variant, disabled }: any, ref: any) => (
+        <button
+          ref={ref}
+          onClick={onClick}
+          disabled={disabled}
+          data-variant={variant ?? "primary"}
+        >
+          {children}
+        </button>
+      )
+    ),
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -228,6 +247,9 @@ describe("NPCDetailPage", () => {
       loading: false,
       error: null,
     };
+    mockUpdateNPC.mockResolvedValue(undefined);
+    mockUpdateNPCNote.mockResolvedValue(undefined);
+    mockRefreshNPCs.mockResolvedValue(undefined);
     mockGetQuestById.mockImplementation((id: string) =>
       id === "quest-1"
         ? { id: "quest-1", title: "Destroy the Ring", status: "active" }
@@ -473,6 +495,342 @@ describe("NPCDetailPage", () => {
         screen.getByRole("heading", { level: 1, name: "Gandalf" })
       ).toBeInTheDocument();
       expect(screen.queryByText("Edit NPC")).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Editing in place (7.2)
+  // -------------------------------------------------------------------------
+  describe("editing the description in place", () => {
+    const openEditor = () => {
+      fireEvent.click(screen.getByText("Edit description"));
+      return screen.getByLabelText("Description");
+    };
+
+    it("edits where it sits, rather than opening a dialog or leaving the page", () => {
+      renderPage();
+      openEditor();
+      expect(screen.getByLabelText("Description")).toBeInTheDocument();
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("puts the caret in the field so a keyboard user keeps their place", () => {
+      renderPage();
+      expect(openEditor()).toHaveFocus();
+    });
+
+    it("writes the edited value through the context", async () => {
+      renderPage();
+      const field = openEditor();
+      fireEvent.change(field, { target: { value: "A wizard, much changed." } });
+      fireEvent.click(screen.getByText("Save description"));
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: "npc-1",
+            description: "A wizard, much changed.",
+          })
+        )
+      );
+    });
+
+    it("re-reads the record after writing, so the page shows what was written", async () => {
+      renderPage();
+      const field = openEditor();
+      fireEvent.change(field, { target: { value: "Changed." } });
+      fireEvent.click(screen.getByText("Save description"));
+
+      // Not an optimistic patch of local state: the refetch is what makes a
+      // concurrent edit by another player visible.
+      await waitFor(() => expect(mockRefreshNPCs).toHaveBeenCalled());
+    });
+
+    it("says the save took, in words", async () => {
+      renderPage();
+      const field = openEditor();
+      fireEvent.change(field, { target: { value: "Changed." } });
+      fireEvent.click(screen.getByText("Save description"));
+      await waitFor(() => expect(screen.getByText("Saved")).toBeInTheDocument());
+    });
+
+    it("returns focus to the control that opened it", async () => {
+      renderPage();
+      fireEvent.click(screen.getByText("Edit description"));
+      fireEvent.click(screen.getByText("Cancel"));
+      await waitFor(() =>
+        expect(screen.getByText("Edit description")).toHaveFocus()
+      );
+    });
+
+    it("discards the typed value on cancel", () => {
+      renderPage();
+      const field = openEditor();
+      fireEvent.change(field, { target: { value: "Never mind." } });
+      fireEvent.click(screen.getByText("Cancel"));
+      expect(mockUpdateNPC).not.toHaveBeenCalled();
+      expect(screen.queryByText("Never mind.")).not.toBeInTheDocument();
+    });
+
+    it("closes on Escape without writing", () => {
+      renderPage();
+      const field = openEditor();
+      fireEvent.keyDown(field, { key: "Escape" });
+      expect(screen.queryByLabelText("Description")).not.toBeInTheDocument();
+      expect(mockUpdateNPC).not.toHaveBeenCalled();
+    });
+
+    it("refuses to save nothing", () => {
+      renderPage();
+      const field = openEditor();
+      fireEvent.change(field, { target: { value: "   " } });
+      expect(screen.getByText("Save description")).toBeDisabled();
+    });
+
+    it("keeps the page to one accent while the editor is open", () => {
+      // The page's accent is earned by the action being taken. Mid-edit that
+      // action is the save, so "Edit NPC" must step back rather than compete.
+      renderPage();
+      openEditor();
+      const accented = screen
+        .getAllByRole("button")
+        .filter((b) => b.getAttribute("data-variant") === "primary");
+      expect(accented).toHaveLength(1);
+      expect(accented[0]).toHaveTextContent("Save description");
+    });
+
+    it("offers to add a description when there is none", () => {
+      mockNpcId = "npc-3";
+      renderPage();
+      expect(screen.getByText("Add a description")).toBeInTheDocument();
+    });
+  });
+
+  describe("when a save fails", () => {
+    it("keeps every character the user typed", async () => {
+      mockUpdateNPC.mockRejectedValue(new Error("Network unavailable"));
+      renderPage();
+      fireEvent.click(screen.getByText("Edit description"));
+      const field = screen.getByLabelText("Description");
+      fireEvent.change(field, { target: { value: "Hard-won sentence." } });
+      fireEvent.click(screen.getByText("Save description"));
+
+      await waitFor(() =>
+        expect(screen.getByText("Not saved")).toBeInTheDocument()
+      );
+      // The unforgivable version of this component throws the typed words away
+      // in order to show an error.
+      expect(screen.getByLabelText("Description")).toHaveValue(
+        "Hard-won sentence."
+      );
+    });
+
+    it("says what happened rather than only that something did", async () => {
+      mockUpdateNPC.mockRejectedValue(new Error("Network unavailable"));
+      renderPage();
+      fireEvent.click(screen.getByText("Edit description"));
+      fireEvent.change(screen.getByLabelText("Description"), {
+        target: { value: "x" },
+      });
+      fireEvent.click(screen.getByText("Save description"));
+      await waitFor(() =>
+        expect(screen.getByText("Network unavailable")).toBeInTheDocument()
+      );
+    });
+
+    it("never claims success for a write the server refused", async () => {
+      mockUpdateNPC.mockRejectedValue(new Error("nope"));
+      renderPage();
+      fireEvent.click(screen.getByText("Edit description"));
+      fireEvent.change(screen.getByLabelText("Description"), {
+        target: { value: "x" },
+      });
+      fireEvent.click(screen.getByText("Save description"));
+      await waitFor(() =>
+        expect(screen.getByText("Not saved")).toBeInTheDocument()
+      );
+      expect(screen.queryByText("Saved")).not.toBeInTheDocument();
+    });
+
+    it("lets the user try again without retyping", async () => {
+      mockUpdateNPC.mockRejectedValueOnce(new Error("nope"));
+      renderPage();
+      fireEvent.click(screen.getByText("Edit description"));
+      fireEvent.change(screen.getByLabelText("Description"), {
+        target: { value: "Second time lucky." },
+      });
+      fireEvent.click(screen.getByText("Save description"));
+      await waitFor(() =>
+        expect(screen.getByText("Not saved")).toBeInTheDocument()
+      );
+
+      fireEvent.click(screen.getByText("Save description"));
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenLastCalledWith(
+          expect.objectContaining({ description: "Second time lucky." })
+        )
+      );
+    });
+  });
+
+  describe("when a save neither succeeds nor fails", () => {
+    // Firestore queues a write when the connection is gone: updateDoc does not
+    // reject, it simply never settles. Verified against a blocked emulator --
+    // the editor sat on "Saving..." with no way to tell whether it had taken.
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
+    });
+
+    const startNeverSettlingSave = () => {
+      mockUpdateNPC.mockImplementation(() => new Promise(() => {}));
+      renderPage();
+      fireEvent.click(screen.getByText("Edit description"));
+      fireEvent.change(screen.getByLabelText("Description"), {
+        target: { value: "A sentence worth keeping." },
+      });
+      fireEvent.click(screen.getByText("Save description"));
+    };
+
+    it("stops implying the save is nearly done", () => {
+      startNeverSettlingSave();
+      // The ordinary state lives on the button and is not repeated beside it.
+      expect(screen.getByText("Saving...")).toBeInTheDocument();
+      expect(screen.queryByText(/Still saving/)).not.toBeInTheDocument();
+
+      act(() => {
+        jest.advanceTimersByTime(8000);
+      });
+      expect(screen.getByText(/Still saving/)).toBeInTheDocument();
+    });
+
+    it("does not claim the save failed, because it has not", () => {
+      startNeverSettlingSave();
+      act(() => {
+        jest.advanceTimersByTime(8000);
+      });
+      // Saying "Not saved" here is the same lie as saying "Saved", pointed the
+      // other way: Firestore may still land the queued write.
+      expect(screen.queryByText("Not saved")).not.toBeInTheDocument();
+      expect(screen.queryByText("Saved")).not.toBeInTheDocument();
+    });
+
+    it("keeps the typed text, and says it is safe", () => {
+      startNeverSettlingSave();
+      act(() => {
+        jest.advanceTimersByTime(8000);
+      });
+      expect(screen.getByLabelText("Description")).toHaveValue(
+        "A sentence worth keeping."
+      );
+      expect(screen.getByText(/Your text is safe/)).toBeInTheDocument();
+    });
+
+    it("lets a stuck user leave, which it does not while the save is brief", () => {
+      startNeverSettlingSave();
+      expect(screen.getByText("Cancel")).toBeDisabled();
+
+      act(() => {
+        jest.advanceTimersByTime(8000);
+      });
+      expect(screen.getByText("Cancel")).toBeEnabled();
+    });
+  });
+
+  describe("adding a note", () => {
+    const openNoteEditor = () => {
+      fireEvent.click(screen.getByText("Add note"));
+      return screen.getByLabelText("New note");
+    };
+
+    it("adds one without navigating away", async () => {
+      renderPage();
+      fireEvent.change(openNoteEditor(), {
+        target: { value: "Met the Balrog." },
+      });
+      fireEvent.click(screen.getAllByText("Add note")[0]);
+
+      await waitFor(() =>
+        expect(mockUpdateNPCNote).toHaveBeenCalledWith(
+          "npc-1",
+          expect.objectContaining({ text: "Met the Balrog." })
+        )
+      );
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+    });
+
+    it("dates the note today, in the shape the forms already write", async () => {
+      renderPage();
+      fireEvent.change(openNoteEditor(), {
+        target: { value: "Met the Balrog." },
+      });
+      fireEvent.click(screen.getAllByText("Add note")[0]);
+
+      await waitFor(() => expect(mockUpdateNPCNote).toHaveBeenCalled());
+      const [, note] = mockUpdateNPCNote.mock.calls[0];
+      expect(note.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(note.date).toBe(new Date().toISOString().split("T")[0]);
+    });
+
+    it("gives the note no author, because NPCNote has nowhere to put one", async () => {
+      renderPage();
+      fireEvent.change(openNoteEditor(), {
+        target: { value: "Met the Balrog." },
+      });
+      fireEvent.click(screen.getAllByText("Add note")[0]);
+      await waitFor(() => expect(mockUpdateNPCNote).toHaveBeenCalled());
+      const [, note] = mockUpdateNPCNote.mock.calls[0];
+      expect(Object.keys(note).sort()).toEqual(["date", "text"]);
+    });
+
+    it("re-reads the record after writing", async () => {
+      renderPage();
+      fireEvent.change(openNoteEditor(), {
+        target: { value: "Met the Balrog." },
+      });
+      fireEvent.click(screen.getAllByText("Add note")[0]);
+      await waitFor(() => expect(mockRefreshNPCs).toHaveBeenCalled());
+    });
+
+    it("keeps the note when the write fails", async () => {
+      mockUpdateNPCNote.mockRejectedValue(new Error("Write refused"));
+      renderPage();
+      fireEvent.change(openNoteEditor(), {
+        target: { value: "Met the Balrog." },
+      });
+      fireEvent.click(screen.getAllByText("Add note")[0]);
+      await waitFor(() =>
+        expect(screen.getByText("Write refused")).toBeInTheDocument()
+      );
+      expect(screen.getByLabelText("New note")).toHaveValue("Met the Balrog.");
+    });
+
+    it("offers no editing or deletion of an existing note", () => {
+      renderPage();
+      expect(screen.queryByText("Edit note")).not.toBeInTheDocument();
+      expect(screen.queryByText("Delete note")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("read-only visitors", () => {
+    it("offers no way to edit while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(screen.queryByText("Edit description")).not.toBeInTheDocument();
+      expect(screen.queryByText("Add note")).not.toBeInTheDocument();
+    });
+
+    it("still renders the record for them", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Gandalf" })
+      ).toBeInTheDocument();
     });
   });
 
