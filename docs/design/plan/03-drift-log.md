@@ -892,6 +892,102 @@ pinned "exactly one accented action"; without this the invariant would have
 been broken silently by 7.2 rather than deliberately. It is now asserted in
 both states.
 
+### D65 — The entity page is a stack of cards, not one slab
+Date: 2026-09-09   Status: active
+Decision: the NPC page is composed of cards that each hold one kind of thing --
+identity, description, the three prose fields, notes -- beside a sidebar of
+relationships, tags and record. Rebuilt from a design mock after the first cut
+was rejected.
+Because: 7.1 put every field into a single card with a metadata aside, and it
+read as a **form**: an undifferentiated column of uppercase labels with values
+under them, where nothing was more important than anything else and the eye had
+nowhere to rest. A record is not a form. Cards give the page joints, so a reader
+can skip a whole section at a glance instead of reading every label to find the
+one they want.
+Three things carry most of the difference, and none of them is decoration:
+- **The identity card starts with the image band**, and the two are one object
+  rather than a band floating above a card. That fixes the page's proportions
+  at the top, which is why the slot came forward from 7.3 rather than arriving
+  after the layout had already been judged without it.
+- **The description is serif italic at reading size.** It is the only running
+  prose on the page; everything else is metadata and lists, and setting it the
+  same as a field value was what made the page read as a form.
+- **One Relationships list, each row saying why it is there.** Location,
+  associates, affiliations, quests and rumors were four separate labelled
+  fields; they are one list now, because "who and what is this person connected
+  to" is one question. The reasons are derived from the kind of link -- a
+  location is where they are, an affiliation is something they claim, a quest
+  and a rumor each carry their own status -- so no field was added to store
+  them. Only NPC-to-NPC has nothing to say beyond the other character's title,
+  because `relatedNPCs` is a bare list of ids.
+
+### D66 — An accent marks a control that writes; navigation is never accented
+Date: 2026-09-09   Status: active
+Decision: supersedes D64's "exactly one accent, following the action being
+taken". The page's accents are the controls that change the record -- `Add
+note`, `Delete`, and a `Save` while an editor is open. `Edit all fields` is
+outline, because going to a form is not an act.
+Because: D64 held only while every editor was summoned. The note composer is now
+permanently on screen (a composer you have to summon is a composer you forget
+exists), so the page always carries a writing action and "exactly one accent" is
+no longer a rule anything can obey. Counting accents was the wrong invariant; it
+was a proxy for the real one, which is *what kind of control earns emphasis*.
+That version survives the composer, survives the editor being open, and is the
+rule the design mock was already following -- its own footnote reads "Two
+accents on the page, both actions: Add note and Delete".
+
+### D67 — A note records who wrote it, from now on
+Date: 2026-09-09   Status: active
+Decision: `NPCNote` gains an optional `author`, set from the acting character
+(falling back to the username) when a note is added from the page. Notes written
+before the field existed keep no author and render with the column blank.
+Because: the page shows a note history, and "who said this" is the second thing
+a reader wants after "when". The field is optional rather than required, and
+existing notes are **not** backfilled from the record's creator: the person who
+created an NPC is not necessarily the person who wrote any note on it, so
+backfilling would be inventing history to fill a column. A blank is honest; a
+plausible wrong name is not.
+Cost: `updateNPCNote`'s payload grows a field, and the composer needs the acting
+profile. Both were already available.
+
+### D68 — NPCs carry tags, and the forms that create them can set them
+Date: 2026-09-09   Status: active
+Decision: `NPC` gains `tags?: string[]`, matching `Location.tags`, with entry
+added to both `NPCForm` and `NPCEditForm`.
+Because: the design gives the sidebar a Tags card, and a card that can only ever
+be empty is worse than no card. Adding the field without the form work would
+have produced exactly that -- which is the trap this decision exists to record:
+a display-only field is not a feature, it is a permanent empty state.
+The control is the one `LocationFormSections` already uses, borrowed rather than
+invented, and its button says "Add tag" rather than "Add" so it is not confused
+with the affiliations control beside it -- by a reader or by a screen reader.
+
+### D69 — Relationships are grouped by kind, and the grouping replaces the reasons
+Date: 2026-09-09   Status: active
+Decision: the Relationships card groups its rows under People, Places,
+Affiliations, Quests and Rumors, in that order, and a group with no members
+shows no heading. A row keeps a second line only where its heading cannot say
+it.
+Because: D65 merged five labelled fields into one list, which was right for the
+question being asked -- "who and what is this person connected to" is one
+question -- and wrong for the answer, once the answer was twelve rows. A
+well-connected NPC turned the card into a bowl: people, places, affiliations,
+quests and rumors interleaved in a single column, so finding an associate meant
+reading past four quests. Grouping restores the joints without splitting the
+card into five, which would have said the connections are five separate
+subjects rather than one.
+The second half matters as much as the first. The flat list needed a reason on
+every row, so every affiliation read "Claims membership". Under a heading that
+says Affiliations, that is **the type stated twice** -- the same redundancy 6.1
+removed from directory rows, arriving by a different route. A row now carries
+only what its heading cannot: an associate's own title, a quest's or rumor's
+status, and which place a location is to them. Affiliations became
+single-line, which also makes them look like what they are: names, not records
+with somewhere to go.
+Cost: the sidebar card title had to take the page's ink rather than the muted
+tone, because a card heading and five group headings at the same weight is no
+hierarchy at all.
+
 ---
 
 ## Revisions
@@ -1112,6 +1208,49 @@ choice between wiring it up and retiring it is a real one: a legend is the one
 place the design language permits a hue to carry meaning alone, since the
 legend is itself the key. That makes it the natural home for the `npc-status-*`
 family rather than dead weight. Deciding needs an owner; see Q15.
+
+### R19 — revises 04-rollout's and A3's account of Phase 8
+Date: 2026-09-09
+Change: Phase 8 is not "almost all consumption, not design", and its one open
+question is already closed. Measured across the eleven form files while writing
+the handoffs:
+- **There is no `Select` primitive**, and the forms render **11 raw
+  `<select>`** between them (RumorForm 4, NPCForm 2, NPCEditForm 2,
+  LocationFormSections 2, QuestFormSections 1). A3 says the `field.*` tokens
+  are complete so the phase is consumption — true of text fields, false here.
+  There is nothing to consume, so `08-0` builds one before anything else runs.
+- **17 hand-written labels are not associated with their controls** — all the
+  same line, `<label className="block text-sm font-medium mb-1 form-label">`
+  with no `htmlFor`, against 8 places in the same files that do it correctly.
+  Those controls are unnamed to a screen reader (WCAG 1.3.1, 4.1.2). It is the
+  form set's largest accessibility defect and nothing in the plan mentioned it,
+  because the plan was written about colour.
+- **The colour half is already done**: zero hardcoded hex values and zero
+  `[data-theme=…]` patches survive in any of the eleven files. The same shape
+  of correction R13 had to make for Phase 7 -- a phase scoped around repainting
+  arriving to find the paint already right and the structure wrong.
+- **"Whether a form sits on `card` or on `page`" is answered.** All eleven
+  render inside `<Card>`, unanimously. `08-3` ratifies it in a decision rather
+  than reopening it.
+Because: the plan's Phase 8 paragraph was written before Phases 3a-7 ran, and
+the token work those phases did is exactly what removed the colour problem it
+describes. Measuring first is what turned a repaint into an accessibility fix.
+
+### R18 — revises 07-3: the image slot shipped inside 7.2.5
+Date: 2026-09-09
+Change: Phase 7 has no separate 7.3. The image slot -- the shared `ImageSlot`
+component, the generalised `.image-slot` rule, and the NPC page's band -- landed
+as part of the 7.2.5 redo.
+Because: the mock's layout begins with the band, and the identity card's
+proportions are set by it. Reviewing a new layout with a hole where its first
+element belongs would have meant judging it twice and rebuilding it once.
+07-3's own rules were kept rather than skipped: no Storage, no picker, no
+upload, no generation, and the empty state is the whole component. One thing in
+the mock was **not** built -- its caption reads "drop a photo", which promises
+an upload this build cannot do. The slot says the state honestly instead.
+`.party-crest-slot` became `.image-slot` and `PartyCrest` now renders the shared
+component: two callers is the threshold 07-3 set for generalising, and the
+second one had just arrived.
 
 ### R17 — revises R16: the raw ISO date is not LocationDirectory's alone
 Date: 2026-09-09

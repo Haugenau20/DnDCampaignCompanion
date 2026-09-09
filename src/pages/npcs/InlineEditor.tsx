@@ -35,8 +35,27 @@ export interface InlineEditorProps {
   onSubmit: (value: string) => Promise<void>;
   /** Called after a write the server accepted. */
   onSaved: () => void;
-  /** Called when the user backs out. The typed value is discarded. */
-  onCancel: () => void;
+  /**
+   * Called when the user backs out. The typed value is discarded.
+   *
+   * Omit it for a composer that is always on screen: there is nothing to back
+   * out of, and a Cancel beside a permanently-open field is a control with no
+   * job.
+   */
+  onCancel?: () => void;
+  /**
+   * Take the caret on mount. True for an editor the user opened, because they
+   * asked for it; false for a composer that is simply always there, which must
+   * not steal focus from the page on load.
+   */
+  autoFocus?: boolean;
+  /**
+   * Empty the field after a successful write instead of leaving the value in
+   * place. What a composer wants; what an editor of an existing value does not.
+   */
+  clearOnSave?: boolean;
+  /** Extra classes for the action row, so a composer can lay its own out. */
+  actionsClassName?: string;
 }
 
 /**
@@ -73,17 +92,23 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   onSubmit,
   onSaved,
   onCancel,
+  autoFocus = true,
+  clearOnSave = false,
+  actionsClassName,
 }) => {
   const [value, setValue] = useState(initialValue);
   const [state, setState] = useState<SaveState>('idle');
   const [errorText, setErrorText] = useState<string | null>(null);
   const fieldRef = useRef<HTMLTextAreaElement>(null);
 
-  // Opening the editor moves the caret into it, so a keyboard user is not left
-  // hunting for where the control went.
+  // Opening an editor moves the caret into it, so a keyboard user is not left
+  // hunting for where the control went. A composer that was always on screen
+  // was not opened by anyone, so it takes nothing.
   useEffect(() => {
-    fieldRef.current?.focus();
-  }, []);
+    if (autoFocus) {
+      fieldRef.current?.focus();
+    }
+  }, [autoFocus]);
 
   const saving = state === 'saving' || state === 'slow';
   const trimmed = value.trim();
@@ -108,6 +133,10 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
     setErrorText(null);
     try {
       await onSubmit(trimmed);
+      if (clearOnSave) {
+        setValue('');
+      }
+      setState('idle');
       onSaved();
     } catch (error) {
       // The typed value is untouched on purpose. `state` returns to a form the
@@ -133,7 +162,9 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
         disabled={saving}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === 'Escape') {
+          // Escape backs out of an editor. A composer has nothing to back out
+          // of, so the key is left to the browser there.
+          if (event.key === 'Escape' && onCancel) {
             event.preventDefault();
             onCancel();
           }
@@ -143,21 +174,23 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
         helperText={helperText}
       />
 
-      <div className="flex items-center gap-3">
+      <div className={actionsClassName ?? 'flex items-center gap-3'}>
         <Button size="sm" onClick={handleSubmit} disabled={!trimmed || saving}>
           {saving ? 'Saving...' : submitLabel}
         </Button>
         {/* Enabled again once the save is slow: a user who is stuck must be
             able to leave, and by then the write is Firestore's problem rather
             than something this editor is still waiting on. */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onCancel}
-          disabled={state === 'saving'}
-        >
-          Cancel
-        </Button>
+        {onCancel && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onCancel}
+            disabled={state === 'saving'}
+          >
+            Cancel
+          </Button>
+        )}
 
         {/*
           The exceptional states, in words and announced. The ordinary "saving"

@@ -24,6 +24,11 @@ let mockActiveCampaignId: string | null = "campaign-1";
 let mockGroups: Array<{ id: string; name: string }> = [
   { id: "group-1", name: "The Fellowship" },
 ];
+let mockGroupUserProfile: any = {
+  username: "gandlaf",
+  activeCharacterId: "char-1",
+  characters: [{ id: "char-1", name: "Zendikarr" }],
+};
 
 jest.mock("features/user-management", () => ({
   useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
@@ -39,6 +44,7 @@ jest.mock("features/user-management", () => ({
       : null,
     setActiveCampaign: jest.fn().mockResolvedValue(undefined),
   }),
+  useUser: () => ({ activeGroupUserProfile: mockGroupUserProfile }),
   SignInForm: () => <div data-testid="sign-in-form" />,
   JoinGroupDialog: ({ open }: { open: boolean }) =>
     open ? <div data-testid="join-group-dialog" /> : null,
@@ -83,7 +89,11 @@ const fullNPC = {
     affiliations: ["The Fellowship", "Istari"],
     relatedQuests: ["quest-1", "quest-missing"],
   },
-  notes: [{ date: "2025-05-31", text: "Rode to Isengard." }],
+  notes: [
+    { date: "2025-05-31", text: "Rode to Isengard.", author: "Zendikarr" },
+    { date: "2025-04-02", text: "An older note, no author recorded." },
+  ],
+  tags: ["wizard", "istari"],
   createdByUsername: "DungeonMaster",
 };
 
@@ -112,14 +122,18 @@ const mockUpdateNPCNote = jest.fn().mockResolvedValue(undefined);
 const mockRefreshNPCs = jest.fn().mockResolvedValue(undefined);
 
 const mockLocations = [{ id: "mines-of-moria", name: "Mines of Moria" }];
+const mockDeleteNPC = jest.fn().mockResolvedValue(undefined);
+let mockRumors: any[] = [];
 
 jest.mock("features/campaign-entities", () => ({
   useNPCData: () => ({ ...mockNPCDataReturn, refreshNPCs: mockRefreshNPCs }),
   useNPCs: () => ({
     updateNPC: mockUpdateNPC,
     updateNPCNote: mockUpdateNPCNote,
+    deleteNPC: mockDeleteNPC,
   }),
   useQuests: () => ({ getQuestById: mockGetQuestById }),
+  useRumors: () => ({ rumors: mockRumors }),
   useLocations: () => ({ locations: mockLocations }),
   // The real resolver, not a stub: the page's contract is that it reuses the
   // directories' answer rather than inventing its own.
@@ -135,6 +149,17 @@ jest.mock("shared/components/AttributionInfo", () => ({
   default: ({ item }: any) => (
     <div data-testid="attribution-info">{item?.id}</div>
   ),
+}));
+
+jest.mock("shared/components/DeleteConfirmationDialog", () => ({
+  __esModule: true,
+  default: ({ isOpen, onConfirm, itemName }: any) =>
+    isOpen ? (
+      <div role="dialog" data-testid="delete-dialog">
+        <span>{itemName}</span>
+        <button onClick={onConfirm}>Confirm delete</button>
+      </div>
+    ) : null,
 }));
 
 jest.mock("shared/components/Breadcrumb", () => ({
@@ -247,6 +272,13 @@ describe("NPCDetailPage", () => {
       loading: false,
       error: null,
     };
+    mockRumors = [];
+    mockGroupUserProfile = {
+      username: "gandlaf",
+      activeCharacterId: "char-1",
+      characters: [{ id: "char-1", name: "Zendikarr" }],
+    };
+    mockDeleteNPC.mockResolvedValue(undefined);
     mockUpdateNPC.mockResolvedValue(undefined);
     mockUpdateNPCNote.mockResolvedValue(undefined);
     mockRefreshNPCs.mockResolvedValue(undefined);
@@ -276,10 +308,14 @@ describe("NPCDetailPage", () => {
       ).toBeInTheDocument();
     });
 
-    it("renders each affiliation", () => {
+    it("renders each affiliation under one heading, not one label each", () => {
       renderPage();
       expect(screen.getByText("The Fellowship")).toBeInTheDocument();
       expect(screen.getByText("Istari")).toBeInTheDocument();
+      // The heading says what these are. Repeating it on every row would be
+      // the type stated twice.
+      expect(screen.getByText("Affiliations")).toBeInTheDocument();
+      expect(screen.queryByText("Claims membership")).not.toBeInTheDocument();
     });
 
     it("resolves related NPC ids to names", () => {
@@ -289,8 +325,57 @@ describe("NPCDetailPage", () => {
 
     it("resolves related quest ids to titles, with the status as a word", () => {
       renderPage();
-      expect(screen.getByText(/Destroy the Ring/)).toBeInTheDocument();
-      expect(screen.getByText(/Active/)).toBeInTheDocument();
+      expect(screen.getByText("Destroy the Ring")).toBeInTheDocument();
+      expect(screen.getByText("Quests")).toBeInTheDocument();
+      expect(screen.getByText("Active")).toBeInTheDocument();
+    });
+
+    it("groups links by what kind of thing they are", () => {
+      mockRumors = [
+        {
+          id: "rumor-1",
+          title: "The Eliksir trade",
+          status: "unconfirmed",
+          relatedNPCs: ["npc-1"],
+        },
+      ];
+      renderPage();
+      expect(screen.getByText(/Relationships/)).toBeInTheDocument();
+      expect(screen.getByText("People")).toBeInTheDocument();
+      expect(screen.getByText("Places")).toBeInTheDocument();
+      expect(screen.getByText("Affiliations")).toBeInTheDocument();
+      expect(screen.getByText("Quests")).toBeInTheDocument();
+      expect(screen.getByText("Rumors")).toBeInTheDocument();
+    });
+
+    it("keeps the per-row line only where the heading cannot say it", () => {
+      mockRumors = [
+        {
+          id: "rumor-1",
+          title: "The Eliksir trade",
+          status: "unconfirmed",
+          relatedNPCs: ["npc-1"],
+        },
+      ];
+      renderPage();
+      // A person's own title, a quest's and a rumor's status, and which place
+      // this is to them -- none of which the headings carry.
+      expect(screen.getByText("The White")).toBeInTheDocument();
+      expect(screen.getByText("Last known location")).toBeInTheDocument();
+      expect(screen.getByText("Active")).toBeInTheDocument();
+      expect(screen.getByText("Unconfirmed")).toBeInTheDocument();
+    });
+
+    it("shows no heading for a kind this NPC has none of", () => {
+      mockRumors = [];
+      renderPage();
+      expect(screen.queryByText("Rumors")).not.toBeInTheDocument();
+    });
+
+    it("does not dress a free-text affiliation up as somewhere to click", () => {
+      renderPage();
+      const affiliation = screen.getByText("Istari").closest("button");
+      expect(affiliation).toBeNull();
     });
 
     it("drops a related id that no longer resolves rather than printing it raw", () => {
@@ -302,19 +387,17 @@ describe("NPCDetailPage", () => {
     it("says so in words when all six are empty, rather than hiding the fields", () => {
       mockNpcId = "npc-3";
       renderPage();
-      // The labels are uppercased by CSS, so the DOM carries sentence case.
-      expect(screen.getByText("Appearance")).toBeInTheDocument();
-      expect(screen.getByText("Personality")).toBeInTheDocument();
-      expect(screen.getByText("Background")).toBeInTheDocument();
-      expect(screen.getByText("Affiliations")).toBeInTheDocument();
-      expect(screen.getByText("Known associates")).toBeInTheDocument();
-      expect(screen.getByText("Related quests")).toBeInTheDocument();
-      expect(fieldValue("Appearance")).toBe("Not described yet");
-      expect(fieldValue("Personality")).toBe("Not described yet");
-      expect(fieldValue("Background")).toBe("Nothing recorded yet");
-      expect(fieldValue("Affiliations")).toBe("None recorded");
-      expect(fieldValue("Known associates")).toBe("None recorded");
-      expect(fieldValue("Related quests")).toBe("No quests linked");
+      // The three prose fields share a card that is dropped entirely when all
+      // three are empty -- an empty card is worse than no card.
+      expect(screen.queryByText("Appearance")).not.toBeInTheDocument();
+      expect(screen.queryByText("Personality")).not.toBeInTheDocument();
+      expect(screen.queryByText("Background")).not.toBeInTheDocument();
+      // The sidebar cards stay, and say they are empty rather than vanishing.
+      expect(screen.getByText(/Relationships/)).toBeInTheDocument();
+      expect(screen.getByText("Nothing linked yet")).toBeInTheDocument();
+      expect(screen.getByText("Tags")).toBeInTheDocument();
+      expect(screen.getByText("No tags yet")).toBeInTheDocument();
+      expect(screen.getByText("Nothing written yet")).toBeInTheDocument();
     });
   });
 
@@ -334,12 +417,15 @@ describe("NPCDetailPage", () => {
     it("renders the sigil at the page size rather than the row size", () => {
       renderPage();
       const sigils = screen.getAllByTestId("entity-sigil");
-      expect(sigils[0]).toHaveStyle({ width: "44px", height: "44px" });
+      expect(sigils[0]).toHaveStyle({ width: "56px", height: "56px" });
     });
 
     it("resolves a stored location id to the location's name", () => {
       renderPage();
-      expect(fieldValue("Last known location")).toBe("Mines of Moria");
+      // Once in the breadcrumb, once in the relationships list -- the page
+      // says where they are in both places it makes sense to look.
+      expect(screen.getAllByText("Mines of Moria")).toHaveLength(2);
+      expect(screen.getByText("Last known location")).toBeInTheDocument();
     });
 
     it("leaves a location reference that resolves to nothing visible as itself", () => {
@@ -351,34 +437,73 @@ describe("NPCDetailPage", () => {
         error: null,
       };
       renderPage();
-      expect(fieldValue("Last known location")).toBe("lothlorien");
+      expect(screen.getAllByText("lothlorien").length).toBeGreaterThan(0);
     });
 
-    it("shows the NPC's title as the subtitle", () => {
+    it("names the NPC's title and where they are, under the name", () => {
       renderPage();
-      expect(screen.getByText("The Grey")).toBeInTheDocument();
+      expect(
+        screen.getByText("The Grey · from Mines of Moria")
+      ).toBeInTheDocument();
     });
 
-    it("breadcrumbs back to the directory", () => {
+    it("reserves the image slot, and says it is optional rather than missing", () => {
+      renderPage();
+      const slot = screen.getByTestId("image-slot");
+      expect(slot).toHaveAttribute("role", "img");
+      expect(slot.getAttribute("aria-label")).toMatch(/no image added/i);
+    });
+
+    it("states the standing facts in a fixed order", () => {
+      renderPage();
+      expect(fieldValue("Status")).toBe("Alive");
+      expect(fieldValue("Disposition")).toBe("Friendly");
+      expect(fieldValue("Role")).toBe("Wizard");
+      expect(fieldValue("Race")).toBe("Maia");
+    });
+
+    it("gives status a hue that agrees with the word rather than replacing it", () => {
+      renderPage();
+      const status = screen.getByText("Alive");
+      expect(status.className).toContain("npc-status-alive");
+    });
+
+    it("renders the NPC's tags", () => {
+      renderPage();
+      expect(screen.getByText("wizard")).toBeInTheDocument();
+      expect(screen.getByText("istari")).toBeInTheDocument();
+    });
+
+    it("breadcrumbs back through the directory and the location", () => {
       renderPage();
       const crumb = screen.getByTestId("breadcrumb");
       expect(crumb).toHaveTextContent("NPCs");
+      expect(crumb).toHaveTextContent("Mines of Moria");
       expect(crumb).toHaveTextContent("Gandalf");
       expect(crumb.querySelector('[data-href="/npcs"]')).toBeInTheDocument();
     });
 
-    it("offers exactly one accented action, and it is the page's own", () => {
+    it("accents what writes, and never what merely navigates", () => {
+      // Supersedes the "exactly one accent" rule 7.1 set: the note composer is
+      // now permanently on screen, so the page always carries a writing action.
+      // The invariant that survives is which *kind* of control is accented.
       renderPage();
       const accented = screen
         .getAllByRole("button")
         .filter((b) => b.getAttribute("data-variant") === "primary");
-      expect(accented).toHaveLength(1);
-      expect(accented[0]).toHaveTextContent("Edit NPC");
+      expect(accented.map((b) => b.textContent)).toEqual(["Add note"]);
+
+      expect(
+        screen.getByText("Edit all fields").getAttribute("data-variant")
+      ).toBe("outline");
+      expect(screen.getByText("Edit").getAttribute("data-variant")).toBe(
+        "ghost"
+      );
     });
 
-    it("navigates to the edit form from the page's action", () => {
+    it("navigates to the full form from the identity card", () => {
       renderPage();
-      screen.getByText("Edit NPC").click();
+      screen.getByText("Edit all fields").click();
       expect(mockNavigateToPage).toHaveBeenCalledWith("/npcs/edit/npc-1");
     });
 
@@ -393,10 +518,30 @@ describe("NPCDetailPage", () => {
   // Notes
   // -------------------------------------------------------------------------
   describe("notes", () => {
-    it("shows a note's date and text", () => {
+    it("shows a note's date, text and author", () => {
       renderPage();
-      expect(screen.getByText("31/05/2025")).toBeInTheDocument();
+      expect(screen.getByText("2025-05-31")).toBeInTheDocument();
       expect(screen.getByText("Rode to Isengard.")).toBeInTheDocument();
+      expect(screen.getByText("Zendikarr")).toBeInTheDocument();
+    });
+
+    it("reads oldest first, and says so", () => {
+      renderPage();
+      const dates = screen
+        .getAllByText(/^\d{4}-\d{2}-\d{2}$/)
+        .map((n) => n.textContent);
+      expect(dates).toEqual(["2025-04-02", "2025-05-31"]);
+      expect(screen.getByText(/oldest first/)).toBeInTheDocument();
+    });
+
+    it("leaves a note written before authors existed uncredited", () => {
+      // Attributing it to the record's creator would be inventing history.
+      renderPage();
+      const older = screen
+        .getByText("An older note, no author recorded.")
+        .closest("div");
+      expect(older?.textContent).not.toContain("Zendikarr");
+      expect(older?.textContent).not.toContain("DungeonMaster");
     });
 
     it("renders a stored ISO timestamp as a date a reader can read", () => {
@@ -413,7 +558,7 @@ describe("NPCDetailPage", () => {
         error: null,
       };
       renderPage();
-      expect(screen.getByText("31/05/2025")).toBeInTheDocument();
+      expect(screen.getByText("2025-05-31")).toBeInTheDocument();
       expect(
         screen.queryByText("2025-05-31T19:27:30.387Z")
       ).not.toBeInTheDocument();
@@ -484,17 +629,29 @@ describe("NPCDetailPage", () => {
         screen.getByRole("heading", { level: 1, name: "Nameless Guard" })
       ).toBeInTheDocument();
       expect(fieldValue("Status")).toBe("Unknown");
-      expect(fieldValue("Last known location")).toBe("Unknown");
-      expect(fieldValue("Description")).toBe("Nothing written yet");
+      expect(fieldValue("Role")).toBe("Unrecorded");
+      expect(screen.getByText("Nothing written yet")).toBeInTheDocument();
     });
 
-    it("keeps naming the page while signed out", () => {
+    it("names the page even when the record cannot be loaded", () => {
       mockUser = null;
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Gandalf" })
+        screen.getByRole("heading", { level: 1, name: "NPC" })
       ).toBeInTheDocument();
-      expect(screen.queryByText("Edit NPC")).not.toBeInTheDocument();
+    });
+
+    it("confirms before deleting, and only then deletes", async () => {
+      renderPage();
+      expect(screen.queryByTestId("delete-dialog")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("Delete"));
+      expect(screen.getByTestId("delete-dialog")).toHaveTextContent("Gandalf");
+      expect(mockDeleteNPC).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByText("Confirm delete"));
+      await waitFor(() => expect(mockDeleteNPC).toHaveBeenCalledWith("npc-1"));
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/npcs");
     });
   });
 
@@ -503,7 +660,7 @@ describe("NPCDetailPage", () => {
   // -------------------------------------------------------------------------
   describe("editing the description in place", () => {
     const openEditor = () => {
-      fireEvent.click(screen.getByText("Edit description"));
+      fireEvent.click(screen.getByText("Edit"));
       return screen.getByLabelText("Description");
     };
 
@@ -557,10 +714,10 @@ describe("NPCDetailPage", () => {
 
     it("returns focus to the control that opened it", async () => {
       renderPage();
-      fireEvent.click(screen.getByText("Edit description"));
+      fireEvent.click(screen.getByText("Edit"));
       fireEvent.click(screen.getByText("Cancel"));
       await waitFor(() =>
-        expect(screen.getByText("Edit description")).toHaveFocus()
+        expect(screen.getByText("Edit")).toHaveFocus()
       );
     });
 
@@ -588,22 +745,26 @@ describe("NPCDetailPage", () => {
       expect(screen.getByText("Save description")).toBeDisabled();
     });
 
-    it("keeps the page to one accent while the editor is open", () => {
-      // The page's accent is earned by the action being taken. Mid-edit that
-      // action is the save, so "Edit NPC" must step back rather than compete.
+    it("accents the save while the editor is open, and still not the navigation", () => {
       renderPage();
       openEditor();
       const accented = screen
         .getAllByRole("button")
-        .filter((b) => b.getAttribute("data-variant") === "primary");
-      expect(accented).toHaveLength(1);
-      expect(accented[0]).toHaveTextContent("Save description");
+        .filter((b) => b.getAttribute("data-variant") === "primary")
+        .map((b) => b.textContent);
+      // Two writing actions are on screen at once: this editor's save and the
+      // composer that is always there. Neither navigation control is accented.
+      expect(accented).toEqual(["Save description", "Add note"]);
+      expect(
+        screen.getByText("Edit all fields").getAttribute("data-variant")
+      ).toBe("outline");
     });
 
-    it("offers to add a description when there is none", () => {
+    it("still offers the editor when there is no description to edit", () => {
       mockNpcId = "npc-3";
       renderPage();
-      expect(screen.getByText("Add a description")).toBeInTheDocument();
+      expect(screen.getByText("Nothing written yet")).toBeInTheDocument();
+      expect(screen.getByText("Edit")).toBeInTheDocument();
     });
   });
 
@@ -611,7 +772,7 @@ describe("NPCDetailPage", () => {
     it("keeps every character the user typed", async () => {
       mockUpdateNPC.mockRejectedValue(new Error("Network unavailable"));
       renderPage();
-      fireEvent.click(screen.getByText("Edit description"));
+      fireEvent.click(screen.getByText("Edit"));
       const field = screen.getByLabelText("Description");
       fireEvent.change(field, { target: { value: "Hard-won sentence." } });
       fireEvent.click(screen.getByText("Save description"));
@@ -629,7 +790,7 @@ describe("NPCDetailPage", () => {
     it("says what happened rather than only that something did", async () => {
       mockUpdateNPC.mockRejectedValue(new Error("Network unavailable"));
       renderPage();
-      fireEvent.click(screen.getByText("Edit description"));
+      fireEvent.click(screen.getByText("Edit"));
       fireEvent.change(screen.getByLabelText("Description"), {
         target: { value: "x" },
       });
@@ -642,7 +803,7 @@ describe("NPCDetailPage", () => {
     it("never claims success for a write the server refused", async () => {
       mockUpdateNPC.mockRejectedValue(new Error("nope"));
       renderPage();
-      fireEvent.click(screen.getByText("Edit description"));
+      fireEvent.click(screen.getByText("Edit"));
       fireEvent.change(screen.getByLabelText("Description"), {
         target: { value: "x" },
       });
@@ -656,7 +817,7 @@ describe("NPCDetailPage", () => {
     it("lets the user try again without retyping", async () => {
       mockUpdateNPC.mockRejectedValueOnce(new Error("nope"));
       renderPage();
-      fireEvent.click(screen.getByText("Edit description"));
+      fireEvent.click(screen.getByText("Edit"));
       fireEvent.change(screen.getByLabelText("Description"), {
         target: { value: "Second time lucky." },
       });
@@ -690,7 +851,7 @@ describe("NPCDetailPage", () => {
     const startNeverSettlingSave = () => {
       mockUpdateNPC.mockImplementation(() => new Promise(() => {}));
       renderPage();
-      fireEvent.click(screen.getByText("Edit description"));
+      fireEvent.click(screen.getByText("Edit"));
       fireEvent.change(screen.getByLabelText("Description"), {
         target: { value: "A sentence worth keeping." },
       });
@@ -743,17 +904,25 @@ describe("NPCDetailPage", () => {
   });
 
   describe("adding a note", () => {
-    const openNoteEditor = () => {
-      fireEvent.click(screen.getByText("Add note"));
-      return screen.getByLabelText("New note");
-    };
+    // The composer is always on screen -- there is nothing to open.
+    const composer = () => screen.getByLabelText("Add a note");
+
+    it("is on screen without being summoned", () => {
+      renderPage();
+      expect(composer()).toBeInTheDocument();
+    });
+
+    it("does not steal the caret on load", () => {
+      renderPage();
+      expect(composer()).not.toHaveFocus();
+    });
 
     it("adds one without navigating away", async () => {
       renderPage();
-      fireEvent.change(openNoteEditor(), {
+      fireEvent.change(composer(), {
         target: { value: "Met the Balrog." },
       });
-      fireEvent.click(screen.getAllByText("Add note")[0]);
+      fireEvent.click(screen.getByText("Add note"));
 
       await waitFor(() =>
         expect(mockUpdateNPCNote).toHaveBeenCalledWith(
@@ -766,10 +935,10 @@ describe("NPCDetailPage", () => {
 
     it("dates the note today, in the shape the forms already write", async () => {
       renderPage();
-      fireEvent.change(openNoteEditor(), {
+      fireEvent.change(composer(), {
         target: { value: "Met the Balrog." },
       });
-      fireEvent.click(screen.getAllByText("Add note")[0]);
+      fireEvent.click(screen.getByText("Add note"));
 
       await waitFor(() => expect(mockUpdateNPCNote).toHaveBeenCalled());
       const [, note] = mockUpdateNPCNote.mock.calls[0];
@@ -777,12 +946,33 @@ describe("NPCDetailPage", () => {
       expect(note.date).toBe(new Date().toISOString().split("T")[0]);
     });
 
-    it("gives the note no author, because NPCNote has nowhere to put one", async () => {
+    it("credits the note to the acting character", async () => {
       renderPage();
-      fireEvent.change(openNoteEditor(), {
+      fireEvent.change(composer(), {
         target: { value: "Met the Balrog." },
       });
-      fireEvent.click(screen.getAllByText("Add note")[0]);
+      fireEvent.click(screen.getByText("Add note"));
+      await waitFor(() => expect(mockUpdateNPCNote).toHaveBeenCalled());
+      const [, note] = mockUpdateNPCNote.mock.calls[0];
+      expect(note.author).toBe("Zendikarr");
+      expect(Object.keys(note).sort()).toEqual(["author", "date", "text"]);
+    });
+
+    it("falls back to the username when the player has no character", async () => {
+      mockGroupUserProfile = { username: "gandlaf", characters: [] };
+      renderPage();
+      fireEvent.change(composer(), { target: { value: "Met the Balrog." } });
+      fireEvent.click(screen.getByText("Add note"));
+      await waitFor(() => expect(mockUpdateNPCNote).toHaveBeenCalled());
+      const [, note] = mockUpdateNPCNote.mock.calls[0];
+      expect(note.author).toBe("gandlaf");
+    });
+
+    it("writes no author at all rather than an empty one", async () => {
+      mockGroupUserProfile = null;
+      renderPage();
+      fireEvent.change(composer(), { target: { value: "Met the Balrog." } });
+      fireEvent.click(screen.getByText("Add note"));
       await waitFor(() => expect(mockUpdateNPCNote).toHaveBeenCalled());
       const [, note] = mockUpdateNPCNote.mock.calls[0];
       expect(Object.keys(note).sort()).toEqual(["date", "text"]);
@@ -790,24 +980,27 @@ describe("NPCDetailPage", () => {
 
     it("re-reads the record after writing", async () => {
       renderPage();
-      fireEvent.change(openNoteEditor(), {
-        target: { value: "Met the Balrog." },
-      });
-      fireEvent.click(screen.getAllByText("Add note")[0]);
+      fireEvent.change(composer(), { target: { value: "Met the Balrog." } });
+      fireEvent.click(screen.getByText("Add note"));
       await waitFor(() => expect(mockRefreshNPCs).toHaveBeenCalled());
+    });
+
+    it("empties itself after a note lands, ready for the next one", async () => {
+      renderPage();
+      fireEvent.change(composer(), { target: { value: "Met the Balrog." } });
+      fireEvent.click(screen.getByText("Add note"));
+      await waitFor(() => expect(composer()).toHaveValue(""));
     });
 
     it("keeps the note when the write fails", async () => {
       mockUpdateNPCNote.mockRejectedValue(new Error("Write refused"));
       renderPage();
-      fireEvent.change(openNoteEditor(), {
-        target: { value: "Met the Balrog." },
-      });
-      fireEvent.click(screen.getAllByText("Add note")[0]);
+      fireEvent.change(composer(), { target: { value: "Met the Balrog." } });
+      fireEvent.click(screen.getByText("Add note"));
       await waitFor(() =>
         expect(screen.getByText("Write refused")).toBeInTheDocument()
       );
-      expect(screen.getByLabelText("New note")).toHaveValue("Met the Balrog.");
+      expect(composer()).toHaveValue("Met the Balrog.");
     });
 
     it("offers no editing or deletion of an existing note", () => {
@@ -818,18 +1011,20 @@ describe("NPCDetailPage", () => {
   });
 
   describe("read-only visitors", () => {
-    it("offers no way to edit while signed out", () => {
+    it("offers no way to edit or delete while signed out", () => {
       mockUser = null;
       renderPage();
-      expect(screen.queryByText("Edit description")).not.toBeInTheDocument();
+      expect(screen.queryByText("Edit")).not.toBeInTheDocument();
       expect(screen.queryByText("Add note")).not.toBeInTheDocument();
+      expect(screen.queryByText("Delete")).not.toBeInTheDocument();
+      expect(screen.queryByText("Edit all fields")).not.toBeInTheDocument();
     });
 
-    it("still renders the record for them", () => {
+    it("still says which page it is", () => {
       mockUser = null;
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Gandalf" })
+        screen.getByRole("heading", { level: 1, name: "NPC" })
       ).toBeInTheDocument();
     });
   });

@@ -49,6 +49,7 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
   
   // State for managing connections
   const [affiliationInput, setAffiliationInput] = useState('');
+  const [tagInput, setTagInput] = useState('');
   const [selectedNPCs, setSelectedNPCs] = useState<Set<string>>(new Set(npc.connections?.relatedNPCs || []));
   const [selectedQuests, setSelectedQuests] = useState<Set<string>>(new Set(npc.connections?.relatedQuests || []));
   const [isNPCDialogOpen, setIsNPCDialogOpen] = useState(false);
@@ -337,6 +338,59 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                           }));
                         }}
                         className="typography-secondary hover:opacity-75">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <Typography variant="body" className="font-medium mb-2">
+                  Tags
+                </Typography>
+                <div className="flex gap-2">
+                  <Input
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    placeholder="merchant"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (tagInput.trim()) {
+                        setFormData(prev => ({
+                          ...prev,
+                          tags: [...(prev.tags || []), tagInput.trim()],
+                        }));
+                        setTagInput('');
+                      }
+                    }}
+                    disabled={!tagInput.trim()}
+                  >
+                    Add tag
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.tags?.map((tag, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-1 px-3 py-1 rounded-full tag"
+                    >
+                      <span>{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            tags: (prev.tags || []).filter((_, i) => i !== index),
+                          }));
+                        }}
+                        className="typography-secondary hover:opacity-75"
+                        aria-label={`Remove tag ${tag}`}
+                      >
                         <X size={14} />
                       </button>
                     </div>

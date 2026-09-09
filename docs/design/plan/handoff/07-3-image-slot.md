@@ -1,5 +1,15 @@
 # PR 7.3 — The image slot and its designed empty state
 
+> **Not executed as its own PR. The work shipped inside `07-2-5` (R18).**
+> The mock the redo was built from opens with the image band, and the identity
+> card's proportions are set by it, so building the layout around a hole and
+> filling it afterwards would have meant judging the page twice. Every rule
+> below was kept: no Storage, no picker, no upload, no generation, and the
+> empty state is the whole component. `.party-crest-slot` was generalised to
+> `.image-slot` behind a shared `ImageSlot`, which is the "two uses is the
+> threshold" instruction in step 1 being taken at the moment the second use
+> arrived. Kept here because its reasoning is still the reasoning.
+
 Phase 7 · third migration PR · closes the phase · depends on 7.1
 
 One image slot, on the NPC page (D61 — there is no Location page). **No bitmaps

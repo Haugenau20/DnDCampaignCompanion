@@ -31,6 +31,7 @@ interface NPCFormProps {
     appearance?: string;
     personality?: string;
     background?: string;
+    tags?: string[];
   };
   onSuccess?: () => void;
   onCancel?: () => void;
@@ -81,10 +82,28 @@ const NPCForm: React.FC<NPCFormProps> = ({
       appearance: initialData.appearance || '',
       personality: initialData.personality || '',
       background: initialData.background || '',
+      tags: initialData.tags || [],
     } : {}
   });
 
   const [affiliationInput, setAffiliationInput] = useState('');
+  const [tagInput, setTagInput] = useState('');
+
+  const handleTagAdd = () => {
+    if (!tagInput.trim()) return;
+    setFormData(prev => ({
+      ...prev,
+      tags: [...(prev.tags || []), tagInput.trim()],
+    }));
+    setTagInput('');
+  };
+
+  const handleTagRemove = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: (prev.tags || []).filter((_, i) => i !== index),
+    }));
+  };
 
   // NPC Selection Dialog state
   const [isNPCDialogOpen, setIsNPCDialogOpen] = useState(false);
@@ -194,6 +213,7 @@ const NPCForm: React.FC<NPCFormProps> = ({
           relatedQuests: Array.from(selectedQuests)
         },
         notes: [],
+        tags: formData.tags || [],
       };
 
       // Use the context method to add NPC
@@ -440,6 +460,44 @@ const NPCForm: React.FC<NPCFormProps> = ({
                     type="button"
                     onClick={() => handleAffiliationRemove(index)}
                     className="typography-secondary hover:opacity-75">
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+            {/* Tags */}
+          <div className="space-y-4">
+            <Typography variant="h4">Tags</Typography>
+            <div className="flex gap-2">
+              <Input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                placeholder="merchant"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                onClick={handleTagAdd}
+                disabled={!tagInput.trim()}
+              >
+                Add tag
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formData.tags?.map((tag, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-1 px-3 py-1 rounded-full tag"
+                >
+                  <span>{tag}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleTagRemove(index)}
+                    className="typography-secondary hover:opacity-75"
+                    aria-label={`Remove tag ${tag}`}
+                  >
                     <X size={14} />
                   </button>
                 </div>

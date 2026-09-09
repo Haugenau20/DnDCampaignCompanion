@@ -7,8 +7,16 @@ Handoffs are written **as a phase starts**, not up front — the same reason
 `00-transition-plan.md` deferred the 2a/3a choice. A handoff written three
 phases early is a guess with a checklist attached.
 
-Currently written: Phase 6 (`06-0` … `06-3`, done) and Phase 7
-(`07-0` … `07-2` done, `07-3` remaining).
+Currently written: Phase 6 (`06-0` … `06-3`, done); Phase 7 (`07-0` … `07-2`
+done, then `07-2-5` -- a redo of the NPC page against a design mock, which
+absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
+saying where its work went, R18); and Phase 8 (`08-0` … `08-3`, unstarted).
+
+Phase 8 is worth reading in order. `08-0` builds the `Select` that does not
+exist, `08-1` adopts it and fixes 17 unassociated labels, `08-2` unifies nine
+hand-rolled chips, and `08-3` handles rhythm and actions. Nothing after `08-0`
+can start without it, and `08-1` is the one carrying the accessibility fix that
+turned out to be the real point of the phase (R19).
 
 Phase 7's optional fourth PR — the image **upload** path — is deliberately not
 written. D6 keeps bitmaps out of this project entirely, so it is a handoff for

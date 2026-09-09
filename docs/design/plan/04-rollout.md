@@ -102,18 +102,33 @@ rendered by nothing. `NoteCard` is live and stays. No `[data-theme=…]` patch
 survives in any of them either; the 21 left in the tree are medieval ornament,
 scrollbars, a dialog shadow, a card hover and reader typography.
 
-Then `handoff/07-1` … `07-3`: the NPC route and its read view; the in-place
-editing; the image slot with its designed empty state. The **upload path is a fifth PR
+Then `handoff/07-1` and `07-2`: the NPC route and its read view, then the
+in-place editing. `07-2-5` rebuilt the page against a design mock after the
+first layout read as a form rather than a record (D65), and absorbed `07-3`'s
+image slot along with it (R18) -- so Phase 7 ends there. The **upload path is a fifth PR
 and is optional** — the slot must look intentional empty, cropped to fill with
 no focal point (D44).
 
 ### Phase 8 — Forms & fields
 
 `NPCForm`, `NPCEditForm`, `LocationFormSections`, `LocationCreateForm`,
-`LocationEditForm`, `QuestFormSections`, `RumorForm`, `ChapterForm`,
-`SagaEditPage`, plus `Input` and `Dialog`. The `field.*` tokens already exist
-and are already 3a-tuned; this phase makes the forms consume them and settles
-one open question — whether a form sits on `card` or on `page`.
+`LocationEditForm`, `QuestFormSections`, `QuestCreateForm`, `QuestEditForm`,
+`RumorForm`, `ChapterForm`, `SagaEditPage`, plus `Input`, `Dialog` and a
+`Select` that does not exist yet.
+
+Four PRs, `handoff/08-0` … `08-3`. This paragraph used to say the phase was
+mostly consumption of the `field.*` tokens, and that it would settle whether a
+form sits on `card` or on `page`. Measured before writing the handoffs, both
+were wrong (R19): the colour work is already done — zero hardcoded hex and zero
+`[data-theme=…]` patches survive in any of the eleven files — and all eleven
+already sit on `Card`, so the question is closed by practice and `08-3` only
+ratifies it.
+
+What the measurement found instead is structural: **no `Select` primitive
+exists** while the forms render 11 raw `<select>` elements, and **17
+hand-written labels are not associated with their controls**, leaving them
+unnamed to a screen reader. Phase 8 is an accessibility phase wearing a
+repainting phase's description.
 
 ### Phase 9 — Reading surfaces
 
