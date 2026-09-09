@@ -1,1243 +1,1249 @@
-/* src/core/themes/css/components.css */
-/*
-  Component-specific styles using CSS variables.
-  These styles apply to all themes, with theme-specific values coming from CSS variables.
-*/
+@layer app {
+  /* src/core/themes/css/components.css */
+  /*
+    Component-specific styles using CSS variables.
+    These styles apply to all themes, with theme-specific values coming from CSS variables.
+  */
 
-/* Base theme styles */
-.theme {
-  background-color: var(--surface-page-bg);
-  color: var(--surface-page-on);
-  font-family: var(--font-primary);
-}
+  /* Base theme styles */
+  .theme {
+    background-color: var(--surface-page-bg);
+    color: var(--surface-page-on);
+    font-family: var(--font-primary);
+  }
 
-.primary {
-  color: var(--color-primary)
-}
+  .primary {
+    color: var(--color-primary)
+  }
 
-.secondary {
-  color: var(--color-secondary);
-}
+  .secondary {
+    color: var(--color-secondary);
+  }
 
-.accent {
-  color: var(--color-accent);
-}
+  .accent {
+    color: var(--color-accent);
+  }
 
-.bg-primary {
-  background-color: var(--surface-page-bg);
-}
+  .bg-primary {
+    background-color: var(--surface-page-bg);
+  }
 
-.bg-secondary {
-  background-color: var(--surface-sunken-bg);
-}
+  .bg-secondary {
+    background-color: var(--surface-sunken-bg);
+  }
 
-.bg-accent {
-  background-color: var(--state-selected);
-}
+  .bg-accent {
+    background-color: var(--state-selected);
+  }
 
-/* ====== BUTTON COMPONENT ====== */
-.button {
-  position: relative;
-  font-family: var(--font-primary);
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
+  /* ====== BUTTON COMPONENT ====== */
+  .button {
+    position: relative;
+    font-family: var(--font-primary);
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
 
-.button-primary {
-  background-color: var(--action-primary-bg);
-  color: var(--action-primary-text);
-}
+  .button-primary {
+    background-color: var(--action-primary-bg);
+    color: var(--action-primary-text);
+  }
 
-.button-primary:hover:not(:disabled) {
-  background-color: var(--action-primary-hover);
-}
+  .button-primary:hover:not(:disabled) {
+    background-color: var(--action-primary-hover);
+  }
 
-.button-secondary {
-  background-color: var(--action-secondary-bg);
-  color: var(--action-secondary-text);
-}
+  .button-secondary {
+    background-color: var(--action-secondary-bg);
+    color: var(--action-secondary-text);
+  }
 
-.button-secondary:hover:not(:disabled) {
-  background-color: var(--action-secondary-hover);
-}
+  .button-secondary:hover:not(:disabled) {
+    background-color: var(--action-secondary-hover);
+  }
 
-.button-outline {
-  background-color: var(--action-outline-bg);
-  color: var(--action-outline-text);
-  border: var(--border-width-sm) solid var(--action-outline-border);
-}
+  .button-outline {
+    background-color: var(--action-outline-bg);
+    color: var(--action-outline-text);
+    border: var(--border-width-sm) solid var(--action-outline-border);
+  }
 
-.button-outline:hover:not(:disabled) {
-  background-color: var(--action-outline-hover);
-}
+  .button-outline:hover:not(:disabled) {
+    background-color: var(--action-outline-hover);
+  }
 
-.button-ghost {
-  background-color: var(--action-ghost-bg);
-  color: var(--action-ghost-text);
-}
+  .button-ghost {
+    background-color: var(--action-ghost-bg);
+    color: var(--action-ghost-text);
+  }
 
-.button-ghost:hover:not(:disabled) {
-  background-color: var(--action-ghost-hover);
-}
+  .button-ghost:hover:not(:disabled) {
+    background-color: var(--action-ghost-hover);
+  }
 
-/*
-  Ghost buttons in the chrome take the chrome's ink and tints.
+  /*
+    Ghost buttons in the chrome take the chrome's ink and tints.
 
-  A ghost button's accent colour is a page affordance -- on a card it is how
-  you tell an action from body text. Inside the frame the nav sets the tone,
-  and the accent both fought with it and measured 2.0:1 against the dark band.
-  This is a structural scope, not a theme-conditional patch: it says a ghost
-  button on this surface takes this surface's values, which is the pair model
-  rather than an exception to it.
-*/
-.header .button-ghost,
-.footer .button-ghost {
-  color: var(--surface-chrome-on-muted);
-}
+    A ghost button's accent colour is a page affordance -- on a card it is how
+    you tell an action from body text. Inside the frame the nav sets the tone,
+    and the accent both fought with it and measured 2.0:1 against the dark band.
+    This is a structural scope, not a theme-conditional patch: it says a ghost
+    button on this surface takes this surface's values, which is the pair model
+    rather than an exception to it.
+  */
+  .header .button-ghost,
+  .footer .button-ghost {
+    color: var(--surface-chrome-on-muted);
+  }
 
-.header .button-ghost:hover:not(:disabled),
-.footer .button-ghost:hover:not(:disabled) {
-  color: var(--surface-chrome-on);
-  background-color: var(--surface-chrome-hover);
-}
+  .header .button-ghost:hover:not(:disabled),
+  .footer .button-ghost:hover:not(:disabled) {
+    color: var(--surface-chrome-on);
+    background-color: var(--surface-chrome-hover);
+  }
 
-.button-link {
-  background-color: var(--action-link-bg);
-  color: var(--action-link-text);
-  text-decoration: none;
-}
+  .button-link {
+    background-color: var(--action-link-bg);
+    color: var(--action-link-text);
+    text-decoration: none;
+  }
 
-.button-link:hover:not(:disabled) {
-  color: var(--action-link-hover);
-  text-decoration: underline;
-}
+  .button-link:hover:not(:disabled) {
+    color: var(--action-link-hover);
+    text-decoration: underline;
+  }
 
-/* ====== CARD COMPONENT ====== */
-.card {
-  border: var(--border-width-sm) solid var(--surface-card-border);
-  border-radius: var(--border-radius-md);
-  background-color: var(--surface-card-bg);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-}
+  /* ====== CARD COMPONENT ====== */
+  .card {
+    border: var(--border-width-sm) solid var(--surface-card-border);
+    border-radius: var(--border-radius-md);
+    background-color: var(--surface-card-bg);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+  }
 
-.card-border {
-  border: var(--border-width-sm) solid var(--surface-card-border);
-}
+  .card-border {
+    border: var(--border-width-sm) solid var(--surface-card-border);
+  }
 
-/*
-  Colour only -- pair with a directional Tailwind width such as `border-t` or
-  `divide-y` to draw a single hairline in the card border's theme colour.
+  /*
+    Colour only -- pair with a directional Tailwind width such as `border-t` or
+    `divide-y` to draw a single hairline in the card border's theme colour.
 
-  `.card-border` above cannot do this job: it is the `border` SHORTHAND, so it
-  sets a width on all four sides. Combining it with `border-t` therefore draws
-  a full box rather than a top rule. That is invisible where the element sits
-  flush against a card edge, and very visible where it is inset -- which is how
-  it surfaced, as a rectangle around each inset row of the notes index.
-*/
-.card-divider {
-  border-color: var(--surface-card-border);
-}
+    `.card-border` above cannot do this job: it is the `border` SHORTHAND, so it
+    sets a width on all four sides. Combining it with `border-t` therefore draws
+    a full box rather than a top rule. That is invisible where the element sits
+    flush against a card edge, and very visible where it is inset -- which is how
+    it surfaced, as a rectangle around each inset row of the notes index.
+  */
+  .card-divider {
+    border-color: var(--surface-card-border);
+  }
 
-.card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
+  .card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
 
-.card-header {
-  padding: 1.5rem 1.5rem 0.75rem;
-}
+  .card-header {
+    padding: 1.5rem 1.5rem 0.75rem;
+  }
 
-.card-content {
-  padding: 1rem 1.5rem;
-}
+  .card-content {
+    padding: 1rem 1.5rem;
+  }
 
-.card-footer {
-  padding: 0.75rem 1.5rem 1.5rem;
-  border-top: var(--border-width-sm) solid var(--surface-card-border);
-  margin-top: 1rem;
-}
+  .card-footer {
+    padding: 0.75rem 1.5rem 1.5rem;
+    border-top: var(--border-width-sm) solid var(--surface-card-border);
+    margin-top: 1rem;
+  }
 
-.card-subtle {
-  background-color: var(--surface-sunken-bg);
-}
+  .card-subtle {
+    background-color: var(--surface-sunken-bg);
+  }
 
-/* ====== DIALOG COMPONENT ====== */
-.dialog {
-  background-color: var(--surface-card-bg);
-  border-radius: var(--border-radius-lg);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  border: var(--border-width-sm) solid var(--surface-card-border);
-}
+  /* ====== DIALOG COMPONENT ====== */
+  .dialog {
+    background-color: var(--surface-card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    border: var(--border-width-sm) solid var(--surface-card-border);
+  }
 
-.dialog-backdrop {
-  background-color: rgba(0, 0, 0, 0.5);
-}
+  .dialog-backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
 
-/* ====== TYPOGRAPHY COMPONENT ====== */
-/*
-  Typography inherits its colour rather than naming one.
+  /* ====== TYPOGRAPHY COMPONENT ====== */
+  /*
+    Typography inherits its colour rather than naming one.
   
-  It used to set `--surface-page-on` unconditionally, which meant every piece
-  of text carried the page's ink no matter which surface it sat on. That was
-  invisible while every surface shared one ink; the moment the chrome became a
-  dark band, every label inside it -- nav items, the campaign switcher, the
-  footer links -- kept rendering near-black on near-black. Inheriting lets the
-  surface decide, which is the whole point of a pair.
-
-  `body` sets the page ink, so text on the page and on cards is unchanged; only
-  text inside a container that sets its own colour now follows that container.
-*/
-.typography {
-  font-family: var(--font-primary);
-  color: inherit;
-}
-
-.typography-heading {
-  font-family: var(--font-heading);
-  color: var(--color-heading);
-}
-
-.typography-secondary {
-  color: var(--surface-page-on-muted);
-}
-
-.typography-primary {
-  color: var(--color-primary);
-}
-
-.typography-muted {
-  color: var(--surface-page-on-muted);
-  opacity: 0.8;
-}
-
-.typography-white {
-  color: white;
-}
-
-.typography-error {
-  color: var(--field-error-text);
-}
-
-.typography-success {
-  color: var(--field-success-text);
-}
-
-.typography-label {
-  color: var(--surface-page-on);
-  font-weight: 500;
-}
-
-/* ====== INPUT COMPONENT ====== */
-.input {
-  background-color: var(--field-bg);
-  border: var(--border-width-sm) solid var(--field-border);
-  color: var(--surface-page-on);
-  transition: all 0.2s ease;
-  border-radius: var(--border-radius-md);
-}
-
-.input:focus {
-  border-color: var(--field-border-focus);
-  box-shadow: 0 0 0 2px var(--field-ring-focus);
-}
-
-.input-error {
-  border-color: var(--field-error-border);
-}
-
-.input-error:focus {
-  border-color: var(--field-error-focus);
-  box-shadow: 0 0 0 2px var(--field-error-ring);
-}
-
-.input-success {
-  border-color: var(--field-success-border);
-}
-
-.input-success:focus {
-  border-color: var(--field-success-focus);
-  box-shadow: 0 0 0 2px var(--field-success-ring);
-}
-
-.input::placeholder {
-  color: var(--field-placeholder);
-}
-
-.form-label {
-  color: var(--field-label-text);
-}
-
-.form-helper {
-  color: var(--field-helper-text);
-}
-
-.form-error {
-  color: var(--field-error-text);
-}
-
-.form-success {
-  color: var(--field-success-text);
-}
-
-.input:disabled {
-  background-color: var(--field-disabled-bg);
-  opacity: 0.7;
-}
-
-/* ====== LAYOUT COMPONENTS ====== */
-.header {
-  background-color: var(--surface-chrome-bg);
-  /* A hairline separates the bar from the page. The drop shadow was doing that job
-     for a coloured field; on a neutral surface a border is quieter and does not
-     imply the bar is floating above the content. */
-  border-bottom: var(--border-width-sm) solid var(--surface-chrome-border);
-}
-
-.header-title {
-  color: var(--surface-chrome-on);
-  font-family: var(--font-heading);
-}
-
-/* The footer is the same band as the header, not a surface of its own. */
-.footer {
-  background-color: var(--surface-chrome-bg);
-  color: var(--surface-chrome-on-muted);
-}
-
-.content {
-  background-color: var(--surface-page-bg);
-}
-
-/* ====== NAVIGATION ====== */
-.navigation {
-  background-color: var(--surface-card-bg);
-  border-bottom: var(--border-width-sm) solid var(--surface-card-border);
-}
-
-/*
-  Navigation lives in the chrome, so it takes the chrome pair's ink and tints
-  rather than the page's. Before the chrome became a surface of its own these
-  were the same values, and the difference only shows up once the bar stops
-  matching the page -- which is exactly the patch-per-theme problem the pair
-  model exists to remove.
-*/
-.navigation-item {
-  color: var(--surface-chrome-on-muted);
-  transition: all 0.2s ease;
-}
-
-/*
-  Ink darkens to `--surface-page-on` on hover rather than switching to the accent.
-  The accent on `--state-hover-light` measured 4.01:1 in the light theme -- the same
-  defect as `.navigation-item-active` below, one tint lighter, and it fails AA
-  the same way. Hover still reads as hover: the ground goes from nothing to
-  `--state-hover-light` and the ink strengthens from `--surface-page-on-muted`. Light
-  13.8:1, dark 10.8:1, medieval 14.4:1.
-*/
-.navigation-item:hover {
-  color: var(--surface-chrome-on);
-  background-color: var(--surface-chrome-hover);
-}
-
-/*
-  Ink is `--surface-page-on`, not `--color-primary`. The accent on `--state-hover-medium`
-  measured 2.86:1 in the light theme -- a legitimate colour in a legitimate slot,
-  wrong in relation to what sits behind it. No value of `--state-hover-medium` fixes
-  it: anything light enough to clear 4.5:1 against `#2563EB` is within ~1.1:1 of
-  the page and the state stops being visible at all. Darkening the ink is the
-  only move that works, and it passes in all three themes (light 9.9:1,
-  dark 9.1:1, medieval 13.4:1). Active stays distinct from inactive by weight
-  and tint, not by hue alone.
-*/
-.navigation-item-active {
-  color: var(--surface-chrome-on);
-  background-color: var(--surface-chrome-selected);
-  font-weight: 500;
-}
-
-/* ====== SIDEBAR ====== */
-.sidebar {
-  background-color: var(--surface-card-bg);
-  border-right: var(--border-width-sm) solid var(--surface-card-border);
-}
-
-/* ====== SEARCH ====== */
-.search {
-  background-color: var(--field-bg);
-  border: var(--border-width-sm) solid var(--field-border);
-  color: var(--surface-page-on);
-  transition: all 0.2s ease;
-  border-radius: var(--border-radius-md);
-}
-
-.search:focus {
-  border-color: var(--field-border-focus);
-  box-shadow: 0 0 0 2px var(--field-ring-focus);
-}
-
-/*
-  The keyboard hint in the search trigger. It used to borrow `.search`, the
-  input-field style, so on the dark chrome it rendered as a bright white pill --
-  the loudest thing in the bar, for a hint you stop reading after the first
-  visit. It is now an overlay on whatever surface it sits on, one step up from
-  the ground rather than a slab against it.
-*/
-.search-shortcut {
-  background-color: var(--surface-chrome-hover);
-  color: var(--surface-chrome-on-muted);
-  border-radius: var(--border-radius-sm);
-}
-
-.search-results {
-  background-color: var(--surface-card-bg);
-  border: var(--border-width-sm) solid var(--surface-card-border);
-  border-radius: var(--border-radius-md);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.search-result {
-  transition: background-color 0.1s ease;
-}
-
-.search-result:hover {
-  background-color: var(--state-hover-light);
-}
-
-.search-result-selected {
-  background-color: var(--state-hover-medium);
-}
-
-/* ====== DROPDOWN ====== */
-.dropdown {
-  background-color: var(--surface-card-bg);
-  border: var(--border-width-sm) solid var(--surface-card-border);
-  border-radius: var(--border-radius-md);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.dropdown-item {
-  color: var(--surface-page-on);
-  transition: background-color 0.1s ease;
-}
-
-.dropdown-item:hover {
-  background-color: var(--state-hover-light);
-}
-
-/* Same failing pair as `.navigation-item-active` above, same fix. */
-.dropdown-item-active {
-  background-color: var(--state-hover-medium);
-  color: var(--surface-page-on);
-}
-
-/* ====== STATUS INDICATORS ====== */
-.status {
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.status-general {
-  color: var(--status-general);
-}
-
-.status-active {
-  color: var(--status-active);
-}
-
-.status-completed {
-  color: var(--status-completed);
-}
-
-.status-failed {
-  color: var(--status-failed);
-}
-
-.status-unknown {
-  color: var(--status-unknown);
-}
-
-/* ====== ICON STYLING ====== */
-.icon-bg {
-  background-color: var(--icon-bg);
-  border: 1px solid var(--icon-border);
-}
-
-/* ====== QUEST CARD ====== */
-/* The .quest-card / .quest-card-{active,completed,failed} rules that stood here were
-   dead once QuestCard was deleted — the quests page renders a roster now, and those
-   four classes had no remaining consumer, static or dynamic. Removing dead styles is
-   what this branch opened by doing (hover:scale-102, hoverColors, hover:typography),
-   so leaving four more behind would have been inconsistent.
-   The .quest-status-* rules below are live: NPCCard and LocationCard both use them. */
-
-.quest-status-active {
-  color: var(--status-active);
-}
-
-.quest-status-completed {
-  color: var(--status-completed);
-}
-
-.quest-status-failed {
-  color: var(--status-failed);
-}
-
-.progress-container {
-  background-color: var(--surface-sunken-bg);
-}
-
-.progress-bar {
-  background-color: var(--status-active);
-}
-
-.progress-bar-active {
-  background-color: var(--status-active);
-}
-
-.progress-bar-completed {
-  background-color: var(--status-completed);
-}
-
-.progress-bar-failed {
-  background-color: var(--status-failed);
-}
-
-.objective-completed {
-  background-color: var(--status-completed);
-  border-color: var(--status-completed);
-}
-
-.objective-pending {
-  border-color: var(--surface-sunken-bg);
-}
-
-/* ====== NPC CARD ====== */
-.npc-card {
-  border-left: 4px solid var(--color-primary);
-}
-
-.npc-card-alive {
-  border-left: 4px solid var(--status-completed);
-}
-
-.npc-card-missing {
-  border-left: 4px solid var(--status-unknown);
-}
-
-.npc-card-deceased {
-  border-left: 4px solid var(--status-failed);
-}
-
-.npc-card-friendly {
-  border-left: 4px solid var(--status-completed);
-}
-
-.npc-card-hostile {
-  border-left: 4px solid var(--status-failed);
-}
-
-.npc-card-neutral {
-  border-left: 4px solid var(--color-primary);
-}
-
-.npc-card-unknown {
-  border-left: 4px solid var(--status-unknown);
-}
-
-.npc-status-alive {
-  color: var(--status-completed);
-}
-
-.npc-status-deceased {
-  color: var(--status-failed);
-}
-
-.npc-status-missing {
-  color: var(--status-unknown);
-}
-
-.npc-status-unknown {
-  color: var(--status-unknown);
-}
-
-.npc-relationship-friendly {
-  color: var(--status-completed);
-}
-
-.npc-relationship-hostile {
-  color: var(--status-failed);
-}
-
-.npc-relationship-neutral {
-  color: var(--surface-page-on-muted);
-}
-
-.npc-relationship-unknown {
-  color: var(--surface-page-on-muted);
-}
-
-.note {
-  background-color: var(--surface-sunken-bg);
-}
-
-/* ====== LOCATION CARD ====== */
-.location-card {
-  border-left: 4px solid var(--status-active);
-}
-
-.location-card-explored {
-  border-left: 4px solid var(--status-completed);
-}
-
-.location-card-visited {
-  border-left: 4px solid var(--status-unknown);
-}
-
-.location-card-known {
-  border-left: 4px solid var(--surface-page-on-muted);
-}
-
-.location-status-explored {
-  color: var(--status-completed);
-}
-
-.location-status-known {
-  color: var(--surface-page-on-muted);
-}
-
-.location-status-visited {
-  color: var(--status-unknown);
-}
-
-/*
-  Location type chips.
-
-  These were eight hand-written `--location-type-*` colours -- the entity
-  palette solved ad hoc, and solved badly: the eight types mapped onto only
-  three distinct values, so `town` and `village` were literally the same colour.
-  They now index the palette, which means one place tunes them per theme and
-  every entry is already verified legible against one ink.
-
-  A chip rather than coloured text: the palette entries are quiet backgrounds,
-  and a pale tint used as ink would fail contrast on a light ground.
-*/
-.location-type-region,
-.location-type-city,
-.location-type-town,
-.location-type-village,
-.location-type-dungeon,
-.location-type-landmark,
-.location-type-building,
-.location-type-poi {
-  color: var(--entity-ink);
-}
-
-.location-type-region {
-  background-color: var(--entity-palette-0);
-}
-
-.location-type-city {
-  background-color: var(--entity-palette-1);
-}
-
-.location-type-town {
-  background-color: var(--entity-palette-2);
-}
-
-.location-type-village {
-  background-color: var(--entity-palette-3);
-}
-
-.location-type-dungeon {
-  background-color: var(--entity-palette-4);
-}
-
-.location-type-landmark {
-  background-color: var(--entity-palette-5);
-}
-
-.location-type-building {
-  background-color: var(--entity-palette-6);
-}
-
-.location-type-poi {
-  background-color: var(--entity-palette-7);
-}
-
-/* ====== RUMOR CARD ====== */
-.rumor-card {
-  border-left: 4px solid var(--color-primary);
-}
-
-.rumor-card-confirmed {
-  border-left: 4px solid var(--status-completed);
-}
-
-.rumor-card-unconfirmed {
-  border-left: 4px solid var(--status-unknown);
-}
-
-.rumor-card-false {
-  border-left: 4px solid var(--status-failed);
-}
-
-.rumor-status-confirmed {
-  color: var(--status-completed);
-}
-
-.rumor-status-unconfirmed {
-  color: var(--status-unknown);
-}
-
-.rumor-status-false {
-  color: var(--status-failed);
-}
-
-.rumor-status-border-confirmed {
-  border-color: var(--status-completed);
-}
-
-.rumor-status-border-unconfirmed {
-  border-color: var(--status-unknown);
-}
-
-.rumor-status-border-false {
-  border-color: var(--status-failed);
-}
-
-/* ====== HERO BAND ====== */
-/*
-  The campaign's identity, on the band surface. Its ink comes from the band
-  pair, so nothing inside it names a colour -- the same rule the chrome follows,
-  and the reason neither needs a per-theme patch.
-*/
-.hero-band {
-  background-color: var(--surface-band-bg);
-  color: var(--surface-band-on);
-  border-bottom: var(--border-width-sm) solid var(--surface-band-border);
-}
-
-/*
-  A heading on the band takes the band's ink.
-
-  `.typography-heading` names `--color-heading`, which is a page-level notion --
-  in the dark theme it is deliberately a touch brighter than body ink. On a
-  surface whose ink differs from the page's, that value is simply wrong, and on
-  this band it would render near-black on dark. Same shape as the chrome's ghost
-  buttons: the surface claims its own ink rather than every component learning
-  about every surface.
-*/
-.hero-band .typography-heading {
-  color: var(--surface-band-on);
-}
-
-.hero-muted {
-  color: var(--surface-band-on-muted);
-}
-
-.hero-eyebrow {
-  color: var(--surface-band-on-muted);
-}
-
-.hero-dot {
-  background-color: var(--surface-band-on-muted);
-}
-
-/*
-  The image slot. It is empty in this phase and will be empty for most campaigns
-  most of the time, so the border and radius are the design rather than a
-  placeholder outline waiting to be replaced.
-*/
-.hero-slot {
-  border-radius: var(--border-radius-lg);
-  overflow: hidden;
-  box-shadow: 0 0 0 var(--border-width-sm) var(--surface-band-border);
-}
-
-/* ====== VIEW TOGGLE ====== */
-/*
-  A segmented control that appears on two different surfaces: the hero band on
-  the dashboard, and the page in the journal. It cannot name one set of colours,
-  so it names roles and the surface supplies them -- default page values here,
-  band values below. Without this the active segment rendered the band's
-  near-white ink on a white card: invisible.
-*/
-.view-toggle {
-  background-color: var(--surface-sunken-bg);
-}
-
-.view-toggle-item {
-  color: var(--surface-page-on-muted);
-}
-
-.view-toggle-item:hover {
-  background-color: var(--surface-page-hover);
-  color: var(--surface-page-on);
-}
-
-.view-toggle-item-active {
-  background-color: var(--surface-card-bg);
-  color: var(--surface-page-on);
-}
-
-.hero-band .view-toggle {
-  background-color: var(--surface-band-hover);
-}
-
-.hero-band .view-toggle-item {
-  color: var(--surface-band-on-muted);
-}
-
-.hero-band .view-toggle-item:hover {
-  background-color: var(--surface-band-hover);
-  color: var(--surface-band-on);
-}
-
-.hero-band .view-toggle-item-active {
-  background-color: var(--surface-band-selected);
-  color: var(--surface-band-on);
-}
-
-/* ====== ENTITY SIGIL ====== */
-/*
-  One ink for every mark, so the palette separates entities without any entry
-  shouting louder than the others. The hue is the only thing that varies.
-*/
-.entity-sigil {
-  color: var(--entity-ink);
-  font-family: var(--font-primary);
-  line-height: 1;
-}
-
-/*
-  One rule per palette index. The component says which entity it is; the
-  stylesheet says what that looks like, so a theme can retune every mark in the
-  product without touching a component.
-*/
-.entity-sigil[data-sigil-index="0"] { background-color: var(--entity-palette-0); }
-.entity-sigil[data-sigil-index="1"] { background-color: var(--entity-palette-1); }
-.entity-sigil[data-sigil-index="2"] { background-color: var(--entity-palette-2); }
-.entity-sigil[data-sigil-index="3"] { background-color: var(--entity-palette-3); }
-.entity-sigil[data-sigil-index="4"] { background-color: var(--entity-palette-4); }
-.entity-sigil[data-sigil-index="5"] { background-color: var(--entity-palette-5); }
-.entity-sigil[data-sigil-index="6"] { background-color: var(--entity-palette-6); }
-.entity-sigil[data-sigil-index="7"] { background-color: var(--entity-palette-7); }
-
-/* ====== SELECTABLE ITEM ====== */
-/*
-  State classes own hover, selected, focus and disabled -- nothing else. A
-  resting background or border here is a contract violation, not a style
-  choice: `.selectable-item` used to set both, and because it is declared ~500
-  lines after `.card` it beat every surface it was combined with. That is why
-  the stats strip, the activity list and the quest aside all rendered one flat
-  tone. See 01-token-model.md section 3.
-
-  Selection draws an `outline`, not a `border`, so the state costs no layout.
-  A border would consume 2px of the padding box on select and shift the row's
-  content; `outline-offset: -2px` puts the same line in the same place for
-  free. `.highlighted-item` below already worked this way.
-
-  These rules are deliberately NOT wrapped in a CSS cascade layer. Layering
-  them was tried and reverted: unlayered declarations beat layered ones
-  regardless of specificity, and Tailwind's utilities are emitted unlayered
-  after these files are hoisted. A layered `.selectable-item:hover` therefore
-  loses to a plain `.bg-secondary` utility, which silently kills hover on the
-  quest-progress cell. Declaring a layer order means layering Tailwind's
-  output too -- an app-wide precedence change, not a Phase 0 one.
-*/
-.selectable-item {
-  transition: all 0.2s ease;
-}
-
-.selectable-item:hover {
-  background-color: var(--state-selected);
-}
-
-.selected-item {
-  background-color: var(--state-selected);
-  outline: 2px solid var(--color-primary);
-  outline-offset: -2px;
-}
-
-.highlighted-item {
-  outline: 2px solid var(--color-primary);
-  border-radius: var(--border-radius-lg);
-  box-shadow: 0 0 0 2px var(--surface-page-bg);
-}
-
-/* ====== SUCCESS/ERROR STATES ====== */
-.success-icon-bg {
-  background-color: var(--field-success-ring);
-  opacity: 0.2;
-}
-
-.success-icon {
-  color: var(--field-success-text);
-}
-
-.error-bg {
-  background-color: var(--danger-bg);
-  color: var(--status-failed);
-}
-
-.delete-button {
-  background-color: var(--danger-delete-bg);
-  color: var(--danger-delete-text);
-}
-
-.delete-button:hover {
-  background-color: var(--danger-delete-hover);
-}
-
-/* ====== DIVIDER ====== */
-.divider {
-  border-color: var(--surface-card-border);
-}
-
-/* ====== TAG ====== */
-.tag {
-  background-color: var(--surface-sunken-bg);
-  border: 1px solid var(--surface-card-border);
-}
-
-/* ====== HINT ====== */
-.hint {
-  background-color: var(--state-selected);
-  color: var(--color-primary);
-}
-
-/* ====== SPINNER ====== */
-.spinner-border {
-  border-color: var(--field-border);
-  border-top-color: var(--color-primary);
-}
-
-/* ====== BOOK VIEWER ====== */
-.book {
-  background-color: var(--surface-card-bg);
-}
-
-.book-header {
-  background-color: var(--surface-sunken-bg);
-}
-
-.book-nav {
-  background-color: var(--surface-sunken-bg);
-}
-
-.book-content-area {
-  background-color: var(--surface-card-bg);
-}
-
-.book-content {
-  font-family: var(--font-primary);
-}
-
-.book-text {
-  color: var(--surface-page-on);
-  font-family: var(--font-primary);
-}
-
-.book-pagination {
-  background-color: var(--surface-sunken-bg);
-}
-
-.page-nav-button {
-  background-color: transparent;
-}
-
-.page-nav-button:hover {
-  background-color: var(--state-hover-light);
-}
-
-/* ====== CHAPTER READER ====== */
-/* The reader deliberately does NOT reuse the .book-* surfaces above. Those carry
-   the paginated book chrome - parchment fill, header band, pagination bar - and
-   the reader is a plain reading card: theme card background, hairline border, no
-   ornament. Only the prose face is special.
-
-   The face is named explicitly here rather than taken from a theme token,
-   because no existing token is a reading serif in all three themes:
-   --font-heading is 'Newsreader, Georgia, serif' in light but plain Inter in
-   dark, and in medieval it is MedievalSharp, whose own definition says
-   "decorative font for headings only" - a display face, unreadable for a
-   chapter's worth of body text. --font-primary is no better, being Inter in
-   light and dark. Colour still comes from the theme; only the typeface is
-   fixed, because the reading measure is a property of the reader rather than
-   of the palette. Both families below are already loaded in public/index.html. */
-.reader-prose {
-  color: var(--surface-page-on);
-  font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
-}
-
-/* Medieval already sets its BODY text to Crimson Text, so the reader matches
-   the rest of that theme's prose instead of importing a face it never uses. */
-[data-theme="medieval"] .reader-prose {
-  font-family: 'Crimson Text', Georgia, serif;
-}
-
-/* ====== JOURNAL STYLING ====== */
-.journal-container {
-  background-color: var(--journal-leather);
-  box-shadow: 0 4px 6px var(--journal-page-shadow);
-}
-
-.journal-binding {
-  background-color: var(--journal-binding);
-  box-shadow: inset 0 0 10px var(--journal-page-shadow);
-}
-
-.journal-stitch {
-  background-color: var(--journal-stitch);
-}
-
-.journal-page {
-  background-color: var(--surface-card-bg);
-  color: var(--surface-page-on);
-}
-
-.journal-page-left {
-  border-top-left-radius: 0.5rem;
-  border-bottom-left-radius: 0.5rem;
-  box-shadow: inset 5px 0 10px var(--journal-page-shadow);
-}
-
-.journal-page-right {
-  border-top-right-radius: 0.5rem;
-  border-bottom-right-radius: 0.5rem;
-  box-shadow: inset -5px 0 10px var(--journal-page-shadow);
-}
-
-.journal-pages {
-  gap: 0.5rem;
-  box-shadow: inset 0 0 10px var(--journal-page-shadow);
-}
-
-.journal-heading {
-  color: var(--surface-page-on);
-  border-bottom: 1px solid var(--surface-card-border);
-  padding-bottom: 0.25rem;
-}
-
-.journal-section {
-  position: relative;
-}
-
-.journal-section::after {
-  content: "";
-  position: absolute;
-  bottom: -1rem;
-  left: 25%;
-  right: 25%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--surface-card-border), transparent);
-  opacity: 0.5;
-}
-
-.journal-title {
-  color: var(--surface-page-on);
-}
-
-.journal-character-card {
-  background-color: var(--journal-character-card-bg);
-  transition: all 0.2s;
-}
-
-.journal-character-card:hover {
-  background-color: var(--journal-character-card-hover);
-}
-
-.journal-character-sketch {
-  background-color: var(--surface-sunken-bg);
-  border: 1px solid var(--surface-card-border);
-}
-
-.journal-character-name {
-  color: var(--surface-page-on);
-}
-
-.journal-quest-item {
-  background-color: var(--journal-quest-item-bg);
-  transition: all 0.2s;
-}
-
-.journal-quest-item:hover {
-  background-color: var(--journal-quest-item-hover);
-}
-
-.journal-quest-bullet {
-  background-color: var(--color-primary);
-}
-
-.journal-quest-title {
-  color: var(--surface-page-on);
-}
-
-.journal-quest-note {
-  color: var(--surface-page-on-muted);
-}
-
-.journal-activity-item {
-  border-left: 2px solid transparent;
-  padding-left: 0.5rem;
-}
-
-.journal-activity-item:hover {
-  border-left-color: var(--color-primary);
-  background-color: var(--journal-activity-hover);
-}
-
-.journal-activity-icon-bg {
-  background-color: var(--surface-sunken-bg);
-  color: var(--color-primary);
-}
-
-.journal-activity-title {
-  color: var(--surface-page-on);
-}
-
-.journal-activity-date {
-  color: var(--surface-page-on-muted);
-}
-
-.journal-activity-type {
-  color: var(--color-primary);
-}
-
-.journal-activity-description {
-  color: var(--surface-page-on-muted);
-}
-
-.journal-activity-separator {
-  color: var(--surface-page-on-muted);
-}
-
-.journal-loading {
-  background-color: var(--surface-sunken-bg);
-  opacity: 0.3;
-}
-
-.journal-empty {
-  color: var(--surface-page-on-muted);
-}
-
-.journal-notes-area {
-  background-color: var(--journal-notes-area);
-  min-height: 200px;
-}
-
-.journal-pagination {
-  background-color: var(--surface-card-bg);
-  color: var(--surface-page-on);
-}
-
-.journal-paper {
-  background-color: var(--surface-sunken-bg);
-  border: 1px solid var(--surface-card-border);
-}
-
-.journal-more-note {
-  font-size: small;
-  font-style: italic;
-}
-
-/* ====== CALLOUT ====== */
-/*
-  An emphasis surface for the one statement on a page that must not be skimmed
-  past -- on the contact page, the response time, which used to sit in a
-  right-hand column styled identically to three blocks of advice.
-
-  The accent background carries the emphasis and the left rule carries the
-  eye, so the text stays the page's normal colour and needs no override. Pair
-  with `rounded-r-*` rather than `rounded-*` so the rule stays a square edge.
-
-  This deliberately replaced an earlier "inverted surface" version that swapped
-  --surface-page-on and --surface-page-bg. Inverting those two keeps any theme legible,
-  which is why it looked sound, but legible is not the same as belonging: in
-  the dark theme it produced a near-white #E0E0E0 slab that read as an alert
-  rather than a note, and in the medieval theme a dark chocolate block on
-  parchment. --state-selected is the token each theme already tuned for exactly this
-  job.
-*/
-.callout-emphasis {
-  background-color: var(--state-selected);
-  border-left: 4px solid var(--color-primary);
-}
-
-/* ====== CHIP (single-select pill) ====== */
-/*
-  Colour only -- pair with Tailwind's `border` for the width, because
-  --border-width-sm is empty in this file and injected per theme.
-
-  Chips deliberately do NOT reuse `.card` or `.button-primary`, which is how
-  the first version was built and why it broke in the medieval theme:
-
-  - `.card` is not a neutral surface. theme-effects.css gives medieval cards
-    decorative ::before/::after corner flourishes and a thicker border, so
-    every UNSELECTED chip arrived wearing card ornaments.
-  - `--action-primary-bg` is tuned for buttons sitting on a card. In medieval
-    it is #E8D0AA, pale tan, which on the #FDF5E6 parchment page is nearly the
-    same value -- so the SELECTED chip was the faintest thing in the row.
-
-  Together those inverted the hierarchy: selection read as less prominent than
-  non-selection. Filling the selected chip with --color-primary and taking the
-  text from --surface-page-bg inverts the page's own two strongest tokens, which
-  every theme already guarantees contrast between: #2563EB, #8AB4F8 and
-  #8B0000 against their respective page grounds.
-*/
-.chip {
-  background-color: var(--surface-card-bg);
-  border-color: var(--surface-card-border);
-  color: var(--surface-page-on);
-}
-
-.chip:hover:not(:disabled) {
-  border-color: var(--color-primary);
-}
-
-.chip-selected {
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--surface-page-bg);
-}
-
-/* ====== TOAST ====== */
-/*
-  A transient confirmation carrying exactly one action.
-
-  Deliberately NOT an inverted surface, although the mock draws one. The
-  contact callout tried `--surface-page-on` on `--surface-page-bg` on the reasoning
-  that every theme guarantees contrast between that pair, and it was legible
-  everywhere and right nowhere: light gave a heavy slab, dark gave a near-white
-  block that read as an alert rather than a confirmation, and medieval gave
-  dark chocolate on parchment. `--state-selected` is the token each theme already
-  tunes for a subtly emphasised surface, and `--color-primary` carries the
-  action -- the same resolution the callout landed on.
-*/
-.toast {
-  background-color: var(--state-selected);
-  border: var(--border-width-sm) solid var(--surface-card-border);
-  border-radius: var(--border-radius-md);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* ====== DESTRUCTIVE ACTION (solid) ====== */
-/*
-  The heavy destructive action. `.delete-button` is the QUIET one -- every
-  theme sets --danger-delete-bg to transparent, which is right for a delete
-  icon in a list but renders lighter than an outlined button beside it. Where
-  two destructive actions sit together and one is meant to read as heavier
-  (the profile's danger zone), this is the filled treatment: the error pair
-  that is solid in all three themes.
-*/
-.button-danger {
-  background-color: var(--status-failed);
-  color: var(--status-on);
-}
-
-.button-danger:hover:not(:disabled) {
-  filter: brightness(0.92);
+    It used to set `--surface-page-on` unconditionally, which meant every piece
+    of text carried the page's ink no matter which surface it sat on. That was
+    invisible while every surface shared one ink; the moment the chrome became a
+    dark band, every label inside it -- nav items, the campaign switcher, the
+    footer links -- kept rendering near-black on near-black. Inheriting lets the
+    surface decide, which is the whole point of a pair.
+
+    `body` sets the page ink, so text on the page and on cards is unchanged; only
+    text inside a container that sets its own colour now follows that container.
+  */
+  .typography {
+    font-family: var(--font-primary);
+    color: inherit;
+  }
+
+  .typography-heading {
+    font-family: var(--font-heading);
+    color: var(--color-heading);
+  }
+
+  .typography-secondary {
+    color: var(--surface-page-on-muted);
+  }
+
+  .typography-primary {
+    color: var(--color-primary);
+  }
+
+  .typography-muted {
+    color: var(--surface-page-on-muted);
+    opacity: 0.8;
+  }
+
+  .typography-white {
+    color: white;
+  }
+
+  .typography-error {
+    color: var(--field-error-text);
+  }
+
+  .typography-success {
+    color: var(--field-success-text);
+  }
+
+  .typography-label {
+    color: var(--surface-page-on);
+    font-weight: 500;
+  }
+
+  /* ====== INPUT COMPONENT ====== */
+  .input {
+    background-color: var(--field-bg);
+    border: var(--border-width-sm) solid var(--field-border);
+    color: var(--surface-page-on);
+    transition: all 0.2s ease;
+    border-radius: var(--border-radius-md);
+  }
+
+  .input:focus {
+    border-color: var(--field-border-focus);
+    box-shadow: 0 0 0 2px var(--field-ring-focus);
+  }
+
+  .input-error {
+    border-color: var(--field-error-border);
+  }
+
+  .input-error:focus {
+    border-color: var(--field-error-focus);
+    box-shadow: 0 0 0 2px var(--field-error-ring);
+  }
+
+  .input-success {
+    border-color: var(--field-success-border);
+  }
+
+  .input-success:focus {
+    border-color: var(--field-success-focus);
+    box-shadow: 0 0 0 2px var(--field-success-ring);
+  }
+
+  .input::placeholder {
+    color: var(--field-placeholder);
+  }
+
+  .form-label {
+    color: var(--field-label-text);
+  }
+
+  .form-helper {
+    color: var(--field-helper-text);
+  }
+
+  .form-error {
+    color: var(--field-error-text);
+  }
+
+  .form-success {
+    color: var(--field-success-text);
+  }
+
+  .input:disabled {
+    background-color: var(--field-disabled-bg);
+    opacity: 0.7;
+  }
+
+  /* ====== LAYOUT COMPONENTS ====== */
+  .header {
+    background-color: var(--surface-chrome-bg);
+    /* A hairline separates the bar from the page. The drop shadow was doing that job
+       for a coloured field; on a neutral surface a border is quieter and does not
+       imply the bar is floating above the content. */
+    border-bottom: var(--border-width-sm) solid var(--surface-chrome-border);
+  }
+
+  .header-title {
+    color: var(--surface-chrome-on);
+    font-family: var(--font-heading);
+  }
+
+  /* The footer is the same band as the header, not a surface of its own. */
+  .footer {
+    background-color: var(--surface-chrome-bg);
+    color: var(--surface-chrome-on-muted);
+  }
+
+  .content {
+    background-color: var(--surface-page-bg);
+  }
+
+  /* ====== NAVIGATION ====== */
+  .navigation {
+    background-color: var(--surface-card-bg);
+    border-bottom: var(--border-width-sm) solid var(--surface-card-border);
+  }
+
+  /*
+    Navigation lives in the chrome, so it takes the chrome pair's ink and tints
+    rather than the page's. Before the chrome became a surface of its own these
+    were the same values, and the difference only shows up once the bar stops
+    matching the page -- which is exactly the patch-per-theme problem the pair
+    model exists to remove.
+  */
+  .navigation-item {
+    color: var(--surface-chrome-on-muted);
+    transition: all 0.2s ease;
+  }
+
+  /*
+    Ink darkens to `--surface-page-on` on hover rather than switching to the accent.
+    The accent on `--state-hover-light` measured 4.01:1 in the light theme -- the same
+    defect as `.navigation-item-active` below, one tint lighter, and it fails AA
+    the same way. Hover still reads as hover: the ground goes from nothing to
+    `--state-hover-light` and the ink strengthens from `--surface-page-on-muted`. Light
+    13.8:1, dark 10.8:1, medieval 14.4:1.
+  */
+  .navigation-item:hover {
+    color: var(--surface-chrome-on);
+    background-color: var(--surface-chrome-hover);
+  }
+
+  /*
+    Ink is `--surface-page-on`, not `--color-primary`. The accent on `--state-hover-medium`
+    measured 2.86:1 in the light theme -- a legitimate colour in a legitimate slot,
+    wrong in relation to what sits behind it. No value of `--state-hover-medium` fixes
+    it: anything light enough to clear 4.5:1 against `#2563EB` is within ~1.1:1 of
+    the page and the state stops being visible at all. Darkening the ink is the
+    only move that works, and it passes in all three themes (light 9.9:1,
+    dark 9.1:1, medieval 13.4:1). Active stays distinct from inactive by weight
+    and tint, not by hue alone.
+  */
+  .navigation-item-active {
+    color: var(--surface-chrome-on);
+    background-color: var(--surface-chrome-selected);
+    font-weight: 500;
+  }
+
+  /* ====== SIDEBAR ====== */
+  .sidebar {
+    background-color: var(--surface-card-bg);
+    border-right: var(--border-width-sm) solid var(--surface-card-border);
+  }
+
+  /* ====== SEARCH ====== */
+  .search {
+    background-color: var(--field-bg);
+    border: var(--border-width-sm) solid var(--field-border);
+    color: var(--surface-page-on);
+    transition: all 0.2s ease;
+    border-radius: var(--border-radius-md);
+  }
+
+  .search:focus {
+    border-color: var(--field-border-focus);
+    box-shadow: 0 0 0 2px var(--field-ring-focus);
+  }
+
+  /*
+    The keyboard hint in the search trigger. It used to borrow `.search`, the
+    input-field style, so on the dark chrome it rendered as a bright white pill --
+    the loudest thing in the bar, for a hint you stop reading after the first
+    visit. It is now an overlay on whatever surface it sits on, one step up from
+    the ground rather than a slab against it.
+  */
+  .search-shortcut {
+    background-color: var(--surface-chrome-hover);
+    color: var(--surface-chrome-on-muted);
+    border-radius: var(--border-radius-sm);
+  }
+
+  .search-results {
+    background-color: var(--surface-card-bg);
+    border: var(--border-width-sm) solid var(--surface-card-border);
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .search-result {
+    transition: background-color 0.1s ease;
+  }
+
+  .search-result:hover {
+    background-color: var(--state-hover-light);
+  }
+
+  .search-result-selected {
+    background-color: var(--state-hover-medium);
+  }
+
+  /* ====== DROPDOWN ====== */
+  .dropdown {
+    background-color: var(--surface-card-bg);
+    border: var(--border-width-sm) solid var(--surface-card-border);
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .dropdown-item {
+    color: var(--surface-page-on);
+    transition: background-color 0.1s ease;
+  }
+
+  .dropdown-item:hover {
+    background-color: var(--state-hover-light);
+  }
+
+  /* Same failing pair as `.navigation-item-active` above, same fix. */
+  .dropdown-item-active {
+    background-color: var(--state-hover-medium);
+    color: var(--surface-page-on);
+  }
+
+  /* ====== STATUS INDICATORS ====== */
+  .status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .status-general {
+    color: var(--status-general);
+  }
+
+  .status-active {
+    color: var(--status-active);
+  }
+
+  .status-completed {
+    color: var(--status-completed);
+  }
+
+  .status-failed {
+    color: var(--status-failed);
+  }
+
+  .status-unknown {
+    color: var(--status-unknown);
+  }
+
+  /* ====== ICON STYLING ====== */
+  .icon-bg {
+    background-color: var(--icon-bg);
+    border: 1px solid var(--icon-border);
+  }
+
+  /* ====== QUEST CARD ====== */
+  /* The .quest-card / .quest-card-{active,completed,failed} rules that stood here were
+     dead once QuestCard was deleted — the quests page renders a roster now, and those
+     four classes had no remaining consumer, static or dynamic. Removing dead styles is
+     what this branch opened by doing (hover:scale-102, hoverColors, hover:typography),
+     so leaving four more behind would have been inconsistent.
+     The .quest-status-* rules below are live: NPCCard and LocationCard both use them. */
+
+  .quest-status-active {
+    color: var(--status-active);
+  }
+
+  .quest-status-completed {
+    color: var(--status-completed);
+  }
+
+  .quest-status-failed {
+    color: var(--status-failed);
+  }
+
+  .progress-container {
+    background-color: var(--surface-sunken-bg);
+  }
+
+  .progress-bar {
+    background-color: var(--status-active);
+  }
+
+  .progress-bar-active {
+    background-color: var(--status-active);
+  }
+
+  .progress-bar-completed {
+    background-color: var(--status-completed);
+  }
+
+  .progress-bar-failed {
+    background-color: var(--status-failed);
+  }
+
+  .objective-completed {
+    background-color: var(--status-completed);
+    border-color: var(--status-completed);
+  }
+
+  .objective-pending {
+    border-color: var(--surface-sunken-bg);
+  }
+
+  /* ====== NPC CARD ====== */
+  .npc-card {
+    border-left: 4px solid var(--color-primary);
+  }
+
+  .npc-card-alive {
+    border-left: 4px solid var(--status-completed);
+  }
+
+  .npc-card-missing {
+    border-left: 4px solid var(--status-unknown);
+  }
+
+  .npc-card-deceased {
+    border-left: 4px solid var(--status-failed);
+  }
+
+  .npc-card-friendly {
+    border-left: 4px solid var(--status-completed);
+  }
+
+  .npc-card-hostile {
+    border-left: 4px solid var(--status-failed);
+  }
+
+  .npc-card-neutral {
+    border-left: 4px solid var(--color-primary);
+  }
+
+  .npc-card-unknown {
+    border-left: 4px solid var(--status-unknown);
+  }
+
+  .npc-status-alive {
+    color: var(--status-completed);
+  }
+
+  .npc-status-deceased {
+    color: var(--status-failed);
+  }
+
+  .npc-status-missing {
+    color: var(--status-unknown);
+  }
+
+  .npc-status-unknown {
+    color: var(--status-unknown);
+  }
+
+  .npc-relationship-friendly {
+    color: var(--status-completed);
+  }
+
+  .npc-relationship-hostile {
+    color: var(--status-failed);
+  }
+
+  .npc-relationship-neutral {
+    color: var(--surface-page-on-muted);
+  }
+
+  .npc-relationship-unknown {
+    color: var(--surface-page-on-muted);
+  }
+
+  .note {
+    background-color: var(--surface-sunken-bg);
+  }
+
+  /* ====== LOCATION CARD ====== */
+  .location-card {
+    border-left: 4px solid var(--status-active);
+  }
+
+  .location-card-explored {
+    border-left: 4px solid var(--status-completed);
+  }
+
+  .location-card-visited {
+    border-left: 4px solid var(--status-unknown);
+  }
+
+  .location-card-known {
+    border-left: 4px solid var(--surface-page-on-muted);
+  }
+
+  .location-status-explored {
+    color: var(--status-completed);
+  }
+
+  .location-status-known {
+    color: var(--surface-page-on-muted);
+  }
+
+  .location-status-visited {
+    color: var(--status-unknown);
+  }
+
+  /*
+    Location type chips.
+
+    These were eight hand-written `--location-type-*` colours -- the entity
+    palette solved ad hoc, and solved badly: the eight types mapped onto only
+    three distinct values, so `town` and `village` were literally the same colour.
+    They now index the palette, which means one place tunes them per theme and
+    every entry is already verified legible against one ink.
+
+    A chip rather than coloured text: the palette entries are quiet backgrounds,
+    and a pale tint used as ink would fail contrast on a light ground.
+  */
+  .location-type-region,
+  .location-type-city,
+  .location-type-town,
+  .location-type-village,
+  .location-type-dungeon,
+  .location-type-landmark,
+  .location-type-building,
+  .location-type-poi {
+    color: var(--entity-ink);
+  }
+
+  .location-type-region {
+    background-color: var(--entity-palette-0);
+  }
+
+  .location-type-city {
+    background-color: var(--entity-palette-1);
+  }
+
+  .location-type-town {
+    background-color: var(--entity-palette-2);
+  }
+
+  .location-type-village {
+    background-color: var(--entity-palette-3);
+  }
+
+  .location-type-dungeon {
+    background-color: var(--entity-palette-4);
+  }
+
+  .location-type-landmark {
+    background-color: var(--entity-palette-5);
+  }
+
+  .location-type-building {
+    background-color: var(--entity-palette-6);
+  }
+
+  .location-type-poi {
+    background-color: var(--entity-palette-7);
+  }
+
+  /* ====== RUMOR CARD ====== */
+  .rumor-card {
+    border-left: 4px solid var(--color-primary);
+  }
+
+  .rumor-card-confirmed {
+    border-left: 4px solid var(--status-completed);
+  }
+
+  .rumor-card-unconfirmed {
+    border-left: 4px solid var(--status-unknown);
+  }
+
+  .rumor-card-false {
+    border-left: 4px solid var(--status-failed);
+  }
+
+  .rumor-status-confirmed {
+    color: var(--status-completed);
+  }
+
+  .rumor-status-unconfirmed {
+    color: var(--status-unknown);
+  }
+
+  .rumor-status-false {
+    color: var(--status-failed);
+  }
+
+  .rumor-status-border-confirmed {
+    border-color: var(--status-completed);
+  }
+
+  .rumor-status-border-unconfirmed {
+    border-color: var(--status-unknown);
+  }
+
+  .rumor-status-border-false {
+    border-color: var(--status-failed);
+  }
+
+  /* ====== HERO BAND ====== */
+  /*
+    The campaign's identity, on the band surface. Its ink comes from the band
+    pair, so nothing inside it names a colour -- the same rule the chrome follows,
+    and the reason neither needs a per-theme patch.
+  */
+  .hero-band {
+    background-color: var(--surface-band-bg);
+    color: var(--surface-band-on);
+    border-bottom: var(--border-width-sm) solid var(--surface-band-border);
+  }
+
+  /*
+    A heading on the band takes the band's ink.
+
+    `.typography-heading` names `--color-heading`, which is a page-level notion --
+    in the dark theme it is deliberately a touch brighter than body ink. On a
+    surface whose ink differs from the page's, that value is simply wrong, and on
+    this band it would render near-black on dark. Same shape as the chrome's ghost
+    buttons: the surface claims its own ink rather than every component learning
+    about every surface.
+  */
+  .hero-band .typography-heading {
+    color: var(--surface-band-on);
+  }
+
+  .hero-muted {
+    color: var(--surface-band-on-muted);
+  }
+
+  .hero-eyebrow {
+    color: var(--surface-band-on-muted);
+  }
+
+  .hero-dot {
+    background-color: var(--surface-band-on-muted);
+  }
+
+  /*
+    The image slot. It is empty in this phase and will be empty for most campaigns
+    most of the time, so the border and radius are the design rather than a
+    placeholder outline waiting to be replaced.
+  */
+  .hero-slot {
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    box-shadow: 0 0 0 var(--border-width-sm) var(--surface-band-border);
+  }
+
+  /* ====== VIEW TOGGLE ====== */
+  /*
+    A segmented control that appears on two different surfaces: the hero band on
+    the dashboard, and the page in the journal. It cannot name one set of colours,
+    so it names roles and the surface supplies them -- default page values here,
+    band values below. Without this the active segment rendered the band's
+    near-white ink on a white card: invisible.
+  */
+  .view-toggle {
+    background-color: var(--surface-sunken-bg);
+  }
+
+  .view-toggle-item {
+    color: var(--surface-page-on-muted);
+  }
+
+  .view-toggle-item:hover {
+    background-color: var(--surface-page-hover);
+    color: var(--surface-page-on);
+  }
+
+  .view-toggle-item-active {
+    background-color: var(--surface-card-bg);
+    color: var(--surface-page-on);
+  }
+
+  .hero-band .view-toggle {
+    background-color: var(--surface-band-hover);
+  }
+
+  .hero-band .view-toggle-item {
+    color: var(--surface-band-on-muted);
+  }
+
+  .hero-band .view-toggle-item:hover {
+    background-color: var(--surface-band-hover);
+    color: var(--surface-band-on);
+  }
+
+  .hero-band .view-toggle-item-active {
+    background-color: var(--surface-band-selected);
+    color: var(--surface-band-on);
+  }
+
+  /* ====== ENTITY SIGIL ====== */
+  /*
+    One ink for every mark, so the palette separates entities without any entry
+    shouting louder than the others. The hue is the only thing that varies.
+  */
+  .entity-sigil {
+    color: var(--entity-ink);
+    font-family: var(--font-primary);
+    line-height: 1;
+  }
+
+  /*
+    One rule per palette index. The component says which entity it is; the
+    stylesheet says what that looks like, so a theme can retune every mark in the
+    product without touching a component.
+  */
+  .entity-sigil[data-sigil-index="0"] { background-color: var(--entity-palette-0); }
+  .entity-sigil[data-sigil-index="1"] { background-color: var(--entity-palette-1); }
+  .entity-sigil[data-sigil-index="2"] { background-color: var(--entity-palette-2); }
+  .entity-sigil[data-sigil-index="3"] { background-color: var(--entity-palette-3); }
+  .entity-sigil[data-sigil-index="4"] { background-color: var(--entity-palette-4); }
+  .entity-sigil[data-sigil-index="5"] { background-color: var(--entity-palette-5); }
+  .entity-sigil[data-sigil-index="6"] { background-color: var(--entity-palette-6); }
+  .entity-sigil[data-sigil-index="7"] { background-color: var(--entity-palette-7); }
+}
+
+@layer app-state {
+  /* ====== SELECTABLE ITEM ====== */
+  /*
+    State classes own hover, selected, focus and disabled -- nothing else. A
+    resting background or border here is a contract violation, not a style
+    choice: `.selectable-item` used to set both, and because it is declared ~500
+    lines after `.card` it beat every surface it was combined with. That is why
+    the stats strip, the activity list and the quest aside all rendered one flat
+    tone. See 01-token-model.md section 3.
+
+    Selection draws an `outline`, not a `border`, so the state costs no layout.
+    A border would consume 2px of the padding box on select and shift the row's
+    content; `outline-offset: -2px` puts the same line in the same place for
+    free. `.highlighted-item` below already worked this way.
+
+    These rules are deliberately NOT wrapped in a CSS cascade layer. Layering
+    them was tried and reverted: unlayered declarations beat layered ones
+    regardless of specificity, and Tailwind's utilities are emitted unlayered
+    after these files are hoisted. A layered `.selectable-item:hover` therefore
+    loses to a plain `.bg-secondary` utility, which silently kills hover on the
+    quest-progress cell. Declaring a layer order means layering Tailwind's
+    output too -- an app-wide precedence change, not a Phase 0 one.
+  */
+  .selectable-item {
+    transition: all 0.2s ease;
+  }
+
+  .selectable-item:hover {
+    background-color: var(--state-selected);
+  }
+
+  .selected-item {
+    background-color: var(--state-selected);
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+  }
+
+  .highlighted-item {
+    outline: 2px solid var(--color-primary);
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 0 0 2px var(--surface-page-bg);
+  }
+}
+
+@layer app {
+  /* ====== SUCCESS/ERROR STATES ====== */
+  .success-icon-bg {
+    background-color: var(--field-success-ring);
+    opacity: 0.2;
+  }
+
+  .success-icon {
+    color: var(--field-success-text);
+  }
+
+  .error-bg {
+    background-color: var(--danger-bg);
+    color: var(--status-failed);
+  }
+
+  .delete-button {
+    background-color: var(--danger-delete-bg);
+    color: var(--danger-delete-text);
+  }
+
+  .delete-button:hover {
+    background-color: var(--danger-delete-hover);
+  }
+
+  /* ====== DIVIDER ====== */
+  .divider {
+    border-color: var(--surface-card-border);
+  }
+
+  /* ====== TAG ====== */
+  .tag {
+    background-color: var(--surface-sunken-bg);
+    border: 1px solid var(--surface-card-border);
+  }
+
+  /* ====== HINT ====== */
+  .hint {
+    background-color: var(--state-selected);
+    color: var(--color-primary);
+  }
+
+  /* ====== SPINNER ====== */
+  .spinner-border {
+    border-color: var(--field-border);
+    border-top-color: var(--color-primary);
+  }
+
+  /* ====== BOOK VIEWER ====== */
+  .book {
+    background-color: var(--surface-card-bg);
+  }
+
+  .book-header {
+    background-color: var(--surface-sunken-bg);
+  }
+
+  .book-nav {
+    background-color: var(--surface-sunken-bg);
+  }
+
+  .book-content-area {
+    background-color: var(--surface-card-bg);
+  }
+
+  .book-content {
+    font-family: var(--font-primary);
+  }
+
+  .book-text {
+    color: var(--surface-page-on);
+    font-family: var(--font-primary);
+  }
+
+  .book-pagination {
+    background-color: var(--surface-sunken-bg);
+  }
+
+  .page-nav-button {
+    background-color: transparent;
+  }
+
+  .page-nav-button:hover {
+    background-color: var(--state-hover-light);
+  }
+
+  /* ====== CHAPTER READER ====== */
+  /* The reader deliberately does NOT reuse the .book-* surfaces above. Those carry
+     the paginated book chrome - parchment fill, header band, pagination bar - and
+     the reader is a plain reading card: theme card background, hairline border, no
+     ornament. Only the prose face is special.
+
+     The face is named explicitly here rather than taken from a theme token,
+     because no existing token is a reading serif in all three themes:
+     --font-heading is 'Newsreader, Georgia, serif' in light but plain Inter in
+     dark, and in medieval it is MedievalSharp, whose own definition says
+     "decorative font for headings only" - a display face, unreadable for a
+     chapter's worth of body text. --font-primary is no better, being Inter in
+     light and dark. Colour still comes from the theme; only the typeface is
+     fixed, because the reading measure is a property of the reader rather than
+     of the palette. Both families below are already loaded in public/index.html. */
+  .reader-prose {
+    color: var(--surface-page-on);
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+  }
+
+  /* Medieval already sets its BODY text to Crimson Text, so the reader matches
+     the rest of that theme's prose instead of importing a face it never uses. */
+  [data-theme="medieval"] .reader-prose {
+    font-family: 'Crimson Text', Georgia, serif;
+  }
+
+  /* ====== JOURNAL STYLING ====== */
+  .journal-container {
+    background-color: var(--journal-leather);
+    box-shadow: 0 4px 6px var(--journal-page-shadow);
+  }
+
+  .journal-binding {
+    background-color: var(--journal-binding);
+    box-shadow: inset 0 0 10px var(--journal-page-shadow);
+  }
+
+  .journal-stitch {
+    background-color: var(--journal-stitch);
+  }
+
+  .journal-page {
+    background-color: var(--surface-card-bg);
+    color: var(--surface-page-on);
+  }
+
+  .journal-page-left {
+    border-top-left-radius: 0.5rem;
+    border-bottom-left-radius: 0.5rem;
+    box-shadow: inset 5px 0 10px var(--journal-page-shadow);
+  }
+
+  .journal-page-right {
+    border-top-right-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    box-shadow: inset -5px 0 10px var(--journal-page-shadow);
+  }
+
+  .journal-pages {
+    gap: 0.5rem;
+    box-shadow: inset 0 0 10px var(--journal-page-shadow);
+  }
+
+  .journal-heading {
+    color: var(--surface-page-on);
+    border-bottom: 1px solid var(--surface-card-border);
+    padding-bottom: 0.25rem;
+  }
+
+  .journal-section {
+    position: relative;
+  }
+
+  .journal-section::after {
+    content: "";
+    position: absolute;
+    bottom: -1rem;
+    left: 25%;
+    right: 25%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--surface-card-border), transparent);
+    opacity: 0.5;
+  }
+
+  .journal-title {
+    color: var(--surface-page-on);
+  }
+
+  .journal-character-card {
+    background-color: var(--journal-character-card-bg);
+    transition: all 0.2s;
+  }
+
+  .journal-character-card:hover {
+    background-color: var(--journal-character-card-hover);
+  }
+
+  .journal-character-sketch {
+    background-color: var(--surface-sunken-bg);
+    border: 1px solid var(--surface-card-border);
+  }
+
+  .journal-character-name {
+    color: var(--surface-page-on);
+  }
+
+  .journal-quest-item {
+    background-color: var(--journal-quest-item-bg);
+    transition: all 0.2s;
+  }
+
+  .journal-quest-item:hover {
+    background-color: var(--journal-quest-item-hover);
+  }
+
+  .journal-quest-bullet {
+    background-color: var(--color-primary);
+  }
+
+  .journal-quest-title {
+    color: var(--surface-page-on);
+  }
+
+  .journal-quest-note {
+    color: var(--surface-page-on-muted);
+  }
+
+  .journal-activity-item {
+    border-left: 2px solid transparent;
+    padding-left: 0.5rem;
+  }
+
+  .journal-activity-item:hover {
+    border-left-color: var(--color-primary);
+    background-color: var(--journal-activity-hover);
+  }
+
+  .journal-activity-icon-bg {
+    background-color: var(--surface-sunken-bg);
+    color: var(--color-primary);
+  }
+
+  .journal-activity-title {
+    color: var(--surface-page-on);
+  }
+
+  .journal-activity-date {
+    color: var(--surface-page-on-muted);
+  }
+
+  .journal-activity-type {
+    color: var(--color-primary);
+  }
+
+  .journal-activity-description {
+    color: var(--surface-page-on-muted);
+  }
+
+  .journal-activity-separator {
+    color: var(--surface-page-on-muted);
+  }
+
+  .journal-loading {
+    background-color: var(--surface-sunken-bg);
+    opacity: 0.3;
+  }
+
+  .journal-empty {
+    color: var(--surface-page-on-muted);
+  }
+
+  .journal-notes-area {
+    background-color: var(--journal-notes-area);
+    min-height: 200px;
+  }
+
+  .journal-pagination {
+    background-color: var(--surface-card-bg);
+    color: var(--surface-page-on);
+  }
+
+  .journal-paper {
+    background-color: var(--surface-sunken-bg);
+    border: 1px solid var(--surface-card-border);
+  }
+
+  .journal-more-note {
+    font-size: small;
+    font-style: italic;
+  }
+
+  /* ====== CALLOUT ====== */
+  /*
+    An emphasis surface for the one statement on a page that must not be skimmed
+    past -- on the contact page, the response time, which used to sit in a
+    right-hand column styled identically to three blocks of advice.
+
+    The accent background carries the emphasis and the left rule carries the
+    eye, so the text stays the page's normal colour and needs no override. Pair
+    with `rounded-r-*` rather than `rounded-*` so the rule stays a square edge.
+
+    This deliberately replaced an earlier "inverted surface" version that swapped
+    --surface-page-on and --surface-page-bg. Inverting those two keeps any theme legible,
+    which is why it looked sound, but legible is not the same as belonging: in
+    the dark theme it produced a near-white #E0E0E0 slab that read as an alert
+    rather than a note, and in the medieval theme a dark chocolate block on
+    parchment. --state-selected is the token each theme already tuned for exactly this
+    job.
+  */
+  .callout-emphasis {
+    background-color: var(--state-selected);
+    border-left: 4px solid var(--color-primary);
+  }
+
+  /* ====== CHIP (single-select pill) ====== */
+  /*
+    Colour only -- pair with Tailwind's `border` for the width, because
+    --border-width-sm is empty in this file and injected per theme.
+
+    Chips deliberately do NOT reuse `.card` or `.button-primary`, which is how
+    the first version was built and why it broke in the medieval theme:
+
+    - `.card` is not a neutral surface. theme-effects.css gives medieval cards
+      decorative ::before/::after corner flourishes and a thicker border, so
+      every UNSELECTED chip arrived wearing card ornaments.
+    - `--action-primary-bg` is tuned for buttons sitting on a card. In medieval
+      it is #E8D0AA, pale tan, which on the #FDF5E6 parchment page is nearly the
+      same value -- so the SELECTED chip was the faintest thing in the row.
+
+    Together those inverted the hierarchy: selection read as less prominent than
+    non-selection. Filling the selected chip with --color-primary and taking the
+    text from --surface-page-bg inverts the page's own two strongest tokens, which
+    every theme already guarantees contrast between: #2563EB, #8AB4F8 and
+    #8B0000 against their respective page grounds.
+  */
+  .chip {
+    background-color: var(--surface-card-bg);
+    border-color: var(--surface-card-border);
+    color: var(--surface-page-on);
+  }
+
+  .chip:hover:not(:disabled) {
+    border-color: var(--color-primary);
+  }
+
+  .chip-selected {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--surface-page-bg);
+  }
+
+  /* ====== TOAST ====== */
+  /*
+    A transient confirmation carrying exactly one action.
+
+    Deliberately NOT an inverted surface, although the mock draws one. The
+    contact callout tried `--surface-page-on` on `--surface-page-bg` on the reasoning
+    that every theme guarantees contrast between that pair, and it was legible
+    everywhere and right nowhere: light gave a heavy slab, dark gave a near-white
+    block that read as an alert rather than a confirmation, and medieval gave
+    dark chocolate on parchment. `--state-selected` is the token each theme already
+    tunes for a subtly emphasised surface, and `--color-primary` carries the
+    action -- the same resolution the callout landed on.
+  */
+  .toast {
+    background-color: var(--state-selected);
+    border: var(--border-width-sm) solid var(--surface-card-border);
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* ====== DESTRUCTIVE ACTION (solid) ====== */
+  /*
+    The heavy destructive action. `.delete-button` is the QUIET one -- every
+    theme sets --danger-delete-bg to transparent, which is right for a delete
+    icon in a list but renders lighter than an outlined button beside it. Where
+    two destructive actions sit together and one is meant to read as heavier
+    (the profile's danger zone), this is the filled treatment: the error pair
+    that is solid in all three themes.
+  */
+  .button-danger {
+    background-color: var(--status-failed);
+    color: var(--status-on);
+  }
+
+  .button-danger:hover:not(:disabled) {
+    filter: brightness(0.92);
+  }
 }

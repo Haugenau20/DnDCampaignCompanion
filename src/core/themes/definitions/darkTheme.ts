@@ -85,7 +85,7 @@ export const darkTheme: Theme = {
     field: {
       bg: '#2a2a2a', // Dark gray for input background
       placeholder: '#6b7280', // Muted gray for placeholder text
-      border: '#4b5563', // Medium gray for input border
+      border: '#82829A', // Medium gray for input border
       borderFocus: '#60a5fa', // Bright blue for focused input border
       ringFocus: 'rgba(59, 130, 246, 0.5)', // Semi-transparent blue for focus ring
       errorBorder: '#ef4444', // Bright red for error border
@@ -120,7 +120,7 @@ export const darkTheme: Theme = {
         bg: 'transparent', // Transparent background for outline buttons
         text: '#E0E0E0', // Soft off-white for button text
         hover: '#3B3B52', // Complementary shade for hover state
-        border: '#3B3B52', // Subtle border for outline buttons
+        border: '#8285A3', // Subtle border for outline buttons
       },
       ghost: {
         bg: 'transparent', // Transparent background for ghost buttons

@@ -101,7 +101,7 @@ export const lightTheme: Theme = {
       // Input styling
       bg: '#ffffff', // Clean white for input background
       placeholder: '#9ca3af', // Neutral gray for placeholder text
-      border: '#d1d5db', // Light gray for input border
+      border: '#868B94', // Light gray for input border
       borderFocus: '#3b82f6', // Bright blue for focused input border
       ringFocus: 'rgba(59, 130, 246, 0.5)', // Semi-transparent blue focus ring
       // Error states
@@ -139,7 +139,7 @@ export const lightTheme: Theme = {
         bg: 'transparent', // Transparent background for outline buttons
         text: '#1E40AF', // Bold secondary blue
         hover: '#E5EDF8', // Soft blue hover effect
-        border: '#93C5FD', // Subtle blue border
+        border: '#6285B5', // Subtle blue border
       },
       ghost: {
         bg: 'transparent', // Transparent background for ghost buttons

@@ -68,45 +68,40 @@ describe("contrast per surface pair", () => {
 
 /**
  * Boundaries that identify a control -- an outline button, a text field -- owe
- * 3:1 under WCAG 1.4.11. These currently do not meet it in light and dark, and
- * fixing them means changing colour values, which Phase 1 explicitly does not
- * do. The numbers below are the measured status quo, recorded so the failure is
- * visible rather than forgotten, and asserted as a floor so it cannot quietly
- * get worse. Raising a floor is a deliberate edit; see Q9 in the drift log.
+ * 3:1 under WCAG 1.4.11, and now meet it. This was a recorded failure through
+ * Phases 1-4, ratcheted so it could not worsen while the phases that were
+ * allowed to change values had not arrived; the ratchet is now a real
+ * requirement.
  *
- * A surface's own `border` is not here on purpose. A card hairline is
+ * A surface's own `border` is deliberately not checked. A card hairline is
  * decorative structure, not the thing identifying a control, so 1.4.11 does not
  * bind -- and the design language wants it quiet ("separated by a hairline; it
  * does not float").
  */
-const CONTROL_BOUNDARY_FLOORS: Record<string, Record<string, number>> = {
-  light: { "action.outline.border": 1.71, "field.border": 1.4 },
-  dark: { "action.outline.border": 1.38, "field.border": 1.98 },
-  medieval: { "action.outline.border": 6.55, "field.border": 2.34 },
-};
+const CONTROL_BOUNDARY_MINIMUM = 3;
 
-describe("control boundaries (recorded, not yet compliant)", () => {
+describe("control boundaries meet 3:1", () => {
   const boundaryOf = (tokens: ThemeTokens, key: string): string =>
     key === "action.outline.border"
       ? (tokens.action.outline.border as string)
       : tokens.field.border;
 
-  describe.each(THEMES)("%s", (name, theme) => {
-    test.each(Object.keys(CONTROL_BOUNDARY_FLOORS[name]))(
-      "%s does not fall below its recorded ratio",
-      (key) => {
-        const colour = parseHex(boundaryOf(theme.tokens, key));
-        expect(colour).not.toBeNull();
+  describe.each(THEMES)("%s", (_name, theme) => {
+    test.each(["action.outline.border", "field.border"])("%s", (key) => {
+      const colour = parseHex(boundaryOf(theme.tokens, key));
+      expect(colour).not.toBeNull();
 
-        // Measured against the least favourable of the two grounds a control
-        // actually sits on, so the floor cannot be met by picking the kind one.
-        const grounds = [theme.tokens.surface.page.bg, theme.tokens.surface.card.bg]
-          .map(parseHex)
-          .filter((c): c is Rgb => c !== null);
-        const worst = Math.min(...grounds.map((g) => contrastRatio(colour as Rgb, g)));
+      // Measured against the least favourable of the two grounds a control
+      // actually sits on, so the bar cannot be cleared by picking the kind one.
+      const grounds = [theme.tokens.surface.page.bg, theme.tokens.surface.card.bg]
+        .map(parseHex)
+        .filter((c): c is Rgb => c !== null);
+      const worst = Math.min(...grounds.map((g) => contrastRatio(colour as Rgb, g)));
 
-        expect(round(worst)).toBeGreaterThanOrEqual(CONTROL_BOUNDARY_FLOORS[name][key]);
-      }
-    );
+      expect({ key, meets3to1: round(worst) >= CONTROL_BOUNDARY_MINIMUM }).toEqual({
+        key,
+        meets3to1: true,
+      });
+    });
   });
 });
