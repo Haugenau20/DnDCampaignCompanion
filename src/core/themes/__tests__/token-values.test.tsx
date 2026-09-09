@@ -14,6 +14,19 @@
 // To re-baseline deliberately (e.g. after a value change is agreed and logged
 // in docs/design/plan/03-drift-log.md):
 //     UPDATE_TOKEN_BASELINE=1 npx jest --testPathPattern=token-values
+//
+// The baseline was re-recorded in Phase 5, when the light theme was retuned and
+// 73 of its values changed on purpose. Two consequences:
+//
+//   * It is now written in current variable names, so `resolve` below is
+//     usually the identity. The rename map stays because it is the record of
+//     the Phase 1 migration and of every deliberate revaluation since -- but it
+//     no longer has work to do on a freshly recorded baseline.
+//   * Re-baselining is the one operation that can hide a mistake, because it
+//     accepts whatever is there. Before doing it, diff the old and new files
+//     per theme and confirm the changes are the ones you meant. Phase 5's diff
+//     was 73 light values and zero in dark or medieval, which is what proved
+//     the retune had the blast radius it claimed.
 
 import React from "react";
 import * as fs from "fs";

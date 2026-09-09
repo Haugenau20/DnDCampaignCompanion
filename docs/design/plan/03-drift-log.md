@@ -444,6 +444,52 @@ row shares width when there is room and scrolls when there is not. Measured at
 320px: 0 overlapping pairs, 0 labels overflowing, scroll width 444 against a
 292 client width.
 
+### D35 — Finish 3a; the banded chronicle in warm ivory
+Date: 2026-09-09   Status: active   (settles the D1 deferral)
+Decision: the light theme is retuned to the banded chronicle -- a warm ivory
+page (`#F3EFE6`) that reads as paper rather than screen, a near-black warm
+chrome (`#17140F`) and hero band (`#211C16`) carrying the value contrast, one
+deep red accent (`#8C1D1D`), and medium-tone sigils with light ink. Finish 3a
+is chosen: no second accent below the chrome. 73 light-theme values changed;
+dark and medieval are untouched, verified by diffing the baseline per theme.
+Because: chosen by the maintainer against Claude Design's two reference
+mockups. 3a keeps the accent budget at one hue below the chrome, which is what
+"contrast lives in the chrome; calm lives in the content" asks for, and avoids
+the failure the design language records from its own first draft -- competing
+accents stacked in the top 300px.
+The old page was `#F7F9FC`, a cool blue-grey: the design language asked for
+"warm off-white -- paper, not screen" and the previous value was the second of
+those. That single change does more of the visual work than any other here.
+
+### R4 — revises D1's claim that the finishes differ only in token values
+Date: 2026-09-09
+Change: 2a and 3a differ structurally as well. In the reference mockups 2a puts
+a coloured type eyebrow above each row title, while 3a folds the type into one
+meta line -- "Story · Gauthak · 2 days ago". Implementing 3a therefore included
+a markup change to the activity row, not only values.
+Because: the plan asserted the two were value-only variants, and the mockups
+that arrived later do not bear that out. The eyebrow also could not be
+expressed as a value difference while it shared `--surface-band-on-muted` with
+the meta line, so it was given `--color-emphasis` of its own -- a small CSS
+change that makes the accent-load difference expressible in values, which is
+what the plan assumed was already true.
+Cost: Phase 5's "diff contains token values only" gate does not hold as
+written. The diff is token values plus one row-structure change and one CSS
+role, each recorded here.
+
+### D36 — Value tuning runs through a generator with contrast gates
+Date: 2026-09-09   Status: active
+Decision: the finishes were produced by a script holding the shared base and
+each finish's overrides, which recomputes every contrast rule the jest suite
+enforces and refuses to write a theme that fails one.
+Because: a tuning pass is exactly where accessibility quietly regresses -- the
+whole activity is chasing a look. Gating the write meant the failures surfaced
+before they reached the browser. It caught one immediately: the 3a hero eyebrow
+at 4.36:1, small uppercase type on the band, which is the precise case section
+10 warns is treated as though it were large. The generator's own checks did not
+originally cover that pair; the browser audit found it, and the check was added
+so it cannot recur.
+
 ---
 
 ## Revisions

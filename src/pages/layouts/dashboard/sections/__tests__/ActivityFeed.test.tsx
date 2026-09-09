@@ -370,7 +370,10 @@ describe("ActivityFeed", () => {
       setupHook({ activities });
       render(<ActivityFeed activities={activities} loading={false} />);
 
-      expect(screen.getByText("PlayerAlpha")).toBeInTheDocument();
+      // The actor now shares one meta line with the type and the date -- a row
+      // carries a single line of metadata -- so it is no longer its own text
+      // node. It must still be present and still unprefixed.
+      expect(screen.getByText(/PlayerAlpha/)).toBeInTheDocument();
       expect(screen.queryByText(/^By:/)).not.toBeInTheDocument();
     });
 
@@ -398,7 +401,7 @@ describe("ActivityFeed", () => {
       setupHook({ activities });
       render(<ActivityFeed activities={activities} loading={false} />);
 
-      expect(screen.getByText("Jun 1, 2024")).toBeInTheDocument();
+      expect(screen.getByText(/Jun 1, 2024/)).toBeInTheDocument();
     });
 
     it("calls getTypeLabel for each activity type", () => {

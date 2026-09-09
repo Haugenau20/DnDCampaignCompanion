@@ -38,12 +38,22 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ action, chapterCount })
   // Cancels both the page container's padding and `main`'s, so the band meets
   // the chrome with no seam of page colour between them. Measured, not guessed:
   // main contributes 16px and the container 8px (16px at sm).
-  const bandFrame =
-    '-mx-6 sm:-mx-8 -mt-8 mb-8 px-6 sm:px-8 py-8 sm:py-10 hero-band';
+  // The band bleeds to the viewport (see `.hero-band`); only the vertical
+  // cancel is Tailwind's job.
+  const bandFrame = '-mt-8 mb-8 py-8 sm:py-10 hero-band';
+
+  // Re-creates `main` > `max-w-7xl` > `container` so the band's content sits in
+  // exactly the same column as the page content below it. Mirroring the chain
+  // is exact by construction; computing the inset from viewport arithmetic is
+  // not, because percentages resolve against the containing block.
+  const bandInner = 'px-4';
+  const bandColumn = 'max-w-7xl mx-auto';
+  const bandGutter = 'container mx-auto px-2 sm:px-4';
 
   if (!hasGroup || !hasCampaign) {
     return (
-      <div className={clsx(bandFrame, 'text-center')} data-testid="campaign-banner">
+      <div className={bandFrame} data-testid="campaign-banner">
+       <div className={bandInner}><div className={bandColumn}><div className={clsx(bandGutter, 'text-center')}>
         <Typography variant="h2" className="mb-2">
           Welcome to D&D Campaign Companion
         </Typography>
@@ -52,6 +62,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ action, chapterCount })
             ? 'Select or create a group to get started'
             : 'Select or create a campaign to begin your adventure'}
         </Typography>
+       </div></div></div>
       </div>
     );
   }
@@ -63,6 +74,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ action, chapterCount })
 
   return (
     <div className={bandFrame} data-testid="campaign-banner">
+     <div className={bandInner}><div className={bandColumn}><div className={bandGutter}>
       {/* Stacked until `sm`. Side by side, the `shrink-0` toggle claims ~180px of
           a 320px viewport and squeezes the title column to almost nothing, at
           which point `break-words` sets the campaign name one character per
@@ -122,6 +134,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ action, chapterCount })
 
         {action && <div className="shrink-0 self-start">{action}</div>}
       </div>
+     </div></div></div>
     </div>
   );
 };

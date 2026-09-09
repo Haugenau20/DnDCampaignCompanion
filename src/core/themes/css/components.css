@@ -715,10 +715,31 @@
     pair, so nothing inside it names a colour -- the same rule the chrome follows,
     and the reason neither needs a per-theme patch.
   */
+  /*
+    Full bleed. The band sits several centred, padded containers deep, so
+    cancelling their padding with negative margins only ever got it close --
+    `.container mx-auto` re-centres inside `max-w-7xl`, leaving a sliver of page
+    either side that read as a wide card rather than a band. `50% - 50vw`
+    reaches the viewport edge regardless of how many ancestors have inset it.
+  */
   .hero-band {
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
     background-color: var(--surface-band-bg);
     color: var(--surface-band-on);
     border-bottom: var(--border-width-sm) solid var(--surface-band-border);
+    /*
+      A faint diagonal ruling, drawn from the band's own hover overlay rather
+      than a literal colour, so it retunes with the theme and costs no asset.
+      This is what "dark, textured" asks for: the band should read as a
+      material, not a flat fill -- but at this strength you notice it only
+      after the type, which is the right order.
+    */
+    background-image: repeating-linear-gradient(
+      135deg,
+      var(--surface-band-hover) 0 1px,
+      transparent 1px 11px
+    );
   }
 
   /*
@@ -739,8 +760,14 @@
     color: var(--surface-band-on-muted);
   }
 
+  /*
+    The eyebrow names its own role rather than borrowing the band's muted ink,
+    because the two finishes disagree about it: one lifts it to a second accent,
+    the other keeps it quiet. Sharing a token with `.hero-muted` would have made
+    that difference impossible to express in values alone.
+  */
   .hero-eyebrow {
-    color: var(--surface-band-on-muted);
+    color: var(--color-emphasis);
   }
 
   .hero-dot {

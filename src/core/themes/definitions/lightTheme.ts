@@ -2,204 +2,177 @@
 import { Theme } from '../types';
 
 /**
- * Light theme.
+ * Light theme, finish 3a: accents concentrated in the chrome -- the interior you scan every session stays quiet.
  *
- * Tokens are grouped by role; variable names derive from the path -- see
- * ../token-variables.ts. Values are unchanged from the flat definition this
- * replaced, and the rename is recorded in
- * ../__tests__/token-rename-map.json.
+ * A warm ivory page that reads as paper rather than screen, a near-black
+ * chrome and hero band carrying the value contrast, and one deep red accent
+ * for things you can act on. Only values are tuned here; the token structure
+ * is Phase 1's and is untouched.
  *
- * The surface `on` / `onMuted` / `border` roles are new. They repeat the
- * theme's existing ink and hairline values, because Phase 1 changes nothing
- * visually; Phase 2 is where a surface's ink starts to differ from the page's.
+ * Every hue was checked against the contrast rules before being written -- see
+ * the generator recorded in the drift log.
  */
 export const lightTheme: Theme = {
   name: 'light',
   tokens: {
     color: {
-      primary: '#2563EB', // Strong blue for primary elements
-      secondary: '#1E40AF', // Deep, rich blue for contrast
-      accent: '#3B82F6', // Bright sky blue for highlights
-      emphasis: '#2563EB', // Vivid blue for emphasized text
-      heading: '#0F172A', // Deep navy for strong headings
+      primary: '#8C1D1D',
+      secondary: '#6E1717',
+      heading: '#241F1B',
+      accent: '#8C1D1D',
+      emphasis: '#9A9082',
     },
     surface: {
       page: {
-        bg: '#F7F9FC', // Soft, neutral background with a hint of blue
-        on: '#0F172A', // Deep navy for readability
-        // Slate rather than blue-900: subtext in blue competed with links and
-        // primary actions for the same "this is interactive" signal.
-        onMuted: '#5A6B87', // Muted slate for subtext
-        border: '#E4E9F2',
-        hover: '#D6E4F5',
-        selected: '#93C5FD',
+        bg: '#F3EFE6',
+        on: '#241F1B',
+        onMuted: '#655C50',
+        border: '#E2DACB',
+        hover: '#E7E0D2',
+        selected: '#DCD2BF',
       },
       card: {
-        bg: '#FFFFFF', // Clean white for modern cards
-        on: '#0F172A',
-        onMuted: '#5A6B87',
-        // A saturated blue hairline on white reads as an interactive outline, which
-        // made every card look selected. Structure should be quieter than action.
-        border: '#E4E9F2', // Neutral hairline for structure
-        hover: '#D6E4F5',
-        selected: '#93C5FD',
+        bg: '#FCFAF6',
+        on: '#241F1B',
+        onMuted: '#655C50',
+        border: '#E6DFD1',
+        hover: '#F0EADC',
+        selected: '#E4DBC9',
       },
       sunken: {
-        bg: '#EBF0F7', // Light blue-gray for contrast sections
-        on: '#0F172A',
-        onMuted: '#5A6B87',
-        border: '#E4E9F2',
-        hover: '#D6E4F5',
-        selected: '#93C5FD',
+        bg: '#EAE3D6',
+        on: '#241F1B',
+        onMuted: '#5F564A',
+        border: '#DBD2C1',
+        hover: '#E2DACA',
+        selected: '#D6CCB8',
       },
       chrome: {
-        // The frame. Deep and near-neutral so value contrast lives in the
-        // chrome while the surfaces you scan every session stay quiet. Its ink
-        // is the page's own ground, which is what ties the band to the paper it
-        // sits above rather than making it a separate visual system.
-        bg: '#171A21',
-        on: '#F7F9FC',
-        onMuted: '#9AA4B5',
-        border: '#2A2F3A',
-        // Overlays rather than opaque tints: on a dark band the feedback has to
-        // lighten, where on the light page it has to darken.
+        bg: '#17140F',
+        on: '#F5F1E8',
+        onMuted: '#A79E90',
         hover: 'rgba(255, 255, 255, 0.08)',
         selected: 'rgba(255, 255, 255, 0.14)',
-      
+        border: '#2B2620',
       },
       band: {
-        // The hero. One step lighter than the chrome so the two read as layers
-        // of the same frame rather than one tall header, and dark enough that
-        // the warm page below lands as a change of material.
-        bg: '#2A3242',
-        on: '#F7F9FC',
-        onMuted: '#A7B0C0',
-        border: '#3A4557',
+        bg: '#211C16',
+        on: '#F5F1E8',
+        onMuted: '#B3A99A',
+        border: '#332C24',
         hover: 'rgba(255, 255, 255, 0.08)',
         selected: 'rgba(255, 255, 255, 0.14)',
-      
       },
     },
     status: {
-      general: '#2563EB', // Strong blue for general status
-      active: '#3B82F6', // Bright blue for active state
-      completed: '#16A34A', // Strong green for success
-      failed: '#DC2626', // Bold red for errors
-      unknown: '#e1b737', // Golden yellow for unknown status
-      on: '#FFFFFF', // White text for status indicators
+      general: '#8C1D1D',
+      completed: '#46663A',
+      failed: '#8C1D1D',
+      unknown: '#A67C1F',
+      on: '#FFFFFF',
+      active: '#8C1D1D',
     },
     state: {
-      hoverLight: '#D6E4F5', // Light blue for hover effects
-      hoverMedium: '#93C5FD', // Stronger blue hover effect
-      selected: '#E4EBF5', // Subtle blue tint for slight emphasis
+      hoverLight: '#E7E0D2',
+      hoverMedium: '#DCD2BF',
+      selected: '#E4DBC9',
     },
     icon: {
-      bg: '#D6E4F5', // Soft blue for icons
-      border: '#93C5FD', // Subtle blue-gray for icon borders
+      bg: '#E7E0D2',
+      border: '#C9BCA3',
     },
     field: {
-      // Input styling
-      bg: '#ffffff', // Clean white for input background
-      placeholder: '#9ca3af', // Neutral gray for placeholder text
-      border: '#868B94', // Light gray for input border
-      borderFocus: '#3b82f6', // Bright blue for focused input border
-      ringFocus: 'rgba(59, 130, 246, 0.5)', // Semi-transparent blue focus ring
-      // Error states
-      errorBorder: '#ef4444', // Bold red for error border
-      errorFocus: '#ef4444', // Bold red for focused error border
-      errorRing: 'rgba(239, 68, 68, 0.5)', // Semi-transparent red focus ring
-      // Success states
-      successBorder: '#10b981', // Strong green for success border
-      successFocus: '#10b981', // Strong green for focused success border
-      successRing: 'rgba(16, 185, 129, 0.5)', // Semi-transparent green focus ring
-      // Form element states
-      disabledBg: '#f3f4f6', // Light gray for disabled form background
-      labelText: '#111827', // Dark gray for form labels
-      helperText: '#6b7280', // Neutral gray for helper text
-      errorText: '#ef4444', // Bold red for error text
-      successText: '#10b981', // Strong green for success text
+      bg: '#FCFAF6',
+      placeholder: '#8A8072',
+      border: '#8B8375',
+      borderFocus: '#8C1D1D',
+      ringFocus: 'rgba(140, 29, 29, 0.35)',
+      errorBorder: '#B3261E',
+      errorFocus: '#B3261E',
+      errorRing: 'rgba(179, 38, 30, 0.4)',
+      successBorder: '#46663A',
+      successFocus: '#46663A',
+      successRing: 'rgba(70, 102, 58, 0.4)',
+      disabledBg: '#EDE7DA',
+      labelText: '#241F1B',
+      helperText: '#655C50',
+      errorText: '#8C1D1D',
+      successText: '#3C5A31',
     },
     action: {
       primary: {
-        bg: '#2563EB', // Vibrant blue buttons
-        text: '#FFFFFF', // White text for contrast
-        hover: '#1D4ED8', // Deeper blue on hover
+        bg: '#8C1D1D',
+        text: '#FDFBF7',
+        hover: '#761818',
       },
       secondary: {
-        bg: '#1E40AF', // Deep blue secondary buttons
-        text: '#FFFFFF', // White text for contrast
-        hover: '#1E3A8A', // Even deeper blue on hover
+        bg: '#3F3A32',
+        text: '#FDFBF7',
+        hover: '#2E2A24',
       },
       link: {
-        bg: 'transparent', // Transparent background for links
-        text: '#2563EB', // Blue links
-        hover: '#1D4ED8', // Deeper blue on hover
+        bg: 'transparent',
+        text: '#8C1D1D',
+        hover: '#761818',
       },
       outline: {
-        bg: 'transparent', // Transparent background for outline buttons
-        text: '#1E40AF', // Bold secondary blue
-        hover: '#E5EDF8', // Soft blue hover effect
-        border: '#6285B5', // Subtle blue border
+        bg: 'transparent',
+        text: '#6E1717',
+        hover: '#EFE7D9',
+        border: '#8F7C63',
       },
       ghost: {
-        bg: 'transparent', // Transparent background for ghost buttons
-        text: '#1E40AF', // Deep blue text
-        hover: '#D6E4F5', // Light blue on hover
+        bg: 'transparent',
+        text: '#4A423A',
+        hover: '#E7E0D2',
       },
     },
     danger: {
-      // Error handling and danger zones
-      bg: 'transparent', // Transparent background for errors
-      deleteBg: 'transparent', // Transparent background for delete buttons
-      deleteText: '#DC2626', // Bold red text for delete buttons
-      deleteHover: 'rgba(239, 68, 68, 0.1)', // Very light red for hover
+      bg: 'transparent',
+      deleteBg: 'transparent',
+      deleteText: '#8C1D1D',
+      deleteHover: 'rgba(140, 29, 29, 0.10)',
     },
     journal: {
-      // Journal specific colors
-      leather: '#A67C52', // Warm brown for journal leather
-      binding: '#7D5A3C', // Dark brown for journal binding
-      stitch: '#D9C5A9', // Light beige for stitching
-      pageShadow: 'rgba(0, 0, 0, 0.05)', // Subtle shadow for pages
-      sectionDivider: 'rgba(0, 0, 0, 0.1)', // Light gray for section dividers
-      characterCardBg: 'rgba(0, 0, 0, 0.02)', // Very light gray for character card background
-      characterCardHover: 'rgba(0, 0, 0, 0.04)', // Slightly darker gray for hover
-      questItemBg: 'rgba(0, 0, 0, 0.01)', // Almost transparent gray for quest item background
-      questItemHover: 'rgba(0, 0, 0, 0.03)', // Slightly darker gray for hover
-      activityHover: 'rgba(0, 0, 0, 0.02)', // Very light gray for activity hover
-      notesArea: 'rgba(0, 0, 0, 0.03)', // Slightly darker gray for notes area
+      leather: '#6B4A2F',
+      binding: '#4E3623',
+      stitch: '#D9C5A9',
+      pageShadow: 'rgba(0, 0, 0, 0.06)',
+      sectionDivider: 'rgba(0, 0, 0, 0.10)',
+      characterCardBg: 'rgba(0, 0, 0, 0.02)',
+      characterCardHover: 'rgba(0, 0, 0, 0.04)',
+      questItemBg: 'rgba(0, 0, 0, 0.01)',
+      questItemHover: 'rgba(0, 0, 0, 0.03)',
+      activityHover: 'rgba(0, 0, 0, 0.02)',
+      notesArea: 'rgba(0, 0, 0, 0.03)',
     },
     font: {
-      primary: 'Inter, sans-serif', // Modern sans-serif for primary text
-      secondary: 'system-ui, sans-serif', // System default sans-serif for secondary text
-      // A serif here is what makes --font-heading mean something. Setting it to Inter
-      // made the token identical to `primary`, so headings and body were one typeface
-      // at four sizes and nothing led the page.
-      heading: 'Newsreader, Georgia, serif', // Serif for headings
+      primary: 'Inter, sans-serif',
+      secondary: 'system-ui, sans-serif',
+      heading: 'Newsreader, Georgia, serif',
     },
     border: {
       radius: {
-        sm: '0.25rem', // Small border radius
-        md: '0.375rem', // Medium border radius
-        lg: '0.5rem', // Large border radius
+        sm: '0.25rem',
+        md: '0.375rem',
+        lg: '0.5rem',
       },
       width: {
-        sm: '1px', // Thin border width
-        md: '2px', // Medium border width
-        lg: '4px', // Thick border width
+        sm: '1px',
+        md: '2px',
+        lg: '4px',
       },
     },
-    // Eight hues at one OKLCH lightness and chroma, hue angle the only
-    // variable. Order is the contract: a mark's hue comes from its index.
     entityPalette: [
-      '#FFD1CC',
-      '#F6D8B7',
-      '#DCE3BA',
-      '#C0EAD2',
-      '#B4E9EF',
-      '#C3E2FF',
-      '#E0D7FF',
-      '#F8D0EA',
+      '#75504D',
+      '#6D563C',
+      '#5A5E3E',
+      '#416451',
+      '#366368',
+      '#455D76',
+      '#5D5574',
+      '#6E5064',
     ],
-    entityInk: '#1F2430',
+    entityInk: '#F5F1E8',
   },
 };
