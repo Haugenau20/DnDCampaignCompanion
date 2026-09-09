@@ -155,9 +155,11 @@ describe('RumorDirectory', () => {
   // Loading state
   // -------------------------------------------------------------------------
   describe('loading state', () => {
-    test('should render loading indicator when isLoading is true', () => {
-      render(<RumorDirectory rumors={[]} isLoading={true} />);
-      expect(screen.getByText(/loading rumors/i)).toBeInTheDocument();
+    test('shows the rhythm of the rows that are coming, not a spinner', () => {
+      const { container } = render(<RumorDirectory rumors={[]} isLoading={true} />);
+      expect(screen.getByRole('status', { name: /loading rumors/i })).toBeInTheDocument();
+      expect(container.querySelectorAll('.section-loading').length).toBeGreaterThan(3);
+      expect(container.querySelector('.animate-spin')).toBeNull();
     });
 
     test('should not render search box when isLoading is true', () => {
@@ -170,14 +172,13 @@ describe('RumorDirectory', () => {
   // Empty state
   // -------------------------------------------------------------------------
   describe('empty state', () => {
-    test('should show "No Rumors Found" when rumors array is empty', () => {
+    test('says what the collection is for, and offers the action that fills it', () => {
       render(<RumorDirectory rumors={[]} />);
-      expect(screen.getByText('No Rumors Found')).toBeInTheDocument();
-    });
-
-    test('should show "add your first rumor" message when list is empty', () => {
-      render(<RumorDirectory rumors={[]} />);
-      expect(screen.getByText(/add your first rumor to get started/i)).toBeInTheDocument();
+      expect(screen.getByText(/nothing heard yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/overheard in a tavern/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /add the first rumour/i })
+      ).toBeInTheDocument();
     });
   });
 
@@ -344,10 +345,13 @@ describe('RumorDirectory', () => {
       expect(screen.getByText('Dragon spotted')).toBeInTheDocument();
     });
 
-    test('should show "Try adjusting your search" when search yields no results', () => {
+    test('a collection emptied by a filter offers no create action', () => {
       render(<RumorDirectory rumors={[r1, r2]} />);
       fireEvent.change(searchInput(), { target: { value: 'zzznomatch' } });
-      expect(screen.getByText(/try adjusting your search criteria/i)).toBeInTheDocument();
+      expect(screen.getByText(/no rumours match these filters/i)).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /add the first rumour/i })
+      ).not.toBeInTheDocument();
     });
   });
 

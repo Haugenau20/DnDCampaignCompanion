@@ -6,13 +6,12 @@ import { useNPCs } from '../../npcs/context/NPCContext';
 import { useLocations } from '../../locations/context/LocationContext';
 import { resolveLocationName } from '../../locations/utils/location-display';
 import { useAuth } from 'features/user-management';
-import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import { useNavigation } from 'shared/hooks/useNavigation';
 import clsx from 'clsx';
-import { Scroll, MapPin, Edit, Trash2, Users } from 'lucide-react';
+import { MapPin, Edit, Trash2, Users, Plus } from 'lucide-react';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -22,6 +21,8 @@ import {
   RosterField,
   type RosterSegment,
   type RosterFilterOption,
+  RosterSkeleton,
+  RosterEmpty,
 } from 'core/components/Roster';
 
 interface QuestDirectoryProps {
@@ -204,13 +205,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
   };
 
   if (isLoading) {
-    return (
-      <Card>
-        <Card.Content>
-          <Typography>Loading quests...</Typography>
-        </Card.Content>
-      </Card>
-    );
+    return <RosterSkeleton label="Loading quests" />;
   }
 
   return (
@@ -530,22 +525,24 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
             })}
           </RosterGroup>
         ))
+      ) : quests.length > 0 ? (
+        <RosterEmpty
+          title="No quests match these filters"
+          message="Try a different search term, or clear the filters to see everything the party has taken on."
+        />
       ) : (
-        <Card>
-          <Card.Content className="text-center py-12">
-            <Scroll className="w-12 h-12 mx-auto mb-4 typography-secondary" />
-            <Typography variant="h3" className="mb-2">
-              No Quests Found
-            </Typography>
-            <Typography color="secondary">
-              {searchQuery
-                ? 'No quests match your search criteria'
-                : statusFilter === 'all'
-                  ? 'There are no quests to display'
-                  : `No ${statusFilter} quests found`}
-            </Typography>
-          </Card.Content>
-        </Card>
+        <RosterEmpty
+          title="Nothing taken on yet"
+          message="What the party agreed to do, who asked, and how far along it is — with the objectives ticked off as you go."
+          action={
+            <Button
+              onClick={() => navigateToPage('/quests/create')}
+              startIcon={<Plus className="w-4 h-4" />}
+            >
+              Add the first quest
+            </Button>
+          }
+        />
       )}
 
       {/* Delete Confirmation Dialog */}

@@ -113,9 +113,14 @@ describe('LocationDirectory', () => {
   // Loading state
   // -------------------------------------------------------------------------
   describe('loading state', () => {
-    test('should render loading message when isLoading is true', () => {
-      render(<LocationDirectory locations={[]} isLoading={true} />);
-      expect(screen.getByText('Loading locations...')).toBeInTheDocument();
+    test('shows the rhythm of the rows that are coming, not a spinner', () => {
+      // A spinner says "something is happening". A skeleton says "a list of
+      // rows is happening, and it will be about this tall", so the page does
+      // not jump when the rows arrive.
+      const { container } = render(<LocationDirectory locations={[]} isLoading={true} />);
+      expect(screen.getByRole('status', { name: /loading locations/i })).toBeInTheDocument();
+      expect(container.querySelectorAll('.section-loading').length).toBeGreaterThan(3);
+      expect(container.querySelector('.animate-spin')).toBeNull();
     });
 
     test('should not render search bar when isLoading is true', () => {
@@ -128,14 +133,13 @@ describe('LocationDirectory', () => {
   // Empty state
   // -------------------------------------------------------------------------
   describe('empty state', () => {
-    test('should render "No Locations Found" when no locations provided', () => {
+    test('says what the collection is for, and offers the action that fills it', () => {
       render(<LocationDirectory locations={[]} />);
-      expect(screen.getByText('No Locations Found')).toBeInTheDocument();
-    });
-
-    test('should show empty state message', () => {
-      render(<LocationDirectory locations={[]} />);
-      expect(screen.getByText('There are no locations to display')).toBeInTheDocument();
+      expect(screen.getByText(/nowhere charted yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/regions, cities, dungeons/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /add the first location/i })
+      ).toBeInTheDocument();
     });
   });
 
@@ -367,18 +371,15 @@ describe('LocationDirectory', () => {
       expect(screen.getByText('Silverkeep')).toBeInTheDocument();
     });
 
-    test('should show empty state when search matches nothing', () => {
+    test('a collection emptied by a filter offers no create action', () => {
+      // The fix here is to change the filter, not to add a location.
       const locations = [makeLocation('loc-1', 'Silverkeep')];
       render(<LocationDirectory locations={locations} />);
       fireEvent.change(searchInput(), { target: { value: 'zzznomatch' } });
-      expect(screen.getByText('No Locations Found')).toBeInTheDocument();
-    });
-
-    test('should show search-specific empty message when no results', () => {
-      const locations = [makeLocation('loc-1', 'Silverkeep')];
-      render(<LocationDirectory locations={locations} />);
-      fireEvent.change(searchInput(), { target: { value: 'zzznomatch' } });
-      expect(screen.getByText('No locations match your search criteria')).toBeInTheDocument();
+      expect(screen.getByText(/no locations match these filters/i)).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /add the first location/i })
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -779,7 +780,7 @@ describe('LocationDirectory', () => {
 
     test('the empty state still appears when there are genuinely no locations', () => {
       render(<LocationDirectory locations={[]} />);
-      expect(screen.getByText('No Locations Found')).toBeInTheDocument();
+      expect(screen.getByText(/nowhere charted yet/i)).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'Unplaced' })).not.toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'Locations' })).not.toBeInTheDocument();
     });
