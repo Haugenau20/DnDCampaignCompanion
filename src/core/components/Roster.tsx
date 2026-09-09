@@ -146,19 +146,32 @@ export interface RosterFilterOption {
  */
 export type RosterFilterSize = 'sm' | 'md';
 
+/*
+  Both states carry a border of the same width, so selecting a filter never
+  reflows the row.
+*/
 const PILL_BASE: Record<RosterFilterSize, string> = {
-  sm: 'px-3 py-1.5 rounded-full text-xs font-semibold transition-colors',
-  md: 'px-3 py-1.5 rounded-md text-sm transition-colors',
+  sm: 'px-3 py-1.5 rounded-full text-xs font-semibold transition-colors roster-filter',
+  md: 'px-3 py-1.5 rounded-md text-sm transition-colors roster-filter',
 };
 
+/**
+ * The one accent inside a collection, and it is an outline rather than a fill.
+ *
+ * It used to be `bg-status-general` filled -- which named the *status* hue for
+ * something that is not a status, and happened to look right only because in
+ * finish 3a that token and the accent are the same value. A filled chip is also
+ * the heaviest treatment available, spent on the most repeated control on the
+ * page.
+ */
 const PILL_ACTIVE: Record<RosterFilterSize, string> = {
-  sm: 'bg-status-general text-status-text',
-  md: 'bg-status-general text-status-text font-semibold',
+  sm: 'roster-filter-active',
+  md: 'roster-filter-active font-semibold',
 };
 
 const PILL_IDLE: Record<RosterFilterSize, string> = {
-  sm: 'bg-secondary typography-secondary selectable-item',
-  md: 'card typography-secondary selectable-item',
+  sm: 'roster-filter-idle selectable-item',
+  md: 'roster-filter-idle selectable-item',
 };
 
 export interface RosterFilterPillsProps {
@@ -167,6 +180,12 @@ export interface RosterFilterPillsProps {
   onChange: (value: string) => void;
   /** Accessible name for the group, e.g. "Filter by relationship". */
   label: string;
+  /**
+   * The option meaning "no filter", usually `all`. Selecting it is the absence
+   * of a filter rather than a filter, so it stays idle -- otherwise every
+   * directory would show an accent on load, and the accent would say nothing.
+   */
+  allValue?: string;
   size?: RosterFilterSize;
 }
 
@@ -181,20 +200,27 @@ export const RosterFilterPills: React.FC<RosterFilterPillsProps> = ({
   value,
   onChange,
   label,
+  allValue = 'all',
   size = 'md',
 }) => (
   <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
     {options.map(option => {
-      const isActive = value === option.value;
+      const isSelected = value === option.value;
+      // Selected and accented are two different questions. "All" is the
+      // selected option when nothing is filtered, and a screen reader must be
+      // told so -- but it is the *absence* of a filter, so it earns no accent.
+      // Conflating the two would silently drop `aria-pressed` from the option
+      // every directory loads on.
+      const isAccented = isSelected && option.value !== allValue;
       return (
         <button
           key={option.value}
           type="button"
           onClick={() => onChange(option.value)}
-          aria-pressed={isActive}
+          aria-pressed={isSelected}
           className={clsx(
             PILL_BASE[size],
-            isActive ? PILL_ACTIVE[size] : PILL_IDLE[size]
+            isAccented ? PILL_ACTIVE[size] : PILL_IDLE[size]
           )}
         >
           {option.label}
@@ -342,19 +368,23 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
       >
         {title}
       </Typography>
-      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-secondary typography-secondary">
+      {/*
+        The count was a filled pill, which gave a number the same weight as a
+        control. It is metadata about the heading beside it, so it reads as
+        muted ink on the same line.
+      */}
+      <Typography variant="body-sm" color="muted" className="text-sm tabular-nums">
         {count}
-      </span>
+      </Typography>
       {onOpen && (
         <button
           type="button"
           onClick={onOpen}
-          className="text-sm font-medium typography-primary"
+          className="text-sm underline underline-offset-2 typography-secondary roster-group-open"
         >
           {openLabel}
         </button>
       )}
-      <span aria-hidden="true" className="flex-1 h-px min-w-4 bg-secondary opacity-60" />
     </div>
 
     <div
@@ -460,7 +490,7 @@ export const RosterRow: React.FC<RosterRowProps> = ({
         onClick={onToggle}
         aria-expanded={expanded}
         aria-label={`${expanded ? 'Collapse' : 'Expand'} ${toggleLabel}`}
-        className="flex-1 min-w-0 text-left px-5 py-3.5 flex items-center gap-4 selectable-item"
+        className="flex-1 min-w-0 text-left flex items-center gap-4 roster-row selectable-item"
       >
         {/*
           The mark sits outside the grid rather than as another column, so the
@@ -490,6 +520,94 @@ export const RosterRow: React.FC<RosterRowProps> = ({
   </div>
   );
 };
+
+// ---------------------------------------------------------------------------
+// Loading
+// ---------------------------------------------------------------------------
+
+export interface RosterSkeletonProps {
+  /** How many placeholder rows to draw. Defaults to a comfortable page. */
+  rows?: number;
+  /** Announced while the rows are standing in for real content. */
+  label?: string;
+}
+
+/**
+ * The shape of the list that is coming, rather than a spinner.
+ *
+ * A spinner says "something is happening"; a skeleton says "a list of rows is
+ * happening, and it will be about this tall", so the page does not jump when it
+ * arrives. Four directories had drifted to three different answers here -- two
+ * spinners with different icons and two bare lines of text.
+ *
+ * The mark, the name and the metadata line are each drawn at their real size, so
+ * this is the row rhythm and not a decorative bar chart.
+ */
+export const RosterSkeleton: React.FC<RosterSkeletonProps> = ({
+  rows = 5,
+  label = 'Loading',
+}) => (
+  <div
+    className={clsx('rounded-lg overflow-hidden card')}
+    role="status"
+    aria-label={label}
+  >
+    {Array.from({ length: rows }, (_, index) => (
+      <div
+        key={index}
+        className={clsx(
+          'flex items-center gap-4 roster-row',
+          index > 0 && 'border-t border-card'
+        )}
+        aria-hidden="true"
+      >
+        <div className="w-7 h-7 rounded-md section-loading shrink-0" />
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+          <div className="h-3.5 rounded section-loading w-[38%]" />
+          <div className="h-3 rounded section-loading w-[22%]" />
+        </div>
+        <div className="hidden md:block h-3 rounded section-loading w-[14%]" />
+      </div>
+    ))}
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Empty
+// ---------------------------------------------------------------------------
+
+export interface RosterEmptyProps {
+  /** What this collection is, stated plainly. */
+  title: string;
+  /** Why it is empty, and what would fill it. */
+  message: string;
+  /** The one action that fills it. Omitted when a filter is what emptied it. */
+  action?: React.ReactNode;
+}
+
+/**
+ * An empty collection, designed rather than blank.
+ *
+ * This is where a returning user is most likely to read the product as
+ * unfinished, so it says what the collection is for and offers the one action
+ * that fills it. No icon: a large grey glyph is decoration on a surface whose
+ * whole problem is that it has nothing to say yet.
+ *
+ * A collection emptied by a *filter* passes no action -- the fix there is to
+ * change the filter, and offering "Add an NPC" would answer a question nobody
+ * asked.
+ */
+export const RosterEmpty: React.FC<RosterEmptyProps> = ({ title, message, action }) => (
+  <div className={clsx('rounded-lg card px-6 py-12 text-center')}>
+    <Typography variant="h3" className="text-lg mb-1.5">
+      {title}
+    </Typography>
+    <Typography color="secondary" className="text-sm max-w-md mx-auto">
+      {message}
+    </Typography>
+    {action && <div className="mt-5 flex justify-center">{action}</div>}
+  </div>
+);
 
 // ---------------------------------------------------------------------------
 // Field — used inside expanded content

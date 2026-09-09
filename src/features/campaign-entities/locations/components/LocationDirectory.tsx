@@ -4,10 +4,9 @@ import { useNPCs } from '../../npcs/context/NPCContext';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useLocations } from '../context/LocationContext';
 import { useAuth } from 'features/user-management';
-import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
-import { MapPin, Landmark, Users, Scroll, Tag } from 'lucide-react';
+import { Landmark, Users, Scroll, Tag, Plus } from 'lucide-react';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useNavigation } from 'shared/context/NavigationContext';
 import clsx from 'clsx';
@@ -20,6 +19,8 @@ import {
   RosterField,
   type RosterSegment,
   type RosterFilterOption,
+  RosterSkeleton,
+  RosterEmpty,
 } from 'core/components/Roster';
 
 interface LocationDirectoryProps {
@@ -553,13 +554,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
   };
 
   if (isLoading) {
-    return (
-      <Card>
-        <Card.Content>
-          <Typography>Loading locations...</Typography>
-        </Card.Content>
-      </Card>
-    );
+    return <RosterSkeleton label="Loading locations" />;
   }
 
   const rootRows = renderRows('root');
@@ -601,19 +596,25 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
 
       {/* Location hierarchy */}
       {rootRows.length === 0 && orphanRows.length === 0 ? (
-        <Card>
-          <Card.Content className="text-center py-8">
-            <MapPin className="w-12 h-12 mx-auto mb-4 typography-secondary" />
-            <Typography variant="h3" className="mb-2">
-              No Locations Found
-            </Typography>
-            <Typography color="secondary">
-              {searchQuery
-                ? 'No locations match your search criteria'
-                : 'There are no locations to display'}
-            </Typography>
-          </Card.Content>
-        </Card>
+        locations.length > 0 ? (
+          <RosterEmpty
+            title="No locations match these filters"
+            message="Try a different search term, or clear the filters to see everywhere you have charted."
+          />
+        ) : (
+          <RosterEmpty
+            title="Nowhere charted yet"
+            message="Regions, cities, dungeons and the rooms inside them — each one can hold the notes, NPCs and quests you found there."
+            action={
+              <Button
+                onClick={() => navigateToPage('/locations/create')}
+                startIcon={<Plus className="w-4 h-4" />}
+              >
+                Add the first location
+              </Button>
+            }
+          />
+        )
       ) : (
         <>
           {rootRows.length > 0 && (

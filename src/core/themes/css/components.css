@@ -815,7 +815,63 @@
   border-bottom: var(--border-width-sm) solid var(--surface-card-border);
 }
 
-/* ====== ENTITY SIGIL ====== */
+/* ====== COLLECTION CHROME ====== */
+  /*
+    Row density, owned here rather than by the component, so a theme can retune
+    the rhythm of every collection in the product from one place. The unit of
+    this product is a row you scan, and it is set once.
+  */
+  .roster-row {
+    padding: 0.875rem 1.25rem;
+  }
+
+  /*
+    A filter is the one accented thing inside a collection, and it is an outline.
+
+    Both states carry the same border width so selecting one never reflows the
+    row, and the idle border is the same control boundary every outline control
+    uses -- already held at 3:1 by `token-contrast.test.ts`. The active state
+    swaps that boundary for the accent and takes the accent as ink; it does not
+    fill, because a fill is the heaviest treatment available and this is the most
+    repeated control on the page.
+  */
+  /*
+    A group heading's link out to the record it names. Quiet on purpose: it
+    repeats once per group, so on a page of eight locations the accent version
+    put eight accents down the page for a navigation affordance -- hue as
+    decoration, and it drowned the one accent that means something (the active
+    filter). The underline carries the affordance, so nothing here is encoded by
+    colour alone either.
+  */
+  .roster-group-open:hover {
+    color: var(--surface-page-on);
+  }
+
+  .roster-filter {
+    border: var(--border-width-sm) solid transparent;
+  }
+
+  .roster-filter-idle {
+    background-color: var(--action-outline-bg);
+    color: var(--action-outline-text);
+    border-color: var(--action-outline-border);
+  }
+
+  .roster-filter-idle:hover {
+    background-color: var(--action-outline-hover);
+  }
+
+  .roster-filter-active {
+    background-color: var(--action-outline-bg);
+    color: var(--action-primary-bg);
+    border-color: var(--action-primary-bg);
+  }
+
+  .roster-filter-active:hover {
+    background-color: var(--action-outline-hover);
+  }
+
+  /* ====== ENTITY SIGIL ====== */
   /*
     One ink for every mark, so the palette separates entities without any entry
     shouting louder than the others. The hue is the only thing that varies.
@@ -1009,9 +1065,22 @@
     the rhythm of the rows that are coming rather than a spinner, and the empty
     state is muted ink on the page rather than an absence.
   */
+  /*
+    Placeholder blocks, at a weight you can actually see.
+
+    This was `surface-sunken-bg` at `opacity: 0.3`, which composites to 1.06:1
+    against a card -- measured, not guessed. A skeleton at 1.06:1 is a blank
+    card, so the "designed loading state" read as the absence of one. It went
+    unnoticed while it stood in for four rows on the dashboard and mattered the
+    moment five collections started leaning on it.
+
+    `surface-sunken-border` is the quietest token that is meant to be *seen*
+    rather than felt, and it lands at 1.44:1 on a card: a placeholder reads as a
+    placeholder without competing with the content that replaces it. Opacity is
+    gone -- it made the value depend on whatever happened to sit behind it.
+  */
   .section-loading {
-    background-color: var(--surface-sunken-bg);
-    opacity: 0.3;
+    background-color: var(--surface-sunken-border);
   }
 
   .section-empty {

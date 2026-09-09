@@ -94,10 +94,12 @@ describe('NotesList', () => {
   });
 
   describe('states', () => {
-    test('should show a loading state', () => {
+    test('shows the rhythm of the rows that are coming, not a spinner', () => {
       setupMocks({ isLoading: true });
-      render(<NotesList />);
-      expect(screen.getByText(/loading notes/i)).toBeInTheDocument();
+      const { container } = render(<NotesList />);
+      expect(screen.getByRole('status', { name: /loading notes/i })).toBeInTheDocument();
+      expect(container.querySelectorAll('.section-loading').length).toBeGreaterThan(3);
+      expect(container.querySelector('.animate-spin')).toBeNull();
     });
 
     test('should show an error state', () => {

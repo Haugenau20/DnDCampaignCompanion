@@ -2,10 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { NPC } from '../types';
 import { useLocations } from '../../locations/context/LocationContext';
 import { resolveLocationName } from '../../locations/utils/location-display';
-import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
-import { Users, AlertCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
 import clsx from 'clsx';
 import {
@@ -16,6 +15,8 @@ import {
   RosterRow,
   RosterField,
   type RosterSegment,
+  RosterSkeleton,
+  RosterEmpty,
 } from 'core/components/Roster';
 
 interface NPCDirectoryProps {
@@ -162,18 +163,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   }, [filteredNPCs, locations]);
 
   if (isLoading) {
-    return (
-      <Card>
-        <Card.Content>
-          <div className="flex items-center justify-center p-8">
-            <div className="animate-spin mr-2">
-              <Users className="primary" />
-            </div>
-            <Typography>Loading NPCs...</Typography>
-          </div>
-        </Card.Content>
-      </Card>
-    );
+    return <RosterSkeleton label="Loading NPCs" />;
   }
 
   const groups = Object.entries(groupedNPCs);
@@ -357,20 +347,27 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
             </RosterGroup>
           );
         })
+      ) : npcs.length > 0 ? (
+        // Emptied by a filter, not by the campaign. The fix is to change the
+        // filter, so no action is offered -- "Add an NPC" would answer a
+        // question nobody asked.
+        <RosterEmpty
+          title="No NPCs match these filters"
+          message="Try a different search term, or clear the filters to see everyone you have met."
+        />
       ) : (
-        <Card>
-          <Card.Content className="text-center py-8">
-            <AlertCircle className="w-12 h-12 mx-auto mb-4 typography-secondary" />
-            <Typography variant="h3" className="mb-2">
-              No NPCs Found
-            </Typography>
-            <Typography color="secondary">
-              {npcs.length > 0
-                ? "Try adjusting your search criteria"
-                : "Start by adding some NPCs to your campaign"}
-            </Typography>
-          </Card.Content>
-        </Card>
+        <RosterEmpty
+          title="No one recorded yet"
+          message="Every person the party meets can live here — name, standing, where you found them, and what they told you."
+          action={
+            <Button
+              onClick={() => navigateToPage('/npcs/create')}
+              startIcon={<Plus className="w-4 h-4" />}
+            >
+              Add the first NPC
+            </Button>
+          }
+        />
       )}
     </div>
   );

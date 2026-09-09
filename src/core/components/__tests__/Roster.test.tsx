@@ -265,7 +265,8 @@ describe('RosterFilterSelect', () => {
       />
     );
     // Idle on the "all" value, so a filter row reads as unfiltered at a glance.
-    expect(screen.getByRole('combobox').className).not.toContain('bg-status-general');
+    expect(screen.getByRole('combobox').className).toContain('roster-filter-idle');
+    expect(screen.getByRole('combobox').className).not.toContain('roster-filter-active');
 
     rerender(
       <RosterFilterSelect
@@ -275,7 +276,8 @@ describe('RosterFilterSelect', () => {
         label="Filter by location"
       />
     );
-    expect(screen.getByRole('combobox').className).toContain('bg-status-general');
+    expect(screen.getByRole('combobox').className).toContain('roster-filter-active');
+    expect(screen.getByRole('combobox').className).not.toContain('roster-filter-idle');
   });
 });
 
@@ -483,6 +485,80 @@ describe('RosterField', () => {
   test('falls back to a default empty message', () => {
     render(<RosterField label="Race" />);
     expect(screen.getByText('Not recorded')).toBeInTheDocument();
+  });
+});
+
+describe('the collection accent budget', () => {
+  const options = [
+    { value: 'all', label: 'All' },
+    { value: 'friendly', label: 'Friendly' },
+    { value: 'hostile', label: 'Hostile' },
+  ];
+
+  const accented = (root: HTMLElement) =>
+    [...root.querySelectorAll('.roster-filter-active')];
+
+  test('nothing in the toolbar is accented while no filter is active', () => {
+    // "All" is selected on load in every directory. If selecting it counted as
+    // filtering, every collection in the product would show an accent that
+    // means nothing -- and an accent that means nothing is the one thing the
+    // budget exists to prevent.
+    const { container } = render(
+      <RosterFilterPills
+        options={options}
+        value="all"
+        onChange={jest.fn()}
+        label="Filter by relationship"
+      />
+    );
+    expect(accented(container)).toHaveLength(0);
+  });
+
+  test('exactly one filter is accented once one is active', () => {
+    const { container } = render(
+      <RosterFilterPills
+        options={options}
+        value="friendly"
+        onChange={jest.fn()}
+        label="Filter by relationship"
+      />
+    );
+    const marked = accented(container);
+    expect(marked).toHaveLength(1);
+    expect(marked[0]).toHaveTextContent('Friendly');
+  });
+
+  test('"All" still reports itself as selected to a screen reader', () => {
+    // Selected and accented are two different questions. Dropping `aria-pressed`
+    // from the option every directory loads on would be a real regression worn
+    // as a visual improvement.
+    render(
+      <RosterFilterPills
+        options={options}
+        value="all"
+        onChange={jest.fn()}
+        label="Filter by relationship"
+      />
+    );
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
+  test('a group heading links out quietly, not in the accent', () => {
+    // It repeats once per group, so the accent version put one accent per group
+    // down the page and drowned the filter, which is the accent that means
+    // something.
+    render(
+      <RosterGroup title="Rivendell" count={6} onOpen={jest.fn()}>
+        <div>row</div>
+      </RosterGroup>
+    );
+    const link = screen.getByRole('button', { name: 'Open location' });
+    expect(link.className).toContain('typography-secondary');
+    expect(link.className).toContain('underline');
+    expect(link.className).not.toContain('typography-primary');
   });
 });
 

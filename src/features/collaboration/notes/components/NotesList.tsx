@@ -8,8 +8,9 @@ import { Note } from "../types";
 import { displayTitle } from "../utils/note-title";
 import { useNotes } from "../context/NoteContext";
 import { useCreateNote } from "../hooks/useCreateNote";
+import { RosterSkeleton, RosterEmpty } from "core/components/Roster";
 import { useCampaigns } from "features/user-management";
-import { Loader2, AlertCircle, Book, Plus, Users, Search } from "lucide-react";
+import { AlertCircle, Book, Plus, Search } from "lucide-react";
 import { clsx } from "clsx";
 
 /** Which slice of the campaign's notes the index is showing. */
@@ -97,12 +98,7 @@ const NotesList: React.FC = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 mr-3 animate-spin primary" />
-        <Typography color="secondary">Loading notes...</Typography>
-      </div>
-    );
+    return <RosterSkeleton label="Loading notes" />;
   }
 
   if (error) {
@@ -117,15 +113,10 @@ const NotesList: React.FC = () => {
   if (!activeCampaignId) {
     return (
       <div className="notes-list">
-        <div className="text-center py-10 px-6 border-2 border-dashed card-border rounded-lg">
-          <Users className="w-6 h-6 mx-auto mb-3 typography-secondary" />
-          <Typography variant="h4" className="mb-2">
-            No Campaign Selected
-          </Typography>
-          <Typography color="secondary">
-            Select a campaign to view and create notes.
-          </Typography>
-        </div>
+        <RosterEmpty
+          title="No campaign selected"
+          message="Notes belong to a campaign. Pick one and this becomes the place the session gets written down."
+        />
       </div>
     );
   }
@@ -192,7 +183,13 @@ const NotesList: React.FC = () => {
               }}
               className={clsx(
                 "h-[38px] px-3 rounded-full text-sm font-medium transition-colors",
-                filterMode === mode ? "button button-primary" : "button button-outline"
+                "roster-filter",
+                // Same rule as every other collection: an active filter is the
+                // accent as an outline, and "All" is the absence of a filter
+                // rather than one, so it stays idle.
+                filterMode === mode && mode !== "all"
+                  ? "roster-filter-active font-semibold"
+                  : "roster-filter-idle selectable-item"
               )}
             >
               {label}
@@ -214,9 +211,10 @@ const NotesList: React.FC = () => {
 
       {/* Rows */}
       {visibleNotes.length === 0 ? (
-        <div className="text-center py-10 px-6 border-2 border-dashed card-border rounded-lg">
-          <Typography color="secondary">No notes match this filter.</Typography>
-        </div>
+        <RosterEmpty
+          title="No notes match these filters"
+          message="Try a different search term, or clear the filters to see everything written down so far."
+        />
       ) : (
         <>
           <div className="card rounded-xl overflow-hidden">

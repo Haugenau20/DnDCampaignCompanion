@@ -178,9 +178,14 @@ describe('NPCDirectory', () => {
   // Loading state
   // -------------------------------------------------------------------------
   describe('loading state', () => {
-    test('should render loading indicator when isLoading is true', () => {
-      render(<NPCDirectory npcs={[]} isLoading={true} />);
-      expect(screen.getByText(/loading npcs/i)).toBeInTheDocument();
+    test('shows the rhythm of the rows that are coming, not a spinner', () => {
+      // A spinner says "something is happening". A skeleton says "a list of
+      // rows is happening, and it will be about this tall", so the page does
+      // not jump when it arrives.
+      const { container } = render(<NPCDirectory npcs={[]} isLoading={true} />);
+      expect(screen.getByRole('status', { name: /loading npcs/i })).toBeInTheDocument();
+      expect(container.querySelectorAll('.section-loading').length).toBeGreaterThan(3);
+      expect(container.querySelector('.animate-spin')).toBeNull();
     });
 
     test('should not render filters when isLoading is true', () => {
@@ -195,14 +200,20 @@ describe('NPCDirectory', () => {
   // Empty state
   // -------------------------------------------------------------------------
   describe('empty state', () => {
-    test('should show "No NPCs Found" when npcs array is empty', () => {
+    test('says what the collection is for, and offers the action that fills it', () => {
       render(<NPCDirectory npcs={[]} />);
-      expect(screen.getByText(/no npcs found/i)).toBeInTheDocument();
+      expect(screen.getByText(/no one recorded yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/every person the party meets/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /add the first npc/i })
+      ).toBeInTheDocument();
     });
 
-    test('should show "Start by adding" message when npcs array is empty', () => {
-      render(<NPCDirectory npcs={[]} />);
-      expect(screen.getByText(/start by adding some npcs/i)).toBeInTheDocument();
+    test('the empty state is not blank', () => {
+      // This is where a returning user is most likely to read the product as
+      // unfinished, so it is designed rather than left empty.
+      const { container } = render(<NPCDirectory npcs={[]} />);
+      expect(container.textContent?.trim().length).toBeGreaterThan(40);
     });
   });
 
@@ -376,10 +387,15 @@ describe('NPCDirectory', () => {
       expect(screen.getByText('Aldric')).toBeInTheDocument();
     });
 
-    test('should show "Try adjusting" message when search yields no results', () => {
+    test('a collection emptied by a filter offers no create action', () => {
+      // The fix here is to change the filter. Offering "Add the first NPC" to
+      // someone who has sixteen of them answers a question nobody asked.
       render(<NPCDirectory npcs={[aldric, mira]} />);
       fireEvent.change(searchInput(), { target: { value: 'zzznomatch' } });
-      expect(screen.getByText(/try adjusting your search criteria/i)).toBeInTheDocument();
+      expect(screen.getByText(/no npcs match these filters/i)).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /add the first npc/i })
+      ).not.toBeInTheDocument();
     });
   });
 

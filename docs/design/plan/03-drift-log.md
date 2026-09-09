@@ -651,6 +651,72 @@ that does not exist -- wrong in a way that looks right. The id is also the
 reason the mark is stable at all: deriving from the name instead would move a
 mark whenever anyone fixed a spelling.
 
+### D51 — The active filter is an accent outline, and "All" is not a filter
+Date: 2026-09-09   Status: active
+Decision: a filter pill's active state is an accent border and accent ink over
+the ordinary control background, never a fill. The option meaning "no filter"
+-- `all` in every directory -- renders idle no matter that it is selected.
+Because: two things were wrong with the fill. It named `status.general` for
+something that is not a status, and looked right only because in finish 3a that
+token and the accent happen to be the same value; and a fill is the heaviest
+treatment available, spent on the most repeated control on the page. More
+importantly, every directory loads with `all` selected, so the old rule put an
+accent on every collection in the product at rest -- an accent that says
+nothing, which is exactly what the budget exists to prevent.
+Selected and accented are now separate questions: `aria-pressed` still reports
+`all` as selected, because dropping it would be a real accessibility regression
+worn as a visual improvement. An existing test caught that, having pinned
+`aria-pressed` rather than the class.
+Both states carry the same border width, so choosing a filter never reflows the
+row.
+
+### D52 — A group heading's link out is quiet, not accented
+Date: 2026-09-09   Status: active
+Decision: `RosterGroup`'s "Open location" renders as muted ink with an
+underline.
+Because: it repeats once per group. Measured on the NPC directory: five accent
+links down one page, against one active filter -- the accent that actually means
+something was outnumbered five to one by a navigation affordance. The underline
+carries the affordance, so nothing here is encoded by colour alone either.
+
+### D53 — A skeleton stands in for rows; a spinner stands in for nothing
+Date: 2026-09-09   Status: active
+Decision: `RosterSkeleton` draws the row rhythm -- mark, name, metadata, at
+their real sizes -- and every collection uses it. `RosterEmpty` states what the
+collection is for and offers the one action that fills it, except when a
+*filter* emptied it, where it offers none.
+Because: four directories had drifted to three different loading states (two
+spinners with different icons, two bare lines of text) and four differently
+worded empty states, none of which offered an action. A spinner says "something
+is happening"; a skeleton says "a list of rows is happening, and it will be
+about this tall", so the page does not jump when the rows arrive.
+The filter distinction matters: offering "Add the first NPC" to someone who has
+sixteen of them and mistyped a search answers a question nobody asked.
+
+### D54 — `section-loading` names a colour instead of dimming one
+Date: 2026-09-09   Status: active
+Decision: the skeleton block is `surface-sunken-border` at full opacity, not
+`surface-sunken-bg` at `opacity: 0.3`.
+Because: measured in the browser, the old rule composited to **1.06:1** against
+a card -- a skeleton indistinguishable from a blank card, so the "designed
+loading state" was the absence of one. It went unnoticed while it stood in for
+four rows on the dashboard, and mattered the moment five collections started
+leaning on it. `surface-sunken-border` is the quietest token meant to be *seen*
+rather than felt: 1.44:1 on light's card, 1.38:1 on dark's, close enough that no
+theme-conditional rule is needed.
+Opacity was the deeper mistake -- it made the value depend on whatever happened
+to sit behind it, which is the one thing the surface-pair model exists to stop.
+
+### D55 — Row density lives in the stylesheet
+Date: 2026-09-09   Status: active
+Decision: `.roster-row` owns the row's padding, and `RosterRow` and
+`RosterSkeleton` both wear it.
+Because: the rhythm of the row is the rhythm of the product -- the unit here is
+a row you scan -- so it is set once where a theme can reach it, rather than as a
+utility on one component. It also keeps the skeleton honest: the placeholder
+rows are exactly as tall as the rows they stand in for, because they are the
+same rule.
+
 ---
 
 ## Revisions
@@ -803,6 +869,12 @@ Change: `main` after PR 6.0 is **239 suites / 4659 tests, 0 failed, 2 skipped**.
 PR 6.1 takes it to 239 / 4676.
 Because: R6 recorded 250 / 4899, measured before 6.0 deleted the journal's
 eleven suites and `SectionHeading`'s. Measured fresh, per CLAUDE.md.
+
+### R11 — revises the recorded test baseline
+Date: 2026-09-09
+Change: `main` after PR 6.1 is **239 suites / 4693 tests**. PR 6.2 takes it to
+239 / 4694.
+Because: measured fresh at the top of the PR, per CLAUDE.md.
 
 ---
 

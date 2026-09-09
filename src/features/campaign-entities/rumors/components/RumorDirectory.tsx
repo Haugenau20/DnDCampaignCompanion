@@ -6,13 +6,12 @@ import { useNPCs } from '../../npcs/context/NPCContext';
 import { useLocations } from '../../locations/context/LocationContext';
 import { resolveLocationName } from '../../locations/utils/location-display';
 import { useAuth } from 'features/user-management';
-import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import RumorBatchActions from './RumorBatchActions';
 import { useNavigation } from 'shared/hooks/useNavigation';
 import clsx from 'clsx';
-import { HelpCircle, RotateCw, Users, MapPin, Scroll } from 'lucide-react';
+import { Users, MapPin, Scroll, Plus } from 'lucide-react';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -22,6 +21,8 @@ import {
   RosterField,
   type RosterSegment,
   type RosterFilterOption,
+  RosterSkeleton,
+  RosterEmpty,
 } from 'core/components/Roster';
 
 interface RumorDirectoryProps {
@@ -216,16 +217,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   };
 
   if (isLoading) {
-    return (
-      <Card>
-        <Card.Content>
-          <div className="flex justify-center items-center py-8">
-            <RotateCw className="w-6 h-6 animate-spin primary mr-3" />
-            <Typography>Loading rumors...</Typography>
-          </div>
-        </Card.Content>
-      </Card>
-    );
+    return <RosterSkeleton label="Loading rumors" />;
   }
 
   const groups = Object.entries(groupedRumors);
@@ -499,20 +491,24 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
             </RosterGroup>
           );
         })
+      ) : initialRumors.length > 0 ? (
+        <RosterEmpty
+          title="No rumours match these filters"
+          message="Try a different search term, or clear the filters to see everything the party has heard."
+        />
       ) : (
-        <Card>
-          <Card.Content className="text-center py-8">
-            <HelpCircle className="w-12 h-12 mx-auto typography-secondary mb-4" />
-            <Typography variant="h3" className="mb-2">
-              No Rumors Found
-            </Typography>
-            <Typography color="secondary">
-              {searchQuery || statusFilter !== 'all' || sourceFilter !== 'all'
-                ? 'Try adjusting your search criteria or filters'
-                : 'There are no rumors to display. Add your first rumor to get started.'}
-            </Typography>
-          </Card.Content>
-        </Card>
+        <RosterEmpty
+          title="Nothing heard yet"
+          message="Overheard in a tavern, posted on a notice board, told by someone who may be lying — record it here and mark it confirmed when you find out."
+          action={
+            <Button
+              onClick={() => navigateToPage('/rumors/create')}
+              startIcon={<Plus className="w-4 h-4" />}
+            >
+              Add the first rumour
+            </Button>
+          }
+        />
       )}
     </div>
   );
