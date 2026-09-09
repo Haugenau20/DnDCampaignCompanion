@@ -1,5 +1,5 @@
 // src/pages/npcs/NPCDetailPage.tsx
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
@@ -7,10 +7,12 @@ import EntitySigil from 'core/components/EntitySigil';
 import { RosterField } from 'core/components/Roster';
 import {
   useNPCData,
+  useNPCs,
   useQuests,
   useLocations,
   resolveLocationName,
 } from 'features/campaign-entities';
+import InlineEditor from './InlineEditor';
 import AttributionInfo from 'shared/components/AttributionInfo';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import { usePageGate, GatedContent } from 'shared/components/gated';
@@ -84,6 +86,55 @@ const NPCDetailPage: React.FC = () => {
   const { npcs, loading, error, refreshNPCs } = useNPCData();
   const { getQuestById } = useQuests();
   const { locations } = useLocations();
+  // Writes go through the context; reads stay on this page's own store. The
+  // context's `error` folds read and write failures into one value, and routing
+  // a failed save into the page-level gate would blank the whole page instead
+  // of saying so beside the field the user was typing in.
+  const { updateNPC, updateNPCNote } = useNPCs();
+
+  const [editing, setEditing] = useState<'description' | 'note' | null>(null);
+  const [savedField, setSavedField] = useState<'description' | 'note' | null>(
+    null
+  );
+  const descriptionButton = useRef<HTMLButtonElement>(null);
+  const addNoteButton = useRef<HTMLButtonElement>(null);
+  const [pendingFocus, setPendingFocus] = useState<
+    'description' | 'note' | null
+  >(null);
+
+  /**
+   * Return focus once the trigger exists again.
+   *
+   * Closing an editor unmounts it and re-mounts the button that opened it, so
+   * the button cannot be focused from inside the editor -- at that moment its
+   * ref is still null. This effect runs after the commit, when the control is
+   * back in the document, which is the only point where the keyboard can be
+   * given its place back.
+   */
+  useEffect(() => {
+    if (!pendingFocus) {
+      return;
+    }
+    const target =
+      pendingFocus === 'description' ? descriptionButton : addNoteButton;
+    target.current?.focus();
+    setPendingFocus(null);
+  }, [pendingFocus]);
+
+  const closeEditor = (field: 'description' | 'note') => {
+    setEditing(null);
+    setPendingFocus(field);
+  };
+
+  // The value changing on screen is the real confirmation; this is the word
+  // that goes with it, for anyone who cannot see the change happen.
+  useEffect(() => {
+    if (!savedField) {
+      return;
+    }
+    const timer = setTimeout(() => setSavedField(null), 4000);
+    return () => clearTimeout(timer);
+  }, [savedField]);
 
   const npc = npcs.find((candidate) => candidate.id === npcId);
 
@@ -120,6 +171,45 @@ const NPCDetailPage: React.FC = () => {
       )
     : undefined;
 
+  /**
+   * Both writes end by re-reading this page's own store rather than patching
+   * state locally. That is what makes the page show what was *written* instead
+   * of what was typed: if another player changed the same record first, the
+   * refetch is where that becomes visible. `NPCContext` refreshes its own copy
+   * too, but that copy is not the one this page renders.
+   */
+  const saveDescription = async (text: string) => {
+    if (!npc) {
+      return;
+    }
+    await updateNPC({ ...npc, description: text });
+    await refreshNPCs();
+  };
+
+  const addNote = async (text: string) => {
+    if (!npc) {
+      return;
+    }
+    await updateNPCNote(npc.id, {
+      // The shape the create and edit forms already write. `formatNoteDate`
+      // renders it; nothing here invents an author (NPCNote has none).
+      date: new Date().toISOString().split('T')[0],
+      text,
+    });
+    await refreshNPCs();
+  };
+
+  /** The word that accompanies a change the reader may not have seen happen. */
+  const savedNotice = (field: 'description' | 'note') => (
+    <span role="status" aria-live="polite">
+      {savedField === field && (
+        <Typography variant="body-sm" color="secondary">
+          Saved
+        </Typography>
+      )}
+    </span>
+  );
+
   return (
     <PageShell
       title={
@@ -146,6 +236,12 @@ const NPCDetailPage: React.FC = () => {
         gate.canAct &&
         npc && (
           <Button
+            // While an editor is open the accent belongs to the save, because
+            // the accent is earned by the action being taken and there is only
+            // ever one of those. Leaving both filled would put two primaries on
+            // one page and make "go and change everything" compete with "keep
+            // the sentence I just typed".
+            variant={editing ? 'outline' : 'primary'}
             onClick={() => navigateToPage(`/npcs/edit/${npc.id}`)}
             startIcon={<Pencil className="w-4 h-4" />}
           >
@@ -169,11 +265,47 @@ const NPCDetailPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6">
             {/* The record itself, on the page's own surface. */}
             <article className="card rounded-lg p-6 flex flex-col gap-6 h-fit">
-              <RosterField label="Description" emptyText="Nothing written yet">
-                {npc.description ? (
-                  <Typography>{npc.description}</Typography>
-                ) : undefined}
-              </RosterField>
+              {editing === 'description' ? (
+                <InlineEditor
+                  label="Description"
+                  helperText="A sentence or two. The full record is behind Edit NPC."
+                  initialValue={npc.description ?? ''}
+                  submitLabel="Save description"
+                  onSubmit={saveDescription}
+                  onSaved={() => {
+                    closeEditor('description');
+                    setSavedField('description');
+                  }}
+                  onCancel={() => closeEditor('description')}
+                />
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <RosterField
+                    label="Description"
+                    emptyText="Nothing written yet"
+                  >
+                    {npc.description ? (
+                      <Typography>{npc.description}</Typography>
+                    ) : undefined}
+                  </RosterField>
+                  {gate.canAct && (
+                    <div className="flex items-center gap-3">
+                      {/* Quiet on purpose: the page's one accent is its
+                          primary action, and an edit affordance beside every
+                          field would spend it four times over. */}
+                      <Button
+                        ref={descriptionButton}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditing('description')}
+                      >
+                        {npc.description ? 'Edit description' : 'Add a description'}
+                      </Button>
+                      {savedNotice('description')}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <RosterField label="Appearance" emptyText="Not described yet">
                 {npc.appearance ? (
@@ -219,6 +351,36 @@ const NPCDetailPage: React.FC = () => {
                   </div>
                 ) : undefined}
               </RosterField>
+
+              {editing === 'note' ? (
+                <InlineEditor
+                  label="New note"
+                  helperText="Dated today. Notes are added, never edited or removed."
+                  submitLabel="Add note"
+                  placeholder="What happened?"
+                  rows={3}
+                  onSubmit={addNote}
+                  onSaved={() => {
+                    closeEditor('note');
+                    setSavedField('note');
+                  }}
+                  onCancel={() => closeEditor('note')}
+                />
+              ) : (
+                gate.canAct && (
+                  <div className="flex items-center gap-3">
+                    <Button
+                      ref={addNoteButton}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditing('note')}
+                    >
+                      Add note
+                    </Button>
+                    {savedNotice('note')}
+                  </div>
+                )
+              )}
             </article>
 
             {/* Standing facts and relations, on the quieter surface. */}

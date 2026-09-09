@@ -859,6 +859,39 @@ sit inside the `h1` beside the name. `EntitySigil` is `aria-hidden` by design,
 so the heading's accessible name is still "Gandalf" and not "G Gandalf" --
 asserted in the page's tests.
 
+### D63 — A write that never settles is its own state, and says so
+Date: 2026-09-09   Status: active
+Decision: an inline save has four states, not three: `saving`, then `slow`
+after eight seconds, then `saved` or `failed`. The `slow` state claims neither
+outcome. It says "Still saving. Your text is safe, and the change will land
+when the connection returns", keeps every typed character, and re-enables
+Cancel so the user is not trapped.
+Because: found by blocking the emulator's transport and trying to save.
+**Firestore does not reject a write when the connection is gone** -- it queues
+it, and the promise simply never settles. The editor sat on "Saving..."
+indefinitely, which is exactly the failure 07-2 forbids ("never a spinner that
+leaves you guessing whether it took"), only spelled in words rather than drawn
+as a spinner. Words do not make an unresolved state honest.
+The tempting fix -- time out and say "Not saved" -- is the same lie as claiming
+success, pointed the other way: the queued write may well land the moment the
+connection returns, and telling someone their sentence was lost when it was not
+will cost them the sentence a second time when they retype it. "We do not know
+yet" is the true state, so it is the one the user is given.
+Cost: one more state to hold, and an eight-second timer. Cheap next to the
+alternative, which is a user staring at a word that stopped being true.
+
+### D64 — The accent follows the action being taken
+Date: 2026-09-09   Status: active
+Decision: while an inline editor is open, the page's header action (`Edit NPC`)
+drops from filled to outline, so the save is the only accent on the page.
+Because: the design language gives a page one accent, earned by action. Opening
+an editor makes the save the action, and leaving both filled put two primaries
+on screen -- "go and change everything" competing with "keep the sentence I
+just typed", at the exact moment the second matters more. 7.1's test already
+pinned "exactly one accented action"; without this the invariant would have
+been broken silently by 7.2 rather than deliberately. It is now asserted in
+both states.
+
 ---
 
 ## Revisions
