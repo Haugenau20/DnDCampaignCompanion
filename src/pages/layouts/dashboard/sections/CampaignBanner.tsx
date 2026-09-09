@@ -2,7 +2,6 @@
 import React from 'react';
 import clsx from 'clsx';
 import Typography from 'core/components/Typography';
-import EntitySigil from 'core/components/EntitySigil';
 import { useCampaignInfo } from '../../../layouts/common/hooks/useCampaignInfo';
 
 interface CampaignBannerProps {
@@ -38,12 +37,28 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ action, chapterCount })
   // Cancels both the page container's padding and `main`'s, so the band meets
   // the chrome with no seam of page colour between them. Measured, not guessed:
   // main contributes 16px and the container 8px (16px at sm).
-  const bandFrame =
-    '-mx-6 sm:-mx-8 -mt-8 mb-8 px-6 sm:px-8 py-8 sm:py-10 hero-band';
+  // The band bleeds to the viewport (see `.hero-band`); only the vertical
+  // cancel is Tailwind's job.
+  // `-mt-4` cancels `main`'s own 16px padding and nothing else: the band now
+  // renders above the page column, so the column's `py-4` is no longer above it.
+  // The column's top padding supplies half the gap beneath, hence `mb-4`.
+  // `-m*-4` cancels `main`'s 16px padding on three sides -- exact, and immune
+  // to the scrollbar in a way `50vw` is not. The band renders above the page
+  // column now, so nothing else insets it.
+  const bandFrame = '-mx-4 -mt-4 mb-4 py-8 sm:py-10 hero-band';
+
+  // Re-creates `main` > `max-w-7xl` > `container` so the band's content sits in
+  // exactly the same column as the page content below it. Mirroring the chain
+  // is exact by construction; computing the inset from viewport arithmetic is
+  // not, because percentages resolve against the containing block.
+  const bandInner = 'px-4';
+  const bandColumn = 'max-w-7xl mx-auto';
+  const bandGutter = 'container mx-auto px-2 sm:px-4';
 
   if (!hasGroup || !hasCampaign) {
     return (
-      <div className={clsx(bandFrame, 'text-center')} data-testid="campaign-banner">
+      <div className={bandFrame} data-testid="campaign-banner">
+       <div className={bandInner}><div className={bandColumn}><div className={clsx(bandGutter, 'text-center')}>
         <Typography variant="h2" className="mb-2">
           Welcome to D&D Campaign Companion
         </Typography>
@@ -52,6 +67,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ action, chapterCount })
             ? 'Select or create a group to get started'
             : 'Select or create a campaign to begin your adventure'}
         </Typography>
+       </div></div></div>
       </div>
     );
   }
@@ -63,21 +79,19 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ action, chapterCount })
 
   return (
     <div className={bandFrame} data-testid="campaign-banner">
+     <div className={bandInner}><div className={bandColumn}><div className={bandGutter}>
       {/* Stacked until `sm`. Side by side, the `shrink-0` toggle claims ~180px of
           a 320px viewport and squeezes the title column to almost nothing, at
           which point `break-words` sets the campaign name one character per
           line. The toggle drops below the identity block instead. */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
         <div className="flex items-start gap-4 sm:gap-6 min-w-0">
-          {/* The image slot. Empty by design in this phase, and designed for it. */}
-          <div className="hero-slot shrink-0 hidden sm:block" data-testid="campaign-crest">
-            <EntitySigil
-              entityId={activeCampaign?.id ?? ''}
-              name={activeCampaign?.name ?? ''}
-              size={88}
-            />
-          </div>
-
+          {/* No crest here. A large monogram beside the campaign name repeated
+              the first letter of the title next to the title, which is the
+              redundant encoding the design language warns about -- and it made
+              the band's left edge shout before the name did. The party's own
+              crest lives in the aside, where it identifies the group rather
+              than restating the heading. */}
           <div className="flex flex-col gap-2 min-w-0">
             {activeGroup?.name && (
               <Typography
@@ -122,6 +136,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ action, chapterCount })
 
         {action && <div className="shrink-0 self-start">{action}</div>}
       </div>
+     </div></div></div>
     </div>
   );
 };

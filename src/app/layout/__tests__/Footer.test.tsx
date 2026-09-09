@@ -79,9 +79,25 @@ describe("Footer", () => {
       ).toBeInTheDocument();
     });
 
-    test("reserves space at the bottom so the floating create button cannot cover the links", () => {
-      render(<Footer />);
-      expect(screen.getByRole("contentinfo")).toHaveClass("pb-20");
+    test("reserves space beside the links so the floating create button cannot cover them", () => {
+      // The reserve used to be `pb-20` on the footer -- 80px of bottom padding
+      // for a button that only ever overlaps the bottom *right*. It is now a
+      // right-hand gutter on the row itself, which costs no height. The button
+      // is `fixed right-6 bottom-6` and 48px square, so it occupies the last
+      // 72px; `pr-20` (80px) clears it.
+      const { container } = render(<Footer />);
+      const row = container.querySelector("footer > div");
+      expect(row).toHaveClass("sm:pr-20");
+      expect(screen.getByRole("contentinfo")).not.toHaveClass("pb-20");
+    });
+
+    test("stacks left-aligned below sm, so the last line does not run under the button", () => {
+      const { container } = render(<Footer />);
+      const row = container.querySelector("footer > div");
+      // Column by default, row only from `sm` -- a right-aligned link row at
+      // phone widths would wrap straight into the button's corner.
+      expect(row).toHaveClass("flex-col");
+      expect(row).toHaveClass("sm:flex-row");
     });
   });
 

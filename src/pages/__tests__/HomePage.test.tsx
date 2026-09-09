@@ -87,6 +87,19 @@ jest.mock("shared/utils/attribution-utils", () => ({
 // Both layouts render the `viewToggle` HomePage hands them — it lives in the page
 // header rather than on a navigation row of its own, so the mocks have to render it
 // for the switch to be reachable at all.
+// The hero band is HomePage's own child now that it renders above the page
+// column (it bleeds to the viewport, and that column clips). It reaches for
+// campaign context of its own, which these tests -- about layout switching --
+// have no reason to provide.
+jest.mock("pages/layouts/dashboard/sections/CampaignBanner", () => ({
+  __esModule: true,
+  default: (props: { chapterCount?: number }) => (
+    <div data-testid="campaign-banner" data-chapter-count={props.chapterCount}>
+      CampaignBanner
+    </div>
+  ),
+}));
+
 jest.mock("pages/layouts/dashboard/DashboardLayout", () => ({
   __esModule: true,
   default: (props: any) => (
@@ -428,6 +441,34 @@ describe("HomePage", () => {
   // -------------------------------------------------------------------------
   // Layout toggle
   // -------------------------------------------------------------------------
+  describe("hero band", () => {
+    // These moved here from DashboardLayout when the band was lifted above the
+    // page column, which it has to be: it bleeds to the viewport edges and that
+    // column sets `overflow-x-hidden`.
+    it("renders the hero band on the dashboard view", () => {
+      renderPage();
+      expect(screen.getByTestId("campaign-banner")).toBeInTheDocument();
+    });
+
+    it("passes the chapter count to the band's meta line", () => {
+      renderPage();
+      expect(screen.getByTestId("campaign-banner")).toHaveAttribute(
+        "data-chapter-count",
+        String(mockChapters.length)
+      );
+    });
+
+    it("renders the band outside the clipping page column", () => {
+      // A bleed inside a clipping ancestor is cut back to that ancestor's
+      // width, which is what made the band render as a floating card.
+      const { container } = renderPage();
+      const band = screen.getByTestId("campaign-banner");
+      const clipped = container.querySelector(".overflow-x-hidden");
+      expect(clipped).toBeInTheDocument();
+      expect(clipped?.contains(band)).toBe(false);
+    });
+  });
+
   describe("layout toggle", () => {
     it("switches to JournalLayout when Journal is clicked", () => {
       renderPage();
