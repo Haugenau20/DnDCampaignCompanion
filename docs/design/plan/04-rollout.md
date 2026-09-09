@@ -91,14 +91,18 @@ Scope is **NPCs and Locations only** — the other entities stay row-only until
 the pattern proves itself. The pages are complete and semi-working (D43):
 description edits in place, notes added without navigating away.
 
-Three PRs: the route and its read view; the in-place editing; the image slot
-with its designed empty state. The **upload path is a fourth PR and is
-optional** — the slot must look intentional empty, cropped to fill with no
-focal point (D44).
+Four PRs. `handoff/07-0` runs first and **deletes** `NPCCard`, `LocationCard`
+and `RumorCard`: this paragraph used to say Phase 7 would *migrate* them, which
+was measured before Phase 6 and is wrong (R13). All three were stranded when the
+directories moved to `Roster` rows — 1,341 lines exported from the barrel and
+rendered by nothing. `NoteCard` is live and stays. No `[data-theme=…]` patch
+survives in any of them either; the 21 left in the tree are medieval ornament,
+scrollbars, a dialog shadow, a card hover and reader typography.
 
-Also migrates `NPCCard`, `LocationCard`, `RumorCard`, `NoteCard` where they
-name colours directly, and drops the `[data-theme=…]` patches that survive
-there.
+Then `handoff/07-1` … `07-3`: the route and its read view; the in-place editing;
+the image slot with its designed empty state. The **upload path is a fifth PR
+and is optional** — the slot must look intentional empty, cropped to fill with
+no focal point (D44).
 
 ### Phase 8 — Forms & fields
 

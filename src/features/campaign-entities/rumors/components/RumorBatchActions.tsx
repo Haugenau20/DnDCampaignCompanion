@@ -174,7 +174,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => handleBatchStatusUpdate('confirmed')}
-            startIcon={<CheckCircle size={16} className="rumor-status-confirmed" />}
+            startIcon={<CheckCircle size={16} className="status-completed" />}
             disabled={isProcessing}
           >
             Mark Confirmed
@@ -184,7 +184,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => handleBatchStatusUpdate('unconfirmed')}
-            startIcon={<HelpCircle size={16} className="rumor-status-unconfirmed" />}
+            startIcon={<HelpCircle size={16} className="status-unknown" />}
             disabled={isProcessing}
           >
             Mark Unconfirmed
@@ -194,7 +194,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => handleBatchStatusUpdate('false')}
-            startIcon={<XCircle size={16} className="rumor-status-false" />}
+            startIcon={<XCircle size={16} className="status-failed" />}
             disabled={isProcessing}
           >
             Mark False
@@ -224,7 +224,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             variant="ghost"
             size="sm"
             onClick={handleBatchDelete}
-            startIcon={<Trash size={16} className="rumor-status-false" />}
+            startIcon={<Trash size={16} className="status-failed" />}
             disabled={isProcessing}
           >
             Delete

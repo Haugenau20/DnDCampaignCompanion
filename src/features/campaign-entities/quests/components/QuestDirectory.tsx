@@ -23,6 +23,8 @@ import {
   type RosterFilterOption,
   RosterSkeleton,
   RosterEmpty,
+  RosterStatus,
+  type RosterStatusTone,
 } from 'core/components/Roster';
 
 interface QuestDirectoryProps {
@@ -50,6 +52,13 @@ const STATUS_GROUPS: { key: QuestStatus; title: string }[] = [
 ];
 
 /** Segment colour per status, reusing the same tokens as the row chip and bar. */
+/** Quest state, in the shared status vocabulary. */
+const STATUS_TONE: Record<QuestStatus, RosterStatusTone> = {
+  active: 'active',
+  completed: 'completed',
+  failed: 'failed',
+};
+
 const STATUS_COLOR: Record<QuestStatus, string> = {
   active: 'bg-status-active',
   completed: 'bg-status-completed',
@@ -361,7 +370,10 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                                     centered={false}
                                   >
                                     <div className="flex items-start gap-2 text-left">
-                                      <MapPin size={16} className="mt-1 location-status-explored" />
+                                      {/* A bullet, not a status. This was hard-coded to the `explored` hue for
+                                          every location in the list, so it stated a status the
+                                          location may not have had. */}
+                                      <MapPin size={16} className="mt-1 typography-secondary" />
                                       <div className="flex-1">
                                         <Typography variant="body-sm" className="font-medium">
                                           {location.name}
@@ -484,16 +496,9 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                     </Typography>
                   </div>
 
-                  {/* The word carries the state, in the status hue; the dot said it twice. */}
-                  <Typography
-                    variant="body-sm"
-                    className={clsx(
-                      'hidden md:block text-sm font-semibold',
-                      `quest-status-${quest.status}`
-                    )}
-                  >
+                  <RosterStatus tone={STATUS_TONE[quest.status]}>
                     {quest.status.charAt(0).toUpperCase() + quest.status.slice(1)}
-                  </Typography>
+                  </RosterStatus>
 
                   {/* Objective progress -- the detail that makes quests more than a
                       plain roster entry, so it stays visible on the collapsed row. */}

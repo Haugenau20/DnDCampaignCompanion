@@ -7,7 +7,13 @@ Handoffs are written **as a phase starts**, not up front — the same reason
 `00-transition-plan.md` deferred the 2a/3a choice. A handoff written three
 phases early is a guess with a checklist attached.
 
-Currently written: Phase 6 (`06-0` … `06-3`).
+Currently written: Phase 6 (`06-0` … `06-3`, done) and Phase 7
+(`07-0` … `07-3`).
+
+Phase 7's optional fourth PR — the image **upload** path — is deliberately not
+written. D6 keeps bitmaps out of this project entirely, so it is a handoff for
+work that may never be scheduled, and writing it now would be the guess this
+section warns about.
 
 ## Contract every handoff follows
 

@@ -717,6 +717,71 @@ utility on one component. It also keeps the skeleton honest: the placeholder
 rows are exactly as tall as the rows they stand in for, because they are the
 same rule.
 
+### D56 — Dark's `completed` and `failed` become readable words
+Date: 2026-09-09   Status: active   (closes the ratchet D48 opened)
+Decision: dark `status.completed` `#12873d` -> `#3FB950` (3.05:1 -> 5.90:1 on
+its card) and `status.failed` `#c52020` -> `#F87171` (2.41:1 -> 5.08:1). Their
+ratchet entries in `token-contrast.test.ts` are gone; light and dark now both
+answer the uniform 4.5. Medieval's `unknown` keeps its ratchet.
+Because: D48 recorded these as failures and ratcheted them because Phase 11
+owned the values. Phase 6's own gate is stricter -- "every status hue at AA
+against the surface its text sits on, both themes" -- and it is stricter for a
+reason this PR made concrete: after Phase 6 the word is the *only* encoding a
+status has, so a status hue below AA is a status nobody can read. Deferring to
+Phase 11 would have shipped that for however long Phase 11 takes.
+Medieval stays ratcheted deliberately. It is deleted in Phase 11 (D40), so
+raising its value is work on a theme with a scheduled end; the ratchet only has
+to stop it getting worse first.
+Values chosen with margin rather than at the bar -- 5.08 and 5.90 against a 4.5
+requirement -- so a later surface tweak does not silently push them under.
+Both are conventional dark-theme status hues, which matters because the theme
+is unmigrated and these are the first values in it chosen deliberately.
+
+### D57 — One status treatment, in one component
+Date: 2026-09-09   Status: active
+Decision: `RosterStatus` renders every status in every collection: same weight,
+same placement, same vocabulary of hues. The four parallel class families
+(`quest-status-*`, `rumor-status-*`, `npc-status-*`, `location-status-*`) stop
+being consumed by the directories, though the CSS stays until Phase 7 migrates
+the cards that still use it.
+Because: four families resolving to the same five tokens is four chances to
+drift, and they had already taken one -- `location-status-explored` and
+`-visited` were swapped against their own status bar for as long as a dot was
+there to cover it (D47). A confirmed rumour and a completed quest are the same
+kind of fact, one thing the party now knows, and should look like it; that is
+true by construction when they pass the same tone rather than by coincidence
+when two class families happen to name the same token.
+`muted` is a tone in the set, not an absence of one. A location that is merely
+`known` is the least-advanced point on its axis, and spending the one status hue
+on "nothing has happened here yet" would say the opposite of what it means -- so
+it keeps the treatment and drops only the hue.
+Scope note: the handoff listed quests and rumours. NPCs and Locations were
+migrated too, because leaving two of four directories on the old families would
+have recreated the drift this decision exists to end.
+
+### D58 — Selection paints from the row's own surface
+Date: 2026-09-09   Status: active
+Decision: a row ticked for a batch action takes `surface.card.selected`. Not the
+accent, not a status hue.
+Because: selection is feedback about what you are *about to act on* -- true for
+the length of one interaction -- while a status is a property of the record that
+outlives it. A status hue here would also mean a selected rumour and a confirmed
+one shared a colour, on the one screen where you are about to change exactly that
+field. Until now a selected row had no paint at all; only its checkbox changed.
+
+### D59 — Two colour-only encodings removed from expanded rows
+Date: 2026-09-09   Status: active
+Decision: in a quest's linked-locations list the `MapPin` becomes muted; in a
+location's linked-quests list the `Scroll` becomes muted and the quest's status
+is stated as a word beside its title.
+Because: the first was hard-coded to `location-status-explored` for *every*
+location in the list, so it asserted a status the location may not have had --
+decoration wearing the status hue, and sometimes lying. The second carried the
+quest's real status by hue alone with no legend anywhere on the page: unreadable
+for anyone who cannot separate the hues, and undecodable for everyone else.
+Design language section 2 forbids both. The second keeps its information by
+stating it, which is strictly better than the hue it replaced.
+
 ---
 
 ## Revisions
@@ -876,6 +941,39 @@ Change: `main` after PR 6.1 is **239 suites / 4693 tests**. PR 6.2 takes it to
 239 / 4694.
 Because: measured fresh at the top of the PR, per CLAUDE.md.
 
+### R12 — revises D48's ratchet, and closes Phase 6
+Date: 2026-09-09
+Change: the dark entries in the status-contrast ratchet are removed, having been
+fixed rather than tolerated (D56). Only `medieval.unknown` remains.
+Because: D48 wrote "a ratchet is not a pass" and named `dark.status.failed` at
+2.41:1 as unreadable. Phase 6 made that concrete by removing the last redundant
+encoding, so the PR that finished the phase is the one that had to answer it.
+Cost: dark's status hues are now two deliberately chosen values in an otherwise
+unmigrated theme. Phase 11 should treat them as already done rather than
+re-tuning them from scratch.
+
+### R13 — revises 04-rollout's Phase 7 scope: the cards are dead, not unmigrated
+Date: 2026-09-09
+Change: Phase 7 **deletes** `NPCCard`, `LocationCard` and `RumorCard` rather
+than migrating them, and drops no `[data-theme=…]` patches, because there are
+none to drop.
+Because: both halves of that sentence were written against the tree before
+Phase 6. Measured now: the three cards are exported from
+`features/campaign-entities/index.ts` and rendered by **nothing** — 1,341 lines
+of component plus roughly 1,300 lines of test, reachable only from their own
+test files. They were stranded when the directories moved to `Roster` rows.
+`NoteCard` is the exception and is live, rendered by `NotesList`.
+The 21 `[data-theme=…]` rules that remain are medieval ornament (10),
+scrollbars (4), a dark dialog shadow, a light card hover and book/reader
+typography (4). Not one is a card colour patch.
+Found by grepping for the identifier rather than for `<NPCCard`, which is the
+lesson CLAUDE.md already records about this codebase: a barrel export is a
+reference that a JSX-shaped grep does not see.
+Cost: none, and a saving. It also gives Phase 7 a genuine ordering: `07-0`
+deletes them, having first been read, because they are the closest thing the
+repo has to a specification for what an entity page shows. That field list is
+copied into `07-1` so it does not depend on the files surviving.
+
 ---
 
 ## Open questions
@@ -895,6 +993,13 @@ Answer as the work reaches them; move to a decision when settled.
   defines the token, as deliberate cleanup.
 - **Q10** — Which CommonMark renderer, and does it run at write time or read
   time? First PR of Phase 9; the reading design depends on the answer.
+- **Q12** — Does an entity keep real edit history? `ContentAttribution` stores
+  created and last-modified and nothing between, so the "timeline of edits"
+  Phase 7 was scoped around cannot exist without a data change. Answer before
+  anything promises a timeline.
+- **Q13** — Can a note be edited or deleted after it is written? 7.2 adds
+  notes only. Changing a shared record's history is a decision about the
+  record, not about the page.
 
 
 Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32,

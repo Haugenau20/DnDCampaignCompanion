@@ -10,7 +10,6 @@ import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import RumorBatchActions from './RumorBatchActions';
 import { useNavigation } from 'shared/hooks/useNavigation';
-import clsx from 'clsx';
 import { Users, MapPin, Scroll, Plus } from 'lucide-react';
 import {
   RosterStatusBar,
@@ -23,6 +22,8 @@ import {
   type RosterFilterOption,
   RosterSkeleton,
   RosterEmpty,
+  RosterStatus,
+  type RosterStatusTone,
 } from 'core/components/Roster';
 
 interface RumorDirectoryProps {
@@ -44,10 +45,17 @@ const SOURCE_FILTERS: RosterFilterOption[] = [
 ];
 
 /** Status as a labelled chip. A bare colour stripe needed a legend nobody had. */
-const STATUS_CLASS: Record<RumorStatus, string> = {
-  confirmed: 'rumor-status-confirmed',
-  unconfirmed: 'rumor-status-unconfirmed',
-  false: 'rumor-status-false',
+/**
+ * Rumour state, in the shared status vocabulary.
+ *
+ * A confirmed rumour and a completed quest are the same kind of fact -- one
+ * thing the party now knows -- so they take the same hue rather than each
+ * directory naming its own.
+ */
+const STATUS_TONE: Record<RumorStatus, RosterStatusTone> = {
+  confirmed: 'completed',
+  unconfirmed: 'unknown',
+  false: 'failed',
 };
 
 const formatStatus = (status: RumorStatus): string =>
@@ -293,6 +301,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                     expanded={isExpanded}
                     toggleLabel={rumor.title}
                     onToggle={() => setExpandedRumorId(isExpanded ? null : rumor.id)}
+                    selected={selectedRumors.has(rumor.id)}
                     leadingControl={
                       selectionMode ? (
                         <input
@@ -450,16 +459,9 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                       </Typography>
                     </div>
 
-                    {/* The word carries the state, in the status hue; the dot said it twice. */}
-                    <Typography
-                      variant="body-sm"
-                      className={clsx(
-                        'hidden md:block text-sm font-semibold',
-                        STATUS_CLASS[rumor.status]
-                      )}
-                    >
+                    <RosterStatus tone={STATUS_TONE[rumor.status]}>
                       {formatStatus(rumor.status)}
-                    </Typography>
+                    </RosterStatus>
 
                     {/* Source type, stated once and plainly -- it was a filled chip
                         saying what a plain label says. */}

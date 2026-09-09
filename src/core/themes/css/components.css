@@ -712,18 +712,6 @@
     color: var(--status-failed);
   }
 
-  .rumor-status-border-confirmed {
-    border-color: var(--status-completed);
-  }
-
-  .rumor-status-border-unconfirmed {
-    border-color: var(--status-unknown);
-  }
-
-  .rumor-status-border-false {
-    border-color: var(--status-failed);
-  }
-
   /* ====== HERO BAND ====== */
   /*
     The campaign's identity, on the band surface. Its ink comes from the band
@@ -845,6 +833,19 @@
   */
   .roster-group-open:hover {
     color: var(--surface-page-on);
+  }
+
+  /*
+    A row you have ticked for a batch action, painted from the card surface's own
+    selected role.
+
+    Not the accent and not a status hue: selection says "this is what you are
+    about to act on", which is feedback about the moment, while a status is a
+    property of the record that outlives it. Using a status hue here would also
+    mean a selected rumour and a confirmed one shared a colour.
+  */
+  .roster-row-selected {
+    background-color: var(--surface-card-selected);
   }
 
   .roster-filter {

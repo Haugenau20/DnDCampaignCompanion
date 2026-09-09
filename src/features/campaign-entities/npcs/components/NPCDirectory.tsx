@@ -6,7 +6,6 @@ import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import { Plus } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
-import clsx from 'clsx';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -17,6 +16,8 @@ import {
   type RosterSegment,
   RosterSkeleton,
   RosterEmpty,
+  RosterStatus,
+  type RosterStatusTone,
 } from 'core/components/Roster';
 
 interface NPCDirectoryProps {
@@ -39,6 +40,14 @@ const RELATIONSHIP_FILTERS = [
 ];
 
 /** Relationship as a labelled chip. A bare colour stripe needed a legend nobody had. */
+/** NPC state, in the shared status vocabulary. */
+const STATUS_TONE: Record<string, RosterStatusTone> = {
+  alive: 'completed',
+  deceased: 'failed',
+  missing: 'unknown',
+  unknown: 'unknown',
+};
+
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   npcs: initialNpcs,
   isLoading = false,
@@ -309,18 +318,9 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                       )}
                     </div>
 
-                    {/* The word carries the state, in the status hue. The dot beside it
-                        said the same thing a second time -- and a dot is the encoding
-                        that fails first, being the one nobody can read. */}
-                    <Typography
-                      variant="body-sm"
-                      className={clsx(
-                        'hidden md:block text-sm font-semibold',
-                        `npc-status-${npc.status}`
-                      )}
-                    >
+                    <RosterStatus tone={STATUS_TONE[npc.status] ?? 'unknown'}>
                       {npc.status.charAt(0).toUpperCase() + npc.status.slice(1)}
-                    </Typography>
+                    </RosterStatus>
 
                     {/* Disposition, stated once and plainly. It was a filled chip in the
                         status hue -- so a row showed a green "Alive" beside a green

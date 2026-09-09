@@ -68,8 +68,8 @@ export const darkTheme: Theme = {
     status: {
       general: '#8AB4F8', // Soft blue for general status
       active: '#8AB4F8', // Soft blue for active status
-      completed: '#12873d', // Deep green for completed status
-      failed: '#c52020', // Bright red for failed status
+      completed: '#3FB950', // Green for completed status, light enough to read as a word (D56)
+      failed: '#F87171', // Red for failed status, light enough to read as a word (D56)
       unknown: '#deaf21', // Yellowish-gold for unknown status
       on: '#121212', // Near black for status text on light backgrounds
     },
