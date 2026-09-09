@@ -834,6 +834,31 @@ inconsistency. Accepted because D41 already framed this as a trial ("until the
 pattern proves itself") and one entity is a better trial than two. 7.2 and 7.3
 narrow to the NPC page with it.
 
+### D62 — The page speaks the row's vocabulary, not a page dialect
+Date: 2026-09-09   Status: active
+Decision: the NPC page is assembled from what the directories already use --
+`RosterField` for every labelled value, `EntitySigil` for identity,
+`resolveLocationName` for the location, and a status stated as a word. It
+introduces no new field component, no new token and no new CSS.
+Because: the page and the row show the same record. If they disagreed about
+what a label looks like, or about how an unresolved location reads, the product
+would have two dialects for one entity and the page would feel like a different
+application. Two concrete places this mattered:
+- `resolveLocationName` carries #1412's deliberate behaviour -- a dangling
+  reference stays visible as itself rather than being prettified into a
+  location that does not exist. Reimplementing that on the page would have
+  forked a decision that took a bug to settle. It is now exported from
+  `campaign-entities`' barrel instead, because `pages/` may not reach into a
+  feature's internals. The seeded data proves the point: Gandalf's `location`
+  is the slug `mines-of-moria`, which the page must render as "Mines of Moria".
+- `RosterField` already answers "what does an empty value look like" -- it says
+  so in italics rather than hiding the field. On a page where most of the six
+  new fields will be empty for most campaigns, that answer is the design.
+Cost: one prop widened. `PageShell.title` takes a `ReactNode` so the sigil can
+sit inside the `h1` beside the name. `EntitySigil` is `aria-hidden` by design,
+so the heading's accessible name is still "Gandalf" and not "G Gandalf" --
+asserted in the page's tests.
+
 ---
 
 ## Revisions
@@ -1054,6 +1079,23 @@ choice between wiring it up and retiring it is a real one: a legend is the one
 place the design language permits a hue to carry meaning alone, since the
 legend is itself the key. That makes it the natural home for the `npc-status-*`
 family rather than dead weight. Deciding needs an owner; see Q15.
+
+### R17 — revises R16: the raw ISO date is not LocationDirectory's alone
+Date: 2026-09-09
+Change: R16 named `LocationDirectory` as the place that prints a note's date
+raw. `NPCDirectory` does it too -- an expanded Gandalf row reads
+`2025-05-31T19:27:30.387Z` in exactly the same way. R16's fix is therefore
+two rows wide, not one.
+Because: seen in the browser while verifying 7.1, on the row this PR was adding
+a button to. The cause is that `NPCNote.date` has no agreed shape: the create
+form writes `YYYY-MM-DD`, the sample-data generator writes a full ISO
+timestamp, and both directories print whichever they were handed.
+The new page formats it -- a date the reader cannot read is not a date -- and
+returns anything unparseable untouched, the same principle `resolveLocationName`
+applies to a dangling location. The rows are deliberately left alone: 7.1 is
+additive and must not change what a row renders (D41), so the page and the row
+disagree about this one value until R16 is taken. That is a knowingly accepted
+inconsistency with a short life, not an oversight.
 
 ### R16 — records a defect found while verifying, out of scope to fix here
 Date: 2026-09-09

@@ -30,6 +30,10 @@ export { default as LocationDirectory } from './locations/components/LocationDir
 export { default as LocationEditForm } from './locations/components/LocationEditForm';
 // Location types
 export type { Location, LocationType, LocationStatus, LocationNote, LocationContextState, LocationContextValue } from './locations/types';
+// The shared answer to "what location is this entity at?" -- see #1412 for why
+// an unresolved reference is shown as itself rather than prettified.
+export { resolveLocationName } from './locations/utils/location-display';
+export type { LocationReference } from './locations/utils/location-display';
 
 // Rumor context and hooks
 export { RumorProvider, useRumors } from './rumors/context/RumorContext';

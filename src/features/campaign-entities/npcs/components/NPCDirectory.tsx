@@ -280,7 +280,20 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                             ) : undefined}
                           </RosterField>
 
-                          <div className="flex gap-2 mt-1">
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {/* The way into the NPC's own page. It lives in the
+                                expanded content, never in the collapsed row:
+                                the collapsed row is the highest-frequency
+                                surface in the product and does not get a second
+                                control (D41). A row that is already open has
+                                said it wants more. */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigateToPage(`/npcs/${npc.id}`)}
+                            >
+                              More info
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"

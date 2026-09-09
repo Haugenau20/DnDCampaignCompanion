@@ -607,4 +607,33 @@ describe('NPCDirectory', () => {
     });
   });
 
+  describe('the way into an NPC page', () => {
+    test('offers More info only once the row is expanded', () => {
+      // The collapsed row is the highest-frequency surface in the product and
+      // does not get a second control (D41). A row that is already open has
+      // said it wants more.
+      render(<NPCDirectory npcs={[aldric]} />);
+      expect(screen.queryByText('More info')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Expand Aldric/ }));
+      expect(screen.getByText('More info')).toBeInTheDocument();
+    });
+
+    test('navigates to the NPC own page', () => {
+      render(<NPCDirectory npcs={[aldric]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Aldric/ }));
+      fireEvent.click(screen.getByText('More info'));
+      expect(mockNavigateToPage).toHaveBeenCalledWith(`/npcs/${aldric.id}`);
+    });
+
+    test('adds no accent to the row', () => {
+      // Edit is an outline and Delete a ghost; More info joins them at Edit's
+      // weight rather than introducing the row's first accent.
+      render(<NPCDirectory npcs={[aldric]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Aldric/ }));
+      const moreInfo = screen.getByText('More info').closest('button');
+      expect(moreInfo?.className).not.toMatch(/button-primary/);
+    });
+  });
+
 });
