@@ -68,7 +68,7 @@ export const lightTheme: Theme = {
       general: '#8C1D1D',
       completed: '#46663A',
       failed: '#8C1D1D',
-      unknown: '#A67C1F',
+      unknown: '#7E5E17',
       on: '#FFFFFF',
       active: '#8C1D1D',
     },

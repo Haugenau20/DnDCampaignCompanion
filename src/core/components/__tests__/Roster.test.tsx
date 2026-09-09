@@ -486,6 +486,39 @@ describe('RosterField', () => {
   });
 });
 
+describe('RosterGroup nesting', () => {
+  // The panel is the element that actually holds the rows -- selected through a
+  // child, because the group's count pill is also `bg-secondary` and matching on
+  // the class alone finds that instead.
+  const panelOf = (getByText: (t: string) => HTMLElement) =>
+    getByText('row').parentElement as HTMLElement;
+
+  test('a top-level group is a card', () => {
+    const { getByText } = render(
+      <RosterGroup title="Rivendell" count={2}>
+        <div>row</div>
+      </RosterGroup>
+    );
+    const panel = panelOf(getByText);
+    expect(panel.className).toContain('card');
+    expect(panel.className).not.toContain('bg-secondary');
+  });
+
+  test('a nested group is recessed, not a card of its own', () => {
+    // A location's sub-locations are parts of one object. Boxing them as a
+    // second card restates a containment the indentation already states.
+    const { getByText } = render(
+      <RosterGroup title="Locations in Moria" count={2} nested>
+        <div>row</div>
+      </RosterGroup>
+    );
+    const panel = panelOf(getByText);
+    expect(panel.className).toContain('bg-secondary');
+    expect(panel.className).toContain('card-border');
+    expect(panel.className.split(/\s+/)).not.toContain('card');
+  });
+});
+
 describe('RosterRow identity mark', () => {
   const renderRow = (
     props: Partial<React.ComponentProps<typeof RosterRow>> = {}

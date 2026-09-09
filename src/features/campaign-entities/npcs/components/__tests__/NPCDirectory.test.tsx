@@ -556,4 +556,39 @@ describe('NPCDirectory', () => {
       expect(screen.getByText('Mira')).toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Row anatomy — one encoding per fact
+  // -------------------------------------------------------------------------
+  describe('row anatomy', () => {
+    test('carries exactly one identity mark, derived from the id', () => {
+      render(<NPCDirectory npcs={[aldric]} />);
+      const row = within(screen.getByRole('button', { name: /Expand Aldric/ }));
+      const marks = row.getAllByTestId('entity-sigil');
+      expect(marks).toHaveLength(1);
+      expect(marks[0]).toHaveAttribute('data-sigil-index');
+      expect(marks[0]).toHaveTextContent('A');
+    });
+
+    test('states status as a word and nothing else', () => {
+      // The coloured dot beside the word encoded the same fact a second time,
+      // in the one form nobody can read.
+      render(<NPCDirectory npcs={[aldric]} />);
+      const row = screen.getByRole('button', { name: /Expand Aldric/ });
+      expect(within(row).getByText('Alive')).toBeInTheDocument();
+      expect(row.querySelectorAll('.bg-status-completed')).toHaveLength(0);
+      expect(row.querySelectorAll('.bg-status-failed')).toHaveLength(0);
+      expect(row.querySelectorAll('.bg-status-unknown')).toHaveLength(0);
+    });
+
+    test('states disposition plainly, without borrowing the status hue', () => {
+      // "Friendly" was a filled chip in the same green as "Alive", so one row
+      // showed one hue for two unrelated facts.
+      render(<NPCDirectory npcs={[aldric]} />);
+      const row = screen.getByRole('button', { name: /Expand Aldric/ });
+      expect(within(row).getByText('Friendly')).toBeInTheDocument();
+      expect(row.querySelector('.npc-relationship-friendly')).toBeNull();
+    });
+  });
+
 });

@@ -24,7 +24,7 @@ SHARED = {
                    'border': '#332C24', 'hover': 'rgba(255, 255, 255, 0.08)'},
     },
     'status': {'general': '#8C1D1D', 'completed': '#46663A', 'failed': '#8C1D1D',
-               'unknown': '#A67C1F', 'on': '#FFFFFF'},
+               'unknown': '#7E5E17', 'on': '#FFFFFF'},
     'state': {'hoverLight': '#E7E0D2', 'hoverMedium': '#DCD2BF', 'selected': '#E4DBC9'},
     'icon': {'bg': '#E7E0D2', 'border': '#C9BCA3'},
     'field': {'bg': '#FCFAF6', 'placeholder': '#8A8072', 'border': '#8B8375',

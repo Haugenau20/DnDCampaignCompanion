@@ -800,4 +800,42 @@ describe('LocationDirectory', () => {
       expect(screen.getByText('Ironhold')).toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Row anatomy — one encoding per fact
+  // -------------------------------------------------------------------------
+  describe('row anatomy', () => {
+    const city = makeLocation('loc-anatomy', 'Silverkeep', {
+      type: 'city',
+      status: 'visited',
+    });
+
+    test('carries exactly one identity mark, derived from the id', () => {
+      render(<LocationDirectory locations={[city]} />);
+      const row = within(screen.getByRole('button', { name: /Expand Silverkeep/ }));
+      const marks = row.getAllByTestId('entity-sigil');
+      expect(marks).toHaveLength(1);
+      expect(marks[0]).toHaveTextContent('S');
+    });
+
+    test('states the type once, as a word', () => {
+      // It was a chip filled from the entity palette -- the same palette the
+      // mark draws from -- plus a type-derived icon beside the name. Three
+      // encodings of one fact, two of them colour and shape.
+      render(<LocationDirectory locations={[city]} />);
+      const row = screen.getByRole('button', { name: /Expand Silverkeep/ });
+      expect(within(row).getByText('City')).toBeInTheDocument();
+      expect(row.querySelector('.location-type-city')).toBeNull();
+    });
+
+    test('states status as a word and nothing else', () => {
+      render(<LocationDirectory locations={[city]} />);
+      const row = screen.getByRole('button', { name: /Expand Silverkeep/ });
+      expect(within(row).getByText('Visited')).toBeInTheDocument();
+      expect(row.querySelectorAll('.bg-status-completed')).toHaveLength(0);
+      expect(row.querySelectorAll('.bg-status-general')).toHaveLength(0);
+      expect(row.querySelectorAll('.bg-status-unknown')).toHaveLength(0);
+    });
+  });
+
 });

@@ -38,13 +38,6 @@ const RELATIONSHIP_FILTERS = [
 ];
 
 /** Relationship as a labelled chip. A bare colour stripe needed a legend nobody had. */
-const RELATIONSHIP_CHIP: Record<string, string> = {
-  friendly: 'npc-relationship-friendly',
-  hostile: 'npc-relationship-hostile',
-  neutral: 'npc-relationship-neutral',
-  unknown: 'npc-relationship-unknown',
-};
-
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   npcs: initialNpcs,
   isLoading = false,
@@ -309,7 +302,10 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                     }
                   >
                     <div className="flex flex-col gap-0.5 min-w-0">
-                      <Typography variant="body" className="font-semibold truncate">
+                      <Typography
+                        variant="body"
+                        className="font-semibold truncate font-heading"
+                      >
                         {npc.name}
                       </Typography>
                       {npc.title && (
@@ -323,33 +319,27 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                       )}
                     </div>
 
-                    {/* Status: dot plus the word, so colour is never the only cue */}
+                    {/* The word carries the state, in the status hue. The dot beside it
+                        said the same thing a second time -- and a dot is the encoding
+                        that fails first, being the one nobody can read. */}
                     <Typography
                       variant="body-sm"
                       className={clsx(
-                        'hidden md:flex items-center gap-2 text-sm font-semibold',
+                        'hidden md:block text-sm font-semibold',
                         `npc-status-${npc.status}`
                       )}
                     >
-                      <span
-                        aria-hidden="true"
-                        className={clsx(
-                          'w-[7px] h-[7px] rounded-full shrink-0',
-                          npc.status === 'alive' && 'bg-status-completed',
-                          npc.status === 'deceased' && 'bg-status-failed',
-                          (npc.status === 'missing' || npc.status === 'unknown') &&
-                            'bg-status-unknown'
-                        )}
-                      />
                       {npc.status.charAt(0).toUpperCase() + npc.status.slice(1)}
                     </Typography>
 
+                    {/* Disposition, stated once and plainly. It was a filled chip in the
+                        status hue -- so a row showed a green "Alive" beside a green
+                        "Friendly" and read as one fact twice, while spending the one hue
+                        reserved for state on something that is not state. */}
                     <Typography
                       variant="body-sm"
-                      className={clsx(
-                        'hidden md:inline-flex justify-self-start px-2.5 py-1 rounded-md text-xs font-semibold bg-secondary',
-                        RELATIONSHIP_CHIP[npc.relationship]
-                      )}
+                      color="secondary"
+                      className="hidden md:block justify-self-start text-sm"
                     >
                       {npc.relationship.charAt(0).toUpperCase() + npc.relationship.slice(1)}
                     </Typography>

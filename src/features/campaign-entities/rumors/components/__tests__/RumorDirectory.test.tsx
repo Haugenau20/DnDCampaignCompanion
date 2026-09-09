@@ -591,4 +591,41 @@ describe('RumorDirectory', () => {
       expect(screen.getByRole('button', { name: /select rumors/i })).toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Row anatomy — one encoding per fact
+  // -------------------------------------------------------------------------
+  describe('row anatomy', () => {
+    test('carries exactly one identity mark, derived from the id', () => {
+      render(<RumorDirectory rumors={[r1]} />);
+      const row = within(screen.getByRole('button', { name: /Expand Dragon spotted/ }));
+      const marks = row.getAllByTestId('entity-sigil');
+      expect(marks).toHaveLength(1);
+      expect(marks[0]).toHaveTextContent('D');
+    });
+
+    test('states status as a word and nothing else', () => {
+      render(<RumorDirectory rumors={[r1]} />);
+      const row = screen.getByRole('button', { name: /Expand Dragon spotted/ });
+      expect(within(row).getByText('Confirmed')).toBeInTheDocument();
+      expect(row.querySelectorAll('.bg-status-completed')).toHaveLength(0);
+      expect(row.querySelectorAll('.bg-status-unknown')).toHaveLength(0);
+      expect(row.querySelectorAll('.bg-status-failed')).toHaveLength(0);
+    });
+
+    test('does not badge a converted rumour twice in one row', () => {
+      // The last cell already reads "Converted to quest"; the pill beside the
+      // title said it again, in a box.
+      const converted = makeRumor({
+        id: 'r-converted',
+        title: 'Bandits on the road',
+        convertedToQuestId: 'q-1',
+      });
+      render(<RumorDirectory rumors={[converted]} />);
+      const row = within(screen.getByRole('button', { name: /Expand Bandits on the road/ }));
+      expect(row.getByText('Converted to quest')).toBeInTheDocument();
+      expect(row.queryByText('Quest')).not.toBeInTheDocument();
+    });
+  });
+
 });

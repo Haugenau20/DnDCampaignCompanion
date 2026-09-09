@@ -308,6 +308,12 @@ export interface RosterGroupProps {
   openLabel?: string;
   /** Marks a placeholder group such as "Location unknown". */
   muted?: boolean;
+  /**
+   * Renders the group as a recessed part of the row above it rather than a card
+   * of its own. A location's sub-locations and a quest's objectives are parts of
+   * one object; boxing them restates a containment the indentation already says.
+   */
+  nested?: boolean;
   children: React.ReactNode;
 }
 
@@ -325,6 +331,7 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
   onOpen,
   openLabel = 'Open location',
   muted = false,
+  nested = false,
   children,
 }) => (
   <section className="flex flex-col gap-2">
@@ -350,7 +357,14 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
       <span aria-hidden="true" className="flex-1 h-px min-w-4 bg-secondary opacity-60" />
     </div>
 
-    <div className={clsx('rounded-lg overflow-hidden card')}>{children}</div>
+    <div
+      className={clsx(
+        'rounded-lg overflow-hidden',
+        nested ? 'bg-secondary card-border' : 'card'
+      )}
+    >
+      {children}
+    </div>
   </section>
 );
 

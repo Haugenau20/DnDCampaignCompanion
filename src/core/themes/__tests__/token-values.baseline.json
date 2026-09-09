@@ -38,7 +38,7 @@
     "--status-general": "#8C1D1D",
     "--status-completed": "#46663A",
     "--status-failed": "#8C1D1D",
-    "--status-unknown": "#A67C1F",
+    "--status-unknown": "#7E5E17",
     "--status-on": "#FFFFFF",
     "--status-active": "#8C1D1D",
     "--state-hover-light": "#E7E0D2",

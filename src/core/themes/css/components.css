@@ -601,16 +601,31 @@
     border-left: 4px solid var(--surface-page-on-muted);
   }
 
-  .location-status-explored {
-    color: var(--status-completed);
-  }
+  /*
+    One axis, in order: known (nothing but a name) -> explored -> visited. The
+    hues must agree with the status bar's bands, which read the same progression
+    from `STATUS_ORDER` in LocationDirectory.
 
+    `explored` and `visited` were swapped here, so a row said "Explored" in the
+    green the legend used for `visited` and vice versa. It went unseen because
+    each row also carried a coloured dot taken from the bar's own map: the dot
+    was right, the word was wrong, and the two sat side by side. Removing the
+    dot -- one encoding per fact -- is what surfaced it.
+
+    `known` stays muted ink rather than the bar's red. On the bar red is just the
+    "not yet" end of a progression; as row text it would put the accent on a
+    resting row, and the accent is earned by action.
+  */
   .location-status-known {
     color: var(--surface-page-on-muted);
   }
 
-  .location-status-visited {
+  .location-status-explored {
     color: var(--status-unknown);
+  }
+
+  .location-status-visited {
+    color: var(--status-completed);
   }
 
   /*

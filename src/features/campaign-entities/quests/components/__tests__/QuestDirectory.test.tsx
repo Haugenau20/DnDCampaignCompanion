@@ -857,4 +857,27 @@ describe('QuestDirectory', () => {
       expect(screen.queryByText('Find the Dragon')).not.toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Row anatomy — one encoding per fact
+  // -------------------------------------------------------------------------
+  describe('row anatomy', () => {
+    test('carries exactly one identity mark, derived from the id', () => {
+      renderPage();
+      const row = within(expandButton('Find the Dragon'));
+      const marks = row.getAllByTestId('entity-sigil');
+      expect(marks).toHaveLength(1);
+      expect(marks[0]).toHaveTextContent('F');
+    });
+
+    test('states status as a word and nothing else', () => {
+      renderPage();
+      const row = expandButton('Find the Dragon');
+      expect(within(row).getByText('Active')).toBeInTheDocument();
+      expect(row.querySelectorAll('.bg-status-active')).toHaveLength(0);
+      expect(row.querySelectorAll('.bg-status-completed')).toHaveLength(0);
+      expect(row.querySelectorAll('.bg-status-failed')).toHaveLength(0);
+    });
+  });
+
 });
