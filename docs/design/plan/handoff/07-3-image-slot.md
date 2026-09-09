@@ -2,8 +2,8 @@
 
 Phase 7 · third migration PR · closes the phase · depends on 7.1
 
-One image slot per entity page. **No bitmaps ship** (D6): this PR builds the
-slot and its empty state, and nothing else. The upload path is a separate,
+One image slot, on the NPC page (D61 — there is no Location page). **No bitmaps
+ship** (D6): this PR builds the slot and its empty state, and nothing else. The upload path is a separate,
 optional PR that is deliberately not written yet.
 
 The empty state *is* the design. Most slots will be empty for most entities for
@@ -12,7 +12,7 @@ something is a slot that looks wrong almost always.
 
 ## Scope
 
-- the two page components from 7.1
+- the NPC page component from 7.1
 - `src/core/themes/css/components.css`
 - a shared slot component if the second use earns it — `PartyCrest` is the
   first, and two uses is the threshold, not one
@@ -44,7 +44,7 @@ something is a slot that looks wrong almost always.
 - Do not use a stock illustration or an icon as the empty state. The hatched
   panel reads as reserved space; a picture of a mountain reads as a wrong
   picture.
-- Do not let the slot push the entity's name or description below the fold.
+- Do not let the slot push the NPC's name or description below the fold.
   Recognition is the job; the name is what does the recognising.
 - Do not give the slot a hue from the entity palette. That palette belongs to
   the sigil, and two marks in two hues for one entity is the row problem again
@@ -52,7 +52,7 @@ something is a slot that looks wrong almost always.
 
 ## Gates
 
-- Both pages look finished with an empty slot, in both themes. Screenshot as
+- The page looks finished with an empty slot, in both themes. Screenshot as
   evidence, not as illustration.
 - The slot has an accessible name that says the state honestly.
 - No new token unless it earns a drift-log entry.

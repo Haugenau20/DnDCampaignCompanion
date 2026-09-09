@@ -6,15 +6,15 @@ What earns the click. A read-only detail page is a worse version of the row
 with more scrolling; the description edits where it sits and a note is added
 without leaving the page (D43).
 
-The plumbing already exists — `NPCContext` exposes `updateNPC` and
-`updateNPCNote`, and `LocationContext` matches — so almost all of this is
-interface, not data work.
+Scope is the NPC page only (D61); there is no Location page to match. The
+plumbing already exists — `NPCContext` exposes `updateNPC` and `updateNPCNote`
+— so almost all of this is interface, not data work.
 
 ## Scope
 
-- the two page components from 7.1
-- `src/features/campaign-entities/npcs/context/NPCContext.tsx` and
-  `locations/context/LocationContext.tsx` (only if a gap appears)
+- the NPC page component from 7.1
+- `src/features/campaign-entities/npcs/context/NPCContext.tsx` (only if a gap
+  appears)
 - `src/core/themes/css/components.css`
 - the matching test files
 
@@ -47,6 +47,8 @@ interface, not data work.
   exist, for different jobs.
 - Do not add note editing or deletion. Adding is what 7.1's read view was
   missing; changing history is a separate decision (Q13).
+- Do not add a byline to a note. `NPCNote` is `{ date, text }` — there is no
+  author to show, and inventing one displays data that does not exist.
 
 ## Gates
 

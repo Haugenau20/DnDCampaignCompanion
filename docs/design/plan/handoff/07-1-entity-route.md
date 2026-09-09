@@ -1,20 +1,23 @@
-# PR 7.1 — The entity route and its read view
+# PR 7.1 — The NPC route and its read view
 
 Phase 7 · branch `visual/phase-7-entity` · first migration PR · depends on 7.0
 
-A route per NPC and per Location, reached from a "More info" action on the
-directory row (D41). Read-only in this PR; 7.2 makes it editable and 7.3 adds
-the image slot.
+One route, `/npcs/:npcId`, reached from a "More info" action on the directory
+row (D41, narrowed by D61). Read-only in this PR; 7.2 makes it editable and 7.3
+adds the image slot.
 
-> **Read Q14 before starting. The Location half of this PR may not be worth
-> building.** 7.0 measured what the rows already render: the Location row's
-> expansion carries eight fields, which is the whole `Location` type bar
-> `parentId` — and the hierarchy expresses that by nesting. A Location page
-> would add a URL and nothing else. The NPC row carries four fields and the
-> type has six more with nowhere to live, so the NPC half is earned outright.
-> Phase 6 did its job well enough to take away half of this PR's reason to
-> exist. If Q14 is answered "NPCs only", build only `/npcs/:npcId`, keep the
-> Location route out of `App.tsx` entirely, and say so in the PR body.
+**There is no Location route, and adding one is out of scope.** Q14 settled
+this: the Location row already renders every field the type has, so the page
+would restate it at a different URL, and `/locations?highlight=<id or name>`
+already gives Locations a working permalink. If you think a Location page has
+become worth building, that is a new decision — reopen it in the drift log
+rather than adding the route here.
+
+**Why this page exists at all**, in one sentence, because it should shape every
+judgement call you make: the NPC type has ten content fields, the row shows
+four, and **six are collected by the create and edit forms, written to
+Firestore, and rendered nowhere in the app**. This page is not a new surface for
+existing content; it makes write-only data readable for the first time.
 
 **Additive, and it must stay additive.** The row's inline expansion keeps every
 field and action it has today. If this PR makes a directory worse, it has
@@ -22,22 +25,20 @@ failed regardless of how the new page looks.
 
 ## Scope
 
-- `src/app/App.tsx` (two routes)
-- `src/pages/npcs/` and `src/pages/locations/` (two new page components)
+- `src/app/App.tsx` (one route)
+- `src/pages/npcs/` (one new page component)
 - `src/features/campaign-entities/npcs/components/NPCDirectory.tsx`
-- `src/features/campaign-entities/locations/components/LocationDirectory.tsx`
 - `src/core/components/Roster.tsx` (the "More info" affordance, if shared)
 - `src/core/themes/css/components.css`
 - the matching test files
 
 ## Do
 
-1. **Two routes**, matching the pair that already exists for each entity:
-   `/npcs/:npcId` beside `/npcs/create` and `/npcs/edit/:npcId`, and
-   `/locations/:locationId` likewise. React Router ranks static segments above
-   dynamic ones, so `/npcs/create` still wins — but assert it in a test rather
-   than trusting it, because the failure mode is a create page that silently
-   becomes a detail page for an NPC called "create".
+1. **One route**, joining the pair that already exists: `/npcs/:npcId` beside
+   `/npcs/create` and `/npcs/edit/:npcId`. React Router ranks static segments
+   above dynamic ones, so `/npcs/create` still wins — but assert it in a test
+   rather than trusting it, because the failure mode is a create page that
+   silently becomes a detail page for an NPC called "create".
 2. **"More info" on the row.** It sits in the expanded content, not the
    collapsed row: the collapsed row is the highest-frequency surface in the
    product and does not get a second control. A row that is already expanded
@@ -54,9 +55,6 @@ failed regardless of how the new page looks.
      look, `relatedNPCs` holds ids needing `getNPCById`, and `affiliations` is
      free text. Expect many campaigns to have them empty; design the empty
      state first.
-   - **Location** — the row already renders description, notable features,
-     notes, tags, last visited, connected NPCs, related quests and recorded-by.
-     There is **no absent field** to justify the page. See Q14.
 4. **Layout**: `surface.card` for the body, `surface.sunken` for the aside —
    relations, tags, attribution. Sigil at 44px beside a serif name. Sans for
    every piece of metadata (D46, same rule as the row).
@@ -74,8 +72,8 @@ failed regardless of how the new page looks.
   pretending to be a history. Show the two facts plainly. Real edit history is
   a data feature, not a visual one, and is out of scope (Q12).
 - Do not remove anything from the row's expansion to "make room" for the page.
-- Do not add the route for Quests, Rumors or Notes. NPCs and Locations only,
-  until the pattern proves itself (D41).
+- Do not add the route for Locations, Quests, Rumors or Notes. NPCs only
+  (D61). One entity is the trial D41 asked for.
 - Do not build the image slot here. 7.3 owns it, and the page must look
   finished before it arrives — that is the test of whether the slot is an
   enhancement or a crutch.
@@ -95,8 +93,11 @@ failed regardless of how the new page looks.
 - Empty campaign, and an entity with only a name: both look finished.
 - One accent on the page, and it is the page's own action.
 - Contrast: AA text and 3:1 non-text on both `card` and `sunken`.
-- Screenshot: an NPC page and a Location page, light and dark, plus the row
-  showing its new "More info".
+- Every one of the six previously invisible fields renders when present, and
+  the page still looks finished when all six are empty. This is the gate that
+  matters: if a populated NPC still shows nothing new, the PR did not happen.
+- Screenshot: an NPC page in light and dark, plus the row showing its new
+  "More info".
 
 ## References
 
