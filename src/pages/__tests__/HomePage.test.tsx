@@ -1,6 +1,6 @@
 // src/pages/__tests__/HomePage.test.tsx
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import HomePage from "../HomePage";
 import firebaseServices from "core/services/firebase";
@@ -84,9 +84,6 @@ jest.mock("shared/utils/attribution-utils", () => ({
 // ---------------------------------------------------------------------------
 // Child component / layout mocks
 // ---------------------------------------------------------------------------
-// Both layouts render the `viewToggle` HomePage hands them — it lives in the page
-// header rather than on a navigation row of its own, so the mocks have to render it
-// for the switch to be reachable at all.
 // The hero band is HomePage's own child now that it renders above the page
 // column (it bleeds to the viewport, and that column clips). It reaches for
 // campaign context of its own, which these tests -- about layout switching --
@@ -112,21 +109,7 @@ jest.mock("pages/layouts/dashboard/DashboardLayout", () => ({
       data-chapter-count={props.chapters?.length}
       data-location-count={props.locations?.length}
       data-activity-count={props.activities?.length}
-    >
-      {props.viewToggle}
-    </div>
-  ),
-}));
-
-jest.mock("pages/layouts/journal/JournalLayout", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <div
-      data-testid="journal-layout"
-      data-loading={String(props.loading)}
-    >
-      {props.viewToggle}
-    </div>
+    />
   ),
 }));
 
@@ -312,15 +295,6 @@ describe("HomePage", () => {
         screen.getByRole("heading", { level: 1 })
       ).toHaveTextContent(/everything your table agreed happened/i);
       expect(screen.queryByTestId("dashboard-layout")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("journal-layout")).not.toBeInTheDocument();
-    });
-
-    it("hides the dashboard/journal toggle while signed out", () => {
-      mockUser = null;
-      renderPage();
-      expect(
-        screen.queryByRole("group", { name: /choose a view/i })
-      ).not.toBeInTheDocument();
     });
 
     // Adapted from the brief: with the shared mock's `getCampaigns` resolving
@@ -337,15 +311,6 @@ describe("HomePage", () => {
         /no campaign chosen/i
       );
       expect(screen.queryByTestId("dashboard-layout")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("journal-layout")).not.toBeInTheDocument();
-    });
-
-    it("hides the dashboard/journal toggle when nothing can act on data", () => {
-      mockActiveCampaignId = null;
-      renderPage();
-      expect(
-        screen.queryByRole("group", { name: /choose a view/i })
-      ).not.toBeInTheDocument();
     });
 
     // Closes a gap the review flagged: every gated page suite (this one
@@ -388,7 +353,6 @@ describe("HomePage", () => {
       expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
       expect(screen.queryByText(/which campaign/i)).not.toBeInTheDocument();
       expect(screen.queryByTestId("dashboard-layout")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("journal-layout")).not.toBeInTheDocument();
     });
 
     // PageShell renders its own `h1` ("Campaign Home") in the non-ready,
@@ -412,35 +376,21 @@ describe("HomePage", () => {
       expect(container).toBeInTheDocument();
     });
 
-    it("renders DashboardLayout by default", () => {
+    it("renders the dashboard, the one layout Home has", () => {
       renderPage();
       expect(screen.getByTestId("dashboard-layout")).toBeInTheDocument();
-      expect(screen.queryByTestId("journal-layout")).not.toBeInTheDocument();
     });
 
-    it("offers both views as a segmented control, not a single swap button", () => {
+    // The segmented view chooser went with the alternate layout it switched to
+    // (D39). Home has one view, so it offers no way to choose one.
+    it("offers no view chooser", () => {
       renderPage();
-      // The old control was one button naming only the view you were not on.
-      expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Journal" })).toBeInTheDocument();
-    });
-
-    it("marks the current view as pressed", () => {
-      renderPage();
-      expect(screen.getByRole("button", { name: "Dashboard" })).toHaveAttribute(
-        "aria-pressed",
-        "true"
-      );
-      expect(screen.getByRole("button", { name: "Journal" })).toHaveAttribute(
-        "aria-pressed",
-        "false"
-      );
+      expect(
+        screen.queryByRole("group", { name: /choose a view/i })
+      ).not.toBeInTheDocument();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Layout toggle
-  // -------------------------------------------------------------------------
   describe("hero band", () => {
     // These moved here from DashboardLayout when the band was lifted above the
     // page column, which it has to be: it bleeds to the viewport edges and that
@@ -466,104 +416,6 @@ describe("HomePage", () => {
       const clipped = container.querySelector(".overflow-x-hidden");
       expect(clipped).toBeInTheDocument();
       expect(clipped?.contains(band)).toBe(false);
-    });
-  });
-
-  describe("layout toggle", () => {
-    it("switches to JournalLayout when Journal is clicked", () => {
-      renderPage();
-      fireEvent.click(screen.getByRole("button", { name: "Journal" }));
-      expect(screen.getByTestId("journal-layout")).toBeInTheDocument();
-      expect(screen.queryByTestId("dashboard-layout")).not.toBeInTheDocument();
-    });
-
-    it("keeps the toggle reachable from the journal view", () => {
-      renderPage();
-      fireEvent.click(screen.getByRole("button", { name: "Journal" }));
-      // Regression guard: the toggle moved out of HomePage's own markup into the
-      // layouts, so a layout that fails to render it would trap the user.
-      expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Journal" })).toHaveAttribute(
-        "aria-pressed",
-        "true"
-      );
-    });
-
-    it("switches back to DashboardLayout when Dashboard is clicked again", () => {
-      renderPage();
-      fireEvent.click(screen.getByRole("button", { name: "Journal" }));
-      fireEvent.click(screen.getByRole("button", { name: "Dashboard" }));
-      expect(screen.getByTestId("dashboard-layout")).toBeInTheDocument();
-      expect(screen.queryByTestId("journal-layout")).not.toBeInTheDocument();
-    });
-
-    it("re-selecting the current view is a no-op rather than a toggle", () => {
-      renderPage();
-      fireEvent.click(screen.getByRole("button", { name: "Dashboard" }));
-      expect(screen.getByTestId("dashboard-layout")).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Data passed to layouts
-  // -------------------------------------------------------------------------
-  describe("data passed to DashboardLayout", () => {
-    it("passes chapters to DashboardLayout", () => {
-      renderPage();
-      expect(screen.getByTestId("dashboard-layout")).toHaveAttribute(
-        "data-chapter-count",
-        "1"
-      );
-    });
-
-    it("passes quests to DashboardLayout", () => {
-      renderPage();
-      expect(screen.getByTestId("dashboard-layout")).toHaveAttribute(
-        "data-quest-count",
-        "1"
-      );
-    });
-
-    it("passes rumors to DashboardLayout", () => {
-      renderPage();
-      expect(screen.getByTestId("dashboard-layout")).toHaveAttribute(
-        "data-rumor-count",
-        "1"
-      );
-    });
-
-    it("passes NPCs to DashboardLayout", () => {
-      renderPage();
-      expect(screen.getByTestId("dashboard-layout")).toHaveAttribute(
-        "data-npc-count",
-        "1"
-      );
-    });
-
-    it("passes locations to DashboardLayout", () => {
-      renderPage();
-      expect(screen.getByTestId("dashboard-layout")).toHaveAttribute(
-        "data-location-count",
-        "1"
-      );
-    });
-
-    it("passes non-zero activities to DashboardLayout for items with dateModified", () => {
-      renderPage();
-      const activityCount = parseInt(
-        screen.getByTestId("dashboard-layout").getAttribute("data-activity-count") || "0"
-      );
-      // All 5 mock items have dateModified, so 5 activities expected
-      expect(activityCount).toBe(5);
-    });
-
-    it("passes activities sorted newest-first (by timestamp)", () => {
-      // Locations have the most recent dateModified (2024-01-05)
-      renderPage();
-      const activityCount = parseInt(
-        screen.getByTestId("dashboard-layout").getAttribute("data-activity-count") || "0"
-      );
-      expect(activityCount).toBeGreaterThan(0);
     });
   });
 

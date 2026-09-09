@@ -783,50 +783,6 @@
     box-shadow: 0 0 0 var(--border-width-sm) var(--surface-band-border);
   }
 
-  /* ====== VIEW TOGGLE ====== */
-  /*
-    A segmented control that appears on two different surfaces: the hero band on
-    the dashboard, and the page in the journal. It cannot name one set of colours,
-    so it names roles and the surface supplies them -- default page values here,
-    band values below. Without this the active segment rendered the band's
-    near-white ink on a white card: invisible.
-  */
-  .view-toggle {
-    background-color: var(--surface-sunken-bg);
-  }
-
-  .view-toggle-item {
-    color: var(--surface-page-on-muted);
-  }
-
-  .view-toggle-item:hover {
-    background-color: var(--surface-page-hover);
-    color: var(--surface-page-on);
-  }
-
-  .view-toggle-item-active {
-    background-color: var(--surface-card-bg);
-    color: var(--surface-page-on);
-  }
-
-  .hero-band .view-toggle {
-    background-color: var(--surface-band-hover);
-  }
-
-  .hero-band .view-toggle-item {
-    color: var(--surface-band-on-muted);
-  }
-
-  .hero-band .view-toggle-item:hover {
-    background-color: var(--surface-band-hover);
-    color: var(--surface-band-on);
-  }
-
-  .hero-band .view-toggle-item-active {
-    background-color: var(--surface-band-selected);
-    color: var(--surface-band-on);
-  }
-
   /* ====== PARTY CREST ====== */
 /*
   The empty state for the party's crest slot. Diagonal ruling in the page's own
@@ -1026,169 +982,30 @@
     font-family: 'Crimson Text', Georgia, serif;
   }
 
-  /* ====== JOURNAL STYLING ====== */
-  .journal-container {
-    background-color: var(--journal-leather);
-    box-shadow: 0 4px 6px var(--journal-page-shadow);
-  }
+  /* ====== SECTION STATES ====== */
+  /*
+    The heading, empty and loading treatments shared by every dashboard section.
+    They carried the retired alternate layout's prefix because that layout
+    defined them first (D39); the dashboard was always the other consumer, so
+    they are now named for what they are.
 
-  .journal-binding {
-    background-color: var(--journal-binding);
-    box-shadow: inset 0 0 10px var(--journal-page-shadow);
-  }
-
-  .journal-stitch {
-    background-color: var(--journal-stitch);
-  }
-
-  .journal-page {
-    background-color: var(--surface-card-bg);
-    color: var(--surface-page-on);
-  }
-
-  .journal-page-left {
-    border-top-left-radius: 0.5rem;
-    border-bottom-left-radius: 0.5rem;
-    box-shadow: inset 5px 0 10px var(--journal-page-shadow);
-  }
-
-  .journal-page-right {
-    border-top-right-radius: 0.5rem;
-    border-bottom-right-radius: 0.5rem;
-    box-shadow: inset -5px 0 10px var(--journal-page-shadow);
-  }
-
-  .journal-pages {
-    gap: 0.5rem;
-    box-shadow: inset 0 0 10px var(--journal-page-shadow);
-  }
-
-  .journal-heading {
+    An empty or loading region is designed, not blank: the loading state shows
+    the rhythm of the rows that are coming rather than a spinner, and the empty
+    state is muted ink on the page rather than an absence.
+  */
+  .section-heading {
     color: var(--surface-page-on);
     border-bottom: 1px solid var(--surface-card-border);
     padding-bottom: 0.25rem;
   }
 
-  .journal-section {
-    position: relative;
-  }
-
-  .journal-section::after {
-    content: "";
-    position: absolute;
-    bottom: -1rem;
-    left: 25%;
-    right: 25%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--surface-card-border), transparent);
-    opacity: 0.5;
-  }
-
-  .journal-title {
-    color: var(--surface-page-on);
-  }
-
-  .journal-character-card {
-    background-color: var(--journal-character-card-bg);
-    transition: all 0.2s;
-  }
-
-  .journal-character-card:hover {
-    background-color: var(--journal-character-card-hover);
-  }
-
-  .journal-character-sketch {
-    background-color: var(--surface-sunken-bg);
-    border: 1px solid var(--surface-card-border);
-  }
-
-  .journal-character-name {
-    color: var(--surface-page-on);
-  }
-
-  .journal-quest-item {
-    background-color: var(--journal-quest-item-bg);
-    transition: all 0.2s;
-  }
-
-  .journal-quest-item:hover {
-    background-color: var(--journal-quest-item-hover);
-  }
-
-  .journal-quest-bullet {
-    background-color: var(--color-primary);
-  }
-
-  .journal-quest-title {
-    color: var(--surface-page-on);
-  }
-
-  .journal-quest-note {
-    color: var(--surface-page-on-muted);
-  }
-
-  .journal-activity-item {
-    border-left: 2px solid transparent;
-    padding-left: 0.5rem;
-  }
-
-  .journal-activity-item:hover {
-    border-left-color: var(--color-primary);
-    background-color: var(--journal-activity-hover);
-  }
-
-  .journal-activity-icon-bg {
-    background-color: var(--surface-sunken-bg);
-    color: var(--color-primary);
-  }
-
-  .journal-activity-title {
-    color: var(--surface-page-on);
-  }
-
-  .journal-activity-date {
-    color: var(--surface-page-on-muted);
-  }
-
-  .journal-activity-type {
-    color: var(--color-primary);
-  }
-
-  .journal-activity-description {
-    color: var(--surface-page-on-muted);
-  }
-
-  .journal-activity-separator {
-    color: var(--surface-page-on-muted);
-  }
-
-  .journal-loading {
+  .section-loading {
     background-color: var(--surface-sunken-bg);
     opacity: 0.3;
   }
 
-  .journal-empty {
+  .section-empty {
     color: var(--surface-page-on-muted);
-  }
-
-  .journal-notes-area {
-    background-color: var(--journal-notes-area);
-    min-height: 200px;
-  }
-
-  .journal-pagination {
-    background-color: var(--surface-card-bg);
-    color: var(--surface-page-on);
-  }
-
-  .journal-paper {
-    background-color: var(--surface-sunken-bg);
-    border: 1px solid var(--surface-card-border);
-  }
-
-  .journal-more-note {
-    font-size: small;
-    font-style: italic;
   }
 
   /* ====== CALLOUT ====== */

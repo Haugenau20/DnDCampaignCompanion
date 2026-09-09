@@ -15,13 +15,6 @@ export interface LayoutProps {
   rumors: any[];
   activities: any[];
   loading: boolean;
-  /**
-   * The dashboard/journal switch, owned by HomePage because it decides which
-   * layout renders. The dashboard no longer consumes it -- HomePage puts it in
-   * the hero band directly -- but the journal still does, so it stays on the
-   * shared props type.
-   */
-  viewToggle?: React.ReactNode;
 }
 
 /**

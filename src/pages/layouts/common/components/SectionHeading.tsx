@@ -28,7 +28,7 @@ const SectionHeading: React.FC<SectionHeadingProps> = ({
       "flex justify-between items-center mb-3",
       className
     )}>
-      <h3 className="text-lg font-medium flex items-center gap-2 journal-heading">
+      <h3 className="text-lg font-medium flex items-center gap-2 section-heading">
         {icon && <span className="flex-shrink-0">{icon}</span>}
         <span>
           {title} {(count !== undefined || loading) && (

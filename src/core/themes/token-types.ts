@@ -127,20 +127,6 @@ export interface ThemeTokens {
     deleteHover: string;
   };
 
-  /** The journal's own ornament. Theme-specific by nature. */
-  journal: {
-    leather: string;
-    binding: string;
-    stitch: string;
-    pageShadow: string;
-    sectionDivider: string;
-    characterCardBg: string;
-    characterCardHover: string;
-    questItemBg: string;
-    questItemHover: string;
-    activityHover: string;
-    notesArea: string;
-  };
 
   font: {
     primary: string;

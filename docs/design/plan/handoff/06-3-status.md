@@ -1,6 +1,6 @@
-# PR 6.4 — Quest and rumour status
+# PR 6.3 — Quest and rumour status
 
-Phase 6 · fourth PR · closes the phase
+Phase 6 · third migration PR · closes the phase
 
 Status is the one hue in the app that is not the accent and not an entity
 (design language §3). Quests and rumours are where it lives.

@@ -68,29 +68,6 @@ export const convertFirestoreTimestamp = (firestoreTimestamp: any): Date | null 
   };
   
   /**
-   * Format a date in a journal style (e.g., "the 12th of June")
-   * Handles Firestore timestamps and other date formats
-   * @param date The date to format (can be Date, Firestore timestamp, or string)
-   * @returns Formatted journal style date string or empty string if invalid
-   */
-  export const formatJournalDate = (date: any): string => {
-    const convertedDate = convertFirestoreTimestamp(date);
-    if (!convertedDate) return '';
-    
-    // Format like "the 12th of June"
-    const day = convertedDate.getDate();
-    const month = convertedDate.toLocaleString('default', { month: 'long' });
-    
-    // Add suffix to day
-    let suffix = 'th';
-    if (day % 10 === 1 && day !== 11) suffix = 'st';
-    else if (day % 10 === 2 && day !== 12) suffix = 'nd';
-    else if (day % 10 === 3 && day !== 13) suffix = 'rd';
-    
-    return `the ${day}${suffix} of ${month}`;
-  };
-  
-  /**
    * Format a date for standard display
    * Handles Firestore timestamps and other date formats
    * @param date The date to format (can be Date, Firestore timestamp, or string)

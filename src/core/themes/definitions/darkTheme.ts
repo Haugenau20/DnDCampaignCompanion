@@ -134,19 +134,6 @@ export const darkTheme: Theme = {
       deleteText: '#F87171', // Soft red for delete button text
       deleteHover: '#3B3B52', // Complementary shade for hover state
     },
-    journal: {
-      leather: '#3D3D3D', // Dark gray for journal leather
-      binding: '#2A2A2A', // Slightly darker gray for journal binding
-      stitch: '#5D5D5D', // Medium gray for journal stitching
-      pageShadow: 'rgba(0, 0, 0, 0.3)', // Semi-transparent black for page shadow
-      sectionDivider: 'rgba(255, 255, 255, 0.1)', // Subtle white for section dividers
-      characterCardBg: 'rgba(255, 255, 255, 0.05)', // Very light white for character card background
-      characterCardHover: 'rgba(255, 255, 255, 0.08)', // Slightly stronger white for hover state
-      questItemBg: 'rgba(255, 255, 255, 0.02)', // Very faint white for quest item background
-      questItemHover: 'rgba(255, 255, 255, 0.05)', // Slightly stronger white for hover state
-      activityHover: 'rgba(255, 255, 255, 0.03)', // Subtle white for activity hover state
-      notesArea: 'rgba(255, 255, 255, 0.05)', // Light white for notes area background
-    },
     font: {
       primary: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', // Clean sans-serif for primary text
       secondary: 'system-ui, sans-serif', // System default sans-serif for secondary text

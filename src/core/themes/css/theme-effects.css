@@ -59,34 +59,6 @@
     );
   }
 
-  /* Medieval theme journal fonts */
-  [data-theme="medieval"] .journal-heading {
-    font-family: 'MedievalSharp', cursive, var(--font-heading);
-    transform: rotate(-0.5deg);
-  }
-
-  [data-theme="medieval"] .journal-character-name,
-  [data-theme="medieval"] .journal-quest-title,
-  [data-theme="medieval"] .journal-activity-title {
-    font-family: 'MedievalSharp', cursive, var(--font-primary);
-  }
-
-  [data-theme="medieval"] .journal-quest-note {
-    font-style: italic;
-  }
-
-  [data-theme="medieval"] .journal-activity-date {
-    font-style: italic;
-  }
-
-  [data-theme="medieval"] .journal-activity-description {
-    font-style: italic;
-  }
-
-  [data-theme="medieval"] .journal-activity-separator {
-    font-family: 'MedievalSharp', cursive;
-  }
-
   /* Medieval scroll decoration */
   [data-theme="medieval"] .decoration-scroll {
     position: relative;
@@ -115,15 +87,7 @@
     transform: translateX(-50%);
   }
 
-  /* Journal page pattern */
-  [data-theme="medieval"] .journal-page {
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e0d8c0' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  }
 
-  /* Journal binding pattern */
-  [data-theme="medieval"] .journal-binding {
-    background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23422106' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 5v1H5z'/%3E%3Cpath d='M6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
-  }
 
   /* ====== DARK THEME SPECIFIC EFFECTS ====== */
 
@@ -143,15 +107,7 @@
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
   }
 
-  /* Journal page patterns */
-  [data-theme="dark"] .journal-page {
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23333333' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  }
 
-  /* Journal binding patterns */
-  [data-theme="dark"] .journal-binding {
-    background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23222222' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 5v1H5z'/%3E%3Cpath d='M6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
-  }
 
   /* ====== LIGHT THEME SPECIFIC EFFECTS ====== */
 
@@ -181,13 +137,5 @@
     background: #94A3B8;
   }
 
-  /* Journal page patterns */
-  [data-theme="light"] .journal-page {
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e6e6e6' fill-opacity='0.2'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  }
 
-  /* Journal binding patterns */
-  [data-theme="light"] .journal-binding {
-    background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23624935' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 5v1H5z'/%3E%3Cpath d='M6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E");
-  }
 }

@@ -1,6 +1,6 @@
-# PR 6.3 — Directory chrome: search, filters, density, empty states
+# PR 6.2 — Directory chrome: search, filters, density, empty states
 
-Phase 6 · third PR · depends on 6.2
+Phase 6 · second migration PR · depends on 6.1
 
 The frame around a collection: the search field, the filter row, section
 heads, counts, pagination, and the empty and loading states.
@@ -40,6 +40,7 @@ heads, counts, pagination, and the empty and loading states.
   chip rule, same component eventually).
 - Do not add sort or view-mode controls that do not exist today. This is a
   visual phase.
+- Do not reopen the row's type or name treatment; 6.1 settled those.
 
 ## Gates
 

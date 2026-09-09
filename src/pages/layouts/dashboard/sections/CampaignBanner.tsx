@@ -5,11 +5,6 @@ import Typography from 'core/components/Typography';
 import { useCampaignInfo } from '../../../layouts/common/hooks/useCampaignInfo';
 
 interface CampaignBannerProps {
-  /**
-   * Rendered at the top right of the band — the dashboard/journal switch lives
-   * here so the page does not need a third navigation layer of its own.
-   */
-  action?: React.ReactNode;
   /** Chapter count, shown in the meta line when the campaign has any. */
   chapterCount?: number;
 }
@@ -28,7 +23,7 @@ interface CampaignBannerProps {
  * design: the campaign's own sigil, derived from its id exactly as every entity
  * mark is. Nothing here depends on content a user may never add.
  */
-const CampaignBanner: React.FC<CampaignBannerProps> = ({ action, chapterCount }) => {
+const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
   const { activeGroup, activeCampaign, formattedCreationDate, hasCampaign, hasGroup } =
     useCampaignInfo();
 
@@ -134,7 +129,6 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ action, chapterCount })
           </div>
         </div>
 
-        {action && <div className="shrink-0 self-start">{action}</div>}
       </div>
      </div></div></div>
     </div>

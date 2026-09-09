@@ -1,8 +1,8 @@
 # PR 6.0 — Retire the journal mode
 
-Phase 6 · runs before 6.1 · deletion only
+Phase 6 · runs before 6.1 · deletion and bookkeeping only
 
-R1 in the drift log. The journal is deleted rather than migrated: never used
+D39 in the drift log. The journal is deleted rather than migrated: never used
 on the live site, answered by the dashboard, and dependent on someone filing
 every entry under the right session — which is a maintenance burden with no
 payoff the first time anyone forgets.
@@ -22,6 +22,8 @@ Deleting it first means Phases 8, 9 and 11 never touch these files.
 - `src/core/themes/definitions/` — the `journal` block in all three themes
 - `src/core/themes/__tests__/token-values.baseline.json`,
   `token-rename-map.json`
+- `docs/design/plan/03-drift-log.md`, `04-rollout.md`, `05-archetypes.md`,
+  `handoff/` (the bookkeeping half)
 
 ## Do
 
@@ -31,17 +33,23 @@ Deleting it first means Phases 8, 9 and 11 never touch these files.
 3. Delete all twelve `--journal-*` tokens: the type, the three themes' values,
    the baseline entries, and every CSS rule that reads one.
 4. Grep `src/` for `journal` and leave zero hits outside changelog-style docs.
-5. Update the baseline JSON deliberately — twelve fewer keys per theme is the
+5. Update the baseline JSON deliberately — eleven fewer keys per theme is the
    expected diff, and it is the receipt for this PR.
+6. Settle the drift log's bookkeeping for Phases 6–12: the decisions
+   `04-rollout.md`, `05-archetypes.md` and these handoffs cite were never
+   written down, and the numbers they cite belong to unrelated Phase 0–5
+   entries. Write them, then correct every reference.
 
 ## Do not
 
 - Do not build a replacement. A timeline over entries that already carry dates
-  is a future feature (D19), not part of this PR, and it is not a mode.
+  is a future feature (D42), not part of this PR, and it is not a mode.
 - Do not keep `--journal-page-shadow` "because something might want it". If a
   surface needs a shadow, that is a surface decision, and the design language
   says depth is value and rule rather than shadow (§5).
 - Do not migrate a stored layout preference into anything. Drop it.
+- Do not renumber any existing drift-log entry. The dangling citations are the
+  wrong half of the mismatch; the log is the record and stays as written.
 
 ## Gates
 
@@ -53,4 +61,4 @@ Deleting it first means Phases 8, 9 and 11 never touch these files.
   toggle.
 
 ## References
-R1, D19; design language §5, §12.1, §13.
+D39–D46, R6–R8, Q10–Q11; design language §5, §12.1, §13.

@@ -14,9 +14,6 @@ import SignedOutHome from 'pages/home/SignedOutHome';
 
 // Import layouts
 import DashboardLayout from 'pages/layouts/dashboard/DashboardLayout';
-import JournalLayout from 'pages/layouts/journal/JournalLayout';
-import { Book, LayoutDashboard } from 'lucide-react';
-import clsx from 'clsx';
 import useLayoutData from 'pages/layouts/common/hooks/useLayoutData';
 import CampaignBanner from 'pages/layouts/dashboard/sections/CampaignBanner';
 
@@ -31,11 +28,8 @@ export interface Activity {
   link: string;
 }
 
-// Layout type options
-type LayoutType = 'dashboard' | 'journal';
-
 /**
- * HomePage component serving as the container for the selected layout
+ * HomePage component serving as the container for the dashboard layout.
  */
 const HomePage: React.FC = () => {
   // Load data from all contexts
@@ -45,9 +39,6 @@ const HomePage: React.FC = () => {
   const { npcs, isLoading: npcsLoading } = useNPCs();
   const { locations, isLoading: locationsLoading } = useLocations();
   const { activeGroupId } = useGroups();
-  
-  // Layout selection state
-  const [layoutType, setLayoutType] = useState<LayoutType>('dashboard');
   
   // State to store the mapping of UIDs to usernames
   const [usernameMap, setUsernameMap] = useState<Record<string, string>>({});
@@ -216,43 +207,6 @@ useEffect(() => {
     locationsLoading
   });
   
-  /**
-   * Dashboard/Journal switch as a segmented control: it shows both destinations and
-   * marks which one is current, where the previous "Switch to Journal View" button
-   * named only the place you weren't. Passed into the layout so it can sit in the
-   * page header rather than on a navigation row of its own.
-   */
-  const viewToggle = (
-    <div
-      className="inline-flex p-0.5 rounded-lg view-toggle"
-      role="group"
-      aria-label="Choose a view"
-    >
-      {([
-        { type: 'dashboard' as LayoutType, label: 'Dashboard', Icon: LayoutDashboard },
-        { type: 'journal' as LayoutType, label: 'Journal', Icon: Book },
-      ]).map(({ type, label, Icon }) => {
-        const isActive = layoutType === type;
-        return (
-          <button
-            key={type}
-            type="button"
-            onClick={() => setLayoutType(type)}
-            aria-pressed={isActive}
-            className={clsx(
-              'flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-sm transition-colors',
-              'view-toggle-item',
-              isActive && 'view-toggle-item-active font-semibold shadow-sm'
-            )}
-          >
-            <Icon size={15} aria-hidden="true" />
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-
   const gate = usePageGate('home', { loading: layoutData.loading });
 
   // Home is the one page allowed an example, and it is a different layout from
@@ -282,36 +236,19 @@ useEffect(() => {
           full width, but its paint was cut back, so it rendered as a floating
           card with the page showing either side. Nothing inside a clipping
           ancestor can bleed past it. */}
-      {layoutType === 'dashboard' && (
-        <CampaignBanner action={viewToggle} chapterCount={chapters.length} />
-      )}
+      <CampaignBanner chapterCount={chapters.length} />
 
     <div className='max-w-7xl mx-auto'>
       <div className="container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden content">
-        {/* Render selected layout with common processed data */}
-        {layoutType === 'dashboard' ? (
-          <DashboardLayout
-            npcs={npcs}
-            locations={locations}
-            quests={quests}
-            chapters={chapters}
-            rumors={rumors}
-            activities={activities}
-            loading={layoutData.loading}
-            viewToggle={viewToggle}
-          />
-        ) : (
-          <JournalLayout
-            npcs={npcs}
-            locations={locations}
-            quests={quests}
-            chapters={chapters}
-            rumors={rumors}
-            activities={activities}
-            loading={layoutData.loading}
-            viewToggle={viewToggle}
-          />
-        )}
+        <DashboardLayout
+          npcs={npcs}
+          locations={locations}
+          quests={quests}
+          chapters={chapters}
+          rumors={rumors}
+          activities={activities}
+          loading={layoutData.loading}
+        />
       </div>
     </div>
     </>

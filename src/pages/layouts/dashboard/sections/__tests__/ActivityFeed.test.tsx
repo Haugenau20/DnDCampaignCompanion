@@ -138,7 +138,7 @@ describe("ActivityFeed", () => {
       // LoadingState's `type="card"` has no branch — it silently falls through to a
       // spinner and drops count/height — so the skeleton is inlined instead.
       expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
-      expect(container.querySelectorAll(".journal-loading")).toHaveLength(4);
+      expect(container.querySelectorAll(".section-loading")).toHaveLength(4);
     });
 
     it("shows the heading while loading", () => {
@@ -455,15 +455,6 @@ describe("ActivityFeed", () => {
 
       expect(mockUseActivityDisplay).toHaveBeenCalledWith(
         expect.objectContaining({ limit: 4 })
-      );
-    });
-
-    it("passes journalStyle=false to useActivityDisplay", () => {
-      setupHook({ activities: [] });
-      render(<ActivityFeed activities={[]} loading={false} />);
-
-      expect(mockUseActivityDisplay).toHaveBeenCalledWith(
-        expect.objectContaining({ journalStyle: false })
       );
     });
   });

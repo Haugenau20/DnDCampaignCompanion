@@ -11,10 +11,9 @@ jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));
 
-// Mock only getRelativeTime and formatJournalDate from dateFormatter
+// Mock only getRelativeTime from dateFormatter
 jest.mock('shared/utils/dateFormatter', () => ({
   getRelativeTime: jest.fn((date: Date) => `relative:${date.toISOString()}`),
-  formatJournalDate: jest.fn((date: Date) => `journal:${date.toISOString()}`),
 }));
 
 // Mock getContentTypeLabel from contentTypeUtils
@@ -23,7 +22,7 @@ jest.mock('../../utils/contentTypeUtils', () => ({
 }));
 
 const { useNavigation } = require('shared/context/NavigationContext');
-const { getRelativeTime, formatJournalDate } = require('shared/utils/dateFormatter');
+const { getRelativeTime } = require('shared/utils/dateFormatter');
 const { getContentTypeLabel } = require('../../utils/contentTypeUtils');
 
 const mockNavigateToPage = jest.fn();
@@ -194,42 +193,22 @@ describe('useActivityDisplay', () => {
   // formatDate function
   // -------------------------------------------------------------------------
   describe('formatDate function', () => {
-    it('calls getRelativeTime when journalStyle=false (default)', () => {
+    it('calls getRelativeTime for every activity date', () => {
       const { result } = renderHook(() =>
-        useActivityDisplay({ activities: [], journalStyle: false })
+        useActivityDisplay({ activities: [] })
       );
       const date = new Date('2024-03-10');
       result.current.formatDate(date);
       expect(getRelativeTime).toHaveBeenCalledWith(date);
-      expect(formatJournalDate).not.toHaveBeenCalled();
     });
 
-    it('calls formatJournalDate when journalStyle=true', () => {
-      const { result } = renderHook(() =>
-        useActivityDisplay({ activities: [], journalStyle: true })
-      );
-      const date = new Date('2024-03-10');
-      result.current.formatDate(date);
-      expect(formatJournalDate).toHaveBeenCalledWith(date);
-      expect(getRelativeTime).not.toHaveBeenCalled();
-    });
-
-    it('returns the result from getRelativeTime in default mode', () => {
+    it('returns the result from getRelativeTime', () => {
       (getRelativeTime as jest.Mock).mockReturnValue('2 hours ago');
       const { result } = renderHook(() =>
         useActivityDisplay({ activities: [] })
       );
       const formatted = result.current.formatDate(new Date());
       expect(formatted).toBe('2 hours ago');
-    });
-
-    it('returns the result from formatJournalDate in journal mode', () => {
-      (formatJournalDate as jest.Mock).mockReturnValue('the 10th of March');
-      const { result } = renderHook(() =>
-        useActivityDisplay({ activities: [], journalStyle: true })
-      );
-      const formatted = result.current.formatDate(new Date('2024-03-10'));
-      expect(formatted).toBe('the 10th of March');
     });
   });
 
