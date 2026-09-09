@@ -952,6 +952,28 @@ Cost: dark's status hues are now two deliberately chosen values in an otherwise
 unmigrated theme. Phase 11 should treat them as already done rather than
 re-tuning them from scratch.
 
+### R13 — revises 04-rollout's Phase 7 scope: the cards are dead, not unmigrated
+Date: 2026-09-09
+Change: Phase 7 **deletes** `NPCCard`, `LocationCard` and `RumorCard` rather
+than migrating them, and drops no `[data-theme=…]` patches, because there are
+none to drop.
+Because: both halves of that sentence were written against the tree before
+Phase 6. Measured now: the three cards are exported from
+`features/campaign-entities/index.ts` and rendered by **nothing** — 1,341 lines
+of component plus roughly 1,300 lines of test, reachable only from their own
+test files. They were stranded when the directories moved to `Roster` rows.
+`NoteCard` is the exception and is live, rendered by `NotesList`.
+The 21 `[data-theme=…]` rules that remain are medieval ornament (10),
+scrollbars (4), a dark dialog shadow, a light card hover and book/reader
+typography (4). Not one is a card colour patch.
+Found by grepping for the identifier rather than for `<NPCCard`, which is the
+lesson CLAUDE.md already records about this codebase: a barrel export is a
+reference that a JSX-shaped grep does not see.
+Cost: none, and a saving. It also gives Phase 7 a genuine ordering: `07-0`
+deletes them, having first been read, because they are the closest thing the
+repo has to a specification for what an entity page shows. That field list is
+copied into `07-1` so it does not depend on the files surviving.
+
 ---
 
 ## Open questions
@@ -971,6 +993,13 @@ Answer as the work reaches them; move to a decision when settled.
   defines the token, as deliberate cleanup.
 - **Q10** — Which CommonMark renderer, and does it run at write time or read
   time? First PR of Phase 9; the reading design depends on the answer.
+- **Q12** — Does an entity keep real edit history? `ContentAttribution` stores
+  created and last-modified and nothing between, so the "timeline of edits"
+  Phase 7 was scoped around cannot exist without a data change. Answer before
+  anything promises a timeline.
+- **Q13** — Can a note be edited or deleted after it is written? 7.2 adds
+  notes only. Changing a shared record's history is a decision about the
+  record, not about the page.
 
 
 Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32,
