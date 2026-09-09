@@ -6,7 +6,7 @@ import NPCDirectory from '../NPCDirectory';
 import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs/types';
 
 // ---------------------------------------------------------------------------
-// Mock all context dependencies used by NPCDirectory and its child NPCCard
+// Mock all context dependencies used by NPCDirectory and the roster rows it renders
 // ---------------------------------------------------------------------------
 
 jest.mock('shared/context/NavigationContext', () => ({
@@ -549,7 +549,7 @@ describe('NPCDirectory', () => {
     test('should propagate onNPCUpdate callback to parent when NPC is updated', () => {
       const onNPCUpdate = jest.fn();
       render(<NPCDirectory npcs={[aldric]} onNPCUpdate={onNPCUpdate} />);
-      // NPCCard is rendered; we verify the Directory accepts the prop without error
+      // The row renders; we verify the Directory accepts the prop without error
       expect(screen.getByText('Aldric')).toBeInTheDocument();
     });
 

@@ -87,9 +87,12 @@ and the page's job is what the row deliberately does not carry: full notes,
 timeline of edits, every relationship, the image slot with its designed empty
 state (D6: no bitmaps).
 
-Scope is **NPCs and Locations only** — the other entities stay row-only until
-the pattern proves itself. The pages are complete and semi-working (D43):
-description edits in place, notes added without navigating away.
+Scope is **NPCs only** (D61, narrowing D41). Locations were dropped once 7.0
+measured that the Location row already renders every field the type has, so a
+Location page would restate it at a different URL — while the NPC row shows four
+of ten fields and hides six the forms already collect. The page is complete and
+semi-working (D43): description edits in place, notes added without navigating
+away.
 
 Four PRs. `handoff/07-0` runs first and **deletes** `NPCCard`, `LocationCard`
 and `RumorCard`: this paragraph used to say Phase 7 would *migrate* them, which
@@ -99,8 +102,8 @@ rendered by nothing. `NoteCard` is live and stays. No `[data-theme=…]` patch
 survives in any of them either; the 21 left in the tree are medieval ornament,
 scrollbars, a dialog shadow, a card hover and reader typography.
 
-Then `handoff/07-1` … `07-3`: the route and its read view; the in-place editing;
-the image slot with its designed empty state. The **upload path is a fifth PR
+Then `handoff/07-1` … `07-3`: the NPC route and its read view; the in-place
+editing; the image slot with its designed empty state. The **upload path is a fifth PR
 and is optional** — the slot must look intentional empty, cropped to fill with
 no focal point (D44).
 

@@ -5,7 +5,6 @@ export { useNPCData } from './npcs/hooks/useNPCData';
 export { default as NPCDirectory } from './npcs/components/NPCDirectory';
 export { default as NPCEditForm } from './npcs/components/NPCEditForm';
 export { default as NPCForm } from './npcs/components/NPCForm';
-export { default as NPCCard } from './npcs/components/NPCCard';
 export { default as NPCLegend } from './npcs/components/NPCLegend';
 // NPC types
 export type { NPC, NPCStatus, NPCRelationship, NPCNote, NPCConnections, NPCContextState, NPCContextValue } from './npcs/types';
@@ -25,7 +24,6 @@ export type { Quest, QuestStatus, QuestObjective, QuestLocation, QuestNPC, Quest
 export { LocationProvider, useLocations } from './locations/context/LocationContext';
 export { useLocationData } from './locations/hooks/useLocationData';
 // Components consumed by pages/locations/* and other external consumers
-export { default as LocationCard } from './locations/components/LocationCard';
 export { default as LocationCombobox } from './locations/components/LocationCombobox';
 export { default as LocationCreateForm } from './locations/components/LocationCreateForm';
 export { default as LocationDirectory } from './locations/components/LocationDirectory';
@@ -37,7 +35,6 @@ export type { Location, LocationType, LocationStatus, LocationNote, LocationCont
 export { RumorProvider, useRumors } from './rumors/context/RumorContext';
 export { useRumorData } from './rumors/hooks/useRumorData';
 // Components consumed by pages/rumors/* and other external consumers
-export { default as RumorCard } from './rumors/components/RumorCard';
 export { default as RumorForm } from './rumors/components/RumorForm';
 export { default as RumorDirectory } from './rumors/components/RumorDirectory';
 export { default as RumorBatchActions } from './rumors/components/RumorBatchActions';

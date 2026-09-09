@@ -466,26 +466,6 @@
     border: 1px solid var(--icon-border);
   }
 
-  /* ====== QUEST CARD ====== */
-  /* The .quest-card / .quest-card-{active,completed,failed} rules that stood here were
-     dead once QuestCard was deleted — the quests page renders a roster now, and those
-     four classes had no remaining consumer, static or dynamic. Removing dead styles is
-     what this branch opened by doing (hover:scale-102, hoverColors, hover:typography),
-     so leaving four more behind would have been inconsistent.
-     The .quest-status-* rules below are live: NPCCard and LocationCard both use them. */
-
-  .quest-status-active {
-    color: var(--status-active);
-  }
-
-  .quest-status-completed {
-    color: var(--status-completed);
-  }
-
-  .quest-status-failed {
-    color: var(--status-failed);
-  }
-
   .progress-container {
     background-color: var(--surface-sunken-bg);
   }
@@ -515,39 +495,22 @@
     border-color: var(--surface-sunken-bg);
   }
 
-  /* ====== NPC CARD ====== */
-  .npc-card {
-    border-left: 4px solid var(--color-primary);
-  }
+  /* ====== ENTITY LEGEND HUES ====== */
+  /* What is left of the NPC / Location / Rumor card families. The card rules
+     themselves went with NPCCard, LocationCard and RumorCard, which nothing had
+     rendered since the directories became rosters.
 
-  .npc-card-alive {
-    border-left: 4px solid var(--status-completed);
-  }
+     .npc-relationship-* is live: LocationDirectory and QuestDirectory both mark a
+     linked NPC with .npc-relationship-{relationship}. It is a hue beside a name,
+     not a hue instead of one -- the row states the relationship in words.
 
-  .npc-card-missing {
-    border-left: 4px solid var(--status-unknown);
-  }
-
-  .npc-card-deceased {
-    border-left: 4px solid var(--status-failed);
-  }
-
-  .npc-card-friendly {
-    border-left: 4px solid var(--status-completed);
-  }
-
-  .npc-card-hostile {
-    border-left: 4px solid var(--status-failed);
-  }
-
-  .npc-card-neutral {
-    border-left: 4px solid var(--color-primary);
-  }
-
-  .npc-card-unknown {
-    border-left: 4px solid var(--status-unknown);
-  }
-
+     .npc-status-* is a different case, kept rather than deleted. Its only
+     consumer is NPCLegend, which is stranded exactly as the three cards were:
+     exported, tested, rendered nowhere. The difference is that it looks
+     deliberate -- buildConfig carries `showNPCLegend: false` -- except no code
+     reads that flag, so the legend cannot be switched on either. Deciding
+     between wiring it up and retiring it is a scope this deletion PR does not
+     own; see the drift log. */
   .npc-status-alive {
     color: var(--status-completed);
   }
@@ -584,23 +547,6 @@
     background-color: var(--surface-sunken-bg);
   }
 
-  /* ====== LOCATION CARD ====== */
-  .location-card {
-    border-left: 4px solid var(--status-active);
-  }
-
-  .location-card-explored {
-    border-left: 4px solid var(--status-completed);
-  }
-
-  .location-card-visited {
-    border-left: 4px solid var(--status-unknown);
-  }
-
-  .location-card-known {
-    border-left: 4px solid var(--surface-page-on-muted);
-  }
-
   /*
     One axis, in order: known (nothing but a name) -> explored -> visited. The
     hues must agree with the status bar's bands, which read the same progression
@@ -628,86 +574,14 @@
     color: var(--status-completed);
   }
 
-  /*
-    Location type chips.
+  /* The last of .rumor-status-*. Its two siblings had no consumer once RumorCard
+     went, and RumorDirectory states the status in words instead.
 
-    These were eight hand-written `--location-type-*` colours -- the entity
-    palette solved ad hoc, and solved badly: the eight types mapped onto only
-    three distinct values, so `town` and `village` were literally the same colour.
-    They now index the palette, which means one place tunes them per theme and
-    every entry is already verified legible against one ink.
-
-    A chip rather than coloured text: the palette entries are quiet backgrounds,
-    and a pale tint used as ink would fail contrast on a light ground.
-  */
-  .location-type-region,
-  .location-type-city,
-  .location-type-town,
-  .location-type-village,
-  .location-type-dungeon,
-  .location-type-landmark,
-  .location-type-building,
-  .location-type-poi {
-    color: var(--entity-ink);
-  }
-
-  .location-type-region {
-    background-color: var(--entity-palette-0);
-  }
-
-  .location-type-city {
-    background-color: var(--entity-palette-1);
-  }
-
-  .location-type-town {
-    background-color: var(--entity-palette-2);
-  }
-
-  .location-type-village {
-    background-color: var(--entity-palette-3);
-  }
-
-  .location-type-dungeon {
-    background-color: var(--entity-palette-4);
-  }
-
-  .location-type-landmark {
-    background-color: var(--entity-palette-5);
-  }
-
-  .location-type-building {
-    background-color: var(--entity-palette-6);
-  }
-
-  .location-type-poi {
-    background-color: var(--entity-palette-7);
-  }
-
-  /* ====== RUMOR CARD ====== */
-  .rumor-card {
-    border-left: 4px solid var(--color-primary);
-  }
-
-  .rumor-card-confirmed {
-    border-left: 4px solid var(--status-completed);
-  }
-
-  .rumor-card-unconfirmed {
-    border-left: 4px solid var(--status-unknown);
-  }
-
-  .rumor-card-false {
-    border-left: 4px solid var(--status-failed);
-  }
-
-  .rumor-status-confirmed {
-    color: var(--status-completed);
-  }
-
-  .rumor-status-unconfirmed {
-    color: var(--status-unknown);
-  }
-
+     Its one remaining consumer is a misuse: RumorForm paints its *form error*
+     icon with it, so a validation failure is coloured by a rumor-status class
+     that happens to resolve to --status-failed. It wants an error token, not a
+     status one. Left alone here because this PR only deletes; Phase 8 owns
+     forms and should retire the last of this family with it. */
   .rumor-status-false {
     color: var(--status-failed);
   }
