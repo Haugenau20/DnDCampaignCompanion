@@ -87,7 +87,7 @@ export const medievalTheme: Theme = {
       // Input styling
       bg: '#FFF9ED', // Parchment color
       placeholder: '#94785C', // Faded ink color
-      border: '#B89F7D', // Aged parchment border
+      border: '#967E5F', // Aged parchment border
       borderFocus: '#8B5A2B', // Rich brown
       ringFocus: 'rgba(139, 90, 43, 0.5)', // Semi-transparent brown
       // Error states

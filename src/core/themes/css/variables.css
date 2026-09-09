@@ -1,3 +1,25 @@
+/*
+  Cascade layer order for the whole app. Later wins.
+
+  This declaration lives here, in the first imported stylesheet, because
+  `@import` is hoisted above everything else in globals.css. Declared there, it
+  arrived *after* the imported files had already created their layers, so the
+  order was whatever creation order happened to be -- which put Tailwind's
+  preflight in a later layer than the app's own rules and let
+  `button { color: inherit }` beat every class that set a colour. Measured: 1135
+  of 3361 elements changed, the chrome losing its ink and its border.
+
+  The critical property, learned by getting it wrong twice: **unlayered CSS
+  beats every layer regardless of specificity.** Tailwind's own output is
+  therefore layered too, with `tw-utilities` last -- a utility winning is what a
+  utility is for, and it is where they already sat, so this preserves today's
+  behaviour rather than changing it.
+
+  `app-state` after `app` is what D9 asked for: hover and selection beat resting
+  paint no matter where either rule sits in the file.
+*/
+@layer tw-base, tw-components, app, app-state, app-theme, tw-utilities;
+
 /* src/core/themes/css/variables.css */
 /*
   This file intentionally declares NO custom properties.

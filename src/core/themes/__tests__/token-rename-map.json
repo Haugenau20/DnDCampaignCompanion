@@ -141,6 +141,21 @@
         "to": "#F8D0EA",
         "phase": 3,
         "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--input-border": {
+        "to": "#868B94",
+        "phase": 4.5,
+        "why": "raised to clear WCAG 1.4.11 (3:1) for a boundary that identifies a control (D32)"
+      },
+      "--spinner-border": {
+        "to": "#868B94",
+        "phase": 4.5,
+        "why": "follows --input-border, which it has always aliased (D32)"
+      },
+      "--button-outline-border": {
+        "to": "#6285B5",
+        "phase": 4.5,
+        "why": "raised to clear WCAG 1.4.11 (3:1) for a boundary that identifies a control (D32)"
       }
     },
     "dark": {
@@ -183,6 +198,21 @@
         "to": "#614157",
         "phase": 3,
         "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--input-border": {
+        "to": "#82829A",
+        "phase": 4.5,
+        "why": "raised to clear WCAG 1.4.11 (3:1) for a boundary that identifies a control (D32)"
+      },
+      "--spinner-border": {
+        "to": "#82829A",
+        "phase": 4.5,
+        "why": "follows --input-border, which it has always aliased (D32)"
+      },
+      "--button-outline-border": {
+        "to": "#8285A3",
+        "phase": 4.5,
+        "why": "raised to clear WCAG 1.4.11 (3:1) for a boundary that identifies a control (D32)"
       }
     },
     "medieval": {
@@ -225,6 +255,21 @@
         "to": "#E6C6DA",
         "phase": 3,
         "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
+      },
+      "--input-border": {
+        "to": "#967E5F",
+        "phase": 4.5,
+        "why": "raised to clear WCAG 1.4.11 (3:1) for a boundary that identifies a control (D32)"
+      },
+      "--spinner-border": {
+        "to": "#967E5F",
+        "phase": 4.5,
+        "why": "follows --input-border, which it has always aliased (D32)"
+      },
+      "--button-outline-border": {
+        "to": "#8B4513",
+        "phase": 4.5,
+        "why": "raised to clear WCAG 1.4.11 (3:1) for a boundary that identifies a control (D32)"
       }
     }
   }

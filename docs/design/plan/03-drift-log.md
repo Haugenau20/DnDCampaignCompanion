@@ -388,6 +388,62 @@ rendering Home in a 320px iframe, which is a real test where resizing a
 maximised window is not. Verified afterwards with a 96-character campaign name
 at both widths: no horizontal overflow, header still one line.
 
+### D32 — Control boundaries raised to 3:1
+Date: 2026-09-09   Status: active   (settles Q9)
+Decision: `field.border` and `action.outline.border` are darkened in every
+theme until the least favourable of the page and card grounds clears 3:1 with
+margin. Light 1.40 -> 3.25 and 1.71 -> 3.59; dark 1.98 -> 4.01 and 1.38 ->
+4.17; medieval 2.34 -> 3.56 (its outline border already passed at 6.55).
+`token-contrast.test.ts` now enforces 3:1 instead of ratcheting a recorded
+failure.
+Because: an outline button and a text input are identified by their borders, so
+WCAG 1.4.11 genuinely binds. It was recorded rather than fixed through Phases
+1-4 because each of those phases was fenced against changing values, and a
+floor kept it from worsening in the meantime. Values were chosen at >= 3.2
+rather than exactly 3.0 so a later tuning nudge cannot silently drop below the
+line. `--spinner-border` follows automatically, having always aliased
+`field.border`.
+
+### D33 — Cascade layer order, declared in the first imported stylesheet
+Date: 2026-09-09   Status: active   (settles Q6, completes D9)
+Decision: `@layer tw-base, tw-components, app, app-state, app-theme,
+tw-utilities;` declared at the top of `variables.css`. Tailwind's own output is
+wrapped in `tw-base` / `tw-components` / `tw-utilities`; `components.css` is
+`app` with its state block in `app-state`; `theme-effects.css` is `app-theme`;
+`globals.css`'s own utility classes join `tw-utilities`.
+Because: precedence was a function of file order, which is what let a rule
+declared 500 lines later beat `.card` and flatten every list surface. R1
+reverted the first attempt after discovering that unlayered CSS beats every
+layer regardless of specificity -- so Tailwind's output had to be layered too,
+with utilities last, which is where they already sat.
+The second attempt failed differently and instructively: the order was declared
+in `globals.css`, but `@import` is hoisted above everything there, so the
+declaration arrived *after* the imported files had already created their layers.
+Creation order then decided, putting Tailwind's preflight above the app's rules
+and letting `button { color: inherit }` beat every class that set a colour --
+1135 of 3361 elements changed, the chrome losing both its ink and its border.
+Moving the declaration into the first imported file fixed it.
+Verified by computed-style diff rather than by eye: 23 properties on all 3361
+elements across nine routes, before and after. Zero tag mismatches and zero
+real style differences -- the only variance was a handful of continuously
+animating elements sampled at different phases, whose values differ between two
+consecutive runs of the *same* build.
+Cost: a new footgun -- an unlayered rule added later would outrank everything.
+`css-layers.test.ts` asserts nothing in the theme stylesheets or `globals.css`
+is unlayered, verified against a control.
+
+### D34 — The mobile nav row scrolls instead of crushing its labels
+Date: 2026-09-09   Status: active
+Decision: mobile nav items use `basis-0 grow shrink-0` with a `3.75rem` floor
+and `text-xs`, replacing `flex-1 min-w-0`.
+Because: seven items sharing 304px gave each about 43px while "Locations" needs
+roughly 65px, and `min-w-0` let each one collapse below its content, so every
+label overflowed its own box and collided with its neighbours. The container
+already had `overflow-x-auto`; `flex-1` was what stopped it working. Now the
+row shares width when there is room and scrolls when there is not. Measured at
+320px: 0 overlapping pairs, 0 labels overflowing, scroll width 444 against a
+292 client width.
+
 ---
 
 ## Revisions
@@ -460,26 +516,5 @@ Answer as the work reaches them; move to a decision when settled.
   differ per theme?
 - **Q5** — When do fallbacks get removed? Proposal: only once every theme
   defines the token, as deliberate cleanup.
-- **Q6** — Where does the cascade layer order land, given R1? Declaring one
-  requires wrapping Tailwind's `@tailwind` output in named layers, which
-  changes precedence app-wide and inverts `theme-effects.css` against the
-  utilities. Proposal: Phase 1, with the token restructure, where a screenshot
-  gate would actually catch the fallout.
 
-- **Q9** — `action.outline.border` and `field.border` fail WCAG 1.4.11 (3:1
-  for boundaries that identify a control). Measured against the least
-  favourable of page and card:
-
-  | theme | action.outline.border | field.border |
-  |---|---|---|
-  | light | 1.71:1 | 1.40:1 |
-  | dark | 1.38:1 | 1.98:1 |
-  | medieval | 6.55:1 (ok) | 2.34:1 |
-
-  An outline button and a text input are identified by their borders, so this
-  is a real failure, not a quiet-hairline judgement call. Out of scope for
-  Phase 1, which changes no values; floors are recorded in
-  `token-contrast.test.ts` so it cannot worsen. Fix in Phase 2 with the chrome,
-  or as a dedicated contrast pass?
-
-Settled: **Q1** by D25, **Q7** by D14, **Q8** by D15.
+Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32.

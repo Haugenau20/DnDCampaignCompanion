@@ -100,7 +100,10 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
     return (
       <nav className="navigation md:hidden" aria-label="Main">
         <div className="max-w-7xl mx-auto px-2">
-          <div className="flex items-center justify-between overflow-x-auto">
+          {/* `gap-1` plus per-item minimums rather than `justify-between`: the
+              row must be allowed to exceed the viewport and scroll, which is
+              what `overflow-x-auto` was already asking for. */}
+          <div className="flex items-center gap-1 overflow-x-auto">
             {navItems.map((item) => {
               const isActive = shouldHighlightPath(item.path);
 
@@ -113,7 +116,15 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
                   iconPosition='top'
                   aria-current={isActive ? 'page' : undefined}
                   className={clsx(
-                    'flex flex-col items-center justify-center flex-1 min-w-0 text-sm',
+                    // `basis-0 grow` shares the width when there is room, and
+                    // `shrink-0` with a floor stops an item being squeezed
+                    // narrower than its label. Previously `flex-1 min-w-0` let
+                    // each of seven items collapse to ~43px at 320px while
+                    // "Locations" needs ~65px, so every label overflowed its own
+                    // box and collided with its neighbours. Now the row scrolls
+                    // instead, which is what the container was already set up for.
+                    'flex flex-col items-center justify-center text-xs',
+                    'basis-0 grow shrink-0 min-w-[3.75rem] px-1',
                     isActive
                       ? `navigation-item-active`
                       : `navigation-item`
@@ -121,7 +132,7 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
                 >
                   <Typography
                     variant="body-sm"
-                    className={`mt-1 ${isActive ? 'font-medium' : ''}`}
+                    className={clsx('mt-1 text-xs whitespace-nowrap', isActive && 'font-medium')}
                   >
                     {item.label}
                   </Typography>

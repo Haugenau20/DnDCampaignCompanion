@@ -1,9 +1,21 @@
 /* src/styles/globals.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/*
+  Layer order is declared at the top of variables.css -- the first @import --
+  because @import is hoisted above everything here. See the note there.
+*/
+@layer tw-base {
+  @tailwind base;
+}
 
-/* Import the theme system CSS */
+@layer tw-components {
+  @tailwind components;
+}
+
+@layer tw-utilities {
+  @tailwind utilities;
+}
+
+/* Import the theme system CSS. Each file declares its own layer internally. */
 @import '../core/themes/css/variables.css';
 @import '../core/themes/css/components.css';
 @import '../core/themes/css/theme-effects.css';
@@ -62,33 +74,40 @@
   }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out forwards;
-}
+/*
+  These are utilities, so they belong in the utilities layer. Left
+  unlayered they would outrank every layer -- including the theme rules --
+  by accident rather than by intent.
+*/
+@layer tw-utilities {
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
 
-/* Hide scrollbar but allow scrolling */
-.hide-scrollbar {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-}
+  /* Hide scrollbar but allow scrolling */
+  .hide-scrollbar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
 
-.hide-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
-}
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 
-/* Text truncation for multi-line */
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
+  /* Text truncation for multi-line */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 
-/* Custom shadow utilities */
-.shadow-inner-right {
-  box-shadow: inset 8px 0 8px -8px rgba(0, 0, 0, 0.2);
-}
+  /* Custom shadow utilities */
+  .shadow-inner-right {
+    box-shadow: inset 8px 0 8px -8px rgba(0, 0, 0, 0.2);
+  }
 
-.shadow-inner-left {
-  box-shadow: inset -8px 0 8px -8px rgba(0, 0, 0, 0.2);
+  .shadow-inner-left {
+    box-shadow: inset -8px 0 8px -8px rgba(0, 0, 0, 0.2);
+  }
 }
