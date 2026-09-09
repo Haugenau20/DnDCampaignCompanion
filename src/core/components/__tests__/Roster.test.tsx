@@ -8,6 +8,7 @@ import {
   RosterFilterSelect,
   RosterGroup,
   RosterRow,
+  RosterStatus,
   RosterField,
   type RosterSegment,
 } from '../Roster';
@@ -485,6 +486,96 @@ describe('RosterField', () => {
   test('falls back to a default empty message', () => {
     render(<RosterField label="Race" />);
     expect(screen.getByText('Not recorded')).toBeInTheDocument();
+  });
+});
+
+describe('RosterStatus', () => {
+  test('states the status as a word, always', () => {
+    render(<RosterStatus tone="completed">Confirmed</RosterStatus>);
+    expect(screen.getByText('Confirmed')).toBeInTheDocument();
+  });
+
+  test('a quest completing and a rumour being confirmed are the same kind of fact', () => {
+    // Same tone, therefore same hue, same weight and same placement. Four
+    // directories used to reach for four parallel class families that all
+    // resolved to these same five tokens, which is how they drifted apart.
+    const { container: quest } = render(
+      <RosterStatus tone="completed">Completed</RosterStatus>
+    );
+    const { container: rumour } = render(
+      <RosterStatus tone="completed">Confirmed</RosterStatus>
+    );
+    const cls = (c: HTMLElement) =>
+      (c.firstChild as HTMLElement).className.split(/\s+/).sort().join(' ');
+    expect(cls(quest)).toBe(cls(rumour));
+  });
+
+  test('every tone maps to a status token, except the one that means "no hue"', () => {
+    const hued = ['active', 'completed', 'failed', 'unknown', 'general'] as const;
+    hued.forEach(tone => {
+      const { container, unmount } = render(
+        <RosterStatus tone={tone}>Word</RosterStatus>
+      );
+      expect((container.firstChild as HTMLElement).className).toContain(`status-${tone}`);
+      unmount();
+    });
+
+    // `muted` is a real status with no hue: a location that is merely `known`
+    // is the least-advanced point on its axis, and spending the one status hue
+    // on "nothing has happened here yet" would say the opposite.
+    const { container } = render(<RosterStatus tone="muted">Known</RosterStatus>);
+    const cls = (container.firstChild as HTMLElement).className;
+    expect(cls).toContain('typography-secondary');
+    expect(cls).not.toMatch(/status-(active|completed|failed|unknown|general)/);
+  });
+
+  test('keeps one weight and placement across every tone', () => {
+    const shapes = new Set<string>();
+    (['active', 'completed', 'failed', 'unknown', 'general', 'muted'] as const).forEach(
+      tone => {
+        const { container, unmount } = render(
+          <RosterStatus tone={tone}>Word</RosterStatus>
+        );
+        const cls = (container.firstChild as HTMLElement).className
+          .split(/\s+/)
+          .filter(c => !c.startsWith('status-') && c !== 'typography-secondary')
+          .sort()
+          .join(' ');
+        shapes.add(cls);
+        unmount();
+      }
+    );
+    expect(shapes.size).toBe(1);
+  });
+});
+
+describe('RosterRow batch selection', () => {
+  const renderRow = (props: Partial<React.ComponentProps<typeof RosterRow>> = {}) =>
+    render(
+      <RosterRow
+        entityId="r1"
+        entityName="Dragon spotted"
+        gridClassName="grid-cols-2"
+        toggleLabel="Dragon spotted"
+        {...props}
+      >
+        <span>Dragon spotted</span>
+      </RosterRow>
+    );
+
+  test('an unselected row carries no selection paint', () => {
+    const { container } = renderRow();
+    expect(container.querySelector('.roster-row-selected')).toBeNull();
+  });
+
+  test('a selected row paints from its own surface, not the accent or a status hue', () => {
+    // Selection says "this is what you are about to act on" -- feedback about
+    // the moment, not a property of the record. A status hue here would mean a
+    // selected rumour and a confirmed one shared a colour.
+    const { container } = renderRow({ selected: true });
+    const row = container.querySelector('.roster-row-selected');
+    expect(row).not.toBeNull();
+    expect(row!.className).not.toMatch(/status-/);
   });
 });
 

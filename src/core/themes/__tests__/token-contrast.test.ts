@@ -128,18 +128,16 @@ describe("status hues meet AA as text on every row surface", () => {
   /**
    * Light is the migrated theme and owes the real 4.5:1.
    *
-   * Dark and medieval are recorded failures, ratcheted at the worst ratio they
-   * currently reach so they cannot get worse while the phases allowed to change
-   * their values have not arrived -- the same treatment control boundaries had
-   * through Phases 1-4, and for the same reason. Dark comes to parity in Phase
-   * 11 and medieval is deleted there (D40); both entries should disappear then,
-   * leaving one uniform 4.5.
+   * Dark met it in PR 6.3 (D56): its `completed` and `failed` were 3.05:1 and
+   * 2.41:1, which is unreadable as a word, and after Phase 6 the word is the
+   * only encoding a status has. Its ratchet entries are gone.
    *
-   * A ratchet is not a pass. `dark.status.failed` at 2.41:1 is unreadable as a
-   * word, and the word is now the only encoding.
+   * Medieval keeps one. It is deleted in Phase 11 (D40), so raising its value
+   * would be work on a theme with a scheduled end; the ratchet is only there so
+   * it cannot get worse first. That last entry should disappear with the theme,
+   * leaving one uniform 4.5.
    */
   const RATCHET: Record<string, Record<string, number>> = {
-    dark: { completed: 3.05, failed: 2.41 },
     medieval: { unknown: 1.83 },
   };
 

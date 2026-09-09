@@ -21,6 +21,8 @@ import {
   type RosterFilterOption,
   RosterSkeleton,
   RosterEmpty,
+  RosterStatus,
+  type RosterStatusTone,
 } from 'core/components/Roster';
 
 interface LocationDirectoryProps {
@@ -62,6 +64,21 @@ const STATUS_ORDER: { key: LocationStatus; colorClass: string }[] = [
   { key: 'explored', colorClass: 'bg-status-unknown' },
   { key: 'visited', colorClass: 'bg-status-completed' },
 ];
+
+/**
+ * Location state, in the shared status vocabulary.
+ *
+ * `known` is muted rather than hued. It is the least-advanced point on the axis
+ * -- a place you have heard of and not been -- so spending the status hue on it
+ * would say the opposite of what it means. The status bar's own band is red
+ * there only as the "not yet" end of a progression; as row text that would put
+ * the accent on a resting row.
+ */
+const STATUS_TONE: Record<LocationStatus, RosterStatusTone> = {
+  known: 'muted',
+  explored: 'unknown',
+  visited: 'completed',
+};
 
 const formatLocationType = (type: LocationType): string => {
   if (type === 'poi') return 'Point of Interest';
@@ -433,11 +450,17 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
                                 onClick={() => handleQuestClick(questId)}
                                 className="flex items-center gap-2 text-left px-2.5 py-1.5 rounded-md selectable-item"
                               >
-                                <Scroll
-                                  size={14}
-                                  className={clsx('shrink-0', `quest-status-${quest.status}`)}
-                                />
-                                <Typography variant="body-sm">{quest.title}</Typography>
+                                <Scroll size={14} className="shrink-0 typography-secondary" />
+                                <Typography variant="body-sm">
+                                  {quest.title}
+                                  {/* The icon used to carry the quest's status by hue alone,
+                                      with no legend anywhere on the page -- unreadable for
+                                      anyone who cannot separate the hues, and undecodable for
+                                      everyone else. The word states it instead. */}
+                                  <span className="typography-secondary ml-1.5">
+                                    · {quest.status.charAt(0).toUpperCase() + quest.status.slice(1)}
+                                  </span>
+                                </Typography>
                               </button>
                             );
                           })}
@@ -500,16 +523,9 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
             )}
           </div>
 
-          {/* The word carries the state, in the status hue; the dot said it twice. */}
-          <Typography
-            variant="body-sm"
-            className={clsx(
-              'hidden md:block text-sm font-semibold',
-              `location-status-${location.status}`
-            )}
-          >
+          <RosterStatus tone={STATUS_TONE[location.status]}>
             {location.status.charAt(0).toUpperCase() + location.status.slice(1)}
-          </Typography>
+          </RosterStatus>
 
           {/* The type, stated once. It was a chip filled from the entity palette --
               the same palette the sigil draws from, so the row carried two marks in

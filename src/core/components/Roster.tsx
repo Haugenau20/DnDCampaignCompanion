@@ -399,6 +399,72 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
 );
 
 // ---------------------------------------------------------------------------
+// Status
+// ---------------------------------------------------------------------------
+
+/**
+ * The status roles, named for the state rather than the entity.
+ *
+ * `muted` is deliberately in the set. Not every state deserves a hue: a
+ * location that is merely `known` is the least-advanced point on its axis, and
+ * spending the one status hue on "nothing has happened here yet" would say the
+ * opposite of what it means. It is still a status, so it keeps the treatment --
+ * same weight, same placement -- and only the hue drops out.
+ */
+export type RosterStatusTone =
+  | 'active'
+  | 'completed'
+  | 'failed'
+  | 'unknown'
+  | 'general'
+  | 'muted';
+
+const STATUS_TONE: Record<RosterStatusTone, string> = {
+  active: 'status-active',
+  completed: 'status-completed',
+  failed: 'status-failed',
+  unknown: 'status-unknown',
+  general: 'status-general',
+  muted: 'typography-secondary',
+};
+
+export interface RosterStatusProps {
+  /** Which state this is, in the vocabulary of the status hue. */
+  tone: RosterStatusTone;
+  /** The state, as a word. Always rendered -- the hue never carries it alone. */
+  children: React.ReactNode;
+  className?: string;
+}
+
+/**
+ * A status, stated as a word in the status hue.
+ *
+ * One component so that a quest's "Completed" and a rumour's "Confirmed" are
+ * the same kind of fact and look like it -- same weight, same placement, same
+ * vocabulary of hues. Four directories previously reached for four parallel
+ * class families (`quest-status-*`, `rumor-status-*`, `npc-status-*`,
+ * `location-status-*`) that all resolved to the same five tokens, which is how
+ * they drifted apart once already: `location-status-explored` and
+ * `-visited` were swapped against their own legend for as long as a dot was
+ * there to cover it.
+ *
+ * The word is not optional. The hue is a scanning aid on top of it, never a
+ * substitute, so the directories stay fully readable with hue removed.
+ */
+export const RosterStatus: React.FC<RosterStatusProps> = ({
+  tone,
+  children,
+  className,
+}) => (
+  <Typography
+    variant="body-sm"
+    className={clsx('hidden md:block text-sm font-semibold', STATUS_TONE[tone], className)}
+  >
+    {children}
+  </Typography>
+);
+
+// ---------------------------------------------------------------------------
 // Row
 // ---------------------------------------------------------------------------
 
@@ -435,6 +501,12 @@ export interface RosterRowProps {
   leadingControl?: React.ReactNode;
   isFirst?: boolean;
   highlighted?: boolean;
+  /**
+   * Batch selection. Painted from the row's own surface rather than the accent
+   * or a status hue -- selection is feedback about what you are about to act on,
+   * not a property of the record.
+   */
+  selected?: boolean;
   id?: string;
 }
 
@@ -457,6 +529,7 @@ export const RosterRow: React.FC<RosterRowProps> = ({
   leadingControl,
   isFirst = false,
   highlighted = false,
+  selected = false,
   id,
 }) => {
   // Loud on purpose. A row reaching this component without an id is a data bug,
@@ -477,6 +550,7 @@ export const RosterRow: React.FC<RosterRowProps> = ({
       'transition-colors',
       !isFirst && 'border-t border-card',
       highlighted && `highlighted-item`,
+      selected && 'roster-row-selected',
       expanded && 'bg-secondary'
     )}
   >
