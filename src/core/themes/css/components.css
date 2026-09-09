@@ -660,14 +660,18 @@
     box-shadow: 0 0 0 var(--border-width-sm) var(--surface-band-border);
   }
 
-  /* ====== PARTY CREST ====== */
+  /* ====== IMAGE SLOT ====== */
 /*
-  The empty state for the party's crest slot. Diagonal ruling in the page's own
+  The empty state for a reserved image slot. Diagonal ruling in the page's own
   sunken tone, so it reads as a reserved space with a design rather than a
-  missing image -- most groups will never upload one, which makes this the
-  state that matters.
+  missing image -- no bitmaps ship (D6), so almost every slot is empty almost
+  always, which makes this the state that matters rather than a placeholder.
+
+  Was `.party-crest-slot`, which had the only instance until the NPC page became
+  the second. The rule did not change when it was generalised; only its name and
+  the number of callers did.
 */
-.party-crest-slot {
+.image-slot {
   background-color: var(--surface-sunken-bg);
   background-image: repeating-linear-gradient(
     135deg,
@@ -675,6 +679,14 @@
     transparent 6px 14px
   );
   border-bottom: var(--border-width-sm) solid var(--surface-card-border);
+}
+
+/*
+  The caption sits on the ruling, so it takes the muted ink of the sunken
+  surface it is drawn on rather than the page's.
+*/
+.image-slot-caption {
+  color: var(--surface-sunken-on-muted, var(--surface-page-on-muted));
 }
 
 /* ====== COLLECTION CHROME ====== */

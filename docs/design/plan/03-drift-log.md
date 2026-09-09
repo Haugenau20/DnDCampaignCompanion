@@ -892,6 +892,76 @@ pinned "exactly one accented action"; without this the invariant would have
 been broken silently by 7.2 rather than deliberately. It is now asserted in
 both states.
 
+### D65 — The entity page is a stack of cards, not one slab
+Date: 2026-09-09   Status: active
+Decision: the NPC page is composed of cards that each hold one kind of thing --
+identity, description, the three prose fields, notes -- beside a sidebar of
+relationships, tags and record. Rebuilt from a design mock after the first cut
+was rejected.
+Because: 7.1 put every field into a single card with a metadata aside, and it
+read as a **form**: an undifferentiated column of uppercase labels with values
+under them, where nothing was more important than anything else and the eye had
+nowhere to rest. A record is not a form. Cards give the page joints, so a reader
+can skip a whole section at a glance instead of reading every label to find the
+one they want.
+Three things carry most of the difference, and none of them is decoration:
+- **The identity card starts with the image band**, and the two are one object
+  rather than a band floating above a card. That fixes the page's proportions
+  at the top, which is why the slot came forward from 7.3 rather than arriving
+  after the layout had already been judged without it.
+- **The description is serif italic at reading size.** It is the only running
+  prose on the page; everything else is metadata and lists, and setting it the
+  same as a field value was what made the page read as a form.
+- **One Relationships list, each row saying why it is there.** Location,
+  associates, affiliations, quests and rumors were four separate labelled
+  fields; they are one list now, because "who and what is this person connected
+  to" is one question. The reasons are derived from the kind of link -- a
+  location is where they are, an affiliation is something they claim, a quest
+  and a rumor each carry their own status -- so no field was added to store
+  them. Only NPC-to-NPC has nothing to say beyond the other character's title,
+  because `relatedNPCs` is a bare list of ids.
+
+### D66 — An accent marks a control that writes; navigation is never accented
+Date: 2026-09-09   Status: active
+Decision: supersedes D64's "exactly one accent, following the action being
+taken". The page's accents are the controls that change the record -- `Add
+note`, `Delete`, and a `Save` while an editor is open. `Edit all fields` is
+outline, because going to a form is not an act.
+Because: D64 held only while every editor was summoned. The note composer is now
+permanently on screen (a composer you have to summon is a composer you forget
+exists), so the page always carries a writing action and "exactly one accent" is
+no longer a rule anything can obey. Counting accents was the wrong invariant; it
+was a proxy for the real one, which is *what kind of control earns emphasis*.
+That version survives the composer, survives the editor being open, and is the
+rule the design mock was already following -- its own footnote reads "Two
+accents on the page, both actions: Add note and Delete".
+
+### D67 — A note records who wrote it, from now on
+Date: 2026-09-09   Status: active
+Decision: `NPCNote` gains an optional `author`, set from the acting character
+(falling back to the username) when a note is added from the page. Notes written
+before the field existed keep no author and render with the column blank.
+Because: the page shows a note history, and "who said this" is the second thing
+a reader wants after "when". The field is optional rather than required, and
+existing notes are **not** backfilled from the record's creator: the person who
+created an NPC is not necessarily the person who wrote any note on it, so
+backfilling would be inventing history to fill a column. A blank is honest; a
+plausible wrong name is not.
+Cost: `updateNPCNote`'s payload grows a field, and the composer needs the acting
+profile. Both were already available.
+
+### D68 — NPCs carry tags, and the forms that create them can set them
+Date: 2026-09-09   Status: active
+Decision: `NPC` gains `tags?: string[]`, matching `Location.tags`, with entry
+added to both `NPCForm` and `NPCEditForm`.
+Because: the design gives the sidebar a Tags card, and a card that can only ever
+be empty is worse than no card. Adding the field without the form work would
+have produced exactly that -- which is the trap this decision exists to record:
+a display-only field is not a feature, it is a permanent empty state.
+The control is the one `LocationFormSections` already uses, borrowed rather than
+invented, and its button says "Add tag" rather than "Add" so it is not confused
+with the affiliations control beside it -- by a reader or by a screen reader.
+
 ---
 
 ## Revisions
@@ -1112,6 +1182,22 @@ choice between wiring it up and retiring it is a real one: a legend is the one
 place the design language permits a hue to carry meaning alone, since the
 legend is itself the key. That makes it the natural home for the `npc-status-*`
 family rather than dead weight. Deciding needs an owner; see Q15.
+
+### R18 — revises 07-3: the image slot shipped inside 7.2.5
+Date: 2026-09-09
+Change: Phase 7 has no separate 7.3. The image slot -- the shared `ImageSlot`
+component, the generalised `.image-slot` rule, and the NPC page's band -- landed
+as part of the 7.2.5 redo.
+Because: the mock's layout begins with the band, and the identity card's
+proportions are set by it. Reviewing a new layout with a hole where its first
+element belongs would have meant judging it twice and rebuilding it once.
+07-3's own rules were kept rather than skipped: no Storage, no picker, no
+upload, no generation, and the empty state is the whole component. One thing in
+the mock was **not** built -- its caption reads "drop a photo", which promises
+an upload this build cannot do. The slot says the state honestly instead.
+`.party-crest-slot` became `.image-slot` and `PartyCrest` now renders the shared
+component: two callers is the threshold 07-3 set for generalising, and the
+second one had just arrived.
 
 ### R17 — revises R16: the raw ISO date is not LocationDirectory's alone
 Date: 2026-09-09

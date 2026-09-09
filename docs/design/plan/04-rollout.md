@@ -102,8 +102,10 @@ rendered by nothing. `NoteCard` is live and stays. No `[data-theme=…]` patch
 survives in any of them either; the 21 left in the tree are medieval ornament,
 scrollbars, a dialog shadow, a card hover and reader typography.
 
-Then `handoff/07-1` … `07-3`: the NPC route and its read view; the in-place
-editing; the image slot with its designed empty state. The **upload path is a fifth PR
+Then `handoff/07-1` and `07-2`: the NPC route and its read view, then the
+in-place editing. `07-2-5` rebuilt the page against a design mock after the
+first layout read as a form rather than a record (D65), and absorbed `07-3`'s
+image slot along with it (R18) -- so Phase 7 ends there. The **upload path is a fifth PR
 and is optional** — the slot must look intentional empty, cropped to fill with
 no focal point (D44).
 

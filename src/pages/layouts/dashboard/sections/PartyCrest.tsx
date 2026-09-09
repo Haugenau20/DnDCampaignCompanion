@@ -1,6 +1,7 @@
 // src/pages/layouts/dashboard/sections/PartyCrest.tsx
 import React from 'react';
 import Typography from 'core/components/Typography';
+import ImageSlot from 'core/components/ImageSlot';
 import { useCampaignInfo } from '../../common/hooks/useCampaignInfo';
 
 interface PartyCrestProps {
@@ -35,10 +36,9 @@ const PartyCrest: React.FC<PartyCrestProps> = ({ memberCount, chapterCount }) =>
 
   return (
     <div className="rounded-lg overflow-hidden card" data-testid="party-crest">
-      <div
-        className="party-crest-slot h-28"
-        role="img"
-        aria-label={`${activeGroup.name} crest — none uploaded yet`}
+      <ImageSlot
+        className="h-28"
+        label={`${activeGroup.name} crest — none uploaded yet`}
       />
       <div className="px-5 py-4">
         <Typography variant="h4" className="text-base">

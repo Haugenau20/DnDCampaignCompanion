@@ -8,7 +8,9 @@ Handoffs are written **as a phase starts**, not up front — the same reason
 phases early is a guess with a checklist attached.
 
 Currently written: Phase 6 (`06-0` … `06-3`, done) and Phase 7
-(`07-0` … `07-2` done, `07-3` remaining).
+(`07-0` … `07-2` done, then `07-2-5` -- a redo of the NPC page against a
+design mock, which absorbed `07-3`. Phase 7 is complete; `07-3` is kept for
+the record with a note saying where its work went, R18).
 
 Phase 7's optional fourth PR — the image **upload** path — is deliberately not
 written. D6 keeps bitmaps out of this project entirely, so it is a handoff for

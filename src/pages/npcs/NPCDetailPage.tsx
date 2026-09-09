@@ -1,24 +1,27 @@
 // src/pages/npcs/NPCDetailPage.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
 import EntitySigil from 'core/components/EntitySigil';
-import { RosterField } from 'core/components/Roster';
+import ImageSlot from 'core/components/ImageSlot';
 import {
   useNPCData,
   useNPCs,
   useQuests,
+  useRumors,
   useLocations,
   resolveLocationName,
 } from 'features/campaign-entities';
-import InlineEditor from './InlineEditor';
+import { useUser } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
 import Breadcrumb from 'shared/components/Breadcrumb';
+import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import { usePageGate, GatedContent } from 'shared/components/gated';
-import PageShell from 'shared/components/page-shell/PageShell';
 import { useNavigation } from 'shared/context/NavigationContext';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
+import InlineEditor from './InlineEditor';
+import { Pencil } from 'lucide-react';
 
 /** Sentence-cases one of the short enum values the type stores lowercase. */
 const capitalise = (value: string): string =>
@@ -29,23 +32,50 @@ const capitalise = (value: string): string =>
  *
  * `NPCNote.date` is a plain string with no agreed shape: the form writes
  * `YYYY-MM-DD`, while the sample-data generator writes a full ISO timestamp.
- * The directory rows print it raw, which is where
- * `2025-05-31T19:27:30.387Z` comes from on an expanded row. A date the reader
- * cannot read is not a date, so the page formats what it can and returns
- * anything unparseable untouched -- the same principle as an unresolved
- * location reference: show it as itself rather than invent a value for it.
+ * A date the reader cannot read is not a date, so the page normalises what it
+ * can and returns anything unparseable untouched -- the same principle as an
+ * unresolved location reference: show it as itself rather than invent a value.
  */
 const formatNoteDate = (value: string): string => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return parsed.toLocaleDateString('en-uk', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
+  return parsed.toISOString().split('T')[0];
 };
+
+/** The uppercase micro-label every field on this page is introduced by. */
+const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Typography
+    variant="body-sm"
+    color="muted"
+    className="text-[11px] font-semibold uppercase tracking-wider"
+  >
+    {children}
+  </Typography>
+);
+
+/** One card in the sidebar. */
+const SideCard: React.FC<{
+  title: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ title, children }) => (
+  <section className="bg-secondary card-border rounded-lg p-5 flex flex-col gap-3">
+    <FieldLabel>{title}</FieldLabel>
+    {children}
+  </section>
+);
+
+/** What a relationship is, said in words rather than left to the reader. */
+interface Relation {
+  key: string;
+  id: string;
+  name: string;
+  /** Why this entity is on the list. Derived from the kind of link, not stored. */
+  reason: string;
+  /** Empty when there is nowhere to go, as for a free-text affiliation. */
+  href: string;
+}
 
 /**
  * The designed not-found. A bad id is an ordinary event -- a stale bookmark, a
@@ -67,64 +97,48 @@ const NPCNotFound: React.FC<{ onBack: () => void }> = ({ onBack }) => (
 /**
  * One NPC, in full.
  *
- * This page exists because six fields were write-only. `appearance`,
+ * The page exists because six fields were write-only: `appearance`,
  * `personality`, `background` and all three `connections.*` arrays are
- * collected by both the create and the edit form, written to Firestore, and
- * were rendered by nothing -- the directory row shows four of the type's ten
- * content fields. Retiring `NPCCard` in 7.0 did not cause that: the card had
- * already been unreachable for a phase, and it never rendered `relatedNPCs` or
- * `affiliations` either. So this is not a second view of the row's data. It is
- * the first time some of this data has been readable at all (D61).
+ * collected by both forms, written to Firestore, and were rendered nowhere
+ * (D61). Nothing here is missing from the directory row, and nothing left the
+ * row to get here -- what the page adds is the whole note history rather than a
+ * truncated one, every relationship in a single list, and somewhere to write.
  *
- * Read-only by design: 7.2 adds editing in place, 7.3 the image slot. The
- * row's own expansion is untouched, because the phase is additive (D41) and a
- * page that costs the directory anything has failed regardless of how it looks.
+ * Laid out as a stack of cards beside a sidebar rather than one slab of
+ * labelled values. Each card is one kind of thing, so a reader can skip a whole
+ * section at a glance; the first cut put every field in one card and read as a
+ * form rather than as a record (D65).
  */
 const NPCDetailPage: React.FC = () => {
   const { npcId } = useParams<{ npcId: string }>();
   const { navigateToPage } = useNavigation();
   const { npcs, loading, error, refreshNPCs } = useNPCData();
+  const { updateNPC, updateNPCNote, deleteNPC } = useNPCs();
   const { getQuestById } = useQuests();
+  const { rumors } = useRumors();
   const { locations } = useLocations();
-  // Writes go through the context; reads stay on this page's own store. The
-  // context's `error` folds read and write failures into one value, and routing
-  // a failed save into the page-level gate would blank the whole page instead
-  // of saying so beside the field the user was typing in.
-  const { updateNPC, updateNPCNote } = useNPCs();
+  const { activeGroupUserProfile } = useUser();
 
-  const [editing, setEditing] = useState<'description' | 'note' | null>(null);
+  const npc = npcs.find((candidate) => candidate.id === npcId);
+
+  // `loading` folds into the gate's resolving state: `npcs` is empty while auth
+  // and the campaign restore, and without this the page would claim "no NPC
+  // with that id" for the found-but-not-yet-loaded case.
+  const gate = usePageGate('npcs', {
+    loading,
+    error,
+    onRetry: () => {
+      void refreshNPCs();
+    },
+  });
+
+  const [editingDescription, setEditingDescription] = useState(false);
   const [savedField, setSavedField] = useState<'description' | 'note' | null>(
     null
   );
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [returnFocus, setReturnFocus] = useState(false);
   const descriptionButton = useRef<HTMLButtonElement>(null);
-  const addNoteButton = useRef<HTMLButtonElement>(null);
-  const [pendingFocus, setPendingFocus] = useState<
-    'description' | 'note' | null
-  >(null);
-
-  /**
-   * Return focus once the trigger exists again.
-   *
-   * Closing an editor unmounts it and re-mounts the button that opened it, so
-   * the button cannot be focused from inside the editor -- at that moment its
-   * ref is still null. This effect runs after the commit, when the control is
-   * back in the document, which is the only point where the keyboard can be
-   * given its place back.
-   */
-  useEffect(() => {
-    if (!pendingFocus) {
-      return;
-    }
-    const target =
-      pendingFocus === 'description' ? descriptionButton : addNoteButton;
-    target.current?.focus();
-    setPendingFocus(null);
-  }, [pendingFocus]);
-
-  const closeEditor = (field: 'description' | 'note') => {
-    setEditing(null);
-    setPendingFocus(field);
-  };
 
   // The value changing on screen is the real confirmation; this is the word
   // that goes with it, for anyone who cannot see the change happen.
@@ -136,33 +150,15 @@ const NPCDetailPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [savedField]);
 
-  const npc = npcs.find((candidate) => candidate.id === npcId);
-
-  // `loading` folds into the gate's resolving state exactly as it does on the
-  // edit page: `npcs` is an empty array while auth and the campaign restore, so
-  // without this the page would claim "No NPC with that id" for the
-  // found-but-not-yet-loaded case (bug #1424's shape).
-  const gate = usePageGate('npcs', {
-    loading,
-    error,
-    onRetry: () => {
-      void refreshNPCs();
-    },
-  });
-
-  // relatedNPCs stores ids; one that no longer resolves is dropped rather than
-  // printed raw, the same way the row drops an unresolvable quest.
-  const associates = (npc?.connections?.relatedNPCs ?? []).flatMap((id) => {
-    const found = npcs.find((candidate) => candidate.id === id);
-    return found ? [found] : [];
-  });
-
-  const quests = (npc?.connections?.relatedQuests ?? []).flatMap((id) => {
-    const quest = getQuestById(id);
-    return quest ? [{ id, quest }] : [];
-  });
-
-  const affiliations = npc?.connections?.affiliations ?? [];
+  // The trigger is unmounted while the editor is open, so focus can only be
+  // returned once the commit has put it back in the document.
+  useEffect(() => {
+    if (!returnFocus) {
+      return;
+    }
+    descriptionButton.current?.focus();
+    setReturnFocus(false);
+  }, [returnFocus]);
 
   const locationName = npc
     ? resolveLocationName(
@@ -171,35 +167,129 @@ const NPCDetailPage: React.FC = () => {
       )
     : undefined;
 
+  const locationHref = `/locations?highlight=${encodeURIComponent(
+    npc?.locationId || npc?.location || ''
+  )}`;
+
+  /**
+   * Every link this NPC has, in one list, each with the reason it is there.
+   *
+   * The reasons are derived from the *kind* of link rather than stored: a
+   * location is somewhere they are, an affiliation is something they claim, a
+   * quest and a rumor each carry their own status. Only NPC-to-NPC has nothing
+   * to say beyond the other character's title, because `relatedNPCs` is a bare
+   * list of ids with no room for why.
+   */
+  const relationships = useMemo<Relation[]>(() => {
+    if (!npc) {
+      return [];
+    }
+    const out: Relation[] = [];
+
+    if (locationName) {
+      out.push({
+        key: `location-${locationName}`,
+        id: npc.locationId || npc.location || locationName,
+        name: locationName,
+        reason: 'Last known location',
+        href: locationHref,
+      });
+    }
+
+    npc.connections?.relatedNPCs?.forEach((id) => {
+      const other = npcs.find((candidate) => candidate.id === id);
+      if (!other) {
+        return;
+      }
+      out.push({
+        key: `npc-${id}`,
+        id,
+        name: other.name,
+        reason: other.title || 'Known associate',
+        href: `/npcs/${id}`,
+      });
+    });
+
+    npc.connections?.affiliations?.forEach((affiliation) => {
+      out.push({
+        key: `affiliation-${affiliation}`,
+        id: affiliation,
+        name: affiliation,
+        reason: 'Claims membership',
+        href: '',
+      });
+    });
+
+    npc.connections?.relatedQuests?.forEach((id) => {
+      const quest = getQuestById(id);
+      if (!quest) {
+        return;
+      }
+      out.push({
+        key: `quest-${id}`,
+        id,
+        name: quest.title,
+        reason: `Quest · ${capitalise(quest.status)}`,
+        href: `/quests?highlight=${id}`,
+      });
+    });
+
+    (rumors ?? [])
+      .filter((rumor) => rumor.relatedNPCs?.includes(npc.id))
+      .forEach((rumor) => {
+        out.push({
+          key: `rumor-${rumor.id}`,
+          id: rumor.id,
+          name: rumor.title,
+          reason: `Rumor · ${rumor.status}`,
+          href: `/rumors?highlight=${rumor.id}`,
+        });
+      });
+
+    return out;
+  }, [npc, npcs, locationName, locationHref, getQuestById, rumors]);
+
+  /** Oldest first, so the history reads as one. Said in the heading, not assumed. */
+  const notes = useMemo(
+    () => [...(npc?.notes ?? [])].sort((a, b) => a.date.localeCompare(b.date)),
+    [npc]
+  );
+
   /**
    * Both writes end by re-reading this page's own store rather than patching
    * state locally. That is what makes the page show what was *written* instead
    * of what was typed: if another player changed the same record first, the
-   * refetch is where that becomes visible. `NPCContext` refreshes its own copy
-   * too, but that copy is not the one this page renders.
+   * refetch is where that becomes visible.
    */
   const saveDescription = async (text: string) => {
-    if (!npc) {
-      return;
-    }
+    if (!npc) return;
     await updateNPC({ ...npc, description: text });
     await refreshNPCs();
   };
 
   const addNote = async (text: string) => {
-    if (!npc) {
-      return;
-    }
+    if (!npc) return;
+    // The acting character, or their username when they have no character --
+    // the same actor `core/attribution` credits for the record itself.
+    const author =
+      getActiveCharacterName(activeGroupUserProfile) ||
+      getUserName(activeGroupUserProfile) ||
+      undefined;
     await updateNPCNote(npc.id, {
-      // The shape the create and edit forms already write. `formatNoteDate`
-      // renders it; nothing here invents an author (NPCNote has none).
       date: new Date().toISOString().split('T')[0],
       text,
+      ...(author ? { author } : {}),
     });
     await refreshNPCs();
   };
 
-  /** The word that accompanies a change the reader may not have seen happen. */
+  const handleDelete = async () => {
+    if (!npc) return;
+    await deleteNPC(npc.id);
+    setConfirmingDelete(false);
+    navigateToPage('/npcs');
+  };
+
   const savedNotice = (field: 'description' | 'note') => (
     <span role="status" aria-live="polite">
       {savedField === field && (
@@ -210,304 +300,362 @@ const NPCDetailPage: React.FC = () => {
     </span>
   );
 
+  const subtitle = [npc?.title, locationName && `from ${locationName}`]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
-    <PageShell
-      title={
-        npc ? (
-          <span className="flex items-center gap-3">
-            <EntitySigil entityId={npc.id} name={npc.name} size={44} />
-            {npc.name}
-          </span>
-        ) : (
-          'NPC'
-        )
-      }
-      subtitle={npc?.title}
-      breadcrumb={
-        <Breadcrumb
-          items={[
-            { label: 'NPCs', href: '/npcs' },
-            { label: npc?.name ?? 'Not found' },
-          ]}
-          className="mb-4"
-        />
-      }
-      actions={
-        gate.canAct &&
-        npc && (
-          <Button
-            // While an editor is open the accent belongs to the save, because
-            // the accent is earned by the action being taken and there is only
-            // ever one of those. Leaving both filled would put two primaries on
-            // one page and make "go and change everything" compete with "keep
-            // the sentence I just typed".
-            variant={editing ? 'outline' : 'primary'}
-            onClick={() => navigateToPage(`/npcs/edit/${npc.id}`)}
-            startIcon={<Pencil className="w-4 h-4" />}
-          >
-            Edit NPC
-          </Button>
-        )
-      }
-    >
-      <div className="mb-8">
-        <Button
-          variant="ghost"
-          onClick={() => navigateToPage('/npcs')}
-          startIcon={<ArrowLeft className="w-4 h-4" />}
-        >
-          Back to NPCs
-        </Button>
-      </div>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <Breadcrumb
+        items={[
+          { label: 'NPCs', href: '/npcs' },
+          ...(locationName ? [{ label: locationName, href: locationHref }] : []),
+          { label: npc?.name ?? 'Not found' },
+        ]}
+        className="mb-6"
+      />
+
+      {/* The page still says what it is in the states where the record cannot
+          be loaded -- signed out, no campaign picked, still resolving. */}
+      {gate.state !== 'ready' && (
+        <Typography variant="h1" className="mb-8">
+          NPC
+        </Typography>
+      )}
 
       <GatedContent gate={gate}>
         {npc ? (
-          <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6">
-            {/* The record itself, on the page's own surface. */}
-            <article className="card rounded-lg p-6 flex flex-col gap-6 h-fit">
-              {editing === 'description' ? (
-                <InlineEditor
-                  label="Description"
-                  helperText="A sentence or two. The full record is behind Edit NPC."
-                  initialValue={npc.description ?? ''}
-                  submitLabel="Save description"
-                  onSubmit={saveDescription}
-                  onSaved={() => {
-                    closeEditor('description');
-                    setSavedField('description');
-                  }}
-                  onCancel={() => closeEditor('description')}
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
+            <div className="flex flex-col gap-6 min-w-0">
+              {/* ---- Identity. The band and the card are one object. ---- */}
+              <section className="card rounded-lg overflow-hidden">
+                <ImageSlot
+                  className="h-40 sm:h-48"
+                  label={`${npc.name} — no image added`}
+                  caption="Optional. The page is finished without one."
                 />
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <RosterField
-                    label="Description"
-                    emptyText="Nothing written yet"
-                  >
-                    {npc.description ? (
-                      <Typography>{npc.description}</Typography>
-                    ) : undefined}
-                  </RosterField>
-                  {gate.canAct && (
-                    <div className="flex items-center gap-3">
-                      {/* Quiet on purpose: the page's one accent is its
-                          primary action, and an edit affordance beside every
-                          field would spend it four times over. */}
-                      <Button
-                        ref={descriptionButton}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditing('description')}
+
+                <div className="p-6 flex flex-col gap-5">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <EntitySigil entityId={npc.id} name={npc.name} size={56} />
+                      <div className="min-w-0">
+                        <Typography variant="h1">{npc.name}</Typography>
+                        {subtitle && (
+                          <Typography color="secondary" className="mt-0.5">
+                            {subtitle}
+                          </Typography>
+                        )}
+                      </div>
+                    </div>
+
+                    {gate.canAct && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Quiet: this page's accents are the two controls that
+                            change something -- Add note and Delete. Going to the
+                            full form is navigation, not an act (D66). */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigateToPage(`/npcs/edit/${npc.id}`)}
+                          startIcon={<Pencil className="w-4 h-4" />}
+                        >
+                          Edit all fields
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="delete-button"
+                          onClick={() => setConfirmingDelete(true)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* The standing facts, on one line in a fixed order, so two
+                      NPCs can be compared by looking at the same place twice. */}
+                  <div className="border-t divider pt-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="flex flex-col gap-1">
+                      <FieldLabel>Status</FieldLabel>
+                      {/* Hue *and* word. The word carries the fact on its own;
+                          the hue only agrees with it (design language §2). */}
+                      <Typography
+                        variant="body-sm"
+                        className={`npc-status-${npc.status} font-medium`}
                       >
-                        {npc.description ? 'Edit description' : 'Add a description'}
-                      </Button>
+                        {capitalise(npc.status)}
+                      </Typography>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <FieldLabel>Disposition</FieldLabel>
+                      <Typography variant="body-sm">
+                        {capitalise(npc.relationship)}
+                      </Typography>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <FieldLabel>Role</FieldLabel>
+                      <Typography variant="body-sm">
+                        {npc.occupation || 'Unrecorded'}
+                      </Typography>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <FieldLabel>Race</FieldLabel>
+                      <Typography variant="body-sm">
+                        {npc.race || 'Unrecorded'}
+                      </Typography>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* ---- Description ---- */}
+              <section className="card rounded-lg p-6 flex flex-col gap-3">
+                {editingDescription ? (
+                  <InlineEditor
+                    label="Description"
+                    helperText="A sentence or two. The whole record is behind Edit all fields."
+                    initialValue={npc.description ?? ''}
+                    submitLabel="Save description"
+                    onSubmit={saveDescription}
+                    onSaved={() => {
+                      setEditingDescription(false);
+                      setReturnFocus(true);
+                      setSavedField('description');
+                    }}
+                    onCancel={() => {
+                      setEditingDescription(false);
+                      setReturnFocus(true);
+                    }}
+                  />
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <FieldLabel>Description</FieldLabel>
+                      {gate.canAct && (
+                        <Button
+                          ref={descriptionButton}
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingDescription(true)}
+                          startIcon={<Pencil className="w-3.5 h-3.5" />}
+                        >
+                          Edit
+                        </Button>
+                      )}
                       {savedNotice('description')}
                     </div>
-                  )}
-                </div>
+                    {npc.description ? (
+                      // Serif: this is the one piece of running prose the page
+                      // carries. Everything else is metadata and lists.
+                      <Typography className="font-serif italic text-lg leading-relaxed">
+                        {npc.description}
+                      </Typography>
+                    ) : (
+                      <Typography color="muted" className="italic">
+                        Nothing written yet
+                      </Typography>
+                    )}
+                  </>
+                )}
+              </section>
+
+              {/* ---- The three fields nothing else in the app renders ---- */}
+              {(npc.appearance || npc.personality || npc.background) && (
+                <section className="card rounded-lg p-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  {(
+                    [
+                      ['Appearance', npc.appearance],
+                      ['Personality', npc.personality],
+                      ['Background', npc.background],
+                    ] as const
+                  )
+                    .filter(([, value]) => Boolean(value))
+                    .map(([label, value]) => (
+                      <div key={label} className="flex flex-col gap-2">
+                        <FieldLabel>{label}</FieldLabel>
+                        <Typography variant="body-sm">{value}</Typography>
+                      </div>
+                    ))}
+                </section>
               )}
 
-              <RosterField label="Appearance" emptyText="Not described yet">
-                {npc.appearance ? (
-                  <Typography>{npc.appearance}</Typography>
-                ) : undefined}
-              </RosterField>
+              {/* ---- Notes: the history, then somewhere to add to it ---- */}
+              <section className="card rounded-lg overflow-hidden">
+                <div className="px-6 pt-5 pb-3 flex items-center gap-3">
+                  <FieldLabel>Notes</FieldLabel>
+                  <Typography variant="body-sm" color="muted" className="text-xs">
+                    {notes.length}
+                    {notes.length > 1 ? ' · oldest first' : ''}
+                  </Typography>
+                  {savedNotice('note')}
+                </div>
 
-              <RosterField label="Personality" emptyText="Not described yet">
-                {npc.personality ? (
-                  <Typography>{npc.personality}</Typography>
-                ) : undefined}
-              </RosterField>
-
-              <RosterField label="Background" emptyText="Nothing recorded yet">
-                {npc.background ? (
-                  <Typography>{npc.background}</Typography>
-                ) : undefined}
-              </RosterField>
-
-              <RosterField label="Notes" emptyText="No notes yet">
-                {npc.notes?.length ? (
-                  <div className="flex flex-col divide-y card-divider">
-                    {npc.notes.map((note, index) => (
+                {notes.length > 0 ? (
+                  <div className="flex flex-col divide-y card-divider px-6">
+                    {notes.map((note, index) => (
                       <div
                         key={`${note.date}-${index}`}
-                        className="flex flex-col sm:flex-row gap-1 sm:gap-4 py-3 first:pt-0 last:pb-0"
+                        className="grid grid-cols-1 sm:grid-cols-[6.5rem_minmax(0,1fr)_auto] gap-1 sm:gap-4 py-3.5"
                       >
-                        {/* When, never who: NPCNote is { date, text } and
-                            carries no author, so a byline here would be
-                            invented data. */}
                         <Typography
                           variant="body-sm"
                           color="muted"
-                          className="text-xs sm:w-24 shrink-0"
+                          className="text-xs tabular-nums whitespace-nowrap"
                         >
                           {formatNoteDate(note.date)}
                         </Typography>
                         <Typography variant="body-sm" className="min-w-0">
                           {note.text}
                         </Typography>
+                        {/* A note written before the author field existed has
+                            none, and stays blank rather than being credited to
+                            a guess. */}
+                        <Typography
+                          variant="body-sm"
+                          color="muted"
+                          className="text-xs sm:text-right whitespace-nowrap"
+                        >
+                          {note.author ?? ''}
+                        </Typography>
                       </div>
                     ))}
                   </div>
-                ) : undefined}
-              </RosterField>
-
-              {editing === 'note' ? (
-                <InlineEditor
-                  label="New note"
-                  helperText="Dated today. Notes are added, never edited or removed."
-                  submitLabel="Add note"
-                  placeholder="What happened?"
-                  rows={3}
-                  onSubmit={addNote}
-                  onSaved={() => {
-                    closeEditor('note');
-                    setSavedField('note');
-                  }}
-                  onCancel={() => closeEditor('note')}
-                />
-              ) : (
-                gate.canAct && (
-                  <div className="flex items-center gap-3">
-                    <Button
-                      ref={addNoteButton}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditing('note')}
-                    >
-                      Add note
-                    </Button>
-                    {savedNotice('note')}
+                ) : (
+                  <div className="px-6 pb-4">
+                    <Typography color="muted" className="italic">
+                      No notes yet
+                    </Typography>
                   </div>
-                )
-              )}
-            </article>
+                )}
 
-            {/* Standing facts and relations, on the quieter surface. */}
-            <aside className="bg-secondary card-border rounded-lg p-6 flex flex-col gap-6 h-fit">
-              <div className="grid grid-cols-2 gap-4">
-                <RosterField label="Status">
-                  <Typography variant="body-sm">
-                    {capitalise(npc.status)}
+                {gate.canAct && (
+                  <div className="bg-secondary border-t divider px-6 py-4">
+                    {/* Always on screen rather than behind a button: writing a
+                        note is why someone opens this page, and a composer you
+                        have to summon is a composer you forget exists. */}
+                    <InlineEditor
+                      label="Add a note"
+                      helperText="Dated today and credited to you. Notes are added, never edited or removed."
+                      submitLabel="Add note"
+                      placeholder="What happened, and when"
+                      rows={2}
+                      autoFocus={false}
+                      clearOnSave
+                      onSubmit={addNote}
+                      onSaved={() => setSavedField('note')}
+                    />
+                  </div>
+                )}
+              </section>
+            </div>
+
+            {/* --------------------------- sidebar --------------------------- */}
+            <div className="flex flex-col gap-6">
+              <SideCard
+                title={`Relationships${
+                  relationships.length ? ` · ${relationships.length}` : ''
+                }`}
+              >
+                {relationships.length ? (
+                  <div className="flex flex-col divide-y card-divider">
+                    {relationships.map((relation) => {
+                      const body = (
+                        <>
+                          <EntitySigil
+                            entityId={relation.id}
+                            name={relation.name}
+                            size={28}
+                          />
+                          <span className="min-w-0">
+                            <Typography
+                              variant="body-sm"
+                              className="block truncate"
+                            >
+                              {relation.name}
+                            </Typography>
+                            <Typography
+                              variant="body-sm"
+                              color="muted"
+                              className="block text-xs"
+                            >
+                              {relation.reason}
+                            </Typography>
+                          </span>
+                        </>
+                      );
+
+                      // An affiliation is a name, not a record: there is nowhere
+                      // to go, so it is not dressed up as somewhere to click.
+                      return relation.href ? (
+                        <button
+                          key={relation.key}
+                          type="button"
+                          onClick={() => navigateToPage(relation.href)}
+                          className="flex items-center gap-3 text-left py-2.5 first:pt-0 last:pb-0 rounded-md selectable-item"
+                        >
+                          {body}
+                        </button>
+                      ) : (
+                        <div
+                          key={relation.key}
+                          className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
+                        >
+                          {body}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <Typography variant="body-sm" color="muted" className="italic">
+                    Nothing linked yet
                   </Typography>
-                </RosterField>
-                <RosterField label="Relationship">
-                  <Typography variant="body-sm">
-                    {capitalise(npc.relationship)}
-                  </Typography>
-                </RosterField>
-                <RosterField label="Race" emptyText="Unrecorded">
-                  {npc.race ? (
-                    <Typography variant="body-sm">{npc.race}</Typography>
-                  ) : undefined}
-                </RosterField>
-                <RosterField label="Occupation" emptyText="Unrecorded">
-                  {npc.occupation ? (
-                    <Typography variant="body-sm">{npc.occupation}</Typography>
-                  ) : undefined}
-                </RosterField>
-              </div>
+                )}
+              </SideCard>
 
-              <RosterField label="Last known location" emptyText="Unknown">
-                {/* The stored value may be an id, a name, or free text, and the
-                    directories already share one answer for that. Reusing it
-                    keeps a dangling reference visible as itself (#1412)
-                    instead of this page inventing a prettier name. */}
-                {locationName ? (
-                  <Typography variant="body-sm">{locationName}</Typography>
-                ) : undefined}
-              </RosterField>
-
-              <RosterField label="Affiliations" emptyText="None recorded">
-                {affiliations.length ? (
+              <SideCard title="Tags">
+                {npc.tags?.length ? (
                   <div className="flex flex-wrap gap-2">
-                    {affiliations.map((affiliation, index) => (
+                    {npc.tags.map((tag, index) => (
                       <span
-                        key={`${affiliation}-${index}`}
-                        className="px-2 py-1 rounded-full text-xs card typography-secondary"
+                        key={`${tag}-${index}`}
+                        className="px-2.5 py-1 rounded-full text-xs card typography-secondary"
                       >
-                        {affiliation}
+                        {tag}
                       </span>
                     ))}
                   </div>
-                ) : undefined}
-              </RosterField>
+                ) : (
+                  <Typography variant="body-sm" color="muted" className="italic">
+                    No tags yet
+                  </Typography>
+                )}
+              </SideCard>
 
-              <RosterField label="Known associates" emptyText="None recorded">
-                {associates.length ? (
-                  <div className="flex flex-col gap-1.5">
-                    {associates.map((associate) => (
-                      <button
-                        key={associate.id}
-                        type="button"
-                        onClick={() => navigateToPage(`/npcs/${associate.id}`)}
-                        className="flex items-center gap-2 text-left px-2.5 py-1.5 rounded-md selectable-item"
-                      >
-                        <EntitySigil
-                          entityId={associate.id}
-                          name={associate.name}
-                          size={20}
-                        />
-                        <Typography variant="body-sm">
-                          {associate.name}
-                          {associate.title && (
-                            <span className="typography-secondary ml-1.5">
-                              · {associate.title}
-                            </span>
-                          )}
-                        </Typography>
-                      </button>
-                    ))}
-                  </div>
-                ) : undefined}
-              </RosterField>
-
-              <RosterField label="Related quests" emptyText="No quests linked">
-                {quests.length ? (
-                  <div className="flex flex-col gap-1.5">
-                    {quests.map(({ id, quest }) => (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() =>
-                          navigateToPage(`/quests?highlight=${id}`)
-                        }
-                        className="flex items-center gap-2 text-left px-2.5 py-1.5 rounded-md selectable-item"
-                      >
-                        <Typography variant="body-sm">
-                          {quest.title}
-                          {/* The status is a word, not a hue -- the same rule
-                              the row settled in 6.3 (D59). */}
-                          <span className="typography-secondary ml-1.5">
-                            · {capitalise(quest.status)}
-                          </span>
-                        </Typography>
-                      </button>
-                    ))}
-                  </div>
-                ) : undefined}
-              </RosterField>
-
-              <div className="flex flex-col gap-1.5">
-                <Typography
-                  variant="body-sm"
-                  color="muted"
-                  className="text-[11px] font-semibold uppercase tracking-wider"
-                >
-                  Recorded by
-                </Typography>
-                {/* Created and last-modified are the only two points that exist
-                    on ContentAttribution. Two facts, stated plainly -- not a
+              <SideCard title="Record">
+                {/* Created and last-modified are the only two points
+                    `ContentAttribution` holds. Two facts, stated -- not a
                     timeline (Q12). */}
                 <AttributionInfo item={npc} />
-              </div>
-            </aside>
+              </SideCard>
+            </div>
           </div>
         ) : (
           <NPCNotFound onBack={() => navigateToPage('/npcs')} />
         )}
       </GatedContent>
-    </PageShell>
+
+      {npc && (
+        <DeleteConfirmationDialog
+          isOpen={confirmingDelete}
+          onClose={() => setConfirmingDelete(false)}
+          onConfirm={handleDelete}
+          itemName={npc.name}
+          itemType="NPC"
+        />
+      )}
+    </div>
   );
 };
 
