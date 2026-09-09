@@ -55,24 +55,53 @@ const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </Typography>
 );
 
-/** One card in the sidebar. */
+/**
+ * One card in the sidebar.
+ *
+ * Its title takes the page's own ink rather than the muted tone the field
+ * labels use, so that a card heading and the group headings inside it are not
+ * the same thing at the same weight. Relationships is the card that needs it:
+ * a well-connected NPC puts five group labels under one card label, and if all
+ * six look alike the grouping stops doing its job.
+ */
 const SideCard: React.FC<{
   title: React.ReactNode;
   children: React.ReactNode;
 }> = ({ title, children }) => (
   <section className="bg-secondary card-border rounded-lg p-5 flex flex-col gap-3">
-    <FieldLabel>{title}</FieldLabel>
+    <Typography
+      variant="body-sm"
+      className="text-[11px] font-semibold uppercase tracking-wider"
+    >
+      {title}
+    </Typography>
     {children}
   </section>
 );
 
-/** What a relationship is, said in words rather than left to the reader. */
+/** The kinds of thing an NPC can be connected to, in the order they are shown. */
+const RELATION_GROUPS = [
+  { kind: 'people', label: 'People' },
+  { kind: 'places', label: 'Places' },
+  { kind: 'affiliations', label: 'Affiliations' },
+  { kind: 'quests', label: 'Quests' },
+  { kind: 'rumors', label: 'Rumors' },
+] as const;
+
+type RelationKind = (typeof RELATION_GROUPS)[number]['kind'];
+
 interface Relation {
   key: string;
   id: string;
   name: string;
-  /** Why this entity is on the list. Derived from the kind of link, not stored. */
-  reason: string;
+  kind: RelationKind;
+  /**
+   * What this row adds beyond its heading -- an associate's title, a quest's
+   * status. Absent where the heading has already said everything: an
+   * affiliation under "Affiliations" does not also need "Claims membership",
+   * which is the type stated twice.
+   */
+  detail?: string;
   /** Empty when there is nowhere to go, as for a free-text affiliation. */
   href: string;
 }
@@ -172,13 +201,18 @@ const NPCDetailPage: React.FC = () => {
   )}`;
 
   /**
-   * Every link this NPC has, in one list, each with the reason it is there.
+   * Every link this NPC has, grouped by what kind of thing it is.
    *
-   * The reasons are derived from the *kind* of link rather than stored: a
-   * location is somewhere they are, an affiliation is something they claim, a
-   * quest and a rumor each carry their own status. Only NPC-to-NPC has nothing
-   * to say beyond the other character's title, because `relatedNPCs` is a bare
-   * list of ids with no room for why.
+   * One flat list was the first cut and it did not survive contact with a
+   * well-connected NPC: twelve rows of people, places, affiliations, quests and
+   * rumors in a single column is a bowl, not an answer. The grouping is what
+   * lets someone look for a person without reading past four quests.
+   *
+   * Grouping also removes a redundancy the flat list needed: each row used to
+   * carry the reason it was listed, so every affiliation said "Claims
+   * membership". Under a heading that says Affiliations, that is the type
+   * stated twice. A row now carries only what its heading cannot say -- an
+   * associate's title, a quest's status.
    */
   const relationships = useMemo<Relation[]>(() => {
     if (!npc) {
@@ -191,7 +225,10 @@ const NPCDetailPage: React.FC = () => {
         key: `location-${locationName}`,
         id: npc.locationId || npc.location || locationName,
         name: locationName,
-        reason: 'Last known location',
+        kind: 'places',
+        // "Places" does not say *which* place this is to them, so this one
+        // earns its line.
+        detail: 'Last known location',
         href: locationHref,
       });
     }
@@ -205,7 +242,10 @@ const NPCDetailPage: React.FC = () => {
         key: `npc-${id}`,
         id,
         name: other.name,
-        reason: other.title || 'Known associate',
+        kind: 'people',
+        // Their own title, when they have one. "Known associate" would only
+        // repeat the heading.
+        detail: other.title,
         href: `/npcs/${id}`,
       });
     });
@@ -215,7 +255,7 @@ const NPCDetailPage: React.FC = () => {
         key: `affiliation-${affiliation}`,
         id: affiliation,
         name: affiliation,
-        reason: 'Claims membership',
+        kind: 'affiliations',
         href: '',
       });
     });
@@ -229,7 +269,8 @@ const NPCDetailPage: React.FC = () => {
         key: `quest-${id}`,
         id,
         name: quest.title,
-        reason: `Quest · ${capitalise(quest.status)}`,
+        kind: 'quests',
+        detail: capitalise(quest.status),
         href: `/quests?highlight=${id}`,
       });
     });
@@ -241,7 +282,8 @@ const NPCDetailPage: React.FC = () => {
           key: `rumor-${rumor.id}`,
           id: rumor.id,
           name: rumor.title,
-          reason: `Rumor · ${rumor.status}`,
+          kind: 'rumors',
+          detail: capitalise(rumor.status),
           href: `/rumors?highlight=${rumor.id}`,
         });
       });
@@ -559,50 +601,78 @@ const NPCDetailPage: React.FC = () => {
                 }`}
               >
                 {relationships.length ? (
-                  <div className="flex flex-col divide-y card-divider">
-                    {relationships.map((relation) => {
-                      const body = (
-                        <>
-                          <EntitySigil
-                            entityId={relation.id}
-                            name={relation.name}
-                            size={28}
-                          />
-                          <span className="min-w-0">
-                            <Typography
-                              variant="body-sm"
-                              className="block truncate"
-                            >
-                              {relation.name}
-                            </Typography>
-                            <Typography
-                              variant="body-sm"
-                              color="muted"
-                              className="block text-xs"
-                            >
-                              {relation.reason}
-                            </Typography>
-                          </span>
-                        </>
+                  <div className="flex flex-col gap-4">
+                    {RELATION_GROUPS.map(({ kind, label }) => {
+                      const members = relationships.filter(
+                        (relation) => relation.kind === kind
                       );
+                      if (!members.length) {
+                        // A heading over nothing is worse than no heading. The
+                        // empty case is said once, for the whole card.
+                        return null;
+                      }
 
-                      // An affiliation is a name, not a record: there is nowhere
-                      // to go, so it is not dressed up as somewhere to click.
-                      return relation.href ? (
-                        <button
-                          key={relation.key}
-                          type="button"
-                          onClick={() => navigateToPage(relation.href)}
-                          className="flex items-center gap-3 text-left py-2.5 first:pt-0 last:pb-0 rounded-md selectable-item"
-                        >
-                          {body}
-                        </button>
-                      ) : (
-                        <div
-                          key={relation.key}
-                          className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
-                        >
-                          {body}
+                      return (
+                        <div key={kind} className="flex flex-col gap-1.5">
+                          <Typography
+                            variant="body-sm"
+                            color="muted"
+                            className="text-[10px] font-semibold uppercase tracking-wider"
+                          >
+                            {label}
+                          </Typography>
+
+                          <div className="flex flex-col divide-y card-divider">
+                            {members.map((relation) => {
+                              const body = (
+                                <>
+                                  <EntitySigil
+                                    entityId={relation.id}
+                                    name={relation.name}
+                                    size={24}
+                                  />
+                                  <span className="min-w-0">
+                                    <Typography
+                                      variant="body-sm"
+                                      className="block truncate"
+                                    >
+                                      {relation.name}
+                                    </Typography>
+                                    {relation.detail && (
+                                      <Typography
+                                        variant="body-sm"
+                                        color="muted"
+                                        className="block text-xs truncate"
+                                      >
+                                        {relation.detail}
+                                      </Typography>
+                                    )}
+                                  </span>
+                                </>
+                              );
+
+                              // An affiliation is a name, not a record: there is
+                              // nowhere to go, so it is not dressed up as
+                              // somewhere to click.
+                              return relation.href ? (
+                                <button
+                                  key={relation.key}
+                                  type="button"
+                                  onClick={() => navigateToPage(relation.href)}
+                                  className="flex items-center gap-2.5 text-left py-2 first:pt-0 last:pb-0 rounded-md selectable-item"
+                                >
+                                  {body}
+                                </button>
+                              ) : (
+                                <div
+                                  key={relation.key}
+                                  className="flex items-center gap-2.5 py-2 first:pt-0 last:pb-0"
+                                >
+                                  {body}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       );
                     })}

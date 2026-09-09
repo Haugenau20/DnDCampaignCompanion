@@ -962,6 +962,32 @@ The control is the one `LocationFormSections` already uses, borrowed rather than
 invented, and its button says "Add tag" rather than "Add" so it is not confused
 with the affiliations control beside it -- by a reader or by a screen reader.
 
+### D69 — Relationships are grouped by kind, and the grouping replaces the reasons
+Date: 2026-09-09   Status: active
+Decision: the Relationships card groups its rows under People, Places,
+Affiliations, Quests and Rumors, in that order, and a group with no members
+shows no heading. A row keeps a second line only where its heading cannot say
+it.
+Because: D65 merged five labelled fields into one list, which was right for the
+question being asked -- "who and what is this person connected to" is one
+question -- and wrong for the answer, once the answer was twelve rows. A
+well-connected NPC turned the card into a bowl: people, places, affiliations,
+quests and rumors interleaved in a single column, so finding an associate meant
+reading past four quests. Grouping restores the joints without splitting the
+card into five, which would have said the connections are five separate
+subjects rather than one.
+The second half matters as much as the first. The flat list needed a reason on
+every row, so every affiliation read "Claims membership". Under a heading that
+says Affiliations, that is **the type stated twice** -- the same redundancy 6.1
+removed from directory rows, arriving by a different route. A row now carries
+only what its heading cannot: an associate's own title, a quest's or rumor's
+status, and which place a location is to them. Affiliations became
+single-line, which also makes them look like what they are: names, not records
+with somewhere to go.
+Cost: the sidebar card title had to take the page's ink rather than the muted
+tone, because a card heading and five group headings at the same weight is no
+hierarchy at all.
+
 ---
 
 ## Revisions

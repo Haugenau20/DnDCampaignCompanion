@@ -308,11 +308,14 @@ describe("NPCDetailPage", () => {
       ).toBeInTheDocument();
     });
 
-    it("renders each affiliation, saying why it is listed", () => {
+    it("renders each affiliation under one heading, not one label each", () => {
       renderPage();
       expect(screen.getByText("The Fellowship")).toBeInTheDocument();
       expect(screen.getByText("Istari")).toBeInTheDocument();
-      expect(screen.getAllByText("Claims membership")).toHaveLength(2);
+      // The heading says what these are. Repeating it on every row would be
+      // the type stated twice.
+      expect(screen.getByText("Affiliations")).toBeInTheDocument();
+      expect(screen.queryByText("Claims membership")).not.toBeInTheDocument();
     });
 
     it("resolves related NPC ids to names", () => {
@@ -323,10 +326,11 @@ describe("NPCDetailPage", () => {
     it("resolves related quest ids to titles, with the status as a word", () => {
       renderPage();
       expect(screen.getByText("Destroy the Ring")).toBeInTheDocument();
-      expect(screen.getByText("Quest · Active")).toBeInTheDocument();
+      expect(screen.getByText("Quests")).toBeInTheDocument();
+      expect(screen.getByText("Active")).toBeInTheDocument();
     });
 
-    it("gathers every kind of link into one list, each with its reason", () => {
+    it("groups links by what kind of thing they are", () => {
       mockRumors = [
         {
           id: "rumor-1",
@@ -337,11 +341,35 @@ describe("NPCDetailPage", () => {
       ];
       renderPage();
       expect(screen.getByText(/Relationships/)).toBeInTheDocument();
-      // A location, an associate, two affiliations, a quest and a rumor.
-      expect(screen.getByText("Last known location")).toBeInTheDocument();
+      expect(screen.getByText("People")).toBeInTheDocument();
+      expect(screen.getByText("Places")).toBeInTheDocument();
+      expect(screen.getByText("Affiliations")).toBeInTheDocument();
+      expect(screen.getByText("Quests")).toBeInTheDocument();
+      expect(screen.getByText("Rumors")).toBeInTheDocument();
+    });
+
+    it("keeps the per-row line only where the heading cannot say it", () => {
+      mockRumors = [
+        {
+          id: "rumor-1",
+          title: "The Eliksir trade",
+          status: "unconfirmed",
+          relatedNPCs: ["npc-1"],
+        },
+      ];
+      renderPage();
+      // A person's own title, a quest's and a rumor's status, and which place
+      // this is to them -- none of which the headings carry.
       expect(screen.getByText("The White")).toBeInTheDocument();
-      expect(screen.getByText("Quest · Active")).toBeInTheDocument();
-      expect(screen.getByText("Rumor · unconfirmed")).toBeInTheDocument();
+      expect(screen.getByText("Last known location")).toBeInTheDocument();
+      expect(screen.getByText("Active")).toBeInTheDocument();
+      expect(screen.getByText("Unconfirmed")).toBeInTheDocument();
+    });
+
+    it("shows no heading for a kind this NPC has none of", () => {
+      mockRumors = [];
+      renderPage();
+      expect(screen.queryByText("Rumors")).not.toBeInTheDocument();
     });
 
     it("does not dress a free-text affiliation up as somewhere to click", () => {
