@@ -49,12 +49,6 @@ const STATUS_CLASS: Record<RumorStatus, string> = {
   false: 'rumor-status-false',
 };
 
-const STATUS_DOT: Record<RumorStatus, string> = {
-  confirmed: 'bg-status-completed',
-  unconfirmed: 'bg-status-unknown',
-  false: 'bg-status-failed',
-};
-
 const formatStatus = (status: RumorStatus): string =>
   status.charAt(0).toUpperCase() + status.slice(1);
 
@@ -299,6 +293,8 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                   <RosterRow
                     key={rumor.id}
                     id={`rumor-${rumor.id}`}
+                    entityId={rumor.id}
+                    entityName={rumor.title}
                     gridClassName={ROW_GRID}
                     isFirst={index === 0}
                     highlighted={highlightedRumorId === rumor.id}
@@ -447,39 +443,38 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                   >
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Typography variant="body" className="font-semibold truncate">
+                        {/* The "Quest" pill that sat here is gone: the last cell in the
+                            same row already reads "Converted to quest", so the pill was
+                            the same fact a second time, in a box, next to the name. */}
+                        <Typography
+                          variant="body"
+                          className="font-semibold truncate font-heading"
+                        >
                           {rumor.title}
                         </Typography>
-                        {rumor.convertedToQuestId && (
-                          <span className="hidden md:inline-flex shrink-0 items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-secondary typography-secondary">
-                            <Scroll size={10} aria-hidden="true" />
-                            Quest
-                          </span>
-                        )}
                       </div>
                       <Typography variant="body-sm" color="secondary" className="text-sm truncate">
                         {rumor.sourceName}
                       </Typography>
                     </div>
 
-                    {/* Status: dot plus the word, so colour is never the only cue */}
+                    {/* The word carries the state, in the status hue; the dot said it twice. */}
                     <Typography
                       variant="body-sm"
                       className={clsx(
-                        'hidden md:flex items-center gap-2 text-sm font-semibold',
+                        'hidden md:block text-sm font-semibold',
                         STATUS_CLASS[rumor.status]
                       )}
                     >
-                      <span
-                        aria-hidden="true"
-                        className={clsx('w-[7px] h-[7px] rounded-full shrink-0', STATUS_DOT[rumor.status])}
-                      />
                       {formatStatus(rumor.status)}
                     </Typography>
 
+                    {/* Source type, stated once and plainly -- it was a filled chip
+                        saying what a plain label says. */}
                     <Typography
                       variant="body-sm"
-                      className="hidden md:inline-flex justify-self-start px-2.5 py-1 rounded-md text-xs font-semibold bg-secondary typography-secondary"
+                      color="secondary"
+                      className="hidden md:block justify-self-start text-sm"
                     >
                       {formatSourceType(rumor.sourceType)}
                     </Typography>

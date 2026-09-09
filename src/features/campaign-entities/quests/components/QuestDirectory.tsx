@@ -253,6 +253,8 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                 <RosterRow
                   key={quest.id}
                   id={`quest-${quest.id}`}
+                  entityId={quest.id}
+                  entityName={quest.title}
                   gridClassName={ROW_GRID}
                   isFirst={index === 0}
                   highlighted={highlightedQuestId === quest.id}
@@ -479,23 +481,22 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                   }
                 >
                   <div className="flex flex-col gap-0.5 min-w-0">
-                    <Typography variant="body" className="font-semibold truncate">
+                    <Typography
+                      variant="body"
+                      className="font-semibold truncate font-heading"
+                    >
                       {quest.title}
                     </Typography>
                   </div>
 
-                  {/* Status: dot plus the word, so colour is never the only cue */}
+                  {/* The word carries the state, in the status hue; the dot said it twice. */}
                   <Typography
                     variant="body-sm"
                     className={clsx(
-                      'hidden md:flex items-center gap-2 text-sm font-semibold',
+                      'hidden md:block text-sm font-semibold',
                       `quest-status-${quest.status}`
                     )}
                   >
-                    <span
-                      aria-hidden="true"
-                      className={clsx('w-[7px] h-[7px] rounded-full shrink-0', STATUS_COLOR[quest.status])}
-                    />
                     {quest.status.charAt(0).toUpperCase() + quest.status.slice(1)}
                   </Typography>
 

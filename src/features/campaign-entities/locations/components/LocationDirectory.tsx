@@ -7,7 +7,7 @@ import { useAuth } from 'features/user-management';
 import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
-import { MapPin, Mountain, Building, Home, Landmark, Users, Scroll, Tag } from 'lucide-react';
+import { MapPin, Landmark, Users, Scroll, Tag } from 'lucide-react';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useNavigation } from 'shared/context/NavigationContext';
 import clsx from 'clsx';
@@ -62,39 +62,9 @@ const STATUS_ORDER: { key: LocationStatus; colorClass: string }[] = [
   { key: 'visited', colorClass: 'bg-status-completed' },
 ];
 
-const STATUS_DOT: Record<LocationStatus, string> = {
-  known: 'bg-status-general',
-  explored: 'bg-status-unknown',
-  visited: 'bg-status-completed',
-};
-
 const formatLocationType = (type: LocationType): string => {
   if (type === 'poi') return 'Point of Interest';
   return type.charAt(0).toUpperCase() + type.slice(1);
-};
-
-const getTypeIcon = (type: LocationType) => {
-  // Deliberately uncoloured. The type chip in the same row already states the
-  // type, and colouring the icon as well encodes one fact twice -- which is
-  // among the most reliable sources of visual noise in a dense list.
-  const className = 'shrink-0';
-  switch (type) {
-    case 'region':
-      return <Mountain size={16} className={className} />;
-    case 'city':
-      return <Building size={16} className={className} />;
-    case 'town':
-    case 'village':
-      return <Home size={16} className={className} />;
-    case 'dungeon':
-    case 'building':
-      return <Building size={16} className={className} />;
-    case 'landmark':
-      return <Landmark size={16} className={className} />;
-    case 'poi':
-    default:
-      return <MapPin size={16} className={className} />;
-  }
 };
 
 export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
@@ -339,6 +309,8 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
         <RosterRow
           key={location.id}
           id={`location-${location.id}`}
+          entityId={location.id}
+          entityName={location.name}
           gridClassName={ROW_GRID}
           isFirst={index === 0}
           highlighted={highlightedLocationId === location.id}
@@ -371,11 +343,11 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
 
                     <RosterField label="Notes" emptyText="No notes yet">
                       {location.notes?.length ? (
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col divide-y card-divider">
                           {location.notes.map((note, noteIndex) => (
                             <div
                               key={noteIndex}
-                              className="flex gap-3 px-3 py-2.5 rounded-md bg-secondary"
+                              className="flex gap-3 py-2.5 first:pt-0 last:pb-0"
                             >
                               <Typography
                                 variant="body-sm"
@@ -497,6 +469,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
                     <RosterGroup
                       title={`Locations in ${location.name}`}
                       count={subRows.length}
+                      nested
                     >
                       {subRows}
                     </RosterGroup>
@@ -508,8 +481,14 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
         >
           <div className="flex flex-col gap-0.5 min-w-0">
             <div className="flex items-center gap-2 min-w-0">
-              {getTypeIcon(location.type)}
-              <Typography variant="body" className="font-semibold truncate">
+              {/* The type icon is gone from the collapsed row. It was already the
+                  second encoding of the type next to the label, and the sigil now
+                  holds the leading slot -- two glyphs before one name is a row
+                  arguing with itself. It survives wherever the label does not. */}
+              <Typography
+                variant="body"
+                className="font-semibold truncate font-heading"
+              >
                 {location.name}
               </Typography>
             </div>
@@ -520,27 +499,25 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
             )}
           </div>
 
-          {/* Status: dot plus the word, so colour is never the only cue */}
+          {/* The word carries the state, in the status hue; the dot said it twice. */}
           <Typography
             variant="body-sm"
             className={clsx(
-              'hidden md:flex items-center gap-2 text-sm font-semibold',
+              'hidden md:block text-sm font-semibold',
               `location-status-${location.status}`
             )}
           >
-            <span
-              aria-hidden="true"
-              className={clsx('w-[7px] h-[7px] rounded-sm shrink-0', STATUS_DOT[location.status])}
-            />
             {location.status.charAt(0).toUpperCase() + location.status.slice(1)}
           </Typography>
 
+          {/* The type, stated once. It was a chip filled from the entity palette --
+              the same palette the sigil draws from, so the row carried two marks in
+              two hues for two different facts and invited the reader to connect
+              them. The label is the encoding that survives. */}
           <Typography
             variant="body-sm"
-            className={clsx(
-              'hidden md:inline-flex justify-self-start px-2.5 py-1 rounded-md text-xs font-semibold',
-              `location-type-${location.type}`
-            )}
+            color="secondary"
+            className="hidden md:block justify-self-start text-sm"
           >
             {formatLocationType(location.type)}
           </Typography>

@@ -4,6 +4,7 @@ import Typography from './Typography';
 import Input from './Input';
 import { ChevronDown, Search } from 'lucide-react';
 import clsx from 'clsx';
+import EntitySigil from './EntitySigil';
 
 /**
  * Shared roster primitives for the entity directories.
@@ -307,6 +308,12 @@ export interface RosterGroupProps {
   openLabel?: string;
   /** Marks a placeholder group such as "Location unknown". */
   muted?: boolean;
+  /**
+   * Renders the group as a recessed part of the row above it rather than a card
+   * of its own. A location's sub-locations and a quest's objectives are parts of
+   * one object; boxing them restates a containment the indentation already says.
+   */
+  nested?: boolean;
   children: React.ReactNode;
 }
 
@@ -324,6 +331,7 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
   onOpen,
   openLabel = 'Open location',
   muted = false,
+  nested = false,
   children,
 }) => (
   <section className="flex flex-col gap-2">
@@ -349,7 +357,14 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
       <span aria-hidden="true" className="flex-1 h-px min-w-4 bg-secondary opacity-60" />
     </div>
 
-    <div className={clsx('rounded-lg overflow-hidden card')}>{children}</div>
+    <div
+      className={clsx(
+        'rounded-lg overflow-hidden',
+        nested ? 'bg-secondary card-border' : 'card'
+      )}
+    >
+      {children}
+    </div>
   </section>
 );
 
@@ -358,6 +373,19 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
 // ---------------------------------------------------------------------------
 
 export interface RosterRowProps {
+  /**
+   * The entity's own document id — not the prefixed DOM `id` below. It is what
+   * makes the mark stable: the same NPC shows the same hue in this list, in the
+   * activity feed and on any surface that adopts the sigil later.
+   *
+   * Required, and required to be non-empty. Deriving the mark from the name
+   * instead would move it whenever anyone corrects a spelling, and falling back
+   * to `''` would paint every id-less row the same hue — wrong in a way that
+   * looks right.
+   */
+  entityId: string;
+  /** The entity's display name or title. Determines the letter, and only that. */
+  entityName: string;
   /** Grid template for the row's cells, so each directory can size its own columns. */
   gridClassName: string;
   /** The collapsed row's cells, laid out on the grid. */
@@ -388,6 +416,8 @@ export interface RosterRowProps {
  * scrolled past a lot of card to find anybody.
  */
 export const RosterRow: React.FC<RosterRowProps> = ({
+  entityId,
+  entityName,
   gridClassName,
   children,
   expanded = false,
@@ -398,7 +428,19 @@ export const RosterRow: React.FC<RosterRowProps> = ({
   isFirst = false,
   highlighted = false,
   id,
-}) => (
+}) => {
+  // Loud on purpose. A row reaching this component without an id is a data bug,
+  // and the quiet alternatives are both worse than a crash: no mark leaves one
+  // row visibly different from its neighbours for no stated reason, and a mark
+  // derived from `''` paints every such row the same hue, which reads as a
+  // deliberate grouping that does not exist.
+  if (!entityId) {
+    throw new Error(
+      `RosterRow: entityId is required and must be non-empty (row "${entityName}").`
+    );
+  }
+
+  return (
   <div
     id={id}
     className={clsx(
@@ -418,20 +460,27 @@ export const RosterRow: React.FC<RosterRowProps> = ({
         onClick={onToggle}
         aria-expanded={expanded}
         aria-label={`${expanded ? 'Collapse' : 'Expand'} ${toggleLabel}`}
-        className={clsx(
-          'flex-1 min-w-0 text-left px-5 py-3.5 items-center gap-4 grid selectable-item',
-          gridClassName
-        )}
+        className="flex-1 min-w-0 text-left px-5 py-3.5 flex items-center gap-4 selectable-item"
       >
-        {children}
-        <ChevronDown
-          size={16}
-          aria-hidden="true"
-          className={clsx(
-            'justify-self-end transition-transform typography-secondary',
-            expanded && 'rotate-180'
-          )}
-        />
+        {/*
+          The mark sits outside the grid rather than as another column, so the
+          four directories keep their own column templates unchanged — a leading
+          `auto` in each of them would be the same slot expressed four times, and
+          would drift the moment one of them was edited.
+        */}
+        <EntitySigil entityId={entityId} name={entityName} size={28} />
+
+        <div className={clsx('flex-1 min-w-0 items-center gap-4 grid', gridClassName)}>
+          {children}
+          <ChevronDown
+            size={16}
+            aria-hidden="true"
+            className={clsx(
+              'justify-self-end transition-transform typography-secondary',
+              expanded && 'rotate-180'
+            )}
+          />
+        </div>
       </button>
     </div>
 
@@ -439,7 +488,8 @@ export const RosterRow: React.FC<RosterRowProps> = ({
       <div className="px-5 pb-5 pt-1 border-t border-card">{expandedContent}</div>
     )}
   </div>
-);
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Field — used inside expanded content

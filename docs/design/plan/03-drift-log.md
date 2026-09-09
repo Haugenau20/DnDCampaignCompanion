@@ -588,6 +588,69 @@ name is content of the world; the rest is the app describing it. Stating it as a
 rollout rule means eight directories inherit one answer instead of each deciding
 for itself.
 
+### D47 — Removing an encoding is what audits the one that remains
+Date: 2026-09-09   Status: active
+Decision: when a fact is stated twice and one encoding is deleted, the survivor
+gets re-checked before the change ships. Two defects surfaced this way in PR
+6.1, both invisible while the redundancy stood.
+Because: redundant encoding does not just add noise, it hides bugs in the
+encodings it duplicates. `LocationDirectory` drew its status dot from
+`STATUS_ORDER` and its status *word* from `.location-status-*`, and the two
+disagreed: `explored` and `visited` were swapped, so a row said "Explored" in
+the green the filter legend used for `visited`. For as long as both were
+present the dot was right, the word was wrong, and they sat side by side
+looking like decoration. Deleting the dot made the row contradict its own
+legend, which is how it was found.
+The same deletion turned every status word into the only encoding of its fact,
+which promoted the status hues from decoration to text -- and that is what
+exposed D48.
+
+### D48 — Status hues are AA text pairs, and were never gated as such
+Date: 2026-09-09   Status: active
+Decision: `token-contrast.test.ts` gains a block asserting every `status.*` hue
+meets 4.5:1 against the worst of `page`, `card` and `sunken`. Light theme's
+`status.unknown` moves from `#A67C1F` to `#7E5E17` (2.98:1 -> 4.70:1 on the
+worst ground). Dark's `completed` (3.05:1) and `failed` (2.41:1) and medieval's
+`unknown` (1.83:1) are recorded and ratcheted, not fixed: Phase 11 owns those
+values, and the ratchet is what stops them worsening meanwhile.
+Because: the test file covered surface pairs and control boundaries and nothing
+else, so a status hue used as a word was measured by no gate at all. `tsc`,
+`npm test` and `npm run build` were all green with `#A67C1F` on `sunken` at
+2.98:1. This is the failure mode design language section 10 describes almost
+word for word -- a legitimate colour, in a legitimate slot, wrong in relation to
+what sits behind it -- and the reason the token model makes pairs the unit is
+that pairs are what a test can enumerate. A pair nobody enumerated was a pair
+nobody checked.
+The generator (D36) held the same `#A67C1F`, so it was updated in the same
+commit; leaving it would have regenerated the failure on the next tuning pass.
+Verified as a gate rather than assumed: darkening dark's `completed` past its
+ratchet was written in as a control and the test failed, then reverted.
+A ratchet is not a pass. `dark.status.failed` at 2.41:1 is unreadable as a
+word, and the word is now the only encoding it has.
+
+### D49 — The identity mark sits beside the row's grid, not inside it
+Date: 2026-09-09   Status: active
+Decision: `RosterRow`'s button is a flex row of `[mark, grid]`, and the four
+directories' column templates are untouched.
+Because: the alternative was a leading `auto` column in `NPCDirectory`,
+`LocationDirectory`, `QuestDirectory` and `RumorDirectory` -- the same slot
+declared four times, drifting the first time one of them was edited, which is
+exactly the failure `Roster` exists to prevent. One consequence worth recording:
+the grid template no longer lands on the button, so the test that asserted it
+there was retargeted at the element that holds the cells, and strengthened to
+assert the cells are inside it so it cannot pass on an empty grid.
+
+### D50 — A row without an entity id throws
+Date: 2026-09-09   Status: active
+Decision: `RosterRow` takes `entityId` as a required, non-empty prop and throws
+when it is missing.
+Because: both quiet alternatives are worse than a crash. Rendering no mark
+leaves one row visibly unlike its neighbours for no stated reason; deriving from
+`''` gives every id-less row the same hue, which reads as a deliberate grouping
+that does not exist -- wrong in a way that looks right. The id is also the
+reason the mark is stable at all: deriving from the name instead would move a
+mark whenever anyone fixed a spelling.
+
 ---
 
 ## Revisions
@@ -722,6 +785,25 @@ Because: recorded so the next reader does not repeat the check. The substance
 survives -- no *directory* renders one, which is what Phase 6 fixes -- but "one
 import in `Roster.tsx`" is the second adoption, not the first.
 
+### R9 — revises Q11: the status dot goes
+Date: 2026-09-09
+Change: Q11 is settled. A status is stated as a word in the status hue, and the
+coloured dot beside it is removed from all four directories.
+Because: the dot and the word encode one fact, and the dot is the encoding that
+fails first -- it is the half nobody can read. It also turned out to be actively
+harmful here: in `LocationDirectory` the dot and the word disagreed (D47), and
+across all four directories the dot was quietly compensating for status hues
+that do not meet AA as text (D48). Redundancy was propping up two defects.
+Cost: the status hue now carries the fact alone, which raises the bar on those
+values. That bar is now a test.
+
+### R10 — revises the recorded test baseline
+Date: 2026-09-09
+Change: `main` after PR 6.0 is **239 suites / 4659 tests, 0 failed, 2 skipped**.
+PR 6.1 takes it to 239 / 4676.
+Because: R6 recorded 250 / 4899, measured before 6.0 deleted the journal's
+eleven suites and `SectionHeading`'s. Measured fresh, per CLAUDE.md.
+
 ---
 
 ## Open questions
@@ -741,8 +823,7 @@ Answer as the work reaches them; move to a decision when settled.
   defines the token, as deliberate cleanup.
 - **Q10** — Which CommonMark renderer, and does it run at write time or read
   time? First PR of Phase 9; the reading design depends on the answer.
-- **Q11** — Does a status keep its coloured dot, or does the word alone carry
-  it in the status hue? Proposed: the word alone, since a dot beside the word
-  encodes one fact twice. Decide in PR 6.2.
 
-Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32.
+
+Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32,
+**Q11** by R9.
