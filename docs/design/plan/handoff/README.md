@@ -7,7 +7,7 @@ Handoffs are written **as a phase starts**, not up front — the same reason
 `00-transition-plan.md` deferred the 2a/3a choice. A handoff written three
 phases early is a guess with a checklist attached.
 
-Currently written: Phase 6 (`06-1` … `06-4`).
+Currently written: Phase 6 (`06-0` … `06-3`).
 
 ## Contract every handoff follows
 

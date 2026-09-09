@@ -26,8 +26,8 @@ the **archetype** (`05-archetypes.md`), and a route's migration is usually
 "adopt archetype A1, delete four class names".
 
 Where a route genuinely has a composition problem no archetype answers — the
-Story/Saga reading stack, the journal spread — it gets its own mock. Three
-mocks total, not twenty-three.
+Story/Saga reading stack, chiefly — it gets its own mock. A handful of mocks,
+not twenty-three.
 
 ## 2. What is already true on `main`
 
@@ -36,11 +36,14 @@ Worth stating, because two of these are loose ends the rollout picks up:
 - Finish **3a** is live in `lightTheme.ts`: near-black chrome and band, warm
   ivory page, one deep red accent (`#8C1D1D`), eight entity hues at one
   lightness.
-- `EntitySigil` exists, is tested, and **nothing uses it.** The single
-  highest-leverage change in the app is one import in `Roster.tsx`.
-- `JournalLayout` is a live alternate Home view still on the twelve
-  `--journal-*` ornament tokens. It is **retired** rather than migrated (R1),
-  and that deletion is the first PR of Phase 6 so nothing later inherits it.
+- `EntitySigil` exists, is tested, and is rendered by `ActivityFeed` only (R8).
+  No *directory* renders one, so the single highest-leverage change in the app
+  is still one import — in `Roster.tsx`, which every collection goes through.
+  Its paint (`.entity-sigil`, eight `[data-sigil-index]` rules) and its
+  `--entity-palette-*` variables already ship; adoption is all that is left.
+- `JournalLayout` was a live alternate Home view on eleven `--journal-*`
+  ornament tokens. It is **retired** rather than migrated (D39) — done, as the
+  first PR of Phase 6, so nothing later inherits it.
 - Dark and medieval render through fallbacks: intact, dated.
 
 ## 3. Phases
@@ -54,7 +57,7 @@ and every PR is sized to one evening.
 | 6 | Collections | A1 | `visual/phase-6-collections` |
 | 7 | Entity detail | A2 | `visual/phase-7-entity` |
 | 8 | Forms & fields | A3 | `visual/phase-8-forms` |
-| 9 | Reading surfaces + journal | A4 | `visual/phase-9-reading` |
+| 9 | Reading surfaces | A4 | `visual/phase-9-reading` |
 | 10 | Utility, profile, auth | A5 | `visual/phase-10-utility` |
 | 11 | Retire medieval, dark to parity | — | `visual/phase-11-themes` |
 | 12 | Cleanup & package extraction | — | `visual/phase-12-cleanup` |
@@ -63,30 +66,35 @@ and every PR is sized to one evening.
 
 The directory lists: NPCs, Locations, Quests, Rumors, Notes, plus `Roster`
 itself. Sigils get adopted here, rows state their type once, and rules replace
-boxes. Four PRs — `handoff/06-1` … `handoff/06-4`.
+boxes. Three PRs — `handoff/06-1` … `handoff/06-3` — after the deletion.
 
 Why first, beyond preference: it is where the sigil work already paid for
 becomes visible, and it is the only archetype every other phase links into.
 
-PR `handoff/06-0` runs ahead of all four: it deletes the journal mode (R1).
-Deleting before migrating means Phases 8, 9 and 11 never touch those files.
+PR `handoff/06-0` runs ahead of all three: it deletes the journal mode (D39)
+and settles the drift log's bookkeeping for Phases 6–12. Deleting before
+migrating means Phases 8, 9 and 11 never touch those files.
+
+Sigil adoption and row anatomy are **one PR** (R7), not two: most of the sigil
+work shipped in Phase 3, and landing what is left on its own would put every row
+in exactly the three-encodings state the next PR exists to remove.
 
 ### Phase 7 — Entity detail
 
 A **new route per entity**, reached from a "More info" action on the directory
-row (D17). The row's inline expansion is unchanged — this phase is additive,
+row (D41). The row's inline expansion is unchanged — this phase is additive,
 and the page's job is what the row deliberately does not carry: full notes,
 timeline of edits, every relationship, the image slot with its designed empty
 state (D6: no bitmaps).
 
 Scope is **NPCs and Locations only** — the other entities stay row-only until
-the pattern proves itself. The pages are complete and semi-working (D20):
+the pattern proves itself. The pages are complete and semi-working (D43):
 description edits in place, notes added without navigating away.
 
 Three PRs: the route and its read view; the in-place editing; the image slot
 with its designed empty state. The **upload path is a fourth PR and is
 optional** — the slot must look intentional empty, cropped to fill with no
-focal point (D21).
+focal point (D44).
 
 Also migrates `NPCCard`, `LocationCard`, `RumorCard`, `NoteCard` where they
 name colours directly, and drops the `[data-theme=…]` patches that survive
@@ -100,7 +108,7 @@ there.
 and are already 3a-tuned; this phase makes the forms consume them and settles
 one open question — whether a form sits on `card` or on `page`.
 
-### Phase 9 — Reading surfaces and the journal
+### Phase 9 — Reading surfaces
 
 `StoryPage`, `ChaptersPage`, `SagaPage`, `ChapterReader`, `ChapterRail`,
 `BookViewer`, `BookshelfView`, `NotePage`.
@@ -109,13 +117,13 @@ The design is 4b in the design doc: a chapter rail on `sunken`, a capped
 measure, serif running text, navigation kept as quiet chrome.
 
 Carries a dependency the visual work cannot fake: **full CommonMark with raw
-HTML disabled at the parser** (D22), on chapter bodies, saga/story
+HTML disabled at the parser** (D45), on chapter bodies, saga/story
 descriptions and notes, with a bold / italic / blockquote toolbar over a plain
 textarea. Without it the pull quote and the emphasis in 4b cannot exist in the
-data. Renderer choice and write-time vs read-time is Q8, and it is the first
+data. Renderer choice and write-time vs read-time is Q10, and it is the first
 PR of the phase — the reading design depends on it.
 
-No journal work — it is deleted in Phase 6 (R1).
+No journal work — it is deleted in Phase 6 (D39).
 
 ### Phase 10 — Utility, profile, auth
 
@@ -126,7 +134,7 @@ readable, not to be interesting.
 
 ### Phase 11 — Retire medieval, dark to parity
 
-Medieval goes (D14). This is a deletion PR plus a migration PR — a stored
+Medieval goes (D40). This is a deletion PR plus a migration PR — a stored
 preference of `medieval` must resolve to something, and roughly a third of
 `theme-effects.css` is its ornament. Dark then gets real values for every
 surface pair instead of fallbacks.
@@ -134,8 +142,9 @@ surface pair instead of fallbacks.
 ### Phase 12 — Cleanup and extraction
 
 Remove the fallbacks (Q5: only once every remaining theme defines the token),
-retire `--location-type-*`, then hand the token model to `theme-contract` as
-the versioned package. Extraction is mechanical by this point, which was the
+retire the eight `.location-type-*` **classes** — the tokens behind them went in
+Phase 3, and the classes now read the entity palette — then hand the token model
+to `theme-contract` as the versioned package. Extraction is mechanical by this point, which was the
 whole argument of D2.
 
 ## 4. Gates
@@ -167,8 +176,9 @@ Per PR, in addition to whatever the phase's handoff adds:
 
 - All five archetypes migrated; every route inheriting rather than declaring.
 - Light and dark at parity; medieval gone; no fallbacks left.
-- No `--journal-*` token at all, and no journal mode.
-- `--location-type-*` retired.
+- No `--journal-*` token at all, and no journal mode. ✅ (D39)
+- `--location-type-*` retired. ✅ at the token level in Phase 3; the eight CSS
+  classes that inherited the name go in Phase 12.
 - Contrast clean at AA across both themes.
 - `theme-contract` consuming the extracted package.
 - `03-drift-log.md` records what actually happened, reversals included.

@@ -140,20 +140,6 @@ export const medievalTheme: Theme = {
       deleteText: '#9B2C2C', // Deep red for medieval theme
       deleteHover: 'rgba(155, 44, 44, 0.1)', // Very light deep red for hover
     },
-    journal: {
-      // Journal specific colors
-      leather: '#8B4513',
-      binding: '#5D3212',
-      stitch: '#E6C9A8',
-      pageShadow: 'rgba(0, 0, 0, 0.1)',
-      sectionDivider: 'rgba(139, 69, 19, 0.2)',
-      characterCardBg: 'rgba(231, 222, 204, 0.3)',
-      characterCardHover: 'rgba(231, 222, 204, 0.5)',
-      questItemBg: 'rgba(231, 222, 204, 0.1)',
-      questItemHover: 'rgba(231, 222, 204, 0.3)',
-      activityHover: 'rgba(231, 222, 204, 0.2)',
-      notesArea: 'rgba(231, 222, 204, 0.3)',
-    },
     font: {
       // Using more readable fonts while maintaining medieval feel
       primary: 'Crimson Text, serif', // More readable serif font

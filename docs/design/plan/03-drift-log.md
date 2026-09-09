@@ -490,6 +490,104 @@ at 4.36:1, small uppercase type on the band, which is the precise case section
 originally cover that pair; the browser audit found it, and the check was added
 so it cannot recur.
 
+### D39 — The journal mode is retired, not migrated
+Date: 2026-09-09   Status: active
+Decision: `pages/layouts/journal/` and the Dashboard/Journal toggle are deleted,
+along with the eleven `--journal-*` tokens, every CSS rule that read one, and
+`formatJournalDate`. Home renders the dashboard, full stop. No stored layout
+preference is migrated into anything.
+Because: never used on the live site, and the dashboard already answers the
+question it was for. Its premise -- that someone files every entry under the
+right session -- is a maintenance burden that pays nothing the first time anyone
+forgets. Deleting it before the rest of Phase 6 means Phases 8, 9 and 11 never
+touch those files.
+Two of its classes were not its own: `.journal-loading` and `.journal-empty`
+were shared with the dashboard from the start and carried the prefix only
+because that layout defined them first. They are renamed `.section-*`, which is
+what they always were. A third, `.journal-heading`, looked shared and was not --
+`SectionHeading` had exactly two consumers, both journal sections -- so the
+component, its test and its rule went with the mode. Found in the browser, after
+the change: the class rendered nowhere.
+Correction to the handoff: eleven tokens, not twelve. The handoff counted from
+memory; the baseline held 33 entries across three themes.
+
+### D40 — Medieval is retired in Phase 11
+Date: 2026-09-09   Status: planned
+Decision: the medieval theme is deleted rather than brought to parity, in Phase
+11, as a deletion PR plus a migration PR for anyone whose stored preference is
+`medieval`.
+Because: roughly a third of `theme-effects.css` is its ornament, and the surface
+model the token restructure produced does not need a costume theme to prove it
+generalises -- light and dark at parity does that. Keeping it means every later
+phase pays for a third theme nobody uses.
+
+### D41 — Entity detail is a new route, reached from "More info"
+Date: 2026-09-09   Status: planned
+Decision: Phase 7 adds a route per entity, reached from a "More info" action on
+the directory row. The row's inline expansion is unchanged; the phase is purely
+additive.
+Because: the row deliberately does not carry full notes, an edit timeline, every
+relationship or an image slot -- it is the highest-frequency surface in the
+product, and design language section 2 says ornament recedes as frequency rises.
+Those things need a surface met rarely. Making the page additive means the phase
+cannot regress the directories.
+Scope is NPCs and Locations only; quests, rumours and notes stay row-only until
+the pattern proves itself.
+
+### D42 — A timeline is a future feature, not a mode
+Date: 2026-09-09   Status: active
+Decision: nothing replaces the journal. A timeline over entries that already
+carry dates may be built later as a feature; it is not a second layout Home can
+switch to.
+Because: the journal's actual failure was being a *mode* -- a second place the
+same data lived, that had to be maintained in parallel and chosen between. A
+timeline reading the entries everything else reads has none of that cost. The
+distinction is what makes deleting the journal safe rather than a loss.
+
+### D43 — The entity page is complete and semi-working, not read-only
+Date: 2026-09-09   Status: planned
+Decision: the Phase 7 entity page shows everything the row shows plus the full
+note history and every relationship, and its description edits in place with a
+note addable without leaving the page.
+Because: a read-only detail page is a worse version of the row with more
+scrolling, and nothing earns the click. Editing in place is what makes the extra
+route pay for itself.
+
+### D44 — The image slot has no focal point and no crop UI
+Date: 2026-09-09   Status: planned
+Decision: one slot per entity page, fixed aspect, cropped to fill, centred. No
+focal-point picker, no crop tool. Designed empty state; the upload path is a
+separate, optional PR.
+Because: D6 stands -- the page must look finished with an empty slot, because
+most slots will be empty most of the time. A crop UI is a feature built for
+content that does not exist yet, and the empty state is the design rather than a
+placeholder (design language section 6).
+
+### D45 — Full CommonMark, raw HTML disabled at the parser
+Date: 2026-09-09   Status: planned
+Decision: chapter bodies, saga and story descriptions, and notes render full
+CommonMark with raw HTML disabled at the parser, authored in a plain textarea
+with a bold / italic / blockquote toolbar. Everything else in the app stays
+plain text.
+Because: the reading design in 4b needs a pull quote and real emphasis, and
+neither can exist in the data without a markup layer -- so this is a dependency
+of Phase 9's look, not a feature beside it. Disabling raw HTML at the parser
+rather than sanitising output is the difference between a policy and a filter.
+Keeping every other surface plain text means a directory row never needs a
+parser.
+Renderer choice, and write-time versus read-time rendering, is Q10; it is the
+first PR of Phase 9.
+
+### D46 — Entity names are serif; everything about them is sans
+Date: 2026-09-09   Status: active
+Decision: in every collection row the entity's name renders serif, and every
+other field -- type, status, disposition, role, dates, attribution -- renders
+sans.
+Because: this is design language section 4's rule applied at the row level. The
+name is content of the world; the rest is the app describing it. Stating it as a
+rollout rule means eight directories inherit one answer instead of each deciding
+for itself.
+
 ---
 
 ## Revisions
@@ -593,6 +691,37 @@ right-hand gutter costs nothing, because the row has spare width. Below `sm` the
 row stacks left-aligned, so its last line ends well short of the button rather
 than wrapping under it. Footer height: 140px -> 60px wide, 88px at 320px.
 
+### R6 — revises R2's recorded test baseline
+Date: 2026-09-09
+Change: the pre-Phase-6 baseline on `main` is **250 suites / 4899 tests, 0
+failed, 2 skipped**.
+Because: R2 recorded 243 / 4883, measured before Phases 1-5 merged. Measured
+fresh at the top of this phase, per CLAUDE.md's "measure it, don't carry one
+forward" rule -- which has now caught a stale figure three times running.
+Cost: none; caught before any change was made.
+
+### R7 — revises Phase 6's PR count from five to four
+Date: 2026-09-09
+Change: `handoff/06-1` (sigil paint and adoption) is folded into `06-2` (row
+anatomy), which becomes the phase's second PR. Phase 6 is 6.0, 6.1, 6.2, 6.3.
+Because: two of 06-1's three steps had already shipped in Phase 3 -- the
+`--entity-palette-*` variables resolve, and `.entity-sigil` with its eight index
+rules is already in `components.css`. What remained was one import and a threaded
+id, which is a commit rather than a PR. More to the point, landing it alone would
+have left the app in exactly the state 06-2 exists to fix: a sigil, a coloured
+type chip and a type-derived colour, three encodings of one fact. The seam
+between 06-2 and 06-3 is kept, because a density change moves every pixel in a
+screenshot and mixing it with an encoding change makes the diff unreadable.
+Cost: the second PR is the phase's largest. Its two halves are separate commits.
+
+### R8 — revises 04-rollout.md's claim that nothing uses `EntitySigil`
+Date: 2026-09-09
+Change: `ActivityFeed` has rendered `EntitySigil` since Phase 4. The claim was
+written against the tree as of Phase 3.
+Because: recorded so the next reader does not repeat the check. The substance
+survives -- no *directory* renders one, which is what Phase 6 fixes -- but "one
+import in `Roster.tsx`" is the second adoption, not the first.
+
 ---
 
 ## Open questions
@@ -610,5 +739,10 @@ Answer as the work reaches them; move to a decision when settled.
   differ per theme?
 - **Q5** — When do fallbacks get removed? Proposal: only once every theme
   defines the token, as deliberate cleanup.
+- **Q10** — Which CommonMark renderer, and does it run at write time or read
+  time? First PR of Phase 9; the reading design depends on the answer.
+- **Q11** — Does a status keep its coloured dot, or does the word alone carry
+  it in the status hue? Proposed: the word alone, since a dot beside the word
+  encodes one fact twice. Decide in PR 6.2.
 
 Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32.

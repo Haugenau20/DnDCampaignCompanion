@@ -66,12 +66,12 @@ describe('LoadingState', () => {
       });
     });
 
-    it('applies journal-loading class to each skeleton item', () => {
+    it('applies section-loading class to each skeleton item', () => {
       const { container } = render(<LoadingState type="skeleton" count={2} />);
       const pulseWrapper = container.querySelector('.animate-pulse');
       const items = Array.from(pulseWrapper!.children);
       items.forEach((item) => {
-        expect(item).toHaveClass('journal-loading');
+        expect(item).toHaveClass('section-loading');
       });
     });
 

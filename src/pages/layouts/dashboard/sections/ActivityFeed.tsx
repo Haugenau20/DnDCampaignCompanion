@@ -59,8 +59,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
   } = useActivityDisplay({
     activities,
     filter,
-    limit: 4,
-    journalStyle: false
+    limit: 4
   });
 
   const heading = (
@@ -84,7 +83,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
               key={i}
               className={clsx('px-5 py-5 h-[92px]', i > 1 && 'border-t border-card')}
             >
-              <div className={clsx('w-full h-full rounded-lg', `journal-loading`)}></div>
+              <div className={clsx('w-full h-full rounded-lg', `section-loading`)}></div>
             </div>
           ))}
         </div>

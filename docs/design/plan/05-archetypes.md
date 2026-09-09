@@ -20,8 +20,8 @@ the quietest.
 
 - Row leading slot: `EntitySigil` at 28px. Hue from the id, letter from the
   name, `aria-hidden`.
-- Entity names in serif, everything about them in sans (D23).
-- No status dot: the word carries the state, in the status hue (Q9).
+- Entity names in serif, everything about them in sans (D46).
+- No status dot: the word carries the state, in the status hue (Q11).
 - The row's existing field set is the requirement, not a starting point:
   name, subtitle, status with its dot, disposition, role, and on expansion
   description, dated notes, race, recorded-by, edit and delete. Nothing leaves
@@ -40,18 +40,18 @@ the quietest.
 ## A2 — Entity you open
 
 **Owns:** a new route per entity, reached from "More info" on a directory row
-(D17), plus `NPCCard`, `LocationCard`, `RumorCard`, `NoteCard`, `EntityCard`
+(D41), plus `NPCCard`, `LocationCard`, `RumorCard`, `NoteCard`, `EntityCard`
 where they name colours directly.
 
 Additive, and **complete**: everything the row shows, plus the full note
-history and every relationship (D20). The row's inline expansion keeps every
+history and every relationship (D43). The row's inline expansion keeps every
 field and action it has today.
 
 Semi-working, not read-only: the description edits in place and a note is
 added without leaving the page. That is what earns the click.
 
 - One image slot, fixed aspect, cropped to fill, centred. No focal point, no
-  crop UI (D21). Designed empty state; the page looks finished without it.
+  crop UI (D44). Designed empty state; the page looks finished without it.
 - Sigil at 44px beside a serif name.
 - `surface.card` for the body, `surface.sunken` for the aside — relations,
   tags, attribution.
@@ -102,11 +102,11 @@ full mock.
 - Serif body at a real reading size, normal line height. This is the only
   place in the app where serif carries running text.
 - Chapter navigation is chrome: sans, quiet, out of the way of the text.
-- Renders full CommonMark with raw HTML disabled at the parser (D22), on
+- Renders full CommonMark with raw HTML disabled at the parser (D45), on
   chapter bodies, saga/story descriptions and notes. Authoring is a plain
   textarea with a bold / italic / blockquote toolbar.
 - Everything not in that list stays plain text, so a row never needs a parser.
-- No journal spread: the mode is retired (R1), and a session-record surface is
+- No journal spread: the mode is retired (D39), and a session-record surface is
   not part of this rollout.
 
 ## A5 — Utility page

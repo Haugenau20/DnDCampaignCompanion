@@ -187,7 +187,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
   const skeleton = (
     <div data-testid="palette-skeleton" className="p-4 flex flex-col gap-2.5 animate-pulse">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="rounded-md journal-loading h-12" />
+        <div key={i} className="rounded-md section-loading h-12" />
       ))}
     </div>
   );

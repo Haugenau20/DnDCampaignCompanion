@@ -26,7 +26,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
 
   return (
     <div className={clsx(
-      "text-center py-4 journal-empty",
+      "text-center py-4 section-empty",
       className
     )}>
       <div className="w-8 h-8 mx-auto mb-2 opacity-50 flex items-center justify-center">
