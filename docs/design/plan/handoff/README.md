@@ -8,7 +8,7 @@ Handoffs are written **as a phase starts**, not up front — the same reason
 phases early is a guess with a checklist attached.
 
 Currently written: Phase 6 (`06-0` … `06-3`, done) and Phase 7
-(`07-0` done, `07-1` … `07-3`).
+(`07-0` and `07-1` done, `07-2` … `07-3`).
 
 Phase 7's optional fourth PR — the image **upload** path — is deliberately not
 written. D6 keeps bitmaps out of this project entirely, so it is a handoff for

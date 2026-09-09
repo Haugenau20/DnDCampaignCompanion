@@ -27,7 +27,7 @@ import {
   ChapterEditPage
 } from 'pages/story';
 import { QuestsPage, QuestCreatePage, QuestEditPage } from 'pages/quests';
-import { NPCsPage, NPCsCreatePage, NPCsEditPage } from 'pages/npcs';
+import { NPCsPage, NPCsCreatePage, NPCsEditPage, NPCDetailPage } from 'pages/npcs';
 import { LocationsPage, LocationCreatePage, LocationEditPage } from 'pages/locations';
 import { RumorsPage, RumorCreatePage, RumorEditPage } from 'pages/rumors';
 import { NotesPage, NotePage } from 'pages/notes';
@@ -72,6 +72,7 @@ const App: React.FC = () => {
                                 <Route path="/npcs" element={<NPCsPage />} />
                                 <Route path="/npcs/create" element={<NPCsCreatePage />} />
                                 <Route path="/npcs/edit/:npcId" element={<NPCsEditPage />} />
+                                <Route path="/npcs/:npcId" element={<NPCDetailPage />} />
                                 <Route path="/locations" element={<LocationsPage />} />
                                 <Route path="/locations/create" element={<LocationCreatePage />} />
                                 <Route path="/locations/edit/:locationId" element={<LocationEditPage />} />

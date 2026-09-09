@@ -5,8 +5,15 @@ import Typography from "core/components/Typography";
 
 /** Props for {@link PageShell}. */
 export interface PageShellProps {
-  /** The page's name. Always rendered as the document's `h1`. */
-  title: string;
+  /**
+   * The page's name. Always rendered as the document's `h1`.
+   *
+   * A node rather than a string only so a detail page can place an
+   * `EntitySigil` beside the name inside the heading. The sigil is
+   * `aria-hidden` by design, so the `h1`'s accessible name is still just the
+   * name. Anything that changes what the heading *says* belongs in the string.
+   */
+  title: ReactNode;
   /** One line under the title saying what the page is for. */
   subtitle?: ReactNode;
   /**

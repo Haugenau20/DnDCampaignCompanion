@@ -155,6 +155,7 @@ jest.mock("../pages/npcs", () => ({
   NPCsPage: () => <div data-testid="page-npcs" />,
   NPCsCreatePage: () => <div data-testid="page-npcs-create" />,
   NPCsEditPage: () => <div data-testid="page-npcs-edit" />,
+  NPCDetailPage: () => <div data-testid="page-npc-detail" />,
 }));
 
 jest.mock("../pages/locations", () => ({
@@ -213,6 +214,7 @@ const EXPECTED_ROUTES = [
   "/npcs",
   "/npcs/create",
   "/npcs/edit/:npcId",
+  "/npcs/:npcId",
   "/locations",
   "/locations/create",
   "/locations/edit/:locationId",
