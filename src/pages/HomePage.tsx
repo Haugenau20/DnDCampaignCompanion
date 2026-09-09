@@ -18,6 +18,7 @@ import JournalLayout from 'pages/layouts/journal/JournalLayout';
 import { Book, LayoutDashboard } from 'lucide-react';
 import clsx from 'clsx';
 import useLayoutData from 'pages/layouts/common/hooks/useLayoutData';
+import CampaignBanner from 'pages/layouts/dashboard/sections/CampaignBanner';
 
 // Combined activity type from all content types
 export interface Activity {
@@ -274,6 +275,17 @@ useEffect(() => {
   }
 
   return (
+    <>
+      {/* The hero band sits outside the page column on purpose. It bleeds to the
+          viewport edges, and the column below sets `overflow-x-hidden`, which
+          clips anything wider than itself -- the band's layout box was already
+          full width, but its paint was cut back, so it rendered as a floating
+          card with the page showing either side. Nothing inside a clipping
+          ancestor can bleed past it. */}
+      {layoutType === 'dashboard' && (
+        <CampaignBanner action={viewToggle} chapterCount={chapters.length} />
+      )}
+
     <div className='max-w-7xl mx-auto'>
       <div className="container mx-auto px-2 sm:px-4 py-4 overflow-x-hidden content">
         {/* Render selected layout with common processed data */}
@@ -302,6 +314,7 @@ useEffect(() => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

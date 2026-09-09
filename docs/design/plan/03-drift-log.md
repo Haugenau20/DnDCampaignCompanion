@@ -545,6 +545,54 @@ Note also that fallbacks would have been actively unsafe here until D14: while
 `variables.css` declared every name as `--x: ;`, `var(--new, --old)` could not
 reach its fallback at all.
 
+### R5 — revises D29: the hero band renders above the page column
+Date: 2026-09-09
+Change: `CampaignBanner` is rendered by `HomePage`, above
+`max-w-7xl` / `.container`, rather than by `DashboardLayout` inside it. The
+bleed is `-mx-4`, cancelling `main`'s padding exactly, instead of `50vw`
+arithmetic.
+Because: the band read as a floating card with page showing either side, even
+though it measured full width. Both halves of that are worth remembering.
+`getBoundingClientRect` reports the **layout box**; the column the band lived in
+sets `overflow-x-hidden`, so the bleed was laid out correctly and then clipped
+back to the column. Nothing inside a clipping ancestor can bleed past it, and
+measuring the layout box will never show it. The fix is structural: render the
+band outside the clip.
+Once outside, `main`'s 16px padding is the only inset, so cancelling it is exact
+-- and `50vw` was wrong anyway, because `vw` includes the scrollbar and left the
+band 4px off-centre at narrow widths.
+Cost: `DashboardLayout` no longer renders the band, so five of its tests moved
+to `HomePage`, and `HomePage` needed the band mocked because it now reaches for
+campaign context.
+
+### D37 — The party crest lives in the aside; the hero carries no crest
+Date: 2026-09-09   Status: active   (revises D29's slot placement)
+Decision: the hero band's monogram is removed. A `PartyCrest` card sits at the
+foot of the aside with an image slot whose empty state is a hatched panel drawn
+from the page's own tokens.
+Because: a large monogram beside the campaign name restated the title's first
+letter next to the title -- redundant encoding, and it made the band's left edge
+shout before the name did. The reference mockups place a wide plate slot in the
+hero and the party crest in the aside, which is the better division: the hero
+names the campaign, the crest identifies the group. The slot is empty now and
+will be for most groups, so the hatched empty state is the design rather than a
+placeholder.
+Not matched to the mockup: its summary line reads "32 chapters" where the
+mockup says "Four players, fourteen chapters". `Group` carries no member count,
+so the player half needs data plumbing that this change did not do.
+
+### D38 — The footer reserves space on the horizontal axis
+Date: 2026-09-09   Status: active
+Decision: the footer is one compact row -- copyright left, links right from `sm`
+up, stacked and left-aligned below it. `pb-20` is replaced by `sm:pr-20`.
+Because: the floating create button is `fixed right-6 bottom-6` and 48px square,
+so it only ever overlaps the bottom **right**. Reserving 80px of bottom padding
+answered that on the wrong axis and cost roughly 64px of dead height at the foot
+of every page, including for signed-out users who get no button at all. A
+right-hand gutter costs nothing, because the row has spare width. Below `sm` the
+row stacks left-aligned, so its last line ends well short of the button rather
+than wrapping under it. Footer height: 140px -> 60px wide, 88px at 320px.
+
 ---
 
 ## Open questions

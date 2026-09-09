@@ -2,7 +2,6 @@
 import React from 'react';
 import clsx from 'clsx';
 import Typography from 'core/components/Typography';
-import EntitySigil from 'core/components/EntitySigil';
 import { useCampaignInfo } from '../../../layouts/common/hooks/useCampaignInfo';
 
 interface CampaignBannerProps {
@@ -40,7 +39,13 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ action, chapterCount })
   // main contributes 16px and the container 8px (16px at sm).
   // The band bleeds to the viewport (see `.hero-band`); only the vertical
   // cancel is Tailwind's job.
-  const bandFrame = '-mt-8 mb-8 py-8 sm:py-10 hero-band';
+  // `-mt-4` cancels `main`'s own 16px padding and nothing else: the band now
+  // renders above the page column, so the column's `py-4` is no longer above it.
+  // The column's top padding supplies half the gap beneath, hence `mb-4`.
+  // `-m*-4` cancels `main`'s 16px padding on three sides -- exact, and immune
+  // to the scrollbar in a way `50vw` is not. The band renders above the page
+  // column now, so nothing else insets it.
+  const bandFrame = '-mx-4 -mt-4 mb-4 py-8 sm:py-10 hero-band';
 
   // Re-creates `main` > `max-w-7xl` > `container` so the band's content sits in
   // exactly the same column as the page content below it. Mirroring the chain
@@ -81,15 +86,12 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ action, chapterCount })
           line. The toggle drops below the identity block instead. */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
         <div className="flex items-start gap-4 sm:gap-6 min-w-0">
-          {/* The image slot. Empty by design in this phase, and designed for it. */}
-          <div className="hero-slot shrink-0 hidden sm:block" data-testid="campaign-crest">
-            <EntitySigil
-              entityId={activeCampaign?.id ?? ''}
-              name={activeCampaign?.name ?? ''}
-              size={88}
-            />
-          </div>
-
+          {/* No crest here. A large monogram beside the campaign name repeated
+              the first letter of the title next to the title, which is the
+              redundant encoding the design language warns about -- and it made
+              the band's left edge shout before the name did. The party's own
+              crest lives in the aside, where it identifies the group rather
+              than restating the heading. */}
           <div className="flex flex-col gap-2 min-w-0">
             {activeGroup?.name && (
               <Typography

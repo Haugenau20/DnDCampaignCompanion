@@ -7,12 +7,13 @@ import DashboardLayout from "../DashboardLayout";
 // Mocks — child sections are mocked so this test focuses on layout/routing only
 // ---------------------------------------------------------------------------
 
-jest.mock("../sections/CampaignBanner", () => ({
+// PartyCrest reads the active group, so it needs a stand-in here exactly as the
+// other sections do; this suite is about composition, not group context.
+jest.mock("../sections/PartyCrest", () => ({
   __esModule: true,
-  default: (props: any) => (
-    <div data-testid="campaign-banner" data-chapter-count={props.chapterCount}>
-      CampaignBanner
-      {props.action}
+  default: (props: { chapterCount?: number }) => (
+    <div data-testid="party-crest" data-chapter-count={props.chapterCount}>
+      PartyCrest
     </div>
   ),
 }));
@@ -98,11 +99,6 @@ describe("DashboardLayout", () => {
       expect(container).toBeInTheDocument();
     });
 
-    it("renders the CampaignBanner section", () => {
-      render(<DashboardLayout {...makeProps()} />);
-      expect(screen.getByTestId("campaign-banner")).toBeInTheDocument();
-    });
-
     it("renders the CampaignStats section", () => {
       render(<DashboardLayout {...makeProps()} />);
       expect(screen.getByTestId("campaign-stats")).toBeInTheDocument();
@@ -113,11 +109,17 @@ describe("DashboardLayout", () => {
       expect(screen.getByTestId("activity-feed")).toBeInTheDocument();
     });
 
-    it("renders all three sections simultaneously", () => {
+    it("renders its sections simultaneously", () => {
+      // The hero band is no longer one of them: it bleeds to the viewport and
+      // this layout renders inside a column that clips, so HomePage owns it.
       render(<DashboardLayout {...makeProps()} />);
-      expect(screen.getByTestId("campaign-banner")).toBeInTheDocument();
       expect(screen.getByTestId("campaign-stats")).toBeInTheDocument();
       expect(screen.getByTestId("activity-feed")).toBeInTheDocument();
+    });
+
+    it("does not render the hero band", () => {
+      render(<DashboardLayout {...makeProps()} />);
+      expect(screen.queryByTestId("campaign-banner")).not.toBeInTheDocument();
     });
   });
 
@@ -232,17 +234,6 @@ describe("DashboardLayout", () => {
   // Layout structure
   // -------------------------------------------------------------------------
   describe("layout structure", () => {
-    it("CampaignBanner appears before the grid container", () => {
-      const { container } = render(<DashboardLayout {...makeProps()} />);
-      const banner = screen.getByTestId("campaign-banner");
-      const grid = container.querySelector(".lg\\:grid");
-      // banner should be in the DOM before the grid wrapper
-      expect(banner).toBeInTheDocument();
-      expect(grid).toBeInTheDocument();
-      // banner should NOT be inside the grid
-      expect(grid?.contains(banner)).toBe(false);
-    });
-
     it("CampaignStats spans the full width, outside the grid", () => {
       const { container } = render(<DashboardLayout {...makeProps()} />);
       const grid = container.querySelector(".lg\\:grid");
@@ -300,24 +291,5 @@ describe("DashboardLayout", () => {
       expect(screen.queryByTestId("rumor-prompt")).not.toBeInTheDocument();
     });
 
-    it("passes the chapter count to the banner meta line", () => {
-      render(
-        <DashboardLayout {...makeProps({ chapters: [{ id: "c1" }, { id: "c2" }] })} />
-      );
-      expect(screen.getByTestId("campaign-banner")).toHaveAttribute(
-        "data-chapter-count",
-        "2"
-      );
-    });
-
-    it("renders the view toggle inside the banner", () => {
-      render(
-        <DashboardLayout
-          {...makeProps({ viewToggle: <button type="button">Journal</button> })}
-        />
-      );
-      const banner = screen.getByTestId("campaign-banner");
-      expect(banner).toContainElement(screen.getByRole("button", { name: "Journal" }));
-    });
   });
 });

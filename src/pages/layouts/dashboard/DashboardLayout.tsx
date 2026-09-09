@@ -1,10 +1,10 @@
 // components/features/layouts/DashboardLayout.tsx
 import React from 'react';
-import CampaignBanner from './sections/CampaignBanner';
 import ActivityFeed from './sections/ActivityFeed';
 import CampaignStats from './sections/CampaignStats';
 import OpenQuests from './sections/OpenQuests';
 import RumorPrompt from './sections/RumorPrompt';
+import PartyCrest from './sections/PartyCrest';
 
 // Props interface for layout components
 export interface LayoutProps {
@@ -16,9 +16,10 @@ export interface LayoutProps {
   activities: any[];
   loading: boolean;
   /**
-   * The dashboard/journal switch, owned by HomePage because it decides which layout
-   * renders. Passed down so it can sit in the page header instead of on a
-   * navigation row of its own.
+   * The dashboard/journal switch, owned by HomePage because it decides which
+   * layout renders. The dashboard no longer consumes it -- HomePage puts it in
+   * the hero band directly -- but the journal still does, so it stays on the
+   * shared props type.
    */
   viewToggle?: React.ReactNode;
 }
@@ -40,13 +41,15 @@ const DashboardLayout: React.FC<LayoutProps> = ({
   rumors,
   activities,
   loading,
-  viewToggle,
 }) => {
 
   return (
     <>
-      {/* Campaign header — carries the view toggle so the page needs no extra nav row */}
-      <CampaignBanner action={viewToggle} chapterCount={chapters.length} />
+      {/* The hero band is rendered by HomePage, above the page column: it bleeds
+          to the viewport edges, and the column it used to live in sets
+          `overflow-x-hidden`, which clipped the bleed back to the column's own
+          width. The band's layout box was correct -- it measured flush -- but
+          the paint was clipped, which is why it read as a floating card. */}
 
       {/* Counts, demoted to one strip across the full width */}
       <CampaignStats
@@ -70,6 +73,7 @@ const DashboardLayout: React.FC<LayoutProps> = ({
         <div className="mt-8 lg:mt-0 flex flex-col gap-7">
           <OpenQuests quests={quests} loading={loading} />
           {!loading && <RumorPrompt rumorCount={rumors.length} />}
+          {!loading && <PartyCrest chapterCount={chapters.length} />}
         </div>
       </div>
     </>
