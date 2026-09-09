@@ -782,6 +782,26 @@ for anyone who cannot separate the hues, and undecodable for everyone else.
 Design language section 2 forbids both. The second keeps its information by
 stating it, which is strictly better than the hue it replaced.
 
+### D60 — Dead code is deleted, not migrated
+Date: 2026-09-09   Status: active
+Decision: `NPCCard`, `LocationCard` and `RumorCard` are deleted, with their
+tests and their barrel exports, and with every CSS family whose only consumer
+they were.
+Because: nothing rendered them. They were stranded when the directories became
+rosters, and 2,637 lines of component and test were reachable only from
+themselves. Migrating them to the token system would have been paint applied to
+a surface no one can see.
+The receipt is unusual and worth recording: after deleting them the **JS bundle
+is byte-identical** — the same content hash, 295.77 kB before and after.
+Webpack had already tree-shaken all three out, so the production bundle never
+contained them. A shrink would have been weaker evidence; an unchanged hash
+proves the code was unreachable rather than merely unused. Only the CSS moved
+(11.06 kB -> 10.79 kB), because CSS is not tree-shaken — which is precisely why
+dead CSS has to be deleted by hand and dead components largely delete
+themselves.
+
+---
+
 ---
 
 ## Revisions
@@ -974,6 +994,48 @@ deletes them, having first been read, because they are the closest thing the
 repo has to a specification for what an entity page shows. That field list is
 copied into `07-1` so it does not depend on the files surviving.
 
+### R14 — revises 07-0's claim that `quest-status-*` still has a consumer
+Date: 2026-09-09
+Change: `.quest-status-{active,completed,failed}` are deleted. The handoff said
+to keep them because "LocationDirectory still renders it, and Phase 12 retires
+that family".
+Because: that stopped being true in 6.3. D59 replaced the hue-coded `Scroll`
+icon in a location's linked-quests list with the quest's status stated as a
+word, which removed the last dynamic `quest-status-${status}` consumer. The two
+cards deleted here were the only others. The handoff was written before 6.3
+merged and carried the stale fact forward — the third time in this phase a
+recorded fact was stale at the moment it was read, and the reason each PR
+re-measures instead of citing.
+
+### R15 — records a fourth stranded component, and does not delete it
+Date: 2026-09-09
+Change: `NPCLegend` is left in the tree, but `.npc-status-*` is now documented
+as having no *rendered* consumer.
+Because: `NPCLegend` is stranded in exactly the shape the three cards were —
+exported from the barrel, covered by its own test file, rendered by no
+component. The difference is that it looks deliberate: `core/config/buildConfig`
+carries `showNPCLegend: false`, with tests pinning it false. Except **no code
+reads that flag**, so the legend cannot be switched on either; the flag records
+an intention that was never wired.
+It is not deleted here because 7.0's scope is the three cards, and because the
+choice between wiring it up and retiring it is a real one: a legend is the one
+place the design language permits a hue to carry meaning alone, since the
+legend is itself the key. That makes it the natural home for the `npc-status-*`
+family rather than dead weight. Deciding needs an owner; see Q15.
+
+### R16 — records a defect found while verifying, out of scope to fix here
+Date: 2026-09-09
+Change: none in this PR. `LocationDirectory` renders a note's date as the raw
+stored string, so an expanded Isengard row reads
+`2025-05-31T19:27:30.387Z` where the NPC row would read `31/05/2025`.
+Because: found in the browser while checking that this deletion changed
+nothing. It is a Phase 6 miss, not a Phase 7 one — `RosterField` "Notes" prints
+`{note.date}` directly while `NPCDirectory` formats the same shape through
+`toLocaleDateString`. Recorded rather than fixed because this PR only deletes,
+and a deletion PR that also changes rendering cannot honestly claim "nothing
+rendered differently anywhere". Whoever opens `LocationDirectory` next should
+take it.
+
 ---
 
 ## Open questions
@@ -1000,6 +1062,19 @@ Answer as the work reaches them; move to a decision when settled.
 - **Q13** — Can a note be edited or deleted after it is written? 7.2 adds
   notes only. Changing a shared record's history is a decision about the
   record, not about the page.
+- **Q14** — Does the **Location** half of 7.1 still earn its place? Measured
+  while reading the cards: the Location row's expansion already renders eight
+  fields — description, notable features, notes, tags, last visited, connected
+  NPCs, related quests, recorded by — which is the entire `Location` type
+  except `parentId`, and the hierarchy already expresses that by nesting. A
+  Location detail page would add **nothing but a URL**. The NPC row renders
+  four fields and its type has six more with nowhere to live (`appearance`,
+  `personality`, `background`, and all three of `connections.*`), so the NPC
+  half is clearly earned. Phase 6 succeeded hard enough to remove half of
+  Phase 7's reason to exist. Answer before 7.1 starts; D41 assumed both.
+- **Q15** — Wire `NPCLegend` up or retire it? See R15. A legend is where a hue
+  may legitimately stand alone, so this decides whether `.npc-status-*` has a
+  future or follows the card families out.
 
 
 Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32,

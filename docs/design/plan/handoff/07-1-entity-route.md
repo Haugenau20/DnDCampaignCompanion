@@ -6,6 +6,16 @@ A route per NPC and per Location, reached from a "More info" action on the
 directory row (D41). Read-only in this PR; 7.2 makes it editable and 7.3 adds
 the image slot.
 
+> **Read Q14 before starting. The Location half of this PR may not be worth
+> building.** 7.0 measured what the rows already render: the Location row's
+> expansion carries eight fields, which is the whole `Location` type bar
+> `parentId` — and the hierarchy expresses that by nesting. A Location page
+> would add a URL and nothing else. The NPC row carries four fields and the
+> type has six more with nowhere to live, so the NPC half is earned outright.
+> Phase 6 did its job well enough to take away half of this PR's reason to
+> exist. If Q14 is answered "NPCs only", build only `/npcs/:npcId`, keep the
+> Location route out of `App.tsx` entirely, and say so in the PR body.
+
 **Additive, and it must stay additive.** The row's inline expansion keeps every
 field and action it has today. If this PR makes a directory worse, it has
 failed regardless of how the new page looks.
@@ -32,14 +42,21 @@ failed regardless of how the new page looks.
    collapsed row: the collapsed row is the highest-frequency surface in the
    product and does not get a second control. A row that is already expanded
    has told you it wants more.
-3. **The page shows what the row does not.** The row's expansion already
-   carries description, dated notes, race, recorded-by, edit and delete. The
-   page carries all of it plus:
-   - **NPC**: `appearance`, `personality`, `background`, `connections.relatedNPCs`,
-     `connections.affiliations`, `connections.relatedQuests`, the full `notes[]`
-     history rather than a truncated list.
-   - **Location**: `features[]`, `connectedNPCs`, `relatedQuests`, `tags[]`,
-     `lastVisited`, the parent location and any children, the full `notes[]`.
+3. **The page shows what the row does not.** Verified against the directories
+   in 7.0, not against the deleted cards:
+   - **NPC** — the row's expansion renders four fields (description, notes,
+     race, recorded-by) and the collapsed row adds status, relationship,
+     occupation and location. Genuinely absent, and this page's whole reason to
+     exist: `appearance`, `personality`, `background`,
+     `connections.relatedNPCs`, `connections.affiliations`,
+     `connections.relatedQuests`. Note that **no component has ever rendered
+     the three `connections.*` arrays** — there is no prior art for how they
+     look, `relatedNPCs` holds ids needing `getNPCById`, and `affiliations` is
+     free text. Expect many campaigns to have them empty; design the empty
+     state first.
+   - **Location** — the row already renders description, notable features,
+     notes, tags, last visited, connected NPCs, related quests and recorded-by.
+     There is **no absent field** to justify the page. See Q14.
 4. **Layout**: `surface.card` for the body, `surface.sunken` for the aside —
    relations, tags, attribution. Sigil at 44px beside a serif name. Sans for
    every piece of metadata (D46, same rule as the row).
@@ -64,6 +81,11 @@ failed regardless of how the new page looks.
   enhancement or a crutch.
 - Do not reach for the deleted cards. 7.0 removed them; their field list is
   in step 3.
+- Do not attribute individual notes to a person. `NPCNote` and `LocationNote`
+  are `{ date, text }` — no author field. Only `RumorNote` carries
+  `createdByUsername`, and rumors are not in this PR. The note history can say
+  *when*, never *who*; the entity's own attribution is the only credit
+  available. Inventing a byline would be showing data that does not exist.
 
 ## Gates
 
