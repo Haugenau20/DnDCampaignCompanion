@@ -14,7 +14,7 @@ jest.mock('../../../../../core/components/Dialog', () => ({
   __esModule: true,
   default: ({ open, title, children }: any) =>
     open ? (
-      <div data-testid="dialog">
+      <div data-testid="dialog" role="dialog">
         {title && <h3>{title}</h3>}
         {children}
       </div>
@@ -451,6 +451,59 @@ describe('RumorForm', () => {
     test("every control in the form has an accessible name", () => {
       const { container } = render(<RumorForm title="Add Rumor" />);
       expect(unnamedControlsIn(container)).toEqual([]);
+    });
+  });
+
+
+  // -------------------------------------------------------------------------
+  // The accent budget, with chips selected (PR 8.2)
+  //
+  // 8.2's gate: "a form with several selections has exactly one accent, and it
+  // is the primary action." This is why a selected chip is accent-*bordered*
+  // rather than accent-filled -- six filled chips would put six accents on the
+  // form and leave the control that actually writes competing with them.
+  // -------------------------------------------------------------------------
+  describe("accent budget", () => {
+    test("should keep exactly one filled accent no matter how many chips are chosen", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<RumorForm title="Add Rumor" />);
+
+      await user.click(screen.getByRole("button", { name: /select npcs/i }));
+
+      const chips = screen
+        .getAllByRole("button")
+        .filter((b) => b.hasAttribute("aria-pressed"));
+      expect(chips.length).toBeGreaterThan(1);
+
+      for (const chip of chips) {
+        await user.click(chip);
+      }
+
+      const chosen = screen
+        .getAllByRole("button")
+        .filter((b) => b.getAttribute("aria-pressed") === "true");
+      expect(chosen.length).toBe(chips.length);
+
+      // Every chosen chip wears the outline treatment, and none of them wears
+      // the filled one.
+      chosen.forEach((chip) => {
+        expect(chip).toHaveClass("chip-toggle-selected");
+        expect(chip).not.toHaveClass("button-primary");
+      });
+
+      // One filled accent per surface, counted per surface rather than per DOM
+      // tree: a modal is its own surface and is entitled to its own primary
+      // action, while the form behind it is inert. What must never happen is the
+      // *chips* adding to either count, and they do not.
+      const filledInDialog = Array.from(
+        container.querySelectorAll<HTMLElement>(".button-primary")
+      ).filter((el) => el.closest('[role="dialog"]') !== null);
+      const filledOnForm = Array.from(
+        container.querySelectorAll<HTMLElement>(".button-primary")
+      ).filter((el) => el.closest('[role="dialog"]') === null);
+
+      expect(filledOnForm.length).toBeLessThanOrEqual(1);
+      expect(filledInDialog.length).toBeLessThanOrEqual(1);
     });
   });
 

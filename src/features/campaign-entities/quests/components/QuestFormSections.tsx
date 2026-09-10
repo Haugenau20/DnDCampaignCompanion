@@ -3,6 +3,7 @@ import { NPC } from '../../npcs/types';
 import React from 'react';
 import { Quest, QuestStatus } from '../types';
 import Typography from '../../../../core/components/Typography';
+import { SelectableChip, RemovableChip } from '../../../../core/components/Chip';
 import Input from '../../../../core/components/Input';
 import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
@@ -67,21 +68,13 @@ interface RelatedNPCsSectionProps extends SectionProps {
           {Array.from(selectedNPCs).map(npcId => {
             const npc = npcs.find(n => n.id === npcId);
             return npc ? (
-              <div
+              <RemovableChip
                 key={npcId}
-                className="flex items-center gap-1 rounded-full px-3 py-1 tag"
+                onRemove={() => handleRemoveNPC(npcId)}
+                removeLabel={`Remove ${npc.name}`}
               >
-                <span>{npc.name}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveNPC(npcId)}
-                  className={clsx(
-                    `typography-secondary hover:opacity-80`
-                  )}
-                >
-                  <X size={14} />
-                </button>
-              </div>
+                {npc.name}
+              </RemovableChip>
             ) : null;
           })}
         </div>
@@ -95,28 +88,14 @@ interface RelatedNPCsSectionProps extends SectionProps {
           <div className="max-h-96 overflow-y-auto mb-4">
             <div className="grid grid-cols-3 gap-2">
               {npcs.map(npc => (
-                <button
-                  type="button"  // Explicitly set type to "button"
+                <SelectableChip
                   key={npc.id}
-                  onClick={(e) => {
-                    e.preventDefault();  // Prevent form submission
-                    e.stopPropagation(); // Stop event bubbling
-                    handleToggleNPC(npc.id);
-                  }}
-                  className={clsx(
-                    "p-2 rounded text-center transition-colors",
-                    selectedNPCs.has(npc.id)
-                      ? `selected-item`
-                      : `selectable-item`
-                  )}
+                  selected={selectedNPCs.has(npc.id)}
+                  onToggle={() => handleToggleNPC(npc.id)}
+                  className="text-center"
                 >
-                  <Typography 
-                    variant="body-sm"
-                    className={selectedNPCs.has(npc.id) ? 'font-medium' : ''}
-                  >
-                    {npc.name}
-                  </Typography>
-                </button>
+                  {npc.name}
+                </SelectableChip>
               ))}
             </div>
           </div>

@@ -758,6 +758,64 @@
     background-color: var(--action-outline-hover);
   }
 
+  /* ====== CHIP, MULTI-SELECT (toggle) and TAG (removable) ====== */
+  /*
+    Deliberately NOT `.chip`, which is taken and stays taken. `.chip` further
+    down this file is the *single-select* pill `CategoryChips` uses, and it fills
+    the chosen one with --color-primary on purpose. That is right for single
+    select -- exactly one chip is ever chosen, so it costs exactly one accent,
+    and filling it makes it unmistakably the answer.
+
+    It is wrong for multi-select, which is what the entity forms have. Six chosen
+    NPCs filled with the accent put six accents on a form and leave the one
+    control that writes competing with them (8.2, design language section 2).
+    Two kinds of chip, two treatments, two names -- rather than one name whose
+    meaning depends on which list it landed in.
+
+    The boundary is --color-primary, NOT --action-primary-bg. `.chip`'s own
+    comment worked this out first and it is worth not re-learning: in medieval
+    --action-primary-bg is #E8D0AA, pale tan on a #FDF5E6 parchment page, which
+    measures 1.38:1 and draws a line you cannot see. --color-primary is the token
+    every theme tunes to stand against its own page -- 7.93, 7.78 and 9.24 across
+    light, dark and medieval -- so it is the one a border can rely on.
+
+    The border also *thickens* on selection rather than only changing hue, so the
+    state survives greyscale. It thickens with `outline` rather than `border` for
+    D12's reason: a wider border would eat the padding box and shift the label
+    the moment you pick it.
+  */
+  .chip-toggle {
+    background-color: var(--action-outline-bg);
+    color: var(--action-outline-text);
+    border: var(--border-width-sm) solid var(--action-outline-border);
+    transition: all 0.2s ease;
+  }
+
+  .chip-toggle:hover:not(:disabled) {
+    background-color: var(--action-outline-hover);
+  }
+
+  .chip-toggle-selected {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    outline: var(--border-width-sm) solid var(--color-primary);
+    outline-offset: -2px;
+  }
+
+  .chip-toggle-selected:hover:not(:disabled) {
+    background-color: var(--action-outline-hover);
+  }
+
+  /*
+    The removable tag. Keeps `.tag`'s quiet recessed surface -- it stands for
+    something already chosen, so it is a label, not an invitation.
+  */
+  .chip-tag {
+    background-color: var(--surface-sunken-bg);
+    border: var(--border-width-sm) solid var(--surface-card-border);
+    color: var(--surface-page-on);
+  }
+
   /* ====== ENTITY SIGIL ====== */
   /*
     One ink for every mark, so the palette separates entities without any entry

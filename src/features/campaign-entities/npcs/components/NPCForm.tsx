@@ -5,6 +5,7 @@ import Input from '../../../../core/components/Input';
 import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
+import { SelectableChip, RemovableChip } from '../../../../core/components/Chip';
 import Card from '../../../../core/components/Card';
 import Dialog from '../../../../core/components/Dialog';
 import { useQuests } from '../../quests/context/QuestContext';
@@ -368,26 +369,21 @@ const NPCForm: React.FC<NPCFormProps> = ({
                 {formData.connections?.relatedNPCs.map(npcId => {
                   const npc = existingNPCs.find(n => n.id === npcId);
                   return npc ? (
-                    <div
+                    <RemovableChip
                       key={npcId}
-                      className="flex items-center gap-1 px-3 py-1 rounded-full tag"
+                      onRemove={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          connections: {
+                            ...prev.connections!,
+                            relatedNPCs: prev.connections!.relatedNPCs.filter(id => id !== npcId)
+                          }
+                        }));
+                      }}
+                      removeLabel={`Remove ${npc.name}`}
                     >
-                      <span>{npc.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            connections: {
-                              ...prev.connections!,
-                              relatedNPCs: prev.connections!.relatedNPCs.filter(id => id !== npcId)
-                            }
-                          }));
-                        }}
-                        className="typography-secondary hover:opacity-75">
-                        <X size={14} />
-                      </button>
-                    </div>
+                      {npc.name}
+                    </RemovableChip>
                   ) : null;
                 })}
               </div>
@@ -411,22 +407,17 @@ const NPCForm: React.FC<NPCFormProps> = ({
                   {Array.from(selectedQuests).map(questId => {
                     const quest = quests.find(q => q.id === questId);
                     return quest ? (
-                      <div
+                      <RemovableChip
                         key={questId}
-                        className="flex items-center gap-1 px-3 py-1 rounded-full tag"
-                      >
-                        <span>{quest.title}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
+                        onRemove={() => {
                             const newSet = new Set(selectedQuests);
                             newSet.delete(questId);
                             setSelectedQuests(newSet);
                           }}
-                          className="typography-secondary hover:opacity-75">
-                          <X size={14} />
-                        </button>
-                      </div>
+                        removeLabel={`Remove ${quest.title}`}
+                      >
+                        {quest.title}
+                      </RemovableChip>
                     ) : null;
                   })}
                 </div>
@@ -455,18 +446,13 @@ const NPCForm: React.FC<NPCFormProps> = ({
             </div>
             <div className="flex flex-wrap gap-2">
               {formData.connections?.affiliations.map((affiliation, index) => (
-                <div
+                <RemovableChip
                   key={index}
-                  className="flex items-center gap-1 px-3 py-1 rounded-full tag"
+                  onRemove={() => handleAffiliationRemove(index)}
+                  removeLabel={`Remove affiliation ${affiliation}`}
                 >
-                  <span>{affiliation}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleAffiliationRemove(index)}
-                    className="typography-secondary hover:opacity-75">
-                    <X size={14} />
-                  </button>
-                </div>
+                  {affiliation}
+                </RemovableChip>
               ))}
             </div>
           </div>
@@ -492,20 +478,13 @@ const NPCForm: React.FC<NPCFormProps> = ({
             </div>
             <div className="flex flex-wrap gap-2">
               {formData.tags?.map((tag, index) => (
-                <div
+                <RemovableChip
                   key={index}
-                  className="flex items-center gap-1 px-3 py-1 rounded-full tag"
+                  onRemove={() => handleTagRemove(index)}
+                  removeLabel={`Remove tag ${tag}`}
                 >
-                  <span>{tag}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleTagRemove(index)}
-                    className="typography-secondary hover:opacity-75"
-                    aria-label={`Remove tag ${tag}`}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
+                  {tag}
+                </RemovableChip>
               ))}
             </div>
           </div>
@@ -555,23 +534,14 @@ const NPCForm: React.FC<NPCFormProps> = ({
         <div className="max-h-96 overflow-y-auto mb-4">
           <div className="grid grid-cols-3 gap-2">
             {sortedNPCs.map(npc => (
-              <button
+              <SelectableChip
                 key={npc.id}
-                onClick={() => toggleNPCSelection(npc.id)}
-                className={clsx(
-                  "p-2 rounded text-center transition-colors",
-                  selectedNPCs.has(npc.id)
-                    ? `selected-item`
-                    : `selectable-item`
-                )}
+                selected={selectedNPCs.has(npc.id)}
+                onToggle={() => toggleNPCSelection(npc.id)}
+                className="text-center"
               >
-                <Typography 
-                  variant="body"
-                  className={`${selectedNPCs.has(npc.id) ? 'font-medium' : ''}`}
-                >
-                  {npc.name}
-                </Typography>
-              </button>
+                {npc.name}
+              </SelectableChip>
             ))}
           </div>
         </div>
@@ -612,9 +582,10 @@ const NPCForm: React.FC<NPCFormProps> = ({
         <div className="max-h-96 overflow-y-auto mb-4">
           <div className="space-y-2">
             {quests.map(quest => (
-              <button
+              <SelectableChip
                 key={quest.id}
-                onClick={() => {
+                selected={selectedQuests.has(quest.id)}
+                onToggle={() => {
                   const newSet = new Set(selectedQuests);
                   if (newSet.has(quest.id)) {
                     newSet.delete(quest.id);
@@ -623,17 +594,10 @@ const NPCForm: React.FC<NPCFormProps> = ({
                   }
                   setSelectedQuests(newSet);
                 }}
-                className={clsx(
-                  "w-full p-2 rounded text-left transition-colors",
-                  selectedQuests.has(quest.id)
-                    ? `selected-item`
-                    : `selectable-item`
-                )}
+                className="w-full text-left"
               >
-                <Typography variant="body-sm" className={selectedQuests.has(quest.id) ? 'font-medium' : ''}>
-                  {quest.title}
-                </Typography>
-              </button>
+                {quest.title}
+              </SelectableChip>
             ))}
           </div>
         </div>

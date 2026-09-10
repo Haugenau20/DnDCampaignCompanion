@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NPC } from '../types';
 import Typography from '../../../../core/components/Typography';
+import { SelectableChip, RemovableChip } from '../../../../core/components/Chip';
 import Input from '../../../../core/components/Input';
 import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
@@ -227,22 +228,17 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                   {Array.from(selectedNPCs).map(npcId => {
                     const relatedNPC = existingNPCs.find(n => n.id === npcId);
                     return relatedNPC ? (
-                      <div
+                      <RemovableChip
                         key={npcId}
-                        className="flex items-center gap-1 px-3 py-1 rounded-full tag"
-                      >
-                        <span>{relatedNPC.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
+                        onRemove={() => {
                             const newSet = new Set(selectedNPCs);
                             newSet.delete(npcId);
                             setSelectedNPCs(newSet);
                           }}
-                          className="typography-secondary hover:opacity-75">
-                          <X size={14} />
-                        </button>
-                      </div>
+                        removeLabel={`Remove ${relatedNPC.name}`}
+                      >
+                        {relatedNPC.name}
+                      </RemovableChip>
                     ) : null;
                   })}
                 </div>
@@ -266,22 +262,17 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                   {Array.from(selectedQuests).map(questId => {
                     const quest = quests.find(q => q.id === questId);
                     return quest ? (
-                      <div
+                      <RemovableChip
                         key={questId}
-                        className="flex items-center gap-1 px-3 py-1 rounded-full tag"
-                      >
-                        <span>{quest.title}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
+                        onRemove={() => {
                             const newSet = new Set(selectedQuests);
                             newSet.delete(questId);
                             setSelectedQuests(newSet);
                           }}
-                          className="typography-secondary hover:opacity-75">
-                          <X size={14} />
-                        </button>
-                      </div>
+                        removeLabel={`Remove ${quest.title}`}
+                      >
+                        {quest.title}
+                      </RemovableChip>
                     ) : null;
                   })}
                 </div>
@@ -321,26 +312,21 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {formData.connections?.affiliations.map((affiliation, index) => (
-                    <div
+                    <RemovableChip
                       key={index}
-                      className="flex items-center gap-1 px-3 py-1 rounded-full tag"
+                      onRemove={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          connections: {
+                            ...prev.connections!,
+                            affiliations: prev.connections!.affiliations.filter((_, i) => i !== index)
+                          }
+                        }));
+                      }}
+                      removeLabel={`Remove affiliation ${affiliation}`}
                     >
-                      <span>{affiliation}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            connections: {
-                              ...prev.connections!,
-                              affiliations: prev.connections!.affiliations.filter((_, i) => i !== index)
-                            }
-                          }));
-                        }}
-                        className="typography-secondary hover:opacity-75">
-                        <X size={14} />
-                      </button>
-                    </div>
+                      {affiliation}
+                    </RemovableChip>
                   ))}
                 </div>
               </div>
@@ -376,25 +362,18 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {formData.tags?.map((tag, index) => (
-                    <div
+                    <RemovableChip
                       key={index}
-                      className="flex items-center gap-1 px-3 py-1 rounded-full tag"
-                    >
-                      <span>{tag}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
+                      onRemove={() => {
                           setFormData(prev => ({
                             ...prev,
                             tags: (prev.tags || []).filter((_, i) => i !== index),
                           }));
                         }}
-                        className="typography-secondary hover:opacity-75"
-                        aria-label={`Remove tag ${tag}`}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
+                      removeLabel={`Remove tag ${tag}`}
+                    >
+                      {tag}
+                    </RemovableChip>
                   ))}
                 </div>
               </div>
@@ -441,9 +420,10 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
             {existingNPCs
               .filter(n => n.id !== npc?.id) // Don't show the current NPC
               .map(otherNPC => (
-                <button
+                <SelectableChip
                   key={otherNPC.id}
-                  onClick={() => {
+                  selected={selectedNPCs.has(otherNPC.id)}
+                  onToggle={() => {
                     const newSet = new Set(selectedNPCs);
                     if (newSet.has(otherNPC.id)) {
                       newSet.delete(otherNPC.id);
@@ -452,17 +432,10 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                     }
                     setSelectedNPCs(newSet);
                   }}
-                  className={clsx(
-                    "p-2 rounded text-center transition-colors",
-                    selectedNPCs.has(otherNPC.id)
-                      ? `selected-item`
-                      : `selectable-item`
-                  )}
+                  className="text-center"
                 >
-                  <Typography variant="body-sm" className={selectedNPCs.has(otherNPC.id) ? 'font-medium' : ''}>
-                    {otherNPC.name}
-                  </Typography>
-                </button>
+                  {otherNPC.name}
+                </SelectableChip>
               ))}
           </div>
         </div>
@@ -481,9 +454,10 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
         <div className="max-h-96 overflow-y-auto mb-4">
           <div className="space-y-2">
             {quests.map(quest => (
-              <button
+              <SelectableChip
                 key={quest.id}
-                onClick={() => {
+                selected={selectedQuests.has(quest.id)}
+                onToggle={() => {
                   const newSet = new Set(selectedQuests);
                   if (newSet.has(quest.id)) {
                     newSet.delete(quest.id);
@@ -492,17 +466,10 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                   }
                   setSelectedQuests(newSet);
                 }}
-                className={clsx(
-                  "w-full p-2 rounded text-left transition-colors",
-                  selectedQuests.has(quest.id)
-                    ? `selected-item`
-                    : `selectable-item`
-                )}
+                className="w-full text-left"
               >
-                <Typography variant="body-sm" className={selectedQuests.has(quest.id) ? 'font-medium' : ''}>
-                  {quest.title}
-                </Typography>
-              </button>
+                {quest.title}
+              </SelectableChip>
             ))}
           </div>
         </div>

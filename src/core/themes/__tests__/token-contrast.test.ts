@@ -81,13 +81,26 @@ describe("contrast per surface pair", () => {
 const CONTROL_BOUNDARY_MINIMUM = 3;
 
 describe("control boundaries meet 3:1", () => {
-  const boundaryOf = (tokens: ThemeTokens, key: string): string =>
-    key === "action.outline.border"
-      ? (tokens.action.outline.border as string)
-      : tokens.field.border;
+  const boundaryOf = (tokens: ThemeTokens, key: string): string => {
+    if (key === "action.outline.border") return tokens.action.outline.border as string;
+    // `action.primary.bg` is a fill everywhere else, but it is a *boundary* on a
+    // chosen filter pill (D51) and now on a selected chip (8.2), where nothing
+    // is filled with it and the border is the whole signal. A boundary owes 3:1
+    // under WCAG 1.4.11 whatever token it happens to be named after, and this
+    // one was never measured as one.
+    if (key === "action.primary.bg") return tokens.action.primary.bg as string;
+    return tokens.field.border;
+  };
 
-  describe.each(THEMES)("%s", (_name, theme) => {
-    test.each(["action.outline.border", "field.border"])("%s", (key) => {
+  describe.each(THEMES)("%s", (name, theme) => {
+    // `action.primary.bg` is exempted for medieval only, and ratcheted below
+    // instead. See the block after this one.
+    const keys =
+      name === "medieval"
+        ? ["action.outline.border", "field.border"]
+        : ["action.outline.border", "field.border", "action.primary.bg"];
+
+    test.each(keys)("%s", (key) => {
       const colour = parseHex(boundaryOf(theme.tokens, key));
       expect(colour).not.toBeNull();
 
@@ -103,6 +116,67 @@ describe("control boundaries meet 3:1", () => {
         meets3to1: true,
       });
     });
+  });
+});
+
+
+/**
+ * Medieval's accent cannot serve as a boundary, and is held rather than fixed.
+ *
+ * `action.primary.bg` is `#E8D0AA` in medieval -- a pale parchment *fill*,
+ * designed to carry dark text on top of it. As a border against the page it
+ * measures **1.38:1**, against a 3:1 requirement. That is not a near miss; it is
+ * a line you cannot see.
+ *
+ * This is pre-existing and is not the form chips' problem -- they border with
+ * `--color-primary`, which measures 7.93 / 7.78 / 9.24 across the three themes.
+ * The consumer that still uses this token as a boundary is `.roster-filter-active`,
+ * which has painted the chosen directory filter with it since D51 shipped in
+ * Phase 6. So medieval's active filter pill has been drawing an edge you cannot
+ * see, in production, with every gate green -- because no gate measured this
+ * token as a boundary. 8.2 is simply the first thing to look.
+ *
+ * Not fixed here: the filter pills are Phase 6's surface, not 8.2's, and a
+ * one-line CSS change to a shipped directory does not belong in a PR about form
+ * chips. The fix is identified though, and is the same one the chips took --
+ * `.roster-filter-active` should take its border from `--color-primary`. Whoever
+ * opens that file next should take it, and Phase 11 removes medieval regardless.
+ * Ratcheted meanwhile, exactly as D48's status hues were while the phases allowed
+ * to change values had not arrived: it cannot get worse.
+ */
+describe("medieval's accent as a boundary is held, not met", () => {
+  const MEDIEVAL_ACCENT_BOUNDARY_FLOOR = 1.38;
+
+  test("does not regress below its recorded ratio", () => {
+    const colour = parseHex(medievalTheme.tokens.action.primary.bg);
+    expect(colour).not.toBeNull();
+
+    const grounds = [
+      medievalTheme.tokens.surface.page.bg,
+      medievalTheme.tokens.surface.card.bg,
+    ]
+      .map(parseHex)
+      .filter((c): c is Rgb => c !== null);
+    const worst = round(Math.min(...grounds.map((g) => contrastRatio(colour as Rgb, g))));
+
+    expect(worst).toBeGreaterThanOrEqual(MEDIEVAL_ACCENT_BOUNDARY_FLOOR);
+  });
+
+  // The thing that must not happen quietly: medieval reaching 3:1 and this
+  // exemption outliving the reason for it.
+  test("still needs the exemption it is being given", () => {
+    const colour = parseHex(medievalTheme.tokens.action.primary.bg);
+    const grounds = [
+      medievalTheme.tokens.surface.page.bg,
+      medievalTheme.tokens.surface.card.bg,
+    ]
+      .map(parseHex)
+      .filter((c): c is Rgb => c !== null);
+    const worst = round(Math.min(...grounds.map((g) => contrastRatio(colour as Rgb, g))));
+
+    // If this fails, medieval passes 3:1 now — delete this whole block and put
+    // "action.primary.bg" back in the list above.
+    expect(worst).toBeLessThan(CONTROL_BOUNDARY_MINIMUM);
   });
 });
 
