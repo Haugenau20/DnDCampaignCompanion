@@ -118,7 +118,15 @@ full mock.
 Visited twice a year. Success is that it inherits correctly and reads well; it
 does not need to be interesting.
 
-- Sans throughout. Nothing here is content of the world (§4).
+- Sans for the page's **content**. Nothing here is content of the world (§4),
+  so there is no serif running text and no italic in-world voice. Headings are
+  the exception and always were: §4 puts titles in serif without qualification,
+  every other archetype does the same through `PageShell`, and a utility page
+  reaching for its own typeface to fit in is §13's signal that something is
+  wrong. This line used to read "Sans throughout", which a measurement in
+  `handoff/10-3` took literally and then confirmed by grepping for a face
+  named in A5 files -- none names one, and all 20 headings across the three
+  pages are serif by inheritance. See R44.
 - `surface.card` sections on the page ground, one rule between, no ornament.
 - Tables get rules, not zebra fills.
 - Admin views may be dense; they are the one place density beats rhythm.

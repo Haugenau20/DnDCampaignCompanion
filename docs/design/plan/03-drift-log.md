@@ -2421,6 +2421,160 @@ Worth noting against R19's framing: Phase 8 found 17 unnamed controls when it
 looked, and the 14 here were sitting in the very forms that phase audited. They
 survived because the gate could not see buttons, which is the point of D98.
 
+### D100 — the contact message field takes the primitive, and keeps its own label row
+Date: 2026-09-10   Status: active
+Decision: `ContactForm`'s message field becomes `Input isTextArea`, with its
+error passed as `error` — but the visible label stays hand-written in the row
+above rather than moving to `Input`'s `label` prop.
+Because: the raw element was the thing worth removing, and it is gone; the
+label row is a composition the primitive does not offer. The row carries the
+character count on the label's baseline, and `label` renders a bare element
+with nothing beside it. The alternative — the count as `helperText` — puts it
+in the slot `error` takes over, since A3 is explicit that error text *replaces*
+helper text and never sits beside it. The count would therefore vanish exactly
+when the message is too short, which is the one moment someone wants to see it.
+`htmlFor` and `id` still agree, so the control is named and `unnamedControlsIn`
+is clean for the form; 8.1's defect was a label with **neither**, not a label
+written by hand.
+Two things came free with the primitive: the field now wears `input-error`
+when the message is too short — the hand-rolled version never did — and the
+error text sits in the same slot, at the same distance, as on every other
+field in the product.
+
+### D101 — the admin panel stops logging who you are on every render
+Date: 2026-09-10   Status: active
+Decision: the eight `console.log` lines go — five printing auth state from
+`AdminPanel`'s debug effect (the effect goes with them, it did nothing else),
+one inside its loading timeout, and two in `CampaignManagementView`. The two
+`console.error` calls in catch blocks stay.
+The 3-second loading timeout **stays**, with a comment saying why it is being
+left rather than looking like an oversight: it looks like a workaround and
+probably is one, but nothing has established what it works around, so removing
+it is a behaviour change nobody can predict (`10-1`).
+Because: `10-3` item 2 asked for these eight to go or for a reason to keep
+them. Printing a user's admin status and group membership to the console on
+every render pass is its own small thing, separate from the 342 `console.*`
+calls across `src` that are not this phase's business — and that count is
+`10-3`'s "119" re-measured, which was either taken differently or has grown.
+Recorded so the next person does not treat 119 as the baseline.
+This corrects R39's own "left behind with it" list, which said these eight
+would be deferred alongside `AdminPanel`'s composition. That was wrong: removing
+a log line is not composition and needs no decision about routes. 10.2 was
+already editing these two files for the accessibility gates, and 10.3 owns the
+item.
+
+### R43 — 09-2's "last textarea" claim, corrected at its source and turned into a gate
+Date: 2026-09-10
+Change: `NoteEditor`'s file comment no longer calls itself "the last
+hand-rolled textarea element in the product". `ContactForm` had one too, and
+now does not (D100).
+`09-2`'s gate was `grep -rn '<textarea' src/features src/pages`. It returned
+nothing, and it was accurate about what it checked — `ContactForm` lives in
+`src/shared/components/`. The sentence it was taken to support was wrong.
+Because: a grep proved the wrong thing, so the check is written down instead of
+retyped. `core/components/__tests__/raw-controls.test.ts` walks all of `src`,
+strips comments so an explanation cannot trip it, and asserts that nothing
+outside the primitive renders a raw `<textarea>` — plus the same for `<select>`,
+which is the same shape of claim from Phase 8. It carries R31's positive half:
+if the walk reads fewer than a hundred files, that fails too, because an empty
+offender list from an empty walk is not a pass.
+**The `<select>` half immediately found something**, which is the argument for
+writing it down: `Roster.tsx`'s `RosterFilterSelect`. It is not a defect —
+it is a filter *pill* that happens to be a dropdown, for the case pills cannot
+serve (an option set derived from the data, where forty locations would mean
+forty pills), wearing the pills' geometry and named by `aria-label`. It is now
+an allow-list entry with that reasoning attached, so nobody converts it to
+`Select` and puts a labelled form field in a filter row. Note also that
+`10-3`'s own "raw `<select>`: zero" was true of the 26 A5 files it measured and
+not of `src`.
+
+### R44 — the A5 read: three rules confirmed, and the fourth is worded wrong
+Date: 2026-09-10
+Change: nothing on the A5 pages. `10-3` item 3 asked for the read to be walked
+and for a "nothing needed doing" to be said out loud rather than left to look
+like an oversight, so: **three of A5's four rules hold as written, and nothing
+was changed to make them hold.**
+- `surface.card` sections on the page ground: privacy renders 3 cards over
+  hairline-ruled prose, contact 2, profile 5. Confirmed.
+- Tables ruled, not filled: `PrivacyDataTable` has exactly one filled row of
+  five, and it is `row.highlighted` in the data — the row where data leaves the
+  app. One semantic emphasis is not a zebra fill. Confirmed for the third time
+  now (`10-0`, `10-3`, here); it can stop being re-checked.
+- Admin views may be dense: unchanged, and deliberately not measured against
+  `Roster`.
+**The fourth is "Sans throughout. Nothing here is content of the world."**
+Measured: zero serif anywhere in an A5 page *body*, and **every heading in
+serif** — 13 of 13 on privacy, 6 of 6 on profile, 1 of 1 on contact, all of
+them `Newsreader` inherited from `Typography`, none of them named by an A5
+file.
+That is not a defect, and it should not be "fixed". The design language
+outranks the archetypes, and §4 puts **titles** in serif without qualification;
+every other archetype does the same, through the same `PageShell`. A5 rendering
+its titles in sans would be a utility page reaching for its own typeface to fit
+in, which §13 lists as a signal that something is wrong. **A5's line means the
+page's content is sans — no serif running text, no italic in-world voice — and
+should be read that way.** Amended in `05-archetypes.md`.
+Worth naming the shape of the error, because it is the third instance in this
+phase: `10-3`'s measurement reported "serif on a utility surface: zero", and
+that was a grep for a face named in A5 *files*. None names one. The rendered
+pages use serif for every heading, inherited. Accurate about what it checked;
+wrong about what it was taken to prove — R43's mistake, R37's mistake, and this
+one, all the same mistake.
+
+### R45 — every `Card` in the product carries a drop shadow, against §5 and §14
+Date: 2026-09-10
+Change: none. Found during R44's read, out of scope here, and put in Phase 11's
+handoff so it is picked up rather than logged and lost.
+`Card.tsx` renders `rounded-lg shadow-sm overflow-hidden card`, and the shadow
+is real: `rgba(0, 0, 0, 0.05) 0 1px 2px`. §5 is explicit — "Depth is expressed
+by **value and rule**, not by shadow… it does not float" — and §14 lists
+"decorative drop shadows" under Not this.
+It is faint, and the card is also doing the right things: a genuine hairline
+(`0.67px solid #E6DFD1`) and a real value step from the page (`#FCFAF6` on
+`#F3EFE6`). So this is a small divergence, not a broken surface — but it is
+app-wide, in the primitive every archetype sits on, and removing it changes
+every surface in the product at once. That is a Phase 11 or 12 change, not a
+line item in the PR that noticed it.
+Because: the same discipline as R40 and R41 — measure it, name it, put it where
+it will actually be done. The difference is that this one is the *design
+language* disagreeing with the code rather than the code disagreeing with
+itself, so it needs a decision (remove the shadow, or amend §5) rather than a
+fix.
+
+### R46 — Phase 11 measured before its handoffs, and its premise was wrong
+Date: 2026-09-10
+Change: `handoff/11-0` … `11-3` written from a measurement of the theme layer.
+`04-rollout.md`'s Phase 11 paragraph corrected.
+What the paragraph says: "Dark then gets real values for every surface pair
+instead of fallbacks." **Dark defines all 117 token properties — the same count
+as light and medieval — and exactly one `var(--x, var(--y))` fallback chain
+survives in all of `src`.** Dark is not unmigrated. It is migrated and untuned,
+which is a different and larger job.
+- **All five dark surfaces share one ink, one muted grey, one border and one
+  pair of state overlays.** Only `bg` varies. Light gives `sunken`, `chrome` and
+  `band` their own `onMuted` deliberately, which is the exact thing
+  `01-token-model.md` §2 says the pair model exists to make checkable.
+- **Chrome and page are at ~1.2:1 in dark, against ~14:1 in light.** §2's first
+  principle is "contrast lives in the chrome"; in dark the frame is gone. `band`
+  and `sunken` are the same hex, so the hero has no value of its own either.
+- **Dark spends three accent hues** — blue `#8AB4F8`, purple `#BB86FC`, red
+  `#F28B82` — where light spends one red at two values. §3 says a theme may
+  never change the number of accents, and §13 lists needing a second as a signal
+  we got it wrong.
+- **`color-scheme` is set nowhere in `src`**, which is the whole of Q16's answer
+  and the reason R22's dark `<select>` popup is white. It also retires four
+  hand-painted `::-webkit-scrollbar` rules.
+- **`theme-utils.ts` is stranded** — 99 lines, 4 exports, zero callers outside
+  its own 215-line test, returning eight `medieval-*` class names that exist in
+  no stylesheet. The sixth stranded module, and `10-3`'s "the streak ends here"
+  was true of A5 and not of the theme layer. `.decoration-scroll` is dead too.
+Because: five phases have now been measured before their handoffs and five have
+found something the plan did not predict. This one is the second where the
+paragraph was wrong about the **premise** rather than the scope (R13 was the
+first), which is the more expensive kind: a Phase 11 executed from the rollout
+would have gone looking for missing values, found none, and concluded dark was
+finished.
+
 ---
 
 ## Open questions

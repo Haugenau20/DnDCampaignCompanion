@@ -399,8 +399,13 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
         )}
 
         {/*
-          The last hand-rolled textarea element in the product, now on the
-          primitive every other field uses (09-2, item 5). The visible label
+          On the primitive every other field uses (09-2, item 5). This comment
+          used to call it "the last hand-rolled textarea element in the
+          product"; it was not. `ContactForm` in `src/shared/components` had
+          one too, and 09-2's gate grepped only `src/features` and
+          `src/pages` -- accurate about what it checked, wrong about what it
+          was taken to prove. Converted in 10-3, with the gate rewritten to
+          cover `src`. The visible label
           comes with it: the control was already named for a screen reader by
           its `aria-label`, so that attribute goes rather than sitting on top
           of a real label element and shadowing it.

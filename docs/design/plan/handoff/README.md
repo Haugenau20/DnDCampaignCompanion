@@ -12,7 +12,8 @@ done, then `07-2-5` -- a redo of the NPC page against a design mock, which
 absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
 saying where its work went, R18); Phase 8 (`08-0` … `08-3`, done); and Phase 9
 (`09-0` … `09-3` done, so Phase 9 is complete); and Phase 10 (`10-0` done; `10-1` done but **narrowed to `ProfilePage` alone**,
-R39; `10-2` done; `10-3` unstarted).
+R39; `10-2` and `10-3` done, so Phase 10 is
+complete); and Phase 11 (`11-0` … `11-3`, written and unstarted).
 
 `09-0` settled Q10 as D82/D83 and answered its own "where do rendered notes
 appear" as D84: **nowhere**. That narrows what follows — `09-1` renders two
@@ -65,6 +66,33 @@ reader would "fix" into D89's defect. The gates found 4 placeholder-only
 controls in A5 and 14 unnamed icon-only buttons in A3 (R42). `10-3` is independent, holds the measurement for the record,
 and corrects `09-2`'s claim that `NoteEditor` was the last raw textarea — it
 was not; `ContactForm` in `src/shared/` still has one.
+
+`10-3` closed the phase. `ContactForm`'s textarea is on the primitive and
+09-2's "last one" claim is corrected (D100, R43) — and the grep that produced
+that claim is now a test, `raw-controls.test.ts`, which walks all of `src` and
+immediately found the one raw `<select>` this codebase keeps on purpose. The A5
+read confirmed three of A5's four rules and found the fourth **worded wrong**:
+"Sans throughout" is true of an A5 page's body and false of its headings, all
+of which are serif by inheritance, as §4 says titles should be. `05-archetypes.md`
+is amended (R44).
+
+Phase 11 is four PRs, written from a measurement of the theme layer rather than
+from `04-rollout.md`'s paragraph — the fifth phase running where that was worth
+doing, and the second where the paragraph was wrong about the *premise* rather
+than the scope. **`04-rollout.md` says dark "gets real values for every surface
+pair instead of fallbacks". Dark defines all 117 token properties, the same as
+light, and one fallback chain survives in all of `src`.** Dark is migrated and
+untuned: five surfaces sharing one ink, one muted grey, one border and one pair
+of state overlays, with chrome and page at ~1.2:1 where light is ~14:1. That is
+`11-2`, and it is the phase's real work.
+`11-0` deletes medieval and takes two already-dead things with it — `theme-utils.ts`
+(99 lines, zero callers, returning eight class names that exist in no
+stylesheet: the sixth stranded module) and `.decoration-scroll`. `11-1` answers
+Q16 with `color-scheme`, which is set nowhere today and is why R22's dark
+`<select>` popup is white. `11-3` reduces dark's three accent hues to one and
+extends `token-contrast.test.ts` to check state roles **with compositing** —
+the gap R35 recorded and the mechanical reason R40's 1.09:1 admin tab went
+unnoticed.
 
 Phase 8 is worth reading in order. `08-0` builds the `Select` that does not
 exist, `08-1` adopts it and fixes 17 unassociated labels, `08-2` unifies nine

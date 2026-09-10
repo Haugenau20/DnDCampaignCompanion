@@ -259,7 +259,24 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialMessage = "" }) => {
               {`${message.length} characters`}
             </Typography>
           </div>
-          <textarea
+          {/*
+            On the shared primitive, like every other field in the product.
+            This was the last raw textarea element outside `Input` itself -- 09-2
+            said `NoteEditor` was, but its gate grepped only `src/features`
+            and `src/pages`, and this file is in `src/shared` (10-3, item 1).
+
+            The label stays hand-written rather than moving to `Input`'s
+            `label` prop, and that is the one thing not adopted here: the row
+            carries the character count on the label's baseline, and `label`
+            renders a bare element with no room beside it. The alternative --
+            the count as `helperText` -- puts it in the slot `error` takes
+            over (A3: error replaces helper, never both), so the count would
+            disappear exactly when the message is too short, which is when
+            someone most wants to see it. `htmlFor` and `id` still agree, so
+            the control is named; 8.1's defect was a label with neither.
+          */}
+          <Input
+            isTextArea
             id="contact-message"
             value={message}
             onChange={(e) => {
@@ -269,14 +286,13 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialMessage = "" }) => {
             onBlur={() => setMessageTouched(true)}
             disabled={isSubmitting}
             rows={6}
-            className="input w-full rounded-lg p-3 min-h-[150px] text-[15px] leading-[1.6]"
+            fullWidth
+            error={
+              messageTouched && messageTooShort ? TOO_SHORT_MESSAGE : undefined
+            }
+            className="min-h-[150px] text-[15px] leading-[1.6]"
             placeholder="What you clicked, what happened, and what you expected instead."
           />
-          {messageTouched && messageTooShort && (
-            <Typography variant="body-sm" color="error">
-              {TOO_SHORT_MESSAGE}
-            </Typography>
-          )}
         </div>
 
         {/* Guidance that follows the category, beside the field it governs */}
