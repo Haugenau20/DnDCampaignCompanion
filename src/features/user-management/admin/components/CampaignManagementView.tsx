@@ -84,12 +84,9 @@ const CampaignManagementView: React.FC = () => {
       if (!activeGroupId) return;
       
       setLoadingCampaigns(true);
-      console.log(`CampaignManagementView: Loading campaigns for group ${activeGroupId} (ONE TIME)`);
-      
       try {
         const campaignList = await getCampaigns(activeGroupId);
         if (isMounted) {
-          console.log(`CampaignManagementView: Setting ${campaignList.length} campaigns`);
           setLocalCampaigns(campaignList);
           setLoadingCampaigns(false);
         }

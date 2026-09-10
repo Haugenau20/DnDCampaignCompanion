@@ -163,8 +163,20 @@ readable, not to be interesting.
 
 Medieval goes (D40). This is a deletion PR plus a migration PR — a stored
 preference of `medieval` must resolve to something, and roughly a third of
-`theme-effects.css` is its ornament. Dark then gets real values for every
-surface pair instead of fallbacks.
+`theme-effects.css` is its ornament.
+
+The second sentence used to read "Dark then gets real values for every surface
+pair instead of fallbacks", and it is **wrong about the premise**, measured
+before the handoffs were written. Dark defines all 117 token properties, the
+same count as light, and exactly one `var(--x, var(--y))` fallback chain
+survives in all of `src`. Dark is not unmigrated; it is migrated and
+**untuned** — five surfaces sharing one ink, one muted grey, one border and one
+pair of state overlays, chrome and page at ~1.2:1 where light is ~14:1, and
+three accent hues where §3 allows one. That is a different and larger job than
+filling in blanks, and it is `handoff/11-2` and `11-3`.
+
+Four PRs, `handoff/11-0` … `11-3`. `11-1` answers Q16 with `color-scheme`,
+which is set nowhere today.
 
 ### Phase 12 — Cleanup and extraction
 
