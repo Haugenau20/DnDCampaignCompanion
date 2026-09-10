@@ -88,9 +88,14 @@ export function usePageGate(
   return useMemo(() => {
     // `missingContext` is already null while resolution is in flight (bug
     // #1413), so this can only be true once the selection has settled on
-    // nothing. A group-only page ignores a missing campaign entirely.
+    // nothing. A group-only page ignores a missing campaign entirely, and an
+    // account page ignores both -- for it, being signed in is the whole
+    // requirement, so `pick-campaign` is unreachable by construction rather
+    // than merely unused.
     const contextMissing =
-      copy.requires === "campaign"
+      copy.requires === "none"
+        ? false
+        : copy.requires === "campaign"
         ? missingContext !== null
         : missingContext === "group";
 

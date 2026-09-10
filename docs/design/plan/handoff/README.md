@@ -11,7 +11,8 @@ Currently written: Phase 6 (`06-0` … `06-3`, done); Phase 7 (`07-0` … `07-2`
 done, then `07-2-5` -- a redo of the NPC page against a design mock, which
 absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
 saying where its work went, R18); Phase 8 (`08-0` … `08-3`, done); and Phase 9
-(`09-0` … `09-3` done, so Phase 9 is complete); and Phase 10 (`10-0` … `10-3`, unstarted).
+(`09-0` … `09-3` done, so Phase 9 is complete); and Phase 10 (`10-0` done; `10-1` done but **narrowed to `ProfilePage` alone**,
+R39; `10-2` and `10-3` unstarted).
 
 `09-0` settled Q10 as D82/D83 and answered its own "where do rendered notes
 appear" as D84: **nowhere**. That narrows what follows — `09-1` renders two
@@ -47,7 +48,16 @@ Phase 10 is four PRs, written from a measurement of all 26 A5 files rather than
 from the rollout's paragraph (R36). `10-0` and `10-1` are the phase's real
 work and run in that order — **none of the four A5 pages uses `PageShell` or
 `usePageGate`**, so this is a composition phase, not the repainting its brief
-describes. `10-2` is independent and adopts the accessibility and accent gates
+describes. `10-1` turned out to be half the work its table describes: `AdminPanel` has no
+route and no page frame, so it was deferred whole (R39), taking `10-3`'s item 2
+and R40's contrast defect with it. Two findings from what remained are worth
+reading first: **D95**, the gate could not express "signed in is enough" and a
+third `requires` value had to exist before an account page could adopt it; and
+**R40**, the header's `navigation-item` classes are used in two places that are
+not the header and fail contrast in both — 1.09:1 for the admin panel's
+selected tab. That is D90's defect, unfixed, in the two consumers D90 did not
+check.
+`10-2` is independent and adopts the accessibility and accent gates
 that **no A5 suite currently uses**, and carries the decision on whether to
 close R34 there. `10-3` is independent, holds the measurement for the record,
 and corrects `09-2`'s claim that `NoteEditor` was the last raw textarea — it

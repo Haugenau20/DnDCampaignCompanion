@@ -2,6 +2,16 @@
 
 Phase 10 · second PR · depends on 10.0
 
+> **Scope narrowed when the phase reached it (R39): this PR is `ProfilePage`
+> alone.** `AdminPanel` is not a page — there is no `/admin` route; it is the
+> body of a `Dialog` opened from the account menu (`Header.tsx:198`). So it has
+> no page frame to hand-roll, `PageShell` cannot apply to it, and the
+> signed-out state of a gate is unreachable from an account menu that only
+> renders for a signed-in admin. Everything below about `AdminPanel` and the
+> four management views is deferred until the route question is decided on its
+> own merits. Item 1 grew a decision it did not anticipate: the gate had no way
+> to say "signed in is enough", so `requires: "none"` was added (D95).
+
 The other half of the frame, and the riskier half: these two pages have real
 auth states, and both currently write their own.
 
