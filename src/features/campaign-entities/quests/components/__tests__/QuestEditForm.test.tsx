@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import QuestEditForm from '../QuestEditForm';
 import { Quest, QuestObjective } from '../../types';
 import { unnamedControlsIn } from "../../../../../test-utils/accessible-names";
+import { formAccentsIn } from "../../../../../test-utils/accent-budget";
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -375,6 +376,20 @@ describe('QuestEditForm', () => {
     test("every control in the form has an accessible name", () => {
       const { container } = render(<QuestEditForm quest={makeQuest()} />);
       expect(unnamedControlsIn(container)).toEqual([]);
+    });
+  });
+
+
+  // -------------------------------------------------------------------------
+  // The accent budget (PR 8.3)
+  //
+  // One filled accent on the form, and it is the control that writes (D66).
+  // `Add` and `Add tag` build a draft; the record changes when you save.
+  // -------------------------------------------------------------------------
+  describe("accent budget", () => {
+    test("has exactly one filled accent, and it is the submit", () => {
+      const { container } = render(<QuestEditForm quest={makeQuest()} />);
+      expect(formAccentsIn(container)).toHaveLength(1);
     });
   });
 

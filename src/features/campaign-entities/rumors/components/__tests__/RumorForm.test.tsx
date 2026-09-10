@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import RumorForm from '../RumorForm';
 import { Rumor } from '../../types';
 import { unnamedControlsIn } from "../../../../../test-utils/accessible-names";
+import { formAccentsIn } from "../../../../../test-utils/accent-budget";
 
 // ---------------------------------------------------------------------------
 // Mock Dialog (bug #150 — Dialog portal interior unreachable)
@@ -504,6 +505,20 @@ describe('RumorForm', () => {
 
       expect(filledOnForm.length).toBeLessThanOrEqual(1);
       expect(filledInDialog.length).toBeLessThanOrEqual(1);
+    });
+  });
+
+
+  // -------------------------------------------------------------------------
+  // The accent budget (PR 8.3)
+  //
+  // One filled accent on the form, and it is the control that writes (D66).
+  // `Add` and `Add tag` build a draft; the record changes when you save.
+  // -------------------------------------------------------------------------
+  describe("accent budget", () => {
+    test("has exactly one filled accent, and it is the submit", () => {
+      const { container } = render(<RumorForm title="Add Rumor" />);
+      expect(formAccentsIn(container)).toHaveLength(1);
     });
   });
 

@@ -137,7 +137,11 @@ repainting phase's description.
 `BookViewer`, `BookshelfView`, `NotePage`.
 
 The design is 4b in the design doc: a chapter rail on `sunken`, a capped
-measure, serif running text, navigation kept as quiet chrome.
+measure, serif running text, navigation kept as quiet chrome. **Most of that is
+already built** -- commit `413259e` rebuilt the reader around scrolling and a
+persistent rail before Phase 9 started, and the A4 files carry zero hardcoded
+hex and zero `[data-theme=…]` patches (R29). What is left is markdown, an
+authoring toolbar, and four loose ends; see `handoff/09-0` … `09-3`.
 
 Carries a dependency the visual work cannot fake: **full CommonMark with raw
 HTML disabled at the parser** (D45), on chapter bodies, saga/story

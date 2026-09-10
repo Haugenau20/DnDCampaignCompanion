@@ -10,13 +10,20 @@ phases early is a guess with a checklist attached.
 Currently written: Phase 6 (`06-0` … `06-3`, done); Phase 7 (`07-0` … `07-2`
 done, then `07-2-5` -- a redo of the NPC page against a design mock, which
 absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
-saying where its work went, R18); and Phase 8 (`08-0` … `08-3`, unstarted).
+saying where its work went, R18); Phase 8 (`08-0` … `08-3`, done); and Phase 9
+(`09-0` … `09-3`, unstarted).
 
 Phase 8 is worth reading in order. `08-0` builds the `Select` that does not
 exist, `08-1` adopts it and fixes 17 unassociated labels, `08-2` unifies nine
 hand-rolled chips, and `08-3` handles rhythm and actions. Nothing after `08-0`
 can start without it, and `08-1` is the one carrying the accessibility fix that
 turned out to be the real point of the phase (R19).
+
+Phase 9 is three PRs in a chain plus one that is independent. `09-0` decides and
+builds markdown (Q10) and blocks `09-1` (the two reading surfaces adopt it) and
+`09-2` (the authoring toolbar). `09-3` depends on none of them and can be taken
+first or last: it is the loose ends left by `413259e`, which built most of what
+Phase 9 was scoped to build, before Phase 9 started (R29).
 
 Phase 7's optional fourth PR — the image **upload** path — is deliberately not
 written. D6 keeps bitmaps out of this project entirely, so it is a handoff for
