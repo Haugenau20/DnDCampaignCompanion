@@ -11,7 +11,7 @@ Currently written: Phase 6 (`06-0` … `06-3`, done); Phase 7 (`07-0` … `07-2`
 done, then `07-2-5` -- a redo of the NPC page against a design mock, which
 absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
 saying where its work went, R18); Phase 8 (`08-0` … `08-3`, done); and Phase 9
-(`09-0`, `09-1` and `09-2` done; `09-3` unstarted).
+(`09-0` … `09-3` done, so Phase 9 is complete); and Phase 10 (`10-0` … `10-3`, unstarted).
 
 `09-0` settled Q10 as D82/D83 and answered its own "where do rendered notes
 appear" as D84: **nowhere**. That narrows what follows — `09-1` renders two
@@ -35,6 +35,23 @@ time, with the shape of a stub that cannot go stale; and **R34**, the
 accessible-name gate being structurally unable to see a button, which turns out
 to hide 6 real unnamed controls in `QuestCreateForm` alone. R34 is a
 forms-and-A3 job, not a Phase 9 one.
+
+`09-3` closed the phase: the rail is `sunken` with its own ink (D90, settling
+Q17 and fixing R32), `LatestChapter` is retired (D91, settling Q18), and
+`ChaptersPage`'s two empty states adopt `RosterEmpty` (D92). Read **R35**
+before Phase 11: a contrast check that touches a `hover` or `selected` role has
+to composite the rgba overlay first, or it will report dark as broken every
+time — it nearly caused a fix here to a defect that did not exist.
+
+Phase 10 is four PRs, written from a measurement of all 26 A5 files rather than
+from the rollout's paragraph (R36). `10-0` and `10-1` are the phase's real
+work and run in that order — **none of the four A5 pages uses `PageShell` or
+`usePageGate`**, so this is a composition phase, not the repainting its brief
+describes. `10-2` is independent and adopts the accessibility and accent gates
+that **no A5 suite currently uses**, and carries the decision on whether to
+close R34 there. `10-3` is independent, holds the measurement for the record,
+and corrects `09-2`'s claim that `NoteEditor` was the last raw textarea — it
+was not; `ContactForm` in `src/shared/` still has one.
 
 Phase 8 is worth reading in order. `08-0` builds the `Select` that does not
 exist, `08-1` adopts it and fixes 17 unassociated labels, `08-2` unifies nine

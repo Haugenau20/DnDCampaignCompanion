@@ -286,10 +286,25 @@ describe("ChaptersPage", () => {
       expect(screen.getByTestId("story-view-tabs")).toBeInTheDocument();
     });
 
-    it("renders empty state when no chapters exist at all", () => {
+    it("renders the designed empty state when no chapters exist at all", () => {
+      // A1's rules apply to this page more than A4's: it is a collection of
+      // things to open. `RosterEmpty` is the pattern the eight directories
+      // already use -- a title saying what the collection is for, a message,
+      // and the one action that fills it. This page used to answer with a bare
+      // sentence in a card, which is the "empty region reads as unfinished"
+      // failure the design language names.
       mockStoryContext = { ...mockStoryContext, chapters: [] };
       renderPage();
-      expect(screen.getByText(/No chapters available yet\./i)).toBeInTheDocument();
+
+      expect(
+        screen.getByRole("heading", { name: /no chapters recorded yet/i })
+      ).toBeInTheDocument();
+      // Deliberately not /new chapter/i: the page header renders a "New
+      // Chapter" button whenever the visitor can act, so that matcher would
+      // pass without the empty state offering anything at all.
+      expect(
+        screen.getByRole("button", { name: /write the first chapter/i })
+      ).toBeInTheDocument();
     });
 
     it("does not render the search/filter row when there are no chapters", () => {
@@ -342,7 +357,9 @@ describe("ChaptersPage", () => {
     it("does NOT render 'New Chapter' button when the page is not ready", () => {
       mockUser = null;
       renderPage();
-      expect(screen.queryByRole("button", { name: /new chapter/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /write the first chapter/i })
+      ).not.toBeInTheDocument();
     });
 
     it("navigates to /story/chapters/create on 'New Chapter' click", () => {
@@ -458,12 +475,24 @@ describe("ChaptersPage", () => {
       expect(screen.getByText("Unread 1")).toBeInTheDocument();
     });
 
-    it("shows a no-results message when the search matches nothing", () => {
+    it("shows the designed no-results state when the search matches nothing", () => {
+      // A collection emptied by a *filter* offers no action: the fix is to
+      // change the filter, and "New chapter" would answer a question nobody
+      // asked. That distinction is `RosterEmpty`'s own documented rule.
       renderPage();
       fireEvent.change(screen.getByPlaceholderText(/Search chapter titles/i), {
         target: { value: "nonexistent chapter title" },
       });
-      expect(screen.getByText(/No chapters match your search\./i)).toBeInTheDocument();
+
+      expect(
+        screen.getByRole("heading", { name: /no chapters match/i })
+      ).toBeInTheDocument();
+      // Not /new chapter/i: the header's "New Chapter" button is present
+      // whenever the visitor can act, so that matcher would fail for the wrong
+      // reason. What must be absent is the empty state's own action.
+      expect(
+        screen.queryByRole("button", { name: /write the first chapter/i })
+      ).not.toBeInTheDocument();
     });
   });
 
