@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { NPC, NPCStatus, NPCRelationship } from '../types';
 import { AlertCircle, Save, X, Users, Scroll } from 'lucide-react';
 import Input from '../../../../core/components/Input';
+import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import Card from '../../../../core/components/Card';
@@ -255,9 +256,8 @@ const NPCForm: React.FC<NPCFormProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1 form-label">Status *</label>
-                  <select
-                    className="w-full rounded-lg border p-2 input"
+                  <Select
+                    label="Status *"
                     value={formData.status}
                     onChange={(e) => handleInputChange('status', e.target.value)}
                     required
@@ -266,13 +266,12 @@ const NPCForm: React.FC<NPCFormProps> = ({
                     <option value="deceased">Deceased</option>
                     <option value="missing">Missing</option>
                     <option value="unknown">Unknown</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1 form-label">Relationship *</label>
-                  <select
-                    className="w-full rounded-lg border p-2 input"
+                  <Select
+                    label="Relationship *"
                     value={formData.relationship}
                     onChange={(e) => handleInputChange('relationship', e.target.value)}
                     required
@@ -281,7 +280,7 @@ const NPCForm: React.FC<NPCFormProps> = ({
                     <option value="neutral">Neutral</option>
                     <option value="hostile">Hostile</option>
                     <option value="unknown">Unknown</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
 
@@ -311,36 +310,40 @@ const NPCForm: React.FC<NPCFormProps> = ({
             <div className="space-y-4">
               <Typography variant="h4">Character Details</Typography>
               <div>
-                <label className="block text-sm font-medium mb-1 form-label">Description</label>
-                <textarea
-                  className="w-full rounded-lg border p-2 h-24 input"
+                <Input
+                  label="Description"
+                  isTextArea
+                  className="h-24"
                   value={formData.description || ''}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 form-label">Appearance</label>
-                <textarea
-                  className="w-full rounded-lg border p-2 h-24 input"
+                <Input
+                  label="Appearance"
+                  isTextArea
+                  className="h-24"
                   value={formData.appearance || ''}
                   onChange={(e) => handleInputChange('appearance', e.target.value)}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 form-label">Personality</label>
-                <textarea
-                  className="w-full rounded-lg border p-2 h-24 input"
+                <Input
+                  label="Personality"
+                  isTextArea
+                  className="h-24"
                   value={formData.personality || ''}
                   onChange={(e) => handleInputChange('personality', e.target.value)}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 form-label">Background</label>
-                <textarea
-                  className="w-full rounded-lg border p-2 h-24 input"
+                <Input
+                  label="Background"
+                  isTextArea
+                  className="h-24"
                   value={formData.background || ''}
                   onChange={(e) => handleInputChange('background', e.target.value)}
                 />
@@ -435,6 +438,7 @@ const NPCForm: React.FC<NPCFormProps> = ({
             <Typography variant="h4">Affiliations</Typography>
             <div className="flex gap-2">
               <Input
+                aria-label="Enter affiliation"
                 value={affiliationInput}
                 onChange={(e) => setAffiliationInput(e.target.value)}
                 placeholder="Miners Exchange"
@@ -472,6 +476,7 @@ const NPCForm: React.FC<NPCFormProps> = ({
             <Typography variant="h4">Tags</Typography>
             <div className="flex gap-2">
               <Input
+                aria-label="Enter tag"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 placeholder="merchant"

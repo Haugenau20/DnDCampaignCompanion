@@ -4,6 +4,7 @@ import React from 'react';
 import { Quest, QuestStatus } from '../types';
 import Typography from '../../../../core/components/Typography';
 import Input from '../../../../core/components/Input';
+import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
 import LocationCombobox from '../../locations/components/LocationCombobox';
 import Dialog from '../../../../core/components/Dialog';
@@ -158,9 +159,8 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1 form-label">Status *</label>
-          <select
-            className="w-full rounded-lg border p-2 input"
+          <Select
+            label="Status *"
             value={formData.status}
             onChange={(e) => handleInputChange('status', e.target.value as QuestStatus)}
             required
@@ -168,7 +168,7 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
             <option value="active">Active</option>
             <option value="completed">Completed</option>
             <option value="failed">Failed</option>
-          </select>
+          </Select>
         </div>
 
         <LocationCombobox
@@ -225,10 +225,11 @@ export const ObjectivesSection: React.FC<SectionProps> = ({ formData, handleInpu
         <Typography variant="h4">Objectives</Typography>
       </div>
       <div className="space-y-2">
-        {formData.objectives?.map((objective) => (
+        {formData.objectives?.map((objective, index) => (
           <div key={objective.id} className="flex gap-4">
             <input
               type="checkbox"
+              aria-label={`Mark objective ${index + 1} complete`}
               checked={objective.completed}
               onChange={(e) => {
                 const newObjectives = formData.objectives?.map(obj =>
@@ -242,6 +243,7 @@ export const ObjectivesSection: React.FC<SectionProps> = ({ formData, handleInpu
             />
             <div className="flex-1">
               <Input
+                aria-label={`Objective ${index + 1}`}
                 value={objective.description}
                 onChange={(e) => {
                   const newObjectives = formData.objectives?.map(obj =>
@@ -296,6 +298,7 @@ export const LeadsSection: React.FC<SectionProps> = ({ formData, handleInputChan
           <div key={`lead-${index}`} className="flex gap-4">
             <div className="flex-1 space-y-2">
               <Input
+                aria-label={`Initial lead ${index + 1}`}
                 placeholder="Initial Lead"
                 value={lead}
                 onChange={(e) => handleLeadChange(index, e.target.value)}
@@ -342,6 +345,7 @@ export const KeyLocationsSection: React.FC<SectionProps> = ({ formData, handleIn
           <div key={index} className="flex gap-4">
             <div className="flex-1 space-y-2">
               <Input
+                aria-label={`Key location ${index + 1} name`}
                 placeholder="Location name"
                 value={location.name}
                 onChange={(e) => {
@@ -354,6 +358,7 @@ export const KeyLocationsSection: React.FC<SectionProps> = ({ formData, handleIn
                 }}
               />
               <Input
+                aria-label={`Key location ${index + 1} description`}
                 placeholder="Description"
                 value={location.description}
                 onChange={(e) => {
@@ -411,6 +416,7 @@ export const ComplicationsSection: React.FC<SectionProps> = ({ formData, handleI
           <div key={`complication-${index}`} className="flex gap-4">
             <div className="flex-1 space-y-2">
               <Input
+                aria-label={`Complication ${index + 1}`}
                 placeholder="Possible Complication"
                 value={complication}
                 onChange={(e) => handleComplicationChange(index, e.target.value)}
@@ -460,6 +466,7 @@ export const RewardsSection: React.FC<SectionProps> = ({ formData, handleInputCh
           <div key={`reward-${index}`} className="flex gap-4">
             <div className="flex-1 space-y-2">
               <Input
+                aria-label={`Reward ${index + 1}`}
                 placeholder="Reward"
                 value={reward}
                 onChange={(e) => handleRewardChange(index, e.target.value)}

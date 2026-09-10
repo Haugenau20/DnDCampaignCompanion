@@ -4,6 +4,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LocationCreateForm from '../LocationCreateForm';
+import { unnamedControlsIn } from "../../../../../test-utils/accessible-names";
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -405,4 +406,20 @@ describe('LocationCreateForm', () => {
       ).toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Accessible names (PR 8.1)
+  //
+  // The point of the phase: every control announces itself. A grep proved the
+  // old unassociated `<label>` markup was gone; only walking the DOM proves the
+  // new markup is right, because a primitive whose `label` prop got dropped in
+  // the move looks just as clean in the source.
+  // -------------------------------------------------------------------------
+  describe("accessible names", () => {
+    test("every control in the form has an accessible name", () => {
+      const { container } = render(<LocationCreateForm />);
+      expect(unnamedControlsIn(container)).toEqual([]);
+    });
+  });
+
 });

@@ -4,6 +4,7 @@ import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import NotesList from '../NotesList';
 import { Note } from '../../types';
+import { unnamedControlsIn } from "../../../../../test-utils/accessible-names";
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -379,4 +380,15 @@ describe('NotesList', () => {
       expect(mockSaveNote).toHaveBeenCalledWith('note-x');
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Accessible names (PR 8.1)
+  // -------------------------------------------------------------------------
+  describe("accessible names", () => {
+    test("every control has an accessible name", () => {
+      const { container } = render(<NotesList />);
+      expect(unnamedControlsIn(container)).toEqual([]);
+    });
+  });
+
 });

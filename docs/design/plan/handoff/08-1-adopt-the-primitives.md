@@ -23,9 +23,8 @@ The eleven form files:
 - `storytelling/chapters/components/ChapterForm.tsx`
 - `pages/story/SagaEditPage.tsx`
 
-Plus the three raw `<select>` that live outside the form set (R21):
+Plus the raw `<select>` that live outside the form set (R21, corrected by R23 -- there are two, not three):
 
-- `pages/layouts/dashboard/sections/ActivityFeed.tsx` — the activity filter
 - `collaboration/notes/components/NotesList.tsx` — the sort control
 - `rumors/components/CombineRumorsDialog.tsx`
 
@@ -33,9 +32,9 @@ Plus their test files, which will need real changes — see the gate.
 
 ## Do
 
-1. **Replace all 14 raw `<select>` with `Select`**, moving the hand-written
+1. **Replace all 13 raw `<select>` with `Select`**, moving the hand-written
    `<label>` onto the `label` prop rather than leaving it beside the control.
-   Eleven are in the forms; the other three are the filter and sort controls
+   Eleven are in the forms; the other two are the sort control and dialog
    named above, which are the same defect in a different room (R21). Where one
    of those three has no visible label at all, it gets an `aria-label` rather
    than a new visible one — 8.3 owns layout, and this PR must not add chrome.
@@ -70,7 +69,7 @@ Plus their test files, which will need real changes — see the gate.
 
 - `grep -rn 'block text-sm font-medium mb-1 form-label' src/` returns nothing.
 - `grep -rn '<select' src/features src/pages` returns nothing outside test
-  files. All 14 are gone.
+  files. All 13 are gone.
 - Every control in every one of the eleven files is reachable by
   `getByLabelText`. This is the gate that matters, and it is worth adding one
   test per form that walks its controls rather than trusting the grep.

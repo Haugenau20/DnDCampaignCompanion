@@ -1401,6 +1401,79 @@ documented behaviour. Whoever takes Phase 11 should open one select in dark
 first and look.
 
 
+
+### D73 — a repeated row is named in the accessibility tree, not with a visible label
+Date: 2026-09-10   Status: active
+Decision: controls that repeat per list row -- a quest objective, a lead, a key
+location, a complication, a reward, a location feature, the tag and affiliation
+entries -- get an indexed `aria-label` ("Objective 3", "Reward 2") rather than a
+visible `<label>` each.
+Because: 8.1's rule is that an input whose only name is a placeholder loses its
+name the moment someone types, and that is true of all of these. But stamping a
+visible label above every row of a repeating list is *adding chrome*, which the
+same handoff forbids ("do not restyle, re-space or reorder anything") and which
+8.3 owns. The index is what a visible label could not carry anyway: with six
+rewards on screen, "Reward" names none of them usefully and "Reward 4" does.
+The checkbox beside each objective was the worst case -- it had no name at all,
+visible or otherwise, so a screen reader announced an unlabelled checkbox six
+times in a row. It now says which objective it completes.
+
+### D74 — the gate walks the DOM, because a grep cannot see a dropped prop
+Date: 2026-09-10   Status: active
+Decision: `test-utils/accessible-names.ts` exposes `unnamedControlsIn`, and every
+migrated form suite asserts it returns nothing. Eleven tests, one per form.
+Because: 8.1's own gate was two greps -- no `form-label` line, no `<select>`.
+Both pass on markup that is silently worse: a `<Select>` whose `label` prop got
+dropped during the move greps identically clean. Walking the rendered DOM and
+asking each control for its accessible name is the only check that tests the
+property the phase is about. Placeholders deliberately do not count as a name.
+It earned itself immediately. It caught **four unnamed controls that the greps
+could not see**: the tag and affiliation inputs on both NPC forms, added in
+7.2.5 with a placeholder and no label. Proved it can fail before trusting it --
+restoring the pre-8.1 `RumorForm` turns it red and names the three unnamed
+selects.
+
+### D75 — a stub must not be laxer than the thing it stands in for
+Date: 2026-09-10   Status: active
+Decision: `SagaEditPage.test.tsx`'s `Input` mock now sets `htmlFor`/`id` the way
+the real `Input` does.
+Because: the new gate failed on that page, and the defect was in the **mock**,
+not the page -- the stub rendered `<label>{label}</label>` beside a control with
+no id, so every control it produced was unnamed. The page itself was correct all
+along. A stub that is more permissive than the real component turns a real gate
+into a green light, and this one would have reported a page as accessible no
+matter what the page did.
+Not fixed by deleting the mock: 20 assertions in that file query the stub's
+`data-testid`s, so unmocking is a larger and riskier diff than the migration it
+would be riding along with. Logged instead -- those queries should become
+`getByLabelText` when someone is next in that file with a reason to be there.
+
+### R23 — revises R21: the count is 13, not 14
+Date: 2026-09-10
+Change: 8.1 migrated **13** raw `<select>`, not 14. `ActivityFeed.tsx` has none.
+Because: R21 counted a `<select>` that appears only inside a **comment** --
+ActivityFeed's own docblock says its filter "is a visible pill row rather than a
+`<select>` that hid five of its six options behind a click", describing a control
+it deliberately does not have. `grep '<select'` matched the prose.
+This is the grep lesson in CLAUDE.md arriving by a new route: the previous
+version was about `^export` missing indented exports, this one is about a pattern
+matching a comment. Both have the same fix, which is to open the file. The two
+genuinely outside the form set were `NotesList` (the sort control, already
+correctly `aria-label`led) and `CombineRumorsDialog` (a hand-written label).
+Cost: none in code. The gate is unchanged and passes; only the number was wrong.
+
+### R24 — revises 08-1's "1 raw `<input>` in QuestFormSections"
+Date: 2026-09-10
+Change: that input is a **checkbox**, and it was not routed through `Input`.
+Because: 8.1 lists it among "the raw controls that bypass `Input`", which was
+written from a grep rather than from the markup. `Input` paints
+`h-10 text-base px-3 w-full rounded-lg border` -- putting a checkbox through it
+renders a stretched empty box where a tick belongs, which is a restyle, and a
+bad one, in the PR that forbids restyling. The handoff named the wrong remedy for
+a real defect: the checkbox had **no accessible name at all**. It has one now
+(D73), which is the fix the observation was actually pointing at.
+
+
 ---
 
 ## Open questions

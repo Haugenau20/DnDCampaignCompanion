@@ -5,6 +5,7 @@ import Dialog from '../../../../core/components/Dialog';
 import Typography from '../../../../core/components/Typography';
 import Button from '../../../../core/components/Button';
 import Input from '../../../../core/components/Input';
+import Select from '../../../../core/components/Select';
 import { X, Layers, AlertCircle } from 'lucide-react';
 
 interface CombineRumorsDialogProps {
@@ -184,9 +185,8 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
           />
 
           <div>
-            <label className="block text-sm font-medium mb-1 form-label">Status *</label>
-            <select
-              className="w-full rounded-lg border p-2 input"
+            <Select
+              label="Status *"
               value={status}
               onChange={(e) => setStatus(e.target.value as RumorStatus)}
               required
@@ -195,7 +195,7 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
               <option value="unconfirmed">Unconfirmed</option>
               <option value="confirmed">Confirmed</option>
               <option value="false">False</option>
-            </select>
+            </Select>
           </div>
         </div>
 
