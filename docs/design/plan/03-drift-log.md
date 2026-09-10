@@ -1474,6 +1474,94 @@ a real defect: the checkbox had **no accessible name at all**. It has one now
 (D73), which is the fix the observation was actually pointing at.
 
 
+
+### D76 — two chips, because filling is right once and wrong six times
+Date: 2026-09-10   Status: active
+Decision: `core/components/Chip.tsx` exports `SelectableChip` (a toggle, painted
+`.chip-toggle`) and `RemovableChip` (a label with a delete, painted `.chip-tag`).
+Neither is `.chip`, which already existed and stays exactly as it is.
+Because: 8.2 asked for "one shared chip", and the tree turned out to already have
+one -- `.chip`, used by `shared/components/contact/CategoryChips`, whose own CSS
+comment records a deliberate decision to **fill** the chosen chip with
+`--color-primary`. That looked like a direct contradiction of 8.2's
+"accent-bordered, not accent-filled" and it is not: `CategoryChips` is
+**single-select**. Exactly one chip is ever chosen, so filling costs exactly one
+accent and makes the answer unmistakable. The entity forms are multi-select,
+where six chosen NPCs filled with the accent would put six accents on a form and
+leave the control that writes competing with them.
+So the rule is not "chips are bordered". It is that **fill marks the one chosen
+thing, and border marks each of many**. Two kinds of chip, two treatments, two
+class names -- rather than one name whose meaning depends on which list it landed
+in.
+Cost: three class names where 8.2 imagined one, and a paragraph in
+`components.css` explaining why. Cheaper than the alternative, which was silently
+redefining `.chip` under `CategoryChips` -- and which is exactly what the first
+cut of this PR did, until the browser showed selected chips rendering filled.
+
+### D77 — a chip's border is `--color-primary`, never `--action-primary-bg`
+Date: 2026-09-10   Status: active
+Decision: `.chip-toggle-selected` takes its border and ink from `--color-primary`.
+Because: `--action-primary-bg` is tuned to be a **fill** that dark text sits on,
+which is a different job. In medieval it is `#E8D0AA`, pale tan on a `#FDF5E6`
+parchment page: **1.38:1**, a line you cannot see. `--color-primary` is the token
+every theme tunes to stand against its own page -- 7.93 light, 7.78 dark, 9.24
+medieval -- so it is the one a border can rely on.
+`.chip`'s existing comment had already worked this out and said so, which is the
+argument for reading the file you are about to duplicate. This decision is that
+comment, generalised and now gated.
+
+### D78 — the accent budget is per surface, not per DOM tree
+Date: 2026-09-10   Status: active
+Decision: the gate "a form with several selections has exactly one accent"
+counts filled accents **per surface**: at most one on the form, and at most one
+inside any open modal.
+Because: written as a single count it failed immediately and correctly -- an open
+selection dialog has its own `Add Selected` button, so the form's submit and the
+dialog's confirm are two filled accents in one DOM tree. That is not the defect
+the rule exists to catch. A modal is its own surface and the form behind it is
+inert; what must never happen is the *chips* adding to either count, and they do
+not. The test asserts both counts separately for exactly that reason.
+Noted while doing it, not fixed: the "Done" buttons that merely close a selection
+dialog are filled primaries, and closing a dialog is not a write (D66). 8.3 owns
+primary actions and should decide that once across all eleven forms rather than
+have it smuggled in here.
+
+### R25 — records an invisible filter-pill border in medieval, and its fix
+Date: 2026-09-10
+Change: none in code. `.roster-filter-active` borders with `--action-primary-bg`,
+which in medieval measures **1.38:1** against the page -- so the chosen directory
+filter has been drawing an edge nobody can see since D51 shipped in Phase 6, with
+every gate green.
+Because: no gate measured that token as a boundary; it is named as a fill and was
+only ever checked as one. Found while gating the chips, which is the second time
+in three PRs that adding a contrast pair has turned up a live defect (D72 was the
+first). The fix is known and is the one the chips took -- `--color-primary`, which
+clears 3:1 in all three themes -- but the filter pills are Phase 6's surface and a
+change to a shipped directory does not belong in a PR about form chips.
+Ratcheted in `token-contrast.test.ts` meanwhile, with a companion test that fails
+if medieval ever *passes* 3:1, so the exemption cannot quietly outlive its reason.
+Phase 11 deletes medieval regardless (D40).
+
+### R26 — a frozen tab makes `getComputedStyle` lie, and it cost an hour
+Date: 2026-09-10
+Change: none in code. A note about verifying CSS through browser automation.
+Because: while checking the chips, `getComputedStyle` reported a selected chip's
+`color` and `border-color` as the *unselected* values, repeatedly, across a hard
+reload -- while an identical element built by hand in the same parent reported the
+right ones. The element also refused to change when its classes were removed.
+The cause was `element.getAnimations()`: five `CSSTransition`s, `playState:
+"running"`, `currentTime: 0`, still 0 after 2.5 seconds. An automated tab does
+not advance its animation timeline, so every transitioned property reads as the
+**start** of a transition that never runs. `.chip-toggle` sets `transition: all`,
+so colour, border and outline were all affected.
+Two things to take from it: a screenshot forces a paint and told the truth
+immediately, and a cloned node has no in-flight transition so it reports the
+resolved value. Reach for either before believing a computed style that contradicts
+what the CSS plainly says. The real bug underneath was found by the screenshot,
+not by the introspection -- selected chips were rendering filled, because `.chip`
+was already taken (D76).
+
+
 ---
 
 ## Open questions

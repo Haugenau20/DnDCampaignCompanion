@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Location, LocationType } from '../types';
 import { NPC } from '../../npcs/types';
 import Typography from '../../../../core/components/Typography';
+import { SelectableChip, RemovableChip } from '../../../../core/components/Chip';
 import Input from '../../../../core/components/Input';
 import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
@@ -204,18 +205,13 @@ export const RelatedQuestsSection: React.FC<RelatedQuestsSectionProps> = ({
         {Array.from(selectedQuests).map(questId => {
           const quest = quests.find(q => q.id === questId);
           return quest ? (
-            <div
+            <RemovableChip
               key={questId}
-              className="flex items-center gap-1 rounded-full px-3 py-1 tag"
+              onRemove={() => handleToggleQuest(questId)}
+              removeLabel={`Remove ${quest.title}`}
             >
-              <span>{quest.title}</span>
-              <button
-                type="button"
-                onClick={() => handleToggleQuest(questId)}
-                className="typography-secondary hover:opacity-70">
-                <X size={14} />
-              </button>
-            </div>
+              {quest.title}
+            </RemovableChip>
           ) : null;
         })}
       </div>
@@ -230,21 +226,14 @@ export const RelatedQuestsSection: React.FC<RelatedQuestsSectionProps> = ({
         <div className="max-h-96 overflow-y-auto mb-4">
           <div className="space-y-2">
             {quests.map(quest => (
-              <button
+              <SelectableChip
                 key={quest.id}
-                type="button"
-                onClick={() => handleToggleQuest(quest.id)}
-                className={clsx(
-                  "w-full p-2 rounded text-left transition-colors",
-                  selectedQuests.has(quest.id)
-                    ? `selected-item`
-                    : `selectable-item`
-                )}
+                selected={selectedQuests.has(quest.id)}
+                onToggle={() => handleToggleQuest(quest.id)}
+                className="w-full text-left"
               >
-                <Typography variant="body-sm">
-                  {quest.title}
-                </Typography>
-              </button>
+                {quest.title}
+              </SelectableChip>
             ))}
           </div>
         </div>
@@ -298,18 +287,13 @@ export const RelatedNPCsSection: React.FC<RelatedNPCsSectionProps> = ({
         {Array.from(selectedNPCs).map(npcId => {
           const npc = npcs.find(n => n.id === npcId);
           return npc ? (
-            <div
+            <RemovableChip
               key={npcId}
-              className="flex items-center gap-1 rounded-full px-3 py-1 tag"
+              onRemove={() => handleToggleNPC(npcId)}
+              removeLabel={`Remove ${npc.name}`}
             >
-              <span>{npc.name}</span>
-              <button
-                type="button"
-                onClick={() => handleToggleNPC(npcId)}
-                className="typography-secondary hover:opacity-70">
-                <X size={14} />
-              </button>
-            </div>
+              {npc.name}
+            </RemovableChip>
           ) : null;
         })}
       </div>
@@ -324,21 +308,14 @@ export const RelatedNPCsSection: React.FC<RelatedNPCsSectionProps> = ({
         <div className="max-h-96 overflow-y-auto mb-4">
           <div className="grid grid-cols-3 gap-2">
             {npcs.map(npc => (
-              <button
+              <SelectableChip
                 key={npc.id}
-                type="button"
-                onClick={() => handleToggleNPC(npc.id)}
-                className={clsx(
-                  "p-2 rounded text-center transition-colors",
-                  selectedNPCs.has(npc.id)
-                    ? `selected-item`
-                    : `selectable-item`
-                )}
+                selected={selectedNPCs.has(npc.id)}
+                onToggle={() => handleToggleNPC(npc.id)}
+                className="text-center"
               >
-                <Typography variant="body-sm">
-                  {npc.name}
-                </Typography>
-              </button>
+                {npc.name}
+              </SelectableChip>
             ))}
           </div>
         </div>
@@ -384,23 +361,18 @@ export const TagsSection: React.FC<SectionProps> = ({ formData, handleInputChang
 
       <div className="flex flex-wrap gap-2">
         {formData.tags?.map((tag, index) => (
-          <div
+          <RemovableChip
             key={index}
-            className="flex items-center gap-1 rounded-full px-3 py-1 tag"
-          >
-            <span>{tag}</span>
-            <button
-              type="button"
-              onClick={() => {
+            onRemove={() => {
                 handleInputChange(
                   'tags',
                   formData.tags?.filter((_, i) => i !== index) || []
                 );
               }}
-              className="typography-secondary hover:opacity-70">
-              <X size={14} />
-            </button>
-          </div>
+            removeLabel={`Remove tag ${tag}`}
+          >
+            {tag}
+          </RemovableChip>
         ))}
       </div>
     </div>
