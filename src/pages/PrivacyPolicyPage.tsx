@@ -4,6 +4,7 @@ import { Database, EyeOff, Trash2 } from "lucide-react";
 import Typography from "core/components/Typography";
 import Card from "core/components/Card";
 import Button from "core/components/Button";
+import PageShell from "shared/components/page-shell/PageShell";
 import { useNavigation } from "shared/hooks/useNavigation";
 import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from "core/constants/time";
 import {
@@ -43,7 +44,12 @@ const Section: React.FC<{
  * The privacy policy.
  *
  * Ordered so the answers come before the prose: three summary cards, then the
- * at-a-glance table, then the full text beside a sticky anchor list. Every
+ * at-a-glance table, then the full text beside a sticky anchor list.
+ *
+ * The frame is `PageShell`'s, at the document width the page already had; the
+ * revision date is the page's `actions`, which is what that slot is for. The
+ * policy sections stay hairline-separated rather than boxed -- see `Section`
+ * below -- so the three cards keep meaning "there is a button in here". Every
  * factual claim below is traceable to code -- see
  * docs/superpowers/specs/2026-09-03-privacy-policy-design.md -- and anything
  * that could not be traced was cut rather than softened.
@@ -52,20 +58,12 @@ const PrivacyPolicyPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* ---- Heading and revision date ---- */}
-      <div className="sm:flex sm:items-start sm:justify-between gap-6 mb-8">
-        <div>
-          <Typography variant="h1" className="mb-2">
-            Privacy
-          </Typography>
-          <Typography color="secondary">
-            What the Companion keeps about you, why, and how to get rid of it.
-          </Typography>
-        </div>
-        <PrivacyLastUpdated />
-      </div>
-
+    <PageShell
+      title="Privacy"
+      subtitle="What the Companion keeps about you, why, and how to get rid of it."
+      actions={<PrivacyLastUpdated />}
+      maxWidth="max-w-5xl"
+    >
       {/* ---- Three summary cards ---- */}
       <div className="grid gap-4 sm:grid-cols-3 mb-8">
         <Card>
@@ -288,7 +286,7 @@ const PrivacyPolicyPage: React.FC = () => {
           </Section>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 };
 
