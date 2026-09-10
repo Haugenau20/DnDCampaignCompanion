@@ -1912,6 +1912,98 @@ say so. Whichever surface wins, the fix is to take that surface's own `on` /
 pairs, and is why this should be fixed by the PR that settles the surface rather
 than patched here.
 
+### D88 — the toolbar is three buttons, and a blockquote is a line mark
+Date: 2026-09-10   Status: active
+Decision: `core/components/MarkdownToolbar.tsx` offers bold, italic and
+blockquote over the chapter body and the saga body. Three buttons, no accent
+(D80 — a toolbar writes a draft, the form's one accent is still its submit),
+icon-only with `aria-label` and a `role="group"` naming the field it serves.
+Two implementation choices worth recording because both were tempting to get
+wrong:
+- **A blockquote is a line mark, not a wrap.** Bold and italic wrap the
+  selection; wrapping in `>` would produce `>quoted>`. So the quote button
+  grows the range to whole lines and prefixes each, skipping lines that are
+  already quoted (a second click must not stack markers) and blank lines (a
+  quoted blank line splits one blockquote into two — D86's problem seen from
+  the authoring side). 4b's pull quote and its attribution are two lines, so
+  this is the button that has to get it right.
+- **The toolbar does not own the value.** It edits through the textarea's own
+  `setRangeText` and then reports the new value through `onChange`, so the
+  form's existing handler stays the single path into state and validation and
+  submission are untouched. `setRangeText` rather than assigning `value` is
+  what preserves the browser's native undo stack, and losing a paragraph to
+  Ctrl+Z not working is a worse bug than the toolbar not existing.
+Not offered, on purpose: headings, links, lists, code, tables. The parser
+supports all of them; the toolbar's job is to make three marks discoverable to
+someone who does not know markdown, not to be a word processor. A fourth button
+is a new decision.
+
+### D89 — the note body takes the shared primitive, visible label included
+Date: 2026-09-10   Status: active
+Decision: `NoteEditor`'s hand-rolled textarea becomes `Input isTextArea` with a
+visible "Note content" label, per `09-2` item 5. Its `aria-label` goes with the
+change rather than sitting on top of a real label and shadowing it. No toolbar
+(D84).
+Because: the owner's call, made against a measured alternative. The handoff's
+stated reason — "the label association that gives it" — turned out to be
+already satisfied: the control carried `aria-label="Note content"`, so
+`unnamedControlsIn` was already clean for it, and D73 is precedent for naming a
+control in the accessibility tree rather than with a visible label. That made
+the conversion a *visual* change to a deliberately chrome-less writing canvas
+rather than an accessibility fix, so it was put to the owner with the options
+drawn. Answer: convert, chrome included — one primitive for every field in the
+product beats a bespoke canvas, and it is the last hand-rolled control.
+`grep -rn '<textarea' src/features src/pages` now returns nothing outside
+tests, which was the gate.
+
+### R33 — the stub pattern, a fifth and sixth time, and a stub that cannot go stale
+Date: 2026-09-10
+Change: three stubs in `SagaEditPage.test.tsx` made honest. All three failures
+they caused looked exactly like product defects and were not.
+- **`Button` dropped `aria-label` and `startIcon`**, so the toolbar's icon-only
+  buttons rendered with no accessible name and no icon. `getByRole('button',
+  { name: /bold/i })` failed against a component that is correct everywhere
+  else.
+- **`Input` dropped `ref` and `helperText`**, so the toolbar could not reach
+  the textarea it writes into (the ref was null) and the markdown hint appeared
+  missing while being rendered. This stub's own comment already warned about
+  this exact class — "a stub that is laxer than the thing it stands in for
+  turns a real gate into a green light", written when it was caught dropping
+  the label association — and it was still laxer in two more ways.
+- **`lucide-react` was stubbed by enumeration**, naming the five icons the page
+  happened to render. Any component the page later mounts gets `undefined` for
+  its icon and fails with "Element type is invalid" pointing at the wrong file.
+  It is now a `Proxy` that returns a stub component for any icon name, keeping
+  the previous kebab-case testids, so it **cannot go stale**.
+Because: D75 said a stub must not be laxer than its component and R28 said the
+pattern was now the point. This is the fifth and sixth instance, so the useful
+output is no longer another instance — it is the *shape* of the fix. An
+enumerating stub is a stub with an expiry date; a proxying stub has none.
+Prefer the proxy wherever the real module is a namespace of like things
+(icons), and where it is a component, pass the props through rather than
+listing the ones today's caller uses.
+
+### R34 — the accessible-name gate cannot see a button, and 5 suites prove it
+Date: 2026-09-10
+Change: `test-utils/accessible-names.ts` gains `unnamedButtonsIn`. `NAMEABLE`
+is deliberately **not** extended, and this entry is why.
+Because: `NAMEABLE` is `"input, select, textarea"`. Buttons were never in it, so
+**an icon-only button with no accessible name passes 8.1's gate silently** —
+and 9.2 is the first PR to add icon-only buttons, with a brief that explicitly
+warns against reintroducing them. The check it would have used was structurally
+incapable of catching the regression it was cited to prevent. `unnamedButtonsIn`
+gives 9.2 a check that looks at buttons, and the toolbar's own test uses it;
+the previous assertion there would have passed against three unnamed buttons.
+Extending `NAMEABLE` was measured before being rejected for now: it fails **5
+form suites** — `SagaEditPage`, `QuestCreateForm`, `QuestEditForm`,
+`LocationCreateForm`, `LocationEditForm` — and in `QuestCreateForm` the **6
+offenders are rendered by the real `Button`, not by a stub**. Those are real
+unnamed controls in the forms Phase 8 audited, which makes closing this a
+forms-and-A3 job rather than a paragraph in a reading-surfaces phase. Worth
+doing; worth doing where the forms are.
+This is R31's lesson in a second costume: a check that cannot see the thing it
+is asked about reports "clean" in exactly the same words as a check that looked.
+
 ---
 
 ## Open questions

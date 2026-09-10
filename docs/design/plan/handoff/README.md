@@ -11,7 +11,7 @@ Currently written: Phase 6 (`06-0` … `06-3`, done); Phase 7 (`07-0` … `07-2`
 done, then `07-2-5` -- a redo of the NPC page against a design mock, which
 absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
 saying where its work went, R18); Phase 8 (`08-0` … `08-3`, done); and Phase 9
-(`09-0` and `09-1` done; `09-2` and `09-3` unstarted).
+(`09-0`, `09-1` and `09-2` done; `09-3` unstarted).
 
 `09-0` settled Q10 as D82/D83 and answered its own "where do rendered notes
 appear" as D84: **nowhere**. That narrows what follows — `09-1` renders two
@@ -26,6 +26,15 @@ code-splitting lever D82 had deferred (D87). **That closes `09-3`'s item 2**,
 so `09-3` is down to three items: the rail's surface (Q17), `LatestChapter`
 (Q18), and the `ChaptersPage`/`BookshelfView` read. Its item 2 needs only a
 line saying D85 exists.
+
+`09-2` built the toolbar (D88) and converted the note body onto `Input`
+(D89) — the owner's call, made after measurement found the handoff's stated
+reason for it already satisfied. Its two findings are worth reading before the
+next PR that touches a form: **R33**, the stub pattern for the fifth and sixth
+time, with the shape of a stub that cannot go stale; and **R34**, the
+accessible-name gate being structurally unable to see a button, which turns out
+to hide 6 real unnamed controls in `QuestCreateForm` alone. R34 is a
+forms-and-A3 job, not a Phase 9 one.
 
 Phase 8 is worth reading in order. `08-0` builds the `Select` that does not
 exist, `08-1` adopts it and fixes 17 unassociated labels, `08-2` unifies nine

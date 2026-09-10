@@ -89,3 +89,35 @@ export const unnamedControlsIn = (container: HTMLElement): string[] =>
         "(no placeholder, name or value to identify it by)";
       return `${tag} — ${hint}`;
     });
+
+/**
+ * Every button inside `container` with no accessible name.
+ *
+ * A separate export rather than an extension of `NAMEABLE`, deliberately.
+ * `unnamedControlsIn` covers `input, select, textarea` — buttons were never in
+ * it, so an icon-only button with no name passes that gate silently. 9.2 is the
+ * first PR to add icon-only buttons (the markdown toolbar's three) and its own
+ * brief warns against exactly that regression, so it needs a check that can
+ * actually see them.
+ *
+ * Extending `NAMEABLE` itself was measured first and is a bigger job than this
+ * PR: it fails 5 form suites, and in `QuestCreateForm` the 6 offenders are
+ * rendered by the **real** `Button`, not by a stub — real unnamed controls in
+ * the forms Phase 8 audited. See R34. Closing that belongs with the forms.
+ *
+ * A button is named by its own text, or by `aria-label` / `aria-labelledby`.
+ */
+export const unnamedButtonsIn = (container: HTMLElement): string[] =>
+  Array.from(container.querySelectorAll<HTMLElement>("button"))
+    .filter((el) => {
+      const own = el.textContent?.trim();
+      if (own) return false;
+      return accessibleNameOf(el) === "";
+    })
+    .map((el) => {
+      const hint =
+        el.getAttribute("title") ||
+        el.getAttribute("data-testid") ||
+        "(no title or testid to identify it by)";
+      return `button — ${hint}`;
+    });

@@ -143,18 +143,37 @@ jest.mock("shared/components/Breadcrumb", () => ({
 // the accent-budget gate below counts zero filled accents on a page that has
 // one -- a stub laxer than the component it stands in for reports a pass it has
 // not earned (D75, and the third time this pattern has appeared in Phase 8).
+// The stub must not be laxer than the component it stands in for (D75, R28).
+// It previously dropped `aria-label` and `startIcon`, which made an icon-only
+// button — the markdown toolbar's three — render with no accessible name at
+// all, so a test asserting the name failed against a defect that exists only
+// in this file. Fourth time this pattern has cost time; see R33.
 jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
-  default: ({ children, onClick, type, isLoading, variant = "primary" }: any) => (
+  default: ({
+    children,
+    onClick,
+    type,
+    isLoading,
+    variant = "primary",
+    startIcon,
+    endIcon,
+    "aria-label": ariaLabel,
+    title,
+  }: any) => (
     <button
-      data-testid={`button-${String(children).trim().replace(/\s+/g, "-").toLowerCase()}`}
+      data-testid={`button-${String(ariaLabel ?? children).trim().replace(/\s+/g, "-").toLowerCase()}`}
       className={`button button-${variant}`}
       onClick={onClick}
       type={type || "button"}
       disabled={!!isLoading}
       data-loading={String(!!isLoading)}
+      aria-label={ariaLabel}
+      title={title}
     >
+      {startIcon}
       {children}
+      {endIcon}
     </button>
   ),
 }));
@@ -181,38 +200,62 @@ jest.mock("../../../core/components/Card", () => {
 // did not, so every control it rendered was unnamed -- which the accessible-name
 // gate below correctly caught, in the mock rather than in the page. A stub that
 // is laxer than the thing it stands in for turns a real gate into a green light.
-jest.mock("../../../core/components/Input", () => ({
-  __esModule: true,
-  default: ({ label, value, onChange, isTextArea, required, fullWidth }: any) => {
-    const controlId = `mock-input-${String(label).replace(/\s+/g, "-").toLowerCase()}`;
-    if (isTextArea) {
-      return (
-        <div data-testid={`input-wrapper-${label?.replace(/\s+/g, "-").toLowerCase()}`}>
-          <label htmlFor={controlId}>{label}</label>
-          <textarea
-            id={controlId}
-            data-testid={`textarea-${label?.replace(/\s+/g, "-").toLowerCase()}`}
-            value={value}
-            onChange={onChange}
-            required={required}
-          />
-        </div>
-      );
-    }
-    return (
-      <div data-testid={`input-wrapper-${label?.replace(/\s+/g, "-").toLowerCase()}`}>
-        <label htmlFor={controlId}>{label}</label>
-        <input
-          id={controlId}
-          data-testid={`input-${label?.replace(/\s+/g, "-").toLowerCase()}`}
-          value={value}
-          onChange={onChange}
-          required={required}
-        />
-      </div>
-    );
-  },
-}));
+//
+// It happened again in 9.2, in the same file, for two more dropped props: the
+// real Input forwards a `ref` to its control and renders `helperText`, and this
+// stub did neither. The markdown toolbar writes through that ref, so the
+// toolbar appeared broken here while working everywhere else, and the markdown
+// hint appeared missing while being rendered. Both are now passed through.
+jest.mock("../../../core/components/Input", () => {
+  const ReactModule = require("react");
+  return {
+    __esModule: true,
+    default: ReactModule.forwardRef(
+      (
+        { label, value, onChange, isTextArea, required, helperText }: any,
+        ref: any
+      ) => {
+        const controlId = `mock-input-${String(label).replace(/\s+/g, "-").toLowerCase()}`;
+        const slug = label?.replace(/\s+/g, "-").toLowerCase();
+        const help = helperText ? (
+          <p data-testid={`helper-${slug}`}>{helperText}</p>
+        ) : null;
+
+        if (isTextArea) {
+          return (
+            <div data-testid={`input-wrapper-${slug}`}>
+              <label htmlFor={controlId}>{label}</label>
+              <textarea
+                ref={ref}
+                id={controlId}
+                data-testid={`textarea-${slug}`}
+                value={value}
+                onChange={onChange}
+                required={required}
+              />
+              {help}
+            </div>
+          );
+        }
+
+        return (
+          <div data-testid={`input-wrapper-${slug}`}>
+            <label htmlFor={controlId}>{label}</label>
+            <input
+              ref={ref}
+              id={controlId}
+              data-testid={`input-${slug}`}
+              value={value}
+              onChange={onChange}
+              required={required}
+            />
+            {help}
+          </div>
+        );
+      }
+    ),
+  };
+});
 
 // Mock Dialog to render children inline (ref: bug #150)
 jest.mock("../../../core/components/Dialog", () => ({
@@ -229,13 +272,31 @@ jest.mock("../../../core/components/Dialog", () => ({
     ) : null,
 }));
 
-jest.mock("lucide-react", () => ({
-  Save: () => <span data-testid="save-icon" />,
-  ArrowLeft: () => <span data-testid="arrow-left-icon" />,
-  FileDown: () => <span data-testid="file-down-icon" />,
-  HelpCircle: () => <span data-testid="help-circle-icon" />,
-  Lock: () => <span data-testid="lock-icon" />,
-}));
+// Stubbed by proxy rather than by enumeration, so it cannot go stale.
+//
+// The list used to name the five icons the page happened to render, which
+// meant any component this page later mounted got `undefined` for its icon and
+// failed with "Element type is invalid" pointing at the wrong file. 9.2's
+// toolbar needs Bold, Italic and Quote, and the next PR will need three more.
+// Testids keep the previous kebab-case convention, so existing queries hold.
+jest.mock("lucide-react", () => {
+  const ReactModule = require("react");
+  const toTestId = (name: string) =>
+    `${name.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase()}-icon`;
+
+  return new Proxy(
+    {},
+    {
+      get: (_target, property) => {
+        if (property === "__esModule") return false;
+        if (typeof property !== "string") return undefined;
+        const Icon = () => <span data-testid={toTestId(property)} />;
+        Icon.displayName = property;
+        return Icon;
+      },
+    }
+  );
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -725,6 +786,38 @@ describe("SagaEditPage", () => {
     test("has exactly one filled accent, and it is the submit", () => {
       const { container } = renderPage();
       expect(formAccentsIn(container)).toHaveLength(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The markdown toolbar (PR 9.2)
+  // -------------------------------------------------------------------------
+  describe("markdown toolbar", () => {
+    test("offers bold, italic and quote over the saga body", () => {
+      renderPage();
+      expect(screen.getByRole("group", { name: "Saga content formatting" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /bold/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /italic/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /quote/i })).toBeInTheDocument();
+    });
+
+    test("quotes the selected lines in the field the form submits", () => {
+      renderPage();
+      // Exact, not a regex: /Saga Content/i also matches the toolbar group's
+      // "Saga content formatting" name.
+      const body = screen.getByLabelText("Saga Content") as HTMLTextAreaElement;
+
+      fireEvent.change(body, { target: { value: "They come from the fruit." } });
+      body.focus();
+      body.setSelectionRange(0, 5);
+      fireEvent.click(screen.getByRole("button", { name: /quote/i }));
+
+      expect(body.value).toBe("> They come from the fruit.");
+    });
+
+    test("says once, quietly, that the field takes markdown", () => {
+      renderPage();
+      expect(screen.getByText(/takes markdown/i)).toBeInTheDocument();
     });
   });
 
