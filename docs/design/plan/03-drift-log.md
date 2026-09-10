@@ -1562,6 +1562,84 @@ not by the introspection -- selected chips were rendering filled, because `.chip
 was already taken (D76).
 
 
+
+### D79 — a form sits on `card`, ratified rather than decided
+Date: 2026-09-10   Status: active
+Decision: the form surface is `card`. All eleven forms already render inside
+`<Card>`, without exception.
+Because: `04-rollout.md` listed this as Phase 8's one open question. R19 measured
+it closed by unanimous practice before the handoffs were written, and 8.3's job
+was only to say so out loud rather than reopen a question the codebase had
+already answered by itself.
+
+### D80 — an accent marks the control that writes the record, not the draft
+Date: 2026-09-10   Status: active
+Decision: on a form, the only filled accent is the submit. `Add`, `Add tag` and
+the dialog-opening buttons are outline. Inside a modal, the confirm that commits
+a selection (`Add Selected`, `Done`) keeps one filled accent of its own; a
+`Close` that only dismisses an informational dialog does not.
+Because: D66 says an accent marks a control that changes the record, and D78
+added that the count is per surface. `Add tag` changes the **draft** -- the
+record changes when you save -- so a form carrying `Add`, `Add tag` and `Create
+NPC` all filled had three places for the eye to go and no answer to "where is
+save". Measured before changing anything: NPCForm and NPCEditForm had three
+filled accents each, LocationFormSections one competing with the submit of
+whatever form composed it, and SagaEditPage's export dialog a filled `Close`.
+The modal half is not an exception to the rule but the same rule applied to a
+second surface: `Add Selected` commits the choice the dialog exists to make, so
+it is that surface's writing control. `Close` on a dialog that only tells you
+something writes nothing, and is now outline.
+
+### D81 — one column, and the grid cells go with it
+Date: 2026-09-10   Status: active
+Decision: the five two-column field grids become one column, and the bare `<div>`
+grid cells they held are unwrapped so each control is a direct sibling at the
+form's own rhythm.
+Because: a form is read and filled top to bottom, and a second column doubles the
+number of places the eye has to check for the error it just triggered. It also
+pays at 320px, where a two-column row gave each control 160px: `Status` and
+`Relationship` now stack instead of being crammed side by side. The wrapper divs
+were kept deliberately in 8.1 -- that PR was forbidden from touching layout, so
+`<div><Select/></div>` was the honest intermediate state -- and removing them is
+this PR's business. The two `grid-cols-2 md:grid-cols-3` grids in `RumorForm`
+stay: they lay out chips inside a dialog, not fields.
+
+### R27 — revises 08-3's account of section heads and delete placement
+Date: 2026-09-10
+Change: two of 8.3's five items were already done, and are recorded rather than
+performed.
+- **Section heads are unanimous.** 08-3 says they "are `Typography variant="h4"`
+  in some files and `variant="body" className="font-medium"` in others -- pick
+  one". Measured: every section head in every one of the eleven forms is `h4`,
+  and the five files with no section heads have none. The `body`+`font-medium`
+  instances the handoff saw are in `NPCLegend`, `QuestDirectory` and two dialogs,
+  none of which is a form section head.
+- **Delete is already separated.** Only one of the eleven forms has a delete at
+  all (`ChapterForm`), and it already sits left, grouped with Cancel, against a
+  right-hand Save in a `justify-between` footer. `DangerZoneCard`'s separation is
+  already the practice here.
+Because: the same shape of correction as R13 and R19 -- a handoff written from a
+survey rather than from the files, describing a state two phases of work had
+already changed. The rule stands and is now asserted; there was simply nothing to
+move.
+
+### R28 — a third stub laxer than its component, and the pattern is now the point
+Date: 2026-09-10
+Change: `SagaEditPage.test.tsx`'s `Button` mock now emits `button button-<variant>`
+like the real one, defaulting to `primary`.
+Because: the accent-budget gate reported **zero** filled accents on a page that
+has one. The stub dropped `variant` entirely, so nothing it rendered ever wore
+`.button-primary`. The page was correct; the test could not see it.
+This is the third time in Phase 8 (D75 for `Input`, 8.2 for the `Dialog` mocks,
+now `Button`) that a hand-written stub was more permissive than the component it
+replaced, and each time the effect was the same: a gate that reports a pass it
+has not earned. The mocks predate the properties being gated, which is how it
+keeps happening -- 8.0 gave `Dialog` a role, 8.1 gave labels an association, 8.3
+counts button variants, and every stub written before those was silently exempt.
+Worth a standing habit rather than three separate fixes: when a PR gates a
+property, grep the mocks of the component that carries it.
+
+
 ---
 
 ## Open questions

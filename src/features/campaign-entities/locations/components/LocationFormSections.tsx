@@ -67,37 +67,33 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
         required
       />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Select
-            label="Type *"
-            value={formData.type}
-            onChange={(e) => handleInputChange('type', e.target.value as LocationType)}
-            required
-          >
-            <option value="region">Region</option>
-            <option value="city">City</option>
-            <option value="town">Town</option>
-            <option value="village">Village</option>
-            <option value="dungeon">Dungeon</option>
-            <option value="landmark">Landmark</option>
-            <option value="building">Building</option>
-            <option value="poi">Point of Interest</option>
-          </Select>
-        </div>
+      <div className="space-y-4">
+        <Select
+          label="Type *"
+          value={formData.type}
+          onChange={(e) => handleInputChange('type', e.target.value as LocationType)}
+          required
+        >
+          <option value="region">Region</option>
+          <option value="city">City</option>
+          <option value="town">Town</option>
+          <option value="village">Village</option>
+          <option value="dungeon">Dungeon</option>
+          <option value="landmark">Landmark</option>
+          <option value="building">Building</option>
+          <option value="poi">Point of Interest</option>
+        </Select>
 
-        <div>
-          <Select
-            label="Status *"
-            value={formData.status}
-            onChange={(e) => handleInputChange('status', e.target.value)}
-            required
-          >
-            <option value="known">Known</option>
-            <option value="explored">Explored</option>
-            <option value="visited">Visited</option>
-          </Select>
-        </div>
+        <Select
+          label="Status *"
+          value={formData.status}
+          onChange={(e) => handleInputChange('status', e.target.value)}
+          required
+        >
+          <option value="known">Known</option>
+          <option value="explored">Explored</option>
+          <option value="visited">Visited</option>
+        </Select>
       </div>
 
       <LocationCombobox
@@ -352,6 +348,7 @@ export const TagsSection: React.FC<SectionProps> = ({ formData, handleInputChang
         />
         <Button 
           type="button"
+          variant="outline"
           onClick={handleAddTag}
           disabled={!tagInput.trim()}
         >

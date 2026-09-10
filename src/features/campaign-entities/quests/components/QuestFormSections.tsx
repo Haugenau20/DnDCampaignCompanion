@@ -136,19 +136,17 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
         required
       />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Select
-            label="Status *"
-            value={formData.status}
-            onChange={(e) => handleInputChange('status', e.target.value as QuestStatus)}
-            required
-          >
-            <option value="active">Active</option>
-            <option value="completed">Completed</option>
-            <option value="failed">Failed</option>
-          </Select>
-        </div>
+      <div className="space-y-4">
+        <Select
+          label="Status *"
+          value={formData.status}
+          onChange={(e) => handleInputChange('status', e.target.value as QuestStatus)}
+          required
+        >
+          <option value="active">Active</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+        </Select>
 
         <LocationCombobox
           label="Location"

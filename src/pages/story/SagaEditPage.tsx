@@ -254,7 +254,8 @@ const SagaEditPage: React.FC = () => {
             </Typography>
 
             <div className="flex justify-end mt-4">
-              <Button onClick={() => setShowExportInfo(false)}>
+              <Button
+  variant="outline" onClick={() => setShowExportInfo(false)}>
                 Close
               </Button>
             </div>

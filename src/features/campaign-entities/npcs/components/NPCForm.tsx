@@ -255,34 +255,30 @@ const NPCForm: React.FC<NPCFormProps> = ({
                 onChange={(e) => handleInputChange('title', e.target.value)}
               />
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Select
-                    label="Status *"
-                    value={formData.status}
-                    onChange={(e) => handleInputChange('status', e.target.value)}
-                    required
-                  >
-                    <option value="alive">Alive</option>
-                    <option value="deceased">Deceased</option>
-                    <option value="missing">Missing</option>
-                    <option value="unknown">Unknown</option>
-                  </Select>
-                </div>
+              <div className="space-y-4">
+                <Select
+                  label="Status *"
+                  value={formData.status}
+                  onChange={(e) => handleInputChange('status', e.target.value)}
+                  required
+                >
+                  <option value="alive">Alive</option>
+                  <option value="deceased">Deceased</option>
+                  <option value="missing">Missing</option>
+                  <option value="unknown">Unknown</option>
+                </Select>
 
-                <div>
-                  <Select
-                    label="Relationship *"
-                    value={formData.relationship}
-                    onChange={(e) => handleInputChange('relationship', e.target.value)}
-                    required
-                  >
-                    <option value="friendly">Friendly</option>
-                    <option value="neutral">Neutral</option>
-                    <option value="hostile">Hostile</option>
-                    <option value="unknown">Unknown</option>
-                  </Select>
-                </div>
+                <Select
+                  label="Relationship *"
+                  value={formData.relationship}
+                  onChange={(e) => handleInputChange('relationship', e.target.value)}
+                  required
+                >
+                  <option value="friendly">Friendly</option>
+                  <option value="neutral">Neutral</option>
+                  <option value="hostile">Hostile</option>
+                  <option value="unknown">Unknown</option>
+                </Select>
               </div>
 
               <Input
@@ -438,6 +434,7 @@ const NPCForm: React.FC<NPCFormProps> = ({
               />
               <Button 
                 type="button"
+                variant="outline"
                 onClick={handleAffiliationAdd}
                 disabled={!affiliationInput.trim()}
               >
@@ -470,6 +467,7 @@ const NPCForm: React.FC<NPCFormProps> = ({
               />
               <Button
                 type="button"
+                variant="outline"
                 onClick={handleTagAdd}
                 disabled={!tagInput.trim()}
               >

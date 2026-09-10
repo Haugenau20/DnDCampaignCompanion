@@ -7,6 +7,7 @@ import NPCEditForm from '../NPCEditForm';
 import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs/types';
 import { Quest } from '../../../quests/types';
 import { unnamedControlsIn } from "../../../../../test-utils/accessible-names";
+import { formAccentsIn } from "../../../../../test-utils/accent-budget";
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -622,6 +623,20 @@ describe('NPCEditForm', () => {
     test("every control in the form has an accessible name", () => {
       const { container } = render(<NPCEditForm npc={makeNPC()} existingNPCs={[]} />);
       expect(unnamedControlsIn(container)).toEqual([]);
+    });
+  });
+
+
+  // -------------------------------------------------------------------------
+  // The accent budget (PR 8.3)
+  //
+  // One filled accent on the form, and it is the control that writes (D66).
+  // `Add` and `Add tag` build a draft; the record changes when you save.
+  // -------------------------------------------------------------------------
+  describe("accent budget", () => {
+    test("has exactly one filled accent, and it is the submit", () => {
+      const { container } = render(<NPCEditForm npc={makeNPC()} existingNPCs={[]} />);
+      expect(formAccentsIn(container)).toHaveLength(1);
     });
   });
 

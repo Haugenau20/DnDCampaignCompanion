@@ -4,6 +4,7 @@ import { render, screen, fireEvent, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import SagaEditPage from "../SagaEditPage";
 import { unnamedControlsIn } from "../../../test-utils/accessible-names";
+import { formAccentsIn } from "../../../test-utils/accent-budget";
 
 // ---------------------------------------------------------------------------
 // Page-suite gate mock (shared across Tasks 8-13 -- see page-suite-mock.md)
@@ -137,11 +138,17 @@ jest.mock("shared/components/Breadcrumb", () => ({
   ),
 }));
 
+// Mirrors the real Button's `button button-<variant>` classes, including the
+// primary default. Without them this stub renders every button unpainted, and
+// the accent-budget gate below counts zero filled accents on a page that has
+// one -- a stub laxer than the component it stands in for reports a pass it has
+// not earned (D75, and the third time this pattern has appeared in Phase 8).
 jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
-  default: ({ children, onClick, type, isLoading }: any) => (
+  default: ({ children, onClick, type, isLoading, variant = "primary" }: any) => (
     <button
       data-testid={`button-${String(children).trim().replace(/\s+/g, "-").toLowerCase()}`}
+      className={`button button-${variant}`}
       onClick={onClick}
       type={type || "button"}
       disabled={!!isLoading}
@@ -704,6 +711,20 @@ describe("SagaEditPage", () => {
     test("every control in the form has an accessible name", () => {
       const { container } = renderPage();
       expect(unnamedControlsIn(container)).toEqual([]);
+    });
+  });
+
+
+  // -------------------------------------------------------------------------
+  // The accent budget (PR 8.3)
+  //
+  // One filled accent on the form, and it is the control that writes (D66).
+  // `Add` and `Add tag` build a draft; the record changes when you save.
+  // -------------------------------------------------------------------------
+  describe("accent budget", () => {
+    test("has exactly one filled accent, and it is the submit", () => {
+      const { container } = renderPage();
+      expect(formAccentsIn(container)).toHaveLength(1);
     });
   });
 

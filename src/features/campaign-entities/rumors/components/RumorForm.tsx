@@ -260,54 +260,48 @@ const RumorForm: React.FC<RumorFormProps> = ({
               disabled={isSubmitting}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Select
-                  label="Status *"
-                  value={formData.status}
-                  onChange={(e) => handleInputChange('status', e.target.value as RumorStatus)}
-                  required
-                  disabled={isSubmitting}
-                >
-                  <option value="unconfirmed">Unconfirmed</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="false">False</option>
-                </Select>
-              </div>
+            <div className="space-y-4">
+              <Select
+                label="Status *"
+                value={formData.status}
+                onChange={(e) => handleInputChange('status', e.target.value as RumorStatus)}
+                required
+                disabled={isSubmitting}
+              >
+                <option value="unconfirmed">Unconfirmed</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="false">False</option>
+              </Select>
 
-              <div>
-                <Select
-                  label="Source Type *"
-                  value={formData.sourceType}
-                  onChange={(e) => handleSourceTypeChange(e.target.value as SourceType)}
-                  required
-                  disabled={isSubmitting}
-                >
-                  <option value="npc">NPC</option>
-                  <option value="tavern">Tavern/Inn</option>
-                  <option value="notice">Written Notice</option>
-                  <option value="traveler">Traveler</option>
-                  <option value="other">Other</option>
-                </Select>
-              </div>
+              <Select
+                label="Source Type *"
+                value={formData.sourceType}
+                onChange={(e) => handleSourceTypeChange(e.target.value as SourceType)}
+                required
+                disabled={isSubmitting}
+              >
+                <option value="npc">NPC</option>
+                <option value="tavern">Tavern/Inn</option>
+                <option value="notice">Written Notice</option>
+                <option value="traveler">Traveler</option>
+                <option value="other">Other</option>
+              </Select>
             </div>
 
             {/* Source information - changes based on source type */}
             {formData.sourceType === 'npc' ? (
-              <div>
-                <Select
-                  label="Source NPC *"
-                  value={formData.sourceNpcId || ''}
-                  onChange={(e) => handleSourceNPCSelect(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                >
-                  <option value="">Select an NPC</option>
-                  {npcs.map(npc => (
-                    <option key={npc.id} value={npc.id}>{npc.name}</option>
-                  ))}
-                </Select>
-              </div>
+              <Select
+                label="Source NPC *"
+                value={formData.sourceNpcId || ''}
+                onChange={(e) => handleSourceNPCSelect(e.target.value)}
+                required
+                disabled={isSubmitting}
+              >
+                <option value="">Select an NPC</option>
+                {npcs.map(npc => (
+                  <option key={npc.id} value={npc.id}>{npc.name}</option>
+                ))}
+              </Select>
             ) : (
               <Input
                 label="Source Name *"
@@ -325,19 +319,17 @@ const RumorForm: React.FC<RumorFormProps> = ({
             )}
 
             {/* Location */}
-            <div>
-              <Select
-                label="Location"
-                value={formData.locationId || ''}
-                onChange={(e) => handleLocationSelect(e.target.value)}
-                disabled={isSubmitting}
-              >
-                <option value="">Select a location</option>
-                {locations.map(location => (
-                  <option key={location.id} value={location.id}>{location.name}</option>
-                ))}
-              </Select>
-            </div>
+            <Select
+              label="Location"
+              value={formData.locationId || ''}
+              onChange={(e) => handleLocationSelect(e.target.value)}
+              disabled={isSubmitting}
+            >
+              <option value="">Select a location</option>
+              {locations.map(location => (
+                <option key={location.id} value={location.id}>{location.name}</option>
+              ))}
+            </Select>
           </div>
 
           {/* Related NPCs */}
@@ -421,7 +413,7 @@ const RumorForm: React.FC<RumorFormProps> = ({
           {/* Error Message */}
           {error && (
             <div className="flex items-center gap-2">
-              <AlertCircle size={16} className={`rumor-status-false`} />
+              <AlertCircle size={16} className="form-error" />
               <Typography color="error">{error}</Typography>
             </div>
           )}
