@@ -9,7 +9,7 @@ import {
 import { useNavigation } from 'shared/context/NavigationContext';
 import { usePageGate, GatedContent } from 'shared/components/gated';
 import PageShell from 'shared/components/page-shell/PageShell';
-import Typography from 'core/components/Typography';
+import { RosterEmpty } from 'core/components/Roster';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import Button from 'core/components/Button';
 import ResumeBar from './components/ResumeBar';
@@ -154,9 +154,17 @@ const ChaptersPage: React.FC = () => {
         <ResumeBar summary={summary} onResume={handleResume} />
 
         {chapters.length === 0 ? (
-          <div className="p-8 text-center rounded-lg card">
-            <Typography>No chapters available yet.</Typography>
-          </div>
+          <RosterEmpty
+            title="No chapters recorded yet"
+            message="Each session becomes a chapter here — what happened, who you met, and what it cost. The party reads them back between games."
+            action={
+              gate.canAct ? (
+                <Button startIcon={<Plus className="w-4 h-4" />} onClick={handleCreateChapter}>
+                  Write the first chapter
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           <>
             {/* Search + filter + view toggle row */}
@@ -229,9 +237,10 @@ const ChaptersPage: React.FC = () => {
             </div>
 
             {visibleItems.length === 0 ? (
-              <div className="p-8 text-center rounded-lg card">
-                <Typography>No chapters match your search.</Typography>
-              </div>
+              <RosterEmpty
+                title="No chapters match this view"
+                message="Try a different search term, or switch back to All to see every chapter recorded so far."
+              />
             ) : viewMode === 'list' ? (
               <ChapterList
                 items={visibleItems}

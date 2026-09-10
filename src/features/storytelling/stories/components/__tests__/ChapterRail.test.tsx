@@ -132,7 +132,11 @@ describe('ChapterRail', () => {
       expect(otherRow).not.toHaveAttribute('aria-current');
     });
 
-    test('the current chapter row has navigation-item-active, others have navigation-item', () => {
+    test('the current chapter row has rail-item-active, others have rail-item', () => {
+      // Was `navigation-item-active` / `navigation-item` until D90. Those are
+      // the header's classes: they paint chrome ink on a chrome ground, which
+      // is right in the header and measured ~1.04:1 on the rail's own surface
+      // -- an invisible active row in the light theme (R32).
       render(
         <ChapterRail
           items={threeMixedChapters()}
@@ -144,11 +148,52 @@ describe('ChapterRail', () => {
         />
       );
       const currentRow = screen.getByText('2. Chapter 2 Title').closest('button') as HTMLElement;
-      expect(currentRow.className).toMatch(/navigation-item-active/);
+      expect(currentRow.className).toMatch(/rail-item-active/);
 
       const otherRow = screen.getByText('3. Chapter 3 Title').closest('button') as HTMLElement;
-      expect(otherRow.className).toMatch(/navigation-item/);
-      expect(otherRow.className).not.toMatch(/navigation-item-active/);
+      expect(otherRow.className).toMatch(/rail-item/);
+      expect(otherRow.className).not.toMatch(/rail-item-active/);
+    });
+
+    test('no row wears a chrome surface class', () => {
+      // The regression guard for R32. The rail does not sit on the chrome, so
+      // a chrome class here is a token used against the wrong ground -- the
+      // exact defect the pair model exists to make unrepresentable.
+      render(
+        <ChapterRail
+          items={threeMixedChapters()}
+          currentChapterId="ch-2"
+          onChapterSelect={jest.fn()}
+          onBackToIndex={jest.fn()}
+          isOpen={false}
+          onClose={jest.fn()}
+        />
+      );
+
+      screen.getAllByRole('button').forEach((row) => {
+        expect(row.className).not.toMatch(/navigation-item/);
+      });
+    });
+
+    test('the rail sits on the sunken surface, not on card', () => {
+      // Q17, settled as D90: A4 asks for `sunken`, and measurement showed the
+      // rail and the reading column were rendering the *same* colour, so
+      // `card` was expressing no hierarchy at all.
+      const { container } = render(
+        <ChapterRail
+          items={threeMixedChapters()}
+          currentChapterId="ch-2"
+          onChapterSelect={jest.fn()}
+          onBackToIndex={jest.fn()}
+          isOpen={false}
+          onClose={jest.fn()}
+        />
+      );
+
+      const rail = container.querySelector('[class*="w-[236px]"]') as HTMLElement;
+      expect(rail.className).toMatch(/card-subtle/);
+      expect(rail.className).toMatch(/sunken-border/);
+      expect(rail.className).not.toMatch(/(^|\s)card($|\s)/);
     });
 
     test('"All chapters" calls onBackToIndex', () => {

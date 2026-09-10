@@ -163,6 +163,21 @@
     background-color: var(--surface-sunken-bg);
   }
 
+  /* Colour only, the sunken counterpart to `.card-border`. A block that takes
+     `card-subtle` for its ground had no matching border token to take, so the
+     chapter rail was reaching for `card-border` and ruling a sunken block with
+     a card's hairline. */
+  .sunken-border {
+    border: var(--border-width-sm) solid var(--surface-sunken-border);
+  }
+
+  /* Colour only, for the same reason `.card-divider` exists: `.sunken-border`
+     is the `border` shorthand and sets a width on all four sides, so pairing
+     it with `border-b` draws a box rather than a rule. */
+  .sunken-divider {
+    border-color: var(--surface-sunken-border);
+  }
+
   /* ====== DIALOG COMPONENT ====== */
   .dialog {
     background-color: var(--surface-card-bg);
@@ -354,6 +369,41 @@
   .navigation-item-active {
     color: var(--surface-chrome-on);
     background-color: var(--surface-chrome-selected);
+    font-weight: 500;
+  }
+
+  /* ====== CHAPTER RAIL ROWS ====== */
+  /*
+    The same job as `.navigation-item` above -- a list of places you can go,
+    with one of them current -- on a different surface, which is the whole
+    reason these exist separately (D90).
+
+    The rail used the chrome classes until R32 measured what that costs: an
+    active row of `--surface-chrome-on` on `--surface-chrome-selected`
+    composites over a light ground to about 1.04:1, so the current chapter's
+    title was invisible in the light theme and correct in dark. A valid token,
+    in a valid slot, wrong in relation to what sits behind it -- the defect
+    class the pair model exists to make unrepresentable, which it only does if
+    a component takes the pair belonging to the surface it is actually on.
+
+    No accent on the current row. A rail row is navigation, and an accent marks
+    a control that writes the record (D66) -- so "you are here" is carried by
+    ground, ink weight and `aria-current`, which is also why this cannot just
+    reuse `.selected-item` and its accent outline.
+  */
+  .rail-item {
+    color: var(--surface-sunken-on-muted);
+    transition: all 0.2s ease;
+  }
+
+  .rail-item:hover {
+    color: var(--surface-sunken-on);
+    background-color: var(--surface-sunken-hover);
+  }
+
+  .rail-item-active {
+    color: var(--surface-sunken-on);
+    background-color: var(--surface-sunken-selected);
     font-weight: 500;
   }
 

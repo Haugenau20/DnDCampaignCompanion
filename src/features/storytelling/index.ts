@@ -13,5 +13,4 @@ export { default as BookshelfView } from './stories/components/BookshelfView';
 export { default as ChapterList } from './stories/components/ChapterList';
 export { default as ChapterRail } from './stories/components/ChapterRail';
 export { default as ChapterReader } from './stories/components/ChapterReader';
-export { default as LatestChapter } from './stories/components/LatestChapter';
 export { default as ChapterForm } from './chapters/components/ChapterForm';

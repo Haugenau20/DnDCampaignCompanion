@@ -2004,6 +2004,132 @@ doing; worth doing where the forms are.
 This is R31's lesson in a second costume: a check that cannot see the thing it
 is asked about reports "clean" in exactly the same words as a check that looked.
 
+### D90 — the chapter rail is `sunken`, and its rows take that surface's ink
+Date: 2026-09-10   Status: active
+Decision: Q17 is answered. The rail sits on `sunken` (`card-subtle` +
+`sunken-border`), and its rows take their ink from the sunken pair through new
+`.rail-item` / `.rail-item-active` classes.
+Because: A4 said `sunken`, `413259e` built `card`, and the measurement settled
+it — **the rail and the reading column were rendering the same colour**,
+`#FCFAF6` both, so `card` was expressing no hierarchy at all. Depth is value
+and rule (§5), and a navigation aid beside prose should sit behind it. It now
+steps 1.22:1 from the reading card in light and 1.07:1 in dark.
+The ink half is R32's defect, and its cause was more specific than that entry
+guessed: the rows were not naming chrome tokens directly, they were reusing
+`.navigation-item` / `.navigation-item-active` — the **header's** classes, which
+paint `--surface-chrome-on` on `--surface-chrome-selected`. Correct in the
+chrome; on a light card it composites to about 1.04:1. Measured after the fix:
+
+| | light | dark |
+|---|---|---|
+| current row | 1.04 → **10.25:1** | already fine → **7.78:1** |
+| other rows | 2.55 → **5.64:1** | **6.48:1** |
+
+No accent on the current row. A rail row is navigation, and an accent marks a
+control that writes the record (D66), so "you are here" is carried by ground,
+ink weight and `aria-current` — which is also why this could not just reuse
+`.selected-item` and its accent outline.
+Two small additions came with it, both filling gaps the sunken surface had:
+`.sunken-border` (the shorthand, symmetric with `.card-border`) and
+`.sunken-divider` (colour only, for pairing with `border-b` — `.card-divider`
+exists for exactly that reason, and the rail was ruling a sunken block with a
+card's hairline).
+
+### D91 — `LatestChapter` is retired
+Date: 2026-09-10   Status: active
+Decision: Q18 is answered. `LatestChapter` is deleted — component, its 12-test
+file, and its barrel export. The owner's call.
+Because: it was the fifth stranded component (R29) and, measured, it does not
+do the thing that would have justified keeping it. It shows the newest chapter
+by `lastModified` with a "Continue Reading" button that navigates to the
+chapter's start and **ignores `lastPosition` entirely** — so it is a
+newest-chapter card, not a resume affordance. Home's `ActivityFeed` already
+answers "what happened since we last played" for every entity type, with a
+sigil and attribution; the `/story` route's `ResumeBar` already answers "where
+was I" from real progress data. It duplicated the first with worse data and did
+not do the second.
+The option of building a genuine resume card on Home was offered and declined
+as a new feature rather than a cleanup — correctly, since it would put a second
+resume affordance on a second surface.
+R15 left `NPCLegend` in the tree because a legend is where a hue may
+legitimately stand alone, and that judgement still holds; this one had no such
+argument. Q15 stays open.
+
+### D92 — `ChaptersPage`'s empty states adopt `RosterEmpty`
+Date: 2026-09-10   Status: active
+Decision: both of `ChaptersPage`'s empty states use `RosterEmpty` — a title
+saying what the collection is for, a message, and, for the truly-empty case
+only, the one action that fills it.
+Because: `09-3` item 4 asked for these two files to get "the same read the
+reader got", against A1's rules rather than A4's, and to change nothing if they
+already matched `Roster`. They did not: both were a bare sentence in a card —
+"No chapters available yet." — where the eight directories use a designed
+state. Section 8 is explicit that an empty region is where a returning user is
+most likely to read the product as unfinished.
+The filter-emptied state gets **no action**, per `RosterEmpty`'s own documented
+rule: the fix there is to change the filter, and "Write the first chapter"
+would answer a question nobody asked. The truly-empty action is labelled
+distinctly from the header's "New Chapter" rather than repeating it — which
+also stopped a test from passing against the header's button instead of the
+empty state's, R31's lesson arriving a third time.
+`BookshelfView` needed nothing: it only renders when chapters exist.
+
+### R35 — an rgba overlay has to be composited before it is a contrast ratio
+Date: 2026-09-10
+Change: none in code. A measurement method, recorded because it nearly caused a
+fix to a defect that did not exist.
+While checking D90 in dark, the current row measured **1.32:1** and looked like
+the light-theme defect inverted. It was not: dark's `sunken.selected` is
+`rgba(255, 255, 255, 0.1)`, and the measuring script took the first three
+numbers out of the colour string — reading a 10% white overlay as opaque white.
+Composited over the rail's actual ground it is `rgb(63, 63, 80)`, and the real
+ratio is **7.78:1**.
+Because: this is R26's lesson in a new costume — that one was a frozen tab
+making `getComputedStyle` lie. Here the value was true and the arithmetic on it
+was wrong. Both themes express `hover` and `selected` as translucent overlays
+in dark and as opaque tints in light, so **any contrast check that touches a
+state role has to composite first**, and one that does not will report the dark
+theme as broken every time. Worth knowing before Phase 11, which is entirely
+about dark's values.
+Related, and smaller: `token-contrast.test.ts` checks `bg` against `on` and
+`onMuted` per surface. It does not check `on` against `selected`, so a selected
+row's ink is not gated by anything. Not fixed here — it needs the compositing
+above to be correct, and that is a real piece of work in a test that currently
+does pure hex arithmetic.
+
+### R36 — Phase 10 measured before its handoffs, and it is a composition phase
+Date: 2026-09-10
+Change: `handoff/10-0` … `10-3` written, from a measurement across all 26 A5
+files (4,494 lines) rather than from `04-rollout.md`'s paragraph.
+What the paragraph says: these pages are "low frequency, so the cheapest
+phase: they need to inherit correctly and be readable, not to be interesting."
+Substantially true — and the inheriting is the part that is missing.
+- **Zero hardcoded hex, zero `[data-theme=…]`, zero raw `<select>`.** The
+  fourth phase running to arrive and find the paint already right (R13, R19,
+  R29). At four this is the expectation, not the surprise.
+- **None of the four A5 pages uses `PageShell` or `usePageGate`**, while every
+  A1, A2 and A4 route does. `ProfilePage` and `AdminPanel` each hand-roll their
+  auth states — `ProfilePage` even documents its three states in a header
+  comment defending a linkable-while-signed-out URL, which is `usePageGate`'s
+  contract written a second time by hand.
+- **Not one of the 20 A5 suites uses `unnamedControlsIn`, `formAccentsIn` or
+  `unnamedButtonsIn`.** Phase 8 found 17 unnamed controls once it looked; A5's
+  are *unmeasured*, which is a weaker claim and a worse position.
+- **`NoteEditor` was not the last raw textarea.** `ContactForm` in
+  `src/shared/components/` still has one; `09-2`'s gate grepped
+  `src/features src/pages`, so it was accurate about what it checked and the
+  sentence it supported was wrong. Corrected in `10-3`, with the gate rewritten
+  to cover `src`.
+- **Zero stranded components**, so the streak ends: R13's three cards, R15's
+  `NPCLegend` and R29's `LatestChapter` have no A5 sibling.
+- Already right and to be left alone: `PrivacyDataTable` rules every row rather
+  than filling alternates, and no A5 file reaches for a serif.
+Because: four phases of measuring first have produced four different answers
+than the plan predicted, and the cost of not measuring is visible in the two
+handoffs that were written early and had to be revised (R13, R19). The plan is
+now reliable about *scope* and unreliable about *content*, which is a useful
+thing to know about a document rather than a criticism of it.
+
 ---
 
 ## Open questions
@@ -2021,15 +2147,6 @@ Answer as the work reaches them; move to a decision when settled.
   differ per theme?
 - **Q5** — When do fallbacks get removed? Proposal: only once every theme
   defines the token, as deliberate cleanup.
-- **Q17** — Is the chapter rail `sunken` (A4) or `card` (what `413259e` built)?
-  See `handoff/09-3`. Whichever wins, the other has to stop saying otherwise.
-  R32 adds a constraint the question did not have: the rail currently takes its
-  ink from the **chrome** pair, so its active row measures ~1.04:1 on light and
-  is invisible. The answer has to name a surface *and* move the ink onto that
-  surface's roles.
-- **Q18** — Wire `LatestChapter` up or retire it? The fifth stranded component
-  (R29), and the same shape of question as Q15. Needs someone to say whether
-  Home wants a "continue reading" affordance.
 - **Q12** — Does an entity keep real edit history? `ContentAttribution` stores
   created and last-modified and nothing between, so the "timeline of edits"
   Phase 7 was scoped around cannot exist without a data change. Answer before
@@ -2046,5 +2163,6 @@ Answer as the work reaches them; move to a decision when settled.
 
 
 Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32,
-**Q10** by D82 and D83, **Q11** by R9, **Q14** by D61. The "where do rendered
+**Q10** by D82 and D83, **Q11** by R9, **Q14** by D61, **Q17** by D90,
+**Q18** by D91. The "where do rendered
 notes appear" half of Q10 is settled by D84: nowhere, for now.
