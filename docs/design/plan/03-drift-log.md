@@ -1640,6 +1640,59 @@ Worth a standing habit rather than three separate fixes: when a PR gates a
 property, grep the mocks of the component that carries it.
 
 
+
+### R29 — revises 04-rollout's account of Phase 9, measured before the handoffs
+Date: 2026-09-10
+Change: Phase 9 is not the reading-surface build its paragraph describes. Most
+of that shipped in `413259e` ("rebuild the chapter reader around scrolling and a
+persistent rail") before the phase started. Measured across the nine A4 files
+while writing `handoff/09-0` … `09-3`:
+- **The reader is finished.** `ChapterReader` caps at `max-w-[68ch]`, wears
+  `.reader-prose` (Newsreader serif, medieval variant included), carries sans
+  chrome in one footer row, and `ChapterRail` is persistent at `lg` and a drawer
+  below. A4's "capped measure, serif running text, navigation as quiet chrome"
+  is describing something that exists.
+- **The colour half is already done, again.** Zero hardcoded hex and zero
+  `[data-theme=…]` patches across all nine files. Third phase running (R13 for
+  Phase 7, R19 for Phase 8) where a phase scoped around repainting arrives to
+  find the paint right and the structure the work.
+- **Markdown is genuinely missing**, and is the only part of the description
+  that survived intact. No `react-markdown`, no `remark`, no `marked`, no
+  sanitiser -- nothing in the family is in `package.json`. Q10 is greenfield.
+- **Notes have no reading surface.** D45 names notes as a markdown field, but
+  `NotePage` mounts `NoteEditor` directly, so a note is only ever an editable
+  textarea, a truncated `NoteCard` preview, or a row on the NPC page. Rendering
+  markdown for notes therefore needs a decision about *where* before it needs a
+  renderer; `09-0` carries it.
+- **`ChapterRail` is on `card`, not the `sunken` A4 specifies.** Left alone
+  pending a judgement rather than silently changed either way.
+- **A fifth stranded component**: `LatestChapter`, 75 lines, barrel-exported,
+  12 tests, rendered by nothing -- the same shape as R13's three cards and R15's
+  `NPCLegend`. Most likely lost its consumer when Phase 4 recomposed Home around
+  `ActivityFeed`.
+Because: the phase paragraph was written before Phases 3a-8 ran, and the reader
+rebuild happened in between. Measuring first turned a repaint-and-compose phase
+into a dependency phase with a cleanup attached, which is a different four PRs
+than the ones a plan-driven handoff would have produced.
+
+### R30 — a decision that lives only in a commit message is not recorded
+Date: 2026-09-10
+Change: none yet in code. Flagging that `BookViewer`'s pagination is a
+deliberate design decision documented nowhere a reader of this file would find
+it. `413259e`'s commit body says: "BookViewer is deliberately untouched:
+SagaPage still uses it, and the saga is one continuous work that keeps the
+page-turning presentation."
+Because: the product now has two reading models on purpose -- a chapter scrolls,
+a saga turns pages -- and the reasoning for that is one `git log` away from
+being invisible. Found while writing `09-1`, where the honest first instinct was
+"the reader scrolls and the saga paginates, unify them", which would have
+reversed a decision without knowing one had been made. `09-3` gives it a
+D-number. The general point is worth more than the instance: this log exists so
+that on day nine you can tell *this was decided* from *this drifted*, and a
+decision recorded only in a commit message reads as drift to everyone who
+arrives later.
+
+
 ---
 
 ## Open questions
@@ -1658,7 +1711,14 @@ Answer as the work reaches them; move to a decision when settled.
 - **Q5** — When do fallbacks get removed? Proposal: only once every theme
   defines the token, as deliberate cleanup.
 - **Q10** — Which CommonMark renderer, and does it run at write time or read
-  time? First PR of Phase 9; the reading design depends on the answer.
+  time? First PR of Phase 9 (`handoff/09-0`). Measured greenfield: nothing in
+  the markdown family is installed. Also carries "where do rendered notes
+  appear", since notes have no reading surface (R29).
+- **Q17** — Is the chapter rail `sunken` (A4) or `card` (what `413259e` built)?
+  See `handoff/09-3`. Whichever wins, the other has to stop saying otherwise.
+- **Q18** — Wire `LatestChapter` up or retire it? The fifth stranded component
+  (R29), and the same shape of question as Q15. Needs someone to say whether
+  Home wants a "continue reading" affordance.
 - **Q12** — Does an entity keep real edit history? `ContentAttribution` stores
   created and last-modified and nothing between, so the "timeline of edits"
   Phase 7 was scoped around cannot exist without a data change. Answer before
