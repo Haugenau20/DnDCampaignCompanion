@@ -11,7 +11,14 @@ Currently written: Phase 6 (`06-0` … `06-3`, done); Phase 7 (`07-0` … `07-2`
 done, then `07-2-5` -- a redo of the NPC page against a design mock, which
 absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
 saying where its work went, R18); Phase 8 (`08-0` … `08-3`, done); and Phase 9
-(`09-0` … `09-3`, unstarted).
+(`09-0` done; `09-1` … `09-3` unstarted).
+
+`09-0` settled Q10 as D82/D83 and answered its own "where do rendered notes
+appear" as D84: **nowhere**. That narrows what follows — `09-1` renders two
+surfaces rather than three, and `09-2` still moves `NoteEditor` onto `Input`
+for the label association but gives it **no toolbar**, so its item 6 (the
+markdown hint) applies to the chapter and saga forms alone. Amend `09-2` when
+it starts rather than reading it as written.
 
 Phase 8 is worth reading in order. `08-0` builds the `Select` that does not
 exist, `08-1` adopts it and fixes 17 unassociated labels, `08-2` unifies nine

@@ -1692,6 +1692,97 @@ that on day nine you can tell *this was decided* from *this drifted*, and a
 decision recorded only in a commit message reads as drift to everyone who
 arrives later.
 
+### D82 — `react-markdown` at read time, and the parser can never emit HTML
+Date: 2026-09-10   Status: active
+Decision: Q10 is answered. The renderer is **`react-markdown` 10.1.0**, run at
+**read time**, wrapped in a single `core/components/Markdown.tsx`. No
+`remark-gfm`: D45 says CommonMark, and tables, strikethrough and autolinks are
+GFM extensions.
+Because: D45's requirement is raw HTML disabled *at the parser*, and of the
+options only this one makes that structural rather than configured.
+`react-markdown` emits React elements and never an HTML string, so there is no
+`dangerouslySetInnerHTML` anywhere in the path and turning raw HTML **on** would
+mean *adding* `rehype-raw` — a thing you do on purpose, not a flag you forget.
+`markdown-it` with `html: false` is equally safe and about 13 kB cheaper, but it
+returns a string, so every render goes through `dangerouslySetInnerHTML`; that
+reads as the configuration D45 exists to forbid even though it isn't, and it
+would be re-litigated by every reviewer for the life of the project. A
+hand-rolled parser is free and is not full CommonMark. `marked` plus a
+sanitiser is the arrangement D45 names and rejects.
+Read time rather than write time: Firestore keeps exactly what the player
+typed, so the source is always recoverable and a renderer change is a deploy
+rather than a migration. Write time would store HTML in a collection two
+surfaces read, which is a far larger security surface than a parser flag, and
+is irreversible.
+Costs, both measured rather than estimated:
+- **Bundle: +43.1 kB gzipped, 299.99 → 343.12 kB (+14.4%).** Over the ~10%
+  the handoff sets as the point where a justification is owed, hence this
+  paragraph. Roughly a third of the tree is `mdast-util-mdx-*`, which serves
+  MDX and is dead weight here but is not removable without a fork. The lever if
+  this becomes a problem is code-splitting: the parser is needed on two reading
+  routes and nowhere else, so a lazy import would keep it out of the initial
+  bundle entirely. Not done here — a Suspense boundary on the reader is a
+  change to the reader, and 09-1 owns that surface.
+- **Jest needed real work.** The tree is 67 ESM-only packages, and this repo
+  transforms nothing in `node_modules` (`transform` covered `.tsx?` alone). It
+  now runs `babel-jest` over `.m?jsx?` and allow-lists the unified/remark/
+  micromark family in `transformIgnorePatterns`, written as prefixes so a patch
+  bump that adds another `micromark-util-*` does not fail the suite. `webpack`
+  and `tsc` needed nothing; the four-resolver table in `CLAUDE.md` gains a
+  fifth column in spirit — **jest was the only gate this dependency tripped**,
+  which is the reverse of the usual failure and worth remembering.
+- `npm install` needs `--legacy-peer-deps`, which is pre-existing: this tree
+  already violates `react-scripts@5.0.1`'s `typescript@^4` peer range with
+  TypeScript 5.7.3. Not introduced here, but a fresh clone hits it.
+
+### D83 — a single newline is a line break, not a paragraph break
+Date: 2026-09-10   Status: active
+Decision: `Markdown` runs `remark-breaks`, so one newline renders as a real
+line break inside the paragraph. Blank-line-separated prose still produces
+separate paragraphs, and block parsing is untouched.
+Because: **every chapter written before Phase 9 separates its paragraphs with a
+single newline** — that is what one Enter press in a textarea produces, and
+`ChapterReader.toParagraphs` rendered each such line as its own `<p>`. Its test
+helper joins paragraphs with `'\n'` and expects them to be separate, so this is
+the product's contract and not an accident. Strict CommonMark reads a single
+newline as a soft break and collapses it: measured, three lines became **one
+paragraph with zero `<br>`** — a wall of text, in every chapter already
+written.
+Three ways out, and the rejected two are instructive:
+- *Rewrite single newlines into blank lines before parsing* matches the old
+  spacing exactly and breaks block constructs, because it cuts them apart: 4b's
+  two-line pull quote becomes two blockquotes, and a fenced code block stops
+  parsing. It fails at precisely the thing the phase exists to enable.
+- *Strict CommonMark with a content migration* is forbidden by 09-0 ("do not
+  migrate existing content") and would rewrite records the players wrote.
+- `remark-breaks` maps the soft break to a `<br>` *inside* the paragraph, so
+  block parsing stays CommonMark. It is also the behaviour every player already
+  knows from GitHub and chat clients.
+The cost, stated so it is not discovered later: legacy content keeps its line
+separation but loses the vertical gap between paragraphs, because it is now one
+paragraph with breaks rather than several with margins. Anyone who re-edits a
+chapter and leaves a blank line gets the margin back. This is the one visual
+difference the 09-1 screenshot gate should expect to see.
+
+### D84 — notes stay plain text, narrowing D45
+Date: 2026-09-10   Status: active
+Decision: markdown renders on **chapter bodies and saga/story descriptions**.
+Notes are dropped from D45's list and stay plain text. `NoteEditor` still moves
+onto `Input isTextArea` in 09-2 for the label association, but it gets **no
+markdown toolbar**.
+Because: R29 measured that notes have no reading surface — `NotePage` mounts
+`NoteEditor` directly, so a note is only ever an editable textarea, a truncated
+`NoteCard` preview, or a row on the NPC page. Rendering markdown in the preview
+is ruled out by A4's own fence (a row must never need a parser) and would show
+half a blockquote in a truncated row. That leaves building a note *reader*,
+which is a new surface and collides with Q13 — whether a note can be edited or
+deleted at all is still open, and a read-then-edit view presumes an answer.
+The fact that decided it: notes live at
+`groups/{groupId}/users/{userId}/notes`. **They are private to one user.** The
+author is always the only reader, and always arrives wanting to edit, so the
+surface a renderer would serve is the one surface that should stay an editor.
+Reversible on purpose: the renderer is one import away if notes ever get a read
+view, and nothing about this decision constrains that.
 
 ---
 
@@ -1710,10 +1801,6 @@ Answer as the work reaches them; move to a decision when settled.
   differ per theme?
 - **Q5** — When do fallbacks get removed? Proposal: only once every theme
   defines the token, as deliberate cleanup.
-- **Q10** — Which CommonMark renderer, and does it run at write time or read
-  time? First PR of Phase 9 (`handoff/09-0`). Measured greenfield: nothing in
-  the markdown family is installed. Also carries "where do rendered notes
-  appear", since notes have no reading surface (R29).
 - **Q17** — Is the chapter rail `sunken` (A4) or `card` (what `413259e` built)?
   See `handoff/09-3`. Whichever wins, the other has to stop saying otherwise.
 - **Q18** — Wire `LatestChapter` up or retire it? The fifth stranded component
@@ -1735,4 +1822,5 @@ Answer as the work reaches them; move to a decision when settled.
 
 
 Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32,
-**Q11** by R9, **Q14** by D61.
+**Q10** by D82 and D83, **Q11** by R9, **Q14** by D61. The "where do rendered
+notes appear" half of Q10 is settled by D84: nowhere, for now.
