@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from "react";
 import { Note } from "../types";
 import Typography from "../../../../core/components/Typography";
+import Input from 'core/components/Input';
 import { useNotes } from "../context/NoteContext";
 import { deriveTitle, LEGACY_DEFAULT_TITLE } from "../utils/note-title";
 import { formatLastSaved } from "../utils/save-status";
@@ -397,14 +398,24 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
           </Typography>
         )}
 
-        <textarea
-          ref={bodyRef}
+        {/*
+          The last hand-rolled textarea element in the product, now on the
+          primitive every other field uses (09-2, item 5). The visible label
+          comes with it: the control was already named for a screen reader by
+          its `aria-label`, so that attribute goes rather than sitting on top
+          of a real label element and shadowing it.
+        */}
+        <Input
+          ref={bodyRef as React.Ref<HTMLTextAreaElement>}
+          isTextArea
+          label="Note content"
           value={content}
           onChange={handleContentChange}
           placeholder="Write your note here..."
           disabled={readOnly}
-          aria-label="Note content"
-          className="note-textarea flex-1 w-full mt-5 bg-transparent border-none outline-none resize-none text-[17px] leading-[1.65] placeholder:opacity-40"
+          fullWidth
+          containerClassName="flex-1 mt-5"
+          className="note-textarea flex-1 resize-none text-[17px] leading-[1.65] placeholder:opacity-40"
           style={{ minHeight: "40vh" }}
         />
       </div>

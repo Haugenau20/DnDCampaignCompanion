@@ -1,7 +1,8 @@
 // pages/story/SagaEditPage.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Typography from '../../core/components/Typography';
 import Input from '../../core/components/Input';
+import MarkdownToolbar from '../../core/components/MarkdownToolbar';
 import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
 import Breadcrumb from 'shared/components/Breadcrumb';
@@ -37,6 +38,8 @@ const SagaEditPage: React.FC = () => {
 
   const [title, setTitle] = useState('The Campaign Saga');
   const [content, setContent] = useState('');
+  /** The body field, so the markdown toolbar can write into it. */
+  const contentRef = useRef<HTMLTextAreaElement>(null);
   const [saving, setSaving] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -182,16 +185,24 @@ const SagaEditPage: React.FC = () => {
                 required
               />
 
-              <Input
-                label="Saga Content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                fullWidth
-                isTextArea
-                rows={20}
-                required
-                helperText="Press Enter for new paragraphs. Tell the epic story of your campaign!"
-              />
+              <div>
+                <MarkdownToolbar
+                  targetRef={contentRef}
+                  onChange={setContent}
+                  label="Saga content formatting"
+                />
+                <Input
+                  ref={contentRef}
+                  label="Saga Content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  fullWidth
+                  isTextArea
+                  rows={20}
+                  required
+                  helperText="Takes markdown: **bold**, *italic*, > quote. One Enter breaks the line, a blank line starts a new paragraph."
+                />
+              </div>
             </Card.Content>
 
             <Card.Footer className="flex justify-between">
