@@ -15,6 +15,8 @@ export interface GatedPageStateProps {
   /** Already resolved for read/write mode by `usePageGate`. */
   heading: string;
   blurb: string;
+  /** Overrides the signed-out eyebrow. See `GatedPageCopy.eyebrow`. */
+  eyebrow?: string;
   onSignIn: () => void;
   onJoinGroup: () => void;
   /** Campaigns to offer. `pick-campaign` only. */
@@ -60,6 +62,7 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
   variant,
   heading,
   blurb,
+  eyebrow = "Private campaign",
   onSignIn,
   onJoinGroup,
   campaigns = [],
@@ -120,7 +123,7 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
     <div className="mx-auto w-full max-w-[560px] rounded-lg p-8 card">
       {isSignedOut ? (
         <Eyebrow icon={<Lock className="w-4 h-4 typography-muted" aria-hidden="true" />}>
-          Private campaign
+          {eyebrow}
         </Eyebrow>
       ) : (
         <Eyebrow>Signed in · no campaign chosen</Eyebrow>

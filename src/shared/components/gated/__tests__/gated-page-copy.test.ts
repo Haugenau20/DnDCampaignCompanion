@@ -6,7 +6,8 @@ import {
   GatedPageKey,
 } from "../gated-page-copy";
 
-const ALL_KEYS: GatedPageKey[] = [
+/** Every page that shows campaign content, and therefore needs one chosen. */
+const CONTENT_KEYS: GatedPageKey[] = [
   "home",
   "story",
   "quests",
@@ -15,6 +16,11 @@ const ALL_KEYS: GatedPageKey[] = [
   "rumors",
   "notes",
 ];
+
+/** Pages about the account rather than about a campaign. */
+const ACCOUNT_KEYS: GatedPageKey[] = ["profile"];
+
+const ALL_KEYS: GatedPageKey[] = [...CONTENT_KEYS, ...ACCOUNT_KEYS];
 
 describe("GATED_COPY", () => {
   it("has an entry for every page key", () => {
@@ -28,24 +34,33 @@ describe("GATED_COPY", () => {
     expect(copy.noun.length).toBeGreaterThan(0);
   });
 
-  // Rewritten: this used to assert `notes.requires === "group"` on the
+  // Rewritten twice. It first asserted `notes.requires === "group"` on the
   // premise that `NoteContext` fetches on `activeGroupId` and only filters by
   // `activeCampaignId` afterwards, so a member with a group but no campaign
   // chosen would still have notes to read. That premise is false --
   // `NoteContext.tsx` sets `filteredNotes = []` whenever `activeCampaignId` is
-  // absent ("If no active campaign, show no notes") -- so `notes` now
-  // requires a campaign like every other page. `"group"` remains a valid
-  // value of `GatedContextRequirement` (see its JSDoc) for a page that
-  // genuinely only needs one; this test just confirms none currently claims
-  // to be one, and that every `requires` field is one of the two valid values.
-  it("requires a campaign for every page", () => {
-    ALL_KEYS.forEach((key) => {
+  // absent ("If no active campaign, show no notes") -- so `notes` requires a
+  // campaign like every other content page.
+  //
+  // It then asserted "campaign" for *every* key, which stopped being true when
+  // `profile` arrived: an account page is not campaign-scoped. Split rather
+  // than relaxed, so the assertion still fails if a content page quietly stops
+  // needing a campaign. `"group"` remains a valid value (see its JSDoc) that
+  // no page currently claims.
+  it("requires a campaign for every content page", () => {
+    CONTENT_KEYS.forEach((key) => {
       expect(GATED_COPY[key].requires).toBe("campaign");
     });
   });
 
+  it("requires nothing but a session for every account page", () => {
+    ACCOUNT_KEYS.forEach((key) => {
+      expect(GATED_COPY[key].requires).toBe("none");
+    });
+  });
+
   it.each(ALL_KEYS)("%s's requires field is a valid GatedContextRequirement", (key) => {
-    expect(["group", "campaign"]).toContain(GATED_COPY[key].requires);
+    expect(["group", "campaign", "none"]).toContain(GATED_COPY[key].requires);
   });
 
   it("never repeats a heading between two pages", () => {

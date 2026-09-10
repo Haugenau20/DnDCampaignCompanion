@@ -2211,6 +2211,132 @@ worked around: the date sat beside the title from `sm` up and now does so from
 the subtitle. The point of adopting a shared frame is inheriting its decisions;
 a page that keeps its own breakpoint has not adopted anything.
 
+### D95 — a page about the account requires nothing but a session
+Date: 2026-09-10   Status: active
+Decision: `GatedContextRequirement` gains a third value, `"none"`, and
+`GATED_COPY` gains a `profile` entry that uses it. `ProfilePage` adopts
+`PageShell` + `usePageGate`/`GatedContent` on that gate.
+Because: `10-1` asks ProfilePage to adopt the gate and says the two states it
+does not use — no campaign chosen, error — "should resolve to something
+deliberate rather than to nothing". Measured, `pick-campaign` could not resolve
+to nothing: every existing page is `requires: "campaign"`, so adopting the gate
+as it stood would have sent a signed-in member who happens to be between
+campaigns to a campaign picker instead of their own account — hiding their
+email address, their username and the only button in the product that deletes
+their account. That is a regression, and precisely the care the old file's
+header comment spent a paragraph defending.
+`"none"` makes `pick-campaign` unreachable by construction rather than merely
+unused, which is the deliberate resolution the handoff asked for. The
+group-scoped cards keep their own `activeGroup` check, so `ready` without a
+group still renders the right three cards.
+Two things fell out of the adoption, both improvements rather than costs: the
+page's skeleton now waits on `useAuth().loading` rather than
+`useGroups().loading` — the flag documented in `useCampaignContextStatus` as
+the one that stays true for the whole restore chain, where `useGroups`' flips
+false as soon as `groups` is an array (bug #701) — and the signed-out card,
+with its own `SignInForm` dialog, is deleted in favour of the one
+`GatedContent` already owns.
+`gated-page-copy.test.ts`'s "requires a campaign for every page" was **split,
+not relaxed**: content pages still assert `"campaign"`, account pages assert
+`"none"`, so the test still fails if a content page quietly stops needing one.
+
+### D96 — the gated panel's eyebrow is copy, not a constant
+Date: 2026-09-10   Status: active
+Decision: `GatedPageCopy` gains an optional `eyebrow`, defaulting to "Private
+campaign". `profile` sets it to "Your account".
+Because: `gated-page-copy.ts` states its own rule — "adding a page is a data
+change, not a new branch: the panel component reads these fields and never
+names a page" — and adding `profile` broke it the moment the panel rendered.
+The signed-out panel hardcoded PRIVATE CAMPAIGN above the heading, which is
+true of every page that shows campaign content and false of an account page.
+Fixed in the data rather than with a branch, per the rule it violated. The lock
+icon stays: a profile is private, it is just not a campaign.
+
+### D97 — one `BackToCampaign`, replacing two hand-written copies
+Date: 2026-09-10   Status: active
+Decision: `shared/components/BackToCampaign.tsx`, used by `ContactPage` and
+`ProfilePage`.
+Because: both pages wrote the same control by hand — the same
+`className="button button-link flex items-center gap-2 text-sm"`, the same
+`ArrowLeft`, and the same `activeCampaign?.name ? … : "Back to the campaign"`
+fallback — and both reached for the raw class pair rather than the `Button`
+primitive, so neither inherited its focus ring or disabled handling. It now
+sits on `Button variant="link"`, which renders identically and is one control
+instead of two.
+`ContactSuccess` writes the same *label* a third time. It is a different
+button, in a different place, doing a different thing, and it keeps its own —
+the duplication worth removing was the control, not the string.
+
+### R39 — revises `10-1`: `AdminPanel` is a dialog, not a page
+Date: 2026-09-10
+Change: `AdminPanel` and its four management views are **out** of Phase 10.1.
+The owner's call, made against the measurement below. `ProfilePage` is the
+whole of the PR.
+`10-1` opens with a table saying `AdminPanel` hand-rolls its *frame* and its
+*gate*. It hand-rolls the gate. It has no frame to hand-roll: **there is no
+`/admin` route**. `AdminPanel` is the body of a `Dialog` opened from the
+account menu (`Header.tsx:198`, `maxWidth="max-w-4xl"`), reached through
+`UserMenu`'s admin entry.
+So the handoff's instruction cannot be followed as written:
+- `PageShell` cannot apply — it would put a page container, page padding and
+  an `h1` inside a modal.
+- `usePageGate`'s `signed-out` state is unreachable: the only way in is an
+  account menu that renders for a signed-in user, with the entry shown only to
+  an admin.
+- The PR's own gate line, "no route becomes unlinkable while signed out that
+  was linkable before", is vacuous for a component with no route.
+Because: the options were to give admin a real route first (a feature change,
+against the handoff's own "do not change what any of this does" about the
+highest-consequence actions in the product), to adopt only the parts that fit,
+or to defer. Deferred, so the route question is decided on its own merits
+rather than as a side effect of a composition phase.
+Left behind with it, to be picked up wherever admin lands: the 3-second loading
+timeout `10-1` said to keep and log; the six `console.log` lines of auth state
+per render that `10-3` item 2 covers; and R40's contrast defect.
+
+### R40 — `navigation-item` outside the chrome fails contrast in two more places
+Date: 2026-09-10
+Change: none in code — recorded, measured, and deliberately not fixed here (the
+owner's call, since neither consumer is in 10.1's remaining scope).
+D90 found that the chapter rail was reusing `.navigation-item` /
+`.navigation-item-active`, the **header's** classes, which paint
+`--surface-chrome-on(-muted)` on `--surface-chrome-selected`. It fixed that one
+consumer with new `.rail-item` classes. It did not check the others. There are
+exactly three consumers outside the CSS, and only one is the header:
+
+| consumer | ink on ground | ratio | |
+|---|---|---|---|
+| `app/layout/Navigation.tsx` | `#A79E90` on `#17140F` | **6.94:1** | correct |
+| `AdminPanel` tabs, **active** | `#F5F1E8` on `#FCFBF7` | **1.09:1** | invisible |
+| `AdminPanel` tabs, inactive | `#A79E90` on `#FCFAF6` | **2.54:1** | fails AA |
+| `PrivacySectionNav` links | `#A79E90` on `#F3EFE6` | **2.31:1** | fails AA |
+
+Measured in light, with the overlay composited first, per R35. The active admin
+tab at 1.09:1 is D90's own defect at the same magnitude — it measured the rail's
+current row at 1.04:1 — in a component that has shipped that way the whole time.
+Because: this is the third appearance of the pattern and the second time it was
+found by measuring rather than by looking, which suggests the fix is one shared
+pair that takes its ink from the surface it sits on, rather than a third
+hand-copy of `.rail-item`. That is a bigger change than either affected file's
+PR, and both consumers are outside what 10.1 ended up touching. Phase 11 is the
+natural home; it must not be lost there, because Phase 11 is about dark and both
+of these fail in **light**.
+
+### R41 — `AccountCard` clips its own content at 320px
+Date: 2026-09-10
+Change: none. Logged rather than fixed, per `10-1` item 3 ("if one of them needs
+work, log it rather than widening this PR").
+`AccountCard`'s rows are `grid grid-cols-[170px_1fr_auto]` with no responsive
+variant. In a 320px viewport the card is 247px wide and the grid is 426px, and
+`Card`'s own `overflow-hidden` clips the difference: the email address is cut
+off, and "used to sign in" and "Join another" sit off the card entirely — the
+second of those is an action, so it is unreachable rather than merely ugly.
+Pre-existing and not this PR's: the page's outer container is byte-identical
+before and after (`max-w-3xl mx-auto px-4 py-8` either way), so the card's
+geometry did not move. Recorded because the 320px check that found it is the
+frame PR's gate, and the next person to run it should find the answer here
+rather than re-deriving it.
+
 ---
 
 ## Open questions

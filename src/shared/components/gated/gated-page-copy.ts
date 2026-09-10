@@ -3,15 +3,26 @@
 /**
  * Which selection a page needs before it can show anything.
  *
+ * `"campaign"` is the default and covers every route that shows campaign
+ * content.
+ *
  * `"group"` exists for a page whose content is genuinely visible with only a
  * group chosen. No current page qualifies: `notes` was believed to be that
  * page (see the note on `GATED_COPY.notes` below) until `NoteContext` was
  * read closely and turned out to discard everything without a campaign, so
- * every page here is `"campaign"` today. The value is kept, with its branch
- * in `usePageGate` still covered by tests, for the day a page's data
+ * every *content* page here is `"campaign"` today. The value is kept, with its
+ * branch in `usePageGate` still covered by tests, for the day a page's data
  * genuinely only needs a group -- e.g. a group-wide notes view.
+ *
+ * `"none"` is for a page about the *account* rather than about a campaign.
+ * `profile` is the first: it shows an email address, a username, a theme
+ * preference and a delete-account button, none of which belong to a campaign,
+ * and its group-scoped cards already render behind their own `activeGroup`
+ * check. Gating it on a campaign would hide a signed-in member's own account
+ * and their only route to deleting it, because they happened to be between
+ * campaigns.
  */
-export type GatedContextRequirement = "group" | "campaign";
+export type GatedContextRequirement = "group" | "campaign" | "none";
 
 /**
  * Everything the gated panel says about one page.
@@ -26,6 +37,13 @@ export interface GatedPageCopy {
   writeHeading?: string;
   /** One paragraph on what this page is for, in the product's voice. */
   blurb: string;
+  /**
+   * The small-caps line above the signed-out heading. Defaults to "Private
+   * campaign", which is right for every page that shows campaign content and
+   * wrong for one that does not -- an account page is private, but it is not a
+   * campaign. Data rather than a branch in the panel, per this file's rule.
+   */
+  eyebrow?: string;
   /** Plural noun for the error line: "Couldn't load quests." */
   noun: string;
   /** Which selection this page needs. */
@@ -40,7 +58,8 @@ export type GatedPageKey =
   | "npcs"
   | "locations"
   | "rumors"
-  | "notes";
+  | "notes"
+  | "profile";
 
 /**
  * The line for genuine newcomers, below the hairline on the signed-out panel.
@@ -153,6 +172,18 @@ export const GATED_COPY: Record<GatedPageKey, GatedPageCopy> = {
     // was simply untrue. `"group"` stays a valid value (see
     // `GatedContextRequirement`) for the day a group-wide notes view exists.
     requires: "campaign",
+  },
+  profile: {
+    heading: "Sign in to see your profile",
+    // No `writeHeading`: the profile has no separate create or edit route --
+    // every card on it edits in place.
+    blurb:
+      "Your account, the characters you post as, and how the Companion looks " +
+      "to you.",
+    noun: "your profile",
+    eyebrow: "Your account",
+    // The first `"none"`. See GatedContextRequirement.
+    requires: "none",
   },
 };
 

@@ -85,6 +85,7 @@ const GatedContent: React.FC<GatedContentProps> = ({ gate, children }) => {
         variant={gate.state === "signed-out" ? "signed-out" : "pick-campaign"}
         heading={gate.heading}
         blurb={gate.copy.blurb}
+        eyebrow={gate.copy.eyebrow}
         onSignIn={() => setShowSignIn(true)}
         onJoinGroup={() => setShowJoinGroup(true)}
         campaigns={options}
