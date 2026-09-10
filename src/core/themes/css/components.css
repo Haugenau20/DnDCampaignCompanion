@@ -998,6 +998,135 @@
     font-family: 'Crimson Text', Georgia, serif;
   }
 
+  /* ====== RENDERED MARKDOWN ====== */
+  /* Structure only. The typographic voice belongs to whatever prose context
+     wraps this - `.reader-prose` in the reader - so nothing here sets a family
+     or a colour on running text: a second typographic system beside
+     `.reader-prose` is exactly what handoff 09-0 forbids, and
+     `@tailwindcss/typography`'s `prose` classes would have been that system.
+
+     It exists because Tailwind's preflight resets every one of these elements:
+     a rendered `<p>` has no margin, a `<ul>` has no marker and no indent, a
+     `<blockquote>` has nothing at all. Before Phase 9 the reader hand-applied
+     `mb-4` to each paragraph it built itself; a parser's output cannot be
+     hand-annotated, so the rhythm moves here.
+
+     Scoped to `.markdown-body` rather than to `.reader-prose` so it travels
+     with the component to every surface that renders prose, and so a caller
+     that wants a different face still gets working lists. */
+  .markdown-body > :last-child {
+    margin-bottom: 0;
+  }
+
+  .markdown-body p,
+  .markdown-body ul,
+  .markdown-body ol,
+  .markdown-body blockquote {
+    margin-bottom: 1rem;
+  }
+
+  /* Size and family together, never weight alone (design language section 4).
+     These inherit the wrapper's serif, so a heading inside a chapter is the
+     campaign's voice at a larger size - not a sans section head, which is what
+     the app uses to talk *about* content. */
+  .markdown-body h2,
+  .markdown-body h3 {
+    font-weight: 600;
+    line-height: 1.25;
+    margin-bottom: 0.5rem;
+  }
+
+  .markdown-body h2 {
+    font-size: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .markdown-body h3 {
+    font-size: 1.25rem;
+    margin-top: 1.5rem;
+  }
+
+  .markdown-body h2:first-child,
+  .markdown-body h3:first-child {
+    margin-top: 0;
+  }
+
+  .markdown-body ul,
+  .markdown-body ol {
+    padding-left: 1.5rem;
+  }
+
+  .markdown-body ul {
+    list-style-type: disc;
+  }
+
+  .markdown-body ol {
+    list-style-type: decimal;
+  }
+
+  .markdown-body li + li {
+    margin-top: 0.25rem;
+  }
+
+  /* The pull quote. Its rule is a border token and deliberately NOT the accent:
+     one accent, earned by action (design language section 2), and a quotation is
+     not something you can act on. Italic serif is reserved for in-world voice,
+     which is precisely what a quoted line in a chapter is. */
+  .markdown-body blockquote {
+    border-left: 2px solid var(--surface-card-border);
+    color: var(--surface-card-on-muted);
+    font-style: italic;
+    padding-left: 1rem;
+  }
+
+  .markdown-body blockquote > :last-child {
+    margin-bottom: 0;
+  }
+
+  /* A link is interactive, so it is the one place inside rendered prose where
+     the accent belongs. */
+  .markdown-body a {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+
+  /* Sans, because a literal is not the campaign's voice - it is a machine
+     detail quoted inside one. */
+  .markdown-body code {
+    background-color: var(--surface-sunken-bg);
+    border-radius: 0.1875rem;
+    /* Named literally: there is no `--font-mono` token, and a monospace stack
+       is not a value a theme varies. Inventing one would need a drift-log
+       entry for a token no theme would ever set differently. */
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.875em;
+    padding: 0.125rem 0.25rem;
+  }
+
+  .markdown-body pre {
+    background-color: var(--surface-sunken-bg);
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+    padding: 0.75rem 1rem;
+  }
+
+  /* A fence sets its own ground, so the inline chip treatment would double it. */
+  .markdown-body pre code {
+    background-color: transparent;
+    padding: 0;
+  }
+
+  .markdown-body hr {
+    border: 0;
+    border-top: 1px solid var(--surface-card-border);
+    margin: 2rem 0;
+  }
+
+  .markdown-body strong {
+    font-weight: 600;
+  }
+
   /* ====== SECTION STATES ====== */
   /*
     The empty and loading treatments shared by every dashboard section. They

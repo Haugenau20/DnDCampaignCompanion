@@ -25,8 +25,65 @@ const config: Config.InitialOptions = {
     'src/setupTests.ts',
   ],
   transform: {
-    '^.+\\.tsx?$': 'ts-jest'
+    '^.+\\.tsx?$': 'ts-jest',
+    // `react-markdown` and its entire unified/remark/micromark tree ship ESM
+    // only (66 packages, `"type": "module"` in each). ts-jest handles our own
+    // TypeScript; these need a JS transform, and `transformIgnorePatterns`
+    // below is what lets them reach it at all.
+    '^.+\\.m?jsx?$': ['babel-jest', {
+      presets: [['@babel/preset-env', { targets: { node: 'current' } }]],
+    }],
   },
+  /*
+    node_modules is not transformed by default, which is right for every
+    dependency this project had before Phase 9. The markdown parser is the
+    first ESM-only one, so its tree is allow-listed back in.
+
+    Written as prefixes rather than the 66 exact names: the tree is one
+    ecosystem (unified) whose packages are versioned together, so a patch bump
+    that adds `micromark-util-something-new` should not fail the suite. The
+    cost of the wildcards is that a *different* ESM dependency arriving under
+    one of these prefixes would be silently transformed too — acceptable, since
+    transforming a CJS package is a no-op.
+  */
+  transformIgnorePatterns: [
+    `/node_modules/(?!(${[
+      'react-markdown',
+      'remark-.*',
+      'micromark.*',
+      'mdast-util-.*',
+      'hast-util-.*',
+      'unist-util-.*',
+      'unified',
+      'vfile.*',
+      'character-entities.*',
+      'character-reference-invalid',
+      'comma-separated-tokens',
+      'space-separated-tokens',
+      'decode-named-character-reference',
+      'estree-util-is-identifier-name',
+      'html-url-attributes',
+      'is-alphabetical',
+      'is-alphanumerical',
+      'is-decimal',
+      'is-hexadecimal',
+      'parse-entities',
+      'stringify-entities',
+      'property-information',
+      'longest-streak',
+      'trim-lines',
+      // Nested: resolves at node_modules/unified/node_modules/is-plain-obj,
+      // which the first-level walk missed and the suite found immediately.
+      'is-plain-obj',
+      'devlop',
+      'zwitch',
+      'trough',
+      'bail',
+      'ccount',
+      'escape-string-regexp',
+      '@ungap/structured-clone',
+    ].join('|')})/)`,
+  ],
   // Test file patterns
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.{ts,tsx}',
