@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Theme, ThemeName, ThemeContextState } from './types';
 import { themes } from './definitions';
 import { applyTokens, TokenTree } from './token-variables';
+import { resolveThemeName } from './theme-migration';
 
 // Import CSS files for the new theme system
 import './css/variables.css';
@@ -18,19 +19,35 @@ const ThemeContext = createContext<ThemeContextState>({
   setTheme: () => {} // No-op function as default
 });
 
+/**
+ * The word in this key is historical and deliberately kept.
+ *
+ * It predates the theme it was named after: `medieval` was retired in Phase 11
+ * (D40) and the key still says so. Renaming it would orphan every stored
+ * preference in every browser -- including `light` and `dark`, which are the
+ * ones anybody actually has -- so the name stays and the migration below deals
+ * with the value instead.
+ */
 const THEME_STORAGE_KEY = 'medieval-companion-theme';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Start with the theme from localStorage if available, defaultTheme otherwise
   const savedThemeName = localStorage.getItem(THEME_STORAGE_KEY);
-  const initialTheme = savedThemeName && themes[savedThemeName as ThemeName] 
-    ? themes[savedThemeName as ThemeName] 
+  const resolvedThemeName = resolveThemeName(savedThemeName);
+  const initialTheme = resolvedThemeName
+    ? themes[resolvedThemeName]
     : defaultTheme;
     
   // Initialize with saved theme right away to prevent flashing
   const [currentTheme, setCurrentTheme] = useState<Theme>(initialTheme);
   
-  // Apply saved theme immediately on component mount
+  // Apply saved theme immediately on component mount.
+  //
+  // This is also what completes a retired-theme migration: `applyThemeToDOM`
+  // writes the theme's own name back to storage, so a stored `medieval` is
+  // replaced by the `light` it resolved to on this first render and every
+  // later visit reads a live name directly. The resolution happens once rather
+  // than on every load.
   useEffect(() => {
     applyThemeToDOM(currentTheme);
   }, []);

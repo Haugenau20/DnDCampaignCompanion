@@ -9,13 +9,11 @@
 
 import { lightTheme } from "../definitions/lightTheme";
 import { darkTheme } from "../definitions/darkTheme";
-import { medievalTheme } from "../definitions/medievalTheme";
 import { Theme, ThemeTokens } from "../types";
 
 const THEMES: ReadonlyArray<[string, Theme]> = [
   ["light", lightTheme],
   ["dark", darkTheme],
-  ["medieval", medievalTheme],
 ];
 
 type Rgb = [number, number, number];
@@ -92,14 +90,13 @@ describe("control boundaries meet 3:1", () => {
     return tokens.field.border;
   };
 
-  describe.each(THEMES)("%s", (name, theme) => {
-    // `action.primary.bg` is exempted for medieval only, and ratcheted below
-    // instead. See the block after this one.
-    const keys =
-      name === "medieval"
-        ? ["action.outline.border", "field.border"]
-        : ["action.outline.border", "field.border", "action.primary.bg"];
+  // Every theme owes all three. `action.primary.bg` used to be exempted for
+  // medieval, which measured 1.38:1 as a boundary and was ratcheted in a block
+  // below rather than fixed, because the theme had a scheduled end. It reached
+  // it (D40), and the exemption left with it.
+  const keys = ["action.outline.border", "field.border", "action.primary.bg"];
 
+  describe.each(THEMES)("%s", (name, theme) => {
     test.each(keys)("%s", (key) => {
       const colour = parseHex(boundaryOf(theme.tokens, key));
       expect(colour).not.toBeNull();
@@ -121,72 +118,12 @@ describe("control boundaries meet 3:1", () => {
 
 
 /**
- * Medieval's accent cannot serve as a boundary, and is held rather than fixed.
- *
- * `action.primary.bg` is `#E8D0AA` in medieval -- a pale parchment *fill*,
- * designed to carry dark text on top of it. As a border against the page it
- * measures **1.38:1**, against a 3:1 requirement. That is not a near miss; it is
- * a line you cannot see.
- *
- * This is pre-existing and is not the form chips' problem -- they border with
- * `--color-primary`, which measures 7.93 / 7.78 / 9.24 across the three themes.
- * The consumer that still uses this token as a boundary is `.roster-filter-active`,
- * which has painted the chosen directory filter with it since D51 shipped in
- * Phase 6. So medieval's active filter pill has been drawing an edge you cannot
- * see, in production, with every gate green -- because no gate measured this
- * token as a boundary. 8.2 is simply the first thing to look.
- *
- * Not fixed here: the filter pills are Phase 6's surface, not 8.2's, and a
- * one-line CSS change to a shipped directory does not belong in a PR about form
- * chips. The fix is identified though, and is the same one the chips took --
- * `.roster-filter-active` should take its border from `--color-primary`. Whoever
- * opens that file next should take it, and Phase 11 removes medieval regardless.
- * Ratcheted meanwhile, exactly as D48's status hues were while the phases allowed
- * to change values had not arrived: it cannot get worse.
- */
-describe("medieval's accent as a boundary is held, not met", () => {
-  const MEDIEVAL_ACCENT_BOUNDARY_FLOOR = 1.38;
-
-  test("does not regress below its recorded ratio", () => {
-    const colour = parseHex(medievalTheme.tokens.action.primary.bg);
-    expect(colour).not.toBeNull();
-
-    const grounds = [
-      medievalTheme.tokens.surface.page.bg,
-      medievalTheme.tokens.surface.card.bg,
-    ]
-      .map(parseHex)
-      .filter((c): c is Rgb => c !== null);
-    const worst = round(Math.min(...grounds.map((g) => contrastRatio(colour as Rgb, g))));
-
-    expect(worst).toBeGreaterThanOrEqual(MEDIEVAL_ACCENT_BOUNDARY_FLOOR);
-  });
-
-  // The thing that must not happen quietly: medieval reaching 3:1 and this
-  // exemption outliving the reason for it.
-  test("still needs the exemption it is being given", () => {
-    const colour = parseHex(medievalTheme.tokens.action.primary.bg);
-    const grounds = [
-      medievalTheme.tokens.surface.page.bg,
-      medievalTheme.tokens.surface.card.bg,
-    ]
-      .map(parseHex)
-      .filter((c): c is Rgb => c !== null);
-    const worst = round(Math.min(...grounds.map((g) => contrastRatio(colour as Rgb, g))));
-
-    // If this fails, medieval passes 3:1 now — delete this whole block and put
-    // "action.primary.bg" back in the list above.
-    expect(worst).toBeLessThan(CONTROL_BOUNDARY_MINIMUM);
-  });
-});
-
-/**
  * A field's own ground is not a surface, and nothing was checking it.
  *
  * `.input` -- worn by every text field, and now by `Select` -- paints
  * `color: var(--surface-page-on)` on `background-color: var(--field-bg)`. Those
  * two tokens come from different halves of the model, and `field.bg` is a
- * distinct value from every surface background in all three themes. So the ink
+ * distinct value from every surface background in both themes. So the ink
  * inside a control was never measured against the thing actually behind it: the
  * surface-pair block above checks page ink on the *page*, which is not where a
  * field's text sits.
@@ -254,22 +191,17 @@ describe("status hues meet AA as text on every row surface", () => {
   const HUES = ["general", "active", "completed", "failed", "unknown"] as const;
 
   /**
-   * Light is the migrated theme and owes the real 4.5:1.
+   * One uniform 4.5, with no exemptions left.
    *
-   * Dark met it in PR 6.3 (D56): its `completed` and `failed` were 3.05:1 and
-   * 2.41:1, which is unreadable as a word, and after Phase 6 the word is the
-   * only encoding a status has. Its ratchet entries are gone.
-   *
-   * Medieval keeps one. It is deleted in Phase 11 (D40), so raising its value
-   * would be work on a theme with a scheduled end; the ratchet is only there so
-   * it cannot get worse first. That last entry should disappear with the theme,
-   * leaving one uniform 4.5.
+   * There were two. Dark's `completed` and `failed` were 3.05:1 and 2.41:1 --
+   * unreadable as words, and after Phase 6 the word is the only encoding a
+   * status has -- and they were fixed in PR 6.3 (D56). Medieval's `unknown` was
+   * held at 1.83 rather than fixed, because raising it would have been work on a
+   * theme with a scheduled end; it reached it (D40) and the last entry went with
+   * it, exactly as the comment here predicted it should.
    */
-  const RATCHET: Record<string, Record<string, number>> = {
-    medieval: { unknown: 1.83 },
-  };
 
-  describe.each(THEMES)("%s", (themeName, theme) => {
+  describe.each(THEMES)("%s", (_themeName, theme) => {
     // The grounds a directory row's text actually sits on: the page, a card, and
     // a nested group's sunken panel. Measured against the least favourable, so
     // the bar cannot be cleared by picking the kind one.
@@ -288,12 +220,9 @@ describe("status hues meet AA as text on every row surface", () => {
       const worst = round(
         Math.min(...grounds.map((g) => contrastRatio(colour as Rgb, g)))
       );
-      const floor = RATCHET[themeName]?.[hue] ?? 4.5;
-
-      expect({ hue, floor, meets: worst >= floor }).toEqual({
+      expect({ hue, meets4point5: worst >= 4.5 }).toEqual({
         hue,
-        floor,
-        meets: true,
+        meets4point5: true,
       });
     });
   });

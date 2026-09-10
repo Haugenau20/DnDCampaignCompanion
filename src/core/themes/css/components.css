@@ -349,7 +349,7 @@
     defect as `.navigation-item-active` below, one tint lighter, and it fails AA
     the same way. Hover still reads as hover: the ground goes from nothing to
     `--state-hover-light` and the ink strengthens from `--surface-page-on-muted`. Light
-    13.8:1, dark 10.8:1, medieval 14.4:1.
+    13.8:1, dark 10.8:1.
   */
   .navigation-item:hover {
     color: var(--surface-chrome-on);
@@ -362,8 +362,8 @@
     wrong in relation to what sits behind it. No value of `--state-hover-medium` fixes
     it: anything light enough to clear 4.5:1 against `#2563EB` is within ~1.1:1 of
     the page and the state stops being visible at all. Darkening the ink is the
-    only move that works, and it passes in all three themes (light 9.9:1,
-    dark 9.1:1, medieval 13.4:1). Active stays distinct from inactive by weight
+    only move that works, and it passes in both themes (light 9.9:1,
+    dark 9.1:1). Active stays distinct from inactive by weight
     and tint, not by hue alone.
   */
   .navigation-item-active {
@@ -823,11 +823,12 @@
     meaning depends on which list it landed in.
 
     The boundary is --color-primary, NOT --action-primary-bg. `.chip`'s own
-    comment worked this out first and it is worth not re-learning: in medieval
-    --action-primary-bg is #E8D0AA, pale tan on a #FDF5E6 parchment page, which
-    measures 1.38:1 and draws a line you cannot see. --color-primary is the token
-    every theme tunes to stand against its own page -- 7.93, 7.78 and 9.24 across
-    light, dark and medieval -- so it is the one a border can rely on.
+    comment worked this out first and it is worth not re-learning: in the
+    medieval theme (retired, D40) --action-primary-bg was #E8D0AA, pale tan on a
+    #FDF5E6 parchment page, which measured 1.38:1 and drew a line you could not
+    see. --color-primary is the token every theme tunes to stand against its own
+    page -- 7.93 and 7.78 across light and dark -- so it is the one a border can
+    rely on.
 
     The border also *thickens* on selection rather than only changing hue, so the
     state survives greyscale. It thickens with `outline` rather than `border` for
@@ -1029,23 +1030,15 @@
      ornament. Only the prose face is special.
 
      The face is named explicitly here rather than taken from a theme token,
-     because no existing token is a reading serif in all three themes:
-     --font-heading is 'Newsreader, Georgia, serif' in light but plain Inter in
-     dark, and in medieval it is MedievalSharp, whose own definition says
-     "decorative font for headings only" - a display face, unreadable for a
-     chapter's worth of body text. --font-primary is no better, being Inter in
-     light and dark. Colour still comes from the theme; only the typeface is
-     fixed, because the reading measure is a property of the reader rather than
-     of the palette. Both families below are already loaded in public/index.html. */
+     because no existing token is a reading serif in both themes: --font-heading
+     is 'Newsreader, Georgia, serif' in light but plain Inter in dark, and
+     --font-primary is no better, being Inter in both. Colour still comes from
+     the theme; only the typeface is fixed, because the reading measure is a
+     property of the reader rather than of the palette. Both families below are
+     already loaded in public/index.html. */
   .reader-prose {
     color: var(--surface-page-on);
     font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
-  }
-
-  /* Medieval already sets its BODY text to Crimson Text, so the reader matches
-     the rest of that theme's prose instead of importing a face it never uses. */
-  [data-theme="medieval"] .reader-prose {
-    font-family: 'Crimson Text', Georgia, serif;
   }
 
   /* ====== RENDERED MARKDOWN ====== */
@@ -1225,9 +1218,9 @@
     --surface-page-on and --surface-page-bg. Inverting those two keeps any theme legible,
     which is why it looked sound, but legible is not the same as belonging: in
     the dark theme it produced a near-white #E0E0E0 slab that read as an alert
-    rather than a note, and in the medieval theme a dark chocolate block on
-    parchment. --state-selected is the token each theme already tuned for exactly this
-    job.
+    rather than a note, and in the medieval theme (retired, D40) a dark
+    chocolate block on parchment. --state-selected is the token each theme
+    already tuned for exactly this job.
   */
   .callout-emphasis {
     background-color: var(--state-selected);
@@ -1240,14 +1233,15 @@
     --border-width-sm is empty in this file and injected per theme.
 
     Chips deliberately do NOT reuse `.card` or `.button-primary`, which is how
-    the first version was built and why it broke in the medieval theme:
+    the first version was built and why it broke in the medieval theme
+    (retired, D40; kept here because the trap it describes is not):
 
-    - `.card` is not a neutral surface. theme-effects.css gives medieval cards
+    - `.card` is not a neutral surface. theme-effects.css gave medieval cards
       decorative ::before/::after corner flourishes and a thicker border, so
       every UNSELECTED chip arrived wearing card ornaments.
     - `--action-primary-bg` is tuned for buttons sitting on a card. In medieval
-      it is #E8D0AA, pale tan, which on the #FDF5E6 parchment page is nearly the
-      same value -- so the SELECTED chip was the faintest thing in the row.
+      it was #E8D0AA, pale tan, which on the #FDF5E6 parchment page was nearly
+      the same value -- so the SELECTED chip was the faintest thing in the row.
 
     Together those inverted the hierarchy: selection read as less prominent than
     non-selection. Filling the selected chip with --color-primary and taking the
@@ -1298,7 +1292,7 @@
     icon in a list but renders lighter than an outlined button beside it. Where
     two destructive actions sit together and one is meant to read as heavier
     (the profile's danger zone), this is the filled treatment: the error pair
-    that is solid in all three themes.
+    that is solid in both themes.
   */
   .button-danger {
     background-color: var(--status-failed);

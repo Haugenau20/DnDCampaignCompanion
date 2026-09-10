@@ -147,6 +147,24 @@ describe('SessionManager', () => {
     test("with no account theme, applies the active group's theme", () => {
       setupMocks(
         { id: 'user-1' },
+        { preferences: { theme: 'dark' } }
+      );
+
+      render(
+        <SessionManager>
+          <div />
+        </SessionManager>
+      );
+
+      expect(mockSetTheme).toHaveBeenCalledWith('dark');
+    });
+
+    test('resolves a stored retired theme name rather than rejecting it', () => {
+      // `medieval` was deleted in Phase 11 (D40). A profile written before that
+      // still names it, and the old membership check would have called it
+      // invalid and left the user on whatever localStorage held.
+      setupMocks(
+        { id: 'user-1' },
         { preferences: { theme: 'medieval' } }
       );
 
@@ -156,13 +174,13 @@ describe('SessionManager', () => {
         </SessionManager>
       );
 
-      expect(mockSetTheme).toHaveBeenCalledWith('medieval');
+      expect(mockSetTheme).toHaveBeenCalledWith('light');
     });
 
     test("with no account theme, writes the group's theme up to the account exactly once", () => {
       setupMocks(
         { id: 'user-1' },
-        { preferences: { theme: 'medieval' } }
+        { preferences: { theme: 'dark' } }
       );
 
       const { rerender } = render(
@@ -174,7 +192,7 @@ describe('SessionManager', () => {
       expect(mockUpdateUserProfile).toHaveBeenCalledTimes(1);
       expect(mockUpdateUserProfile).toHaveBeenCalledWith(
         'user-1',
-        expect.objectContaining({ preferences: expect.objectContaining({ theme: 'medieval' }) })
+        expect.objectContaining({ preferences: expect.objectContaining({ theme: 'dark' }) })
       );
 
       // A re-render with the exact same profiles (nothing about the stored
@@ -217,7 +235,7 @@ describe('SessionManager', () => {
 
       // Switch group: a different membership object, same account theme.
       useGroups.mockReturnValue({
-        activeGroupUserProfile: { id: 'membership-b', preferences: { theme: 'medieval' } },
+        activeGroupUserProfile: { id: 'membership-b', preferences: { theme: 'light' } },
       });
 
       rerender(

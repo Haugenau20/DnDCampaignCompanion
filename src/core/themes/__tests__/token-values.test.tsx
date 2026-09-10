@@ -25,7 +25,7 @@
 //   * Re-baselining is the one operation that can hide a mistake, because it
 //     accepts whatever is there. Before doing it, diff the old and new files
 //     per theme and confirm the changes are the ones you meant. Phase 5's diff
-//     was 73 light values and zero in dark or medieval, which is what proved
+//     was 73 light values and zero in dark, which is what proved
 //     the retune had the blast radius it claimed.
 
 import React from "react";
