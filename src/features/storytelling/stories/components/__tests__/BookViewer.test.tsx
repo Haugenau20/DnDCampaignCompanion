@@ -3,6 +3,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import BookViewer from '../BookViewer';
+import { flushLazy } from '@/test-utils/flush-lazy';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,22 +59,82 @@ describe('BookViewer', () => {
       expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
     });
 
-    test('renders content text on the first page', () => {
+    test('renders content text on the first page', async () => {
       render(<BookViewer content="hello world adventure begins" title="Ch1" />);
+      await flushLazy();
       expect(screen.getByText('hello world adventure begins')).toBeInTheDocument();
     });
 
-    test('converts escaped \\n sequences to paragraph breaks', () => {
+    test('converts escaped \\n sequences to real line breaks', () => {
       // The component replaces the literal two-char sequence \n (backslash + n)
-      // with a real newline, then splits on '\n' to render separate <p> tags.
-      // To produce the literal \n in the DOM string we use a raw string via
-      // String.raw so the prop value contains the two characters \ and n.
+      // with a real newline. Since D83 that renders as a <br> inside one
+      // paragraph rather than as two <p> tags: every saga written before
+      // Phase 9 separates its paragraphs with a single newline, and strict
+      // CommonMark would collapse those into a wall of text.
       const rawContent = String.raw`First paragraph\nSecond paragraph`;
-      render(<BookViewer content={rawContent} title="Ch1" />);
-      // After formatContent the content becomes "First paragraph\nSecond paragraph"
-      // (real newline), and renderContent splits on '\n' producing two <p> elements.
-      expect(screen.getByText('First paragraph')).toBeInTheDocument();
-      expect(screen.getByText('Second paragraph')).toBeInTheDocument();
+      const { container } = render(<BookViewer content={rawContent} title="Ch1" />);
+
+      expect(container.textContent).not.toContain(String.raw`\n`);
+      expect(container.textContent).toContain('First paragraph');
+      expect(container.textContent).toContain('Second paragraph');
+      expect(container.querySelectorAll('br')).toHaveLength(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Markdown
+  // -------------------------------------------------------------------------
+  describe('markdown', () => {
+    test('renders a bold phrase as bold rather than as literal asterisks', async () => {
+      const { container } = render(
+        <BookViewer content="The village had gone **very quiet** by dawn." title="Ch1" />
+      );
+      await flushLazy();
+
+      expect(container.querySelector('strong')).toHaveTextContent('very quiet');
+      expect(container.textContent).not.toContain('**');
+    });
+
+    test('never splits a bold phrase across a page boundary', async () => {
+      // The handoff's own gate for keeping pagination. 600 words with the bold
+      // phrase in the middle guarantees a boundary near it; whichever page it
+      // lands on, it must be bold there and literal nowhere.
+      const filler = Array(300).fill('word').join(' ');
+      const { container } = render(
+        <BookViewer content={`${filler} **a bold phrase** ${filler}`} title="Ch1" />
+      );
+      await flushLazy();
+
+      // Page 1, then every subsequent page.
+      const totalPages = Number(
+        /Page 1 of (\d+)/.exec(screen.getByText(/Page 1 of/).textContent ?? '')?.[1] ?? '1'
+      );
+      expect(totalPages).toBeGreaterThan(1);
+
+      for (let page = 1; page <= totalPages; page += 1) {
+        expect(container.textContent).not.toContain('**');
+        if (page < totalPages) {
+          fireEvent.click(screen.getByLabelText('Next page'));
+        }
+      }
+    });
+
+    test('renders a blockquote and its attribution together', async () => {
+      const quote = ['> They come from the fruit.', '> - Erky Timbers'].join('\n');
+      const { container } = render(<BookViewer content={quote} title="Ch1" />);
+      await flushLazy();
+
+      expect(container.querySelectorAll('blockquote')).toHaveLength(1);
+      expect(container.querySelector('blockquote')?.textContent).toContain('Erky Timbers');
+    });
+
+    test('does not let raw HTML in a saga body reach the DOM', async () => {
+      const content = ['A saga.', '', '<script>window.pwned = true;</script>'].join('\n');
+      const { container } = render(<BookViewer content={content} title="Ch1" />);
+      await flushLazy();
+
+      expect(container.querySelector('script')).toBeNull();
+      expect((window as unknown as Record<string, unknown>).pwned).toBeUndefined();
     });
   });
 
