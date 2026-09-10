@@ -43,23 +43,25 @@
     ring-offset: 2px;
   }
 
-  /* Scrollbar styling */
-  ::-webkit-scrollbar {
-    @apply w-2;
-  }
+  /*
+    Scrollbars are the browser's, not ours.
 
-  ::-webkit-scrollbar-track {
-    background-color: var(--surface-sunken-bg);
-  }
+    This used to hand-paint them -- an 8px track on `--surface-sunken-bg` with a
+    `--color-secondary` thumb at 30% opacity. Two things were wrong with it, and
+    only the first is about Q16:
 
-  ::-webkit-scrollbar-thumb {
-    background-color: var(--color-secondary);
-    @apply rounded-full opacity-30;
-  }
+      * `-webkit-` prefixed pseudo-elements are Blink and WebKit only, and they
+        cannot reach the controls that actually needed help: a `<select>`'s
+        popup list, a date picker, the focus ring on a native control. Setting
+        `color-scheme` from the theme's own `scheme` token (ThemeContext) paints
+        all of them, in every engine.
+      * a scrollbar in `--color-secondary` spends an accent hue on furniture.
+        Design language section 2 is "one accent, earned by action", and scrolling
+        is not an action. In dark that thumb was `#BB86FC`, a purple, which is
+        one of the three hues 11-3 exists to remove.
 
-  ::-webkit-scrollbar-thumb:hover {
-    @apply opacity-50;
-  }
+    Deleting this is the point of PR 11.1, not a side effect of it.
+  */
 }
 
 /* Animation for fade in effect */
@@ -82,16 +84,6 @@
 @layer tw-utilities {
   .animate-fadeIn {
     animation: fadeIn 0.3s ease-out forwards;
-  }
-
-  /* Hide scrollbar but allow scrolling */
-  .hide-scrollbar {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-  }
-
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
   }
 
   /* Text truncation for multi-line */

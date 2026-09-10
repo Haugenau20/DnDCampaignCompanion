@@ -16,6 +16,7 @@ import { Theme } from '../types';
 export const darkTheme: Theme = {
   name: 'dark',
   tokens: {
+    scheme: 'dark',
     color: {
       primary: '#8AB4F8', // Soft blue for primary elements
       secondary: '#BB86FC', // Muted purple for secondary elements

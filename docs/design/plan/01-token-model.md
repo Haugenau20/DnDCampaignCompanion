@@ -141,6 +141,22 @@ Validating an enum means checking the **value** is legal, not just that the
 variable exists. That is a stronger guarantee than a spelling check, and it
 needs saying out loud in the package spec.
 
+**This shape now has a real instance, and it is not ornament.** `scheme`
+(`light | dark`) was added in Phase 11 to answer Q16 — how a theme says which way
+up it is, so the browser paints a `<select>`'s popup, the scrollbars and a date
+picker to match (D103). It is declared on the theme rather than derived from the
+theme's *name*, for the reason §4 gives: inferring a value from a name is the
+hand-maintained map this model exists to abolish, and a package whose consumers
+name their own themes cannot do it at all.
+
+It is also the argument for value-validation in miniature. `scheme: 'drak'`
+passes every other gate in this repo — the manifest sees a defined variable, the
+cross-theme path check sees matching sets — and is then **silently dropped** by
+the browser, which ignores `color-scheme` values it does not recognise. The
+symptom is indistinguishable from having no `color-scheme` at all, which is the
+bug Q16 existed to fix. Existence checks cannot catch that class; value checks
+can, and the app's now does.
+
 ## 7. What tokens must not be
 
 - Not a colour named after one component (`--npc-card-deceased`). Name the

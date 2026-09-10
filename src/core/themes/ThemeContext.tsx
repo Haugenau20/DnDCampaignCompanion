@@ -67,7 +67,20 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Set theme name as data attribute for theme-specific styles
       root.dataset.theme = theme.name;
-      
+
+      // Tell the browser which way up the theme is, so it paints the controls
+      // this stylesheet cannot reach: a `<select>`'s popup list, scrollbars,
+      // the focus ring on a native control, a date picker. With this unset the
+      // browser assumes light and paints a white popup with dark text over a
+      // dark page, which is R22's defect exactly.
+      //
+      // It is set here, beside `data-theme`, because the document element has
+      // one owner (see variables.css's header) -- and as a property rather than
+      // a `[data-theme=...]` CSS rule, which is what design language section
+      // 12.8 says a missing piece of the surface model looks like. The value is
+      // the theme's own `scheme` token, not an inference from its name.
+      root.style.colorScheme = theme.tokens.scheme;
+
       // Apply all theme values to CSS variables
       applyThemeToCssVariables(theme, root);
     } catch (error) {

@@ -15,6 +15,7 @@ import { Theme } from '../types';
 export const lightTheme: Theme = {
   name: 'light',
   tokens: {
+    scheme: 'light',
     color: {
       primary: '#8C1D1D',
       secondary: '#6E1717',

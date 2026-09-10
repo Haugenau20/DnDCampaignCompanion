@@ -13,7 +13,7 @@ absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
 saying where its work went, R18); Phase 8 (`08-0` … `08-3`, done); and Phase 9
 (`09-0` … `09-3` done, so Phase 9 is complete); and Phase 10 (`10-0` done; `10-1` done but **narrowed to `ProfilePage` alone**,
 R39; `10-2` and `10-3` done, so Phase 10 is
-complete); and Phase 11 (`11-0` done; `11-1` … `11-3` written and unstarted).
+complete); and Phase 11 (`11-0` and `11-1` done; `11-2` and `11-3` written and unstarted).
 
 `09-0` settled Q10 as D82/D83 and answered its own "where do rendered notes
 appear" as D84: **nowhere**. That narrows what follows — `09-1` renders two
@@ -96,7 +96,18 @@ shrinking them — medieval's 1.38:1 exemption from the 3:1 boundary check and t
 last status-hue ratchet are both gone, so both remaining themes now face the real
 bar with no exemptions anywhere. `11-1` answers
 Q16 with `color-scheme`, which is set nowhere today and is why R22's dark
-`<select>` popup is white. `11-3` reduces dark's three accent hues to one and
+`<select>` popup is white. **Done** (D103): the scheme is **declared** as the
+model's first enum token rather than derived from the theme's name, because
+Phase 12 hands this model to a package whose consumers name their own themes —
+and Q2 now has a worked answer in the app, since `scheme: 'drak'` would pass
+every existing gate and then be silently dropped by the browser. Two findings
+for `11-2`: the four scrollbar rules in the handoff's table were **not** the ones
+painting scrollbars — `globals.css` had four more with broader reach, and the
+cascade reasoning about which won was wrong until a control experiment settled it
+(R48); and `11-0`'s deletion left medieval's *data* in two JSON fixtures, unseen
+by a gate that grepped for a CSS selector (R49). **When deleting a theme, ask
+what holds theme data as well as what holds theme code** — `11-2` reads a
+baseline diff closely and wants that file clean. `11-3` reduces dark's three accent hues to one and
 extends `token-contrast.test.ts` to check state roles **with compositing** —
 the gap R35 recorded and the mechanical reason R40's 1.09:1 admin tab went
 unnoticed.

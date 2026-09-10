@@ -1,10 +1,10 @@
 // src/core/themes/definitions/__tests__/themes.test.ts
-// Structural validation of all three theme definitions.
+// Structural validation of both theme definitions.
 //
 // This used to hand-enumerate every key, which meant the test had to be edited
 // in lockstep with the model and could only ever check what someone remembered
 // to list. The token tree is enumerable, so traversal checks the whole set --
-// including the property the old test could not express at all: that the three
+// including the property the old test could not express at all: that the
 // themes define exactly the same token paths as each other.
 
 import { lightTheme } from '../lightTheme';
@@ -69,6 +69,51 @@ describe('theme definitions', () => {
           roles: ['bg', 'border', 'hover', 'on', 'onMuted', 'selected'].sort(),
         });
       });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Enum tokens
+  // -------------------------------------------------------------------------
+  //
+  // `scheme` is the first enum token in this model, and it is checked
+  // differently from every colour above it. `01-token-model.md` section 6 is
+  // explicit about why: "Validating an enum means checking the **value** is
+  // legal, not just that the variable exists. That is a stronger guarantee than
+  // a spelling check."
+  //
+  // Everything else here proves a token is *present* and that the themes agree
+  // on the *set* of paths. Neither would notice `scheme: 'drak'`, which would
+  // sail through the manifest as a defined variable and then be silently
+  // ignored by the browser -- `color-scheme` drops values it does not
+  // recognise, so the failure looks exactly like the bug this PR fixes.
+  //
+  // This is Q2's first concrete instance in the app. The package question --
+  // whether `theme-contract` validates enum values or only existence -- is
+  // still open, but it now has a worked answer to inherit rather than a
+  // hypothetical.
+  describe('enum tokens carry a legal value, not merely a present one', () => {
+    const LEGAL_SCHEMES = ['light', 'dark'];
+
+    test.each(ALL)('%s declares a scheme the browser understands', (_name, theme) => {
+      expect(LEGAL_SCHEMES).toContain(theme.tokens.scheme);
+    });
+
+    // The check above passes for a theme that declares nothing, if `scheme`
+    // were ever made optional -- `toContain` on undefined would throw, but a
+    // reader should not have to work that out. Asserted directly.
+    test.each(ALL)('%s declares a scheme at all', (_name, theme) => {
+      expect(typeof theme.tokens.scheme).toBe('string');
+    });
+
+    // The theme's name is not the source of truth, but where a theme *is*
+    // named after its scheme the two must not contradict each other -- that
+    // would be a typo, not a design choice. A future theme named for something
+    // other than its scheme simply is not covered by this.
+    test.each(ALL)('%s does not contradict its own name', (name, theme) => {
+      if (name === 'light' || name === 'dark') {
+        expect(theme.tokens.scheme).toBe(name);
+      }
     });
   });
 

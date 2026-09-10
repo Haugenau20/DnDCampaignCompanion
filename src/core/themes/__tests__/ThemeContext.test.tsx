@@ -234,6 +234,37 @@ describe('ThemeProvider — CSS variable application', () => {
     expect(value).toBe(themes.dark.tokens.color.primary);
   });
 
+  // Q16's answer, asserted where it is set. A `<select>`'s popup, a date
+  // picker and the scrollbars are painted by the browser rather than by this
+  // stylesheet, so no CSS rule can reach them; `color-scheme` is the only
+  // thing that tells the browser which way up the page is. Before this it was
+  // set nowhere in `src`, which is why R22's dark select popup was white.
+  //
+  // Note what these do NOT assert: the popup's appearance. That is drawn
+  // outside the DOM and is not observable from a test -- it was checked by
+  // opening one in the browser in both themes. What is checkable here is that
+  // the document element carries the theme's own declared scheme.
+  test('sets color-scheme on documentElement from the theme token', () => {
+    window.localStorage.setItem(STORAGE_KEY, 'dark');
+    renderHook(() => useTheme(), { wrapper });
+    expect(document.documentElement.style.colorScheme).toBe(themes.dark.tokens.scheme);
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+  });
+
+  test('updates color-scheme when the theme changes', () => {
+    window.localStorage.setItem(STORAGE_KEY, 'dark');
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+
+    act(() => {
+      result.current.setTheme('light');
+    });
+
+    // A stale scheme is worse than none: the page would be light while the
+    // browser kept painting its own controls dark.
+    expect(document.documentElement.style.colorScheme).toBe('light');
+  });
+
   test('sets data-theme attribute on documentElement after mount', () => {
     window.localStorage.setItem(STORAGE_KEY, 'dark');
     renderHook(() => useTheme(), { wrapper });
