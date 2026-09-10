@@ -244,6 +244,7 @@ const CampaignManagementView: React.FC = () => {
         <div className="flex items-center gap-2">
           <div className="w-64">
             <Input
+              aria-label="Search campaigns"
               placeholder="Search campaigns..."
               value={campaignSearchQuery}
               onChange={(e) => setCampaignSearchQuery(e.target.value)}

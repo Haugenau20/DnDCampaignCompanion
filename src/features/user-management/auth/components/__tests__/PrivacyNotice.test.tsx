@@ -3,6 +3,8 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import PrivacyNotice from '../PrivacyNotice';
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 // ---------------------------------------------------------------------------
 // Mock useNavigation hook
@@ -163,5 +165,31 @@ describe('PrivacyNotice', () => {
       const { container } = render(<PrivacyNotice />);
       expect(container.firstChild).toBeNull();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). Every control has a name; the surface spends its one
+// accent on the control that writes, or none where nothing writes.
+// ---------------------------------------------------------------------------
+describe("PrivacyNotice — names and accents", () => {
+  it("names every control", () => {
+    setupMocks();
+    const { container } = render(<PrivacyNotice />);
+
+    // Paired with a positive assertion so an empty list cannot mean "this
+    // rendered nothing at all" (R31).
+    expect(container.querySelectorAll("input, select, textarea, button").length)
+      .toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends no accent: acknowledging a notice writes no record", () => {
+    setupMocks();
+    const { container } = render(<PrivacyNotice />);
+
+    // "Got it" dismisses a banner. Nothing about the campaign changes, so
+    // nothing here earns the accent (D66).
+    expect(formAccentsIn(container)).toEqual([]);
   });
 });

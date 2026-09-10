@@ -12,7 +12,7 @@ done, then `07-2-5` -- a redo of the NPC page against a design mock, which
 absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
 saying where its work went, R18); Phase 8 (`08-0` … `08-3`, done); and Phase 9
 (`09-0` … `09-3` done, so Phase 9 is complete); and Phase 10 (`10-0` done; `10-1` done but **narrowed to `ProfilePage` alone**,
-R39; `10-2` and `10-3` unstarted).
+R39; `10-2` done; `10-3` unstarted).
 
 `09-0` settled Q10 as D82/D83 and answered its own "where do rendered notes
 appear" as D84: **nowhere**. That narrows what follows — `09-1` renders two
@@ -57,9 +57,12 @@ third `requires` value had to exist before an account page could adopt it; and
 not the header and fail contrast in both — 1.09:1 for the admin panel's
 selected tab. That is D90's defect, unfixed, in the two consumers D90 did not
 check.
-`10-2` is independent and adopts the accessibility and accent gates
-that **no A5 suite currently uses**, and carries the decision on whether to
-close R34 there. `10-3` is independent, holds the measurement for the record,
+`10-2` adopted the gates on 23 A5 suites and **took R34** (D98). Read D98
+before extending any test helper: adding `button` to `NAMEABLE` alone fails 11
+suites rather than 5, because `accessibleNameOf` had no name-from-contents
+branch, and six of those eleven are correctly labelled submits that a trusting
+reader would "fix" into D89's defect. The gates found 4 placeholder-only
+controls in A5 and 14 unnamed icon-only buttons in A3 (R42). `10-3` is independent, holds the measurement for the record,
 and corrects `09-2`'s claim that `NoteEditor` was the last raw textarea — it
 was not; `ContactForm` in `src/shared/` still has one.
 

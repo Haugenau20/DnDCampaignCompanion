@@ -13,8 +13,22 @@
 // exactly as clean. So the check walks the rendered DOM instead and asks each
 // control what its name is.
 
-/** Controls that owe the user a name. */
-const NAMEABLE = "input, select, textarea";
+/**
+ * Controls that owe the user a name.
+ *
+ * `button` joined this list when R34 was closed in 10.2. It was left out
+ * originally, so an icon-only button passed the gate unseen and needed a
+ * second helper (`unnamedButtonsIn`) to catch it -- two ways to ask one
+ * question, which is how the two drifted apart.
+ *
+ * Adding `button` here is only correct alongside the BUTTON branch in
+ * `accessibleNameOf`. Without it the gate reports every button named by its
+ * own text -- "Save", "Cancel", "Sign in" -- as unnamed: 11 suites rather than
+ * the 5 that have a real defect, and an invitation to "fix" a correctly
+ * labelled submit button by bolting an `aria-label` onto it, which is D89's
+ * mistake exactly.
+ */
+const NAMEABLE = "input, select, textarea, button";
 
 /**
  * Inputs whose name is carried by something other than a label, legitimately.
@@ -65,6 +79,14 @@ export const accessibleNameOf = (el: HTMLElement): string => {
     if (named) return named;
   }
 
+  // A button is named by its own contents (accname step 2F). Nothing else in
+  // NAMEABLE is: an <input>'s text content is always empty, and a <select>'s
+  // is its option list, which is a value rather than a name.
+  if (el.tagName === "BUTTON") {
+    const own = el.textContent?.trim();
+    if (own) return own;
+  }
+
   return "";
 };
 
@@ -82,42 +104,16 @@ export const unnamedControlsIn = (container: HTMLElement): string[] =>
     .map((el) => {
       const type = el.getAttribute("type");
       const tag = type ? `${el.tagName.toLowerCase()}[type=${type}]` : el.tagName.toLowerCase();
+      // A button has no placeholder, name or value to give itself away, so it
+      // is identified by whatever the markup does carry -- otherwise a failure
+      // says only that six buttons somewhere are unnamed.
       const hint =
         el.getAttribute("placeholder") ||
         el.getAttribute("name") ||
         (el as HTMLInputElement).value ||
-        "(no placeholder, name or value to identify it by)";
-      return `${tag} — ${hint}`;
-    });
-
-/**
- * Every button inside `container` with no accessible name.
- *
- * A separate export rather than an extension of `NAMEABLE`, deliberately.
- * `unnamedControlsIn` covers `input, select, textarea` — buttons were never in
- * it, so an icon-only button with no name passes that gate silently. 9.2 is the
- * first PR to add icon-only buttons (the markdown toolbar's three) and its own
- * brief warns against exactly that regression, so it needs a check that can
- * actually see them.
- *
- * Extending `NAMEABLE` itself was measured first and is a bigger job than this
- * PR: it fails 5 form suites, and in `QuestCreateForm` the 6 offenders are
- * rendered by the **real** `Button`, not by a stub — real unnamed controls in
- * the forms Phase 8 audited. See R34. Closing that belongs with the forms.
- *
- * A button is named by its own text, or by `aria-label` / `aria-labelledby`.
- */
-export const unnamedButtonsIn = (container: HTMLElement): string[] =>
-  Array.from(container.querySelectorAll<HTMLElement>("button"))
-    .filter((el) => {
-      const own = el.textContent?.trim();
-      if (own) return false;
-      return accessibleNameOf(el) === "";
-    })
-    .map((el) => {
-      const hint =
         el.getAttribute("title") ||
         el.getAttribute("data-testid") ||
-        "(no title or testid to identify it by)";
-      return `button — ${hint}`;
+        el.className.toString().trim().split(/\s+/).slice(0, 3).join(" ") ||
+        "(nothing in the markup to identify it by)";
+      return `${tag} — ${hint}`;
     });

@@ -3,7 +3,7 @@ import React, { useRef, useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MarkdownToolbar from '../MarkdownToolbar';
-import { unnamedButtonsIn } from '@/test-utils/accessible-names';
+import { unnamedControlsIn } from '@/test-utils/accessible-names';
 import { formAccentsIn } from '@/test-utils/accent-budget';
 
 /**
@@ -55,7 +55,7 @@ describe('MarkdownToolbar — three buttons, named and reachable', () => {
     // are icon-only, which is the exact thing 09-2 warns against
     // reintroducing, so the check has to be one that looks at buttons.
     const { container } = setup();
-    expect(unnamedButtonsIn(container)).toEqual([]);
+    expect(unnamedControlsIn(container)).toEqual([]);
   });
 
   it('exposes bold, italic and blockquote by name', () => {

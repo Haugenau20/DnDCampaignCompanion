@@ -40,6 +40,8 @@ jest.mock("@/features/user-management/groups/components/JoinGroupDialog", () => 
 }));
 
 const { useAuth, useGroups, useJoinGroupCompletion } = require("@/features/user-management");
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 function setupMocks(overrides: { groups?: Array<{ id: string; name: string }> } = {}) {
   useAuth.mockReturnValue({ user: { uid: "user-1", email: "test@test.com" } });
@@ -96,5 +98,27 @@ describe("AccountCard", () => {
     await user.click(screen.getByTestId("trigger-join-success"));
 
     expect(mockCompleteJoin).toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). Every control has a name; the surface spends its one
+// accent on the control that writes, or none where nothing writes.
+// ---------------------------------------------------------------------------
+describe("AccountCard — names and accents", () => {
+  it("names every control", () => {
+    const { container } = render(<AccountCard />);
+
+    // Paired with a positive assertion so an empty list cannot mean "this
+    // rendered nothing at all" (R31).
+    expect(container.querySelectorAll("input, select, textarea, button").length)
+      .toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends at most one accent, on the control that writes", () => {
+    const { container } = render(<AccountCard />);
+
+    expect(formAccentsIn(container)).toEqual([]);
   });
 });

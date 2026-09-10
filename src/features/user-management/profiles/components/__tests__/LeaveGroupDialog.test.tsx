@@ -3,6 +3,8 @@ import React from "react";
 import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import LeaveGroupDialog from "../LeaveGroupDialog";
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { dialogAccentsIn, formAccentsIn } from "@/test-utils/accent-budget";
 
 const mockRefreshGroups = jest.fn();
 const mockNavigate = jest.fn();
@@ -132,5 +134,28 @@ describe("LeaveGroupDialog", () => {
     });
 
     expect(window.location.href).toBe(before);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). Every control has a name; the surface spends its one
+// accent on the control that writes, or none where nothing writes.
+// ---------------------------------------------------------------------------
+describe("LeaveGroupDialog — names and accents", () => {
+  it("names every control", () => {
+    const { container } = render(<LeaveGroupDialog open onClose={jest.fn()} />);
+
+    // Paired with a positive assertion so an empty list cannot mean "this
+    // rendered nothing at all" (R31).
+    expect(container.querySelectorAll("input, select, textarea, button").length)
+      .toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends no filled accent: the action here is a leave, not a save", () => {
+    const { container } = render(<LeaveGroupDialog open onClose={jest.fn()} />);
+
+    expect(dialogAccentsIn(container)).toEqual([]);
+    expect(formAccentsIn(container)).toEqual([]);
   });
 });

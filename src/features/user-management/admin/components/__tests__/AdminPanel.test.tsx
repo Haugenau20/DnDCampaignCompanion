@@ -4,6 +4,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AdminPanel from '../AdminPanel';
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 // ---------------------------------------------------------------------------
 // Mock context/firebase
@@ -239,5 +241,36 @@ describe('AdminPanel', () => {
       render(<AdminPanel />);
       expect(screen.queryByRole('button', { name: /^close$/i })).not.toBeInTheDocument();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). Every control has a name; the surface spends its one
+// accent on the control that writes, or none where nothing writes.
+//
+// The panel's *composition* is deferred (R39 -- it is a dialog, not a page),
+// but a control still owes the user a name whatever frame it sits in.
+// ---------------------------------------------------------------------------
+describe('AdminPanel — names and accents', () => {
+  test('names every control', () => {
+    setupMocks();
+    const { container } = render(<AdminPanel />);
+
+    // Paired with a positive assertion so an empty list cannot mean the panel
+    // fell through to its Access Denied card and rendered no controls (R31).
+    expect(screen.getByText(/administration/i)).toBeInTheDocument();
+    expect(container.querySelectorAll('input, select, textarea, button').length)
+      .toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  test('spends at most one accent on the panel itself', () => {
+    setupMocks();
+    const { container } = render(<AdminPanel />);
+
+    // The tab bar navigates and the views own their own writes; whatever the
+    // active view contributes, the panel must not add a second filled accent
+    // beside it.
+    expect(formAccentsIn(container).length).toBeLessThanOrEqual(1);
   });
 });

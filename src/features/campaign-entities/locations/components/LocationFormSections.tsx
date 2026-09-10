@@ -129,6 +129,7 @@ export const FeaturesSection: React.FC<SectionProps> = ({ formData, handleInputC
           type="button"
           variant="ghost"
           onClick={handleAddFeature}
+          aria-label="Add a notable feature"
           startIcon={<PlusCircle />}
         />
         <Typography variant="h4">Notable Features</Typography>
@@ -151,6 +152,7 @@ export const FeaturesSection: React.FC<SectionProps> = ({ formData, handleInputC
                 const newFeatures = formData.features?.filter((_, i) => i !== index);
                 handleInputChange('features', newFeatures || []);
               }}
+              aria-label={`Remove feature ${index + 1}`}
             >
               <X className="w-4 h-4" />
             </Button>

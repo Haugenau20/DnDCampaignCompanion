@@ -29,6 +29,8 @@ jest.mock("@/features/user-management", () => ({
 jest.mock("../../hooks/useUser", () => require("@/features/user-management"));
 
 const { useUser } = require("@/features/user-management");
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 function setupMocks(currentThemeName: string = "light") {
   useTheme.mockReturnValue({
@@ -94,5 +96,27 @@ describe("AppearanceCard", () => {
     expect(screen.queryByText(/^medieval theme$/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { expanded: true })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { expanded: false })).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). Every control has a name; the surface spends its one
+// accent on the control that writes, or none where nothing writes.
+// ---------------------------------------------------------------------------
+describe("AppearanceCard — names and accents", () => {
+  it("names every control", () => {
+    const { container } = render(<AppearanceCard />);
+
+    // Paired with a positive assertion so an empty list cannot mean "this
+    // rendered nothing at all" (R31).
+    expect(container.querySelectorAll("input, select, textarea, button").length)
+      .toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends at most one accent, on the control that writes", () => {
+    const { container } = render(<AppearanceCard />);
+
+    expect(formAccentsIn(container)).toEqual([]);
   });
 });

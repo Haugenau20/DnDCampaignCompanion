@@ -149,6 +149,8 @@ const SagaEditPage: React.FC = () => {
               Export Chapter Content
             </Button>
             <button
+              type="button"
+              aria-label="What does exporting chapter content do?"
               className="hover:opacity-80 typography-secondary"
               onClick={() => setShowExportInfo(true)}
             >

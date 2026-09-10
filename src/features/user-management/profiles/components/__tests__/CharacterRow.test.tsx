@@ -3,6 +3,8 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CharacterRow from "../CharacterRow";
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 const character = { id: "char-1", name: "Gandalf" };
 
@@ -23,8 +25,10 @@ function renderRow(overrides: Partial<React.ComponentProps<typeof CharacterRow>>
     onRemove: jest.fn(),
     ...overrides,
   };
-  render(<CharacterRow {...props} />);
-  return props;
+  const { container } = render(<CharacterRow {...props} />);
+  // Props plus the container: existing callers read the jest.fn()s off this,
+  // and the gate below needs the rendered subtree.
+  return { ...props, container };
 }
 
 describe("CharacterRow", () => {
@@ -116,5 +120,27 @@ describe("CharacterRow", () => {
   test("renders its own failure message under the row that failed", () => {
     renderRow({ error: "Save failed" });
     expect(screen.getByText("Save failed")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). Every control has a name; the surface spends its one
+// accent on the control that writes, or none where nothing writes.
+// ---------------------------------------------------------------------------
+describe("CharacterRow — names and accents", () => {
+  it("names every control", () => {
+    const { container } = renderRow();
+
+    // Paired with a positive assertion so an empty list cannot mean "this
+    // rendered nothing at all" (R31).
+    expect(container.querySelectorAll("input, select, textarea, button").length)
+      .toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends no accent: a row in a list writes nothing by itself", () => {
+    const { container } = renderRow();
+
+    expect(formAccentsIn(container)).toEqual([]);
   });
 });
