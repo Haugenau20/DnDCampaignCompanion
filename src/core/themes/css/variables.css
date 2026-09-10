@@ -46,7 +46,7 @@
   5), which is what keeps unmigrated themes rendering while new surface pairs
   are introduced. A new token declared empty here would resolve to nothing
   instead of to the token it replaces -- exactly where the rule is supposed to
-  save dark and medieval. See Q7 in docs/design/plan/03-drift-log.md.
+  save an unmigrated theme. See Q7 in docs/design/plan/03-drift-log.md.
 
   When Phase 1 adds real tokens, they belong here only with real values.
 */

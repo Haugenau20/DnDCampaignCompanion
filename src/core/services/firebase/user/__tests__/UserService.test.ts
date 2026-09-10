@@ -144,12 +144,12 @@ describe('UserService', () => {
           activeGroupId: 'g1',
           lastLogin: new Date(),
           createdAt: new Date(),
-          preferences: { theme: 'medieval' },
+          preferences: { theme: 'dark' },
         })
       );
       const svc = UserService.getInstance();
       const profile = await svc.getUserProfile('uid-1');
-      expect(profile?.preferences?.theme).toBe('medieval');
+      expect(profile?.preferences?.theme).toBe('dark');
     });
 
     test('should return a UserProfile when the document exists', async () => {

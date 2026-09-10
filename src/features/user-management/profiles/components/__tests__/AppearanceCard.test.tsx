@@ -57,11 +57,11 @@ describe("AppearanceCard", () => {
 
     expect(screen.getByText(/^light$/i)).toBeInTheDocument();
     expect(screen.getByText(/^dark$/i)).toBeInTheDocument();
-    expect(screen.getByText(/^medieval$/i)).toBeInTheDocument();
 
-    // Three option buttons, one per theme.
+    // Two option buttons, one per theme. The list comes from `themes` itself,
+    // so this count follows the theme registry rather than restating it.
     const options = screen.getAllByRole("button");
-    expect(options).toHaveLength(3);
+    expect(options).toHaveLength(2);
   });
 
   test("marks the current theme as selected", () => {
@@ -93,7 +93,6 @@ describe("AppearanceCard", () => {
     // exist any more -- the toggle must be gone, not merely hidden.
     expect(screen.queryByText(/^light theme$/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^dark theme$/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/^medieval theme$/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { expanded: true })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { expanded: false })).not.toBeInTheDocument();
   });

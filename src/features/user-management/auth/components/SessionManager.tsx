@@ -4,14 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useGroups } from '../../groups/hooks/useGroups';
 import { useUser } from '../../profiles/hooks/useUser';
 import { useTheme } from 'core/themes/ThemeContext';
-import { ThemeName } from 'core/themes/types';
-
-/**
- * Helper function to validate the theme name
- */
-function isValidTheme(theme: string): theme is ThemeName {
-  return ['light', 'dark', 'medieval'].includes(theme);
-}
+import { resolveThemeName } from 'core/themes/theme-migration';
 
 /**
  * Component that manages user session activity tracking and theme preference
@@ -66,9 +59,15 @@ const SessionManager: React.FC<{ children: React.ReactNode }> = ({ children }) =
     if (!accountThemeName) return;
     if (lastApplied.current === accountThemeName) return;
 
-    if (isValidTheme(accountThemeName)) {
+    // `resolveThemeName` rather than a membership check, so a preference naming
+    // a retired theme resolves to its replacement instead of being rejected as
+    // invalid. Before Phase 11 this list was hardcoded here and in two other
+    // places; a stored `medieval` would now fail all three and leave the user
+    // on whatever localStorage happened to hold.
+    const resolved = resolveThemeName(accountThemeName);
+    if (resolved) {
       lastApplied.current = accountThemeName;
-      setTheme(accountThemeName);
+      setTheme(resolved);
     } else {
       console.warn('Invalid theme found in account preferences:', accountThemeName);
     }
@@ -99,16 +98,19 @@ const SessionManager: React.FC<{ children: React.ReactNode }> = ({ children }) =
     // membership's theme over the choice, and fires the migration write again.
     if (lastApplied.current === groupThemeName) return;
 
-    if (isValidTheme(groupThemeName)) {
+    const resolvedGroupTheme = resolveThemeName(groupThemeName);
+    if (resolvedGroupTheme) {
       lastApplied.current = groupThemeName;
-      setTheme(groupThemeName);
+      setTheme(resolvedGroupTheme);
 
       // Carry the theme of whichever group is active right now up to the
       // account, so it stops depending on which group happens to be active
-      // at a future sign-in.
+      // at a future sign-in. The *resolved* name is written, not the stored
+      // one, so a retired theme is migrated by the same write rather than
+      // being copied up to the account to be resolved again every sign-in.
       if (user) {
         updateUserProfile(user.uid, {
-          preferences: { ...(userProfile?.preferences || {}), theme: groupThemeName },
+          preferences: { ...(userProfile?.preferences || {}), theme: resolvedGroupTheme },
         }).catch(() => {
           // Migration is best-effort: a failed write here simply leaves the
           // group-level value in place to be retried next sign-in.

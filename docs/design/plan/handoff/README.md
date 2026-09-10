@@ -13,7 +13,7 @@ absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
 saying where its work went, R18); Phase 8 (`08-0` … `08-3`, done); and Phase 9
 (`09-0` … `09-3` done, so Phase 9 is complete); and Phase 10 (`10-0` done; `10-1` done but **narrowed to `ProfilePage` alone**,
 R39; `10-2` and `10-3` done, so Phase 10 is
-complete); and Phase 11 (`11-0` … `11-3`, written and unstarted).
+complete); and Phase 11 (`11-0` done; `11-1` … `11-3` written and unstarted).
 
 `09-0` settled Q10 as D82/D83 and answered its own "where do rendered notes
 appear" as D84: **nowhere**. That narrows what follows — `09-1` renders two
@@ -87,7 +87,14 @@ of state overlays, with chrome and page at ~1.2:1 where light is ~14:1. That is
 `11-2`, and it is the phase's real work.
 `11-0` deletes medieval and takes two already-dead things with it — `theme-utils.ts`
 (99 lines, zero callers, returning eight class names that exist in no
-stylesheet: the sixth stranded module) and `.decoration-scroll`. `11-1` answers
+stylesheet: the sixth stranded module) and `.decoration-scroll`. **Done** (D102):
+it also took a third, `public/decorative/`, which its `src`-only measurement could
+not see (R47). Two findings worth reading before `11-1`: the retired name lives in
+**two** stores, `localStorage` and `users/{uid}.preferences.theme`, and only the
+first is in the handoff; and the deletion **strengthened** two gates rather than
+shrinking them — medieval's 1.38:1 exemption from the 3:1 boundary check and the
+last status-hue ratchet are both gone, so both remaining themes now face the real
+bar with no exemptions anywhere. `11-1` answers
 Q16 with `color-scheme`, which is set nowhere today and is why R22's dark
 `<select>` popup is white. `11-3` reduces dark's three accent hues to one and
 extends `token-contrast.test.ts` to check state roles **with compositing** —

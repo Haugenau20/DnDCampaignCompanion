@@ -6,7 +6,7 @@ import type { ThemeTokens } from './token-types';
 /**
  * Available theme names
  */
-export type ThemeName = 'light' | 'medieval' | 'dark';
+export type ThemeName = 'light' | 'dark';
 
 /**
  * The token tree lives in token-types.ts. It is re-exported here so `types`

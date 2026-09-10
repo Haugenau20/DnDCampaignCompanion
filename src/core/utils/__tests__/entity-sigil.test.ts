@@ -10,7 +10,6 @@ import {
 } from '../entity-sigil';
 import { lightTheme } from '../../themes/definitions/lightTheme';
 import { darkTheme } from '../../themes/definitions/darkTheme';
-import { medievalTheme } from '../../themes/definitions/medievalTheme';
 
 describe('sigilIndexFor', () => {
   test('is stable for the same id', () => {
@@ -90,7 +89,6 @@ describe('palette contract', () => {
   const themes = [
     ['light', lightTheme],
     ['dark', darkTheme],
-    ['medieval', medievalTheme],
   ] as const;
 
   test.each(themes)('%s defines at least one hue per bucket', (_name, theme) => {

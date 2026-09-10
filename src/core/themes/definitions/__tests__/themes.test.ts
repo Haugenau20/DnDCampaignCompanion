@@ -9,7 +9,6 @@
 
 import { lightTheme } from '../lightTheme';
 import { darkTheme } from '../darkTheme';
-import { medievalTheme } from '../medievalTheme';
 import { themes } from '../index';
 import { Theme, ThemeName } from '../../types';
 import { flattenTokens, variableNameFor, TokenTree } from '../../token-variables';
@@ -17,7 +16,6 @@ import { flattenTokens, variableNameFor, TokenTree } from '../../token-variables
 const ALL: ReadonlyArray<[string, Theme]> = [
   ['light', lightTheme],
   ['dark', darkTheme],
-  ['medieval', medievalTheme],
 ];
 
 /** Every leaf in a token tree, as dotted paths paired with their value. */
@@ -74,17 +72,16 @@ describe('theme definitions', () => {
     });
   });
 
-  test('all three themes define exactly the same token paths', () => {
+  test('both themes define exactly the same token paths', () => {
     const paths = ALL.map(([, t]) => leaves(treeOf(t)).map(([p]) => p).sort());
-    const [light, dark, medieval] = paths;
+    const [light, dark] = paths;
     // Compared against light in both directions so a missing *or* extra token
-    // in either of the other themes is named in the failure.
+    // in dark is named in the failure.
     expect(dark).toEqual(light);
-    expect(medieval).toEqual(light);
   });
 
-  test('the themes index exposes all three by name', () => {
-    expect(Object.keys(themes).sort()).toEqual(['dark', 'light', 'medieval']);
+  test('the themes index exposes both by name', () => {
+    expect(Object.keys(themes).sort()).toEqual(['dark', 'light']);
     (Object.keys(themes) as ThemeName[]).forEach((n) => {
       expect(themes[n].name).toBe(n);
     });

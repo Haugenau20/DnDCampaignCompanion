@@ -2575,6 +2575,72 @@ first), which is the more expensive kind: a Phase 11 executed from the rollout
 would have gone looking for missing values, found none, and concluded dark was
 finished.
 
+### D102 — medieval is deleted, and a stored `medieval` resolves to `light`
+Date: 2026-09-10   Status: active
+Decision: D40 is executed. `medievalTheme.ts` (175 lines, 117 props), the 13
+`[data-theme="medieval"]` rules, `.decoration-scroll`, and the stranded
+`theme-utils.ts` with its 215-line test are gone; `ThemeName` is
+`'light' | 'dark'`.
+A stored preference of `medieval` -- in `localStorage` **or** in
+`users/{uid}.preferences.theme` -- resolves to `light`, and the resolved name is
+written back so the migration happens once rather than on every load. `light`
+rather than `dark` because medieval was a warm parchment theme and light is the
+nearer of the two survivors.
+The storage key keeps the word: `medieval-companion-theme` names every stored
+preference anybody has, `light` and `dark` included, so renaming it would orphan
+all of them to fix the cosmetics of one. A comment says the name is historical.
+Because: the deletion is D40's, unchanged. What the handoff did not anticipate is
+that the retired name lives in **two** stores, not one. `11-0`'s item 1 names
+only `localStorage`; a profile written before today also carries `medieval` in
+Firestore, and the hardcoded `['light','dark','medieval']` membership check in
+`SessionManager` would have called it invalid, warned to the console, and left
+the user on whatever `localStorage` happened to hold. Both stores now go through
+one resolver.
+**The deletion strengthened two gates rather than only shrinking them**, which is
+the argument for doing it before `11-2` and `11-3`:
+- `action.primary.bg` was **exempted** from the 3:1 boundary check for medieval,
+  which measured 1.38:1, and ratcheted in a block of its own instead of fixed --
+  because the theme had a scheduled end. It reached it. The exemption and its
+  block are gone and both remaining themes are held to the real bar.
+- the status-hue floor had one ratchet entry left (`medieval.unknown` at 1.83).
+  It is gone too, leaving one uniform 4.5 with no exemptions anywhere. The
+  comment beside it had predicted exactly this and it is worth noting that the
+  prediction held.
+Verified in the browser, not only in a test, per the handoff's gate: with the key
+set by hand to `medieval`, the first paint applies `light` **and** rewrites the
+stored value to `light` in the same tick -- observed as the trail
+`["light:light", "dark:dark"]`, the second entry being this account's own dark
+preference arriving afterwards from Firestore, which is separate and expected.
+`medieval` appears nowhere in the sequence.
+
+### R47 — the handoff's scope list was measured from `src`, and two things live outside it
+Date: 2026-09-10
+Change: `public/decorative/` deleted (3 SVGs), and the retired-theme resolver put
+in its own module rather than in `ThemeContext`.
+`11-0`'s measurement table counts `[data-theme=…]` rules, `medievalTheme.ts`,
+and files naming `medieval` -- all of them **in `src`** -- and its Scope list is
+derived from that table. Two consequences it could not have seen:
+1. **`public/decorative/` is medieval's ornament directory and nothing else.**
+   `parchment-texture.svg`, `corner-dragon.svg` and `scroll-end.svg` were
+   referenced by exactly one file, the `theme-effects.css` block this PR
+   deletes, and by nothing after it. Left alone they would have been three
+   stranded assets shipping to every browser, created by the PR whose whole
+   subject is removing stranded things -- so they went with the block. This is
+   R43's shape again: a measurement accurate about what it checked, whose scope
+   was then read as complete.
+2. **A pure helper exported from `ThemeContext` is invisible to every suite that
+   mocks it.** The resolver started there -- it is where the storage key lives --
+   and `SessionManager`'s suite failed immediately with
+   `resolveThemeName is not a function`, because that suite mocks
+   `core/themes/ThemeContext` to supply `useTheme`. The failure was loud here
+   only because the helper is called unconditionally; a helper called in a
+   branch would have returned `undefined` silently and the suite would have gone
+   green while testing nothing. It now lives in `core/themes/theme-migration.ts`,
+   which nothing has a reason to mock.
+Because: both are the same lesson in different clothes -- the boundary a
+measurement drew is not the boundary the work has. Recorded rather than fixed
+quietly, because the next handoff's scope list will be measured the same way.
+
 ---
 
 ## Open questions

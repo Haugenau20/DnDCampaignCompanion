@@ -88,10 +88,21 @@ describe('ThemeProvider — initial theme resolution', () => {
     expect(result.current.theme.name).toBe('dark');
   });
 
-  test('uses saved medieval theme from localStorage', () => {
+  test('resolves a stored retired theme name to its replacement', () => {
+    // `medieval` was deleted in Phase 11 (D40). Anyone whose browser still
+    // holds the string must land on a theme that exists rather than on
+    // whatever a lookup miss happens to produce.
     window.localStorage.setItem(STORAGE_KEY, 'medieval');
     const { result } = renderHook(() => useTheme(), { wrapper });
-    expect(result.current.theme.name).toBe('medieval');
+    expect(result.current.theme.name).toBe('light');
+  });
+
+  test('rewrites a stored retired theme name, so the migration happens once', () => {
+    // The value must be replaced in storage, not merely resolved on read --
+    // otherwise every visit for the rest of that browser's life re-resolves it.
+    window.localStorage.setItem(STORAGE_KEY, 'medieval');
+    renderHook(() => useTheme(), { wrapper });
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('light');
   });
 
   test('falls back to default theme when localStorage value is an unknown theme name', () => {
@@ -125,15 +136,6 @@ describe('ThemeProvider — setTheme()', () => {
     expect(result.current.theme).toEqual(themes.dark);
   });
 
-  test('switches theme to medieval', () => {
-    const { result } = renderHook(() => useTheme(), { wrapper });
-    act(() => {
-      result.current.setTheme('medieval');
-    });
-    expect(result.current.theme.name).toBe('medieval');
-    expect(result.current.theme).toEqual(themes.medieval);
-  });
-
   test('switches back to light from dark', () => {
     window.localStorage.setItem(STORAGE_KEY, 'dark');
     const { result } = renderHook(() => useTheme(), { wrapper });
@@ -149,9 +151,9 @@ describe('ThemeProvider — setTheme()', () => {
   test('persists selected theme name to localStorage after setTheme', () => {
     const { result } = renderHook(() => useTheme(), { wrapper });
     act(() => {
-      result.current.setTheme('medieval');
+      result.current.setTheme('dark');
     });
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('medieval');
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('dark');
   });
 
   test('setTheme with an invalid theme name falls back to defaultTheme (lines 189-193 catch-like branch)', () => {
@@ -217,19 +219,19 @@ describe('ThemeProvider — CSS variable application', () => {
   });
 
   test('sets --font-primary CSS variable matching the current theme', () => {
-    window.localStorage.setItem(STORAGE_KEY, 'medieval');
+    window.localStorage.setItem(STORAGE_KEY, 'dark');
     renderHook(() => useTheme(), { wrapper });
     const value = document.documentElement.style.getPropertyValue('--font-primary');
-    expect(value).toBe(themes.medieval.tokens.font.primary);
+    expect(value).toBe(themes.dark.tokens.font.primary);
   });
 
   test('updates CSS variables when setTheme is called', () => {
     const { result } = renderHook(() => useTheme(), { wrapper });
     act(() => {
-      result.current.setTheme('medieval');
+      result.current.setTheme('dark');
     });
     const value = document.documentElement.style.getPropertyValue('--color-primary');
-    expect(value).toBe(themes.medieval.tokens.color.primary);
+    expect(value).toBe(themes.dark.tokens.color.primary);
   });
 
   test('sets data-theme attribute on documentElement after mount', () => {
@@ -241,9 +243,9 @@ describe('ThemeProvider — CSS variable application', () => {
   test('updates data-theme attribute when theme changes via setTheme', () => {
     const { result } = renderHook(() => useTheme(), { wrapper });
     act(() => {
-      result.current.setTheme('medieval');
+      result.current.setTheme('dark');
     });
-    expect(document.documentElement.dataset.theme).toBe('medieval');
+    expect(document.documentElement.dataset.theme).toBe('dark');
   });
 });
 
