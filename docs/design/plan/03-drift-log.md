@@ -2130,6 +2130,87 @@ handoffs that were written early and had to be revised (R13, R19). The plan is
 now reliable about *scope* and unreliable about *content*, which is a useful
 thing to know about a document rather than a criticism of it.
 
+### D93 — `PageShell` takes its width as a prop, because two `max-w-*` do not compose
+Date: 2026-09-10   Status: active
+Decision: `PageShell` gains `maxWidth?: string`, defaulting to `"max-w-7xl"`.
+`PrivacyPolicyPage` passes `max-w-5xl` and `ContactPage` `max-w-[660px]` — the
+widths both pages already had.
+Because: 10.0 asks these pages to adopt the shared frame, and the shared frame
+was 1,280px wide with no way to say otherwise. Three of the four A5 pages are
+deliberately narrower — privacy at `5xl`, profile at `3xl`, contact at 660px —
+so adopting the shell as it stood would have stretched the policy prose from
+about 90 characters to about 120, which is a design change smuggled in as a
+composition change.
+The escape hatch that looked like it already existed does not work:
+`className="max-w-5xl"` merges into `clsx("max-w-7xl …", className)` and
+**loses**, because Tailwind emits `max-w-7xl` after `max-w-5xl` and the later
+rule wins regardless of the order the classes are written in the attribute.
+That failure is silent, which is the argument for a prop over a convention.
+A whole class string rather than a scale name, and passed rather than merged,
+because `Dialog` already takes `maxWidth?: string` defaulting to `'max-w-md'`
+and is used that way at 20-odd call sites. A second shape for the same idea
+would be the "second way to say something" the token model rejects.
+The prop's own test asserts the **absence** of `max-w-7xl` alongside the
+presence of the given width — the absence is the assertion that matters here,
+and R31 is why it is paired with a positive one.
+
+### D94 — the contact form sits on a card
+Date: 2026-09-10   Status: active
+Decision: `ContactPage` wraps `ContactForm` in a `Card`. The response-time
+callout stays on the page ground, outside it.
+Because: `10-0` item 4 asked for this to be decided rather than left neither.
+D79 ratified `card` for the eleven entity forms, and this is the twelfth form
+in the product with no argument for being a different kind of surface. Two
+things followed that the surface model predicted: `SenderIdentity`'s recessed
+block was `card-subtle` sitting directly on the page, which skips a level of
+§3's hierarchy — sunken is defined as recessed *from card* — and the category
+guidance block was doing the same. Both now sit on the ground they were built
+for.
+`ContactSuccess` is itself `card card-border` and now renders inside the form's
+card. Checked in the browser rather than reasoned about: on the same ground
+with one hairline it reads as a bordered notice at the top of the form, not as
+a box inside a box. The callout stays outside because it is the page speaking,
+not the form.
+
+### R37 — revises `10-0`'s count of the privacy page's cards, and its brief
+Date: 2026-09-10
+Change: `10-0` item 3 says `PrivacyPolicyPage` "already renders 6 `Card`s" and
+asks whether they read as one document or as six stacked boxes. It renders
+**three**, and the question is already answered in the file.
+The page's `Section` component carries a comment saying sections are
+"hairline-separated rather than boxed" so "a box means 'there is a button in
+here' instead of meaning nothing", and its suite already asserts both halves —
+`renders exactly the three summary cards`, and `does not box the prose`. The
+handoff's count predates the privacy redesign that landed on
+`redesign/privacy-policy`.
+Because: R36 measured A5 for paint, composition and gates and got those right;
+this one item was carried from an older reading of the file. Worth recording
+because the correction is the opposite of the usual direction — the page was
+*more* finished than the handoff assumed, and re-deriving a correct surface is
+how a good one gets worse (`09-3`'s warning about the reader, and `10-3`'s
+about `PrivacyDataTable`).
+Two smaller confirmations from the same read, so nobody re-measures them:
+`PrivacyDataTable`'s one filled row is `row.highlighted` in the data — a single
+semantic emphasis on the row where data leaves the app, not a zebra fill, so
+`10-0` item 5 and `10-3` item 3 both stand as "already right". And the summary
+card without a button ("No tracking, no ads") does bend the page's own rule,
+but it is one third of a 3-up grid that reads as a single unit; left alone.
+
+### R38 — the frame owns placement, so `PrivacyLastUpdated`'s alignment was dead
+Date: 2026-09-10
+Change: `PrivacyLastUpdated` loses the two `sm:text-right` classes it carried.
+Because: it is `PageShell`'s `actions` now, and the shell renders that slot in a
+shrink-to-fit `flex` box aligned by the header. `text-right` inside a box that
+is exactly as wide as its text does nothing at any width, so keeping it would
+have left a class that looks load-bearing and is not — and would have
+right-aligned the changelog entries under a left-aligned date if the header
+ever stacked them.
+One real behaviour change comes with the adoption and is accepted rather than
+worked around: the date sat beside the title from `sm` up and now does so from
+`md` up, because that is the shell's breakpoint. Below it the block sits under
+the subtitle. The point of adopting a shared frame is inheriting its decisions;
+a page that keeps its own breakpoint has not adopted anything.
+
 ---
 
 ## Open questions

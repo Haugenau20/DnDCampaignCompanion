@@ -98,6 +98,33 @@ describe("PrivacyPolicyPage — structure", () => {
     expect(container.querySelectorAll(".card")).toHaveLength(3);
   });
 
+  it("frames itself with the shared page shell at the document width", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+
+    const shell = container.firstElementChild as HTMLElement;
+    expect(shell).toHaveClass("max-w-5xl", "mx-auto");
+    // Not the directory width: this page is a document with an aside, and
+    // stretching it to `max-w-7xl` would push the policy prose well past a
+    // readable measure.
+    expect(shell).not.toHaveClass("max-w-7xl");
+  });
+
+  it("puts the revision date in the page header, not in the body", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+
+    const header = container.querySelector("header");
+    expect(header).not.toBeNull();
+    // Paired with the positive assertion so it cannot pass against a page
+    // that stopped rendering the date at all.
+    expect(header!.querySelector("time")).toHaveAttribute(
+      "dateTime",
+      PRIVACY_LAST_UPDATED
+    );
+    expect(
+      within(header!).getByRole("button", { name: "What changed" })
+    ).toBeInTheDocument();
+  });
+
   it("hides decorative icons from assistive technology", () => {
     const { container } = render(<PrivacyPolicyPage />);
     container.querySelectorAll("svg").forEach((icon) => {

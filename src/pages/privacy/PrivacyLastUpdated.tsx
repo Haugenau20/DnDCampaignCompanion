@@ -25,12 +25,17 @@ const formatPolicyDate = (isoDate: string): string =>
  * The date is machine-readable in a `<time dateTime>` and human-readable in the
  * element's text, and both come from PRIVACY_LAST_UPDATED -- never from the
  * clock. A policy that re-dates itself on every view records nothing.
+ *
+ * Rendered as the page's `actions`, so it carries no placement of its own.
  */
 const PrivacyLastUpdated: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="sm:text-right">
+    // No alignment of its own: it is `PageShell`'s `actions` now, and the
+    // shell decides where the block sits. The `sm:text-right` this used to
+    // carry aligned text inside a shrink-to-fit box, which did nothing.
+    <div>
       <Typography variant="body-sm" color="secondary">
         Last updated{" "}
         <time dateTime={PRIVACY_LAST_UPDATED} className="font-medium">
@@ -51,7 +56,7 @@ const PrivacyLastUpdated: React.FC = () => {
       {isOpen && (
         <ul
           id="privacy-changelog"
-          className="mt-2 space-y-1 sm:text-right list-none"
+          className="mt-2 space-y-1 list-none"
         >
           {PRIVACY_CHANGELOG.map((entry) => (
             <li key={entry}>

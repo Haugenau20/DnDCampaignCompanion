@@ -26,6 +26,20 @@ export interface PageShellProps {
   actions?: ReactNode;
   /** Optional breadcrumb, rendered above the title. */
   breadcrumb?: ReactNode;
+  /**
+   * The container's max width, as a Tailwind class.
+   *
+   * A whole class rather than a scale name, and passed rather than merged,
+   * because two `max-w-*` utilities on one element do not compose -- the one
+   * Tailwind emits later wins regardless of the order they are written in, so
+   * `className="max-w-5xl"` would silently lose to the default. `Dialog` takes
+   * its width the same way for the same reason.
+   *
+   * The A5 utility pages are the reason this exists: privacy is a document at
+   * `max-w-5xl` and profile a single column at `max-w-3xl`, and neither should
+   * be stretched to the directory width just to inherit the frame.
+   */
+  maxWidth?: string;
   /** Extra classes for the outer container. */
   className?: string;
   children: ReactNode;
@@ -47,10 +61,11 @@ const PageShell: React.FC<PageShellProps> = ({
   subtitle,
   actions,
   breadcrumb,
+  maxWidth = "max-w-7xl",
   className,
   children,
 }) => (
-  <div className={clsx("max-w-7xl mx-auto px-4 py-8", className)}>
+  <div className={clsx(maxWidth, "mx-auto px-4 py-8", className)}>
     {breadcrumb}
     <header className="mb-8 flex flex-col md:flex-row justify-between items-start gap-4">
       <div>

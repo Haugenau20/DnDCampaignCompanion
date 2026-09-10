@@ -83,6 +83,32 @@ describe("ContactPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("puts the form on a card, like every other form in the product", () => {
+    // D79: a form sits on `card`. This page was the one that did not -- the
+    // chips, the field and the sender block sat straight on the page ground,
+    // which also left `SenderIdentity`'s recessed block with nothing to be
+    // recessed from.
+    const { container } = render(<ContactPage />);
+
+    const form = screen.getByTestId("contact-form");
+    expect(form.closest(".card")).not.toBeNull();
+    // The callout is page-level, not part of the form, and stays off the card.
+    const callout = container.querySelector(".callout-emphasis");
+    expect(callout).not.toBeNull();
+    expect(callout!.closest(".card")).toBeNull();
+  });
+
+  it("frames itself with the shared page shell at its own column width", () => {
+    // Not tidiness: a page that declares its own frame drifts when the frame
+    // changes. The width is passed rather than merged because two `max-w-*`
+    // utilities do not compose -- see PageShell's own suite.
+    const { container } = render(<ContactPage />);
+
+    const shell = container.firstElementChild as HTMLElement;
+    expect(shell).toHaveClass("max-w-[660px]", "mx-auto");
+    expect(shell.querySelector("header")).not.toBeNull();
+  });
+
   // The four right-hand prose blocks are the thing this redesign removes.
   // Three of them were instructions for a field the reader had already
   // scrolled past; their content now lives under the message field.
