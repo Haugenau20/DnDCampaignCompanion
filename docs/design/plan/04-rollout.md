@@ -48,9 +48,10 @@ Worth stating, because two of these are loose ends the rollout picks up:
 
 ## 3. Phases
 
-One branch per phase off the integration branch; one PR per row in
-`handoff/`. Every PR is independently mergeable and independently revertable,
-and every PR is sized to one evening.
+One branch per phase off `main`; one PR per row in `handoff/`. Every PR is
+independently mergeable and independently revertable, and every PR is sized to
+one evening. (This said "off the integration branch" until R20 measured that
+no phase since 3 has done that.)
 
 | # | Phase | Archetype | Branch |
 |---|---|---|---|

@@ -12,7 +12,7 @@ themselves and a hand-written `<label>` beside a control does not.
 
 ## Scope
 
-The eleven form files, and nothing else:
+The eleven form files:
 
 - `npcs/components/NPCForm.tsx`, `NPCEditForm.tsx`
 - `locations/components/LocationFormSections.tsx`, `LocationCreateForm.tsx`,
@@ -23,12 +23,22 @@ The eleven form files, and nothing else:
 - `storytelling/chapters/components/ChapterForm.tsx`
 - `pages/story/SagaEditPage.tsx`
 
+Plus the three raw `<select>` that live outside the form set (R21):
+
+- `pages/layouts/dashboard/sections/ActivityFeed.tsx` — the activity filter
+- `collaboration/notes/components/NotesList.tsx` — the sort control
+- `rumors/components/CombineRumorsDialog.tsx`
+
 Plus their test files, which will need real changes — see the gate.
 
 ## Do
 
-1. **Replace all 11 raw `<select>` with `Select`**, moving the hand-written
+1. **Replace all 14 raw `<select>` with `Select`**, moving the hand-written
    `<label>` onto the `label` prop rather than leaving it beside the control.
+   Eleven are in the forms; the other three are the filter and sort controls
+   named above, which are the same defect in a different room (R21). Where one
+   of those three has no visible label at all, it gets an `aria-label` rather
+   than a new visible one — 8.3 owns layout, and this PR must not add chrome.
 2. **Replace the raw controls that bypass `Input`**: 4 `<textarea>` in
    `NPCForm`, 1 `<input>` in `QuestFormSections`.
 3. **Move every remaining hand-written label onto the primitive's `label`
@@ -59,7 +69,8 @@ Plus their test files, which will need real changes — see the gate.
 ## Gates
 
 - `grep -rn 'block text-sm font-medium mb-1 form-label' src/` returns nothing.
-- `grep -rn '<select' src/features src/pages` returns nothing.
+- `grep -rn '<select' src/features src/pages` returns nothing outside test
+  files. All 14 are gone.
 - Every control in every one of the eleven files is reachable by
   `getByLabelText`. This is the gate that matters, and it is worth adding one
   test per form that walks its controls rather than trusting the grep.

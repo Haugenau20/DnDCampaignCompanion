@@ -110,7 +110,7 @@ in a valid slot, wrong in relation to its background. Pairs make that class of
 bug unrepresentable, and make the check computable from tokens alone.
 
 ### D11 — Long-lived integration branch, one branch per phase
-Date: 2026-09-08   Status: active
+Date: 2026-09-08   Status: superseded by R20
 Decision: an integration branch off `main`; each phase a branch off it, merged
 independently.
 Because: each phase is independently revertable, and a half-migrated token
@@ -1281,6 +1281,43 @@ nothing. It is a Phase 6 miss, not a Phase 7 one — `RosterField` "Notes" print
 and a deletion PR that also changes rendering cannot honestly claim "nothing
 rendered differently anywhere". Whoever opens `LocationDirectory` next should
 take it.
+
+---
+
+### R20 — revises D11: there is no integration branch, and has not been since Phase 3
+Date: 2026-09-10
+Change: a phase branches off `main` and its PRs merge to `main`.
+`04-rollout.md` §3 said "off the integration branch"; it no longer does.
+Because: measured rather than decided. Every PR from #44 (Phase 3) through #55
+(Phase 7) merged a `visual/phase-*` branch straight into `main` —
+`visual/integration` was never the target for any of them. D11's reasoning was
+that a half-migrated token model should live as an unmerged branch rather than
+on `main`, and that risk expired when Phase 1 landed: from Phase 3 onward each
+phase has been a self-contained visual change that is fine to have on `main`
+half-rolled-out, because the archetypes inherit rather than depend on each
+other. The documented rule outlived the reason for it by six phases, and a rule
+nobody follows is worse than no rule — the next person reads it, branches off a
+stale `visual/integration`, and rebases for an afternoon.
+Cost: none. This records what was already happening.
+
+### R21 — revises 08-1's scope: the three non-form `<select>` come too
+Date: 2026-09-10
+Change: `08-1` migrates 14 raw `<select>`, not 11. The three outside the form
+set — `ActivityFeed.tsx` (the activity filter), `NotesList.tsx` (the sort
+control) and `CombineRumorsDialog.tsx` — are added to its scope.
+Because: `08-1` as written set a gate its own scope could not pass. The gate
+says `grep -rn '<select' src/features src/pages` returns nothing; the scope
+listed only the eleven form files, which hold 11 of the 14. Something had to
+give, and widening is the right direction: once `Select` exists each of the
+three is a one-line swap, and leaving them is precisely the "shared component
+with two remaining hand-rolled cousins" that `08-2` names as having made things
+worse rather than better. A native `<select>` styled by hand is also where the
+unassociated-label defect came from in the first place.
+Cost: three more files in a PR that was already wide and shallow, and three
+more test files that may need their queries strengthened. The behavioural rule
+is unchanged and applies to them identically — this PR changes what the DOM
+says about a control, never what the control does.
+
 
 ---
 
