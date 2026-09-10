@@ -44,7 +44,31 @@ export interface ActionPair {
   border?: string;
 }
 
+/**
+ * Which way up a theme is, for the browser's benefit.
+ *
+ * The first **enum** token in this model, and the shape `01-token-model.md` §6
+ * anticipated: not a colour, and validated by checking the *value* is legal
+ * rather than that the variable exists.
+ *
+ * It is declared rather than derived from the theme's name. Deriving is two
+ * lines and correct for exactly today's two themes, and wrong the moment a
+ * theme is called something that does not say which way up it is -- which
+ * Phase 12 guarantees, since it hands this model to `theme-contract` as a
+ * package whose consumers name their own themes. Inferring "am I dark?" from a
+ * name is also the hand-maintained map §4 exists to abolish.
+ */
+export type ColorSchemeToken = 'light' | 'dark';
+
 export interface ThemeTokens {
+  /**
+   * What the browser paints its own controls to match -- a `<select>`'s popup
+   * list, scrollbars, the focus ring on a native control, a date picker. None
+   * of those is reachable from a stylesheet, which is why this is a token and
+   * not a rule. See Q16 and R22.
+   */
+  scheme: ColorSchemeToken;
+
   color: {
     primary: string;
     secondary: string;

@@ -2641,6 +2641,102 @@ Because: both are the same lesson in different clothes -- the boundary a
 measurement drew is not the boundary the work has. Recorded rather than fixed
 quietly, because the next handoff's scope list will be measured the same way.
 
+### D103 — a theme declares its scheme; it is not inferred from its name (Q16)
+Date: 2026-09-10   Status: active
+Decision: Q16 is answered with `color-scheme`, set on the document element in
+`ThemeContext` beside `data-theme`, from a new **`scheme` token** on the theme
+itself (`'light' | 'dark'`).
+`11-1` offered two honest options -- derive it from the theme's name, or declare
+it. **Declared**, for three reasons and only the third is speculative:
+- Deriving means `name === 'dark' ? 'dark' : 'light'`, which is the
+  hand-maintained map `01-token-model.md` section 4 exists to abolish. The
+  model's whole claim is that a theme carries its own values and nothing infers
+  them.
+- It is the model's **first enum token**, the shape section 6 anticipated and
+  described in the abstract for four phases. Section 6's argument -- "what makes
+  'tuned per theme' a *value* rather than a code path" -- is exactly the choice
+  being made here.
+- Phase 12 hands this model to `theme-contract` as a package whose consumers name
+  their own themes. A package that infers "am I dark?" from a name is wrong for
+  its first external consumer, so deriving would be a code path written to be
+  deleted.
+**Q2 gains its first concrete instance**, though it is not settled: the app now
+validates the enum's *value* rather than its existence, in
+`definitions/__tests__/themes.test.ts`. That matters because `scheme: 'drak'`
+would pass every other gate -- the manifest sees a defined variable, the
+path-equality check sees matching sets -- and then be silently dropped by the
+browser, which ignores `color-scheme` values it does not recognise. The failure
+would look exactly like the bug this PR fixes. Verified by breaking it on
+purpose and watching two tests fail before reverting.
+Verified in the browser in both themes, which is the only place this is
+observable: the `RosterFilterSelect` popup on `/quests` is light ink on a dark
+ground in dark, and dark ink on cream in light. R22 is closed.
+Incidentally: R22 recorded that "a native popup is drawn by the OS and does not
+appear in a CDP screenshot", and on this platform that is **not** true -- the
+popup captured cleanly in both themes. Whoever relies on that note should try it
+before believing it.
+
+### R48 — the scrollbars `11-1` set out to retire were not the ones painting them
+Date: 2026-09-10
+Change: `src/styles/globals.css` loses its four `::-webkit-scrollbar` rules as
+well as the four `[data-theme=...]` ones in `theme-effects.css`, and the stranded
+`.hide-scrollbar` utility goes with them.
+`11-1`'s table lists four scrollbar rules, both pairs in `theme-effects.css`, and
+says deleting them is the point of the PR. **There were nine `::-webkit-scrollbar`
+lines in `src`, and the ones with the broadest reach were in `globals.css`** --
+a global track on `--surface-sunken-bg` and a thumb on `--color-secondary` at 30%
+opacity, applying in every theme. Deleting only the four named would have left
+the browser's scrollbars overridden anyway, so the PR's stated outcome ("they
+will be the browser's") could not have happened.
+Two things worth recording about how this was established, because the first
+reasoning was wrong:
+- **The layer argument was wrong, and a control experiment caught it.** The
+  declared order is `tw-base, tw-components, app, app-state, app-theme,
+  tw-utilities`, and `globals.css` wraps its rules in `@layer base` -- not in
+  that list. The obvious reading is that an undeclared layer sorts last and wins,
+  making the `theme-effects` rules dead. It does not: **Tailwind intercepts
+  `@layer base` as its own directive** and hoists the contents to where
+  `@tailwind base` sits, which this file wraps in `tw-base` -- the *first* layer.
+  So `app-theme` won. Established by putting a bright red thumb in `app-theme`
+  and looking.
+- **The first probe used `!important` and proved nothing.** An `!important`
+  declaration inverts layer order, so it would have shown red whichever way the
+  cascade fell. Re-run without it, and only then was the result evidence.
+- **`.hide-scrollbar` has zero consumers** anywhere in `src` -- the same shape as
+  `.decoration-scroll`, deleted in `11-0` for the same reason one PR earlier.
+There is also a design argument that stands independently of Q16: a scrollbar
+painted in `--color-secondary` spends an accent hue on furniture, and design
+language section 2 is "one accent, earned by action". Scrolling is not an action.
+In dark that thumb was `#BB86FC`, one of the three hues `11-3` exists to remove.
+Because: `11-1`'s measurement was of `theme-effects.css`, and the gate it wrote
+(`grep -rn "::-webkit-scrollbar" src` returns nothing) is the thing that
+disagreed with its own table -- the gate was right and the table was short. Note
+the gate as literally written also demands deleting `.hide-scrollbar`, which
+happens to be correct here only because that class is stranded; a *used* hiding
+utility would have been a false positive, since `color-scheme` does not replace
+`display: none`.
+
+### R49 — `11-0` left medieval's data behind in two JSON files
+Date: 2026-09-10
+Change: `token-values.baseline.json` loses its `medieval` block (100 entries) and
+`token-rename-map.json` loses `revalued.medieval` (11 entries).
+`11-0` deleted the theme, the CSS, the type and ten suites' worth of references,
+and its gates were green: `grep -rn 'data-theme="medieval"' src` empty, `tsc`
+clean, 242 suites passing. **None of those could see a theme's *data* sitting in
+a JSON fixture.** The grep looked for a CSS selector; a baseline holds variable
+names and hex values and contains the string `medieval` only as an object key.
+And `token-values.test.tsx` iterates `Object.keys(themes)`, so once the theme was
+gone its baseline block was simply never read -- extra keys are ignored in
+silence, which is the same shape as R31's warning about a gate that passes
+because it skipped.
+Because: recorded rather than quietly cleaned, because it is the second time in
+two PRs that a deletion's scope was set by a `src`-shaped grep (R47 was the
+first, for `public/decorative/`). The pattern to carry into `11-2`: **when
+deleting a theme, ask what holds theme data as well as what holds theme code.**
+The practical consequence here is small but real -- `11-2` must read a baseline
+diff closely, and a stale third theme in that file is exactly the noise that
+makes a careful read harder.
+
 ---
 
 ## Open questions
@@ -2651,7 +2747,9 @@ Answer as the work reaches them; move to a decision when settled.
   Changes what a manifest can assert. Decide before package extraction.
 - **Q2** — Does the package validate enum token *values*, or only that
   variables exist? Ornament needs the former, which is stronger than a
-  spelling check.
+  spelling check. **The app now does** (D103, for `scheme`), so this is down
+  to whether `theme-contract` inherits it — a worked example rather than a
+  hypothetical.
 - **Q3** — Should the precedence lint (no resting background in a state class)
   live in the app or the shared package?
 - **Q4** — Which surface does the hero band's empty fallback use, and does it
@@ -2665,15 +2763,12 @@ Answer as the work reaches them; move to a decision when settled.
 - **Q13** — Can a note be edited or deleted after it is written? 7.2 adds
   notes only. Changing a shared record's history is a decision about the
   record, not about the page.
-- **Q16** — How does a theme say it is dark, so the browser paints native
-  controls (a `<select>`'s popup, scrollbars, a date picker) to match? See R22.
-  Phase 11 needs an answer; a `[data-theme=…]` rule is not one.
 - **Q15** — Wire `NPCLegend` up or retire it? See R15. A legend is where a hue
   may legitimately stand alone, so this decides whether `.npc-status-*` has a
   future or follows the card families out.
 
 
 Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32,
-**Q10** by D82 and D83, **Q11** by R9, **Q14** by D61, **Q17** by D90,
-**Q18** by D91. The "where do rendered
+**Q10** by D82 and D83, **Q11** by R9, **Q14** by D61, **Q16** by D103,
+**Q17** by D90, **Q18** by D91. The "where do rendered
 notes appear" half of Q10 is settled by D84: nowhere, for now.

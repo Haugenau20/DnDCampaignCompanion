@@ -214,63 +214,6 @@
         "phase": 4.5,
         "why": "raised to clear WCAG 1.4.11 (3:1) for a boundary that identifies a control (D32)"
       }
-    },
-    "medieval": {
-      "--location-type-region": {
-        "to": "#EDC6C2",
-        "phase": 3,
-        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
-      },
-      "--location-type-city": {
-        "to": "#E5CDB2",
-        "phase": 3,
-        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
-      },
-      "--location-type-town": {
-        "to": "#CFD5B4",
-        "phase": 3,
-        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
-      },
-      "--location-type-village": {
-        "to": "#B9DBC7",
-        "phase": 3,
-        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
-      },
-      "--location-type-dungeon": {
-        "to": "#AFDADF",
-        "phase": 3,
-        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
-      },
-      "--location-type-landmark": {
-        "to": "#BBD4EE",
-        "phase": 3,
-        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
-      },
-      "--location-type-building": {
-        "to": "#D3CCEC",
-        "phase": 3,
-        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
-      },
-      "--location-type-poi": {
-        "to": "#E6C6DA",
-        "phase": 3,
-        "why": "served by the ordered entity palette instead of an ad-hoc alias (D25)"
-      },
-      "--input-border": {
-        "to": "#967E5F",
-        "phase": 4.5,
-        "why": "raised to clear WCAG 1.4.11 (3:1) for a boundary that identifies a control (D32)"
-      },
-      "--spinner-border": {
-        "to": "#967E5F",
-        "phase": 4.5,
-        "why": "follows --input-border, which it has always aliased (D32)"
-      },
-      "--button-outline-border": {
-        "to": "#8B4513",
-        "phase": 4.5,
-        "why": "raised to clear WCAG 1.4.11 (3:1) for a boundary that identifies a control (D32)"
-      }
     }
   }
 }
