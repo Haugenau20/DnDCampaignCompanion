@@ -4,14 +4,27 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import ChapterReader from '../ChapterReader';
 import { scrollPercent } from 'features/storytelling/chapters/utils/reading-position';
+import { flushLazy } from '@/test-utils/flush-lazy';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Build `n` short, distinct paragraphs joined by real newlines. */
+/**
+ * Build `n` short, distinct paragraphs joined by real newlines.
+ *
+ * Single newlines, which is how every chapter written before Phase 9
+ * separates its paragraphs. Since D83 those render as line breaks inside one
+ * paragraph rather than as separate `<p>` nodes, so a test that cares about
+ * paragraph structure uses the blank-line helper below instead.
+ */
 function makeParagraphs(n: number): string {
   return Array.from({ length: n }, (_, i) => `Paragraph number ${i + 1} of the chapter.`).join('\n');
+}
+
+/** The same, separated by blank lines - real CommonMark paragraphs. */
+function makeBlankLineParagraphs(n: number): string {
+  return Array.from({ length: n }, (_, i) => `Paragraph number ${i + 1} of the chapter.`).join('\n\n');
 }
 
 /**
@@ -95,12 +108,60 @@ describe('ChapterReader', () => {
   // Content rendering
   // -------------------------------------------------------------------------
   describe('content rendering', () => {
-    test('renders the title and each paragraph of the content', () => {
-      render(<ChapterReader content={makeParagraphs(3)} {...baseProps} />);
+    test('renders the title and each paragraph of the content', async () => {
+      // Async because the parser is behind a dynamic import (D82): the first
+      // mount in this file suspends for a microtask. `findByText` is the wrong
+      // tool — see `flushLazy`.
+      render(<ChapterReader content={makeBlankLineParagraphs(3)} {...baseProps} />);
+      await flushLazy();
       expect(screen.getByText('Ch1')).toBeInTheDocument();
       expect(screen.getByText('Paragraph number 1 of the chapter.')).toBeInTheDocument();
       expect(screen.getByText('Paragraph number 2 of the chapter.')).toBeInTheDocument();
       expect(screen.getByText('Paragraph number 3 of the chapter.')).toBeInTheDocument();
+    });
+
+    test('renders single-newline prose as one paragraph of line-broken text', async () => {
+      // D83, and the shape of every chapter written before Phase 9. The lines
+      // must all still be readable and still be visually separated - by <br>
+      // now rather than by a paragraph margin.
+      render(<ChapterReader content={makeParagraphs(3)} {...baseProps} />);
+      await flushLazy();
+      const container = getScrollContainer();
+
+      expect(container.querySelectorAll('p')).toHaveLength(1);
+      expect(container.querySelectorAll('br')).toHaveLength(2);
+      expect(container.textContent).toContain('Paragraph number 1 of the chapter.');
+      expect(container.textContent).toContain('Paragraph number 3 of the chapter.');
+    });
+
+    test('renders the marks the reading design needs', async () => {
+      // The point of the phase: 4b's pull quote and its emphasis have to be
+      // expressible in a chapter body.
+      const content = [
+        'Plain opening.',
+        '',
+        '> They come from the fruit.',
+        '> - Erky Timbers',
+        '',
+        'A **bold** and *quiet* close.',
+      ].join('\n');
+      render(<ChapterReader content={content} {...baseProps} />);
+      await flushLazy();
+      const container = getScrollContainer();
+
+      expect(container.querySelectorAll('blockquote')).toHaveLength(1);
+      expect(container.querySelector('blockquote')?.textContent).toContain('Erky Timbers');
+      expect(container.querySelector('strong')).toHaveTextContent('bold');
+      expect(container.querySelector('em')).toHaveTextContent('quiet');
+    });
+
+    test('does not let raw HTML in a chapter body reach the DOM', async () => {
+      const content = ['A chapter.', '', '<script>window.pwned = true;</script>'].join('\n');
+      render(<ChapterReader content={content} {...baseProps} />);
+      await flushLazy();
+
+      expect(getScrollContainer().querySelector('script')).toBeNull();
+      expect((window as unknown as Record<string, unknown>).pwned).toBeUndefined();
     });
 
     test('blank lines do not produce empty paragraphs', () => {
@@ -113,13 +174,22 @@ describe('ChapterReader', () => {
       expect(paragraphEls[1].textContent).toBe('Second paragraph.');
     });
 
-    test('converts literal \\n escape sequences into separate paragraphs', () => {
+    test('converts literal \\n escape sequences into real breaks', async () => {
       // Use String.raw so the prop value contains the literal two characters
-      // "\" and "n", not a real newline.
+      // "\" and "n", not a real newline. Stored content really does
+      // contain these, and the behaviour survives the move to a parser. Since
+      // D83 the break is a <br> inside one paragraph, not a paragraph split.
       const rawContent = String.raw`First paragraph\nSecond paragraph`;
       render(<ChapterReader content={rawContent} {...baseProps} />);
-      expect(screen.getByText('First paragraph')).toBeInTheDocument();
-      expect(screen.getByText('Second paragraph')).toBeInTheDocument();
+      await flushLazy();
+      const container = getScrollContainer();
+
+      // String.raw so this is the literal two characters, which is what must
+      // be gone; a real newline in the text is expected and harmless.
+      expect(container.textContent).not.toContain(String.raw`\n`);
+      expect(container.textContent).toContain('First paragraph');
+      expect(container.textContent).toContain('Second paragraph');
+      expect(container.querySelectorAll('br')).toHaveLength(1);
     });
   });
 

@@ -1784,6 +1784,134 @@ surface a renderer would serve is the one surface that should stay an editor.
 Reversible on purpose: the renderer is one import away if notes ever get a read
 view, and nothing about this decision constrains that.
 
+### D85 — the saga turns pages, the chapter scrolls, on purpose
+Date: 2026-09-10   Status: active
+Decision: two reading models, deliberately. `ChapterReader` is one continuous
+scrolling column; `BookViewer` keeps its page turn for the saga. Recorded here
+rather than in `09-3` because `09-1` had to act on it — a paginator cannot be
+rebuilt without first settling whether it survives.
+Because: this is R30's finding promoted to a decision. `413259e`'s commit body
+said "BookViewer is deliberately untouched: SagaPage still uses it, and the
+saga is one continuous work that keeps the page-turning presentation", and that
+reasoning existed nowhere a reader of this log would find it. A chapter is a
+session's worth of record that a reader returns to and scrolls; the saga is the
+campaign's one continuous story, and turning its pages is the presentation that
+says so.
+The alternative — unify both on scrolling — was considered and rejected by the
+owner. It would have been a design change wearing a markdown PR's clothes, and
+`09-1` explicitly refused to make it in passing.
+**This closes `09-3`'s item 2.** That handoff can note it is done.
+
+### D86 — a page break falls between blocks, never inside markup
+Date: 2026-09-10   Status: active
+Decision: `BookViewer`'s pagination breaks on block boundaries. The old
+paginator sliced `content.split(' ')` into 250-word pages; the new one prefers
+the coarsest safe break available, in `stories/utils/paginate-prose.ts`:
+1. between top-level blocks, where a blank line makes the break free;
+2. inside an oversized prose block, at a whitespace boundary where no inline
+   span is left open;
+3. never inside a blockquote, list, heading or fence — one of those takes its
+   own page whole, even when it runs long.
+The word budget is unchanged at 250, so a plain-text saga paginates exactly as
+it always did.
+Because: word-slicing and markdown are incompatible. A boundary landing between
+`**a` and `bold**` produces two pages of literal asterisks, which is the one
+option `09-1` named as definitely wrong. Tier 2 is what keeps the old behaviour
+for the single long unbroken paragraph that most stored content actually is —
+without it, block-only splitting would collapse a legacy saga to a single page
+and kill the page turn D85 just committed to. Tier 3 is why 4b's two-line pull
+quote cannot be severed.
+Every page is a **verbatim slice** of the normalised source rather than
+re-joined fragments, so no separator is ever guessed; the suite asserts that
+concatenating the pages round-trips the source, which is the property the rest
+rests on.
+The delimiter check counts rather than parses, deliberately: a false negative
+costs a slightly short page, a false positive costs a visibly broken phrase, so
+an odd count always answers "not safe".
+
+### D87 — the parser is code-split, and the split has to sit in the component
+Date: 2026-09-10   Status: active
+Decision: `Markdown` reaches the parser through `React.lazy` and a dynamic
+import of `MarkdownRenderer`. Measured: **`main.js` 301.45 kB, +1.46 kB against
+the pre-markdown baseline of 299.99 kB**, with the parser in its own 43.14 kB
+chunk fetched only where prose is read. D82 recorded +43.1 kB in the initial
+bundle and named this as the lever; the lever is now pulled.
+Because: the placement is forced by the architecture, not chosen. Splitting at
+the **route** does nothing here — `ChapterReader` and `BookViewer` are exported
+from `features/storytelling`'s barrel, and `HomePage`, `SearchContext` and
+`CampaignStats` all import from that barrel, so anything the barrel can reach
+is in the initial graph however the routes are loaded. (`App.tsx` has no lazy
+routes at all; the app ships one bundle.) A dynamic import is split by webpack
+regardless of who imports the module containing it, which makes it the one
+placement that actually works.
+The Suspense fallback is **nothing**, on purpose: a stand-in for the prose
+would either shift the layout when the real text replaced it or — if it
+rendered the raw source — flash literal `**` at the reader. The chunk is a
+same-origin request starting at mount while the body it renders is still
+arriving from Firestore, so the parser is generally ready before the content
+is.
+Cost, stated plainly: every test that asserts on rendered prose now crosses an
+async boundary. See R31, which is the part worth reading.
+
+### R31 — a suspended boundary makes an absence assertion vacuous
+Date: 2026-09-10
+Change: D87's code split silently invalidated four of `09-0`'s tests, and the
+fix is now a shared helper (`test-utils/flush-lazy.ts`) plus a positive
+assertion in every attack test.
+Because: `React.lazy` renders **nothing** until its chunk resolves, and 9.0's
+security tests assert that something is *absent* — "there is no `<script>`
+element in the DOM". Against a suspended boundary that rendered an empty tree,
+all four passed for the wrong reason: not because the parser refused to emit
+the markup, but because the parser had never run. The suite stayed green
+throughout, which is exactly what makes it worth writing down.
+Every attack test now also asserts that the surrounding prose *did* render, so
+"no script element" can only mean "the parser ran and declined". This is the
+same lesson the tracker already recorded once, when #013/#014/#300 turned out
+to be a missing `crypto.randomUUID` aborting the tests before any assertion ran
+— **a test that never reached the code it names is indistinguishable, in a
+failure count, from one that passed honestly.** Twice now, so it is a pattern
+rather than an anecdote: when a test asserts absence, make it prove presence of
+something too.
+Two mechanical notes that cost time and will cost it again otherwise:
+- **`findBy*` does not resolve a lazy boundary.** Its polling never wraps the
+  resolution, so it waits out the full timeout and then reports the content as
+  missing, which reads exactly like a real failure. `await act(async () => {})`
+  resolves it immediately.
+- **Only the first mount per file is cold**, because `React.lazy` caches the
+  resolved module on the lazy object. So a test asserting the *cold* behaviour
+  only holds as the first render in its file, which is why the Suspense
+  contract test lives in `Markdown.suspense.test.tsx` on its own rather than
+  depending on the order of its neighbours.
+
+### R32 — the chapter rail wears chrome ink on a card, and its active row is invisible in light
+Date: 2026-09-10
+Change: none in code — out of `09-1`'s scope, and the fix depends on a decision
+`09-3` has not made yet. Recording it because it is a defect a reader can see,
+and because it turns out to be evidence in Q17.
+Found while taking `09-1`'s screenshots. In the light theme the rail's **active
+row renders no visible title at all**. The text is in the DOM — the accessibility
+tree reads "1. A Long-expected Party" — so this is contrast, not missing content:
+- active row ink `rgb(245, 241, 232)` = `--surface-chrome-on`, on
+  `rgba(255, 255, 255, 0.14)` = `--surface-chrome-selected`, which composites
+  over the light card to roughly `#FCFBF8`. **About 1.04:1.** Invisible.
+- inactive rows ink `rgb(167, 158, 144)` = `--surface-chrome-on-muted` on the
+  card, **about 2.55:1** — under AA for text and under 3:1 for anything.
+Both measured from `getComputedStyle` in the running app, then computed.
+Because: `ChapterRail` is consuming the **chrome** surface pair while sitting on
+a **card** surface. This is the exact defect class `01-token-model.md` §1 was
+written for — "a valid token, in a valid slot, wrong in *relation* to what sits
+behind it" — and design language §10 names it as the pattern that has already
+happened repeatedly here. The dark theme hides it completely: chrome ink is
+near-white and dark's card is dark, so the rail looks correct there, which is
+almost certainly why it shipped.
+**This is evidence for Q17.** `09-3` has to decide whether the rail is `sunken`
+(A4) or `card` (what `413259e` built). The ink says neither was ever really
+chosen: the component was authored against a *dark* ground and its tokens still
+say so. Whichever surface wins, the fix is to take that surface's own `on` /
+`on-muted` / `selected` roles rather than chrome's — which is the whole point of
+pairs, and is why this should be fixed by the PR that settles the surface rather
+than patched here.
+
 ---
 
 ## Open questions
@@ -1803,6 +1931,10 @@ Answer as the work reaches them; move to a decision when settled.
   defines the token, as deliberate cleanup.
 - **Q17** — Is the chapter rail `sunken` (A4) or `card` (what `413259e` built)?
   See `handoff/09-3`. Whichever wins, the other has to stop saying otherwise.
+  R32 adds a constraint the question did not have: the rail currently takes its
+  ink from the **chrome** pair, so its active row measures ~1.04:1 on light and
+  is invisible. The answer has to name a surface *and* move the ink onto that
+  surface's roles.
 - **Q18** — Wire `LatestChapter` up or retire it? The fifth stranded component
   (R29), and the same shape of question as Q15. Needs someone to say whether
   Home wants a "continue reading" affordance.
