@@ -110,7 +110,7 @@ in a valid slot, wrong in relation to its background. Pairs make that class of
 bug unrepresentable, and make the check computable from tokens alone.
 
 ### D11 — Long-lived integration branch, one branch per phase
-Date: 2026-09-08   Status: active
+Date: 2026-09-08   Status: superseded by R20
 Decision: an integration branch off `main`; each phase a branch off it, merged
 independently.
 Because: each phase is independently revertable, and a half-migrated token
@@ -1284,6 +1284,125 @@ take it.
 
 ---
 
+### R20 — revises D11: there is no integration branch, and has not been since Phase 3
+Date: 2026-09-10
+Change: a phase branches off `main` and its PRs merge to `main`.
+`04-rollout.md` §3 said "off the integration branch"; it no longer does.
+Because: measured rather than decided. Every PR from #44 (Phase 3) through #55
+(Phase 7) merged a `visual/phase-*` branch straight into `main` —
+`visual/integration` was never the target for any of them. D11's reasoning was
+that a half-migrated token model should live as an unmerged branch rather than
+on `main`, and that risk expired when Phase 1 landed: from Phase 3 onward each
+phase has been a self-contained visual change that is fine to have on `main`
+half-rolled-out, because the archetypes inherit rather than depend on each
+other. The documented rule outlived the reason for it by six phases, and a rule
+nobody follows is worse than no rule — the next person reads it, branches off a
+stale `visual/integration`, and rebases for an afternoon.
+Cost: none. This records what was already happening.
+
+### R21 — revises 08-1's scope: the three non-form `<select>` come too
+Date: 2026-09-10
+Change: `08-1` migrates 14 raw `<select>`, not 11. The three outside the form
+set — `ActivityFeed.tsx` (the activity filter), `NotesList.tsx` (the sort
+control) and `CombineRumorsDialog.tsx` — are added to its scope.
+Because: `08-1` as written set a gate its own scope could not pass. The gate
+says `grep -rn '<select' src/features src/pages` returns nothing; the scope
+listed only the eleven form files, which hold 11 of the 14. Something had to
+give, and widening is the right direction: once `Select` exists each of the
+three is a one-line swap, and leaving them is precisely the "shared component
+with two remaining hand-rolled cousins" that `08-2` names as having made things
+worse rather than better. A native `<select>` styled by hand is also where the
+unassociated-label defect came from in the first place.
+Cost: three more files in a PR that was already wide and shallow, and three
+more test files that may need their queries strengthened. The behavioural rule
+is unchanged and applies to them identically — this PR changes what the DOM
+says about a control, never what the control does.
+
+
+
+### D70 — `Select` is a native `<select>`, and Input's sibling in every other way
+Date: 2026-09-10   Status: active
+Decision: `core/components/Select.tsx` wraps a native `<select>`, takes the same
+prop names as `Input` for the same jobs (`label`, `helperText`, `error`,
+`successMessage`, `size`, `disabled`, `containerClassName`), forwards its ref,
+generates an id with `useId` when a label is given, and paints from `field.*`
+through the existing `.input` classes. It adds no token and no CSS: the
+production stylesheet is byte-identical at 10.94 kB after the build.
+Because: the browser's own control is keyboard-accessible, screen-reader-correct
+and gets a native picker on a phone, all for free and all of it work we would
+otherwise have to write and then keep right. The options arrive as children
+rather than through an `options` prop, so a call site that maps an array keeps
+reading like the markup it replaces.
+The prop names matter more than they look. 8.1 moves 17 hand-written labels onto
+a primitive's `label` prop across eleven files; a caller who has to remember
+which component wants `label` and which wants something else will get some of
+them wrong, and the ones they get wrong are silently unlabelled again.
+
+### D71 — the Dialog audit found three of its four items broken, and fixed them
+Date: 2026-09-10   Status: active
+Decision: `Dialog` gains `role="dialog"`, `aria-modal="true"`, an
+`aria-labelledby` pointing at its own title, focus moved into the panel on open,
+focus returned to the opener on close, and a Tab/Shift+Tab trap.
+Because: 8.0 asked for an audit against four items — focus trap, restore on
+close, Escape, labelled by its own title. Escape was the only one that worked.
+The other three were not merely absent but **actively misdescribed**: the
+component's own JSDoc said it provided "a backdrop, close button, and focus
+trap", and there was no focus code in the file at all. A keyboard user tabbed
+straight out of the dialog into the page behind the backdrop, and a screen
+reader met an anonymous `<div>` of text rather than a dialog with a name.
+Verified in the browser on `CombineRumorsDialog`, not only in jsdom: the panel
+reports its accessible name as "Combine Rumors", twelve consecutive Tab presses
+never left it, and Escape returned focus to the `Combine` button that opened it
+rather than to `<body>`. Seven components render `Dialog` today and inherit all
+of this.
+Cost: 7 tests added to a suite that had 16 and asserted nothing about focus or
+role. The trap is bound to the panel rather than the document, so a nested
+dialog traps on its own without either instance knowing about the other.
+
+### D72 — a field's own ground is a contrast pair, and was never gated
+Date: 2026-09-10   Status: active
+Decision: `token-contrast.test.ts` gains a block measuring the control's ink
+against `field.bg` (AA) and `field.border` against the worst of `field.bg` and
+`surface.card.bg` (3:1), in all three themes.
+Because: `.input` paints `color: var(--surface-page-on)` on
+`background-color: var(--field-bg)`, and those two tokens come from different
+halves of the model. `field.bg` is a distinct value from every surface
+background in all three themes, so the ink inside a control was never measured
+against what is actually behind it — the surface-pair block checks page ink on
+the *page*, which is not where a field's text sits. That is precisely the
+failure shape the file's own header describes, left open on the one surface
+every form in the app is made of.
+All six new assertions passed on the existing values, so no token moved. That is
+the useful outcome rather than a disappointing one: the gate now holds a
+property that was true by luck, and Phase 11 is about to change dark's values.
+Proved it can fail before believing it — mutating light's `field.bg` to `#3A342C`
+turns it red, and only it.
+
+### R22 — records a dark-theme select defect, out of scope to fix here
+Date: 2026-09-10
+Change: none in this PR. In the dark theme, `color-scheme` computes to `normal`
+on the root while `data-theme` is `dark`, so the browser paints a `<select>`'s
+**dropdown popup** in its light appearance while the `<option>` ink is
+`#E0E0E0` — light grey on a light popup. The closed control is fine and was
+checked: `#2a2a2a` fill, `#82829A` border, `#E0E0E0` ink, chevron following
+`color`.
+Because: found while verifying 8.0 in the browser. It is pre-existing and
+affects all 14 raw `<select>` identically, so it is not `Select`'s defect and
+fixing it here would mean a repaint PR smuggled into a primitive PR. It is also
+not a CSS patch: saying "this theme is dark" is something the **surface model
+cannot currently express**, and design language §12.8 is explicit that a new
+theme-conditional rule means the model is missing something. That makes it
+Phase 11's work (dark to parity), where a theme gains a scheme token honestly,
+rather than a `[data-theme="dark"] { color-scheme: dark }` patch that gate 4
+forbids on sight.
+Not confirmed by eye: a native popup is drawn by the OS and does not appear in a
+CDP screenshot, so the reading above is from computed styles plus Chrome's
+documented behaviour. Whoever takes Phase 11 should open one select in dark
+first and look.
+
+
+---
+
 ## Open questions
 
 Answer as the work reaches them; move to a decision when settled.
@@ -1308,6 +1427,9 @@ Answer as the work reaches them; move to a decision when settled.
 - **Q13** — Can a note be edited or deleted after it is written? 7.2 adds
   notes only. Changing a shared record's history is a decision about the
   record, not about the page.
+- **Q16** — How does a theme say it is dark, so the browser paints native
+  controls (a `<select>`'s popup, scrollbars, a date picker) to match? See R22.
+  Phase 11 needs an answer; a `[data-theme=…]` rule is not one.
 - **Q15** — Wire `NPCLegend` up or retire it? See R15. A legend is where a hue
   may legitimately stand alone, so this decides whether `.npc-status-*` has a
   future or follows the card families out.
