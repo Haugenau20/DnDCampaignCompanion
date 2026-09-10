@@ -3,6 +3,8 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ContactPage from "../ContactPage";
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 const mockNavigateToPage = jest.fn();
 let mockCampaigns = {
@@ -121,5 +123,27 @@ describe("ContactPage", () => {
     expect(
       screen.queryByText(/Our secure contact form ensures your privacy/)
     ).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). ContactForm is stubbed in this suite, so these measure
+// the page around it -- the form's own controls are ContactForm's suite.
+// ---------------------------------------------------------------------------
+describe("ContactPage — names and accents", () => {
+  it("names every control", () => {
+    const { container } = render(<ContactPage />);
+
+    expect(container.querySelectorAll("button").length).toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends no accent of its own: the send button belongs to the form", () => {
+    const { container } = render(<ContactPage />);
+
+    // The page's chrome is a back link and a callout. The one control that
+    // writes is Send, and it lives inside ContactForm -- so the page must add
+    // nothing beside it (D78: the budget is per surface).
+    expect(formAccentsIn(container)).toEqual([]);
   });
 });

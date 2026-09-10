@@ -4,6 +4,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RegistrationForm from '../RegistrationForm';
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 // ---------------------------------------------------------------------------
 // Mock context/firebase
@@ -457,5 +459,29 @@ describe('RegistrationForm', () => {
       fireEvent.change(getConfirmPasswordInput(), { target: { value: 'Mismatch1!' } });
       expect(screen.getByRole('button', { name: /create account/i })).toBeDisabled();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). Every control has a name; the surface spends its one
+// accent on the control that writes, or none where nothing writes.
+// ---------------------------------------------------------------------------
+describe("RegistrationForm — names and accents", () => {
+  it("names every control", () => {
+    setupMocks();
+    const { container } = render(<RegistrationForm />);
+
+    // Paired with a positive assertion so an empty list cannot mean "this
+    // rendered nothing at all" (R31).
+    expect(container.querySelectorAll("input, select, textarea, button").length)
+      .toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends its one accent on the control that creates the account", () => {
+    setupMocks();
+    const { container } = render(<RegistrationForm />);
+
+    expect(formAccentsIn(container)).toHaveLength(1);
   });
 });

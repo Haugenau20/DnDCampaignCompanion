@@ -73,6 +73,12 @@ const CharactersCard: React.FC = () => {
 
         <div className="flex gap-2">
           <Input
+            // Named in the accessibility tree rather than with a visible
+            // label: the card is already headed "Characters" and the row is
+            // one field beside its own Add button, so a label above it would
+            // say the placeholder's words a third time. A placeholder is not a
+            // name -- it is the name a field has until you type in it.
+            aria-label="Add a character"
             placeholder="Add a character…"
             value={newCharacterName}
             onChange={(e) => setNewCharacterName(e.target.value)}

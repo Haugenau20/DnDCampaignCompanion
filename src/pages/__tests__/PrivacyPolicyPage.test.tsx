@@ -10,6 +10,8 @@ import {
   PRIVACY_HOSTING_REGION,
 } from "core/constants/privacy";
 import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from "core/constants/time";
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 const mockNavigateToPage = jest.fn();
 
@@ -256,5 +258,28 @@ describe("PrivacyPolicyPage — content that must be there", () => {
     const cards = Array.from(container.querySelectorAll(".card"));
     const last = cards[cards.length - 1];
     expect(last?.textContent).not.toMatch(/^Contact Us/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2).
+// ---------------------------------------------------------------------------
+describe("PrivacyPolicyPage — names and accents", () => {
+  it("names every control", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+
+    // Paired with a positive assertion so an empty list cannot mean the page
+    // rendered no controls at all (R31).
+    expect(container.querySelectorAll("button, a[href]").length).toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends no accent: a policy writes nothing", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+
+    // Zero, not one. An accent marks the control that changes the record
+    // (D66); this page changes nothing, and its three card actions are links
+    // to elsewhere. A page with nothing to write has no accent to spend.
+    expect(formAccentsIn(container)).toEqual([]);
   });
 });

@@ -206,6 +206,7 @@ const TokenManagementView: React.FC = () => {
           </Typography>
           <div className="w-64">
             <Input
+              aria-label="Search tokens"
               placeholder="Search tokens..."
               value={tokenSearchQuery}
               onChange={(e) => setTokenSearchQuery(e.target.value)}

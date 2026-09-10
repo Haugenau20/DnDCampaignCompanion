@@ -60,6 +60,7 @@ interface RelatedNPCsSectionProps extends SectionProps {
             type="button"
             variant="ghost"
             onClick={() => setIsNPCDialogOpen(true)}
+            aria-label="Add a related NPC"
             startIcon={<PlusCircle />}
           ></Button>
           <Typography variant="h4">Related NPCs</Typography>
@@ -197,6 +198,7 @@ export const ObjectivesSection: React.FC<SectionProps> = ({ formData, handleInpu
           type="button"
           variant="ghost"
           onClick={handleAddObjective}
+          aria-label="Add an objective"
           startIcon={<PlusCircle />}
         ></Button>
         <Typography variant="h4">Objectives</Typography>
@@ -237,6 +239,7 @@ export const ObjectivesSection: React.FC<SectionProps> = ({ formData, handleInpu
               type="button"
               variant="ghost"
               onClick={() => handleRemoveObjective(objective.id)}
+              aria-label={`Remove objective ${index + 1}`}
               className="flex-shrink-0"
             >
               <X className="w-4 h-4" />
@@ -266,6 +269,7 @@ export const LeadsSection: React.FC<SectionProps> = ({ formData, handleInputChan
           type="button"
           variant="ghost"
           onClick={handleAddLead}
+          aria-label="Add a lead"
           startIcon={<PlusCircle />}
         ></Button>
         <Typography variant="h4">Initial Leads</Typography>
@@ -288,6 +292,7 @@ export const LeadsSection: React.FC<SectionProps> = ({ formData, handleInputChan
                 const newLeads = formData.leads?.filter((_, i) => i !== index);
                 handleInputChange('leads', newLeads || []);
               }}
+              aria-label={`Remove lead ${index + 1}`}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -313,6 +318,7 @@ export const KeyLocationsSection: React.FC<SectionProps> = ({ formData, handleIn
           type="button"
           variant="ghost"
           onClick={handleAddLocation}
+          aria-label="Add a key location"
           startIcon={<PlusCircle />}
         ></Button>
         <Typography variant="h4">Key Locations</Typography>
@@ -356,6 +362,7 @@ export const KeyLocationsSection: React.FC<SectionProps> = ({ formData, handleIn
                 const newLocations = formData.keyLocations?.filter((_, i) => i !== index);
                 handleInputChange('keyLocations', newLocations || []);
               }}
+              aria-label={`Remove key location ${index + 1}`}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -384,6 +391,7 @@ export const ComplicationsSection: React.FC<SectionProps> = ({ formData, handleI
           type="button"
           variant="ghost"
           onClick={handleAddComplication}
+          aria-label="Add a complication"
           startIcon={<PlusCircle />}
         ></Button>
         <Typography variant="h4">Possible Complications</Typography>
@@ -406,6 +414,7 @@ export const ComplicationsSection: React.FC<SectionProps> = ({ formData, handleI
                 const newComplications = formData.complications?.filter((_, i) => i !== index);
                 handleInputChange('complications', newComplications || []);
               }}
+              aria-label={`Remove complication ${index + 1}`}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -434,6 +443,7 @@ export const RewardsSection: React.FC<SectionProps> = ({ formData, handleInputCh
           type="button"
           variant="ghost"
           onClick={handleAddReward}
+          aria-label="Add a reward"
           startIcon={<PlusCircle />}
         ></Button>
         <Typography variant="h4">Rewards</Typography>
@@ -456,6 +466,7 @@ export const RewardsSection: React.FC<SectionProps> = ({ formData, handleInputCh
                 const newRewards = formData.rewards?.filter((_, i) => i !== index);
                 handleInputChange('rewards', newRewards || []);
               }}
+              aria-label={`Remove reward ${index + 1}`}
             >
               <X className="w-4 h-4" />
             </Button>

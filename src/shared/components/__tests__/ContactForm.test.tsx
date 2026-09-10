@@ -3,6 +3,8 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ContactForm from "../ContactForm";
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 const mockSendContactEmail = jest.fn();
 const mockRegistryHas = jest.fn();
@@ -520,5 +522,31 @@ describe("ContactForm", () => {
         expect(screen.queryByText(/^Sent/)).not.toBeInTheDocument()
       );
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). The contact form is the one A5 route carrying a real
+// form, so leaving it to `ContactPage`'s suite -- which stubs it -- would have
+// left the archetype's densest surface the only unmeasured one.
+// ---------------------------------------------------------------------------
+describe("ContactForm — names and accents", () => {
+  it("names every control", () => {
+    const { container } = render(<ContactForm />);
+
+    // Paired with a positive assertion so an empty list cannot mean the form
+    // rendered nothing (R31). Five category chips, a message field and a
+    // submit are the minimum this form ever shows.
+    expect(container.querySelectorAll("input, select, textarea, button").length)
+      .toBeGreaterThan(5);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends its one accent on the control that sends", () => {
+    const { container } = render(<ContactForm />);
+
+    // One, and it is Send: the category chips and "Use a different email"
+    // build a draft, and the record changes when you send (D80).
+    expect(formAccentsIn(container)).toHaveLength(1);
   });
 });

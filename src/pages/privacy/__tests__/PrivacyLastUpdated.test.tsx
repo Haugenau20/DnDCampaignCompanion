@@ -3,6 +3,8 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import PrivacyLastUpdated from "../PrivacyLastUpdated";
 import { PRIVACY_LAST_UPDATED, PRIVACY_CHANGELOG } from "core/constants/privacy";
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 describe("PrivacyLastUpdated", () => {
   it("renders a machine-readable time element carrying the ISO date", () => {
@@ -53,5 +55,23 @@ describe("PrivacyLastUpdated", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute("aria-expanded", "true");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2).
+// ---------------------------------------------------------------------------
+describe("PrivacyLastUpdated — names and accents", () => {
+  it("names every control", () => {
+    const { container } = render(<PrivacyLastUpdated />);
+
+    expect(container.querySelectorAll("button").length).toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends no accent: a disclosure reveals, it does not write", () => {
+    const { container } = render(<PrivacyLastUpdated />);
+
+    expect(formAccentsIn(container)).toEqual([]);
   });
 });

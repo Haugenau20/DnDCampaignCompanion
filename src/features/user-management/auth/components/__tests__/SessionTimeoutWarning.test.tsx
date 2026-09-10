@@ -4,6 +4,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import SessionTimeoutWarning from '../SessionTimeoutWarning';
 import { INACTIVITY_TIMEOUT, SESSION_WARNING_THRESHOLD } from '@/core/constants/time';
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 // ---------------------------------------------------------------------------
 // Mock context/firebase
@@ -334,5 +336,41 @@ describe('SessionTimeoutWarning', () => {
       expect(clearIntervalSpy).toHaveBeenCalled();
       clearIntervalSpy.mockRestore();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). Every control has a name; the surface spends its one
+// accent on the control that writes, or none where nothing writes.
+// ---------------------------------------------------------------------------
+describe("SessionTimeoutWarning — names and accents", () => {
+  /** Puts the session inside the inactivity warning window and renders. */
+  function renderWarning() {
+    const now = Date.now();
+    setSessionInfo({
+      lastActivityAt: now - INACTIVITY_TIMEOUT + (SESSION_WARNING_THRESHOLD - 60000),
+      expiresAt: now + 24 * 60 * 60 * 1000,
+    });
+    return render(<SessionTimeoutWarning />);
+  }
+
+  it("names every control", () => {
+    const { container } = renderWarning();
+
+    // Paired with a positive assertion so an empty list cannot mean "the
+    // warning never opened" -- which is exactly how this one could go vacuous,
+    // since the component renders nothing outside the warning window (R31).
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(container.querySelectorAll("input, select, textarea, button").length)
+      .toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends no filled accent: staying signed in changes no record", () => {
+    const { container } = renderWarning();
+
+    // "Extend Session" keeps the session you already have. Nothing about the
+    // campaign changes, so nothing here earns the accent (D66, D80).
+    expect(formAccentsIn(container)).toEqual([]);
   });
 });

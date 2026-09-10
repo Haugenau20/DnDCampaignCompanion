@@ -3,6 +3,8 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import PrivacySectionNav from "../PrivacySectionNav";
 import { PRIVACY_SECTIONS } from "core/constants/privacy";
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 describe("PrivacySectionNav", () => {
   it("is a labelled landmark, so it can be skipped to and past", () => {
@@ -46,5 +48,25 @@ describe("PrivacySectionNav", () => {
     const nav = container.querySelector("nav");
     expect(nav?.className).toContain("lg:sticky");
     expect(nav?.className).not.toMatch(/(^|\s)sticky(\s|$)/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2).
+// ---------------------------------------------------------------------------
+describe("PrivacySectionNav — names and accents", () => {
+  it("names every control", () => {
+    const { container } = render(<PrivacySectionNav />);
+
+    expect(container.querySelectorAll("a[href]").length).toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends no accent: navigation is not an action on the record", () => {
+    const { container } = render(<PrivacySectionNav />);
+
+    // D90 settled the same question for the chapter rail: "you are here" is
+    // carried by ground, ink and aria-current, never by the accent.
+    expect(formAccentsIn(container)).toEqual([]);
   });
 });

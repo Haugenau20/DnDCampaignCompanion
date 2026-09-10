@@ -2337,6 +2337,90 @@ geometry did not move. Recorded because the 320px check that found it is the
 frame PR's gate, and the next person to run it should find the answer here
 rather than re-deriving it.
 
+### D98 — R34 is closed: a button is a control, and it is named by its own text
+Date: 2026-09-10   Status: active
+Decision: `NAMEABLE` becomes `"input, select, textarea, button"`,
+`accessibleNameOf` gains the BUTTON branch that returns the element's own text,
+and `unnamedButtonsIn` is **deleted**. Its one consumer
+(`MarkdownToolbar.test.tsx`) moves to `unnamedControlsIn`.
+Because: `10-2` item 4 asked for R34 to be taken or logged, and this is the
+gate-adoption PR — Phase 8 is closed, so nothing else would have picked it up.
+Two helpers asking one question is how the two drifted apart in the first
+place: `unnamedControlsIn` could not see a button at all, so an icon-only
+button passed the a11y gate of every A3 form silently.
+**The half R34 did not say, and it changes the size of the job.** Adding
+`button` to `NAMEABLE` on its own fails **11** suites, not 5. `accessibleNameOf`
+implemented the label routes and not accname step 2F — name from contents — so
+every button named by its own visible text ("Save", "Cancel", "Sign in",
+every submit) was reported unnamed. Six of the eleven were entirely false
+positives.
+That matters beyond the count. A reader who trusted the failing list would
+"fix" a correctly labelled submit button by bolting an `aria-label` onto it,
+which is exactly D89's mistake — two names, the `aria-label` wins, and a
+visible label becomes decorative without anyone noticing. With the BUTTON
+branch in place the failures land on exactly the 5 suites R34 predicted.
+
+### D99 — most A5 surfaces spend no accent, and that is the answer, not an omission
+Date: 2026-09-10   Status: active
+Decision: the accent expectation each A5 suite asserts, decided per surface
+rather than defaulted:
+
+| surface | accents | why |
+|---|---|---|
+| `SignInForm`, `RegistrationForm` | **1** | signing in / creating the account is the write |
+| `ContactForm` | **1** | Send. The chips and "use a different email" build a draft |
+| `ProfilePage`, signed out | **1** | Sign in is the action that unlocks the record |
+| `PrivacyPolicyPage` | **0** | a policy writes nothing; its card actions are links elsewhere |
+| `ContactPage`, `ProfilePage` ready | **0** | frames around a form and five cards; the write lives inside |
+| the six profile cards | **0** | each edits in place; none has a filled submit |
+| `DeleteAccountDialog`, `LeaveGroupDialog` | **0** | destructive confirms wear `danger.delete*` (A3), not the accent |
+| `PrivacyNotice`, `SessionTimeoutWarning` | **0** | dismissing a banner and staying signed in change no record |
+| `PrivacySectionNav`, `PrivacyLastUpdated` | **0** | navigation and disclosure are not writes (D90's answer for the rail) |
+| `AdminPanel`, the four views | **≤ 1** | the tab bar navigates; whichever view is open owns the write |
+
+Because: `10-2` warned that "the accent count is not always 1 … a wrong
+expectation here is worse than no test". Measured, the honest answer for A5 is
+that **most of these surfaces write nothing**, so zero is the correct number on
+ten of them — and asserting `[]` there is a real gate, not a weaker one: it
+fails the moment someone reaches for `variant="primary"` to make a utility page
+feel less empty, which §12.3 names as the standing temptation.
+The two dialogs assert `dialogAccentsIn` **and** `formAccentsIn` are both
+empty, since D78 makes the budget per surface and a destructive confirm is
+entitled to neither.
+
+### R42 — what the A5 gates found once they existed
+Date: 2026-09-10
+Change: 23 A5 suites gained both gates; 18 `aria-label`s added across 7
+components. `PrivacyDataTable` is the one A5 suite with no gate, because it
+renders zero controls — measured, not assumed.
+What the gates found, all one defect wearing one costume: **four controls named
+only by their placeholder.**
+- `CharactersCard` — the "Add a character…" field
+- `TokenManagementView` — "Search tokens..."
+- `CampaignManagementView` — "Search campaigns..."
+- `UserManagementView` — "Search users..."
+A placeholder is the name a field has until you type in it, which is to say it
+is not a name; `accessibleNameOf` has refused to count it since 8.1 for exactly
+this case. All four are fixed with `aria-label` rather than a visible label:
+each sits under a heading that already says what the region is, beside its own
+button, so a visible label would say the same words a third time (D73's
+precedent for naming in the accessibility tree instead).
+Closing R34 in the same PR found **14 more** in A3, which is the count R34
+predicted: six unnamed "add" buttons and five unnamed "remove" buttons across
+`QuestFormSections`, two in `LocationFormSections`, and the help button beside
+`SagaEditPage`'s export action. Every one is icon-only — a `PlusCircle` or an
+`X` with no text — so a screen reader announced "button" and nothing else, on
+six sections of the quest form at once. Numbered where they repeat
+(`Remove objective 3`), matching the convention Phase 8 already set for the
+fields in those same rows.
+Because: R36 recorded that not one of the 20 A5 suites used any of these
+helpers, and called that "a weaker claim and a worse position: nobody knows".
+Now measured: A5's own damage was smaller than A3's (4 against 14), but it was
+the same defect, and it had been invisible for the same reason — nothing asked.
+Worth noting against R19's framing: Phase 8 found 17 unnamed controls when it
+looked, and the 14 here were sitting in the very forms that phase audited. They
+survived because the gate could not see buttons, which is the point of D98.
+
 ---
 
 ## Open questions

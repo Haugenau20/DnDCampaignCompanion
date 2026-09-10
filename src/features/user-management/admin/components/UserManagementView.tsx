@@ -109,6 +109,7 @@ const UserManagementView: React.FC = () => {
         
         <div className="w-64">
           <Input
+            aria-label="Search users"
             placeholder="Search users..."
             value={userSearchQuery}
             onChange={(e) => setUserSearchQuery(e.target.value)}

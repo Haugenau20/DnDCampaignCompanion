@@ -3,6 +3,8 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import DeleteAccountDialog from "../DeleteAccountDialog";
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { dialogAccentsIn, formAccentsIn } from "@/test-utils/accent-budget";
 
 const mockSignOut = jest.fn();
 const mockNavigate = jest.fn();
@@ -146,5 +148,33 @@ describe("DeleteAccountDialog", () => {
     });
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(mockSignOut).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). Every control has a name; the surface spends its one
+// accent on the control that writes, or none where nothing writes.
+// ---------------------------------------------------------------------------
+describe("DeleteAccountDialog — names and accents", () => {
+  it("names every control", () => {
+    const { container } = render(<DeleteAccountDialog open onClose={jest.fn()} />);
+
+    // Paired with a positive assertion so an empty list cannot mean "this
+    // rendered nothing at all" (R31).
+    expect(container.querySelectorAll("input, select, textarea, button").length)
+      .toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends no filled accent: the action here is a delete, not a save", () => {
+    const { container } = render(<DeleteAccountDialog open onClose={jest.fn()} />);
+
+    // D78: the budget is per surface, so a dialog is entitled to its own
+    // filled accent -- but an accent marks the control that writes the
+    // record (D66/D80), and a destructive confirm wears `danger.delete*`
+    // instead (A3). Both counts are asserted so a stray primary anywhere
+    // on the surface fails.
+    expect(dialogAccentsIn(container)).toEqual([]);
+    expect(formAccentsIn(container)).toEqual([]);
   });
 });
