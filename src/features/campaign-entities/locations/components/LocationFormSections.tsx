@@ -4,6 +4,7 @@ import { Location, LocationType } from '../types';
 import { NPC } from '../../npcs/types';
 import Typography from '../../../../core/components/Typography';
 import Input from '../../../../core/components/Input';
+import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
 import Dialog from '../../../../core/components/Dialog';
 import { useQuests } from '../../quests/context/QuestContext';
@@ -67,9 +68,8 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1 form-label">Type *</label>
-          <select
-            className="w-full rounded-lg border p-2 input"
+          <Select
+            label="Type *"
             value={formData.type}
             onChange={(e) => handleInputChange('type', e.target.value as LocationType)}
             required
@@ -82,13 +82,12 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
             <option value="landmark">Landmark</option>
             <option value="building">Building</option>
             <option value="poi">Point of Interest</option>
-          </select>
+          </Select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1 form-label">Status *</label>
-          <select
-            className="w-full rounded-lg border p-2 input"
+          <Select
+            label="Status *"
             value={formData.status}
             onChange={(e) => handleInputChange('status', e.target.value)}
             required
@@ -96,7 +95,7 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
             <option value="known">Known</option>
             <option value="explored">Explored</option>
             <option value="visited">Visited</option>
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -142,6 +141,7 @@ export const FeaturesSection: React.FC<SectionProps> = ({ formData, handleInputC
           <div key={index} className="flex gap-4">
             <div className="flex-1">
               <Input
+                aria-label={`Feature ${index + 1}`}
                 value={feature}
                 onChange={(e) => handleFeatureChange(index, e.target.value)}
                 placeholder="Feature description"
@@ -367,6 +367,7 @@ export const TagsSection: React.FC<SectionProps> = ({ formData, handleInputChang
       <Typography variant="h4">Tags</Typography>
       <div className="flex gap-2">
         <Input
+          aria-label="Enter tag"
           value={tagInput}
           onChange={(e) => setTagInput(e.target.value)}
           placeholder="Enter tag..."

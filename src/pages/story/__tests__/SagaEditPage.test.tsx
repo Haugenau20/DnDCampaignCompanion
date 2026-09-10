@@ -3,6 +3,7 @@ import React from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import SagaEditPage from "../SagaEditPage";
+import { unnamedControlsIn } from "../../../test-utils/accessible-names";
 
 // ---------------------------------------------------------------------------
 // Page-suite gate mock (shared across Tasks 8-13 -- see page-suite-mock.md)
@@ -169,14 +170,20 @@ jest.mock("../../../core/components/Card", () => {
 });
 
 // Input mock: renders a real <input> or <textarea> so we can change values
+// The real Input associates its label with its control via htmlFor/id. This stub
+// did not, so every control it rendered was unnamed -- which the accessible-name
+// gate below correctly caught, in the mock rather than in the page. A stub that
+// is laxer than the thing it stands in for turns a real gate into a green light.
 jest.mock("../../../core/components/Input", () => ({
   __esModule: true,
   default: ({ label, value, onChange, isTextArea, required, fullWidth }: any) => {
+    const controlId = `mock-input-${String(label).replace(/\s+/g, "-").toLowerCase()}`;
     if (isTextArea) {
       return (
         <div data-testid={`input-wrapper-${label?.replace(/\s+/g, "-").toLowerCase()}`}>
-          <label>{label}</label>
+          <label htmlFor={controlId}>{label}</label>
           <textarea
+            id={controlId}
             data-testid={`textarea-${label?.replace(/\s+/g, "-").toLowerCase()}`}
             value={value}
             onChange={onChange}
@@ -187,8 +194,9 @@ jest.mock("../../../core/components/Input", () => ({
     }
     return (
       <div data-testid={`input-wrapper-${label?.replace(/\s+/g, "-").toLowerCase()}`}>
-        <label>{label}</label>
+        <label htmlFor={controlId}>{label}</label>
         <input
+          id={controlId}
           data-testid={`input-${label?.replace(/\s+/g, "-").toLowerCase()}`}
           value={value}
           onChange={onChange}
@@ -683,4 +691,20 @@ describe("SagaEditPage", () => {
       expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Accessible names (PR 8.1)
+  //
+  // The point of the phase: every control announces itself. A grep proved the
+  // old unassociated `<label>` markup was gone; only walking the DOM proves the
+  // new markup is right, because a primitive whose `label` prop got dropped in
+  // the move looks just as clean in the source.
+  // -------------------------------------------------------------------------
+  describe("accessible names", () => {
+    test("every control in the form has an accessible name", () => {
+      const { container } = renderPage();
+      expect(unnamedControlsIn(container)).toEqual([]);
+    });
+  });
+
 });

@@ -7,6 +7,7 @@ import { useLocations } from '../../locations/context/LocationContext';
 import { useNotes } from 'features/collaboration';
 import Typography from '../../../../core/components/Typography';
 import Input from '../../../../core/components/Input';
+import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
 import Card from '../../../../core/components/Card';
 import Dialog from '../../../../core/components/Dialog';
@@ -260,9 +261,8 @@ const RumorForm: React.FC<RumorFormProps> = ({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1 form-label">Status *</label>
-                <select
-                  className="w-full rounded-lg border p-2 input"
+                <Select
+                  label="Status *"
                   value={formData.status}
                   onChange={(e) => handleInputChange('status', e.target.value as RumorStatus)}
                   required
@@ -271,13 +271,12 @@ const RumorForm: React.FC<RumorFormProps> = ({
                   <option value="unconfirmed">Unconfirmed</option>
                   <option value="confirmed">Confirmed</option>
                   <option value="false">False</option>
-                </select>
+                </Select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 form-label">Source Type *</label>
-                <select
-                  className="w-full rounded-lg border p-2 input"
+                <Select
+                  label="Source Type *"
                   value={formData.sourceType}
                   onChange={(e) => handleSourceTypeChange(e.target.value as SourceType)}
                   required
@@ -288,16 +287,15 @@ const RumorForm: React.FC<RumorFormProps> = ({
                   <option value="notice">Written Notice</option>
                   <option value="traveler">Traveler</option>
                   <option value="other">Other</option>
-                </select>
+                </Select>
               </div>
             </div>
 
             {/* Source information - changes based on source type */}
             {formData.sourceType === 'npc' ? (
               <div>
-                <label className="block text-sm font-medium mb-1 form-label">Source NPC *</label>
-                <select
-                  className="w-full rounded-lg border p-2 input"
+                <Select
+                  label="Source NPC *"
                   value={formData.sourceNpcId || ''}
                   onChange={(e) => handleSourceNPCSelect(e.target.value)}
                   required
@@ -307,7 +305,7 @@ const RumorForm: React.FC<RumorFormProps> = ({
                   {npcs.map(npc => (
                     <option key={npc.id} value={npc.id}>{npc.name}</option>
                   ))}
-                </select>
+                </Select>
               </div>
             ) : (
               <Input
@@ -327,9 +325,8 @@ const RumorForm: React.FC<RumorFormProps> = ({
 
             {/* Location */}
             <div>
-              <label className="block text-sm font-medium mb-1 form-label">Location</label>
-              <select
-                className="w-full rounded-lg border p-2 input"
+              <Select
+                label="Location"
                 value={formData.locationId || ''}
                 onChange={(e) => handleLocationSelect(e.target.value)}
                 disabled={isSubmitting}
@@ -338,7 +335,7 @@ const RumorForm: React.FC<RumorFormProps> = ({
                 {locations.map(location => (
                   <option key={location.id} value={location.id}>{location.name}</option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
 

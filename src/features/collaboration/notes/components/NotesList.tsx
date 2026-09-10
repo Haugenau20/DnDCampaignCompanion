@@ -9,6 +9,7 @@ import { displayTitle } from "../utils/note-title";
 import { useNotes } from "../context/NoteContext";
 import { useCreateNote } from "../hooks/useCreateNote";
 import { RosterSkeleton, RosterEmpty } from "core/components/Roster";
+import Select from "core/components/Select";
 import { useCampaigns } from "features/user-management";
 import { AlertCircle, Book, Plus, Search } from "lucide-react";
 import { clsx } from "clsx";
@@ -197,8 +198,8 @@ const NotesList: React.FC = () => {
           ))}
         </div>
 
-        <select
-          className="input h-[38px]"
+        <Select
+          className="h-[38px] w-auto"
           aria-label="Sort notes"
           value={sortMode}
           onChange={event => setSortMode(event.target.value as SortMode)}
@@ -206,7 +207,7 @@ const NotesList: React.FC = () => {
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
           <option value="edited">Recently edited</option>
-        </select>
+        </Select>
       </div>
 
       {/* Rows */}

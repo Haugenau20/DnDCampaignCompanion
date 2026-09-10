@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NPC } from '../types';
 import Typography from '../../../../core/components/Typography';
 import Input from '../../../../core/components/Input';
+import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
 import Card from '../../../../core/components/Card';
 import Dialog from '../../../../core/components/Dialog';
@@ -122,9 +123,8 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1 form-label">Status *</label>
-                  <select
-                    className="w-full rounded-lg border p-2 input"
+                  <Select
+                    label="Status *"
                     value={formData.status}
                     onChange={(e) => handleInputChange('status', e.target.value)}
                     required
@@ -133,13 +133,12 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                     <option value="deceased">Deceased</option>
                     <option value="missing">Missing</option>
                     <option value="unknown">Unknown</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1 form-label">Relationship *</label>
-                  <select
-                    className="w-full rounded-lg border p-2 input"
+                  <Select
+                    label="Relationship *"
                     value={formData.relationship}
                     onChange={(e) => handleInputChange('relationship', e.target.value)}
                     required
@@ -148,7 +147,7 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                     <option value="neutral">Neutral</option>
                     <option value="hostile">Hostile</option>
                     <option value="unknown">Unknown</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
 
@@ -295,6 +294,7 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                 </Typography>
                 <div className="flex gap-2">
                   <Input
+                    aria-label="Enter affiliation"
                     value={affiliationInput}
                     onChange={(e) => setAffiliationInput(e.target.value)}
                     placeholder="Enter affiliation..."
@@ -352,6 +352,7 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                 </Typography>
                 <div className="flex gap-2">
                   <Input
+                    aria-label="Enter tag"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     placeholder="merchant"
