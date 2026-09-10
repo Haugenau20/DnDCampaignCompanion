@@ -107,6 +107,60 @@ describe("control boundaries meet 3:1", () => {
 });
 
 /**
+ * A field's own ground is not a surface, and nothing was checking it.
+ *
+ * `.input` -- worn by every text field, and now by `Select` -- paints
+ * `color: var(--surface-page-on)` on `background-color: var(--field-bg)`. Those
+ * two tokens come from different halves of the model, and `field.bg` is a
+ * distinct value from every surface background in all three themes. So the ink
+ * inside a control was never measured against the thing actually behind it: the
+ * surface-pair block above checks page ink on the *page*, which is not where a
+ * field's text sits.
+ *
+ * That is the file header's own failure shape -- a legitimate colour in a
+ * legitimate slot, wrong in relation to its background -- left ungated for the
+ * one surface every form is made of. Found while building `Select` in 8.0,
+ * whose gate asks that a control's text meet 4.5:1 and its boundary 3:1 in
+ * every theme.
+ *
+ * The boundary is measured against both grounds it has to work on at once: the
+ * field's own fill on the inside, and the card the field sits on outside. A
+ * border only reads as an edge if it is distinguishable from both.
+ */
+describe("a field's ink and edge work against the field's own ground", () => {
+  describe.each(THEMES)("%s", (_name, theme) => {
+    const tokens: ThemeTokens = theme.tokens;
+
+    test("control text meets AA on the field background", () => {
+      const ink = parseHex(tokens.surface.page.on);
+      const fieldBg = parseHex(tokens.field.bg);
+      expect(ink).not.toBeNull();
+      expect(fieldBg).not.toBeNull();
+
+      const ratio = round(contrastRatio(ink as Rgb, fieldBg as Rgb));
+      expect({ meetsAA: ratio >= 4.5, ratio }).toEqual({ meetsAA: true, ratio });
+    });
+
+    test("the field border reads as an edge from both sides", () => {
+      const border = parseHex(tokens.field.border);
+      expect(border).not.toBeNull();
+
+      const grounds = [tokens.field.bg, tokens.surface.card.bg]
+        .map(parseHex)
+        .filter((c): c is Rgb => c !== null);
+      const worst = round(
+        Math.min(...grounds.map((g) => contrastRatio(border as Rgb, g)))
+      );
+
+      expect({ meets3to1: worst >= CONTROL_BOUNDARY_MINIMUM, worst }).toEqual({
+        meets3to1: true,
+        worst,
+      });
+    });
+  });
+});
+
+/**
  * A status hue is text before it is anything else.
  *
  * The directories state a status as a word in the status hue -- that word is now
