@@ -13,7 +13,7 @@ absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
 saying where its work went, R18); Phase 8 (`08-0` … `08-3`, done); and Phase 9
 (`09-0` … `09-3` done, so Phase 9 is complete); and Phase 10 (`10-0` done; `10-1` done but **narrowed to `ProfilePage` alone**,
 R39; `10-2` and `10-3` done, so Phase 10 is
-complete); and Phase 11 (`11-0` … `11-3` done, so Phase 11 is complete).
+complete); and Phase 11 (`11-0` … `11-3` done, so Phase 11 is complete).; and phase 12 is written
 
 `09-0` settled Q10 as D82/D83 and answered its own "where do rendered notes
 appear" as D84: **nowhere**. That narrows what follows — `09-1` renders two

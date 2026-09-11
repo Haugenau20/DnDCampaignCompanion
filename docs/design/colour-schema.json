@@ -1,0 +1,823 @@
+{
+  "scheme": "torchlight-forge",
+  "version": 1,
+  "warning": "GENERATED. Do not hand-edit. Regenerate from the contract in design/colour-schema.md §4.",
+  "hue": {
+    "neutral": {
+      "H": 68,
+      "C_surface": 0.012,
+      "C_ink": 0.014
+    },
+    "accent": {
+      "H": 62,
+      "C": 0.115
+    },
+    "succeeded": {
+      "H": 143,
+      "C": 0.085
+    },
+    "failed": {
+      "H": 22,
+      "C": 0.155
+    },
+    "knowledge": {
+      "H": 245,
+      "C": 0.034
+    },
+    "entity": {
+      "H0": 25,
+      "step": 45,
+      "C": 0.055
+    }
+  },
+  "ramp": {
+    "light": {
+      "chrome": 0.205,
+      "chromeBorder": 0.29,
+      "band": 0.25,
+      "bandBorder": 0.33,
+      "page": 0.945,
+      "card": 0.975,
+      "sunken": 0.915,
+      "inkOnLight": 0.23,
+      "inkOnLightMuted": 0.47,
+      "inkOnDark": 0.955,
+      "inkOnDarkMuted": 0.745,
+      "hairline": -0.06,
+      "fieldBorder": 0.615,
+      "placeholder": 0.5,
+      "accent": 0.49,
+      "accentHover": 0.42,
+      "accentOn": 0.975,
+      "succeeded": 0.46,
+      "failedInk": 0.44,
+      "failedFill": 0.44,
+      "k": [
+        0.48,
+        0.385,
+        0.29
+      ],
+      "secondary": 0.3,
+      "secondaryOn": 0.975,
+      "entity": 0.435,
+      "entityInk": 0.965,
+      "hover": -0.03,
+      "selected": -0.062,
+      "disabled": -0.025
+    },
+    "dark": {
+      "chrome": 0.13,
+      "chromeBorder": 0.225,
+      "band": 0.175,
+      "bandBorder": 0.265,
+      "page": 0.225,
+      "card": 0.27,
+      "sunken": 0.18,
+      "inkOnLight": 0.915,
+      "inkOnLightMuted": 0.73,
+      "inkOnDark": 0.945,
+      "inkOnDarkMuted": 0.72,
+      "hairline": 0.065,
+      "fieldBorder": 0.62,
+      "placeholder": 0.68,
+      "accent": 0.715,
+      "accentHover": 0.645,
+      "accentOn": 0.165,
+      "succeeded": 0.695,
+      "failedInk": 0.65,
+      "failedFill": 0.56,
+      "k": [
+        0.65,
+        0.735,
+        0.84
+      ],
+      "secondary": 0.35,
+      "secondaryOn": 0.915,
+      "entity": 0.395,
+      "entityInk": 0.955,
+      "hover": 0.04,
+      "selected": 0.082,
+      "disabled": -0.035
+    }
+  },
+  "resolved": {
+    "light": {
+      "surface": {
+        "chrome": {
+          "bg": "#1B1611",
+          "on": "#F7EFE6",
+          "onMuted": "#B2ABA3",
+          "border": "#2F2A25",
+          "hover": "#14100B",
+          "selected": "#0D0905"
+        },
+        "band": {
+          "bg": "#26211C",
+          "on": "#F7EFE6",
+          "onMuted": "#B2ABA3",
+          "border": "#3A342F",
+          "hover": "#1E1A15",
+          "selected": "#17120E"
+        },
+        "page": {
+          "bg": "#F2EBE4",
+          "on": "#211C16",
+          "onMuted": "#605953",
+          "border": "#DFD8D1",
+          "hover": "#E8E2DB",
+          "selected": "#DED7D0"
+        },
+        "card": {
+          "bg": "#FCF5EE",
+          "on": "#211C16",
+          "onMuted": "#605953",
+          "border": "#E8E2DB",
+          "hover": "#F2EBE4",
+          "selected": "#E8E1DA"
+        },
+        "sunken": {
+          "bg": "#E8E2DB",
+          "on": "#211C16",
+          "onMuted": "#605953",
+          "border": "#D5CEC7",
+          "hover": "#DFD8D1",
+          "selected": "#D4CDC7"
+        }
+      },
+      "accent": {
+        "base": {
+          "hex": "#8D4F00",
+          "rgb": [
+            141,
+            79,
+            0
+          ],
+          "L": 0.49,
+          "C": 0.113,
+          "H": 62,
+          "clipped": false,
+          "moved": 0,
+          "worst": 5.02
+        },
+        "hover": {
+          "hex": "#723F00",
+          "rgb": [
+            114,
+            63,
+            0
+          ],
+          "L": 0.42,
+          "C": 0.097,
+          "H": 62,
+          "clipped": true
+        },
+        "on": {
+          "hex": "#FDF5ED",
+          "rgb": [
+            253,
+            245,
+            237
+          ],
+          "L": 0.975,
+          "C": 0.014,
+          "H": 68,
+          "clipped": false
+        },
+        "ring": "rgba(141, 79, 0, 0.35)"
+      },
+      "outcome": {
+        "succeeded": {
+          "hex": "#3A6437",
+          "rgb": [
+            58,
+            100,
+            55
+          ],
+          "L": 0.46,
+          "C": 0.085,
+          "H": 143,
+          "clipped": false,
+          "moved": 0,
+          "worst": 5.34
+        },
+        "failedInk": {
+          "hex": "#951D28",
+          "rgb": [
+            149,
+            29,
+            40
+          ],
+          "L": 0.44,
+          "C": 0.155,
+          "H": 22,
+          "clipped": false,
+          "moved": 0,
+          "worst": 6.57
+        },
+        "failedFill": {
+          "hex": "#951D28",
+          "rgb": [
+            149,
+            29,
+            40
+          ],
+          "L": 0.44,
+          "C": 0.155,
+          "H": 22,
+          "clipped": false,
+          "moved": 0,
+          "worst": 6.57
+        }
+      },
+      "knowledge": [
+        {
+          "hex": "#4E6070",
+          "rgb": [
+            78,
+            96,
+            112
+          ],
+          "L": 0.48,
+          "C": 0.034,
+          "H": 245,
+          "clipped": false,
+          "moved": 0,
+          "worst": 5.05
+        },
+        {
+          "hex": "#344655",
+          "rgb": [
+            52,
+            70,
+            85
+          ],
+          "L": 0.385,
+          "C": 0.034,
+          "H": 245,
+          "clipped": false,
+          "moved": 0,
+          "worst": 7.59
+        },
+        {
+          "hex": "#1D2D3B",
+          "rgb": [
+            29,
+            45,
+            59
+          ],
+          "L": 0.29,
+          "C": 0.034,
+          "H": 245,
+          "clipped": false,
+          "moved": 0,
+          "worst": 10.96
+        }
+      ],
+      "action": {
+        "secondaryBg": {
+          "hex": "#322D27",
+          "rgb": [
+            50,
+            45,
+            39
+          ],
+          "L": 0.3,
+          "C": 0.012,
+          "H": 68,
+          "clipped": false
+        },
+        "secondaryOn": {
+          "hex": "#FDF5ED",
+          "rgb": [
+            253,
+            245,
+            237
+          ],
+          "L": 0.975,
+          "C": 0.014,
+          "H": 68,
+          "clipped": false
+        }
+      },
+      "field": {
+        "bg": "#FCF5EE",
+        "border": {
+          "hex": "#878079",
+          "rgb": [
+            135,
+            128,
+            121
+          ],
+          "L": 0.605,
+          "C": 0.014,
+          "H": 68,
+          "clipped": false,
+          "moved": -0.01,
+          "worst": 3.03
+        },
+        "placeholder": {
+          "hex": "#69625B",
+          "rgb": [
+            105,
+            98,
+            91
+          ],
+          "L": 0.5,
+          "C": 0.014,
+          "H": 68,
+          "clipped": false,
+          "moved": 0,
+          "worst": 4.67
+        },
+        "disabledBg": {
+          "hex": "#F4EDE6",
+          "rgb": [
+            244,
+            237,
+            230
+          ],
+          "L": 0.95,
+          "C": 0.012,
+          "H": 68,
+          "clipped": false
+        },
+        "errorRing": "rgba(149, 29, 40, 0.35)",
+        "successRing": "rgba(58, 100, 55, 0.35)"
+      },
+      "entity": [
+        {
+          "hex": "#6C4542",
+          "rgb": [
+            108,
+            69,
+            66
+          ],
+          "L": 0.435,
+          "C": 0.055,
+          "H": 25,
+          "clipped": false
+        },
+        {
+          "hex": "#654C2F",
+          "rgb": [
+            101,
+            76,
+            47
+          ],
+          "L": 0.435,
+          "C": 0.055,
+          "H": 70,
+          "clipped": false
+        },
+        {
+          "hex": "#505531",
+          "rgb": [
+            80,
+            85,
+            49
+          ],
+          "L": 0.435,
+          "C": 0.055,
+          "H": 115,
+          "clipped": false
+        },
+        {
+          "hex": "#355B47",
+          "rgb": [
+            53,
+            91,
+            71
+          ],
+          "L": 0.435,
+          "C": 0.055,
+          "H": 160,
+          "clipped": false
+        },
+        {
+          "hex": "#275A60",
+          "rgb": [
+            39,
+            90,
+            96
+          ],
+          "L": 0.435,
+          "C": 0.055,
+          "H": 205,
+          "clipped": false
+        },
+        {
+          "hex": "#39546F",
+          "rgb": [
+            57,
+            84,
+            111
+          ],
+          "L": 0.435,
+          "C": 0.055,
+          "H": 250,
+          "clipped": false
+        },
+        {
+          "hex": "#534B6D",
+          "rgb": [
+            83,
+            75,
+            109
+          ],
+          "L": 0.435,
+          "C": 0.055,
+          "H": 295,
+          "clipped": false
+        },
+        {
+          "hex": "#66455B",
+          "rgb": [
+            102,
+            69,
+            91
+          ],
+          "L": 0.435,
+          "C": 0.055,
+          "H": 340,
+          "clipped": false
+        }
+      ],
+      "entityInk": {
+        "hex": "#FAF2EA",
+        "rgb": [
+          250,
+          242,
+          234
+        ],
+        "L": 0.965,
+        "C": 0.014,
+        "H": 68,
+        "clipped": false
+      },
+      "_grounds": [
+        "#F2EBE4",
+        "#FCF5EE",
+        "#E8E2DB"
+      ]
+    },
+    "dark": {
+      "surface": {
+        "chrome": {
+          "bg": "#0A0704",
+          "on": "#F3EBE3",
+          "onMuted": "#ABA39B",
+          "border": "#201B16",
+          "hover": "#130E0A",
+          "selected": "#1D1813"
+        },
+        "band": {
+          "bg": "#14100B",
+          "on": "#F3EBE3",
+          "onMuted": "#ABA39B",
+          "border": "#29241F",
+          "hover": "#1D1814",
+          "selected": "#27221D"
+        },
+        "page": {
+          "bg": "#201B16",
+          "on": "#E9E1D9",
+          "onMuted": "#AEA69F",
+          "border": "#2F2A25",
+          "hover": "#29241F",
+          "selected": "#342F29"
+        },
+        "card": {
+          "bg": "#2A2520",
+          "on": "#E9E1D9",
+          "onMuted": "#AEA69F",
+          "border": "#3B3630",
+          "hover": "#342F2A",
+          "selected": "#3F3A34"
+        },
+        "sunken": {
+          "bg": "#15110C",
+          "on": "#E9E1D9",
+          "onMuted": "#AEA69F",
+          "border": "#241F1A",
+          "hover": "#1E1A15",
+          "selected": "#28231E"
+        }
+      },
+      "accent": {
+        "base": {
+          "hex": "#D69253",
+          "rgb": [
+            214,
+            146,
+            83
+          ],
+          "L": 0.715,
+          "C": 0.115,
+          "H": 62,
+          "clipped": false,
+          "moved": 0,
+          "worst": 5.85
+        },
+        "hover": {
+          "hex": "#BF7C3C",
+          "rgb": [
+            191,
+            124,
+            60
+          ],
+          "L": 0.645,
+          "C": 0.115,
+          "H": 62,
+          "clipped": false
+        },
+        "on": {
+          "hex": "#120D08",
+          "rgb": [
+            18,
+            13,
+            8
+          ],
+          "L": 0.165,
+          "C": 0.014,
+          "H": 68,
+          "clipped": false
+        },
+        "ring": "rgba(214, 146, 83, 0.35)"
+      },
+      "outcome": {
+        "succeeded": {
+          "hex": "#7EAB7A",
+          "rgb": [
+            126,
+            171,
+            122
+          ],
+          "L": 0.695,
+          "C": 0.085,
+          "H": 143,
+          "clipped": false,
+          "moved": 0,
+          "worst": 5.78
+        },
+        "failedInk": {
+          "hex": "#E16566",
+          "rgb": [
+            225,
+            101,
+            102
+          ],
+          "L": 0.66,
+          "C": 0.155,
+          "H": 22,
+          "clipped": false,
+          "moved": 0.01,
+          "worst": 4.52
+        },
+        "failedFill": {
+          "hex": "#BE4649",
+          "rgb": [
+            190,
+            70,
+            73
+          ],
+          "L": 0.56,
+          "C": 0.155,
+          "H": 22,
+          "clipped": false,
+          "moved": 0,
+          "worst": 3.01
+        }
+      },
+      "knowledge": [
+        {
+          "hex": "#7E92A3",
+          "rgb": [
+            126,
+            146,
+            163
+          ],
+          "L": 0.65,
+          "C": 0.034,
+          "H": 245,
+          "clipped": false,
+          "moved": 0,
+          "worst": 4.72
+        },
+        {
+          "hex": "#98ACBE",
+          "rgb": [
+            152,
+            172,
+            190
+          ],
+          "L": 0.735,
+          "C": 0.034,
+          "H": 245,
+          "clipped": false,
+          "moved": 0,
+          "worst": 6.49
+        },
+        {
+          "hex": "#B9CDE0",
+          "rgb": [
+            185,
+            205,
+            224
+          ],
+          "L": 0.84,
+          "C": 0.034,
+          "H": 245,
+          "clipped": false,
+          "moved": 0,
+          "worst": 9.3
+        }
+      ],
+      "action": {
+        "secondaryBg": {
+          "hex": "#3F3934",
+          "rgb": [
+            63,
+            57,
+            52
+          ],
+          "L": 0.35,
+          "C": 0.012,
+          "H": 68,
+          "clipped": false
+        },
+        "secondaryOn": {
+          "hex": "#E9E1D9",
+          "rgb": [
+            233,
+            225,
+            217
+          ],
+          "L": 0.915,
+          "C": 0.014,
+          "H": 68,
+          "clipped": false
+        }
+      },
+      "field": {
+        "bg": "#2A2520",
+        "border": {
+          "hex": "#8C857D",
+          "rgb": [
+            140,
+            133,
+            125
+          ],
+          "L": 0.62,
+          "C": 0.014,
+          "H": 68,
+          "clipped": false,
+          "moved": 0,
+          "worst": 4.17
+        },
+        "placeholder": {
+          "hex": "#9E978F",
+          "rgb": [
+            158,
+            151,
+            143
+          ],
+          "L": 0.68,
+          "C": 0.014,
+          "H": 68,
+          "clipped": false,
+          "moved": 0,
+          "worst": 5.26
+        },
+        "disabledBg": {
+          "hex": "#221D18",
+          "rgb": [
+            34,
+            29,
+            24
+          ],
+          "L": 0.235,
+          "C": 0.012,
+          "H": 68,
+          "clipped": false
+        },
+        "errorRing": "rgba(225, 101, 102, 0.35)",
+        "successRing": "rgba(126, 171, 122, 0.35)"
+      },
+      "entity": [
+        {
+          "hex": "#613A37",
+          "rgb": [
+            97,
+            58,
+            55
+          ],
+          "L": 0.395,
+          "C": 0.055,
+          "H": 25,
+          "clipped": false
+        },
+        {
+          "hex": "#594124",
+          "rgb": [
+            89,
+            65,
+            36
+          ],
+          "L": 0.395,
+          "C": 0.055,
+          "H": 70,
+          "clipped": false
+        },
+        {
+          "hex": "#454A26",
+          "rgb": [
+            69,
+            74,
+            38
+          ],
+          "L": 0.395,
+          "C": 0.055,
+          "H": 115,
+          "clipped": false
+        },
+        {
+          "hex": "#2A503C",
+          "rgb": [
+            42,
+            80,
+            60
+          ],
+          "L": 0.395,
+          "C": 0.055,
+          "H": 160,
+          "clipped": false
+        },
+        {
+          "hex": "#1B4F54",
+          "rgb": [
+            27,
+            79,
+            84
+          ],
+          "L": 0.395,
+          "C": 0.055,
+          "H": 205,
+          "clipped": false
+        },
+        {
+          "hex": "#2F4963",
+          "rgb": [
+            47,
+            73,
+            99
+          ],
+          "L": 0.395,
+          "C": 0.055,
+          "H": 250,
+          "clipped": false
+        },
+        {
+          "hex": "#484061",
+          "rgb": [
+            72,
+            64,
+            97
+          ],
+          "L": 0.395,
+          "C": 0.055,
+          "H": 295,
+          "clipped": false
+        },
+        {
+          "hex": "#5A3B50",
+          "rgb": [
+            90,
+            59,
+            80
+          ],
+          "L": 0.395,
+          "C": 0.055,
+          "H": 340,
+          "clipped": false
+        }
+      ],
+      "entityInk": {
+        "hex": "#F7EFE6",
+        "rgb": [
+          247,
+          239,
+          230
+        ],
+        "L": 0.955,
+        "C": 0.014,
+        "H": 68,
+        "clipped": false
+      },
+      "_grounds": [
+        "#201B16",
+        "#2A2520",
+        "#15110C"
+      ]
+    }
+  }
+}

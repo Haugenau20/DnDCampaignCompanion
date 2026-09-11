@@ -96,7 +96,8 @@ and in print.
 ## 3. Colour identity
 
 Described as **structure**, not a fixed palette — so it survives value tuning
-and theme variants. Concrete values live in the theme definitions.
+and theme variants. Concrete values live in `colour-schema.md`, which is
+generated from a hue contract and is the source of truth for every number.
 
 The identity is a **value progression**, not a hue:
 
@@ -112,19 +113,28 @@ The warmth of the page against the neutrality of the chrome *is* the identity.
 Get that relationship right and the palette can shift a long way without
 losing the product's character.
 
-Beyond surfaces, exactly three colour jobs:
+Beyond surfaces, exactly four colour jobs (amended from three — D26):
 
-- **One accent** — action and interactivity. Deep, low-brightness, never neon.
-- **One status hue** — quest and rumour state. Never doubles as the accent.
+- **One accent** — action, interactivity, and anything in progress. Deep,
+  low-brightness, never neon. **Never red.** Red is reserved for failure and
+  destruction, which is what keeps both of them readable.
+- **One outcome pair** — succeeded and failed, and *only* things that
+  concluded. This is the single place in the product where red/green valence
+  is honest, and therefore the only place it is spent.
+- **One knowledge ladder** — three steps of a single hue, for how much the
+  party knows. Non-valenced by construction: colour says "how much", never
+  "good or bad". A knowledge state must never borrow an outcome token; that
+  mistake is what once painted a visited location green.
 - **An entity palette** — 6–8 hues in a *single narrow band of lightness and
   chroma*, tuned per theme. Their job is to separate entities from each other
   while all sitting equally quiet against the same ink. Saturated jewel tones
   fail this: they separate beautifully and shout.
 
-**Every theme keeps this structure.** A theme changes values, warmth and
-ornament strength — never the number of accents or the surface hierarchy. A
-theme that needs a second accent is a signal the design is wrong, not the
-theme.
+**Every theme keeps this structure**, and now cannot do otherwise: a theme
+supplies lightness only, while hue and chroma are authored once for the whole
+product (`colour-schema.md` §4). A theme changes values, warmth and ornament
+strength — never the number of accents or the surface hierarchy. A theme that
+needs a second accent is a signal the design is wrong, not the theme.
 
 ## 4. Type
 

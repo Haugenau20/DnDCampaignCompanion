@@ -58,10 +58,17 @@ no phase since 3 has done that.)
 | 6 | Collections | A1 | `visual/phase-6-collections` |
 | 7 | Entity detail | A2 | `visual/phase-7-entity` |
 | 8 | Forms & fields | A3 | `visual/phase-8-forms` |
-| 9 | Reading surfaces | A4 | `visual/phase-9-reading` |
+| 9 | Reading surfaces + journal | A4 | `visual/phase-9-reading` |
 | 10 | Utility, profile, auth | A5 | `visual/phase-10-utility` |
 | 11 | Retire medieval, dark to parity | — | `visual/phase-11-themes` |
-| 12 | Cleanup & package extraction | — | `visual/phase-12-cleanup` |
+| 12 | Colour schema — derive the modes | — | `visual/phase-12-schema` |
+| 13 | Cleanup & package extraction | — | `visual/phase-13-cleanup` |
+
+Phases 6–11 are merged. **Phase 12 was inserted after them** and is planned in
+`06-colour-schema-rollout.md`; what this document called Phase 12 is now
+Phase 13 and is unchanged. The insertion is not optional ordering: the schema
+renames tokens, and renaming tokens after extracting the package would be a
+breaking change to a published contract.
 
 ### Phase 6 — Collections (first, by your call)
 
@@ -181,12 +188,17 @@ first enum (D103). `11-2` gave dark the pair model (D104) and `11-3` reduced it
 to one accent and closed R40 (D106, D107). `[data-theme=…]` went from 23 rules to
 **1**, which is documented rather than overlooked.
 
-### Phase 12 — Cleanup and extraction
+### Phase 12 — Colour schema
+
+See `06-colour-schema-rollout.md`. Derives both modes from one hue contract,
+replaces the status scale with named semantic scales, and adds the non-colour
+cues. Five PRs — `handoff/12-1` … `handoff/12-5`.
+
+### Phase 13 — Cleanup and extraction
 
 Remove the fallbacks (Q5: only once every remaining theme defines the token),
-retire the eight `.location-type-*` **classes** — the tokens behind them went in
-Phase 3, and the classes now read the entity palette — then hand the token model
-to `theme-contract` as the versioned package. Extraction is mechanical by this point, which was the
+retire `--location-type-*`, then hand the token model to `theme-contract` as
+the versioned package. Extraction is mechanical by this point, which was the
 whole argument of D2.
 
 ## 4. Gates
