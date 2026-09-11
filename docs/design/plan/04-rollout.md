@@ -175,8 +175,11 @@ pair of state overlays, chrome and page at ~1.2:1 where light is ~14:1, and
 three accent hues where §3 allows one. That is a different and larger job than
 filling in blanks, and it is `handoff/11-2` and `11-3`.
 
-Four PRs, `handoff/11-0` … `11-3`. `11-1` answers Q16 with `color-scheme`,
-which is set nowhere today.
+Four PRs, `handoff/11-0` … `11-3`, all merged — **Phase 11 is complete.**
+`11-1` answered Q16 with `color-scheme` as a declared `scheme` token, the model's
+first enum (D103). `11-2` gave dark the pair model (D104) and `11-3` reduced it
+to one accent and closed R40 (D106, D107). `[data-theme=…]` went from 23 rules to
+**1**, which is documented rather than overlooked.
 
 ### Phase 12 — Cleanup and extraction
 

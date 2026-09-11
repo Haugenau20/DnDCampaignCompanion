@@ -113,13 +113,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
         </Typography>
         
         {/* Tab Navigation */}
-        <div className={clsx("flex flex-wrap border-b", `navigation`)}>
+        <div className={clsx("flex flex-wrap border-b", `navigation`, `nav-on-card`)}>
           <button
             className={clsx(
               "py-2 px-4 font-medium flex items-center gap-2",
               activeTab === AdminTab.Tokens 
-                ? `navigation-item-active` 
-                : `navigation-item`
+                ? `nav-item nav-item-active`
+                : `nav-item`
             )}
             onClick={() => setActiveTab(AdminTab.Tokens)}
           >
@@ -129,8 +129,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             className={clsx(
               "py-2 px-4 font-medium flex items-center gap-2",
               activeTab === AdminTab.Users 
-                ? `navigation-item-active` 
-                : `navigation-item`
+                ? `nav-item nav-item-active`
+                : `nav-item`
             )}
             onClick={() => setActiveTab(AdminTab.Users)}
           >
@@ -140,8 +140,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             className={clsx(
               "py-2 px-4 font-medium flex items-center gap-2",
               activeTab === AdminTab.Campaigns 
-                ? `navigation-item-active` 
-                : `navigation-item`
+                ? `nav-item nav-item-active`
+                : `nav-item`
             )}
             onClick={() => setActiveTab(AdminTab.Campaigns)}
           >
@@ -151,8 +151,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             className={clsx(
               "py-2 px-4 font-medium flex items-center gap-2",
               activeTab === AdminTab.Groups 
-                ? `navigation-item-active` 
-                : `navigation-item`
+                ? `nav-item nav-item-active`
+                : `nav-item`
             )}
             onClick={() => setActiveTab(AdminTab.Groups)}
           >

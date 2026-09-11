@@ -38,11 +38,30 @@ export const darkTheme: Theme = {
   name: 'dark',
   tokens: {
     scheme: 'dark',
+    /**
+     * One accent hue, and it is light's own red moved onto a dark ground.
+     *
+     * This spent three unrelated hues until D106 -- a blue `primary`, a purple
+     * `secondary` and a soft red `accent` -- so the control a user meets on
+     * every button was not even the same hue family as light's. Design language
+     * section 3 is explicit that a theme "changes values, warmth and ornament
+     * strength -- never the number of accents", and section 13 lists needing a
+     * second accent as a signal the design is wrong.
+     *
+     * `#EA9C90` is `#8C1D1D` lifted until it clears 4.5:1 on the lightest
+     * content ground, hue held. It reads as a warm brick rather than a pink,
+     * which a straight HLS lift of the same red does not.
+     */
     color: {
-      primary: '#8AB4F8', // Soft blue for primary elements -- 11-3 reduces the three hues to one
-      secondary: '#BB86FC', // Muted purple for secondary elements -- 11-3
-      accent: '#F28B82', // Soft red for accents -- 11-3
-      emphasis: '#F28B82', // Soft red for important highlights -- 11-3
+      primary: '#EA9C90', // 5.11:1 on the worst content ground
+      // The higher-contrast value of the same hue. Light's `#6E1717` is darker
+      // than its `#8C1D1D` because darker gains contrast on a light page; here
+      // lighter does. The relationship is mirrored, not the direction (D104).
+      secondary: '#F1BEB7',
+      accent: '#EA9C90', // The same red, as light's `accent` is its `primary`
+      // A warm grey, because light's `emphasis` is a neutral (#9A9082) and not
+      // a third hue. This was `#F28B82`, a second red.
+      emphasis: '#B3A99A',
       // Matches the content ink rather than being pure white, exactly as light
       // does (its `heading` and its content `on` are both #241F1B). #FFFFFF on
       // a warm dark ground glares and belongs to no family here.
@@ -113,17 +132,27 @@ export const darkTheme: Theme = {
         selected: 'rgba(255, 255, 255, 0.14)',
       },
     },
+    /**
+     * Status mirrors light's own spend, which is not literally "one status
+     * hue": light uses its accent red for `general`, `active` and `failed`, a
+     * green for `completed` and a gold for `unknown`. Dark now does the same,
+     * where it used to spend a blue on `general` and `active` -- the accent
+     * hue doubling as a status, which section 3 forbids in as many words.
+     *
+     * `active` and `failed` therefore share a colour, in both themes. That is
+     * safe because section 2's last principle holds: nothing is encoded by
+     * colour alone, and a status is always also the word.
+     */
     status: {
-      general: '#8AB4F8', // Soft blue for general status
-      active: '#8AB4F8', // Soft blue for active status
-      // Lifted from #3FB950 / #F87171, hue and saturation held. D56 tuned those
-      // against the old, darker grounds; the retune lightens `card` enough that
-      // both fell to 4.38 and 4.02 as text. Both now clear 4.56 on the worst of
-      // page/card/sunken -- the same fix D56 made, for the same reason (D104).
+      general: '#EA9C90', // The accent, as light's is
+      active: '#EA9C90',
+      // Lifted from #3FB950, hue and saturation held. D56 tuned it against the
+      // old, darker grounds; D104's retune lightened `card` enough that it fell
+      // to 4.38 as text.
       completed: '#40BD52', // Green for completed status, legible as a word (D56, D104)
-      failed: '#F98383', // Red for failed status, legible as a word (D56, D104)
+      failed: '#EA9C90', // The accent, as light's is. Was #F98383, a second red
       unknown: '#deaf21', // Yellowish-gold for unknown status
-      on: '#121212', // Near black for status text on a filled status chip
+      on: '#1B1710', // Warm near-black ink on a FILLED status chip; 7.32-8.72:1 on the three
     },
     state: {
       // These three are the GLOBAL state tokens, used where no surface pair
@@ -144,39 +173,49 @@ export const darkTheme: Theme = {
       bg: '#3F3B35', // Equals card.bg, exactly as light's equals its card -- the border defines the control
       placeholder: '#ADA8A0', // 4.71:1. See the note in the drift log: light's own is 3.72 and fails AA
       border: '#8C877E', // 3.11:1 against the worst of page/card -- clears WCAG 1.4.11
-      borderFocus: '#60a5fa', // Bright blue for focused input border
-      ringFocus: 'rgba(59, 130, 246, 0.5)', // Semi-transparent blue for focus ring
-      errorBorder: '#ef4444', // Bright red for error border
-      errorFocus: '#ef4444', // Bright red for focused error border
-      errorRing: 'rgba(239, 68, 68, 0.5)', // Semi-transparent red for error focus ring
-      successBorder: '#10b981', // Bright green for success border
-      successFocus: '#10b981', // Bright green for focused success border
-      successRing: 'rgba(16, 185, 129, 0.5)', // Semi-transparent green for success focus ring
+      // The focus ring is the accent, as light's is. This was `#60a5fa`, a
+      // bright blue -- a hue the theme spent nowhere else and the fourth in a
+      // theme the handoff counted three in. It is the blue a user sees on every
+      // focused field (D106).
+      borderFocus: '#EA9C90',
+      ringFocus: 'rgba(234, 156, 144, 0.35)', // The accent at light's own ring alpha
+      // A more saturated value of the accent hue, the way light's `#B3261E` is
+      // to its `#8C1D1D`. Was `#ef4444`, a generic red belonging to no family.
+      errorBorder: '#F58776',
+      errorFocus: '#F58776',
+      errorRing: 'rgba(245, 135, 118, 0.4)',
+      successBorder: '#40BD52', // The `completed` green, not a generic `#10b981`
+      successFocus: '#40BD52',
+      successRing: 'rgba(64, 189, 82, 0.4)',
       disabledBg: '#2A261F', // Follows sunken -- a disabled field recedes
       labelText: '#E9E3D7', // The content ink, as light's is
       helperText: '#B1ADA6', // page.onMuted, as light's is
-      errorText: '#f87171', // Soft red for error text
-      successText: '#34d399', // Bright green for success text
+      errorText: '#EA9C90', // The accent, as light's `errorText` is its own accent
+      successText: '#5FCB6E', // The completed green, lifted for text headroom (5.43:1)
     },
     action: {
       primary: {
-        bg: '#8AB4F8', // 11-3 owns the hue
-        text: '#1B1710', // Warm near-black on the accent, 8.47:1
-        hover: '#729DE3',
+        bg: '#EA9C90', // The accent
+        text: '#1B1710', // Warm near-black on the accent, 8.21:1
+        hover: '#E58576', // Deeper on hover, as light's `#761818` is to `#8C1D1D`
       },
       secondary: {
-        bg: '#BB86FC', // 11-3 owns the hue
-        text: '#1B1710', // 6.74:1
-        hover: '#9E6EDC',
+        // A NEUTRAL fill, not a hue. Light's secondary button is `#3F3A32`, a
+        // warm dark neutral on a light page; dark's is a warm light neutral on
+        // a dark one. It was `#BB86FC`, a purple, which was the whole of dark's
+        // second accent.
+        bg: '#55514A',
+        text: '#E9E3D7', // 6.17:1
+        hover: '#615D55',
       },
       link: {
         bg: 'transparent',
-        text: '#8AB4F8',
-        hover: '#A0C4FF',
+        text: '#EA9C90', // The accent, as light's link is
+        hover: '#F0BBB2', // Gains contrast on hover; light darkens for the same reason
       },
       outline: {
         bg: 'transparent',
-        text: '#E9E3D7', // The content ink
+        text: '#F1BEB7', // `color.secondary`, exactly as light's outline text is its own
         hover: '#48443E', // card.hover -- an outline button usually sits on a card
         border: '#9A9189', // 3.59:1, clears WCAG 1.4.11 for a boundary that identifies a control
       },
@@ -189,8 +228,8 @@ export const darkTheme: Theme = {
     danger: {
       bg: 'transparent',
       deleteBg: 'transparent',
-      deleteText: '#F87171', // Soft red for delete button text
-      deleteHover: 'rgba(248, 113, 113, 0.12)', // A wash of its own ink, as light does with its red
+      deleteText: '#EA9C90', // The accent, as light's `deleteText` is its own
+      deleteHover: 'rgba(234, 156, 144, 0.12)', // A wash of its own ink, as light does with its red
     },
     font: {
       primary: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', // Clean sans-serif for primary text

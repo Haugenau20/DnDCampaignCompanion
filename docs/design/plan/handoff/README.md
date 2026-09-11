@@ -13,7 +13,7 @@ absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
 saying where its work went, R18); Phase 8 (`08-0` … `08-3`, done); and Phase 9
 (`09-0` … `09-3` done, so Phase 9 is complete); and Phase 10 (`10-0` done; `10-1` done but **narrowed to `ProfilePage` alone**,
 R39; `10-2` and `10-3` done, so Phase 10 is
-complete); and Phase 11 (`11-0` … `11-2` done; `11-3` written and unstarted).
+complete); and Phase 11 (`11-0` … `11-3` done, so Phase 11 is complete).
 
 `09-0` settled Q10 as D82/D83 and answered its own "where do rendered notes
 appear" as D84: **nowhere**. That narrows what follows — `09-1` renders two
@@ -136,6 +136,32 @@ written — and a control experiment settled a cascade question the spec appeare
 to answer the other way. Read **R52** too: light's `field.placeholder` fails AA
 at 3.72:1 and nothing gates it; dark's was fixed here and light's deliberately
 left alone.
+
+`11-3` closed the phase. Dark spends **one accent** — `#EA9C90`, light's own red
+lifted onto a dark ground (D106) — and the handoff's count of three was low: a
+**fourth** hue, `field.borderFocus` at `#60a5fa`, was the blue on every focused
+field, with the validation family on generic Tailwind values besides. R40 is
+closed by one `.nav-item` pair that takes its ink from whichever surface the
+container declares (D107), and R40 **undercounted too**: `Navigation.tsx` holds
+two nav lists, and the mobile bar sits on a card ground while taking chrome ink
+— 1.09:1 in light, in the same file R40 cleared as "the header".
+
+Three findings for Phase 12:
+- **R53** — the contrast gate now checks state roles with compositing. Making
+  the compositor naive fails **light's** chrome and band as well as dark's, so
+  R35's trap was never dark-only.
+- **R55** — the manifest gate now collects CSS-local `--name:` declarations
+  instead of exempting a prefix, because D107's indirection variables are not
+  theme tokens. It still catches a typo in one.
+- **R54** — the blue in a native `<select>`'s open popup is the **system**
+  accent and is not stylable: `accent-color` does not reach it, and
+  `option:checked` with `!important` does not override it, though `option`
+  backgrounds *are* respected. Both established by control experiment. Do not
+  re-investigate.
+
+The one surviving `[data-theme=…]` rule wants `ornament.strength` as an enum,
+which is Phase 12's (R50). `01-token-model.md` §6 now has `scheme` as a worked
+example of that shape (D103).
 
 Phase 8 is worth reading in order. `08-0` builds the `Select` that does not
 exist, `08-1` adopts it and fixes 17 unassociated labels, `08-2` unifies nine
