@@ -81,16 +81,7 @@
     background-color: var(--action-ghost-hover);
   }
 
-  /*
-    Ghost buttons in the chrome take the chrome's ink and tints.
-
-    A ghost button's accent colour is a page affordance -- on a card it is how
-    you tell an action from body text. Inside the frame the nav sets the tone,
-    and the accent both fought with it and measured 2.0:1 against the dark band.
-    This is a structural scope, not a theme-conditional patch: it says a ghost
-    button on this surface takes this surface's values, which is the pair model
-    rather than an exception to it.
-  */
+  /* Ghost buttons in the chrome take the chrome's ink and tints. */
   .header .button-ghost,
   .footer .button-ghost {
     color: var(--surface-chrome-on-muted);
@@ -114,14 +105,7 @@
   }
 
   /* ====== CARD COMPONENT ====== */
-  /*
-    No shadow. Depth is value and rule (design language section 5) -- the card
-    separates from the page by a real value step and a hairline, and "it does
-    not float". This carried `box-shadow: 0 2px 4px` and, through `shadow-sm` in
-    Card.tsx, actually rendered `0 1px 2px` instead, because Tailwind utilities
-    sort into the last layer. R45 recorded the computed result and attributed it
-    to one of the three sources; there were three (D105).
-  */
+  /* No shadow. */
   .card {
     border: var(--border-width-sm) solid var(--surface-card-border);
     border-radius: var(--border-radius-md);
@@ -133,16 +117,7 @@
     border: var(--border-width-sm) solid var(--surface-card-border);
   }
 
-  /*
-    Colour only -- pair with a directional Tailwind width such as `border-t` or
-    `divide-y` to draw a single hairline in the card border's theme colour.
-
-    `.card-border` above cannot do this job: it is the `border` SHORTHAND, so it
-    sets a width on all four sides. Combining it with `border-t` therefore draws
-    a full box rather than a top rule. That is invisible where the element sits
-    flush against a card edge, and very visible where it is inset -- which is how
-    it surfaced, as a rectangle around each inset row of the notes index.
-  */
+  /* Colour only -- pair with a directional Tailwind width such as `border-t` or `divide-y` to draw a single hairline in the card border's theme colour. */
   .card-divider {
     border-color: var(--surface-card-border);
   }
@@ -193,19 +168,7 @@
   }
 
   /* ====== TYPOGRAPHY COMPONENT ====== */
-  /*
-    Typography inherits its colour rather than naming one.
-  
-    It used to set `--surface-page-on` unconditionally, which meant every piece
-    of text carried the page's ink no matter which surface it sat on. That was
-    invisible while every surface shared one ink; the moment the chrome became a
-    dark band, every label inside it -- nav items, the campaign switcher, the
-    footer links -- kept rendering near-black on near-black. Inheriting lets the
-    surface decide, which is the whole point of a pair.
-
-    `body` sets the page ink, so text on the page and on cards is unchanged; only
-    text inside a container that sets its own colour now follows that container.
-  */
+  /* Typography inherits its colour rather than naming one. */
   .typography {
     font-family: var(--font-primary);
     color: inherit;
@@ -333,79 +296,104 @@
     border-bottom: var(--border-width-sm) solid var(--surface-card-border);
   }
 
-  /*
-    Navigation lives in the chrome, so it takes the chrome pair's ink and tints
-    rather than the page's. Before the chrome became a surface of its own these
-    were the same values, and the difference only shows up once the bar stops
-    matching the page -- which is exactly the patch-per-theme problem the pair
-    model exists to remove.
-  */
-  .navigation-item {
-    color: var(--surface-chrome-on-muted);
+  /* ====== NATIVE SELECT, CUSTOMISED ====== */
+  /* A `<select>`'s drop-down used to be the one surface in the product this stylesheet could not reach. */
+  @supports (appearance: base-select) {
+    select.input,
+    select.input::picker(select),
+    select.roster-filter,
+    select.roster-filter::picker(select) {
+      appearance: base-select;
+    }
+
+    select.input::picker(select),
+    select.roster-filter::picker(select) {
+      background-color: var(--surface-card-bg);
+      color: var(--surface-card-on);
+      border: var(--border-width-sm) solid var(--surface-card-border);
+      border-radius: var(--border-radius-md);
+      padding: 0.25rem;
+    }
+
+    select.input option,
+    select.roster-filter option {
+      color: var(--surface-card-on);
+      padding: 0.35rem 0.6rem;
+      border-radius: var(--border-radius-sm);
+    }
+
+    /* The row under the pointer, and the row already chosen. Both were the
+       system accent; both are now the card surface's own state roles. */
+    select.input option:hover,
+    select.roster-filter option:hover {
+      background-color: var(--surface-card-hover);
+    }
+
+    select.input option:checked,
+    select.roster-filter option:checked {
+      background-color: var(--surface-card-selected);
+      font-weight: 500;
+    }
+
+    /* The tick beside the chosen row. This is the one place an accent belongs
+       here: it marks the current value rather than decorating the list. */
+    select.input option::checkmark,
+    select.roster-filter option::checkmark {
+      color: var(--color-primary);
+    }
+
+    select.input::picker-icon,
+    select.roster-filter::picker-icon {
+      color: var(--surface-card-on-muted);
+    }
+  }
+
+  /* ====== NAVIGATION ITEMS ====== */
+  /* One pair for every "list of places you can go, with one of them current", wherever it sits. */
+  .nav-on-chrome {
+    --nav-item-on: var(--surface-chrome-on);
+    --nav-item-on-muted: var(--surface-chrome-on-muted);
+    --nav-item-hover: var(--surface-chrome-hover);
+    --nav-item-selected: var(--surface-chrome-selected);
+  }
+
+  .nav-on-sunken {
+    --nav-item-on: var(--surface-sunken-on);
+    --nav-item-on-muted: var(--surface-sunken-on-muted);
+    --nav-item-hover: var(--surface-sunken-hover);
+    --nav-item-selected: var(--surface-sunken-selected);
+  }
+
+  .nav-on-card {
+    --nav-item-on: var(--surface-card-on);
+    --nav-item-on-muted: var(--surface-card-on-muted);
+    --nav-item-hover: var(--surface-card-hover);
+    --nav-item-selected: var(--surface-card-selected);
+  }
+
+  .nav-on-page {
+    --nav-item-on: var(--surface-page-on);
+    --nav-item-on-muted: var(--surface-page-on-muted);
+    --nav-item-hover: var(--surface-page-hover);
+    --nav-item-selected: var(--surface-page-selected);
+  }
+
+  .nav-item {
+    color: var(--nav-item-on-muted);
     transition: all 0.2s ease;
   }
 
-  /*
-    Ink darkens to `--surface-page-on` on hover rather than switching to the accent.
-    The accent on `--state-hover-light` measured 4.01:1 in the light theme -- the same
-    defect as `.navigation-item-active` below, one tint lighter, and it fails AA
-    the same way. Hover still reads as hover: the ground goes from nothing to
-    `--state-hover-light` and the ink strengthens from `--surface-page-on-muted`. Light
-    13.8:1, dark 10.8:1.
-  */
-  .navigation-item:hover {
-    color: var(--surface-chrome-on);
-    background-color: var(--surface-chrome-hover);
+  /* Ink strengthens to the surface's own `on` on hover rather than switching to the accent. */
+  .nav-item:hover {
+    color: var(--nav-item-on);
+    background-color: var(--nav-item-hover);
   }
 
-  /*
-    Ink is `--surface-page-on`, not `--color-primary`. The accent on `--state-hover-medium`
-    measured 2.86:1 in the light theme -- a legitimate colour in a legitimate slot,
-    wrong in relation to what sits behind it. No value of `--state-hover-medium` fixes
-    it: anything light enough to clear 4.5:1 against `#2563EB` is within ~1.1:1 of
-    the page and the state stops being visible at all. Darkening the ink is the
-    only move that works, and it passes in both themes (light 9.9:1,
-    dark 9.1:1). Active stays distinct from inactive by weight
-    and tint, not by hue alone.
-  */
-  .navigation-item-active {
-    color: var(--surface-chrome-on);
-    background-color: var(--surface-chrome-selected);
-    font-weight: 500;
-  }
-
-  /* ====== CHAPTER RAIL ROWS ====== */
-  /*
-    The same job as `.navigation-item` above -- a list of places you can go,
-    with one of them current -- on a different surface, which is the whole
-    reason these exist separately (D90).
-
-    The rail used the chrome classes until R32 measured what that costs: an
-    active row of `--surface-chrome-on` on `--surface-chrome-selected`
-    composites over a light ground to about 1.04:1, so the current chapter's
-    title was invisible in the light theme and correct in dark. A valid token,
-    in a valid slot, wrong in relation to what sits behind it -- the defect
-    class the pair model exists to make unrepresentable, which it only does if
-    a component takes the pair belonging to the surface it is actually on.
-
-    No accent on the current row. A rail row is navigation, and an accent marks
-    a control that writes the record (D66) -- so "you are here" is carried by
-    ground, ink weight and `aria-current`, which is also why this cannot just
-    reuse `.selected-item` and its accent outline.
-  */
-  .rail-item {
-    color: var(--surface-sunken-on-muted);
-    transition: all 0.2s ease;
-  }
-
-  .rail-item:hover {
-    color: var(--surface-sunken-on);
-    background-color: var(--surface-sunken-hover);
-  }
-
-  .rail-item-active {
-    color: var(--surface-sunken-on);
-    background-color: var(--surface-sunken-selected);
+  /* `:hover` is listed alongside so the current item keeps its own ground when the pointer is over it. */
+  .nav-item-active,
+  .nav-item-active:hover {
+    color: var(--nav-item-on);
+    background-color: var(--nav-item-selected);
     font-weight: 500;
   }
 
@@ -429,13 +417,7 @@
     box-shadow: 0 0 0 2px var(--field-ring-focus);
   }
 
-  /*
-    The keyboard hint in the search trigger. It used to borrow `.search`, the
-    input-field style, so on the dark chrome it rendered as a bright white pill --
-    the loudest thing in the bar, for a hint you stop reading after the first
-    visit. It is now an overlay on whatever surface it sits on, one step up from
-    the ground rather than a slab against it.
-  */
+  /* The keyboard hint in the search trigger. */
   .search-shortcut {
     background-color: var(--surface-chrome-hover);
     color: var(--surface-chrome-on-muted);
@@ -478,7 +460,7 @@
     background-color: var(--state-hover-light);
   }
 
-  /* Same failing pair as `.navigation-item-active` above, same fix. */
+  /* Same failing pair as `.nav-item-active` above, same fix. */
   .dropdown-item-active {
     background-color: var(--state-hover-medium);
     color: var(--surface-page-on);
@@ -548,21 +530,7 @@
   }
 
   /* ====== ENTITY LEGEND HUES ====== */
-  /* What is left of the NPC / Location / Rumor card families. The card rules
-     themselves went with NPCCard, LocationCard and RumorCard, which nothing had
-     rendered since the directories became rosters.
-
-     .npc-relationship-* is live: LocationDirectory and QuestDirectory both mark a
-     linked NPC with .npc-relationship-{relationship}. It is a hue beside a name,
-     not a hue instead of one -- the row states the relationship in words.
-
-     .npc-status-* is a different case, kept rather than deleted. Its only
-     consumer is NPCLegend, which is stranded exactly as the three cards were:
-     exported, tested, rendered nowhere. The difference is that it looks
-     deliberate -- buildConfig carries `showNPCLegend: false` -- except no code
-     reads that flag, so the legend cannot be switched on either. Deciding
-     between wiring it up and retiring it is a scope this deletion PR does not
-     own; see the drift log. */
+  /* What is left of the NPC / Location / Rumor card families. */
   .npc-status-alive {
     color: var(--status-completed);
   }
@@ -599,21 +567,7 @@
     background-color: var(--surface-sunken-bg);
   }
 
-  /*
-    One axis, in order: known (nothing but a name) -> explored -> visited. The
-    hues must agree with the status bar's bands, which read the same progression
-    from `STATUS_ORDER` in LocationDirectory.
-
-    `explored` and `visited` were swapped here, so a row said "Explored" in the
-    green the legend used for `visited` and vice versa. It went unseen because
-    each row also carried a coloured dot taken from the bar's own map: the dot
-    was right, the word was wrong, and the two sat side by side. Removing the
-    dot -- one encoding per fact -- is what surfaced it.
-
-    `known` stays muted ink rather than the bar's red. On the bar red is just the
-    "not yet" end of a progression; as row text it would put the accent on a
-    resting row, and the accent is earned by action.
-  */
+  /* One axis, in order: known (nothing but a name) -> explored -> visited. */
   .location-status-known {
     color: var(--surface-page-on-muted);
   }
@@ -626,14 +580,7 @@
     color: var(--status-completed);
   }
 
-  /* The last of .rumor-status-*. Its two siblings had no consumer once RumorCard
-     went, and RumorDirectory states the status in words instead.
-
-     Its one remaining consumer is a misuse: RumorForm paints its *form error*
-     icon with it, so a validation failure is coloured by a rumor-status class
-     that happens to resolve to --status-failed. It wants an error token, not a
-     status one. Left alone here because this PR only deletes; Phase 8 owns
-     forms and should retire the last of this family with it. */
+  /* The last of .rumor-status-*. */
   .rumor-status-false {
     color: var(--status-failed);
   }
@@ -644,24 +591,12 @@
     pair, so nothing inside it names a colour -- the same rule the chrome follows,
     and the reason neither needs a per-theme patch.
   */
-  /*
-    Full bleed. The band sits several centred, padded containers deep, so
-    cancelling their padding with negative margins only ever got it close --
-    `.container mx-auto` re-centres inside `max-w-7xl`, leaving a sliver of page
-    either side that read as a wide card rather than a band. `50% - 50vw`
-    reaches the viewport edge regardless of how many ancestors have inset it.
-  */
+  /* Full bleed. */
   .hero-band {
     background-color: var(--surface-band-bg);
     color: var(--surface-band-on);
     border-bottom: var(--border-width-sm) solid var(--surface-band-border);
-    /*
-      A faint diagonal ruling, drawn from the band's own hover overlay rather
-      than a literal colour, so it retunes with the theme and costs no asset.
-      This is what "dark, textured" asks for: the band should read as a
-      material, not a flat fill -- but at this strength you notice it only
-      after the type, which is the right order.
-    */
+    /* A faint diagonal ruling, drawn from the band's own hover overlay rather than a literal colour, so it retunes with the theme and costs no asset. */
     background-image: repeating-linear-gradient(
       135deg,
       var(--surface-band-hover) 0 1px,
@@ -669,16 +604,7 @@
     );
   }
 
-  /*
-    A heading on the band takes the band's ink.
-
-    `.typography-heading` names `--color-heading`, which is a page-level notion --
-    in the dark theme it is deliberately a touch brighter than body ink. On a
-    surface whose ink differs from the page's, that value is simply wrong, and on
-    this band it would render near-black on dark. Same shape as the chrome's ghost
-    buttons: the surface claims its own ink rather than every component learning
-    about every surface.
-  */
+  /* A heading on the band takes the band's ink. */
   .hero-band .typography-heading {
     color: var(--surface-band-on);
   }
@@ -687,12 +613,7 @@
     color: var(--surface-band-on-muted);
   }
 
-  /*
-    The eyebrow names its own role rather than borrowing the band's muted ink,
-    because the two finishes disagree about it: one lifts it to a second accent,
-    the other keeps it quiet. Sharing a token with `.hero-muted` would have made
-    that difference impossible to express in values alone.
-  */
+  /* The eyebrow names its own role rather than borrowing the band's muted ink, because the two finishes disagree about it: one lifts it to a second accent */
   .hero-eyebrow {
     color: var(--color-emphasis);
   }
@@ -713,16 +634,7 @@
   }
 
   /* ====== IMAGE SLOT ====== */
-/*
-  The empty state for a reserved image slot. Diagonal ruling in the page's own
-  sunken tone, so it reads as a reserved space with a design rather than a
-  missing image -- no bitmaps ship (D6), so almost every slot is empty almost
-  always, which makes this the state that matters rather than a placeholder.
-
-  Was `.party-crest-slot`, which had the only instance until the NPC page became
-  the second. The rule did not change when it was generalised; only its name and
-  the number of callers did.
-*/
+/* The empty state for a reserved image slot. */
 .image-slot {
   background-color: var(--surface-sunken-bg);
   background-image: repeating-linear-gradient(
@@ -751,37 +663,13 @@
     padding: 0.875rem 1.25rem;
   }
 
-  /*
-    A filter is the one accented thing inside a collection, and it is an outline.
-
-    Both states carry the same border width so selecting one never reflows the
-    row, and the idle border is the same control boundary every outline control
-    uses -- already held at 3:1 by `token-contrast.test.ts`. The active state
-    swaps that boundary for the accent and takes the accent as ink; it does not
-    fill, because a fill is the heaviest treatment available and this is the most
-    repeated control on the page.
-  */
-  /*
-    A group heading's link out to the record it names. Quiet on purpose: it
-    repeats once per group, so on a page of eight locations the accent version
-    put eight accents down the page for a navigation affordance -- hue as
-    decoration, and it drowned the one accent that means something (the active
-    filter). The underline carries the affordance, so nothing here is encoded by
-    colour alone either.
-  */
+  /* A filter is the one accented thing inside a collection, and it is an outline. */
+  /* A group heading's link out to the record it names. */
   .roster-group-open:hover {
     color: var(--surface-page-on);
   }
 
-  /*
-    A row you have ticked for a batch action, painted from the card surface's own
-    selected role.
-
-    Not the accent and not a status hue: selection says "this is what you are
-    about to act on", which is feedback about the moment, while a status is a
-    property of the record that outlives it. Using a status hue here would also
-    mean a selected rumour and a confirmed one shared a colour.
-  */
+  /* A row you have ticked for a batch action, painted from the card surface's own selected role. */
   .roster-row-selected {
     background-color: var(--surface-card-selected);
   }
@@ -800,10 +688,11 @@
     background-color: var(--action-outline-hover);
   }
 
+  /* Ink and edge come from `--color-primary`, not `--action-primary-bg`. */
   .roster-filter-active {
     background-color: var(--action-outline-bg);
-    color: var(--action-primary-bg);
-    border-color: var(--action-primary-bg);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
   }
 
   .roster-filter-active:hover {
@@ -811,32 +700,7 @@
   }
 
   /* ====== CHIP, MULTI-SELECT (toggle) and TAG (removable) ====== */
-  /*
-    Deliberately NOT `.chip`, which is taken and stays taken. `.chip` further
-    down this file is the *single-select* pill `CategoryChips` uses, and it fills
-    the chosen one with --color-primary on purpose. That is right for single
-    select -- exactly one chip is ever chosen, so it costs exactly one accent,
-    and filling it makes it unmistakably the answer.
-
-    It is wrong for multi-select, which is what the entity forms have. Six chosen
-    NPCs filled with the accent put six accents on a form and leave the one
-    control that writes competing with them (8.2, design language section 2).
-    Two kinds of chip, two treatments, two names -- rather than one name whose
-    meaning depends on which list it landed in.
-
-    The boundary is --color-primary, NOT --action-primary-bg. `.chip`'s own
-    comment worked this out first and it is worth not re-learning: in the
-    medieval theme (retired, D40) --action-primary-bg was #E8D0AA, pale tan on a
-    #FDF5E6 parchment page, which measured 1.38:1 and drew a line you could not
-    see. --color-primary is the token every theme tunes to stand against its own
-    page -- 7.93 and 7.78 across light and dark -- so it is the one a border can
-    rely on.
-
-    The border also *thickens* on selection rather than only changing hue, so the
-    state survives greyscale. It thickens with `outline` rather than `border` for
-    D12's reason: a wider border would eat the padding box and shift the label
-    the moment you pick it.
-  */
+  /* Deliberately NOT `.chip`, which is taken and stays taken. */
   .chip-toggle {
     background-color: var(--action-outline-bg);
     color: var(--action-outline-text);
@@ -896,41 +760,13 @@
 }
 
 @layer app-state {
-  /*
-    ====== CARD, HOVERABLE ======
-    A card responds to the pointer only when it was asked to. `.card:hover` used
-    to lift and shadow EVERY card, which made `Card`'s own `hoverable` prop
-    meaningless and gave a static card a response that confirmed nothing was
-    happening (design language section 9: motion confirms that something
-    changed). The feedback is now the surface's own `hover` role, which is what
-    the pair model exists to supply, and it is opt-in.
-  */
+  /* A card responds to the pointer only when it was asked to. */
   .card-hoverable:hover {
     background-color: var(--surface-card-hover);
   }
 
   /* ====== SELECTABLE ITEM ====== */
-  /*
-    State classes own hover, selected, focus and disabled -- nothing else. A
-    resting background or border here is a contract violation, not a style
-    choice: `.selectable-item` used to set both, and because it is declared ~500
-    lines after `.card` it beat every surface it was combined with. That is why
-    the stats strip, the activity list and the quest aside all rendered one flat
-    tone. See 01-token-model.md section 3.
-
-    Selection draws an `outline`, not a `border`, so the state costs no layout.
-    A border would consume 2px of the padding box on select and shift the row's
-    content; `outline-offset: -2px` puts the same line in the same place for
-    free. `.highlighted-item` below already worked this way.
-
-    These rules are deliberately NOT wrapped in a CSS cascade layer. Layering
-    them was tried and reverted: unlayered declarations beat layered ones
-    regardless of specificity, and Tailwind's utilities are emitted unlayered
-    after these files are hoisted. A layered `.selectable-item:hover` therefore
-    loses to a plain `.bg-secondary` utility, which silently kills hover on the
-    quest-progress cell. Declaring a layer order means layering Tailwind's
-    output too -- an app-wide precedence change, not a Phase 0 one.
-  */
+  /* State classes own hover, selected, focus and disabled -- nothing else. */
   .selectable-item {
     transition: all 0.2s ease;
   }
@@ -1017,19 +853,7 @@
     background-color: var(--surface-card-bg);
   }
 
-  /*
-    The book's running text is the campaign's voice, so it is serif in BOTH
-    themes -- design language section 4, which puts "content of the world" in
-    serif without qualification.
-
-    It used to be `--font-primary` here, overridden to Crimson Text by a
-    `[data-theme="light"]` rule. That gave light a serif and dark **Inter**, so
-    the same chapter read as a record in one theme and as an application in the
-    other. The face is named explicitly for the reason `.reader-prose` gives
-    above -- no token is a reading serif in both themes -- and it is the same
-    face as `.reader-prose`, because two reading surfaces in one product should
-    not disagree about what reading looks like (D105).
-  */
+  /* The book's running text is the campaign's voice, so it is serif in BOTH themes -- design language section 4, which puts "content of the world" in seri */
   .book-content {
     font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
   }
@@ -1052,39 +876,14 @@
   }
 
   /* ====== CHAPTER READER ====== */
-  /* The reader deliberately does NOT reuse the .book-* surfaces above. Those carry
-     the paginated book chrome - parchment fill, header band, pagination bar - and
-     the reader is a plain reading card: theme card background, hairline border, no
-     ornament. Only the prose face is special.
-
-     The face is named explicitly here rather than taken from a theme token,
-     because no existing token is a reading serif in both themes: --font-heading
-     is 'Newsreader, Georgia, serif' in light but plain Inter in dark, and
-     --font-primary is no better, being Inter in both. Colour still comes from
-     the theme; only the typeface is fixed, because the reading measure is a
-     property of the reader rather than of the palette. Both families below are
-     already loaded in public/index.html. */
+  /* The reader deliberately does NOT reuse the .book-* surfaces above. */
   .reader-prose {
     color: var(--surface-page-on);
     font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
   }
 
   /* ====== RENDERED MARKDOWN ====== */
-  /* Structure only. The typographic voice belongs to whatever prose context
-     wraps this - `.reader-prose` in the reader - so nothing here sets a family
-     or a colour on running text: a second typographic system beside
-     `.reader-prose` is exactly what handoff 09-0 forbids, and
-     `@tailwindcss/typography`'s `prose` classes would have been that system.
-
-     It exists because Tailwind's preflight resets every one of these elements:
-     a rendered `<p>` has no margin, a `<ul>` has no marker and no indent, a
-     `<blockquote>` has nothing at all. Before Phase 9 the reader hand-applied
-     `mb-4` to each paragraph it built itself; a parser's output cannot be
-     hand-annotated, so the rhythm moves here.
-
-     Scoped to `.markdown-body` rather than to `.reader-prose` so it travels
-     with the component to every surface that renders prose, and so a caller
-     that wants a different face still gets working lists. */
+  /* Structure only. */
   .markdown-body > :last-child {
     margin-bottom: 0;
   }
@@ -1199,31 +998,8 @@
   }
 
   /* ====== SECTION STATES ====== */
-  /*
-    The empty and loading treatments shared by every dashboard section. They
-    carried the retired alternate layout's prefix because that layout defined
-    them first (D39); the dashboard was always the other consumer, so they are
-    now named for what they are. The matching heading rule went with the layout
-    -- `SectionHeading` had no consumer outside it.
-
-    An empty or loading region is designed, not blank: the loading state shows
-    the rhythm of the rows that are coming rather than a spinner, and the empty
-    state is muted ink on the page rather than an absence.
-  */
-  /*
-    Placeholder blocks, at a weight you can actually see.
-
-    This was `surface-sunken-bg` at `opacity: 0.3`, which composites to 1.06:1
-    against a card -- measured, not guessed. A skeleton at 1.06:1 is a blank
-    card, so the "designed loading state" read as the absence of one. It went
-    unnoticed while it stood in for four rows on the dashboard and mattered the
-    moment five collections started leaning on it.
-
-    `surface-sunken-border` is the quietest token that is meant to be *seen*
-    rather than felt, and it lands at 1.44:1 on a card: a placeholder reads as a
-    placeholder without competing with the content that replaces it. Opacity is
-    gone -- it made the value depend on whatever happened to sit behind it.
-  */
+  /* The empty and loading treatments shared by every dashboard section. */
+  /* Placeholder blocks, at a weight you can actually see. */
   .section-loading {
     background-color: var(--surface-sunken-border);
   }
@@ -1233,50 +1009,14 @@
   }
 
   /* ====== CALLOUT ====== */
-  /*
-    An emphasis surface for the one statement on a page that must not be skimmed
-    past -- on the contact page, the response time, which used to sit in a
-    right-hand column styled identically to three blocks of advice.
-
-    The accent background carries the emphasis and the left rule carries the
-    eye, so the text stays the page's normal colour and needs no override. Pair
-    with `rounded-r-*` rather than `rounded-*` so the rule stays a square edge.
-
-    This deliberately replaced an earlier "inverted surface" version that swapped
-    --surface-page-on and --surface-page-bg. Inverting those two keeps any theme legible,
-    which is why it looked sound, but legible is not the same as belonging: in
-    the dark theme it produced a near-white #E0E0E0 slab that read as an alert
-    rather than a note, and in the medieval theme (retired, D40) a dark
-    chocolate block on parchment. --state-selected is the token each theme
-    already tuned for exactly this job.
-  */
+  /* An emphasis surface for the one statement on a page that must not be skimmed past -- on the contact page, the response time, which used to sit in a ri */
   .callout-emphasis {
     background-color: var(--state-selected);
     border-left: 4px solid var(--color-primary);
   }
 
   /* ====== CHIP (single-select pill) ====== */
-  /*
-    Colour only -- pair with Tailwind's `border` for the width, because
-    --border-width-sm is empty in this file and injected per theme.
-
-    Chips deliberately do NOT reuse `.card` or `.button-primary`, which is how
-    the first version was built and why it broke in the medieval theme
-    (retired, D40; kept here because the trap it describes is not):
-
-    - `.card` is not a neutral surface. theme-effects.css gave medieval cards
-      decorative ::before/::after corner flourishes and a thicker border, so
-      every UNSELECTED chip arrived wearing card ornaments.
-    - `--action-primary-bg` is tuned for buttons sitting on a card. In medieval
-      it was #E8D0AA, pale tan, which on the #FDF5E6 parchment page was nearly
-      the same value -- so the SELECTED chip was the faintest thing in the row.
-
-    Together those inverted the hierarchy: selection read as less prominent than
-    non-selection. Filling the selected chip with --color-primary and taking the
-    text from --surface-page-bg inverts the page's own two strongest tokens, which
-    every theme already guarantees contrast between: #2563EB, #8AB4F8 and
-    #8B0000 against their respective page grounds.
-  */
+  /* Colour only -- pair with Tailwind's `border` for the width, because --border-width-sm is empty in this file and injected per theme. */
   .chip {
     background-color: var(--surface-card-bg);
     border-color: var(--surface-card-border);
@@ -1294,18 +1034,7 @@
   }
 
   /* ====== TOAST ====== */
-  /*
-    A transient confirmation carrying exactly one action.
-
-    Deliberately NOT an inverted surface, although the mock draws one. The
-    contact callout tried `--surface-page-on` on `--surface-page-bg` on the reasoning
-    that every theme guarantees contrast between that pair, and it was legible
-    everywhere and right nowhere: light gave a heavy slab, dark gave a near-white
-    block that read as an alert rather than a confirmation, and medieval gave
-    dark chocolate on parchment. `--state-selected` is the token each theme already
-    tunes for a subtly emphasised surface, and `--color-primary` carries the
-    action -- the same resolution the callout landed on.
-  */
+  /* A transient confirmation carrying exactly one action. */
   .toast {
     background-color: var(--state-selected);
     border: var(--border-width-sm) solid var(--surface-card-border);
@@ -1314,14 +1043,7 @@
   }
 
   /* ====== DESTRUCTIVE ACTION (solid) ====== */
-  /*
-    The heavy destructive action. `.delete-button` is the QUIET one -- every
-    theme sets --danger-delete-bg to transparent, which is right for a delete
-    icon in a list but renders lighter than an outlined button beside it. Where
-    two destructive actions sit together and one is meant to read as heavier
-    (the profile's danger zone), this is the filled treatment: the error pair
-    that is solid in both themes.
-  */
+  /* The heavy destructive action. */
   .button-danger {
     background-color: var(--status-failed);
     color: var(--status-on);

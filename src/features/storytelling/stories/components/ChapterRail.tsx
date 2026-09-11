@@ -55,7 +55,7 @@ const ChapterRailList: React.FC<ChapterRailListProps> = ({
   }, [currentChapterId]);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 nav-on-sunken">
       {items.map((item) => {
         const { chapter, state } = item;
         const isCurrentChapter = chapter.id === currentChapterId;
@@ -69,7 +69,8 @@ const ChapterRailList: React.FC<ChapterRailListProps> = ({
             aria-current={isCurrentChapter ? 'page' : undefined}
             className={clsx(
               'w-full flex items-center gap-2 text-left px-2 py-1.5 rounded-lg transition-colors',
-              isCurrentChapter ? 'rail-item-active' : 'rail-item'
+              'nav-item',
+              isCurrentChapter && 'nav-item-active'
             )}
           >
             <Typography

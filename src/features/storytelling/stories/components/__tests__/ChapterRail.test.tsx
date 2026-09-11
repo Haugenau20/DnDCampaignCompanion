@@ -132,11 +132,11 @@ describe('ChapterRail', () => {
       expect(otherRow).not.toHaveAttribute('aria-current');
     });
 
-    test('the current chapter row has rail-item-active, others have rail-item', () => {
-      // Was `navigation-item-active` / `navigation-item` until D90. Those are
-      // the header's classes: they paint chrome ink on a chrome ground, which
-      // is right in the header and measured ~1.04:1 on the rail's own surface
-      // -- an invisible active row in the light theme (R32).
+    test('the current chapter row has nav-item-active, others have nav-item', () => {
+      // Was `navigation-item-active` / `navigation-item` until D90, which built
+      // `rail-item` to fix an active row measuring ~1.04:1 on the rail's own
+      // surface (R32). D107 replaced both pairs with one `nav-item` that takes
+      // its ink from whichever surface the container declares -- here `sunken`.
       render(
         <ChapterRail
           items={threeMixedChapters()}
@@ -148,11 +148,11 @@ describe('ChapterRail', () => {
         />
       );
       const currentRow = screen.getByText('2. Chapter 2 Title').closest('button') as HTMLElement;
-      expect(currentRow.className).toMatch(/rail-item-active/);
+      expect(currentRow.className).toMatch(/nav-item-active/);
 
       const otherRow = screen.getByText('3. Chapter 3 Title').closest('button') as HTMLElement;
-      expect(otherRow.className).toMatch(/rail-item/);
-      expect(otherRow.className).not.toMatch(/rail-item-active/);
+      expect(otherRow.className).toMatch(/nav-item/);
+      expect(otherRow.className).not.toMatch(/nav-item-active/);
     });
 
     test('no row wears a chrome surface class', () => {
@@ -173,6 +173,9 @@ describe('ChapterRail', () => {
       screen.getAllByRole('button').forEach((row) => {
         expect(row.className).not.toMatch(/navigation-item/);
       });
+      // And the surface it does declare is the sunken one.
+      const container = screen.getByText('2. Chapter 2 Title').closest('div');
+      expect(container?.className).toMatch(/nav-on-sunken/);
     });
 
     test('the rail sits on the sunken surface, not on card', () => {

@@ -36,11 +36,12 @@
     color: var(--color-heading);
   }
 
-  /* Basic focus styles */
+  /* Theme accent, as an outline. `ring-color:`/`ring-offset:` are not CSS
+     properties -- written bare they are dropped, which left Tailwind's default
+     blue ring on every focusable control in both themes. */
   :focus-visible {
-    @apply outline-none ring-2;
-    ring-color: var(--color-primary);
-    ring-offset: 2px;
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
 
   /*

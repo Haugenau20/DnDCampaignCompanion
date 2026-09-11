@@ -20,7 +20,7 @@ interface PrivacySectionNavProps {
 const PrivacySectionNav: React.FC<PrivacySectionNavProps> = ({ activeId }) => (
   <nav
     aria-label="The full text"
-    className="lg:sticky lg:top-24 lg:self-start mb-6 lg:mb-0"
+    className="lg:sticky lg:top-24 lg:self-start mb-6 lg:mb-0 nav-on-page"
   >
     <Typography
       variant="body-sm"
@@ -39,8 +39,8 @@ const PrivacySectionNav: React.FC<PrivacySectionNavProps> = ({ activeId }) => (
               href={`#${section.id}`}
               aria-current={isActive ? "true" : undefined}
               className={[
-                "block rounded px-3 py-1.5 text-sm navigation-item",
-                isActive ? "navigation-item-active" : "",
+                "block rounded px-3 py-1.5 text-sm nav-item",
+                isActive ? "nav-item-active" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}

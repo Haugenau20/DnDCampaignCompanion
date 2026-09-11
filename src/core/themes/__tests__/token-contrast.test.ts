@@ -41,6 +41,42 @@ export const contrastRatio = (a: Rgb, b: Rgb): number => {
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
+/**
+ * A colour that may carry alpha. `parseHex` deliberately does not accept these:
+ * an `rgba()` string has no meaning as a ratio until it has a ground.
+ */
+type Rgba = [number, number, number, number];
+
+const parseColour = (value: string): Rgba | null => {
+  const rgba = value
+    .trim()
+    .match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?\s*\)$/);
+  if (rgba) {
+    return [
+      Number(rgba[1]),
+      Number(rgba[2]),
+      Number(rgba[3]),
+      rgba[4] === undefined ? 1 : Number(rgba[4]),
+    ];
+  }
+  const hex = parseHex(value);
+  return hex === null ? null : [hex[0], hex[1], hex[2], 1];
+};
+
+/**
+ * Source-over compositing: a translucent colour onto an opaque ground.
+ *
+ * **This is the whole point of the state half of this file, and R35 is why it
+ * exists.** Both themes express `hover` and `selected` as translucent white on
+ * their dark surfaces, and a check that reads the first three numbers out of
+ * `rgba(255, 255, 255, 0.1)` sees opaque white. It then reports the theme as
+ * broken -- R35 measured a rail row at 1.32:1 that way and nearly produced a
+ * fix to a defect that did not exist; composited over its real ground it was
+ * 7.78:1.
+ */
+const composite = (fg: Rgba, bg: Rgb): Rgb =>
+  [0, 1, 2].map((i) => fg[i] * fg[3] + bg[i] * (1 - fg[3])) as Rgb;
+
 describe("contrast per surface pair", () => {
   describe.each(THEMES)("%s", (_name, theme) => {
     const surfaces = Object.entries(theme.tokens.surface);
@@ -65,6 +101,85 @@ describe("contrast per surface pair", () => {
 });
 
 /**
+ * A surface's ink, against the two states it can sit on.
+ *
+ * The block above checks `on` and `onMuted` against the surface's *resting*
+ * background and stops there, so a selected row's ink was gated by nothing.
+ * R35 recorded that gap and did not close it, because closing it needs
+ * compositing and this file did pure hex arithmetic.
+ *
+ * R40 is the bill for leaving it open: `.navigation-item-active` painted
+ * `--surface-chrome-on` on `--surface-chrome-selected` in three places, only
+ * one of which was the chrome, and the admin panel's active tab measured
+ * **1.09:1** -- invisible -- with every gate green, because no gate multiplied
+ * those two tokens together.
+ */
+describe("contrast of ink against its own states", () => {
+  describe.each(THEMES)("%s", (_name, theme) => {
+    const surfaces = Object.entries(theme.tokens.surface);
+
+    test.each(surfaces)("%s: ink stays legible on hover and selected", (surfaceName, pair) => {
+      const bg = parseHex(pair.bg);
+      const on = parseHex(pair.on);
+      expect(bg).not.toBeNull();
+      expect(on).not.toBeNull();
+
+      const against = (role: string): number => {
+        const parsed = parseColour(role);
+        expect(parsed).not.toBeNull();
+        // Composited over this surface's OWN background, which is the only
+        // ground a state role ever lands on.
+        return round(contrastRatio(on as Rgb, composite(parsed as Rgba, bg as Rgb)));
+      };
+
+      expect({
+        surface: surfaceName,
+        hover: against(pair.hover) >= 4.5,
+        selected: against(pair.selected) >= 4.5,
+      }).toEqual({ surface: surfaceName, hover: true, selected: true });
+    });
+  });
+});
+
+/**
+ * The compositor itself, checked against values whose answers are known.
+ *
+ * R31's lesson applied to a gate rather than an assertion: a state check that
+ * silently treated every `rgba()` as opaque would pass this file's new block
+ * for the light theme -- whose content states are opaque hexes -- and fail it
+ * for dark, which is exactly the false alarm R35 describes. These pin the
+ * arithmetic so the gate above cannot be quietly wrong.
+ */
+describe("the compositor", () => {
+  test("a fully opaque overlay is itself", () => {
+    expect(composite([255, 0, 0, 1], [0, 0, 0])).toEqual([255, 0, 0]);
+  });
+
+  test("a fully transparent overlay is the ground", () => {
+    expect(composite([255, 255, 255, 0], [17, 34, 51])).toEqual([17, 34, 51]);
+  });
+
+  test("a half-alpha white over black is mid grey", () => {
+    expect(composite([255, 255, 255, 0.5], [0, 0, 0])).toEqual([127.5, 127.5, 127.5]);
+  });
+
+  test("R35's own numbers: 10% white over the rail ground is not white", () => {
+    // The measurement that nearly caused a fix to a defect that did not exist.
+    const ground: Rgb = [42, 42, 60];
+    const composited = composite([255, 255, 255, 0.1], ground);
+    expect(composited.map(Math.round)).toEqual([63, 63, 80]);
+    // Read as opaque white it would have measured ~1.3:1 against a light ink.
+    expect(round(contrastRatio([224, 224, 224], composited))).toBeGreaterThan(7);
+  });
+
+  test("an rgba string round-trips through parseColour", () => {
+    expect(parseColour("rgba(255, 255, 255, 0.08)")).toEqual([255, 255, 255, 0.08]);
+    expect(parseColour("#3D3932")).toEqual([61, 57, 50, 1]);
+    expect(parseColour("not a colour")).toBeNull();
+  });
+});
+
+/**
  * Boundaries that identify a control -- an outline button, a text field -- owe
  * 3:1 under WCAG 1.4.11, and now meet it. This was a recorded failure through
  * Phases 1-4, ratcheted so it could not worsen while the phases that were
@@ -81,20 +196,24 @@ const CONTROL_BOUNDARY_MINIMUM = 3;
 describe("control boundaries meet 3:1", () => {
   const boundaryOf = (tokens: ThemeTokens, key: string): string => {
     if (key === "action.outline.border") return tokens.action.outline.border as string;
-    // `action.primary.bg` is a fill everywhere else, but it is a *boundary* on a
-    // chosen filter pill (D51) and now on a selected chip (8.2), where nothing
-    // is filled with it and the border is the whole signal. A boundary owes 3:1
-    // under WCAG 1.4.11 whatever token it happens to be named after, and this
-    // one was never measured as one.
-    if (key === "action.primary.bg") return tokens.action.primary.bg as string;
+    // `color.primary` is the accent where it acts as a *boundary* -- the edge and
+    // label of a chosen filter pill (D51), a selected chip (8.2), a focus ring.
+    // A boundary owes 3:1 under WCAG 1.4.11 whatever it is named after.
+    //
+    // This used to read `action.primary.bg`, and the rename is the point rather
+    // than a tidy-up: that token is a **fill**, tuned to carry ink on top of it,
+    // and dark's is now `#A32B22` at 1.83:1 from the page (D108). Measuring a
+    // fill as a boundary asks it to be two incompatible things; `.chip-toggle`'s
+    // own comment reached the same conclusion before this test did.
+    if (key === "color.primary") return tokens.color.primary as string;
     return tokens.field.border;
   };
 
-  // Every theme owes all three. `action.primary.bg` used to be exempted for
-  // medieval, which measured 1.38:1 as a boundary and was ratcheted in a block
-  // below rather than fixed, because the theme had a scheduled end. It reached
-  // it (D40), and the exemption left with it.
-  const keys = ["action.outline.border", "field.border", "action.primary.bg"];
+  // Every theme owes all three. The accent used to be exempted for medieval,
+  // which measured 1.38:1 as a boundary and was ratcheted rather than fixed
+  // because the theme had a scheduled end. It reached it (D40), and the
+  // exemption left with it.
+  const keys = ["action.outline.border", "field.border", "color.primary"];
 
   describe.each(THEMES)("%s", (name, theme) => {
     test.each(keys)("%s", (key) => {

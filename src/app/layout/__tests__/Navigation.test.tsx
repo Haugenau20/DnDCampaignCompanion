@@ -123,7 +123,7 @@ describe("Navigation", () => {
   // Active state
   // -------------------------------------------------------------------------
   describe("active state", () => {
-    test("should mark the active path item with navigation-item-active class", () => {
+    test("should mark the active path item with nav-item-active class", () => {
       setupHook({ activePath: "/npcs" });
       render(<Navigation />);
 
@@ -131,21 +131,38 @@ describe("Navigation", () => {
       const npcBtns = screen.getAllByRole("button", { name: /npcs/i });
       // At least one button should have the active class
       const activeBtn = npcBtns.find((b) =>
-        b.classList.contains("navigation-item-active")
+        b.classList.contains("nav-item-active")
       );
       expect(activeBtn).toBeDefined();
     });
 
-    test("should mark inactive paths with navigation-item class, not navigation-item-active", () => {
+    test("should mark inactive paths with nav-item class, not nav-item-active", () => {
       setupHook({ activePath: "/npcs" });
       render(<Navigation />);
 
       // Story buttons should NOT be active
       const storyBtns = screen.getAllByRole("button", { name: /story/i });
       const anyActive = storyBtns.some((b) =>
-        b.classList.contains("navigation-item-active")
+        b.classList.contains("nav-item-active")
       );
       expect(anyActive).toBe(false);
+    });
+
+    test("each nav list declares the surface it sits on", () => {
+      // R40's defect, generalised: `.nav-item` takes its ink from four
+      // indirection variables, and a list that declares no surface resolves
+      // them to nothing -- unstyled ink, silently. The two lists here sit on
+      // DIFFERENT surfaces: the desktop row is in the chrome, and the mobile
+      // bar wears `.navigation`, which paints a card background. The mobile bar
+      // took chrome ink on that card ground until D107 -- 1.09:1 in light.
+      setupHook({ activePath: "/npcs" });
+      const { container } = render(<Navigation />);
+
+      const lists = Array.from(container.querySelectorAll("nav"));
+      expect(lists.length).toBeGreaterThan(0);
+      lists.forEach((list) => {
+        expect(list.className).toMatch(/nav-on-(chrome|card|sunken|page)/);
+      });
     });
 
     test("should call shouldHighlightPath for each nav item", () => {

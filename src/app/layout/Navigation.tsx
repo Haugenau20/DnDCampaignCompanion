@@ -98,7 +98,7 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
 
   if (variant === 'mobile') {
     return (
-      <nav className="navigation md:hidden" aria-label="Main">
+      <nav className="navigation nav-on-card md:hidden" aria-label="Main">
         <div className="max-w-7xl mx-auto px-2">
           {/* `gap-1` plus per-item minimums rather than `justify-between`: the
               row must be allowed to exceed the viewport and scroll, which is
@@ -126,8 +126,8 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
                     'flex flex-col items-center justify-center text-xs',
                     'basis-0 grow shrink-0 min-w-[3.75rem] px-1',
                     isActive
-                      ? `navigation-item-active`
-                      : `navigation-item`
+                      ? `nav-item nav-item-active`
+                      : `nav-item`
                   )}
                 >
                   <Typography
@@ -170,8 +170,8 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
         className={clsx(
           'px-2.5 py-1.5 rounded-md whitespace-nowrap transition-colors',
           isActive
-            ? `navigation-item-active`
-            : `navigation-item`,
+            ? `nav-item nav-item-active`
+            : `nav-item`,
           extraClassName
         )}
       >
@@ -186,7 +186,7 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
   };
 
   return (
-    <nav className="hidden md:flex items-center gap-1 lg:gap-2" aria-label="Main">
+    <nav className="hidden md:flex items-center gap-1 lg:gap-2 nav-on-chrome" aria-label="Main">
       {inlineItems.map((item) => renderNavButton(item))}
       {overflowItems.map((item) => renderNavButton(item, 'hidden nav:block'))}
 
