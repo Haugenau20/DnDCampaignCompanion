@@ -47,9 +47,36 @@ describe('Card Component', () => {
     it('renders as hoverable when hoverable prop is true', () => {
       // Arrange & Act
       const { container } = renderCard({ hoverable: true }, 'Card content');
-      
+
       // Assert
-      expect(container.firstChild).toHaveClass('hover:shadow-md');
+      // `card-hoverable` takes its feedback from the surface's own `hover`
+      // role. This asserted `hover:shadow-md` until D105 removed the card's
+      // shadows -- depth is value and rule, not shadow (design language
+      // section 5).
+      expect(container.firstChild).toHaveClass('card-hoverable');
+    });
+
+    it('does not respond to hover unless asked to', () => {
+      // Arrange & Act
+      const { container } = renderCard({}, 'Card content');
+
+      // Assert
+      // The regression this guards: `.card:hover` used to lift and shadow every
+      // card in the product, which made the `hoverable` prop meaningless and
+      // gave a static card a response that confirmed nothing had happened.
+      expect(container.firstChild).not.toHaveClass('card-hoverable');
+    });
+
+    it('carries no drop shadow at rest', () => {
+      // Arrange & Act
+      const { container } = renderCard({}, 'Card content');
+
+      // Assert
+      // Section 5: "Depth is expressed by value and rule, not by shadow... it
+      // does not float", and section 14 lists decorative drop shadows under Not
+      // this. R45 found this on every card in the product; D105 removed it.
+      expect(container.firstChild).not.toHaveClass('shadow-sm');
+      expect(container.firstChild).not.toHaveClass('shadow-md');
     });
 
     it('handles click events when provided', async () => {

@@ -162,10 +162,9 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
 
     const styles = twMerge(
       clsx(
-        'rounded-lg shadow-sm overflow-hidden',
+        'rounded-lg overflow-hidden',
         hoverable && [
-          'transition-shadow duration-200',
-          'hover:shadow-md',
+          'card-hoverable',
           onClick && 'cursor-pointer'
         ],
         `card`,
