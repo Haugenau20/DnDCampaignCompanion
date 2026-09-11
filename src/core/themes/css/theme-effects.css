@@ -1,43 +1,12 @@
 @layer app-theme {
   /* src/core/themes/css/theme-effects.css */
-  /*
-    Theme-specific styling that overrides or enhances the base components.
-    Uses data-theme attribute to target specific themes.
-
-    Every rule here is a surface question the token model could not express, so
-    the file getting shorter is the model getting better -- design language
-    section 12.8. Four of them were hand-painted `::-webkit-scrollbar-thumb`
-    rules, two per theme; they are gone because `color-scheme` (set on the
-    document element in ThemeContext) makes the browser paint scrollbars
-    correctly in every engine rather than only in Blink and WebKit, and paints
-    the native controls a prefixed pseudo-element cannot reach at all. See Q16.
-
-    The five that remain are surface questions, and 11-2 decides them.
-  */
+  /* Theme-conditional rules. One survives; see R50 in the drift log. */
 
 
   /* ====== DARK THEME SPECIFIC EFFECTS ====== */
 
-  /*
-    Kept deliberately, and it is the only theme-conditional rule left.
-
-    Design language section 12.8 says a theme-conditional rule means the surface
-    model is missing something, and here the missing thing is nameable: an
-    `ornament.strength` enum (01-token-model.md section 6), because what differs
-    between the themes is not a colour but how hard the shadow has to work. A
-    black shadow over a light page reads at 0.15 alpha; over a dark page it is
-    invisible, so dark spends 0.4 and a tighter radius to get the same
-    separation. Section 3 permits exactly that -- "a theme changes values,
-    warmth and ornament strength".
-
-    This is also the one element in the product that genuinely floats. Section
-    5's "it does not float" governs a card sitting in the page's own plane; a
-    modal sits above a scrim and is not in that plane, which is why the card's
-    shadow went in this PR (D105) and this one did not.
-
-    Adding the enum is a change to the model and would apply to light too, so it
-    belongs with the ornament work in Phase 12, not here.
-  */
+  /* A modal floats above a scrim, and the shadow has to work harder on a
+     dark ground. Wants `ornament.strength` as an enum -- Phase 12. */
   [data-theme="dark"] .dialog {
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
   }

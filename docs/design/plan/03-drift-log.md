@@ -2885,7 +2885,7 @@ Whoever next has light open should raise `--field-placeholder` to clear 4.5; it
 is a one-value change with no layout consequence.
 
 ### D106 — dark spends one accent hue, and it is light's own red
-Date: 2026-09-11   Status: active
+Date: 2026-09-11   Status: **reverted and deferred by R57** — the reasoning below stands; the values did not ship
 Decision: dark's accent is **`#EA9C90`**, a warm brick. 28 values change; light
 changes none.
 It spent three unrelated hues — a blue `primary` `#8AB4F8`, a purple `secondary`
@@ -2975,7 +2975,7 @@ The compositor is also pinned by its own unit tests, including R35's actual
 numbers — 10% white over `rgb(42,42,60)` is `rgb(63,63,80)`, not white.
 
 ### R54 — the blue in the dropdown is the operating system's, and it cannot be styled
-Date: 2026-09-11
+Date: 2026-09-11   Status: **withdrawn by R56** — the popup *is* customizable via `appearance: base-select`
 Change: none. Investigated because the owner asked where it came from, and the
 answer is worth writing down so nobody looks again.
 A native `<select>`'s popup paints its **active row** with the system accent —
@@ -3016,6 +3016,103 @@ exemption would also excuse `--nav-item-onn`; collecting declarations does not.
 Verified: introducing exactly that typo still fails the gate.
 Because: the gate got **more** precise, not weaker, and that is the only
 acceptable direction for a check to move when new code inconveniences it.
+
+### R56 — revises R54: the native dropdown **is** customizable, and the real blue was ours
+Date: 2026-09-11
+Change: `appearance: base-select` styles the `<select>` picker from theme
+tokens, guarded by `@supports`. R54's conclusion is withdrawn.
+R54 said the option-row highlight was the system accent and "not stylable",
+from two control experiments: `accent-color` did not reach it, and
+`option:checked` with `!important` did not override it. **Both results were
+correct and the conclusion did not follow** — they only tested the *legacy*
+native rendering path. `appearance: base-select` shipped in Chrome 135 and opts
+the control into a mode where the picker is real DOM: `::picker(select)` is the
+popup, `option` takes `:hover` and `:checked`, `option::checkmark` is the tick.
+Verified in Chrome 152 (`CSS.supports('appearance','base-select')` is true) in
+both themes: the popup is the `card` surface with its own ink, hover and
+selected roles, and no system colour survives in it.
+The failure was reasoning from "my experiments found no way" to "there is no
+way". The experiments were sound; the search space was not. Found because the
+owner did not believe the result and asked for it to be checked against the
+web — which was the right instinct and is the reason this entry exists.
+**Fallback is the status quo**: Firefox and Safari ignore the block and render
+the OS popup, still correct because `color-scheme` tells the browser which way
+up the theme is (D103). Progressive enhancement, not a dependency. It stays a
+native `<select>` -- R43's reasoning is untouched, and a hand-rolled listbox
+would be the accessibility liability this avoids.
+
+### D109 — every focus ring in the app was Tailwind's default blue, for the life of the file
+Date: 2026-09-11   Status: active
+Decision: `:focus-visible` takes `outline: 2px solid var(--color-primary)` with
+a 2px offset, replacing `@apply outline-none ring-2` plus two invalid
+declarations.
+`globals.css` read:
+```
+:focus-visible { @apply outline-none ring-2; ring-color: var(--color-primary); ring-offset: 2px; }
+```
+**`ring-color` and `ring-offset` are not CSS properties.** Tailwind spells them
+as utilities (`ring-<color>`, `ring-offset-<n>`) that set `--tw-ring-color` and
+friends; written as bare declarations they are invalid and the browser drops
+them silently. `ring-2` therefore kept Tailwind's *default* ring, and every
+focusable control in the product -- both themes, for as long as the file has
+existed -- drew `rgba(59, 130, 246, 0.5)`. Measured on a header button:
+`box-shadow: rgba(59,130,246,0.5) 0 0 0 2px` while `--color-primary` was
+`#EA9C90`.
+Because: no gate could have caught it. `--tw-ring-color` is a Tailwind internal,
+so `token-manifest.test.ts` skips it under `--tw-`, and no contrast gate
+measures a focus ring. It surfaced only because the owner asked where a blue in
+a dropdown came from and the investigation reached the computed styles (R56).
+An `outline` also follows the element's border radius and does not clip inside
+an overflow container, which a box-shadow ring can.
+
+### R57 — D106's accent reduction is reverted and deferred, not abandoned
+Date: 2026-09-11
+Change: dark's `color`, `status`, `field`, `action` and `danger` values return to
+exactly `main`'s. The token baseline diffs to **zero changes in both themes**.
+D106 reduced dark's accent hues to one and brought the field and status families
+onto it. Three candidate hues were tried against the owner's eye and none
+survived: a lifted red (`#EA9C90`) read as a pale salmon beside `status.completed`
+and `status.unknown`, which sit at 50% lightness where any red bright enough for
+AA on a dark card sits near 67%; a split into a deep fill plus lighter text
+solved the button but not the category mismatch; and moving the hue to orange
+fixed the mismatch by re-hueing more of the product than the problem warranted.
+The measurement that explains all three is worth keeping: **WCAG weights
+luminance 0.2126 R / 0.7152 G / 0.0722 B.** Green draws ~71% of its brightness
+from being green and can be vivid while bright; red draws ~21%, so reaching the
+same brightness means adding green and blue, which *is* desaturation. A red
+legible as text on a dark ground is necessarily paler than a green or gold
+beside it. No amount of tuning escapes it — only a change of hue, of ground, or
+of which roles the accent has to serve.
+That last option is the one nobody had looked at, and it is why this is deferred
+rather than retried: **the same token is being asked to be a fill and ink at
+once.** `--status-active` paints both the progress bar (`background-color`) and
+the word (`color`); a bar owes 3:1 and text owes 4.5:1, so the text requirement
+sets the value and drags the bar light with it. `--action-primary-bg` is a fill
+that `.roster-filter-active` was using as ink and edge. Deciding hues before
+deciding which roles exist is tuning in the wrong order.
+Because: the owner's call, and the right one. A colour strategy for both themes
+together is a design job, not a sequence of per-token contrast solves — which is
+what the last several rounds had become.
+
+### R58 — the theme files were carrying more prose than data
+Date: 2026-09-11
+Change: comments cut across the theme layer. `darkTheme.ts` 301 -> 155 lines
+(49% -> 1% comment), `token-types.ts` 184 -> 119, `components.css` 1423 -> 1055
+(48% -> 30%), plus `theme-effects.css` and `globals.css`.
+`lightTheme.ts` was 8% comment and `darkTheme.ts` had reached **49%** -- the same
+data, one file reading as an essay and the other as values. Most of the prose was
+written in this phase and every load-bearing sentence of it is in this log, which
+is the mechanism this project already has for it.
+What was kept: a short factual label on each rule, and the **mechanical** warnings
+that prevent bugs rather than justify designs -- `.selectable-item`'s precedence
+note (a resting background in a state class once flattened every list),
+`variables.css`'s warning that a token declared empty silently skips its
+fallback, the layer-order notes. Those do not steer a colour decision.
+Every edit was verified by comparing the **comment-free source** before and
+after: byte-identical for the stylesheets, and every string literal and type
+field unchanged in the TypeScript.
+Because: the next phase hands this layer to a design tool, and rationale in the
+files would anchor it to decisions that are being reopened on purpose.
 
 ---
 

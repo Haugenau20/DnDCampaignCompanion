@@ -137,7 +137,17 @@ to answer the other way. Read **R52** too: light's `field.placeholder` fails AA
 at 3.72:1 and nothing gates it; dark's was fixed here and light's deliberately
 left alone.
 
-`11-3` closed the phase. Dark spends **one accent** — `#EA9C90`, light's own red
+`11-3` closed the phase, **with its accent work reverted and deferred** (R57):
+dark's colour values ship exactly as they were, and a colour strategy for both
+themes is a phase of its own, inserted before the old Phase 12. What landed is
+structural — see below. Read **R56** before trusting any "this cannot be
+styled" conclusion: a native `<select>`'s picker *is* customizable via
+`appearance: base-select`, and the entry it withdraws reasoned from "my
+experiments found no way" to "there is no way". Read **D109** too: every focus
+ring in the product was Tailwind's default blue because `ring-color:` and
+`ring-offset:` are not CSS properties and were silently dropped.
+
+`11-3` also closed the phase. Dark spends **one accent** — `#EA9C90`, light's own red
 lifted onto a dark ground (D106) — and the handoff's count of three was low: a
 **fourth** hue, `field.borderFocus` at `#60a5fa`, was the blue on every focused
 field, with the validation family on generic Tailwind values besides. R40 is

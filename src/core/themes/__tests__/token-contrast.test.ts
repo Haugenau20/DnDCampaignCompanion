@@ -196,20 +196,24 @@ const CONTROL_BOUNDARY_MINIMUM = 3;
 describe("control boundaries meet 3:1", () => {
   const boundaryOf = (tokens: ThemeTokens, key: string): string => {
     if (key === "action.outline.border") return tokens.action.outline.border as string;
-    // `action.primary.bg` is a fill everywhere else, but it is a *boundary* on a
-    // chosen filter pill (D51) and now on a selected chip (8.2), where nothing
-    // is filled with it and the border is the whole signal. A boundary owes 3:1
-    // under WCAG 1.4.11 whatever token it happens to be named after, and this
-    // one was never measured as one.
-    if (key === "action.primary.bg") return tokens.action.primary.bg as string;
+    // `color.primary` is the accent where it acts as a *boundary* -- the edge and
+    // label of a chosen filter pill (D51), a selected chip (8.2), a focus ring.
+    // A boundary owes 3:1 under WCAG 1.4.11 whatever it is named after.
+    //
+    // This used to read `action.primary.bg`, and the rename is the point rather
+    // than a tidy-up: that token is a **fill**, tuned to carry ink on top of it,
+    // and dark's is now `#A32B22` at 1.83:1 from the page (D108). Measuring a
+    // fill as a boundary asks it to be two incompatible things; `.chip-toggle`'s
+    // own comment reached the same conclusion before this test did.
+    if (key === "color.primary") return tokens.color.primary as string;
     return tokens.field.border;
   };
 
-  // Every theme owes all three. `action.primary.bg` used to be exempted for
-  // medieval, which measured 1.38:1 as a boundary and was ratcheted in a block
-  // below rather than fixed, because the theme had a scheduled end. It reached
-  // it (D40), and the exemption left with it.
-  const keys = ["action.outline.border", "field.border", "action.primary.bg"];
+  // Every theme owes all three. The accent used to be exempted for medieval,
+  // which measured 1.38:1 as a boundary and was ratcheted rather than fixed
+  // because the theme had a scheduled end. It reached it (D40), and the
+  // exemption left with it.
+  const keys = ["action.outline.border", "field.border", "color.primary"];
 
   describe.each(THEMES)("%s", (name, theme) => {
     test.each(keys)("%s", (key) => {
