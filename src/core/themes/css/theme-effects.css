@@ -18,7 +18,26 @@
 
   /* ====== DARK THEME SPECIFIC EFFECTS ====== */
 
-  /* Dark theme dialog */
+  /*
+    Kept deliberately, and it is the only theme-conditional rule left.
+
+    Design language section 12.8 says a theme-conditional rule means the surface
+    model is missing something, and here the missing thing is nameable: an
+    `ornament.strength` enum (01-token-model.md section 6), because what differs
+    between the themes is not a colour but how hard the shadow has to work. A
+    black shadow over a light page reads at 0.15 alpha; over a dark page it is
+    invisible, so dark spends 0.4 and a tighter radius to get the same
+    separation. Section 3 permits exactly that -- "a theme changes values,
+    warmth and ornament strength".
+
+    This is also the one element in the product that genuinely floats. Section
+    5's "it does not float" governs a card sitting in the page's own plane; a
+    modal sits above a scrim and is not in that plane, which is why the card's
+    shadow went in this PR (D105) and this one did not.
+
+    Adding the enum is a change to the model and would apply to light too, so it
+    belongs with the ornament work in Phase 12, not here.
+  */
   [data-theme="dark"] .dialog {
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
   }
@@ -26,22 +45,6 @@
 
 
   /* ====== LIGHT THEME SPECIFIC EFFECTS ====== */
-
-  /* Light theme card hover */
-  [data-theme="light"] .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-  }
-
-  /* Light theme book content area */
-  [data-theme="light"] .book-content-area {
-    background-color: #FFF9ED; /* Special parchment color for book content */
-  }
-
-  [data-theme="light"] .book-content,
-  [data-theme="light"] .book-text {
-    font-family: 'Crimson Text', serif;
-  }
 
 
 }

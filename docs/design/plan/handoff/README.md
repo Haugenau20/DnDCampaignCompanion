@@ -13,7 +13,7 @@ absorbed `07-3`. Phase 7 is complete; `07-3` is kept for the record with a note
 saying where its work went, R18); Phase 8 (`08-0` … `08-3`, done); and Phase 9
 (`09-0` … `09-3` done, so Phase 9 is complete); and Phase 10 (`10-0` done; `10-1` done but **narrowed to `ProfilePage` alone**,
 R39; `10-2` and `10-3` done, so Phase 10 is
-complete); and Phase 11 (`11-0` and `11-1` done; `11-2` and `11-3` written and unstarted).
+complete); and Phase 11 (`11-0` … `11-2` done; `11-3` written and unstarted).
 
 `09-0` settled Q10 as D82/D83 and answered its own "where do rendered notes
 appear" as D84: **nowhere**. That narrows what follows — `09-1` renders two
@@ -111,6 +111,31 @@ baseline diff closely and wants that file clean. `11-3` reduces dark's three acc
 extends `token-contrast.test.ts` to check state roles **with compositing** —
 the gap R35 recorded and the mechanical reason R40's 1.09:1 admin tab went
 unnoticed.
+
+`11-2` is **done** (D104, D105). Four things `11-3` inherits:
+- **Dark is warm now.** The owner chose light's warm axis over keeping the cool
+  blue-slate family, so `11-3`'s one-accent choice lands in a theme whose
+  neutrals are already warm — a red in light's own family will sit naturally
+  where the blue, purple and soft red currently do not.
+- **`page`/`chrome` was 1.03:1, not the ~1.2:1 the handoff recorded**, and chrome
+  was very slightly *lighter* than page, so the frame was inverted rather than
+  merely weak. It is 1.51:1 now — deliberately ~40% clear of the 1.08–1.12 that
+  GitHub, VS Code and Slack spend on the same separation, because a strong frame
+  is this product's identity and not a default.
+- **Two status hues moved** (`completed`, `failed`). D56 tuned them against the
+  old darker grounds and the lighter `card` dropped them to 4.38 and 4.02 as
+  text; both are lifted to 4.56. Expect that class of breakage from any further
+  ground change.
+- **`[data-theme=…]` is down to 1** from 23 at the phase's start, and the
+  survivor is documented rather than overlooked (R50). Do not let `11-3` add one.
+
+Read **R51** before extending the contrast gate: every figure in `11-2` was
+composited first, the palette was *solved* against target ratios rather than
+eyeballed — which is how three gate failures were found before a file was
+written — and a control experiment settled a cascade question the spec appeared
+to answer the other way. Read **R52** too: light's `field.placeholder` fails AA
+at 3.72:1 and nothing gates it; dark's was fixed here and light's deliberately
+left alone.
 
 Phase 8 is worth reading in order. `08-0` builds the `Select` that does not
 exist, `08-1` adopts it and fixes 17 unassociated labels, `08-2` unifies nine

@@ -2737,6 +2737,153 @@ The practical consequence here is small but real -- `11-2` must read a baseline
 diff closely, and a stale third theme in that file is exactly the noise that
 makes a careful read harder.
 
+### D104 — dark gets the pair model, and light's warmth with it
+Date: 2026-09-11   Status: active
+Decision: all 30 surface roles in `darkTheme.ts` are retuned, plus the 21
+non-surface neutrals that were still cool. 51 values change; **light changes
+none**. Two choices sit under every hex:
+**1. The frame goes darker than the page, as light's does.** `11-2` asked for
+the direction to be decided and recorded because it sets every later surface.
+Chrome is now the deepest surface and the page lifts to make room, so
+`page`/`chrome` measures **1.51:1** against the **1.03:1** it actually had. Note
+the handoff said ~1.2:1; measured, it was 1.03, and chrome was very slightly
+*lighter* than page, so the frame was not merely weak but inverted.
+1.51 is a deliberate target, not a maximum. Two dark surfaces cannot sit 16:1
+apart the way light's near-black chrome and ivory page do, so the question was
+what "enough to read as different surfaces" means. Measured for reference:
+**GitHub dark 1.09:1, VS Code 1.08:1, Slack 1.12:1** between canvas and
+chrome. This product spends 16:1 on the frame in light because a strong frame
+is its identity (design language §2, §3), so dark clears the industry norm by
+about 40% rather than matching it.
+**2. Dark takes light's warm axis.** §3: "the warmth of the page against the
+neutrality of the chrome *is* the identity". Dark was a cool blue-slate family,
+so switching themes changed the product's temperature — not its values, its
+character. Every ground, ink, hairline and neutral now sits on light's own
+warm axis (R > G > B at very low chroma). This was the owner's call, taken
+against the alternative of keeping the cool family and fixing only the roles.
+What the retune copies from light is the **structure**, never the numbers:
+- surfaces run `chrome < band << sunken < page < card`, the same order;
+- `on` comes in **two families** — content ink for page/card/sunken, a brighter
+  frame ink for chrome/band. Light splits it the same way, though there the
+  frame inverts. Both families are light ink here because every ground is dark;
+  they stay two values because the frame sits deeper and can run brighter
+  without glare;
+- state overlays split the same way too: **opaque tints on the content
+  surfaces, translucent white on the frame**. That is not decoration. The band
+  carries imagery (§6) and an opaque tint would paint over it;
+- `onMuted` lands at 5.69–7.31 across the five surfaces, inside light's own
+  5.64–7.29 band, and every surface has its own.
+`band` finally has a value of its own (`#1E1A14`); it was the same hex as
+`sunken`, so the hero had no value at all.
+**Three gates failed on the first pass and were fixed, not waived.**
+`status.completed` and `status.failed` were tuned by D56 against the old, darker
+grounds; the lighter `card` dropped them to 4.38 and 4.02 as text. Both are
+lifted — hue and saturation held, lightness only — to 4.56 on the worst of
+page/card/sunken. `field.placeholder` was 3.11 and is now 4.71.
+Because: `11-2` called this "the phase's real work", and the measurement agreed:
+all five surfaces shared one ink, one muted grey, one border and one pair of
+overlays, which is precisely what `01-token-model.md` §2 says the pair model
+exists to make impossible. Dark was not unmigrated. It was migrated and untuned.
+
+### D105 — the card stops floating, and R45 was under-measured
+Date: 2026-09-11   Status: active
+Decision: §5 is **kept, not amended**. The card's shadows go.
+R45 recorded one shadow — `shadow-sm` in `Card.tsx`, computing to
+`rgba(0,0,0,0.05) 0 1px 2px`. There were **three**, and R45 measured the
+composite and attributed it to the one it had found:
+1. `shadow-sm` in `Card.tsx`;
+2. `box-shadow: 0 2px 4px` on `.card` in `components.css`;
+3. `transform: translateY(-1px)` + `0 4px 6px` on `.card:hover`, plus a stronger
+   `translateY(-2px)` + `0 6px 12px` in `[data-theme="light"] .card:hover`.
+R45's figure was `shadow-sm`'s because Tailwind utilities sort into the **last**
+layer (`tw-utilities`), so the utility beat the `.card` rule it sat on top of.
+All of it is gone. §5 — "depth is expressed by value and rule, not by shadow…
+it does not float" — and §14's "decorative drop shadows" are unambiguous, and
+light's card still separates on a real value step (`#FCFAF6` on `#F3EFE6`) and a
+hairline, which was the condition for choosing removal over amendment.
+**A defect fell out of it.** `.card:hover` lifted and shadowed **every card in
+the product**, which made `Card`'s own `hoverable` prop meaningless — and that
+prop has **zero consumers**, so nothing had ever opted in. A static card was
+responding to the pointer with a motion that confirmed nothing had happened
+(§9). Hover is now `.card-hoverable:hover` taking `--surface-card-hover`, the
+role the pair model already supplies, and it is opt-in. The suite had a test
+asserting `hover:shadow-md`; it now asserts the class, plus two new cases — that
+a plain card carries no shadow, and that it does **not** get the hover class.
+Because: `11-2` said "do not leave it undecided a third time". This is the third
+time it has been raised (R45, and twice before that in the phases R45 cites).
+
+### R50 — three of the four surviving `[data-theme=…]` rules were the model missing something; one was not
+Date: 2026-09-11
+Change: `[data-theme=…]` in `src` goes from 5 to **1**. At the start of Phase 11
+there were 23.
+- **`[data-theme="light"] .card:hover`** — deleted with the shadow (D105).
+- **`[data-theme="light"] .book-content-area { background-color: #FFF9ED }`** —
+  deleted. A hardcoded hex, and a leftover: it predates Phase 5's retune, when
+  the page was not yet warm ivory. The base rule already says
+  `--surface-card-bg`, and `.reader-prose`'s own comment says the reader is "a
+  plain reading card: theme card background, hairline border, no ornament". The
+  model expressed it all along.
+- **`[data-theme="light"] .book-content, .book-text { font-family: 'Crimson
+  Text' }`** — deleted, and this one was hiding a real defect. The base rule was
+  `--font-primary`, so **light got a serif and dark got Inter**: the same chapter
+  read as a record in one theme and as an application in the other. §4 puts
+  content of the world in serif without qualification. Both now name the same
+  reading serif as `.reader-prose`, unconditionally — two reading surfaces in one
+  product should not disagree about what reading looks like.
+- **`[data-theme="dark"] .dialog`** — **kept, with the reason written down.**
+  §12.8 says a theme-conditional rule means the model is missing something, and
+  here the missing thing is nameable: an `ornament.strength` enum
+  (`01-token-model.md` §6), because what differs is not a colour but how hard
+  the shadow has to work — 0.15 alpha reads over a light page, 0.4 is needed over
+  a dark one. §3 permits exactly that ("a theme changes values, warmth and
+  ornament strength"). It is also the one element in the product that genuinely
+  floats: §5's "it does not float" governs a card in the page's own plane, and a
+  modal sits above a scrim. Adding the enum is a model change that applies to
+  light too, so it belongs with Phase 12's ornament work.
+Because: `11-2` item 5 asked for each to be fixed where the model was missing
+something and left with a reason where it was not. Three and one.
+
+### R51 — every contrast figure in this PR was composited first, and the tooling is the deliverable
+Date: 2026-09-11
+Change: none in `src` beyond D104. Recorded because R35 asked for it and `11-3`
+inherits it.
+R35 warned that a checker reading the first three numbers out of
+`rgba(255,255,255,0.1)` sees opaque white and reports dark as broken every time.
+Dark's frame still expresses `hover` and `selected` as translucent white, so
+every state figure quoted for D104 is the **composite over that surface's own
+`bg`**, not the raw string. The worst state pair in the theme is
+`card.selected` at 6.57:1 — comfortably AA, and it would have measured as a
+failure under the naive method.
+Two things worth carrying into `11-3`, which turns this into a test:
+- **The design was solved against target ratios, not eyeballed.** Muted inks and
+  hairlines were solved for a target contrast against each surface's own ground,
+  which is why five distinct values land inside one narrow band rather than
+  drifting. The same solver found the three gate failures above **before** any
+  file was written.
+- **A control experiment is worth more than a reading of the spec.** Deciding
+  whether `globals.css` or `theme-effects.css` won the scrollbar rules (R48) took
+  a probe, and the first probe used `!important`, which inverts layer order and
+  therefore proved nothing. `11-3`'s instruction to break a value on purpose and
+  watch the gate fail is the same discipline; it was applied here to the `scheme`
+  enum in D103 and to D104's own numbers.
+
+### R52 — placeholder text fails AA in light, and dark no longer matches it
+Date: 2026-09-11
+Change: dark's `field.placeholder` is `#ADA8A0`, **4.71:1** on the field ground.
+Nothing in light.
+Setting dark's placeholder by matching light's ratio is what surfaced it:
+light's `#8A8072` on `#FCFAF6` measures **3.72:1**, below the 4.5 §10 asks for,
+and nothing gates it — `token-contrast.test.ts` checks surface pairs and the
+control boundaries, not this. Dark's old value was worse still at 3.11.
+Dark is fixed here because a fresh value was being chosen anyway and choosing a
+failing one when a passing one costs nothing is indefensible (§10: accessibility
+"treated as part of the design rather than a compliance pass"). **Light is not
+touched**, because `11-2` is explicit that a PR adjusting both is a PR whose dark
+screenshots cannot be compared to anything.
+So the two themes now disagree on this role, deliberately and in dark's favour.
+Whoever next has light open should raise `--field-placeholder` to clear 4.5; it
+is a one-value change with no layout consequence.
+
 ---
 
 ## Open questions

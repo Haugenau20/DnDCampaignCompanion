@@ -114,12 +114,19 @@
   }
 
   /* ====== CARD COMPONENT ====== */
+  /*
+    No shadow. Depth is value and rule (design language section 5) -- the card
+    separates from the page by a real value step and a hairline, and "it does
+    not float". This carried `box-shadow: 0 2px 4px` and, through `shadow-sm` in
+    Card.tsx, actually rendered `0 1px 2px` instead, because Tailwind utilities
+    sort into the last layer. R45 recorded the computed result and attributed it
+    to one of the three sources; there were three (D105).
+  */
   .card {
     border: var(--border-width-sm) solid var(--surface-card-border);
     border-radius: var(--border-radius-md);
     background-color: var(--surface-card-bg);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
+    transition: background-color 0.2s ease;
   }
 
   .card-border {
@@ -138,11 +145,6 @@
   */
   .card-divider {
     border-color: var(--surface-card-border);
-  }
-
-  .card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
 
   .card-header {
@@ -894,6 +896,19 @@
 }
 
 @layer app-state {
+  /*
+    ====== CARD, HOVERABLE ======
+    A card responds to the pointer only when it was asked to. `.card:hover` used
+    to lift and shadow EVERY card, which made `Card`'s own `hoverable` prop
+    meaningless and gave a static card a response that confirmed nothing was
+    happening (design language section 9: motion confirms that something
+    changed). The feedback is now the surface's own `hover` role, which is what
+    the pair model exists to supply, and it is opt-in.
+  */
+  .card-hoverable:hover {
+    background-color: var(--surface-card-hover);
+  }
+
   /* ====== SELECTABLE ITEM ====== */
   /*
     State classes own hover, selected, focus and disabled -- nothing else. A
@@ -1002,13 +1017,26 @@
     background-color: var(--surface-card-bg);
   }
 
+  /*
+    The book's running text is the campaign's voice, so it is serif in BOTH
+    themes -- design language section 4, which puts "content of the world" in
+    serif without qualification.
+
+    It used to be `--font-primary` here, overridden to Crimson Text by a
+    `[data-theme="light"]` rule. That gave light a serif and dark **Inter**, so
+    the same chapter read as a record in one theme and as an application in the
+    other. The face is named explicitly for the reason `.reader-prose` gives
+    above -- no token is a reading serif in both themes -- and it is the same
+    face as `.reader-prose`, because two reading surfaces in one product should
+    not disagree about what reading looks like (D105).
+  */
   .book-content {
-    font-family: var(--font-primary);
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
   }
 
   .book-text {
     color: var(--surface-page-on);
-    font-family: var(--font-primary);
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
   }
 
   .book-pagination {
