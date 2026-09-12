@@ -220,9 +220,16 @@ describe("control boundaries meet 3:1", () => {
       const colour = parseHex(boundaryOf(theme.tokens, key));
       expect(colour).not.toBeNull();
 
-      // Measured against the least favourable of the two grounds a control
+      // Measured against the least favourable of the three grounds a control
       // actually sits on, so the bar cannot be cleared by picking the kind one.
-      const grounds = [theme.tokens.surface.page.bg, theme.tokens.surface.card.bg]
+      // `sunken` joined the list in 12-1: the contract solves every chromatic
+      // role against page, card and sunken simultaneously, and a gate that
+      // checks two of the three can pass a value the generator would reject.
+      const grounds = [
+        theme.tokens.surface.page.bg,
+        theme.tokens.surface.card.bg,
+        theme.tokens.surface.sunken.bg,
+      ]
         .map(parseHex)
         .filter((c): c is Rgb => c !== null);
       const worst = Math.min(...grounds.map((g) => contrastRatio(colour as Rgb, g)));
@@ -342,6 +349,131 @@ describe("status hues meet AA as text on every row surface", () => {
       expect({ hue, meets4point5: worst >= 4.5 }).toEqual({
         hue,
         meets4point5: true,
+      });
+    });
+  });
+});
+
+/**
+ * Every chromatic role, against every surface content can sit on.
+ *
+ * The blocks above grew one at a time, each closing the gap the last defect
+ * came through: status hues after `status.unknown` shipped at 3.65:1, field ink
+ * after `Select` found nothing measured a control's own ground, boundaries
+ * after a medieval exemption expired. Each checks a slice.
+ *
+ * 12-1 makes contrast a property of the contract rather than of review -- a
+ * role's lightness is *solved* against page, card and sunken simultaneously
+ * until it clears its threshold. This block is that rule restated as a gate, so
+ * the two can disagree.
+ *
+ * It restates the list by hand rather than importing the generator's own, for
+ * the reason the schema fixture exists: a check that asks the implementation
+ * what to check passes by construction.
+ */
+describe("every chromatic role against page, card and sunken at once", () => {
+  describe.each(THEMES)("%s", (_name, theme) => {
+    const tokens: ThemeTokens = theme.tokens;
+
+    const grounds = [
+      tokens.surface.page.bg,
+      tokens.surface.card.bg,
+      tokens.surface.sunken.bg,
+    ]
+      .map(parseHex)
+      .filter((c): c is Rgb => c !== null);
+
+    const worstAgainstContent = (colour: string): number => {
+      const parsed = parseHex(colour);
+      expect(parsed).not.toBeNull();
+      return round(Math.min(...grounds.map((g) => contrastRatio(parsed as Rgb, g))));
+    };
+
+    /**
+     * Ink, so 4.5:1.
+     *
+     * `color.secondary`, `action.link.hover` and `action.primary.hover` are
+     * absent on purpose: all three resolve to `accent.hover`, which schema
+     * section 5.2 authors with a dash rather than a ratio. Dark's measures
+     * 4.45:1 here, which is a finding for the PR that retires them, not a
+     * requirement the contract makes.
+     */
+    const inks: ReadonlyArray<[string, string]> = [
+      ["color.primary", tokens.color.primary],
+      ["color.accent", tokens.color.accent],
+      ["color.emphasis", tokens.color.emphasis],
+      ["color.heading", tokens.color.heading],
+      ["field.placeholder", tokens.field.placeholder],
+      ["field.labelText", tokens.field.labelText],
+      ["field.helperText", tokens.field.helperText],
+      ["field.errorText", tokens.field.errorText],
+      ["field.successText", tokens.field.successText],
+      ["action.link.text", tokens.action.link.text],
+      ["action.outline.text", tokens.action.outline.text],
+      ["action.ghost.text", tokens.action.ghost.text],
+      ["danger.deleteText", tokens.danger.deleteText],
+    ];
+
+    /** Boundaries that identify a control, so 3:1 under WCAG 1.4.11. */
+    const boundaries: ReadonlyArray<[string, string]> = [
+      ["icon.border", tokens.icon.border],
+      ["field.border", tokens.field.border],
+      ["field.borderFocus", tokens.field.borderFocus],
+      ["field.errorBorder", tokens.field.errorBorder],
+      ["field.successBorder", tokens.field.successBorder],
+      ["action.outline.border", tokens.action.outline.border as string],
+    ];
+
+    test.each(inks)("%s meets AA on all three", (token, colour) => {
+      const worst = worstAgainstContent(colour);
+      expect({ token, meetsAA: worst >= 4.5 }).toEqual({ token, meetsAA: true });
+    });
+
+    test.each(boundaries)("%s meets 3:1 on all three", (token, colour) => {
+      const worst = worstAgainstContent(colour);
+      expect({ token, meets3to1: worst >= CONTROL_BOUNDARY_MINIMUM }).toEqual({
+        token,
+        meets3to1: true,
+      });
+    });
+
+    /**
+     * Ink whose ground is a fill rather than a surface.
+     *
+     * These would read as catastrophic against the page -- `action.primary.text`
+     * is near-white in light mode -- which is precisely why they need naming:
+     * a check that measured every token against the page would either be wrong
+     * about these or be tuned until it stopped catching anything.
+     */
+    const inkOnFill: ReadonlyArray<[string, string, string]> = [
+      ["action.primary.text", tokens.action.primary.text, tokens.action.primary.bg],
+      ["action.secondary.text", tokens.action.secondary.text, tokens.action.secondary.bg],
+      ["status.on", tokens.status.on, tokens.status.active],
+    ];
+
+    test.each(inkOnFill)("%s meets AA on its own fill", (token, ink, fill) => {
+      const parsedInk = parseHex(ink);
+      const parsedFill = parseHex(fill);
+      expect(parsedInk).not.toBeNull();
+      expect(parsedFill).not.toBeNull();
+      const ratio = round(contrastRatio(parsedInk as Rgb, parsedFill as Rgb));
+      expect({ token, meetsAA: ratio >= 4.5 }).toEqual({ token, meetsAA: true });
+    });
+
+    test("the entity ink is legible on every hue in the palette", () => {
+      const ink = parseHex(tokens.entityInk);
+      expect(ink).not.toBeNull();
+      const worst = round(
+        Math.min(
+          ...tokens.entityPalette
+            .map(parseHex)
+            .filter((c): c is Rgb => c !== null)
+            .map((swatch) => contrastRatio(ink as Rgb, swatch))
+        )
+      );
+      expect({ meetsAA: worst >= 4.5, count: tokens.entityPalette.length }).toEqual({
+        meetsAA: true,
+        count: 8,
       });
     });
   });

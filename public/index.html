@@ -12,10 +12,18 @@
     <title>D&D Campaign Companion</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Newsreader carries the heading scale for the light and dark themes, so the
-         --font-heading token differs from --font-primary instead of duplicating it.
-         Share Tech Mono and Fondamento were requested but referenced nowhere in src. -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=MedievalSharp&family=Crimson+Text:wght@400;600&family=Gentium+Book+Basic:wght@400;700&display=swap" rel="stylesheet">
+    <!-- The two families the colour schema names, and only those. Zilla Slab is
+         --font-heading (the campaign's voice: titles, entity names, running
+         chapter text), Archivo is --font-primary and --font-secondary (the
+         application's voice). Italic serif is reserved for in-world voice, so
+         Zilla Slab loads one italic weight and Archivo loads none. Both load 700:
+         headings compute to bold, and a missing face is synthesised rather than
+         drawn -- which the stack this replaced had been doing unnoticed.
+         Inter and Newsreader left with 12-1, which stopped authoring font
+         values and took them from the schema instead. MedievalSharp went with
+         the medieval theme (D102) and Crimson Text and Gentium Book Basic were
+         referenced nowhere in src -- the same leftover shape as R47. -->
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Zilla+Slab:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <script>
       // Redirect script for client-side routing
       (function() {
