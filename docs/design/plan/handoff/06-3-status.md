@@ -1,6 +1,12 @@
 # PR 6.3 — Quest and rumour status
 
-Phase 6 · third migration PR · closes the phase
+Phase 6 · third migration PR · closes the phase **merged, and superseded by Phase 12**
+
+> Historical. `status.*` is deleted in `12-3`, and this file's instruction to
+> keep `status.failed` and the accent identical is reversed by D25 — the accent
+> is never red. Read `../../design/colour-schema.md` §3, not this, for how a
+> domain state maps to a hue.
+
 
 Status is the one hue in the app that is not the accent and not an entity
 (design language §3). Quests and rumours are where it lives.

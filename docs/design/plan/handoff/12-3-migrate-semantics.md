@@ -5,6 +5,14 @@ Phase 12 · third PR · the semantic fix
 This is the PR that stops the application claiming that visiting a place is a
 victory and that a disproven rumour is a failure.
 
+## Read-only, in every PR of this phase
+
+`../../design/colour-schema.md`, `colour-schema.json`, `design-language.md`,
+`01-token-model.md`, `06-colour-schema-rollout.md` and every
+`handoff/12-*.md` are **read-only**. A handoff that is wrong is reported, not
+rewritten. `../03-drift-log.md` is append-only and is where findings go.
+Schema §9 has the procedure.
+
 ## Scope
 
 - `src/core/themes/css/components.css`
@@ -28,12 +36,26 @@ victory and that a disproven rumour is a failure.
    anything needs no encoding at all.
 4. **Delete `status.*`** and every class that reads it —
    `.status-*`, `.npc-status-*`, `.location-status-*`, `.rumor-status-*`.
+5. **Delete the pre-pair-model tokens** marked "Retired · 12-3" in schema §5.4,
+   with their consumers:
+   - `color.primary`, `color.secondary`, `color.accent` — consumers move to
+     the accent role. Three names for one value is why the audit found ten jobs
+     on one red.
+   - `state.hoverLight`, `state.hoverMedium`, `state.selected` — consumers
+     move to their own surface's `hover` and `selected`. A global hover grey
+     is precisely what token model §2 says cannot exist once surfaces carry
+     their own feedback.
+
+   `color.emphasis` and `color.heading` stay: they are real roles, and §5.4
+   gives them sources.
 
 ## Do not
 
 - Do not leave a compatibility alias mapping `status.completed` to
   `outcome.succeeded`. The alias is the defect: it is what made the wrong
   token reachable. Delete, and let the compiler find the consumers.
+- Do not keep `color.primary` as a deprecated synonym for the accent. Nothing
+  is using the site during this phase; there is no audience for a shim.
 - Do not let a location or a rumour touch an `outcome` token, or a quest
   outcome touch `knowledge`. If a state seems to need both, it is two facts
   and the row should state one of them (design language §8).
@@ -44,7 +66,10 @@ victory and that a disproven rumour is a failure.
 
 ## Gates
 
-- `grep -r "status-"` clean across `src/`.
+- `grep -r "status-"` clean across `src/`, and `color-primary`,
+  `color-secondary`, `color-accent`, `state-hover` and `state-selected`
+  likewise.
+- `colour-schema.md` and `colour-schema.json` unmodified in the diff.
 - The knowledge ladder is **monotonic in contrast** against its ground, in
   ladder order, in both modes. A ladder that is not ordered is not a ladder.
 - Colour-blind pass: quests, locations, rumours and NPCs fully readable with

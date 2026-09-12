@@ -159,6 +159,13 @@ can, and the app's now does.
 
 ## 7. What tokens must not be
 
+- Not an **alias** — a token whose value is another token's name. A token that
+  must go resolves during the additive PR and is deleted in the destructive
+  one; a shim left behind is a second way to say what a pair already says, and
+  it outlives the migration it was meant to enable. Where an existing name must
+  keep working, it is a *derivation* resolved at generation time to a literal
+  value (`../design/colour-schema.md` §5.4), not an indirection in the running
+  app.
 - Not a colour named after one component (`--npc-card-deceased`). Name the
   role; let the component pick a surface.
 - Not layout constants, unless they genuinely vary by theme. Ornament does, by
@@ -181,3 +188,9 @@ lint that a state class never sets a resting background.
 Contrast is a third. Because §2 makes pairs the unit, contrast becomes
 computable from the token set alone — a real check the package could own,
 rather than a review habit.
+
+A fourth, learned late: it cannot prove a value is **right**, only consistent.
+That is why concrete values live in an independently authored fixture
+(`../design/colour-schema.md`) that no implementation PR may edit. A generated
+tree checked against a fixture written by the same agent passes by
+construction. See that document's §9.

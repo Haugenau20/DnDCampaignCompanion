@@ -7,6 +7,14 @@ hand-listed one. Eight hues at even spacing, one lightness, one chroma — that
 is a loop, and writing it as a loop is what makes the design language's "single
 narrow band" true by construction rather than by care.
 
+## Read-only, in every PR of this phase
+
+`../../design/colour-schema.md`, `colour-schema.json`, `design-language.md`,
+`01-token-model.md`, `06-colour-schema-rollout.md` and every
+`handoff/12-*.md` are **read-only**. A handoff that is wrong is reported, not
+rewritten. `../03-drift-log.md` is append-only and is where findings go.
+Schema §9 has the procedure.
+
 ## Scope
 
 - `src/core/themes/derive/` — the contract

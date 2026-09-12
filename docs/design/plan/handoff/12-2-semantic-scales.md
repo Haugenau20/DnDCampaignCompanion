@@ -6,6 +6,14 @@ The scales that replace `status.*` arrive with no consumers, so the
 destructive PR that follows can be reverted on its own without leaving the
 application unstyled. This is token model §5 being used for what it is for.
 
+## Read-only, in every PR of this phase
+
+`../../design/colour-schema.md`, `colour-schema.json`, `design-language.md`,
+`01-token-model.md`, `06-colour-schema-rollout.md` and every
+`handoff/12-*.md` are **read-only**. A handoff that is wrong is reported, not
+rewritten. `../03-drift-log.md` is append-only and is where findings go.
+Schema §9 has the procedure.
+
 ## Scope
 
 - `src/core/themes/token-types.ts`

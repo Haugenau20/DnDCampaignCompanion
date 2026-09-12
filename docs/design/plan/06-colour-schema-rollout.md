@@ -55,6 +55,26 @@ deliberately additive and screenshot-identical, which is the whole point of
 token model §5 — it means `12-3` can be reverted alone without leaving the
 app unstyled.
 
+## 3b. The source of truth is read-only
+
+`../design/colour-schema.md` and `colour-schema.json` are **not editable by
+any PR in this phase.** Neither is `design-language.md`, `01-token-model.md`,
+this document, or any `handoff/12-*.md`.
+
+The reason is mechanical rather than procedural. The phase's central gate is
+"generated themes equal the fixture". If the agent generating the themes also
+authors the fixture, that gate compares the implementation to itself and passes
+by construction — which is worse than having no gate, because it reports green.
+
+`03-drift-log.md` is append-only and is where every finding goes.
+
+**When a document is wrong, and one will be:** stop, append the gap to the
+drift log as a question, raise it, and wait for a corrected document. Do not
+extend the schema to cover what it missed. Version 1 of the schema was wrong by
+52 leaves — it defined the primitives and the handoff assumed it covered the
+token tree. That was found by an implementation agent, reported, and fixed at
+the source; §5.4 exists because of it. That is the loop working.
+
 ## 4. Sequencing rules specific to this phase
 
 - **Never hand-correct a generated value.** If a colour is wrong, the contract
@@ -71,11 +91,24 @@ app unstyled.
 - **The cue is not optional decoration.** `12-4` is what makes the accent and
   `outcome.failed` safe at 40° apart on a warm palette. Shipping `12-3`
   without it leaves failure encoded by hue alone for deuteranopic users.
+- **No alias layer, in any PR.** A role in schema §5.4 is a derivation
+  resolved at generation time, not a variable pointing at a variable. Tokens
+  marked "Retired · 12-3" resolve in `12-1` so no commit is broken, and are
+  deleted in `12-3` with their consumers. An alias that survives its migration
+  is a second way to say what a pair already says (token model §7), and grep
+  cannot tell it from an intentional reference.
+- **A borrowed role is re-verified, not assumed.** A primitive that clears
+  4.5:1 where it was authored is not automatically safe where it is borrowed.
+  The check belongs in the generator, not in review.
 
 ## 5. Gates, in addition to the standing six in `04-rollout.md` §4
 
-1. Generated theme values match `../design/colour-schema.json` exactly. A
-   mismatch fails the build; it is never resolved by editing the theme file.
+1. Generated theme values match `../design/colour-schema.json` exactly — all
+   101 leaves, both modes. A mismatch fails the build; it is never resolved by
+   editing the theme file, and never by editing the fixture.
+1b. `colour-schema.md` and `colour-schema.json` do not appear in
+   `git diff --stat` for any PR in this phase. If either does, the PR is wrong
+   regardless of what else is green.
 2. Every pair in schema §5 at its stated threshold — 4.5:1 text, 3:1 fill and
    border — against **page, card and sunken simultaneously**, both modes.
 3. A greyscale pass: every state in quests, locations, rumours and NPCs
@@ -94,4 +127,7 @@ app unstyled.
 - Locations, rumours and NPCs carry no valenced hue.
 - Failure is legible in greyscale.
 - The entity palette is eight generated hues, and `--location-type-*` is gone.
-- D23–D29 recorded in `03-drift-log.md`.
+- Every one of the 101 leaves generated; no hex literal in either definition
+  file; no alias layer anywhere.
+- `finish-generator.py` deleted.
+- D23–D30 recorded in `03-drift-log.md`.
