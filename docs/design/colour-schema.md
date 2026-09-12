@@ -250,6 +250,160 @@ Ink `#FAF2EA` light, `#F7EFE6` dark. Worst ink ratio 6.92 light, 7.98 dark.
 | 6 | 295° | `#534B6D` | `#484061` |
 | 7 | 340° | `#66455B` | `#5A3B50` |
 
+### 5.4 Role map — the other 61 leaves
+
+§5.1–5.3 generate 91 primitives. The theme tree ships **101 leaves — 91 colours
+and 10 non-colour values**. The difference is not missing values: it is
+existing token names that must each resolve to one of the primitives.
+
+This section is the map, and it was the original oversight in version 1 of this
+document — §5 defined the primitives and then the rollout assumed the schema
+covered the tree. It covered slightly over half of it.
+
+**A role is a derivation, not an alias.** `action.primary.bg` does not point at
+a variable named `accent`; it *is* the accent, resolved at generation time to a
+literal value in the theme tree. Nothing in the running application indirects
+through a second name. This matters because an alias layer is a second way to
+say what a pair already says, which token model §7 forbids, and because an
+alias is a thing that survives — a derivation is just where the number came
+from.
+
+Three rules govern this table:
+
+1. **No role introduces a value.** Every entry is either a primitive from
+   §5.1–5.3 or a literal (`transparent`, a font stack, a radius). If a token
+   seems to need a colour that no primitive provides, the *contract* in §4 is
+   incomplete — raise it, do not invent a hex.
+2. **A borrowed role is re-verified against its new ground.** A primitive that
+   clears 4.5:1 where it was authored is not automatically safe where it is
+   borrowed. This is the exact defect class the pair model exists to catch, and
+   two of the audit's four measured failures were this. Verification output is
+   part of generation, not review.
+3. **"Retired" means deleted, not aliased.** Tokens marked `12-3` resolve in
+   `12-1` and `12-2` so no commit is broken, and are then removed along with
+   their consumers. They are never kept as compatibility shims.
+
+**Legacy `color.*`**
+
+| Token | Source | Light | Dark | Retired |
+|---|---|---|---|---|
+| `color.primary` | `accent.base` | `#8D4F00` | `#D69253` | **12-3** |
+| `color.secondary` | `accent.hover` | `#723F00` | `#BF7C3C` | **12-3** |
+| `color.accent` | `accent.base` | `#8D4F00` | `#D69253` | **12-3** |
+| `color.emphasis` | `surface.page.onMuted` | `#605953` | `#AEA69F` | — |
+| `color.heading` | `surface.page.on` | `#211C16` | `#E9E1D9` | — |
+
+- `color.primary` — consumers move to the accent role
+- `color.secondary` — was a darker accent, never a role
+- `color.accent` — duplicate of color.primary
+- `color.emphasis` — was #9A9082 at 2.7:1 — this fixes it
+
+**Legacy `status.*`**
+
+| Token | Source | Light | Dark | Retired |
+|---|---|---|---|---|
+| `status.general` | `surface.card.onMuted` | `#605953` | `#AEA69F` | **12-3** |
+| `status.active` | `accent.base` | `#8D4F00` | `#D69253` | **12-3** |
+| `status.completed` | `outcome.succeeded` | `#3A6437` | `#7EAB7A` | **12-3** |
+| `status.failed` | `outcome.failedInk` | `#951D28` | `#E16566` | **12-3** |
+| `status.unknown` | `knowledge.0` | `#4E6070` | `#7E92A3` | **12-3** |
+| `status.on` | `accent.on` | `#FDF5ED` | `#120D08` | **12-3** |
+
+**Legacy `state.*`**
+
+| Token | Source | Light | Dark | Retired |
+|---|---|---|---|---|
+| `state.hoverLight` | `surface.card.hover` | `#F2EBE4` | `#342F2A` | **12-3** |
+| `state.hoverMedium` | `surface.card.selected` | `#E8E1DA` | `#3F3A34` | **12-3** |
+| `state.selected` | `surface.card.selected` | `#E8E1DA` | `#3F3A34` | **12-3** |
+
+- `state.hoverLight` — a global hover grey is what token model §2 forbids
+- `state.hoverMedium` — ditto
+- `state.selected` — ditto
+
+**`icon.*`**
+
+| Token | Source | Light | Dark | Retired |
+|---|---|---|---|---|
+| `icon.bg` | `surface.sunken.bg` | `#E8E2DB` | `#15110C` | — |
+| `icon.border` | `neutralBorder` | `#878079` | `#8C857D` | — |
+
+- `icon.border` — was #C9BCA3 at 1.8:1 — reuses the 3:1-solved neutral
+
+**`field.*`**
+
+| Token | Source | Light | Dark | Retired |
+|---|---|---|---|---|
+| `field.bg` | `surface.card.bg` | `#FCF5EE` | `#2A2520` | — |
+| `field.placeholder` | `placeholder` | `#69625B` | `#9E978F` | — |
+| `field.border` | `neutralBorder` | `#878079` | `#8C857D` | — |
+| `field.borderFocus` | `accent.base` | `#8D4F00` | `#D69253` | — |
+| `field.ringFocus` | `accent.ring` | `rgba(141, 79, 0, 0.35)` | `rgba(214, 146, 83, 0.35)` | — |
+| `field.errorBorder` | `outcome.failedInk` | `#951D28` | `#E16566` | — |
+| `field.errorFocus` | `outcome.failedInk` | `#951D28` | `#E16566` | — |
+| `field.errorRing` | `outcome.failedRing` | `rgba(149, 29, 40, 0.35)` | `rgba(225, 101, 102, 0.35)` | — |
+| `field.successBorder` | `outcome.succeeded` | `#3A6437` | `#7EAB7A` | — |
+| `field.successFocus` | `outcome.succeeded` | `#3A6437` | `#7EAB7A` | — |
+| `field.successRing` | `outcome.successRing` | `rgba(58, 100, 55, 0.35)` | `rgba(126, 171, 122, 0.35)` | — |
+| `field.disabledBg` | `disabledBg` | `#F4EDE6` | `#221D18` | — |
+| `field.labelText` | `surface.card.on` | `#211C16` | `#E9E1D9` | — |
+| `field.helperText` | `surface.card.onMuted` | `#605953` | `#AEA69F` | — |
+| `field.errorText` | `outcome.failedInk` | `#951D28` | `#E16566` | — |
+| `field.successText` | `outcome.succeeded` | `#3A6437` | `#7EAB7A` | — |
+
+**`action.*`**
+
+| Token | Source | Light | Dark | Retired |
+|---|---|---|---|---|
+| `action.primary.bg` | `accent.base` | `#8D4F00` | `#D69253` | — |
+| `action.primary.text` | `accent.on` | `#FDF5ED` | `#120D08` | — |
+| `action.primary.hover` | `accent.hover` | `#723F00` | `#BF7C3C` | — |
+| `action.secondary.bg` | `secondary.bg` | `#322D27` | `#3F3934` | — |
+| `action.secondary.text` | `secondary.on` | `#FDF5ED` | `#E9E1D9` | — |
+| `action.secondary.hover` | `secondary.hover` | `#231E19` | `#504B45` | — |
+| `action.link.bg` | _literal_ | `transparent` | `transparent` | — |
+| `action.link.text` | `accent.base` | `#8D4F00` | `#D69253` | — |
+| `action.link.hover` | `accent.hover` | `#723F00` | `#BF7C3C` | — |
+| `action.outline.bg` | _literal_ | `transparent` | `transparent` | — |
+| `action.outline.text` | `accent.base` | `#8D4F00` | `#D69253` | — |
+| `action.outline.hover` | `surface.page.hover` | `#E8E2DB` | `#29241F` | — |
+| `action.outline.border` | `neutralBorder` | `#878079` | `#8C857D` | — |
+| `action.ghost.bg` | _literal_ | `transparent` | `transparent` | — |
+| `action.ghost.text` | `surface.page.onMuted` | `#605953` | `#AEA69F` | — |
+| `action.ghost.hover` | `surface.page.hover` | `#E8E2DB` | `#29241F` | — |
+
+- `action.outline.border` — 3:1 verified; not a decorative hairline
+
+**`danger.*`**
+
+| Token | Source | Light | Dark | Retired |
+|---|---|---|---|---|
+| `danger.bg` | _literal_ | `transparent` | `transparent` | — |
+| `danger.deleteBg` | _literal_ | `transparent` | `transparent` | — |
+| `danger.deleteText` | `outcome.failedInk` | `#951D28` | `#E16566` | — |
+| `danger.deleteHover` | `outcome.failedWash` | `rgba(149, 29, 40, 0.1)` | `rgba(225, 101, 102, 0.1)` | — |
+
+**`font.*`**
+
+| Token | Source | Light | Dark | Retired |
+|---|---|---|---|---|
+| `font.primary` | _literal_ | `Archivo, system-ui, sans-serif` | `Archivo, system-ui, sans-serif` | — |
+| `font.secondary` | _literal_ | `Archivo, system-ui, sans-serif` | `Archivo, system-ui, sans-serif` | — |
+| `font.heading` | _literal_ | `'Zilla Slab', Georgia, serif` | `'Zilla Slab', Georgia, serif` | — |
+
+- `font.heading` — identical in both modes — dark shipping sans here was the same drift as the colour
+
+**`border.*`**
+
+| Token | Source | Light | Dark | Retired |
+|---|---|---|---|---|
+| `border.radius.sm` | _literal_ | `0.25rem` | `0.25rem` | — |
+| `border.radius.md` | _literal_ | `0.375rem` | `0.375rem` | — |
+| `border.radius.lg` | _literal_ | `0.5rem` | `0.5rem` | — |
+| `border.width.sm` | _literal_ | `1px` | `1px` | — |
+| `border.width.md` | _literal_ | `2px` | `2px` | — |
+| `border.width.lg` | _literal_ | `4px` | `4px` | — |
+
 ## 6. Non-colour cues
 
 Because nothing is encoded by colour alone (design language §2), and because
@@ -298,3 +452,93 @@ Carry these into `../plan/03-drift-log.md` as they are implemented.
   dark-mode red that reads as salmon, which was rejected outright.
 - **D29 — Entity palette is generated by loop**, replacing the hand-listed
   array and retiring `--location-type-*`.
+- **D30 — The source of truth is read-only to implementation.** No PR and no
+  agent executing one edits this document or its JSON. Raised by schema v1
+  covering 49 primitives against a 101-leaf token tree: the gap was correctly
+  found by an implementation agent, and correctly fixed here rather than there.
+  §5.4 and §9 are the result.
+- **D31 — No alias layer.** Legacy names resolve as derivations at generation
+  time and are deleted with their consumers in `12-3`; none survives as a
+  compatibility shim. `color.primary/secondary/accent` and
+  `state.hoverLight/hoverMedium/selected` are retired alongside `status.*`.
+
+## 9. This document is never edited by an implementation agent
+
+**`colour-schema.md` and `colour-schema.json` are the source of truth. No
+implementation PR, and no agent executing one, changes either file.**
+
+Not "should avoid". Never. The reason is not ceremony:
+
+The schema outranks the plan, the handoffs and the code on every value. If the
+agent doing the implementation also authors the schema, the source of truth
+becomes downstream of the implementation, and the one guarantee the whole phase
+rests on — that the generated themes can be checked against something
+independent — quietly becomes a tautology. A test that compares generated output
+to a fixture the same agent just wrote proves nothing at all.
+
+So the fixture must be *independently* authored. That is its entire job.
+
+### What to do instead, when the schema is wrong
+
+It will be wrong sometimes; version 1 of this document was wrong by 52 leaves.
+The procedure is the same in every case:
+
+1. **Stop.** Do not patch around it, and do not extend the schema to cover it.
+2. **Write the gap down** in `../plan/03-drift-log.md` as a question: what the
+   token needs, which primitive seems closest, and why the schema does not
+   answer it.
+3. **Raise it** and wait for a corrected schema. Both files are regenerated
+   together, and the version number in the JSON increments.
+4. **Resume** against the new fixture.
+
+A blocked PR is cheap. A fixture that agrees with the code because the code
+wrote it is expensive, and the cost does not show up until a value is wrong and
+nothing catches it.
+
+### The same rule, stated for the other documents
+
+| File | May an implementation PR change it? |
+|---|---|
+| `design/colour-schema.md` | **No.** Never. |
+| `design/colour-schema.json` | **No.** Never. |
+| `design/design-language.md` | **No.** Principles are not an implementation concern. |
+| `plan/01-token-model.md` | No — propose in the drift log. |
+| `plan/06-colour-schema-rollout.md` | No — propose in the drift log. |
+| `plan/handoff/12-*.md` | No. A handoff that is wrong is reported, not rewritten. |
+| `plan/03-drift-log.md` | **Yes — append only.** This is where findings go. |
+
+## 10. Learnings worth keeping
+
+Six, each earned by getting something wrong in this project.
+
+**A theme that may say anything will eventually say something different.** Two
+hand-authored mode files drifted into two different designs, and no amount of
+review caught it because nothing was violated. The fix was structural, not
+editorial: author the shared part once and let the mode supply only what
+genuinely differs.
+
+**Name tokens after meaning, never appearance.** `status.completed` was green,
+existed, and was therefore available for a location to borrow — which is how
+"visited" came to render green and a progress bar came to run red-to-green as
+though exploring were a win condition. The bug was not in the CSS. It was in
+the name.
+
+**A colour is safe in a pair, not in isolation.** Three separate defects in this
+project were the same shape: a legitimate value, in a legitimate slot, wrong in
+relation to what sat behind it. Hence §5.4 rule 2 — a borrowed role is
+re-verified, always, because borrowing changes the ground.
+
+**A fixture must be authored by someone other than the implementation.**
+Otherwise the check passes by construction. See §9.
+
+**An alias is not a migration mechanism.** It is a second name that survives the
+migration it was meant to enable. Where a token must go, resolve it during the
+additive PR and delete it in the destructive one; do not leave a shim behind
+that grep cannot distinguish from an intentional reference.
+
+**On a dark ground, some constraints simply bind.** A red that clears 4.5:1 is
+necessarily light, and a light red is pink. When two requirements genuinely
+cannot both hold, split the token by role rather than compromising the value —
+that is what pairs are for (§4.4). Do not resolve it by quietly failing
+contrast, and do not resolve it by shipping a colour the product's owner has
+already rejected.

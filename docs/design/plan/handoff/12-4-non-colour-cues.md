@@ -6,6 +6,14 @@ The accent and `outcome.failed` are 40° apart on a warm palette — the closest
 pair in the schema, and the one real cost of choosing amber. Two shape cues
 make that safe, and incidentally make every state legible in greyscale.
 
+## Read-only, in every PR of this phase
+
+`../../design/colour-schema.md`, `colour-schema.json`, `design-language.md`,
+`01-token-model.md`, `06-colour-schema-rollout.md` and every
+`handoff/12-*.md` are **read-only**. A handoff that is wrong is reported, not
+rewritten. `../03-drift-log.md` is append-only and is where findings go.
+Schema §9 has the procedure.
+
 ## Scope
 
 - `src/core/themes/css/components.css`

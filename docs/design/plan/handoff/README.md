@@ -190,6 +190,21 @@ written. D6 keeps bitmaps out of this project entirely, so it is a handoff for
 work that may never be scheduled, and writing it now would be the guess this
 section warns about.
 
+## Read-only documents
+
+Design sources of truth are **never edited by an implementation PR or by an
+agent executing one**: `../../design/colour-schema.md`,
+`../../design/colour-schema.json`, `../../design/design-language.md`,
+`../01-token-model.md`, the phase plans, and the handoffs themselves.
+
+`../03-drift-log.md` is append-only and is where findings go.
+
+A handoff that is wrong is **reported, not rewritten**. When a document does
+not answer something, stop and raise it rather than extending the document —
+for the colour schema specifically, the gate is "generated output equals the
+fixture", and a fixture edited by the agent being checked passes by
+construction. See `../../design/colour-schema.md` §9.
+
 ## Contract every handoff follows
 
 - **Scope** — the files it may touch. Anything else is out of scope; log it in
