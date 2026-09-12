@@ -853,14 +853,17 @@
     background-color: var(--surface-card-bg);
   }
 
-  /* The book's running text is the campaign's voice, so it is serif in BOTH themes -- design language section 4, which puts "content of the world" in seri */
+  /* The book's running text is the campaign's voice, so it takes the heading
+     family -- serif in BOTH themes, design language section 4, which puts
+     "content of the world" in serif. Named by token rather than by family: a
+     hardcoded 'Newsreader' here outlived the token twice. */
   .book-content {
-    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-family: var(--font-heading);
   }
 
   .book-text {
     color: var(--surface-page-on);
-    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-family: var(--font-heading);
   }
 
   .book-pagination {
@@ -879,7 +882,7 @@
   /* The reader deliberately does NOT reuse the .book-* surfaces above. */
   .reader-prose {
     color: var(--surface-page-on);
-    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-family: var(--font-heading);
   }
 
   /* ====== RENDERED MARKDOWN ====== */

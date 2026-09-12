@@ -3114,6 +3114,117 @@ field unchanged in the TypeScript.
 Because: the next phase hands this layer to a design tool, and rationale in the
 files would anchor it to decisions that are being reopened on purpose.
 
+### D110 - Torchlight Forge: both modes are derived from one contract
+Date: 2026-09-12   Status: active
+Decision: `lightTheme.ts` and `darkTheme.ts` author nothing. One hue-and-chroma
+contract is authored in `design/colour-schema.md` section 4; a mode supplies
+lightness and nothing else. Both files are now four lines and a call to
+`deriveTokens`, and neither contains a hex.
+This is the schema's own D23 and D24. **Its numbering is internal to
+`colour-schema.md` and collides with this log's** -- D23 here is surface hover
+roles, D24 is `Typography` inheriting its colour. An append-only log cannot
+reuse a number, so schema decisions land here at the next free one. When 12-2
+is told to "record D25-D29", read that the same way.
+What ships, in one paragraph: the accent is amber (`#8D4F00` light, `#D69253`
+dark) and **never red**, because red now means exactly two things -- this
+failed, and this deletes something. 89 of each mode's 101 leaves change. Dark
+stops carrying Material's stock blue and purple, five untouched Tailwind field
+defaults, and a sans heading font where light's was serif.
+Because: two files that may each say anything will eventually each say
+something different, and Phase 11 proved that reviewing them does not catch it
+-- nothing was violated. The fix is structural. A mode that can only supply
+lightness cannot be a different design, and a new theme becomes about a dozen
+numbers rather than ninety-five hexes. It also closes R57 from the other end:
+that reversal failed because hues were being chosen before it was decided which
+roles exist, and this decides the roles first.
+
+### D111 - the source of truth is read-only to the code that implements it
+Date: 2026-09-12   Status: active
+Decision: `design/colour-schema.md` and `colour-schema.json` are not edited by
+any PR in this phase. `schema-fixture.test.ts` asserts that both generated
+trees equal `resolved.<mode>.tree` -- all 101 leaves, both modes, exactly.
+This is the schema's own D30.
+Because: the gate is "generated output equals the fixture". If the agent
+generating the themes also authors the fixture, the gate compares the
+implementation to itself and passes by construction, which is worse than no
+gate because it reports green. The fixture's entire job is to have been written
+by someone else. It earned that job honestly: version 1 of the schema defined
+49 primitives against a 101-leaf tree, an implementation agent found the gap,
+and it was fixed at the source rather than patched downstream -- section 5.4
+exists because of it.
+The rule held on this PR. The typeface question below is what it looks like
+when it works: stop, raise, take a decision, proceed.
+
+### R59 - the schema changes the typefaces, and 12-1's scope widened to load them
+Date: 2026-09-12
+Change: `public/index.html` loads Archivo and Zilla Slab instead of Inter,
+Newsreader, MedievalSharp, Crimson Text and Gentium Book Basic, and the three
+hardcoded `'Newsreader'` rules in `components.css` take `var(--font-heading)`.
+Three of the 89 changed leaves per mode are **not colours**. The fixture's
+`font.*` literals are `Archivo, system-ui, sans-serif` and
+`'Zilla Slab', Georgia, serif`, where the app shipped Inter and Newsreader.
+That put two instructions in conflict: schema section 7 says the schema does
+not decide type, while gate 1 requires all 101 leaves to match it. Neither new
+family was loaded, so a faithful implementation would have fallen back to
+system-ui and Georgia, and `components.css` -- explicitly out of scope -- named
+Newsreader in three places and would have disagreed with the token it was meant
+to follow.
+Raised rather than resolved locally, per D111. **The owner's call: the change is
+intentional and the scope widens to carry it.** The alternative considered and
+rejected was regenerating the schema to keep Inter and Newsreader.
+Cost: two files outside the handoff's scope list, plus the dead font loads that
+came with them. MedievalSharp had outlived the medieval theme (D102), and
+Crimson Text and Gentium Book Basic were referenced nowhere in `src` -- the same
+leftover shape R47 found in `public/decorative/`, in the same file, and found
+only because something else made it necessary to look there.
+**The lesson is the one the handoff contract already states:** a document that
+is wrong is reported, not rewritten, and the report is cheap. This one cost a
+single question and changed the shape of the PR.
+
+### R60 - reproducing an independently generated fixture, byte for byte
+Date: 2026-09-12
+Change: nothing in the design. This records what it took to satisfy "generated
+values match `colour-schema.json` exactly -- all 101 leaves, both modes",
+because three separate things were nearly wrong in ways that would have looked
+right.
+**The gamut rule decides one leaf, and only one.** Out-of-gamut colours are
+resolved by reducing chroma, never by clipping channels -- clipping moves the
+hue and breaks the one guarantee the schema rests on. But "reduce until it fits"
+needs a definition of fits. Bisecting to the strict boundary, every linear
+channel within [0, 1], reproduces **201 of 202 leaves** and misses light's
+`accent.hover` by one unit of red: `#713F00` where the fixture says `#723F00`.
+The rule that reproduces all 202 is representability as an sRGB *byte*: a
+channel encoding to -0.001 still rounds to 0 and displays exactly, so the
+tolerance is half an 8-bit step. Established by control experiment against five
+fixed epsilons and two step-wise reductions, all of which miss by more.
+**The contrast solve is load-bearing in exactly two places.** Section 4.3 rule 2
+moves a role's lightness away from the ground in 0.005 steps until it clears its
+threshold against page, card and sunken simultaneously. Only two roles move:
+light `field.border` (0.615 -> 0.605, to reach 3:1) and dark `outcome.failed.ink`
+(0.65 -> 0.66, to reach 4.5:1). **A generator that implements no solve at all
+passes 200 of 202 leaves** -- close enough to look finished, and wrong in the
+two places contrast is tightest.
+**`inkOnLight` and `inkOnDark` name the surface family, not the mode.** In dark
+mode `inkOnLight` is a *light* ink, because it is the ink for page, card and
+sunken -- named for where the contract was authored. Reading them as
+mode-conditional produced six wrong leaves in dark and nothing wrong in light,
+which is the shape of a bug that ships.
+Two measurements worth keeping:
+- The borrowed-role verification, which runs inside the generator rather than in
+  review, found dark's `accent.hover` at **4.45:1** on `card`. It is not
+  asserted: section 5.2 authors that primitive with a dash where every verified
+  role has a number, so asserting one would be the generator inventing a
+  requirement the contract does not make. The three tokens that borrow it are
+  two hover states and `color.secondary`, which 12-3 retires. Re-measure there.
+- `color.emphasis` was `#9A9082` at 2.7:1 and **no gate in this project ever saw
+  it** -- it appears in none of `token-contrast.test.ts`'s blocks, each of which
+  was added to close the gap the previous defect came through. It is the page's
+  muted ink now, at 5.35:1, and the new block covers it.
+Because: the handoff says to transcribe the contract, not re-derive it. That is
+right, and it is not sufficient -- the contract is a specification whose output
+is exact, and three implementations that all look like faithful transcriptions
+produce three different palettes. The fixture is what tells them apart, which is
+the whole argument of D111.
 ---
 
 ## Open questions
