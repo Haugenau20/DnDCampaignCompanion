@@ -8,8 +8,11 @@
 import { ThemeName, ThemeTokens, SurfacePair } from "../types";
 import {
   AWAY_FROM_GROUND,
+  CUES,
   ENTITY_COUNT,
   HUE,
+  LEGAL_CUES,
+  LEGAL_SCHEMES,
   NON_TEXT_MINIMUM,
   RAMP,
   SOLVE_STEP,
@@ -231,6 +234,21 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
       unknown: role("status.unknown"),
       on: role("status.on"),
     },
+    // The semantic scales. These take their values straight from the
+    // primitives rather than through the role map, because they are not
+    // existing names being resolved -- they *are* the primitives, finally
+    // carrying the name of what they mean. The role map exists for the
+    // opposite case, and putting these through it would invent an indirection
+    // in the one place there genuinely is none.
+    outcome: {
+      succeeded: primitives.outcome.succeeded,
+      failed: {
+        ink: primitives.outcome.failedInk,
+        fill: primitives.outcome.failedFill,
+      },
+    },
+    knowledge: [...primitives.knowledge],
+    cue: { failure: CUES.failure, negation: CUES.negation },
     state: {
       hoverLight: role("state.hoverLight"),
       hoverMedium: role("state.hoverMedium"),
@@ -314,8 +332,53 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
   };
 
   assertAllConsumed();
+  verifyEnums(tokens);
   verifyBorrowedRoles(tokens);
   return tokens;
+};
+
+/** One enum token carrying a value nothing downstream understands. */
+export interface IllegalEnumValue {
+  token: string;
+  value: string;
+  legal: readonly string[];
+}
+
+/**
+ * Enum tokens, checked by **value** rather than by presence.
+ *
+ * Token model section 6 asks for this explicitly, and the reason is that the
+ * failure mode is silence. `scheme: 'drak'` defines a variable, satisfies the
+ * manifest, satisfies the cross-theme path check, and is then dropped by the
+ * browser -- the symptom is identical to having no `color-scheme` at all,
+ * which is the bug `scheme` was added to fix. A misspelt cue fails the same
+ * way: the variable is there and no hatching is painted.
+ */
+export const findIllegalEnumValues = (
+  tokens: ThemeTokens
+): readonly IllegalEnumValue[] => {
+  const checks: ReadonlyArray<[string, string, readonly string[]]> = [
+    ["scheme", tokens.scheme, LEGAL_SCHEMES],
+    ["cue.failure", tokens.cue.failure, LEGAL_CUES],
+    ["cue.negation", tokens.cue.negation, LEGAL_CUES],
+  ];
+
+  return checks
+    .filter(([, value, legal]) => !legal.includes(value))
+    .map(([token, value, legal]) => ({ token, value, legal }));
+};
+
+/** The same check, as a hard stop at generation time. */
+export const verifyEnums = (tokens: ThemeTokens): void => {
+  const illegal = findIllegalEnumValues(tokens);
+  if (illegal.length === 0) return;
+
+  throw new Error(
+    "Enum tokens carry values nothing understands:\n" +
+      illegal
+        .map((e) => `  ${e.token}: "${e.value}" is not one of ${e.legal.join(", ")}`)
+        .join("\n")
+  );
 };
 
 /** One failed check: what was measured, against what, and how short it fell. */

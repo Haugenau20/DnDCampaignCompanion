@@ -141,6 +141,35 @@ export const RAMP: Record<ThemeName, LightnessRamp> = {
   },
 };
 
+/**
+ * The non-colour cues, from schema section 6.
+ *
+ * Authored once rather than per mode, for the reason the colours are: a cue is
+ * part of the design, and a mode that could choose its own would be a second
+ * design. They live in the contract rather than being hardcoded in the
+ * generator so that turning one off is a value change, not a code change --
+ * which is the whole point of an enum token (token model section 6).
+ */
+export const CUES = {
+  failure: "hatch",
+  negation: "strike",
+} as const;
+
+/**
+ * The legal values of the `cue` enum, as data the generator can check against.
+ *
+ * Token model section 6: "Validating an enum means checking the **value** is
+ * legal, not just that the variable exists." `scheme` is the worked example --
+ * `scheme: 'drak'` passes a manifest, passes a cross-theme path check, and is
+ * then silently dropped by the browser, which is indistinguishable from having
+ * declared nothing. A cue fails the same way: `cue.failure: 'hatchh'` would
+ * define the variable and paint no hatching.
+ */
+export const LEGAL_CUES = ["hatch", "strike", "none"] as const;
+
+/** Which way up a theme can say it is. */
+export const LEGAL_SCHEMES = ["light", "dark"] as const;
+
 /** Which way a role moves when it has to clear a threshold: away from the ground. */
 export const AWAY_FROM_GROUND: Record<ThemeName, 1 | -1> = {
   light: -1,

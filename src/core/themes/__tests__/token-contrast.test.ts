@@ -478,3 +478,76 @@ describe("every chromatic role against page, card and sunken at once", () => {
     });
   });
 });
+
+/**
+ * The semantic scales, at the thresholds the schema states for them.
+ *
+ * These have no consumers yet -- 12-3 migrates them -- so nothing else in the
+ * project would notice if a value were wrong. Gating them on arrival is the
+ * point of an additive PR: by the time a consumer points at `outcome.failed`,
+ * the question of whether it is legible is already closed.
+ *
+ * `outcome.failed` is checked at two different thresholds, which is the pair
+ * model doing exactly what it was built for. The ink is the word "Failed" and
+ * owes AA; the fill paints bars and hatching and owes 3:1. Holding the fill to
+ * 4.5 would force it pale on a dark ground, and a pale red is pink -- the
+ * schema rejected that outright (section 4.4), so measuring them together
+ * would be the gate arguing with the design rather than checking it.
+ */
+describe("the semantic scales meet their stated thresholds", () => {
+  describe.each(THEMES)("%s", (_name, theme) => {
+    const tokens: ThemeTokens = theme.tokens;
+
+    const grounds = [
+      tokens.surface.page.bg,
+      tokens.surface.card.bg,
+      tokens.surface.sunken.bg,
+    ]
+      .map(parseHex)
+      .filter((c): c is Rgb => c !== null);
+
+    const worst = (colour: string): number => {
+      const parsed = parseHex(colour);
+      expect(parsed).not.toBeNull();
+      return round(Math.min(...grounds.map((g) => contrastRatio(parsed as Rgb, g))));
+    };
+
+    const asText: ReadonlyArray<[string, string]> = [
+      ["outcome.succeeded", tokens.outcome.succeeded],
+      ["outcome.failed.ink", tokens.outcome.failed.ink],
+      ...tokens.knowledge.map(
+        (step, i) => [`knowledge.${i}`, step] as [string, string]
+      ),
+    ];
+
+    test.each(asText)("%s meets AA on page, card and sunken", (token, colour) => {
+      expect({ token, meetsAA: worst(colour) >= 4.5 }).toEqual({ token, meetsAA: true });
+    });
+
+    test("outcome.failed.fill meets 3:1 as a fill", () => {
+      const ratio = worst(tokens.outcome.failed.fill);
+      expect({ meets3to1: ratio >= CONTROL_BOUNDARY_MINIMUM, ratio }).toEqual({
+        meets3to1: true,
+        ratio,
+      });
+    });
+
+    /**
+     * Schema gate 6: the ladder is monotonic in contrast, in ladder order.
+     *
+     * More knowledge must *read* as more, and it has to do so in both modes --
+     * darker in light, lighter in dark. No per-token threshold can express
+     * that, because every step passing 4.5:1 individually says nothing about
+     * whether they are in the right order. This is what makes the ladder
+     * survive greyscale and colour blindness: it is a value ramp, not three
+     * hues a reader is asked to rank.
+     */
+    test("the knowledge ladder rises with the index", () => {
+      const ratios = tokens.knowledge.map(worst);
+      expect({ ratios, rising: ratios[0] < ratios[1] && ratios[1] < ratios[2] }).toEqual({
+        ratios,
+        rising: true,
+      });
+    });
+  });
+});

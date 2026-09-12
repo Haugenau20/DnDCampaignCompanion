@@ -3225,6 +3225,105 @@ right, and it is not sufficient -- the contract is a specification whose output
 is exact, and three implementations that all look like faithful transcriptions
 produce three different palettes. The fixture is what tells them apart, which is
 the whole argument of D111.
+### D112 - two semantic scales, named after meaning rather than appearance
+Date: 2026-09-12   Status: active
+Decision: `outcome` and `knowledge` exist as tokens. **Outcome is valenced**
+(succeeded, failed) and is the only place red and green are spent;
+**knowledge** is a non-valenced ladder of three, ordered, used by locations and
+rumours alike. This is the schema's own D26, and it amends design language
+section 3 from three colour jobs to four.
+`status.*` is untouched and still consumed. Nothing in this PR is visible.
+Because: the defect being removed was in a *name*. `status.completed` existed,
+was green, and was therefore available for a location to borrow -- which is how
+"visited" came to render green and a progress bar came to run red to green as
+though exploring a place were a win condition, and how a rumour marked false
+came to render in the same red as a failed quest. A disproven rumour is a
+*resolved* one and usually good news. Red and green are pre-attentive and
+cannot be opted out of, so the fix is not to avoid the convention but to spend
+it only where the domain actually has valence and encode everything else
+differently.
+`knowledge` is an **array**, not a record. Position is the ladder, so
+`knowledge.1` is a step that two domains share, where `knowledge.visited` would
+tie it to one of them -- the same reasoning as the entity palette (token model
+section 6).
+
+### D113 - failure splits into ink and fill
+Date: 2026-09-12   Status: active
+Decision: `outcome.failed` is a pair. `ink` is the word "Failed" and owes
+4.5:1; `fill` paints bars and hatching and owes 3:1. In light they resolve to
+the same value; in dark they do not (`#E16566` and `#BE4649`). The schema's
+own D28.
+Because: on a dark ground the constraint genuinely binds. A red that clears
+4.5:1 as text is necessarily light, and a light red is pink -- R57 spent a
+whole round of tuning discovering this and recorded the arithmetic behind it
+(WCAG weights green 0.7152 against red 0.2126). When two requirements cannot
+both hold, the answer is to split the token by role rather than compromise the
+value. That is what pairs are for, and it is the same shape as a surface
+carrying its own ink.
+The contrast gate checks the two at **different thresholds**, deliberately.
+Measuring the fill at 4.5 would force it pale and would be the gate arguing
+with the design rather than checking it.
+
+### D114 - a cue is a property of a fact, not a setting on a theme
+Date: 2026-09-12   Status: active
+Decision: `cue.failure` and `cue.negation`, each carrying one of
+`hatch | strike | none`. Light and dark both declare `hatch` and `strike`.
+The handoff names the enum's members and not the token's shape, and the two
+readings are materially different: one token whose value is a cue, or a token
+per fact whose value is a cue. Decided from schema section 6, whose table maps
+each cue to **what it applies to** -- hatch to `outcome.failed`, strike to a
+deceased NPC and a false rumour. A single `cue` token cannot express two
+simultaneous applications, so the table decides it. Handoff contract: the
+design sources decide a judgement the handoff did not anticipate.
+This is also where `none` earns its place. A theme that wants no hatching sets
+`cue.failure: 'none'`, which is the difference between an enum and a boolean --
+and the reason token model section 6 wanted ornament expressed this way.
+Because: 12-4's hatch is not decoration. The accent and `outcome.failed` sit
+40 degrees apart on a warm palette -- the closest pair in the schema -- and the
+cue is what makes failure legible in greyscale and under deuteranopia. A shape
+that could not be turned off per theme would make it a code path again, which
+is the thing the enum exists to abolish.
+
+### R61 - what an additive PR can hide, and the three gates that now see it
+Date: 2026-09-12
+Change: three gates gained a direction they did not have. Nothing visible moved;
+the token baseline diffs to **+8 leaves per mode, 0 changed, 0 removed**.
+**The manifest gate could not see these tokens at all.** It walks *consumed* to
+*defined*, which is the direction a rename breaks -- and an additive PR produces
+the opposite: tokens that exist and are used nowhere. A whole scale could have
+been misnamed, half-defined, or present in one theme only, and every gate in the
+project would have stayed green until 12-3 wired it up, at which point the
+failure would have looked like 12-3's. `token-manifest.test.ts` now enumerates
+the new variables in both themes. **Enumerating is what makes "additive"
+checkable rather than merely invisible.**
+**Enum validation moved out of the test and into generation.** `scheme` was
+value-checked only by `themes.test.ts`; `cue` would have arrived the same way.
+Both are now checked by `verifyEnums` inside `deriveTokens`, so a misspelt value
+cannot reach a theme file, and the test asserts the *same function generation
+runs* rather than restating it. The failure mode is why this matters and it is
+identical for both tokens: the variable is defined, the manifest is satisfied,
+the cross-theme path check is satisfied, and the browser silently ignores it.
+`scheme: 'drak'` is indistinguishable from declaring no `color-scheme` at all;
+`cue.failure: 'hatchh'` is indistinguishable from painting no hatching.
+**The fixture's `tree` block stops being an equality here**, and the gate stayed
+exact rather than being loosened. `colour-schema.json` records the token set as
+of 12-1; this PR adds 8 leaves and 12-3 will delete 12. The obvious move is to
+relax the comparison to "the fixture is a subset", and that would quietly accept
+an accidental extra token -- most of what the file exists to prevent. Instead the
+additions are **named exhaustively** in the test, and each is asserted against
+the fixture's own `primitives` block, which already holds every one of the new
+colours. The 101 tree leaves are still compared exactly.
+One ambiguity worth recording rather than guessing at twice: **the knowledge
+ladder is 0-indexed in data and 1-indexed in prose.** Schema sections 3 and 5.2
+say `knowledge.1 / .2 / .3`; the role map's JSON says `status.unknown` comes
+from `knowledge.0`. The data spelling wins, because the entity palette
+established the convention (`--entity-palette-0`) and a token model cannot have
+two index bases. So the variables are `--knowledge-0 .. -2`, and schema prose
+step "1" is `knowledge.0`.
+Because: an additive PR is the one that most looks like it needs no gates, since
+by construction nothing it does is visible. That is exactly backwards -- an
+invisible change is one no screenshot and no consumer can contradict, so the
+only thing standing between it and 12-3 is whether anything enumerates it.
 ---
 
 ## Open questions

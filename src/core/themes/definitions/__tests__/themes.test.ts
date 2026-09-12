@@ -10,7 +10,8 @@
 import { lightTheme } from '../lightTheme';
 import { darkTheme } from '../darkTheme';
 import { themes } from '../index';
-import { Theme, ThemeName } from '../../types';
+import { Theme, ThemeName, CueToken, ColorSchemeToken } from '../../types';
+import { findIllegalEnumValues, LEGAL_CUES, LEGAL_SCHEMES } from '../../derive';
 import { flattenTokens, variableNameFor, TokenTree } from '../../token-variables';
 
 const ALL: ReadonlyArray<[string, Theme]> = [
@@ -93,7 +94,6 @@ describe('theme definitions', () => {
   // still open, but it now has a worked answer to inherit rather than a
   // hypothetical.
   describe('enum tokens carry a legal value, not merely a present one', () => {
-    const LEGAL_SCHEMES = ['light', 'dark'];
 
     test.each(ALL)('%s declares a scheme the browser understands', (_name, theme) => {
       expect(LEGAL_SCHEMES).toContain(theme.tokens.scheme);
@@ -114,6 +114,56 @@ describe('theme definitions', () => {
       if (name === 'light' || name === 'dark') {
         expect(theme.tokens.scheme).toBe(name);
       }
+    });
+
+    // `cue` is the second instance of the shape, and the first with more than
+    // one member in play. It fails the same silent way: `cue.failure: 'hatchh'`
+    // defines the variable, satisfies the manifest, and paints no hatching --
+    // which matters because 12-4's hatch is not decoration. It is what makes
+    // the accent and `outcome.failed`, 40 degrees apart on a warm palette, safe
+    // for a deuteranopic reader.
+    test.each(ALL)('%s declares legal cue values', (_name, theme) => {
+      expect({
+        failure: LEGAL_CUES.includes(theme.tokens.cue.failure),
+        negation: LEGAL_CUES.includes(theme.tokens.cue.negation),
+      }).toEqual({ failure: true, negation: true });
+    });
+
+    // Existence, asserted separately for the reason given above `scheme`'s:
+    // `toContain` on undefined throws rather than failing usefully.
+    test.each(ALL)('%s declares both cues at all', (_name, theme) => {
+      expect([typeof theme.tokens.cue.failure, typeof theme.tokens.cue.negation]).toEqual([
+        'string',
+        'string',
+      ]);
+    });
+
+    // The checks above are only worth having if they can fail, and a gate that
+    // has never been seen to fail is indistinguishable from one that cannot.
+    // `findIllegalEnumValues` is the same function generation itself runs, so
+    // this pins the real gate rather than a restatement of it.
+    describe('the check rejects what it is meant to reject', () => {
+      test('a misspelt cue is caught, and named', () => {
+        const broken = {
+          ...lightTheme.tokens,
+          cue: { ...lightTheme.tokens.cue, failure: 'hatchh' as CueToken },
+        };
+        expect(findIllegalEnumValues(broken)).toEqual([
+          { token: 'cue.failure', value: 'hatchh', legal: LEGAL_CUES },
+        ]);
+      });
+
+      test("a scheme the browser would drop is caught", () => {
+        const broken = { ...lightTheme.tokens, scheme: 'drak' as ColorSchemeToken };
+        expect(findIllegalEnumValues(broken).map((e) => e.token)).toEqual(['scheme']);
+      });
+
+      test('both real themes are clean', () => {
+        expect(ALL.map(([n, t]) => [n, findIllegalEnumValues(t.tokens)])).toEqual([
+          ['light', []],
+          ['dark', []],
+        ]);
+      });
     });
   });
 
