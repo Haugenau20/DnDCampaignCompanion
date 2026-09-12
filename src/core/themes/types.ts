@@ -12,7 +12,14 @@ export type ThemeName = 'light' | 'dark';
  * The token tree lives in token-types.ts. It is re-exported here so `types`
  * stays the one import site for a theme's shape.
  */
-export type { ThemeTokens, SurfacePair, ActionPair } from './token-types';
+export type {
+  ThemeTokens,
+  SurfacePair,
+  ActionPair,
+  OutcomePair,
+  CueToken,
+  ColorSchemeToken,
+} from './token-types';
 
 /**
  * Complete theme configuration
