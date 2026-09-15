@@ -604,6 +604,47 @@ describe('RosterStatus', () => {
   });
 });
 
+describe('RosterStatus negation cue', () => {
+  // `cue.negation`, from schema section 6. A deceased NPC and a false rumour
+  // are both facts that are fully known and *negated*, which is what a strike
+  // says and a red label does not -- a red label claims something went wrong,
+  // and neither of them did.
+  test('a negated state carries the strike', () => {
+    const { container } = render(
+      <RosterStatus tone="knowledge-2" negated>
+        False
+      </RosterStatus>
+    );
+    expect((container.firstChild as HTMLElement).className).toContain('cue-negated');
+  });
+
+  test('an ordinary state does not', () => {
+    const { container } = render(<RosterStatus tone="knowledge-2">Confirmed</RosterStatus>);
+    expect((container.firstChild as HTMLElement).className).not.toContain('cue-negated');
+  });
+
+  test('negation is orthogonal to tone, not a tone of its own', () => {
+    // This is the property that matters. A false rumour sits at the *top* of
+    // the knowledge ladder alongside a confirmed one -- both are fully known --
+    // so the two are indistinguishable by hue by design, and the strike is the
+    // only thing separating them. If negation were a tone it would have to
+    // leave the ladder to say so.
+    const cls = (negated: boolean) => {
+      const { container, unmount } = render(
+        <RosterStatus tone="knowledge-2" negated={negated}>
+          Word
+        </RosterStatus>
+      );
+      const value = (container.firstChild as HTMLElement).className;
+      unmount();
+      return value;
+    };
+    const plain = cls(false).split(/\s+/).sort();
+    const struck = cls(true).split(/\s+/).sort();
+    expect(struck.filter(c => !plain.includes(c))).toEqual(['cue-negated']);
+  });
+});
+
 describe('RosterRow batch selection', () => {
   const renderRow = (props: Partial<React.ComponentProps<typeof RosterRow>> = {}) =>
     render(

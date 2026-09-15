@@ -472,7 +472,10 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                       </Typography>
                     </div>
 
-                    <RosterStatus tone={STATUS_TONE[rumor.status]}>
+                    <RosterStatus
+                      tone={STATUS_TONE[rumor.status]}
+                      negated={rumor.status === 'false'}
+                    >
                       {formatStatus(rumor.status)}
                     </RosterStatus>
 

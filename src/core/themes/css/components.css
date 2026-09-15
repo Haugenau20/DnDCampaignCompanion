@@ -665,8 +665,69 @@
     background-color: var(--outcome-succeeded);
   }
 
+  /*
+    A failed quest's bar is hatched rather than solid. This is `cue.failure`,
+    and it is not decoration.
+
+    The accent and `outcome.failed` sit 40 degrees apart on a warm palette --
+    the closest pair in the schema, and the one real cost of choosing amber.
+    Under deuteranopia they collapse toward each other, and in greyscale the
+    bar is the only thing distinguishing a failed quest from an active one,
+    because the fill is all that differs. The texture survives both. It needs
+    no copy change, no icon to align and translate, and no stronger red: if a
+    hue has to shout, the cue is not doing its job.
+
+    Bands are 3px on a 6px bar -- sized against the height that actually
+    ships, not a demo. Finer stripes alias into a flat wash at this size.
+
+    The gaps are cut in the track's own colour rather than `transparent`, so
+    the texture reads the same whatever the bar is drawn over.
+  */
   .progress-bar-failed {
     background-color: var(--outcome-failed-fill);
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--surface-sunken-bg) 0,
+      var(--surface-sunken-bg) 3px,
+      transparent 3px,
+      transparent 6px
+    );
+  }
+
+  /*
+    The enum, as the only way to turn a cue off.
+
+    Token model section 6 asks for ornament as an enum rather than a code
+    path, so a theme changes the cue by changing a *value*. The branch is
+    deliberately one-directional: the hatch is the default and the enum can
+    only remove it. A browser without style-query support therefore keeps the
+    accessible behaviour and loses only the ability to opt out -- which is the
+    right way round for a cue whose entire job is to not depend on colour.
+  */
+  @container style(--cue-failure: none) {
+    .progress-bar-failed {
+      background-image: none;
+    }
+  }
+
+  /*
+    `cue.negation`: a hairline rule through the label, in the label's own ink.
+
+    A deceased NPC and a false rumour are both facts that are fully known and
+    negated, which is precisely what a strike says and what a red label does
+    not -- a red label says "this went wrong", and neither of them did. It is
+    also what lets a false rumour share the knowledge ladder's top rung with a
+    confirmed one without the two being indistinguishable.
+  */
+  .cue-negated {
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+  }
+
+  @container style(--cue-negation: none) {
+    .cue-negated {
+      text-decoration: none;
+    }
   }
 
   /*

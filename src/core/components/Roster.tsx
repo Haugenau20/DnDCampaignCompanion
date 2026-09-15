@@ -461,10 +461,23 @@ const STATUS_TONE: Record<RosterStatusTone, string> = {
 };
 
 export interface RosterStatusProps {
-  /** Which state this is, in the vocabulary of the status hue. */
+  /** Which state this is, in the vocabulary of the scale it belongs to. */
   tone: RosterStatusTone;
   /** The state, as a word. Always rendered -- the hue never carries it alone. */
   children: React.ReactNode;
+  /**
+   * A fact that is fully known and **negated**: a deceased NPC, a false
+   * rumour. Draws `cue.negation` -- a hairline rule through the label, in the
+   * label's own ink.
+   *
+   * Deliberately not a tone. Negation is orthogonal to which scale a state
+   * belongs to: a false rumour is still at the top of the knowledge ladder,
+   * and saying so in red would claim it went wrong when it simply turned out
+   * not to be true. The strike is what carries that distinction without
+   * spending a hue on it -- and without it, a false rumour and a confirmed
+   * one are indistinguishable, since both are fully known.
+   */
+  negated?: boolean;
   className?: string;
 }
 
@@ -487,11 +500,17 @@ export interface RosterStatusProps {
 export const RosterStatus: React.FC<RosterStatusProps> = ({
   tone,
   children,
+  negated,
   className,
 }) => (
   <Typography
     variant="body-sm"
-    className={clsx('hidden md:block text-sm font-semibold', STATUS_TONE[tone], className)}
+    className={clsx(
+      'hidden md:block text-sm font-semibold',
+      STATUS_TONE[tone],
+      negated && 'cue-negated',
+      className
+    )}
   >
     {children}
   </Typography>

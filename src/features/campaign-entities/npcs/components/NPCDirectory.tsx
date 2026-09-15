@@ -58,14 +58,20 @@ const RELATIONSHIP_FILTERS = [
  * `unknown`: they are different claims -- one is "we have not recorded where
  * this person stands", the other "we do not know whether they are alive".
  */
-const DISPOSITION_TONE: Record<string, RosterStatusTone> = {
+// `Partial<>` is load-bearing, not pedantry. As a plain `Record<string, T>`
+// the index access is typed non-nullable, so TypeScript treats the `?? fallback`
+// at the call site as unreachable and **never checks it** -- which is how a
+// `?? 'unknown'` naming a tone that no longer exists survived 12-3a's rename
+// and would have rendered no class at all. `Partial` makes the lookup
+// `T | undefined`, so the fallback is type-checked like any other value.
+const DISPOSITION_TONE: Partial<Record<string, RosterStatusTone>> = {
   friendly: 'friendly',
   neutral: 'neutral',
   hostile: 'hostile',
   unknown: 'unsure',
 };
 
-const STATUS_TONE: Record<string, RosterStatusTone> = {
+const STATUS_TONE: Partial<Record<string, RosterStatusTone>> = {
   alive: 'present',
   deceased: 'absent',
   missing: 'knowledge-0',
@@ -358,7 +364,10 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                       )}
                     </div>
 
-                    <RosterStatus tone={STATUS_TONE[npc.status] ?? 'unknown'}>
+                    <RosterStatus
+                      tone={STATUS_TONE[npc.status] ?? 'knowledge-0'}
+                      negated={npc.status === 'deceased'}
+                    >
                       {npc.status.charAt(0).toUpperCase() + npc.status.slice(1)}
                     </RosterStatus>
 

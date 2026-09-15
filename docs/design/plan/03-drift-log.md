@@ -3534,6 +3534,70 @@ separate rule. Related to Q15, which asks whether a legend is where a hue may
 legitimately stand alone.
 
 
+### D116 - a cue's enum branch runs one way only
+Date: 2026-09-15   Status: active
+Decision: the hatch and the strike are the **default**, and `cue.failure: none`
+/ `cue.negation: none` can only remove them. Implemented as
+`@container style(--cue-failure: none)`, which is the only CSS-only way to
+branch on an enum whose value is a word.
+The handoff asks for both cues to be "driven from the `cue` enum, so a theme can
+change cue strength without a code path" (token model section 6). A style query
+does that. What the handoff does not say is which way the branch should run,
+and it matters more than it looks: a browser without style-query support
+ignores the `@container` block entirely. Written the other way -- cue off by
+default, switched on by `style(--cue-failure: hatch)` -- an unsupported browser
+would silently drop the cue, which is the **worst** possible failure for a
+feature whose entire purpose is to not depend on colour. Written this way it
+loses only the ability to opt out.
+Because: browserslist here is `>0.2%, not dead`, which is wider than baseline
+style-query support. A gate pins the direction (`non-colour-cues.test.ts`), so
+someone inverting it later fails a test rather than shipping a silent
+regression on old browsers.
+Rejected: reading `tokens.cue.failure` in the component and mapping it to a
+class. It works everywhere, and it is exactly the code path token model
+section 6 asks not to write.
+
+### R64 - 12-5: the cues, and a type hole they uncovered
+Date: 2026-09-15
+Change: `cue.hatch` on a failed quest's progress fill, `cue.strike` on a
+deceased NPC and a false rumour. Both driven by the enum, both gated.
+**The strike is what makes 12-3a's rumour mapping legible at all.** Confirmed
+and false rumours share the knowledge ladder's top rung -- both are fully known
+-- so by design nothing separates them by hue. Until this PR they were
+genuinely indistinguishable. `negated` is a prop orthogonal to `tone` rather
+than a tone of its own, because a false rumour has not left the ladder; saying
+so in red would claim it went wrong, and it simply turned out not to be true.
+**Verified in the browser at the size that ships.** The seed campaign has no
+failed quests, no deceased NPCs and no false rumours, so none of the three
+states could be reached through the UI -- they were rendered directly into the
+page instead. The hatch reads as a clear diagonal texture at the bar's real
+**6px** height with 3px bands; 2px bands aliased into a flat wash and were
+discarded. The strike's colour computes identical to the label's own
+(`rgb(29, 45, 59)` for both), which is "in the label's own ink" measured rather
+than assumed.
+**A latent bug this PR found, and the type hole that hid it.**
+`NPCDirectory` carried `STATUS_TONE[npc.status] ?? 'unknown'` -- a tone 12-3a
+had deleted. It would have rendered **no class at all** for an unrecorded NPC.
+`npx tsc --noEmit` did not catch it, and the reason generalises: a map typed
+`Record<string, T>` has a **non-nullable** index signature, so TypeScript treats
+the `?? fallback` as unreachable and never type-checks it. Both maps are
+`Partial<Record<string, T>>` now, which makes the lookup `T | undefined` and the
+fallback checked -- confirmed by deliberately substituting a nonsense tone and
+watching `tsc` reject it, where before it passed silently.
+Worth generalising: **`Record<string, T>` plus `?? fallback` is a blind spot,
+not a safety net.** Anywhere that shape appears, the fallback is unverified.
+**A fifth stale reference, reported not fixed:** `handoff/12-5-non-colour-cues.md`
+is titled "PR 12.4" and subtitled "fifth PR" in its own header. The file was
+renamed 12-4 to 12-5 during the 12-3 split and the heading did not follow. Not
+corrected here -- the one-time licence to edit these documents covered the four
+slips reported before 12-2b, and this rule exists precisely so a handoff cannot
+drift under the agent executing it.
+**Still open after this PR:** the colour-blind gate 12-3a recorded as failing
+now has its mechanism, but the formal greyscale and deuteranopia passes over
+all four directories still need states this seed data does not contain. Flagged
+rather than claimed.
+
+
 ### Q19 - can an ordered collection have named siblings?
 Date: 2026-09-15   Status: open
 `TokenTree` supports a record or an array, and `knowledge` is the first token to
