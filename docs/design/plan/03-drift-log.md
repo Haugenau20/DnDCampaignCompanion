@@ -3598,6 +3598,55 @@ all four directories still need states this seed data does not contain. Flagged
 rather than claimed.
 
 
+### R65 - 12-6: the loop was already built; the gate was not
+Date: 2026-09-15
+Change: a gate, and almost nothing else. Two of this handoff's three "Do" items
+were **already done before the PR started**, which is worth recording because
+the handoff reads as though neither was.
+  - **The loop shipped in `12-1`.** `derivePrimitives` has generated the eight
+    hues from `HUE.entity.firstHue`, `.step` and `.c` since the derivation
+    landed; both hand-listed arrays went with the hex literals.
+  - **`--location-type-*` was retired before Phase 12.** All eight are in
+    `token-rename-map.json` as Phase 1 history with a note that their values
+    deliberately became palette hues, and `grep` finds no such variable in
+    `src/` or `tailwind.config.js`. The three surviving `locationType` hits are
+    an entity's **data field** (`region | city | town | ...`), which is a
+    different thing wearing a similar name.
+**What was genuinely missing was the gate, and its absence was the interesting
+part.** Every existing check on this palette measured *values*: eight entries,
+all clearing 4.5:1 against one ink, enough of them for the sigil buckets, each
+id mapping stably to an index. **All four would pass for eight hand-picked hues
+that happen to be legible** -- which is precisely what the theme files used to
+hold. Nothing asserted the property the phase exists to create: that the
+palette is a *loop*.
+`entity-loop.test.ts` asserts the construction instead. The hues divide the
+wheel exactly (`step * count === 360`), each entry is recomputed in the test
+from the contract's own numbers rather than read back from the generator, no
+entry repeats, and the contrast spread against the single ink stays inside 1.5.
+Confirmed to bite: setting `step` to 40 fails the sweep assertion, where before
+the change every gate in the project stayed green.
+That spread bound is deliberately loose. Perceived unevenness across hues is
+real and is **not** compensated for -- varying lightness per entry to balance
+the wheel is the trade the handoff forbids -- so the test allows the honest
+variation and catches a hand-tuned entry.
+**Also pinned: unreachable entries.** `sigilIndexFor` is `hash %
+SIGIL_BUCKET_COUNT`, so a palette longer than the bucket count has entries
+nothing can select. The sigil util keeps that count fixed on purpose, so
+appending a ninth hue does not renumber every mark in the product -- meaning
+`palette.length > buckets` is a legitimate intermediate state rather than a
+bug. It is now pinned at **zero unreachable**, so growing the palette has to
+move a number here and becomes a decision someone made rather than a drift.
+Verified live: 16 NPCs land in **6 of the 8** buckets, which is what hash
+distribution gives at that size, and every rendered mark's colour matches the
+generated palette byte for byte (`rgb(108, 69, 66)` = `#6C4542` =
+`--entity-palette-0`, and so on). The remaining two hues are covered by the
+test rather than by this data set; recorded that way rather than claimed as
+observed.
+**A sixth stale heading, reported not fixed:** `handoff/12-6-entity-loop.md` is
+titled "PR 12.5" and subtitled "sixth PR", the same renumbering slip as `12-5`
+(R64). Left alone for the same reason.
+
+
 ### Q19 - can an ordered collection have named siblings?
 Date: 2026-09-15   Status: open
 `TokenTree` supports a record or an array, and `knowledge` is the first token to
