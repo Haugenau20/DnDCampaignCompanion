@@ -40,20 +40,51 @@ The schema renames tokens. Renaming tokens in a package that has already been
 published is a breaking change to a consumer contract; renaming them before
 extraction is a diff. The ordering is therefore forced, not preferred.
 
-## 3. The five PRs
+## 3. The seven PRs
 
-| PR | Does | Visual diff |
-|---|---|---|
-| `12-1` | The derivation: OKLCH contract in, both theme trees out | Yes — new palette |
-| `12-2` | Add `outcome`, `knowledge`, `cue` tokens, no consumers | None |
-| `12-3` | Migrate consumers, delete `status.*` | Yes — semantics fixed |
-| `12-4` | Non-colour cues: hatch on failure, strike on negation | Small |
-| `12-5` | Entity palette by loop; retire `--location-type-*` | Marks change hue |
+| PR | Does | Visual diff | State |
+|---|---|---|---|
+| `12-1` | The derivation: OKLCH contract in, both theme trees out | Yes — new palette | **merged** |
+| `12-2` | Add `outcome`, `knowledge`, `cue`; no consumers | None | **merged** |
+| `12-2b` | Add `accent.*`, `feedback.*`, `disposition.*`; no consumers | None | next |
+| `12-3a` | Campaign semantics; delete `status.*` | Yes — the semantic fix | |
+| `12-3b` | Application feedback; delete `color.primary` and `state.*` | Moderate | |
+| `12-5` | Non-colour cues: hatch on failure, strike on negation | Small | |
+| `12-6` | Entity palette by loop; retire `--location-type-*` | Marks change hue | |
 
-`12-1` and `12-3` are the two that need real review time. `12-2` is
+**Why there is a `12-2b`.** The feedback and disposition scales were added to
+the schema after `12-2` merged, so its handoff describes work that shipped
+without them while `12-3a` and `12-3b` consume names nothing built. Editing a
+merged PR's handoff does not build anything; late work gets a late PR (D39).
+
+`12-3a` and `12-3b` need real review time. `12-2` and `12-2b` are
 deliberately additive and screenshot-identical, which is the whole point of
-token model §5 — it means `12-3` can be reverted alone without leaving the
-app unstyled.
+token model §5 — it means the destructive PRs can be reverted alone without
+leaving the app unstyled.
+
+**The migration is split because the consumers are two different things.**
+`status.*` has 22 consumer files, not the six the original handoff named. Six
+describe the campaign's own record; roughly sixteen are the application talking
+about itself — an error banner, a session timeout, an unsaved-note dot. Those
+are different voices with different scales, and reviewing them in one diff
+buries the semantic fix that is the point of the phase. The deletion forces
+both halves at once (once `--status-failed` stops existing, a `var()` on it
+resolves to nothing), so `12-3a` and `12-3b` land together or not at all —
+but they are reviewed apart.
+
+## 3a. What is already merged
+
+`12-1` and `12-2` are on `main` (`1b3cc2d`). The generator, the role map and
+the fixture test are live; `outcome`, `knowledge` and `cue` exist with no
+consumers.
+
+**Schema v6 is additive over that.** No value the merged code generates
+changes. The three code changes v6 does force — the fixture's version and leaf
+count, the test's `additions` block, and the `retire` tags — are listed in
+schema §11 and land in `12-2b`.
+
+This matters for how the rest of the phase is read: every remaining handoff
+assumes a working generator and a live fixture, not a greenfield.
 
 ## 3b. The source of truth is read-only
 
@@ -83,18 +114,29 @@ the source; §5.4 exists because of it. That is the loop working.
   looks better.
 - **Regenerate both modes, always.** A mode regenerated alone is how the
   original drift happened.
-- **Additive before destructive.** `12-2` lands before `12-3`, so no commit
-  ever has a consumer pointing at a token that does not exist.
+- **Additive before destructive.** `12-2` and `12-2b` land before `12-3a`, so
+  no commit ever has a consumer pointing at a token that does not exist.
+- **Work added after a PR merges gets a new PR.** Editing the merged handoff
+  changes a historical record and builds nothing.
+- **When the fixture and a careful implementation disagree, suspect the
+  specification.** It has happened twice: both times the generator was right
+  and the schema's prose was imprecise. Report the disagreement with
+  measurements, as a drift-log entry.
+- **Enumerate consumers before trusting a scope list.** Both times this phase's
+  documents were wrong, they were wrong by assuming rather than grepping — 52
+  token names the first time, two whole scales and sixteen files the second.
+  Before starting any PR here, grep for what it claims to touch and report the
+  difference.
 - **A domain state may not borrow a scale.** If a state does not fit outcome,
   knowledge or the accent, the scale set is missing something — raise it as a
   drift-log question rather than borrowing the nearest hue.
-- **The cue is not optional decoration.** `12-4` is what makes the accent and
-  `outcome.failed` safe at 40° apart on a warm palette. Shipping `12-3`
+- **The cue is not optional decoration.** `12-5` is what makes the accent and
+  `outcome.failed` safe at 40° apart on a warm palette. Shipping `12-3a`
   without it leaves failure encoded by hue alone for deuteranopic users.
 - **No alias layer, in any PR.** A role in schema §5.4 is a derivation
   resolved at generation time, not a variable pointing at a variable. Tokens
   marked "Retired · 12-3" resolve in `12-1` so no commit is broken, and are
-  deleted in `12-3` with their consumers. An alias that survives its migration
+  deleted in `12-3a`/`12-3b` with their consumers. An alias that survives its migration
   is a second way to say what a pair already says (token model §7), and grep
   cannot tell it from an intentional reference.
 - **A borrowed role is re-verified, not assumed.** A primitive that clears
@@ -104,7 +146,7 @@ the source; §5.4 exists because of it. That is the loop working.
 ## 5. Gates, in addition to the standing six in `04-rollout.md` §4
 
 1. Generated theme values match `../design/colour-schema.json` exactly — all
-   101 leaves, both modes. A mismatch fails the build; it is never resolved by
+   135 leaves, both modes. A mismatch fails the build; it is never resolved by
    editing the theme file, and never by editing the fixture.
 1b. `colour-schema.md` and `colour-schema.json` do not appear in
    `git diff --stat` for any PR in this phase. If either does, the PR is wrong
@@ -127,7 +169,7 @@ the source; §5.4 exists because of it. That is the loop working.
 - Locations, rumours and NPCs carry no valenced hue.
 - Failure is legible in greyscale.
 - The entity palette is eight generated hues, and `--location-type-*` is gone.
-- Every one of the 101 leaves generated; no hex literal in either definition
+- Every one of the 135 leaves generated; no hex literal in either definition
   file; no alias layer anywhere.
 - `finish-generator.py` deleted.
-- D23–D30 recorded in `03-drift-log.md`.
+- D23–D39 recorded in `03-drift-log.md`.

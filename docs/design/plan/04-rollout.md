@@ -192,7 +192,7 @@ to one accent and closed R40 (D106, D107). `[data-theme=…]` went from 23 rules
 
 See `06-colour-schema-rollout.md`. Derives both modes from one hue contract,
 replaces the status scale with named semantic scales, and adds the non-colour
-cues. Five PRs — `handoff/12-1` … `handoff/12-5`.
+cues. Six PRs — `handoff/12-1` … `handoff/12-5`.
 
 ### Phase 13 — Cleanup and extraction
 

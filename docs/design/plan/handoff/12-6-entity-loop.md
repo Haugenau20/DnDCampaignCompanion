@@ -1,6 +1,6 @@
 # PR 12.5 — Entity palette by loop; retire `--location-type-*`
 
-Phase 12 · fifth PR · closes the phase
+Phase 12 · sixth PR · closes the phase
 
 The entity palette is the strongest thing in the old theme files and the last
 hand-listed one. Eight hues at even spacing, one lightness, one chroma — that

@@ -1,6 +1,6 @@
 # PR 12.4 — Non-colour cues
 
-Phase 12 · fourth PR
+Phase 12 · fifth PR
 
 The accent and `outcome.failed` are 40° apart on a warm palette — the closest
 pair in the schema, and the one real cost of choosing amber. Two shape cues
@@ -18,7 +18,7 @@ Schema §9 has the procedure.
 
 - `src/core/themes/css/components.css`
 - `src/core/themes/css/theme-effects.css`
-- The four directories touched by `12-3`
+- The four directories touched by `12-3a`
 
 ## Do
 
@@ -49,7 +49,7 @@ Schema §9 has the procedure.
   still distinguishable.
 - Deuteranopia simulation of the same four, with the accent and
   `outcome.failed` both present in one frame.
-- The colour-blind gate recorded as failing in `12-3` now passes.
+- The colour-blind gate recorded as failing in `12-3a` now passes.
 - Hatching legible at the bar's real height — check it at the row height that
   actually ships, not at a demo size.
 
