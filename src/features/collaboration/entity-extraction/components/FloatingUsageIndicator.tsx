@@ -88,13 +88,13 @@ const UsageRing: React.FC<UsageRingProps> = ({
     const percentage = calculateFillPercentage();
     
     if (usage.limitExceeded) {
-      return "status-failed";
+      return "feedback-error";
     } else if (percentage >= 80) {
-      return "status-unknown";
+      return "feedback-warning";
     } else if (percentage >= 60) {
-      return "status-general";
+      return "typography-secondary";
     } else {
-      return "status-completed";
+      return "feedback-success";
     }
   };
 
@@ -216,7 +216,7 @@ const UsageRing: React.FC<UsageRingProps> = ({
                   Daily:
                 </Typography>
                 <Typography variant="body-sm" className={
-                  usage.exceededPeriod === 'daily' ? 'status-failed' : ''
+                  usage.exceededPeriod === 'daily' ? 'feedback-error' : ''
                 }>
                   {getPeriodStatusText('daily')}
                 </Typography>
@@ -228,7 +228,7 @@ const UsageRing: React.FC<UsageRingProps> = ({
                   Weekly:
                 </Typography>
                 <Typography variant="body-sm" className={
-                  usage.exceededPeriod === 'weekly' ? 'status-failed' : ''
+                  usage.exceededPeriod === 'weekly' ? 'feedback-error' : ''
                 }>
                   {getPeriodStatusText('weekly')}
                 </Typography>
@@ -240,7 +240,7 @@ const UsageRing: React.FC<UsageRingProps> = ({
                   Monthly:
                 </Typography>
                 <Typography variant="body-sm" className={
-                  usage.exceededPeriod === 'monthly' ? 'status-failed' : ''
+                  usage.exceededPeriod === 'monthly' ? 'feedback-error' : ''
                 }>
                   {getPeriodStatusText('monthly')}
                 </Typography>
@@ -283,7 +283,7 @@ const UsageRing: React.FC<UsageRingProps> = ({
             {/* Special statuses */}
             {usage.usage.isUnlimited && (
               <div className="mt-2 pt-2">
-                <Typography variant="caption" className="status-success">
+                <Typography variant="caption" className="feedback-success">
                   ✓ Unlimited access
                 </Typography>
               </div>
@@ -300,7 +300,7 @@ const UsageRing: React.FC<UsageRingProps> = ({
             {/* Limit exceeded warning */}
             {usage.limitExceeded && (
               <div className="mt-2 pt-2">
-                <Typography variant="caption" className="status-failed">
+                <Typography variant="caption" className="feedback-error">
                   {usage.exceededPeriod} limit exceeded
                 </Typography>
               </div>

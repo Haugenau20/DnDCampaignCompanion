@@ -196,16 +196,16 @@ const CONTROL_BOUNDARY_MINIMUM = 3;
 describe("control boundaries meet 3:1", () => {
   const boundaryOf = (tokens: ThemeTokens, key: string): string => {
     if (key === "action.outline.border") return tokens.action.outline.border as string;
-    // `color.primary` is the accent where it acts as a *boundary* -- the edge and
+    // `accent.edge` is the accent where it acts as a *boundary* -- the edge and
     // label of a chosen filter pill (D51), a selected chip (8.2), a focus ring.
     // A boundary owes 3:1 under WCAG 1.4.11 whatever it is named after.
     //
-    // This used to read `action.primary.bg`, and the rename is the point rather
-    // than a tidy-up: that token is a **fill**, tuned to carry ink on top of it,
-    // and dark's is now `#A32B22` at 1.83:1 from the page (D108). Measuring a
-    // fill as a boundary asks it to be two incompatible things; `.chip-toggle`'s
-    // own comment reached the same conclusion before this test did.
-    if (key === "color.primary") return tokens.color.primary as string;
+    // This read `action.primary.bg`, then `color.primary`, and the second
+    // rename is the same point as the first: a fill is tuned to carry ink on
+    // top of it, and measuring one as a boundary asks it to be two
+    // incompatible things. `accent.edge` finally names the job, which is the
+    // whole reason 12-2b split one primitive into three usage names.
+    if (key === "accent.edge") return tokens.accent.edge;
     return tokens.field.border;
   };
 
@@ -213,7 +213,7 @@ describe("control boundaries meet 3:1", () => {
   // which measured 1.38:1 as a boundary and was ratcheted rather than fixed
   // because the theme had a scheduled end. It reached it (D40), and the
   // exemption left with it.
-  const keys = ["action.outline.border", "field.border", "color.primary"];
+  const keys = ["action.outline.border", "field.border", "accent.edge"];
 
   describe.each(THEMES)("%s", (name, theme) => {
     test.each(keys)("%s", (key) => {
@@ -310,11 +310,32 @@ describe("a field's ink and edge work against the field's own ground", () => {
  * the gap that let a legitimate colour in a legitimate slot be wrong in relation
  * to what sat behind it -- the exact shape the file header warns about.
  *
- * `status.on` is excluded: it is ink for a filled status chip, not a hue used as
- * text, and the surface pairs above already cover the grounds it lands on.
+ * Ink *on* a fill is excluded here and measured against its fill below: it is
+ * not a hue used as text on a surface, and the surface pairs above already
+ * cover the grounds it lands on.
  */
-describe("status hues meet AA as text on every row surface", () => {
-  const HUES = ["general", "active", "completed", "failed", "unknown"] as const;
+describe("domain state hues meet AA as text on every row surface", () => {
+  /**
+   * The three scales a directory row can reach for, replacing the five status
+   * hues this block used to check.
+   *
+   * `presence-present` and `presence-absent` are absent on purpose: they are
+   * `surface.*.on` and `surface.*.onMuted`, which the surface-pair block above
+   * already gates against their own grounds. Presence carries no hue, so there
+   * is nothing here for it to have.
+   */
+  const HUES = [
+    "outcome.active",
+    "outcome.succeeded",
+    "outcome.failed.ink",
+    "knowledge.0",
+    "knowledge.1",
+    "knowledge.2",
+    "disposition.friendly",
+    "disposition.neutral",
+    "disposition.hostile",
+    "disposition.unknown",
+  ] as const;
 
   /**
    * One uniform 4.5, with no exemptions left.
@@ -339,8 +360,15 @@ describe("status hues meet AA as text on every row surface", () => {
       .map(parseHex)
       .filter((c): c is Rgb => c !== null);
 
-    test.each(HUES)("status.%s", (hue) => {
-      const colour = parseHex(theme.tokens.status[hue]);
+    /** Resolves a dotted path so the list above reads as the schema spells it. */
+    const at = (path: string): string =>
+      path.split(".").reduce<Record<string, unknown>>(
+        (node, key) => node[key] as Record<string, unknown>,
+        theme.tokens as unknown as Record<string, unknown>
+      ) as unknown as string;
+
+    test.each(HUES)("%s", (hue) => {
+      const colour = parseHex(hue === "outcome.active" ? theme.tokens.accent.ink : at(hue));
       expect(colour).not.toBeNull();
 
       const worst = round(
@@ -399,8 +427,6 @@ describe("every chromatic role against page, card and sunken at once", () => {
      * requirement the contract makes.
      */
     const inks: ReadonlyArray<[string, string]> = [
-      ["color.primary", tokens.color.primary],
-      ["color.accent", tokens.color.accent],
       ["color.emphasis", tokens.color.emphasis],
       ["color.heading", tokens.color.heading],
       ["field.placeholder", tokens.field.placeholder],
@@ -412,6 +438,17 @@ describe("every chromatic role against page, card and sunken at once", () => {
       ["action.outline.text", tokens.action.outline.text],
       ["action.ghost.text", tokens.action.ghost.text],
       ["danger.deleteText", tokens.danger.deleteText],
+      // Added once they had consumers. 12-2b shipped them with none, which is
+      // why they arrive in this list only now.
+      ["accent.ink", tokens.accent.ink],
+      ["feedback.error.ink", tokens.feedback.error.ink],
+      ["feedback.warning.ink", tokens.feedback.warning.ink],
+      ["feedback.success.ink", tokens.feedback.success.ink],
+      ["feedback.progress.ink", tokens.feedback.progress.ink],
+      ["disposition.friendly", tokens.disposition.friendly],
+      ["disposition.neutral", tokens.disposition.neutral],
+      ["disposition.hostile", tokens.disposition.hostile],
+      ["disposition.unknown", tokens.disposition.unknown],
     ];
 
     /** Boundaries that identify a control, so 3:1 under WCAG 1.4.11. */
@@ -422,6 +459,11 @@ describe("every chromatic role against page, card and sunken at once", () => {
       ["field.errorBorder", tokens.field.errorBorder],
       ["field.successBorder", tokens.field.successBorder],
       ["action.outline.border", tokens.action.outline.border as string],
+      ["accent.edge", tokens.accent.edge],
+      ["feedback.error.edge", tokens.feedback.error.edge],
+      ["feedback.warning.edge", tokens.feedback.warning.edge],
+      ["feedback.success.edge", tokens.feedback.success.edge],
+      ["feedback.progress.edge", tokens.feedback.progress.edge],
     ];
 
     test.each(inks)("%s meets AA on all three", (token, colour) => {
@@ -448,7 +490,9 @@ describe("every chromatic role against page, card and sunken at once", () => {
     const inkOnFill: ReadonlyArray<[string, string, string]> = [
       ["action.primary.text", tokens.action.primary.text, tokens.action.primary.bg],
       ["action.secondary.text", tokens.action.secondary.text, tokens.action.secondary.bg],
-      ["status.on", tokens.status.on, tokens.status.active],
+      ["accent.on", tokens.accent.on, tokens.accent.fill],
+      ["outcome.failed.on", tokens.outcome.failed.on, tokens.outcome.failed.fill],
+      ["danger.confirmText", tokens.danger.confirmText, tokens.danger.confirmBg],
     ];
 
     test.each(inkOnFill)("%s meets AA on its own fill", (token, ink, fill) => {

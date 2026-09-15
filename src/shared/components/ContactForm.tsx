@@ -343,7 +343,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialMessage = "" }) => {
 
         {submitError && (
           <div className="flex items-center gap-2 p-3 rounded error-bg">
-            <AlertCircle className="w-4 h-4 status-failed" />
+            <AlertCircle className="w-4 h-4 feedback-error" />
             <Typography variant="body-sm" color="error">
               {submitError}
             </Typography>

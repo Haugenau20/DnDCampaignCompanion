@@ -16,15 +16,20 @@ module.exports = {
         title: "1200px",
       },
       colors: {
-        primary: 'var(--color-primary)',
-        secondary: 'var(--color-secondary)',
-        accent: 'var(--color-accent)',
+        // Only `accent` survives, and only because `ring-accent` is generated
+        // from here rather than from `borderColor`. A ring is a boundary, so
+        // it takes the edge. `primary` and `secondary` are gone: every
+        // utility they generated was already shadowed by the more specific
+        // `textColor` / `backgroundColor` / `borderColor` entries below.
+        accent: 'var(--accent-edge)',
       },
       backgroundColor: {
         // Main background colors
         primary: 'var(--surface-page-bg)',
         secondary: 'var(--surface-sunken-bg)',
-        accent: 'var(--state-selected)',
+        // A selected row's ground belongs to the surface it sits on -- a global
+        // hover grey is what the pair model forbids (token model section 2).
+        accent: 'var(--surface-card-selected)',
         
         // UI element backgrounds
         card: 'var(--surface-card-bg)',
@@ -35,12 +40,21 @@ module.exports = {
         input: 'var(--field-bg)',
         'form-disabled': 'var(--field-disabled-bg)',
         
-        // Status backgrounds for components
-        'status-general': 'var(--status-general)',
-        'status-active': 'var(--status-active)',
-        'status-completed': 'var(--status-completed)',
-        'status-failed': 'var(--status-failed)',
-        'status-unknown': 'var(--status-unknown)',
+        // Domain state, named after meaning. The `status-*` family these
+        // replace was named after appearance, which is what let a location
+        // borrow the quest scale and render "visited" as a win condition.
+        // Schema section 3 is the mapping table.
+        'outcome-active': 'var(--accent-fill)',
+        'outcome-succeeded': 'var(--outcome-succeeded)',
+        'outcome-failed': 'var(--outcome-failed-fill)',
+        'knowledge-0': 'var(--knowledge-0)',
+        'knowledge-1': 'var(--knowledge-1)',
+        'knowledge-2': 'var(--knowledge-2)',
+        // Presence carries no hue: a death is a fact, not an error. These are
+        // the ink ramp, so the segments differ by value rather than colour.
+        'presence-present': 'var(--surface-page-on)',
+        'presence-absent': 'var(--surface-page-on-muted)',
+        'accent-fill': 'var(--accent-fill)',
         
         // Button backgrounds
         'button-primary': 'var(--action-primary-bg)',
@@ -63,8 +77,8 @@ module.exports = {
         success: 'var(--field-success-text)',
         placeholder: 'var(--field-placeholder)',
         
-        // Status text colors
-        'status-text': 'var(--status-on)',
+        // Ink on a filled failure. `status-on` is retired with `status.*`.
+        'outcome-failed-on': 'var(--outcome-failed-on)',
         
         // Button text colors
         'button-primary': 'var(--action-primary-text)',
@@ -75,9 +89,7 @@ module.exports = {
         'delete-button': 'var(--danger-delete-text)',
       },
       borderColor: {
-        primary: 'var(--color-primary)',
-        secondary: 'var(--color-secondary)',
-        accent: 'var(--color-accent)',
+        accent: 'var(--accent-edge)',
         card: 'var(--surface-card-border)',
         
         // Input borders

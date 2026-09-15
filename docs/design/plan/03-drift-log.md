@@ -3434,6 +3434,106 @@ literal `0.35` and `0.1` inside the generator, which meant the schema's
 top-level `wash` and `ring` values could drift from the code with nothing
 noticing.
 
+### R63 - 12-3a and 12-3b: the semantic migration, in one PR
+Date: 2026-09-15
+Change: `status.*`, `color.primary/secondary/accent` and `state.*` are gone with
+their consumers -- 41 files, 135 leaves down to **123**. The application no
+longer claims that visiting a place is a victory or that a disproven rumour is a
+defeat.
+**Merged into one PR at the maintainer's direction, and it was the right call.**
+`06-colour-schema-rollout.md` section 3 already said the two halves "land
+together or not at all": once `--status-failed` stops existing, a `var()` on it
+resolves to nothing, so merging `12-3a` alone would have deployed an app with
+dead references on every error banner, the session-timeout warning and the usage
+meter. Merge-to-main is a live deploy here, so that window was real rather than
+theoretical. One PR removes it entirely.
+The cost is that the two halves are not separable into two green commits: they
+share `components.css` and `tailwind.config.js`, and the deletion in one is what
+the other's consumers depend on. Split by file, every arrangement leaves one
+commit red. Recorded rather than hidden.
+**The deletion changed no value, and that is proved rather than asserted.**
+Every one of the twelve retired names was pure indirection -- each already
+equalled another token -- so they are recorded in `token-rename-map.json` the
+way Phase 1's retirements were, and `token-values.test.tsx` passes **without
+re-recording the baseline**. Re-baselining would have accepted whatever was
+there; this pins each old variable to the token that carries its value. One
+subtlety worth keeping: `--status-on` maps to `--accent-on`, because that is
+what it was *worth*; its **successor** in the schema is `outcome.failed.on`,
+which is a different question from its value.
+**The fixture is driven by the schema's own retire tags.** `colour-schema.json`
+carries `retire: "12-3a" | "12-3b"` on each legacy role, so the test subtracts
+them rather than hardcoding a new leaf count. The distinction matters: a
+hardcoded 123 would pass for *any* twelve deletions that happened to total 123,
+while this cannot drop a token the schema has not marked. The test states only
+which phases have landed -- one line a reviewer checks against the branch.
+**Three scope gaps in the handoffs, all found by grepping rather than reading.**
+Neither handoff named them and both migrations are impossible without them:
+  - `tailwind.config.js` defines `bg-status-*`, `colors.primary/secondary/
+    accent`, `backgroundColor.accent` and `borderColor.*` against retired
+    tokens. The manifest gate reads it, so it is load-bearing, not config.
+  - `AppearanceCard.tsx` and `ThemeSelector.tsx` read `tokens.color.primary`
+    in **TypeScript** to paint a theme preview swatch. Both now take
+    `accent.fill`.
+  - A **second** `bg-status-*` family: the proportional summary bar above every
+    directory, whose segments are a different set of call sites from the row
+    labels. `12-3a`'s scope list named the rows only.
+**A class name built from a variable is invisible to every gate.**
+`QuestDirectory` assembled `progress-bar-${quest.status}` and `NPCDetailPage`
+assembled `npc-status-${npc.status}`. Neither the compiler nor `grep` can see
+those, so both would have survived a migration that was supposed to delete them
+and failed only when someone looked at the page. Both are now explicit maps.
+This is the third time this phase has been bitten by an invisible reference and
+it is worth a rule: **a token reference assembled at runtime is a token
+reference nothing can audit.**
+**Two dead classes found on the way.** `status-warning`
+(`DeleteConfirmationDialog`) and `status-success` (`FloatingUsageIndicator`)
+were referenced in JSX and defined nowhere -- they have been painting nothing
+for as long as they have existed. Both now resolve, to `feedback-warning` and
+`feedback-success`.
+**One judgement the schema does not decide, and the safe reading taken.**
+Confirmed and false rumours sit on the *same* rung, because both are fully
+known -- that is the schema's own mapping, and the strike cue in `12-5` is what
+separates them. In a row that is right. In the **proportional bar** it means two
+adjacent segments render identically and read as one band. Kept faithful to the
+schema and the legend still labels each, but raised as Q20: the bar may want a
+rule the rows do not.
+**NPC disposition gets its hue back, and the old reason for muting it is gone.**
+`NPCDirectory` deliberately rendered disposition as plain secondary text,
+because as a filled chip in the status hue a green "Alive" sat beside a green
+"Friendly" and read as one fact twice. Presence now carries no hue at all, so
+the collision cannot happen and the scale that genuinely is valenced can have
+one. Worth recording because the old comment looked like a design preference and
+was really a workaround for a defect this PR removes.
+**Reading progress is not a quest outcome.** `ResumeBar` used
+`progress-bar-completed` -- the quest scale -- for "you have read everything".
+It takes `feedback.success` now, via its own class. Finishing the reading is the
+application reporting on itself; one class serving both is how the borrow
+starts, and the borrow is what this whole phase exists to stop.
+Verified in the browser, both modes: the location ladder rises with knowledge
+and inverts direction between modes, rumours carry no valence, "Alive" is plain
+ink while "Hostile" is red, and the live document defines **123** custom
+properties with **none** of the twelve retired names still resolving -- no shims
+survived. The washed banner composites to `wash` background, `edge` border and
+`surface.card.on` text, which is section 5.6's legal pairing measured rather
+than assumed.
+**Still outstanding, as the handoff predicted:** the colour-blind pass fails
+until `12-5` lands. Failure is encoded by hue alone until the hatch arrives, and
+deceased NPCs by weight alone until the strike does. Recorded, not worked around.
+
+### Q20 - does a proportional bar need a rule the rows do not?
+Date: 2026-09-15   Status: open
+Schema section 3 puts confirmed and false rumours on the same knowledge rung,
+which is right: both are fully known, and what separates them is the strike cue,
+not the hue. In a row that reads correctly. In the stacked summary bar above the
+directory, two adjacent segments of the same hue merge into one band, and a
+reader filtering by "false" sees a legend swatch identical to "confirmed".
+R63 kept the schema's mapping rather than inventing a hue. The open question is
+whether a bar segment is a different kind of surface from a label -- one where
+adjacency itself carries meaning -- and therefore whether section 3 owes it a
+separate rule. Related to Q15, which asks whether a legend is where a hue may
+legitimately stand alone.
+
+
 ### Q19 - can an ordered collection have named siblings?
 Date: 2026-09-15   Status: open
 `TokenTree` supports a record or an array, and `knowledge` is the first token to

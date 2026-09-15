@@ -22,11 +22,11 @@ jest.mock('../../../core/themes/definitions', () => ({
   themes: {
     light: {
       name: 'light',
-      tokens: { color: { primary: '#ffffff' } },
+      tokens: { accent: { fill: '#ffffff' } },
     },
     dark: {
       name: 'dark',
-      tokens: { color: { primary: '#000000' } },
+      tokens: { accent: { fill: '#000000' } },
     },
   },
 }));
@@ -35,8 +35,8 @@ jest.mock('../../../core/themes/definitions', () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-const lightThemeMock = { name: 'light', tokens: { color: { primary: '#ffffff' } } };
-const darkThemeMock = { name: 'dark', tokens: { color: { primary: '#000000' } } };
+const lightThemeMock = { name: 'light', tokens: { accent: { fill: '#ffffff' } } };
+const darkThemeMock = { name: 'dark', tokens: { accent: { fill: '#000000' } } };
 
 function makeUseThemeMock(currentTheme = lightThemeMock) {
   return {

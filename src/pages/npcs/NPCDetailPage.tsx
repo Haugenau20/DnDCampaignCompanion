@@ -24,6 +24,37 @@ import InlineEditor from './InlineEditor';
 import { Pencil } from 'lucide-react';
 
 /** Sentence-cases one of the short enum values the type stores lowercase. */
+/**
+ * NPC presence, which carries no hue.
+ *
+ * Alive was green and deceased was red, which reads a death as an error. It is
+ * a fact about the world with no valence, so alive is plain ink and deceased
+ * is muted ink; only genuine uncertainty takes a hue. Schema section 3.
+ *
+ * Written out rather than interpolated into `npc-status-${status}`. The old
+ * form was a class name assembled from a variable, which no compiler and no
+ * grep can see -- the token it referenced could have been deleted underneath
+ * it and nothing would have failed until someone looked at the page.
+ */
+const PRESENCE_CLASS: Record<string, string> = {
+  alive: 'presence-present',
+  deceased: 'presence-absent',
+  missing: 'knowledge-0',
+  unknown: 'knowledge-0',
+};
+
+/**
+ * Disposition *is* valenced, and that is not a contradiction: presence is a
+ * fact about the world, while an NPC's stance toward the party has valence
+ * from the only point of view the record keeps.
+ */
+const DISPOSITION_CLASS: Record<string, string> = {
+  friendly: 'disposition-friendly',
+  neutral: 'disposition-neutral',
+  hostile: 'disposition-hostile',
+  unknown: 'disposition-unknown',
+};
+
 const capitalise = (value: string): string =>
   value.charAt(0).toUpperCase() + value.slice(1);
 
@@ -425,14 +456,17 @@ const NPCDetailPage: React.FC = () => {
                           the hue only agrees with it (design language §2). */}
                       <Typography
                         variant="body-sm"
-                        className={`npc-status-${npc.status} font-medium`}
+                        className={`${PRESENCE_CLASS[npc.status] ?? 'knowledge-0'} font-medium`}
                       >
                         {capitalise(npc.status)}
                       </Typography>
                     </div>
                     <div className="flex flex-col gap-1">
                       <FieldLabel>Disposition</FieldLabel>
-                      <Typography variant="body-sm">
+                      <Typography
+                        variant="body-sm"
+                        className={DISPOSITION_CLASS[npc.relationship] ?? 'disposition-unknown'}
+                      >
                         {capitalise(npc.relationship)}
                       </Typography>
                     </div>

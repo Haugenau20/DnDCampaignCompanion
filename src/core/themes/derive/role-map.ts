@@ -30,28 +30,11 @@ export type Role =
  * are dotted paths into the primitives that section 5.1-5.3 generate.
  */
 export const ROLE_MAP: Readonly<Record<string, Role>> = {
-  // Legacy `color.*`. Three of the five are retired in 12-3b.
-  "color.primary": { from: "accent.base", retire: "12-3b" },
-  "color.secondary": { from: "accent.hover", retire: "12-3b" },
-  "color.accent": { from: "accent.base", retire: "12-3b" },
+  // What survives of the pre-pair-model `color.*`. The other three were the
+  // accent under names that said nothing about the job; `accent.*` says it.
   // Was #9A9082 at 2.7:1. Taking the page's muted ink fixes it.
   "color.emphasis": { from: "surface.page.onMuted" },
   "color.heading": { from: "surface.page.on" },
-
-  // Legacy `status.*`. All six go in 12-3a, with their consumers, and are
-  // replaced by scales named after meaning rather than appearance.
-  "status.general": { from: "surface.card.onMuted", retire: "12-3a" },
-  "status.active": { from: "accent.base", retire: "12-3a" },
-  "status.completed": { from: "outcome.succeeded", retire: "12-3a" },
-  "status.failed": { from: "outcome.failedInk", retire: "12-3a" },
-  "status.unknown": { from: "knowledge.0", retire: "12-3a" },
-  "status.on": { from: "accent.on", retire: "12-3a" },
-
-  // Legacy `state.*`. A global hover grey is exactly what the pair model
-  // forbids: a state belongs to the surface it lands on.
-  "state.hoverLight": { from: "surface.card.hover", retire: "12-3b" },
-  "state.hoverMedium": { from: "surface.card.selected", retire: "12-3b" },
-  "state.selected": { from: "surface.card.selected", retire: "12-3b" },
 
   // Icons. `icon.border` was #C9BCA3 at 1.8:1; it now reuses the neutral that
   // was solved to 3:1 for field borders.

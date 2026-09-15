@@ -137,8 +137,8 @@ const UsageMeter: React.FC = () => {
               data-testid={`usage-row-${row.key}`}
               title={row.resetSentence ?? undefined}
               className={clsx(
-                isExceeded && "status-failed",
-                !isExceeded && isBinding && "status-unknown"
+                isExceeded && "feedback-error",
+                !isExceeded && isBinding && "feedback-warning"
               )}
             >
               <div className="flex items-baseline justify-between gap-3">

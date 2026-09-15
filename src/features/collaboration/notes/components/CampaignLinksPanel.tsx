@@ -408,7 +408,7 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
       )}
 
       {isUsageLimitExceeded && contactInfo && (
-        <div className="mt-4 p-3 rounded-lg border-l-4 status-failed">
+        <div className="mt-4 p-3 rounded-lg border-l-4 feedback-banner feedback-banner-error">
           <Typography variant="body-sm" className="font-medium mb-1">
             Usage Limit Reached
           </Typography>
@@ -428,7 +428,7 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
 
       {(error || hookError) && !isUsageLimitExceeded && (
         <div className="mt-4 flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 mt-0.5 status-failed flex-shrink-0" />
+          <AlertCircle className="w-4 h-4 mt-0.5 feedback-error flex-shrink-0" />
           <Typography variant="body-sm" color="error">
             {error || hookError}
           </Typography>
@@ -471,7 +471,7 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
         <div className="mt-4">
           <Typography
             variant="caption"
-            className="text-[11px] uppercase tracking-wider status-unknown"
+            className="text-[11px] uppercase tracking-wider feedback-warning"
           >
             {`DETECTED, NOT IN YOUR CAMPAIGN · ${detections.length}`}
           </Typography>

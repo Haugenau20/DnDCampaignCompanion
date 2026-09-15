@@ -138,7 +138,7 @@ describe('FloatingUsageIndicator', () => {
   // -------------------------------------------------------------------------
   describe('color class branches', () => {
     test('should render ring with high-usage class when daily fill >= 80% (line 93)', () => {
-      // daily count = 8, limit = 10 → 80% → status-unknown class
+      // daily count = 8, limit = 10 → 80% → feedback-warning class
       setupMocks({
         currentPath: '/notes/note-1',
         usageStatus: makeUsageStatus({
@@ -150,7 +150,7 @@ describe('FloatingUsageIndicator', () => {
         }),
       });
       const { container } = render(<FloatingUsageIndicator />);
-      // Component renders (doesn't crash); the SVG circle gets the status-unknown class
+      // Component renders (doesn't crash); the SVG circle gets the feedback-warning class
       expect(container.firstChild).not.toBeNull();
     });
 

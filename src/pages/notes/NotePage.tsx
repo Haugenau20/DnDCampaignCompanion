@@ -195,7 +195,7 @@ const NotePage: React.FC = () => {
             </div>
 
             <div className="text-center py-12">
-              <AlertCircle className="w-12 h-12 mx-auto mb-4 status-failed" />
+              <AlertCircle className="w-12 h-12 mx-auto mb-4 feedback-error" />
               <Typography variant="h3" className="mb-2">
                 Note Not Found
               </Typography>
@@ -208,7 +208,7 @@ const NotePage: React.FC = () => {
           <div className="note-page">
             {/* Warning banner for cross-campaign notes */}
             {isFromDifferentCampaign && (
-              <div className="mb-6 p-4 rounded-lg border-l-4 status-unknown">
+              <div className="mb-6 p-4 rounded-lg border-l-4 feedback-banner feedback-banner-warning">
                 <div className="flex items-start gap-3">
                   <ExternalLink className="w-5 h-5 mt-0.5 flex-shrink-0" />
                   <div>

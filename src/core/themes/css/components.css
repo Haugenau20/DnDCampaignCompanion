@@ -13,15 +13,15 @@
   }
 
   .primary {
-    color: var(--color-primary)
+    color: var(--accent-ink)
   }
 
   .secondary {
-    color: var(--color-secondary);
+    color: var(--accent-hover);
   }
 
   .accent {
-    color: var(--color-accent);
+    color: var(--accent-ink);
   }
 
   .bg-primary {
@@ -33,7 +33,7 @@
   }
 
   .bg-accent {
-    background-color: var(--state-selected);
+    background-color: var(--surface-card-selected);
   }
 
   /* ====== BUTTON COMPONENT ====== */
@@ -184,7 +184,7 @@
   }
 
   .typography-primary {
-    color: var(--color-primary);
+    color: var(--accent-ink);
   }
 
   .typography-muted {
@@ -339,7 +339,7 @@
        here: it marks the current value rather than decorating the list. */
     select.input option::checkmark,
     select.roster-filter option::checkmark {
-      color: var(--color-primary);
+      color: var(--accent-ink);
     }
 
     select.input::picker-icon,
@@ -436,11 +436,11 @@
   }
 
   .search-result:hover {
-    background-color: var(--state-hover-light);
+    background-color: var(--surface-card-hover);
   }
 
   .search-result-selected {
-    background-color: var(--state-hover-medium);
+    background-color: var(--surface-card-selected);
   }
 
   /* ====== DROPDOWN ====== */
@@ -457,16 +457,28 @@
   }
 
   .dropdown-item:hover {
-    background-color: var(--state-hover-light);
+    background-color: var(--surface-card-hover);
   }
 
   /* Same failing pair as `.nav-item-active` above, same fix. */
   .dropdown-item-active {
-    background-color: var(--state-hover-medium);
+    background-color: var(--surface-card-selected);
     color: var(--surface-page-on);
   }
 
-  /* ====== STATUS INDICATORS ====== */
+  /* ====== DOMAIN STATE ====== */
+  /*
+    Three scales, named after what they mean. What they replace was one scale
+    named after what it looked like -- `.status-completed` was green, existed,
+    and was therefore available for a location to borrow, which is how
+    "visited" came to render as a win condition and a disproven rumour came to
+    render as a failure. The bug was never in the CSS; it was in the name.
+
+    So valence is spent only where the domain has it. A quest concludes, so it
+    takes `outcome`. A location or a rumour is *known about* to some degree,
+    which is a ladder and not a verdict, so it takes `knowledge`. Schema
+    section 3 is the mapping table.
+  */
   .status {
     padding: 0.25rem 0.75rem;
     border-radius: 1rem;
@@ -474,24 +486,150 @@
     font-weight: 500;
   }
 
-  .status-general {
-    color: var(--status-general);
+  /* A thing that concluded. Quests only -- this is the one valenced scale. */
+  .outcome-active {
+    color: var(--accent-ink);
   }
 
-  .status-active {
-    color: var(--status-active);
+  .outcome-succeeded {
+    color: var(--outcome-succeeded);
   }
 
-  .status-completed {
-    color: var(--status-completed);
+  .outcome-failed {
+    color: var(--outcome-failed-ink);
   }
 
-  .status-failed {
-    color: var(--status-failed);
+  /*
+    How much the party knows, as a ladder. Contrast against the ground rises
+    with the index in both modes, so it survives greyscale and colour blindness
+    as a value ramp rather than three hues a reader is asked to rank. The steps
+    are numbered rather than named: a step called `visited` would tie a ladder
+    that locations *and* rumours use to one of them.
+  */
+  .knowledge-0 {
+    color: var(--knowledge-0);
   }
 
-  .status-unknown {
-    color: var(--status-unknown);
+  .knowledge-1 {
+    color: var(--knowledge-1);
+  }
+
+  .knowledge-2 {
+    color: var(--knowledge-2);
+  }
+
+  /*
+    NPC presence, which carries no hue at all. A slain villain is not a bad
+    outcome, so green and red leave the NPC directory entirely; alive is plain
+    ink and deceased is muted ink. 12-5 adds the strike that makes deceased
+    legible without relying on weight alone.
+  */
+  .presence-present {
+    color: var(--surface-page-on);
+  }
+
+  .presence-absent {
+    color: var(--surface-page-on-muted);
+  }
+
+  /*
+    Disposition is valenced, and that does not contradict the rule above:
+    presence is a fact about the world, while an NPC's stance toward the party
+    has valence from the only point of view the record keeps.
+  */
+  .disposition-friendly {
+    color: var(--disposition-friendly);
+  }
+
+  .disposition-neutral {
+    color: var(--disposition-neutral);
+  }
+
+  .disposition-hostile {
+    color: var(--disposition-hostile);
+  }
+
+  .disposition-unknown {
+    color: var(--disposition-unknown);
+  }
+
+  /* ====== APPLICATION FEEDBACK ====== */
+  /*
+    The application talking about itself, which is a different voice from the
+    campaign's record even where the hues coincide. A failed quest is a fact
+    about the fiction; a failed save is a fact about the software, and naming
+    them apart is what lets them diverge later without archaeology -- and what
+    stops a save error being "fixed" by changing what a quest looks like.
+
+    No `info`: warning and progress both take the accent, because the accent
+    already means "your attention is needed here".
+  */
+  .feedback-error {
+    color: var(--feedback-error-ink);
+  }
+
+  .feedback-warning {
+    color: var(--feedback-warning-ink);
+  }
+
+  .feedback-success {
+    color: var(--feedback-success-ink);
+  }
+
+  .feedback-progress {
+    color: var(--feedback-progress-ink);
+  }
+
+  /* Edge only, for a rule down the side of a panel that carries body text. */
+  .feedback-error-edge {
+    border-color: var(--feedback-error-edge);
+  }
+
+  .feedback-warning-edge {
+    border-color: var(--feedback-warning-edge);
+  }
+
+  .feedback-success-edge {
+    border-color: var(--feedback-success-edge);
+  }
+
+  .feedback-progress-edge {
+    border-color: var(--feedback-progress-edge);
+  }
+
+  /*
+    A washed banner, composed the one way schema section 5.6 allows: `wash`
+    behind, `edge` at the boundary, and **body ink** for the text.
+
+    Putting the hue's own ink on its own wash is the thing forbidden, and not
+    as a matter of taste -- it fails AA in three of eight mode-and-state
+    combinations, and which three differs by mode (light's warning and
+    progress, dark's error). `12-2b` asserts that at generation time. The hue
+    appears here as the boundary, never as the text on top of itself.
+  */
+  .feedback-banner {
+    color: var(--surface-card-on);
+    border-style: solid;
+  }
+
+  .feedback-banner-error {
+    background-color: var(--feedback-error-wash);
+    border-color: var(--feedback-error-edge);
+  }
+
+  .feedback-banner-warning {
+    background-color: var(--feedback-warning-wash);
+    border-color: var(--feedback-warning-edge);
+  }
+
+  .feedback-banner-success {
+    background-color: var(--feedback-success-wash);
+    border-color: var(--feedback-success-edge);
+  }
+
+  .feedback-banner-progress {
+    background-color: var(--feedback-progress-wash);
+    border-color: var(--feedback-progress-edge);
   }
 
   /* ====== ICON STYLING ====== */
@@ -504,85 +642,60 @@
     background-color: var(--surface-sunken-bg);
   }
 
+  /*
+    Anything filling up takes the accent, because the accent means "in play".
+    Only a quest's bar switches to the outcome scale, and only once the quest
+    has actually concluded -- a bar that ran red-to-green as it filled was the
+    most visible half of the bug this phase fixes.
+  */
   .progress-bar {
-    background-color: var(--status-active);
+    background-color: var(--accent-fill);
   }
 
   .progress-bar-active {
-    background-color: var(--status-active);
+    background-color: var(--accent-fill);
   }
 
-  .progress-bar-completed {
-    background-color: var(--status-completed);
+  /*
+    Named `succeeded`, not `completed`, and the rename is the point: the old
+    name described a colour that anything could reach for. This one describes a
+    quest that was won, and nothing else may use it.
+  */
+  .progress-bar-succeeded {
+    background-color: var(--outcome-succeeded);
   }
 
   .progress-bar-failed {
-    background-color: var(--status-failed);
+    background-color: var(--outcome-failed-fill);
+  }
+
+  /*
+    Finishing the reading is the application reporting on itself, not a
+    campaign outcome, so it takes `feedback` rather than `outcome`. Separate
+    from `.progress-bar-succeeded` on purpose: reading every chapter is not a
+    quest that was won, and one class serving both is how the borrow starts.
+  */
+  .progress-bar-read {
+    background-color: var(--feedback-success-ink);
   }
 
   .objective-completed {
-    background-color: var(--status-completed);
-    border-color: var(--status-completed);
+    background-color: var(--outcome-succeeded);
+    border-color: var(--outcome-succeeded);
   }
 
   .objective-pending {
     border-color: var(--surface-sunken-bg);
   }
 
-  /* ====== ENTITY LEGEND HUES ====== */
-  /* What is left of the NPC / Location / Rumor card families. */
-  .npc-status-alive {
-    color: var(--status-completed);
-  }
-
-  .npc-status-deceased {
-    color: var(--status-failed);
-  }
-
-  .npc-status-missing {
-    color: var(--status-unknown);
-  }
-
-  .npc-status-unknown {
-    color: var(--status-unknown);
-  }
-
-  .npc-relationship-friendly {
-    color: var(--status-completed);
-  }
-
-  .npc-relationship-hostile {
-    color: var(--status-failed);
-  }
-
-  .npc-relationship-neutral {
-    color: var(--surface-page-on-muted);
-  }
-
-  .npc-relationship-unknown {
-    color: var(--surface-page-on-muted);
-  }
-
+  /*
+    The four parallel `*-status-*` families are gone. They all resolved to the
+    same five tokens, which is how they drifted apart once already, and their
+    replacements are the three scales above -- so an NPC, a location and a
+    rumour now reach for a *meaning* and get whatever hue that meaning has.
+  */
   .note {
     background-color: var(--surface-sunken-bg);
-  }
-
-  /* One axis, in order: known (nothing but a name) -> explored -> visited. */
-  .location-status-known {
-    color: var(--surface-page-on-muted);
-  }
-
-  .location-status-explored {
-    color: var(--status-unknown);
-  }
-
-  .location-status-visited {
-    color: var(--status-completed);
-  }
-
-  /* The last of .rumor-status-*. */
-  .rumor-status-false {
-    color: var(--status-failed);
   }
 
   /* ====== HERO BAND ====== */
@@ -688,11 +801,10 @@
     background-color: var(--action-outline-hover);
   }
 
-  /* Ink and edge come from `--color-primary`, not `--action-primary-bg`. */
   .roster-filter-active {
     background-color: var(--action-outline-bg);
-    color: var(--color-primary);
-    border-color: var(--color-primary);
+    color: var(--accent-ink);
+    border-color: var(--accent-ink);
   }
 
   .roster-filter-active:hover {
@@ -713,9 +825,9 @@
   }
 
   .chip-toggle-selected {
-    color: var(--color-primary);
-    border-color: var(--color-primary);
-    outline: var(--border-width-sm) solid var(--color-primary);
+    color: var(--accent-ink);
+    border-color: var(--accent-ink);
+    outline: var(--border-width-sm) solid var(--accent-edge);
     outline-offset: -2px;
   }
 
@@ -772,17 +884,17 @@
   }
 
   .selectable-item:hover {
-    background-color: var(--state-selected);
+    background-color: var(--surface-card-selected);
   }
 
   .selected-item {
-    background-color: var(--state-selected);
-    outline: 2px solid var(--color-primary);
+    background-color: var(--surface-card-selected);
+    outline: 2px solid var(--accent-edge);
     outline-offset: -2px;
   }
 
   .highlighted-item {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--accent-edge);
     border-radius: var(--border-radius-lg);
     box-shadow: 0 0 0 2px var(--surface-page-bg);
   }
@@ -801,7 +913,7 @@
 
   .error-bg {
     background-color: var(--danger-bg);
-    color: var(--status-failed);
+    color: var(--feedback-error-ink);
   }
 
   .delete-button {
@@ -826,14 +938,14 @@
 
   /* ====== HINT ====== */
   .hint {
-    background-color: var(--state-selected);
-    color: var(--color-primary);
+    background-color: var(--surface-card-selected);
+    color: var(--accent-ink);
   }
 
   /* ====== SPINNER ====== */
   .spinner-border {
     border-color: var(--field-border);
-    border-top-color: var(--color-primary);
+    border-top-color: var(--accent-ink);
   }
 
   /* ====== BOOK VIEWER ====== */
@@ -875,7 +987,7 @@
   }
 
   .page-nav-button:hover {
-    background-color: var(--state-hover-light);
+    background-color: var(--surface-card-hover);
   }
 
   /* ====== CHAPTER READER ====== */
@@ -959,7 +1071,7 @@
   /* A link is interactive, so it is the one place inside rendered prose where
      the accent belongs. */
   .markdown-body a {
-    color: var(--color-primary);
+    color: var(--accent-ink);
     text-decoration: underline;
   }
 
@@ -1014,8 +1126,8 @@
   /* ====== CALLOUT ====== */
   /* An emphasis surface for the one statement on a page that must not be skimmed past -- on the contact page, the response time, which used to sit in a ri */
   .callout-emphasis {
-    background-color: var(--state-selected);
-    border-left: 4px solid var(--color-primary);
+    background-color: var(--surface-card-selected);
+    border-left: 4px solid var(--accent-edge);
   }
 
   /* ====== CHIP (single-select pill) ====== */
@@ -1027,19 +1139,19 @@
   }
 
   .chip:hover:not(:disabled) {
-    border-color: var(--color-primary);
+    border-color: var(--accent-ink);
   }
 
   .chip-selected {
-    background-color: var(--color-primary);
-    border-color: var(--color-primary);
+    background-color: var(--accent-ink);
+    border-color: var(--accent-ink);
     color: var(--surface-page-bg);
   }
 
   /* ====== TOAST ====== */
   /* A transient confirmation carrying exactly one action. */
   .toast {
-    background-color: var(--state-selected);
+    background-color: var(--surface-card-selected);
     border: var(--border-width-sm) solid var(--surface-card-border);
     border-radius: var(--border-radius-md);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -1047,9 +1159,15 @@
 
   /* ====== DESTRUCTIVE ACTION (solid) ====== */
   /* The heavy destructive action. */
+  /*
+    A filled destructive action, so the red is the background and carries its
+    own ink -- 7.83:1 light, 4.68:1 dark. `danger.deleteText` stays the case of
+    red text on a plain surface; the two are different grounds, which is the
+    distinction a single "delete red" token loses.
+  */
   .button-danger {
-    background-color: var(--status-failed);
-    color: var(--status-on);
+    background-color: var(--danger-confirm-bg);
+    color: var(--danger-confirm-text);
   }
 
   .button-danger:hover:not(:disabled) {

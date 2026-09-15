@@ -25,6 +25,8 @@ const SCHEMA_PATH = path.resolve(
 interface Schema {
   version: number;
   leafCount: number;
+  /** Section 5.4's role map, including which PR each legacy name retires in. */
+  roles: Record<string, { retire?: string }>;
   resolved: Record<ThemeName, { tree: Record<string, string> }>;
 }
 
@@ -53,17 +55,59 @@ const flatten = (node: unknown, trail: string[] = []): Record<string, string> =>
   );
 };
 
+/**
+ * The retirements that have actually landed in this branch.
+ *
+ * The fixture's `tree` is the token set as of 12-2b, and section 5.4 marks
+ * twelve of those names "Retired 12-3a" or "Retired 12-3b" -- they resolve in
+ * the fixture so that no commit is ever broken, and go with their consumers.
+ * So once a migration lands, the generated tree is deliberately *smaller* than
+ * the fixture's, and the comparison has to say so.
+ *
+ * Naming the landed phases is the whole of what this file states on its own
+ * authority, and it is one line a reviewer checks against the branch. Which
+ * *tokens* each phase retires still comes from the schema, so a token cannot
+ * be dropped here without the schema having said it could -- the alternative,
+ * hardcoding a new leaf count, would let any deletion through as long as the
+ * total happened to match.
+ */
+const LANDED: readonly string[] = ["12-3a", "12-3b"];
+
 const MODES: readonly ThemeName[] = ["light", "dark"];
 
 describe("generated themes equal the schema fixture", () => {
+  /** Token paths the schema says are gone once `LANDED` has landed. */
+  const retired = new Set(
+    Object.entries(schema.roles)
+      .filter(([, role]) => role.retire !== undefined && LANDED.includes(role.retire))
+      .map(([token]) => token)
+  );
+
   test("the fixture is the version this generator was written against", () => {
     expect(schema.version).toBe(6);
     expect(schema.leafCount).toBe(135);
   });
 
+  test("every landed retirement names tokens the schema actually marked", () => {
+    // Guards the mechanism above rather than the tree: a typo in `LANDED`
+    // would silently retire nothing and the comparison would then fail with a
+    // confusing diff instead of this.
+    const tagged = new Set(
+      Object.values(schema.roles)
+        .map((role) => role.retire)
+        .filter((tag): tag is string => tag !== undefined)
+    );
+    expect({ landed: LANDED.filter((p) => !tagged.has(p)), retiredCount: retired.size }).toEqual({
+      landed: [],
+      retiredCount: 12,
+    });
+  });
+
   describe.each(MODES)("%s", (mode) => {
     const generated = flatten(deriveTokens(mode) as unknown as Record<string, unknown>);
-    const expected = schema.resolved[mode].tree;
+    const expected = Object.fromEntries(
+      Object.entries(schema.resolved[mode].tree).filter(([token]) => !retired.has(token))
+    );
 
     /*
      * A plain equality over the whole tree, in both directions.
@@ -80,8 +124,15 @@ describe("generated themes equal the schema fixture", () => {
       expect(Object.keys(generated).sort()).toEqual(Object.keys(expected).sort());
     });
 
-    test("all 135 leaves of the fixture's tree match exactly", () => {
-      // One assertion over the whole tree rather than 135 assertions: a diff of
+    test("nothing the schema retired survives as a shim", () => {
+      // Retired means deleted, not aliased. An alias is a second way to say
+      // what a pair already says, it outlives the migration it was meant to
+      // enable, and grep cannot tell it from an intentional reference.
+      expect([...retired].filter((token) => token in generated)).toEqual([]);
+    });
+
+    test("every leaf the fixture still expects matches exactly", () => {
+      // One assertion over the whole tree rather than one per leaf: a diff of
       // the two objects names every wrong value at once, which is what you want
       // when a contract change moves fifty of them.
       expect(generated).toEqual(expected);

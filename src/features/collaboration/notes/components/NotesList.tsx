@@ -105,7 +105,7 @@ const NotesList: React.FC = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center py-8 error-container">
-        <AlertCircle className="w-6 h-6 mr-3 status-failed" />
+        <AlertCircle className="w-6 h-6 mr-3 feedback-error" />
         <Typography color="error">{error}</Typography>
       </div>
     );

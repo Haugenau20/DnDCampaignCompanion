@@ -490,61 +490,116 @@ describe('RosterField', () => {
 });
 
 describe('RosterStatus', () => {
+  const ALL_TONES = [
+    'active',
+    'succeeded',
+    'failed',
+    'knowledge-0',
+    'knowledge-1',
+    'knowledge-2',
+    'friendly',
+    'neutral',
+    'hostile',
+    'unsure',
+    'present',
+    'absent',
+  ] as const;
+
+  /** Every class the rendered status carries. */
+  const toneClass = (container: HTMLElement): string =>
+    (container.firstChild as HTMLElement).className;
+
+  /** The one class that comes from a scale, with the shape classes dropped. */
+  const SCALE_PREFIXES = ['outcome-', 'knowledge-', 'disposition-', 'presence-'];
+  const fromScale = (cls: string): string | undefined =>
+    cls.split(/\s+/).find(c => SCALE_PREFIXES.some(p => c.startsWith(p)));
+
   test('states the status as a word, always', () => {
-    render(<RosterStatus tone="completed">Confirmed</RosterStatus>);
+    render(<RosterStatus tone="succeeded">Confirmed</RosterStatus>);
     expect(screen.getByText('Confirmed')).toBeInTheDocument();
   });
 
-  test('a quest completing and a rumour being confirmed are the same kind of fact', () => {
-    // Same tone, therefore same hue, same weight and same placement. Four
-    // directories used to reach for four parallel class families that all
-    // resolved to these same five tokens, which is how they drifted apart.
+  test('a quest succeeding and a rumour being fully known are not the same fact', () => {
+    // They used to be. `completed` was green and available, so a confirmed
+    // rumour, a visited location and a living NPC all reached for it -- which
+    // is how the application came to claim that exploring a place was a win
+    // condition. A quest concludes and takes `outcome`; a rumour is knowledge
+    // and rides the ladder. Different scales, therefore different classes.
     const { container: quest } = render(
-      <RosterStatus tone="completed">Completed</RosterStatus>
+      <RosterStatus tone="succeeded">Completed</RosterStatus>
     );
     const { container: rumour } = render(
-      <RosterStatus tone="completed">Confirmed</RosterStatus>
+      <RosterStatus tone="knowledge-2">Confirmed</RosterStatus>
     );
-    const cls = (c: HTMLElement) =>
-      (c.firstChild as HTMLElement).className.split(/\s+/).sort().join(' ');
-    expect(cls(quest)).toBe(cls(rumour));
+    expect(toneClass(quest)).not.toBe(toneClass(rumour));
   });
 
-  test('every tone maps to a status token, except the one that means "no hue"', () => {
-    const hued = ['active', 'completed', 'failed', 'unknown', 'general'] as const;
-    hued.forEach(tone => {
+  test('a confirmed and a disproven rumour sit on the same rung', () => {
+    // Both are fully known. What separates them is the strike cue 12-5 adds,
+    // not the hue -- rendering `false` in the red of a lost quest states that
+    // a disproven rumour is a defeat, when it is a resolved one and usually
+    // good news for the party.
+    const { container: confirmed } = render(
+      <RosterStatus tone="knowledge-2">Confirmed</RosterStatus>
+    );
+    const { container: disproven } = render(
+      <RosterStatus tone="knowledge-2">False</RosterStatus>
+    );
+    expect(toneClass(confirmed)).toBe(toneClass(disproven));
+  });
+
+  test('every tone resolves to a class from the scale it names', () => {
+    const resolved = ALL_TONES.map(tone => {
       const { container, unmount } = render(
         <RosterStatus tone={tone}>Word</RosterStatus>
       );
-      expect((container.firstChild as HTMLElement).className).toContain(`status-${tone}`);
+      const cls = fromScale(toneClass(container));
       unmount();
+      return [tone, cls];
     });
 
-    // `muted` is a real status with no hue: a location that is merely `known`
-    // is the least-advanced point on its axis, and spending the one status hue
-    // on "nothing has happened here yet" would say the opposite.
-    const { container } = render(<RosterStatus tone="muted">Known</RosterStatus>);
-    const cls = (container.firstChild as HTMLElement).className;
-    expect(cls).toContain('typography-secondary');
-    expect(cls).not.toMatch(/status-(active|completed|failed|unknown|general)/);
+    expect(resolved).toEqual([
+      ['active', 'outcome-active'],
+      ['succeeded', 'outcome-succeeded'],
+      ['failed', 'outcome-failed'],
+      ['knowledge-0', 'knowledge-0'],
+      ['knowledge-1', 'knowledge-1'],
+      ['knowledge-2', 'knowledge-2'],
+      ['friendly', 'disposition-friendly'],
+      ['neutral', 'disposition-neutral'],
+      ['hostile', 'disposition-hostile'],
+      ['unsure', 'disposition-unknown'],
+      ['present', 'presence-present'],
+      ['absent', 'presence-absent'],
+    ]);
+  });
+
+  test('no tone can name a retired status hue', () => {
+    // The vocabulary is the fix, not the CSS. A tone set that cannot say
+    // `completed` cannot let a location borrow green in the first place.
+    ALL_TONES.forEach(tone => {
+      const { container, unmount } = render(
+        <RosterStatus tone={tone}>Word</RosterStatus>
+      );
+      expect(toneClass(container)).not.toMatch(/\bstatus-/);
+      unmount();
+    });
   });
 
   test('keeps one weight and placement across every tone', () => {
     const shapes = new Set<string>();
-    (['active', 'completed', 'failed', 'unknown', 'general', 'muted'] as const).forEach(
-      tone => {
-        const { container, unmount } = render(
-          <RosterStatus tone={tone}>Word</RosterStatus>
-        );
-        const cls = (container.firstChild as HTMLElement).className
-          .split(/\s+/)
-          .filter(c => !c.startsWith('status-') && c !== 'typography-secondary')
-          .sort()
-          .join(' ');
-        shapes.add(cls);
-        unmount();
-      }
-    );
+    ALL_TONES.forEach(tone => {
+      const { container, unmount } = render(
+        <RosterStatus tone={tone}>Word</RosterStatus>
+      );
+      const cls = toneClass(container)
+        .split(/\s+/)
+        .filter(c => !SCALE_PREFIXES.some(p => c.startsWith(p)))
+        .sort()
+        .join(' ');
+      shapes.add(cls);
+      unmount();
+    });
     expect(shapes.size).toBe(1);
   });
 });

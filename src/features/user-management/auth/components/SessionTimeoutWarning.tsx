@@ -98,7 +98,7 @@ const SessionTimeoutWarning: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center gap-3">
         <AlertCircle 
-          className={`status-unknown`} 
+          className={`feedback-warning`} 
           size={24} 
         />
           <Typography>

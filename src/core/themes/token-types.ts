@@ -128,10 +128,16 @@ export interface ThemeTokens {
   /** Sets `color-scheme` on the document element. */
   scheme: ColorSchemeToken;
 
+  /**
+   * What is left of the pre-pair-model `color.*`.
+   *
+   * `primary`, `secondary` and `accent` are gone with their consumers: all
+   * three were the accent under names that said nothing about the job, and
+   * `accent.ink` / `.edge` / `.fill` say it. These two survive because they
+   * name something real -- emphasis is the page's muted ink, heading is its
+   * full-strength ink.
+   */
   color: {
-    primary: string;
-    secondary: string;
-    accent: string;
     emphasis: string;
     heading: string;
   };
@@ -147,25 +153,6 @@ export interface ThemeTokens {
     sunken: SurfacePair;
     chrome: SurfacePair;
     band: SurfacePair;
-  };
-
-  /**
-   * Quest and rumour state. **Retired in 12-3**, with its consumers.
-   *
-   * Named after appearance rather than meaning, which is the defect and not a
-   * tidiness complaint: `status.completed` existed, was green, and was
-   * therefore available for a location to borrow -- which is how "visited"
-   * came to render green and a progress bar came to run red-to-green as though
-   * exploring a place were a win condition. `outcome` and `knowledge` below
-   * are the replacement, and they arrive first so nothing is ever broken.
-   */
-  status: {
-    general: string;
-    active: string;
-    completed: string;
-    failed: string;
-    unknown: string;
-    on: string;
   };
 
   /**
@@ -225,13 +212,6 @@ export interface ThemeTokens {
 
   /** An NPC's stance toward the party. */
   disposition: DispositionScale;
-
-  /** Feedback only -- never a resting background. */
-  state: {
-    hoverLight: string;
-    hoverMedium: string;
-    selected: string;
-  };
 
   icon: {
     bg: string;

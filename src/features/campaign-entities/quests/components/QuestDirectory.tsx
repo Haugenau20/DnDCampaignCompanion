@@ -53,16 +53,34 @@ const STATUS_GROUPS: { key: QuestStatus; title: string }[] = [
 
 /** Segment colour per status, reusing the same tokens as the row chip and bar. */
 /** Quest state, in the shared status vocabulary. */
+/**
+ * A quest is the one domain object in this application that genuinely
+ * concludes, so it is the one that gets the valenced scale. Schema section 3.
+ */
 const STATUS_TONE: Record<QuestStatus, RosterStatusTone> = {
   active: 'active',
-  completed: 'completed',
+  completed: 'succeeded',
   failed: 'failed',
 };
 
+/**
+ * The progress bar's fill, per state.
+ *
+ * Spelled out rather than built as `progress-bar-${quest.status}`. A class
+ * name assembled from a variable is invisible to grep, which is how a token
+ * survives a migration that was supposed to delete it -- and this phase has
+ * now been bitten by exactly that twice.
+ */
+const PROGRESS_FILL: Record<QuestStatus, string> = {
+  active: 'progress-bar-active',
+  completed: 'progress-bar-succeeded',
+  failed: 'progress-bar-failed',
+};
+
 const STATUS_COLOR: Record<QuestStatus, string> = {
-  active: 'bg-status-active',
-  completed: 'bg-status-completed',
-  failed: 'bg-status-failed',
+  active: 'bg-outcome-active',
+  completed: 'bg-outcome-succeeded',
+  failed: 'bg-outcome-failed',
 };
 
 /**
@@ -511,7 +529,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                     {totalObjectives > 0 && (
                       <div className="w-full rounded-full h-1.5 progress-container">
                         <div
-                          className={clsx('rounded-full h-1.5', `progress-bar-${quest.status}`)}
+                          className={clsx('rounded-full h-1.5', PROGRESS_FILL[quest.status])}
                           style={{ width: `${(completedObjectives / totalObjectives) * 100}%` }}
                         />
                       </div>

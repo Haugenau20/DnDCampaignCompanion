@@ -59,7 +59,7 @@ const AppearanceCard: React.FC = () => {
                 >
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: t.tokens.color.primary }}
+                    style={{ backgroundColor: t.tokens.accent.fill }}
                   />
                 </div>
                 <span className="flex items-center gap-1 capitalize">

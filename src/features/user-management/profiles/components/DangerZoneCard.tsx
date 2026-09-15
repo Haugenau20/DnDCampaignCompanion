@@ -68,7 +68,7 @@ const DangerZoneCard: React.FC = () => {
   const campaignCount = campaigns ? campaigns.length : null;
 
   return (
-    <div className="rounded-lg" style={{ border: "2px solid var(--status-failed)" }}>
+    <div className="rounded-lg" style={{ border: "2px solid var(--feedback-error-edge)" }}>
       <Card>
         <Card.Content className="space-y-6">
           <Typography id="danger-heading" variant="h4" color="error">

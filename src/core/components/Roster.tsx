@@ -32,7 +32,7 @@ export interface RosterSegment {
   key: string;
   label: string;
   count: number;
-  /** Tailwind background utility backed by a theme token, e.g. bg-status-completed. */
+  /** Tailwind background utility backed by a theme token, e.g. bg-knowledge-0. */
   colorClass: string;
 }
 
@@ -403,29 +403,61 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
 // ---------------------------------------------------------------------------
 
 /**
- * The status roles, named for the state rather than the entity.
+ * The tones a roster row's state can take, named after the scale it belongs to.
  *
- * `muted` is deliberately in the set. Not every state deserves a hue: a
- * location that is merely `known` is the least-advanced point on its axis, and
- * spending the one status hue on "nothing has happened here yet" would say the
- * opposite of what it means. It is still a status, so it keeps the treatment --
- * same weight, same placement -- and only the hue drops out.
+ * This replaces a five-word vocabulary -- `active`, `completed`, `failed`,
+ * `unknown`, `general` -- that described *hues* rather than meanings, and was
+ * therefore something any entity could reach into. That is not a tidiness
+ * complaint: `completed` was green and available, so a visited location took
+ * it and the application began claiming that exploring a place was a win
+ * condition. A vocabulary that cannot say "green" cannot make that mistake.
+ *
+ * Three scales, and the choice between them is a claim about the domain:
+ *
+ *   - `outcome` is for a thing that **concluded**, and is the only valenced
+ *     scale here. Quests, and nothing else.
+ *   - `knowledge` is a **ladder**, not a verdict: how much the party knows.
+ *     Locations and rumours both ride it, which is why its steps are numbered
+ *     rather than named -- `visited` would tie a shared ladder to one domain.
+ *   - `disposition` is an NPC's stance toward the party. Valenced, and that
+ *     does not contradict presence being unvalenced: a slain villain is not a
+ *     bad outcome, but a hostile NPC is genuinely a threat to the reader.
+ *
+ * `present` and `absent` carry no hue at all, which is the point rather than
+ * an omission. The default state of a thing needs no encoding, and a fact
+ * (this NPC died) is not an error.
  */
 export type RosterStatusTone =
+  // Outcome -- quests only.
   | 'active'
-  | 'completed'
+  | 'succeeded'
   | 'failed'
-  | 'unknown'
-  | 'general'
-  | 'muted';
+  // Knowledge -- the shared ladder. Rising index means more knowledge.
+  | 'knowledge-0'
+  | 'knowledge-1'
+  | 'knowledge-2'
+  // Disposition -- an NPC's stance.
+  | 'friendly'
+  | 'neutral'
+  | 'hostile'
+  | 'unsure'
+  // Presence, and anything else that should simply be read rather than scanned.
+  | 'present'
+  | 'absent';
 
 const STATUS_TONE: Record<RosterStatusTone, string> = {
-  active: 'status-active',
-  completed: 'status-completed',
-  failed: 'status-failed',
-  unknown: 'status-unknown',
-  general: 'status-general',
-  muted: 'typography-secondary',
+  active: 'outcome-active',
+  succeeded: 'outcome-succeeded',
+  failed: 'outcome-failed',
+  'knowledge-0': 'knowledge-0',
+  'knowledge-1': 'knowledge-1',
+  'knowledge-2': 'knowledge-2',
+  friendly: 'disposition-friendly',
+  neutral: 'disposition-neutral',
+  hostile: 'disposition-hostile',
+  unsure: 'disposition-unknown',
+  present: 'presence-present',
+  absent: 'presence-absent',
 };
 
 export interface RosterStatusProps {
@@ -441,12 +473,13 @@ export interface RosterStatusProps {
  *
  * One component so that a quest's "Completed" and a rumour's "Confirmed" are
  * the same kind of fact and look like it -- same weight, same placement, same
- * vocabulary of hues. Four directories previously reached for four parallel
- * class families (`quest-status-*`, `rumor-status-*`, `npc-status-*`,
+ * vocabulary. Four directories previously reached for four parallel class
+ * families (`quest-status-*`, `rumor-status-*`, `npc-status-*`,
  * `location-status-*`) that all resolved to the same five tokens, which is how
  * they drifted apart once already: `location-status-explored` and
  * `-visited` were swapped against their own legend for as long as a dot was
- * there to cover it.
+ * there to cover it. Those families are gone; a row now names a meaning and
+ * the meaning owns the hue.
  *
  * The word is not optional. The hue is a scanning aid on top of it, never a
  * substitute, so the directories stay fully readable with hue removed.

@@ -88,7 +88,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onSaveNow }) => {
     <div
       onClick={handleViewNote}
       className={`note-card grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-4 px-5 py-4 cursor-pointer transition-colors ${
-        note.isUnsaved ? "border-l-[3px] border-l-current status-unknown" : ""
+        note.isUnsaved ? "border-l-[3px] feedback-warning-edge" : ""
       }`}
     >
       {/* Left: the note itself */}
@@ -106,7 +106,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onSaveNow }) => {
           </Typography>
 
           {note.isUnsaved && (
-            <span className="px-2 py-0.5 rounded text-xs font-medium bg-secondary status-unknown">
+            <span className="px-2 py-0.5 rounded text-xs font-medium bg-secondary feedback-warning">
               Not saved yet
             </span>
           )}
@@ -150,7 +150,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onSaveNow }) => {
           <button
             type="button"
             onClick={handleSaveNow}
-            className="mt-1 text-[13px] font-medium status-unknown hover:underline"
+            className="mt-1 text-[13px] font-medium feedback-warning hover:underline"
           >
             Save now
           </button>

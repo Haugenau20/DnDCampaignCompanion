@@ -51,7 +51,7 @@ const ErrorFallback: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <AlertCircle className="w-12 h-12 mb-4 status-failed"/>
+      <AlertCircle className="w-12 h-12 mb-4 feedback-error"/>
       <Typography variant="h2" className="mb-4">
         Something went wrong
       </Typography>

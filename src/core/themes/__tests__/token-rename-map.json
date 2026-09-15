@@ -11,7 +11,9 @@
     "",
     "The 38 names not listed here were already role-shaped and are unchanged.",
     "",
-    "The eight --location-type-* entries are a different kind of retirement from the rest: they were aliases of primary/secondary/accent/status, and their values deliberately change to palette hues. They are listed under retired for the manifest, and under revalued so the gate pins their new values."
+    "The eight --location-type-* entries are a different kind of retirement from the rest: they were aliases of primary/secondary/accent/status, and their values deliberately change to palette hues. They are listed under retired for the manifest, and under revalued so the gate pins their new values.",
+    "",
+    "Phase 12's twelve retirements (12-3a and 12-3b) are recorded the same way, and for the same reason: `status.*`, `color.primary/secondary/accent` and `state.*` were all pure indirection -- every one of them already equalled another token -- so each maps to the token that carried its value. The gate then proves the deletion changed no value at all, which is a stronger statement than re-recording the baseline would have been. `--status-on` maps to `--accent-on` because that is the value it held; its *successor* in the schema is `outcome.failed.on`, which is a different question from what it was worth."
   ],
   "renamed": {
     "--bg-primary": "--surface-page-bg",
@@ -80,7 +82,19 @@
     "--location-type-dungeon": "--entity-palette-4",
     "--location-type-landmark": "--entity-palette-5",
     "--location-type-building": "--entity-palette-6",
-    "--location-type-poi": "--entity-palette-7"
+    "--location-type-poi": "--entity-palette-7",
+    "--color-primary": "--accent-ink",
+    "--color-secondary": "--accent-hover",
+    "--color-accent": "--accent-ink",
+    "--status-general": "--surface-card-on-muted",
+    "--status-active": "--accent-ink",
+    "--status-completed": "--outcome-succeeded",
+    "--status-failed": "--outcome-failed-ink",
+    "--status-unknown": "--knowledge-0",
+    "--status-on": "--accent-on",
+    "--state-hover-light": "--surface-card-hover",
+    "--state-hover-medium": "--surface-card-selected",
+    "--state-selected": "--surface-card-selected"
   },
   "_revalued_comment": [
     "Values deliberately changed after the baseline was taken. Listed per theme,",

@@ -236,9 +236,6 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
   const tokens: ThemeTokens = {
     scheme: mode,
     color: {
-      primary: role("color.primary"),
-      secondary: role("color.secondary"),
-      accent: role("color.accent"),
       emphasis: role("color.emphasis"),
       heading: role("color.heading"),
     },
@@ -253,14 +250,6 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
       ring: primitives.accent.ring,
     },
     surface: primitives.surface,
-    status: {
-      general: role("status.general"),
-      active: role("status.active"),
-      completed: role("status.completed"),
-      failed: role("status.failed"),
-      unknown: role("status.unknown"),
-      on: role("status.on"),
-    },
     // The semantic scales. These take their values straight from the
     // primitives rather than through the role map, because they are not
     // existing names being resolved -- they *are* the primitives, finally
@@ -315,11 +304,6 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
       neutral: primitives.surface.card.onMuted,
       hostile: primitives.outcome.failedInk,
       unknown: primitives.knowledge[0],
-    },
-    state: {
-      hoverLight: role("state.hoverLight"),
-      hoverMedium: role("state.hoverMedium"),
-      selected: role("state.selected"),
     },
     icon: {
       bg: role("icon.bg"),
@@ -500,9 +484,6 @@ export const findBorrowedRoleFailures = (
 
   /** Ink that lands on page, card or sunken. All three, simultaneously. */
   const inkOnContent: ReadonlyArray<[string, string]> = ([
-    ["color.primary", tokens.color.primary],
-    ["color.secondary", tokens.color.secondary],
-    ["color.accent", tokens.color.accent],
     ["color.emphasis", tokens.color.emphasis],
     ["color.heading", tokens.color.heading],
     ["accent.ink", tokens.accent.ink],
@@ -514,11 +495,6 @@ export const findBorrowedRoleFailures = (
     ["disposition.neutral", tokens.disposition.neutral],
     ["disposition.hostile", tokens.disposition.hostile],
     ["disposition.unknown", tokens.disposition.unknown],
-    ["status.general", tokens.status.general],
-    ["status.active", tokens.status.active],
-    ["status.completed", tokens.status.completed],
-    ["status.failed", tokens.status.failed],
-    ["status.unknown", tokens.status.unknown],
     ["field.placeholder", tokens.field.placeholder],
     ["field.labelText", tokens.field.labelText],
     ["field.helperText", tokens.field.helperText],
@@ -562,7 +538,6 @@ export const findBorrowedRoleFailures = (
       "action.secondary.bg",
       tokens.action.secondary.bg,
     ],
-    ["status.on", tokens.status.on, "status.active", tokens.status.active],
     ["accent.on", tokens.accent.on, "accent.fill", tokens.accent.fill],
     [
       "outcome.failed.on",
