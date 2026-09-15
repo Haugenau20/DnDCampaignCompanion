@@ -22,15 +22,10 @@ const SCHEMA_PATH = path.resolve(
   "../../../../docs/design/colour-schema.json"
 );
 
-interface Primitives {
-  outcome: { succeeded: string; failedInk: string; failedFill: string };
-  knowledge: [string, string, string];
-}
-
 interface Schema {
   version: number;
   leafCount: number;
-  resolved: Record<ThemeName, { tree: Record<string, string>; primitives: Primitives }>;
+  resolved: Record<ThemeName, { tree: Record<string, string> }>;
 }
 
 const schema: Schema = JSON.parse(fs.readFileSync(SCHEMA_PATH, "utf8"));
@@ -62,63 +57,34 @@ const MODES: readonly ThemeName[] = ["light", "dark"];
 
 describe("generated themes equal the schema fixture", () => {
   test("the fixture is the version this generator was written against", () => {
-    expect(schema.version).toBe(2);
-    expect(schema.leafCount).toBe(101);
+    expect(schema.version).toBe(6);
+    expect(schema.leafCount).toBe(135);
   });
 
   describe.each(MODES)("%s", (mode) => {
     const generated = flatten(deriveTokens(mode) as unknown as Record<string, unknown>);
     const expected = schema.resolved[mode].tree;
-    const primitives = schema.resolved[mode].primitives;
 
-    /**
-     * What 12-2 added on top of the fixture's tree.
+    /*
+     * A plain equality over the whole tree, in both directions.
      *
-     * The fixture's `tree` block is the token set as of 12-1, and the phase
-     * changes that set on purpose: 12-2 adds the semantic scales, 12-3 deletes
-     * `status.*`, `color.primary/secondary/accent` and `state.*` with their
-     * consumers. So the tree is no longer an equality, and this names the
-     * difference **exhaustively** rather than loosening the comparison to a
-     * subset check -- a subset check would pass an accidental extra token,
-     * which is most of what this file exists to prevent.
-     *
-     * Every addition still comes from the fixture: the colours are the
-     * `primitives` block, finally carrying the name of what they mean rather
-     * than what they look like.
+     * This used to carry an `additions` block naming 12-2's six colours and
+     * two cues as exceptions, because the fixture predated them. The schema
+     * now carries all 135 leaves in `resolved.<mode>.tree`, so the exception
+     * is gone -- which matters beyond tidiness. A correct workaround that
+     * outlives its reason becomes a second source of truth, and this one was
+     * load-bearing: any token the generator invented would have been waved
+     * through if someone added it to the block instead of to the schema.
      */
-    const additions: Record<string, string> = {
-      "outcome.succeeded": primitives.outcome.succeeded,
-      "outcome.failed.ink": primitives.outcome.failedInk,
-      "outcome.failed.fill": primitives.outcome.failedFill,
-      "knowledge.0": primitives.knowledge[0],
-      "knowledge.1": primitives.knowledge[1],
-      "knowledge.2": primitives.knowledge[2],
-      // Not colours, so not in `primitives`. Schema section 6 is the source.
-      "cue.failure": "hatch",
-      "cue.negation": "strike",
-    };
-
-    test("the generated set is the fixture's tree plus exactly the phase's additions", () => {
-      expect(Object.keys(generated).sort()).toEqual(
-        [...Object.keys(expected), ...Object.keys(additions)].sort()
-      );
+    test("the generated token set is exactly the fixture's, no more and no less", () => {
+      expect(Object.keys(generated).sort()).toEqual(Object.keys(expected).sort());
     });
 
-    test("all 101 leaves of the fixture's tree match exactly", () => {
-      // One assertion over the whole tree rather than 101 assertions: a diff of
+    test("all 135 leaves of the fixture's tree match exactly", () => {
+      // One assertion over the whole tree rather than 135 assertions: a diff of
       // the two objects names every wrong value at once, which is what you want
       // when a contract change moves fifty of them.
-      const asFixtured = Object.fromEntries(
-        Object.keys(expected).map((key) => [key, generated[key]])
-      );
-      expect(asFixtured).toEqual(expected);
-    });
-
-    test("the semantic scales carry the fixture's own primitive values", () => {
-      const added = Object.fromEntries(
-        Object.keys(additions).map((key) => [key, generated[key]])
-      );
-      expect(added).toEqual(additions);
+      expect(generated).toEqual(expected);
     });
 
     test("the knowledge ladder is monotonic in contrast against every content ground", () => {

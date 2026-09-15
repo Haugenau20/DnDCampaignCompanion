@@ -11,7 +11,13 @@ import { lightTheme } from '../lightTheme';
 import { darkTheme } from '../darkTheme';
 import { themes } from '../index';
 import { Theme, ThemeName, CueToken, ColorSchemeToken } from '../../types';
-import { findIllegalEnumValues, LEGAL_CUES, LEGAL_SCHEMES } from '../../derive';
+import {
+  findIllegalEnumValues,
+  findWashPairingRatios,
+  verifyBorrowedRoles,
+  LEGAL_CUES,
+  LEGAL_SCHEMES,
+} from '../../derive';
 import { flattenTokens, variableNameFor, TokenTree } from '../../token-variables';
 
 const ALL: ReadonlyArray<[string, Theme]> = [
@@ -164,6 +170,53 @@ describe('theme definitions', () => {
           ['dark', []],
         ]);
       });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The wash pairing
+  // -------------------------------------------------------------------------
+  //
+  // Schema section 5.6 forbids one combination: `feedback.*.ink` on its own
+  // `wash`. A washed banner takes `surface.*.on` for its text, so the hue
+  // appears as the boundary and never as the text on top of itself.
+  //
+  // Stated as prose that reads like a stylistic preference, which is exactly
+  // why it is measured here. Three of the eight mode-and-state combinations
+  // fall below AA, and *which* three differs by mode -- light's warning and
+  // progress, dark's error. An asymmetry in that shape is what gets shipped by
+  // eye and caught by a gate.
+  describe('the one pairing rule these scales carry', () => {
+    test.each(ALL)('%s: the legal banner clears AA on every content ground', (_name, theme) => {
+      // Background `wash`, border `edge`, text `surface.*.on`. This is the
+      // composition the generator gates, and it is green -- which is the half
+      // of the rule that says what to *do*.
+      expect(() => verifyBorrowedRoles(theme.tokens)).not.toThrow();
+    });
+
+    // The other half: the forbidden pairing is genuinely unsafe, not merely
+    // discouraged. A rule nobody has watched bind is indistinguishable from
+    // one that does not.
+    test('ink on its own wash fails AA in three of eight combinations', () => {
+      const below = ALL.flatMap(([mode, theme]) =>
+        findWashPairingRatios(theme.tokens)
+          .filter((pairing) => pairing.ratio < 4.5)
+          .map((pairing) => `${mode}.${pairing.scale}`)
+      );
+      expect(below.sort()).toEqual(['dark.error', 'light.progress', 'light.warning']);
+    });
+
+    // Pinned as numbers as well as a count, because "three fail" would still
+    // hold if every ratio moved. These are the schema's own measurements.
+    test.each(ALL)('%s: the measured ratios are the schema section 5.6 table', (name, theme) => {
+      const measured = Object.fromEntries(
+        findWashPairingRatios(theme.tokens).map((p) => [p.scale, p.ratio])
+      );
+      expect(measured).toEqual(
+        name === 'light'
+          ? { error: 5.57, warning: 4.39, success: 4.67, progress: 4.39 }
+          : { error: 3.99, warning: 4.95, success: 4.92, progress: 4.95 }
+      );
     });
   });
 

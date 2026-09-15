@@ -104,12 +104,18 @@ describe("token manifest", () => {
  * its own without leaving the application unstyled (token model section 5).
  *
  * Without this block, a whole scale could be misnamed, half-defined, or absent
- * from one theme, and every gate in the project would stay green until 12-3
+ * from one theme, and every gate in the project would stay green until 12-3a
  * wired it up. Enumerating it is what makes "additive" checkable rather than
  * merely invisible.
+ *
+ * 12-2b adds 26 more of the same kind: the `accent`, `feedback` and
+ * `disposition` scales, which 12-3a and 12-3b give consumers. They are listed
+ * here for the same reason and will stay listed until those PRs land -- at
+ * which point the block above starts covering them from the other direction.
  */
 describe("tokens with no consumers yet are still enumerated", () => {
   const EXPECTED = [
+    // 12-2
     "--outcome-succeeded",
     "--outcome-failed-ink",
     "--outcome-failed-fill",
@@ -118,6 +124,33 @@ describe("tokens with no consumers yet are still enumerated", () => {
     "--knowledge-2",
     "--cue-failure",
     "--cue-negation",
+    // 12-2b
+    "--accent-ink",
+    "--accent-edge",
+    "--accent-fill",
+    "--accent-hover",
+    "--accent-on",
+    "--accent-ring",
+    "--outcome-failed-on",
+    "--knowledge-wash",
+    "--feedback-error-ink",
+    "--feedback-error-edge",
+    "--feedback-error-wash",
+    "--feedback-warning-ink",
+    "--feedback-warning-edge",
+    "--feedback-warning-wash",
+    "--feedback-success-ink",
+    "--feedback-success-edge",
+    "--feedback-success-wash",
+    "--feedback-progress-ink",
+    "--feedback-progress-edge",
+    "--feedback-progress-wash",
+    "--disposition-friendly",
+    "--disposition-neutral",
+    "--disposition-hostile",
+    "--disposition-unknown",
+    "--danger-confirm-bg",
+    "--danger-confirm-text",
   ];
 
   const THEMES: ReadonlyArray<[string, TokenTree]> = [
@@ -147,5 +180,17 @@ describe("tokens with no consumers yet are still enumerated", () => {
     expect(EXPECTED.map((v) => [v, v in light, v in dark])).toEqual(
       EXPECTED.map((v) => [v, true, true])
     );
+  });
+
+  /*
+   * The count, as its own assertion.
+   *
+   * The list above names what this PR adds, so it goes stale the moment a
+   * later PR deletes something -- and a stale allow-list fails open. The total
+   * does not: `status.*` leaving in 12-3a has to move this number, which is
+   * what makes the deletion visible here rather than only in the fixture.
+   */
+  test.each(THEMES)("%s defines exactly the schema's 135 leaves", (_name, tokens) => {
+    expect(Object.keys(flattenTokens(tokens)).length).toBe(135);
   });
 });

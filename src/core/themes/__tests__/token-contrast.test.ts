@@ -512,12 +512,17 @@ describe("the semantic scales meet their stated thresholds", () => {
       return round(Math.min(...grounds.map((g) => contrastRatio(parsed as Rgb, g))));
     };
 
+    /** The ladder's steps, in order. `wash` is translucent and not a step. */
+    const LADDER = [0, 1, 2] as const;
+
     const asText: ReadonlyArray<[string, string]> = [
       ["outcome.succeeded", tokens.outcome.succeeded],
       ["outcome.failed.ink", tokens.outcome.failed.ink],
-      ...tokens.knowledge.map(
-        (step, i) => [`knowledge.${i}`, step] as [string, string]
-      ),
+      // The ladder is a record rather than an array now, because the schema
+      // gives it a named sibling (`knowledge.wash`) that an array cannot
+      // carry. The steps are still enumerated in ladder order, which is what
+      // the monotonicity test below depends on.
+      ...LADDER.map((i) => [`knowledge.${i}`, tokens.knowledge[i]] as [string, string]),
     ];
 
     test.each(asText)("%s meets AA on page, card and sunken", (token, colour) => {
@@ -543,7 +548,7 @@ describe("the semantic scales meet their stated thresholds", () => {
      * hues a reader is asked to rank.
      */
     test("the knowledge ladder rises with the index", () => {
-      const ratios = tokens.knowledge.map(worst);
+      const ratios = LADDER.map((i) => worst(tokens.knowledge[i]));
       expect({ ratios, rising: ratios[0] < ratios[1] && ratios[1] < ratios[2] }).toEqual({
         ratios,
         rising: true,

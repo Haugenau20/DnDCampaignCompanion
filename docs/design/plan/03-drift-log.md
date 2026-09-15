@@ -3355,6 +3355,95 @@ Answer as the work reaches them; move to a decision when settled.
   future or follows the card families out.
 
 
+### D115 - the knowledge ladder becomes a record, because the schema gave it a sibling
+Date: 2026-09-15   Status: active
+Decision: `ThemeTokens.knowledge` changes from `string[]` to
+`{ 0, 1, 2, wash }`. Token model section 6 prefers an ordered collection here
+and says so for a good reason -- position is the meaning, and a record makes a
+reorder invisible -- so this is a departure, recorded rather than slipped in.
+It is forced, not preferred. Schema section 5.5 names a token `knowledge.wash`,
+a *named sibling of the three steps*, and an array cannot carry one:
+`flattenTokens` branches on `Array.isArray` and emits index-suffixed variables
+only, so a property hung off an array is silently dropped. The alternatives were
+worse -- teaching `flattenTokens` about arrays with extra own properties is a
+change to shared infrastructure to serve one token, and `knowledge.ladder.0`
+spells a path the fixture does not have.
+Because: what the array type was actually buying is still bought, and by
+something stronger. Ordering was never enforced by the shape; it is enforced by
+`token-contrast.test.ts` asserting the ladder rises with the index in both
+modes, and by the fixture pinning all four paths exactly. A record that fails
+those two gates is as loud as an array would have been. `entityPalette` stays an
+array, so the ordered-collection mechanism is still exercised and still tested.
+**Worth a ruling if the model is ever extracted as a package**: the general
+shape "an ordered collection with named siblings" has no representation in
+`TokenTree` today, and this is the first token to want one. Raised as Q19.
+
+### R62 - 12-2b: 26 leaves, and the pairing rule reproduced independently
+Date: 2026-09-15
+Change: the token tree goes from 109 leaves to **135**, in both modes. The token
+baseline diffs to **+26 per mode, 0 changed, 0 removed** -- and `token-values`
+passed without re-baselining, which is a per-value proof of "screenshot
+identical" rather than an eyeball one. Confirmed live: the running app serves
+135 custom properties, the new ones at the fixture's values and every
+pre-existing one unchanged.
+**All 135 leaves reproduced from the contract on the first run, both modes.**
+That is worth recording because the previous revision of the schema did not:
+v4 disagreed with a careful generator on six primitives and 43 leaves. v6 is
+additive over v2 and every value the merged code already shipped is
+byte-identical, so the disagreement is gone rather than papered over. The two
+rules that closed it -- section 4.3 rule 5 (`on` values are authored, never
+searched) and rule 6 (a wash does not constrain the ink it is made from) -- are
+now the reason `outcome.failed.on` resolves to one value in both modes: it is
+`neutral(0.975)`, and a neutral does not vary with the mode, only its lightness
+does.
+**The wash pairing reproduced to the hundredth, which is what makes it a gate
+rather than a preference.** Schema section 5.6 publishes six ratios for
+`feedback.*.ink` on its own `wash`. An independent implementation here measures
+light 5.57 / 4.39 / 4.67 / 4.39 and dark 3.99 / 4.95 / 4.92 / 4.95 -- every one
+of them the schema's own number. Three of eight fall below AA, and which three
+differs by mode: light's warning and progress, dark's error. The asymmetry is
+the point; it is exactly the shape that survives review by eye.
+Two things that mattered in getting there. A wash **has no ratio until it has a
+ground**, so the check composites `rgba()` onto page, card and sunken and
+measures the body ink against the result -- `flattenOnto` in `oklch.ts`. And the
+composite must be **rounded to bytes**, because that is what a browser paints; a
+first pass in floating point put every ratio 0.01-0.02 low and would have made
+the schema look wrong when it was right.
+**What the generator can and cannot gate here, stated plainly.** It cannot see a
+consumer pairing ink with its own wash -- no generator can. So the rule is
+enforced from both ends: `verifyBorrowedRoles` asserts the *legal* banner
+(`wash` background, `edge` border, `surface.*.on` text) clears AA on all three
+content grounds, and `findWashPairingRatios` exists so a test can pin that the
+forbidden pairing genuinely fails. A rule nobody has watched bind is
+indistinguishable from one that does not.
+**The fixture's tree is a plain equality again.** R61 recorded the `additions`
+block as a correct workaround for a fixture that predated 12-2's scales. v6
+carries all 135 leaves in `resolved.<mode>.tree`, so the block is deleted and
+the comparison is equality in both directions. This is the more important half
+of the change: a correct workaround that outlives its reason becomes a second
+source of truth, and this one was load-bearing -- a token the generator invented
+would have been waved through by adding it to the block instead of to the
+schema.
+**A count assertion, because an allow-list fails open.** `token-manifest` now
+also asserts each theme defines exactly 135 variables. The enumerated list names
+what this PR adds and goes stale the moment a later PR deletes something; the
+total does not, so `status.*` leaving in 12-3a has to move a number here rather
+than only in the fixture.
+Also lifted: `WASH_ALPHA` and `RING_ALPHA` into `contract.ts`. They were a
+literal `0.35` and `0.1` inside the generator, which meant the schema's
+top-level `wash` and `ring` values could drift from the code with nothing
+noticing.
+
+### Q19 - can an ordered collection have named siblings?
+Date: 2026-09-15   Status: open
+`TokenTree` supports a record or an array, and `knowledge` is the first token to
+need both at once: three ordered steps plus a `wash`. D115 resolves it for the
+app by making the ladder a record and leaning on the monotonicity gate for
+order. The general question is for the package: does `theme-contract` get a
+shape for "ordered, with siblings", or does a collection that grows a sibling
+stop being ordered? Decide before extraction, alongside Q1.
+
+
 Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32,
 **Q10** by D82 and D83, **Q11** by R9, **Q14** by D61, **Q16** by D103,
 **Q17** by D90, **Q18** by D91. The "where do rendered
