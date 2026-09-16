@@ -697,7 +697,7 @@ describe('QuestDirectory', () => {
       fireEvent.click(expandButton('Find the Dragon'));
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
       expect(
-        screen.getByText('Are you sure you want to delete Quest "Find the Dragon"? This action cannot be undone.')
+        screen.getByText('“Find the Dragon” is removed for everyone. This cannot be undone.')
       ).toBeInTheDocument();
     });
 
@@ -714,11 +714,11 @@ describe('QuestDirectory', () => {
       fireEvent.click(expandButton('Find the Dragon'));
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
-      const confirmButtons = screen.getAllByRole('button', { name: 'Delete' });
-      // The row's own Delete button plus the dialog's confirm button both read
-      // "Delete" while the dialog is open; the dialog is portalled after the
-      // row in document order, so it is the last match.
-      fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+      // The row's Delete and the dialog's confirm used to read identically,
+      // so this had to reach for the last match in document order. Since 14.5
+      // the confirm carries the verb -- "Delete Quest" -- and the two are
+      // simply different controls.
+      fireEvent.click(screen.getByRole('button', { name: 'Delete Quest' }));
 
       await waitFor(() => expect(mockDeleteQuest).toHaveBeenCalledWith('q1'));
     });

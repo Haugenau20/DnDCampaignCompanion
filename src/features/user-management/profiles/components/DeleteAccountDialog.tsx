@@ -64,15 +64,14 @@ const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = ({ open, onClose
   };
 
   return (
-    <Dialog open={open} onClose={onClose} title="Confirm Account Deletion" maxWidth="max-w-md">
+    <Dialog open={open} onClose={onClose} title="Delete your account?" maxWidth="max-w-md">
       <div className="space-y-4">
-        <Typography>Are you sure you want to permanently delete your account?</Typography>
-        <Typography color="error">This will:</Typography>
-        <ul className="list-disc pl-5 space-y-1 typography">
-          <li>Remove your access to all groups</li>
-          <li>Delete all your user profiles and settings</li>
-          <li>This action is permanent and cannot be undone</li>
-        </ul>
+        {/* Body ink, not red. The fill is spent on the confirm button. */}
+        <Typography color="secondary">
+          You lose access to every group you are in, and your profiles,
+          characters and settings are deleted. What you have written stays for
+          the other members. This cannot be undone.
+        </Typography>
         <Input
           label={`Type ${accountEmail} to confirm`}
           value={confirmText}
@@ -85,14 +84,14 @@ const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = ({ open, onClose
             Cancel
           </Button>
           <Button
-            variant="outline"
-            color="error"
+            variant="ghost"
             onClick={handleConfirm}
             isLoading={deleting}
             disabled={!isConfirmed}
+            className="button-danger min-h-[2.75rem]"
             startIcon={<Trash2 size={16} />}
           >
-            Delete My Account
+            Delete account
           </Button>
         </div>
         {error && (

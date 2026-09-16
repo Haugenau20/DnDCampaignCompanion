@@ -228,7 +228,7 @@ describe("AdminCampaignsPage", () => {
       await userEvent.click(within(row).getByRole("button", { name: "Delete" }));
       const dialog = await screen.findByRole("dialog");
       await userEvent.click(
-        within(dialog).getByRole("button", { name: /^delete$/i })
+        within(dialog).getByRole("button", { name: "Delete campaign" })
       );
       await settle();
       expect(deleteCampaign).toHaveBeenCalledWith("c2");

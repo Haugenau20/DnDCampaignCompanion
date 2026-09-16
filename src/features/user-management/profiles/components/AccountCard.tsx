@@ -1,37 +1,29 @@
 // src/features/user-management/profiles/components/AccountCard.tsx
-import React, { useState } from "react";
+import React from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { useGroups } from "../../groups/hooks/useGroups";
-import { useJoinGroupCompletion } from "../../groups/hooks/useJoinGroupCompletion";
 import Typography from "core/components/Typography";
 import Card from "core/components/Card";
-import Button from "core/components/Button";
-import JoinGroupDialog from "../../groups/components/JoinGroupDialog";
+import { buttonClasses } from "core/components/Button";
 
 /**
  * Account-scoped section of the profile page: the settings that apply to
  * the signed-in user everywhere, in every group they belong to.
  *
- * Shows the sign-in email and every group the user is a member of, and
- * hosts the "Join another" entrance onto {@link JoinGroupDialog}. A
- * successful join lands the user in the newly joined group through
- * {@link useJoinGroupCompletion} -- the same completion behaviour the
- * header's own "Join Group" entrance uses, so joining behaves identically
- * no matter which surface it is started from.
+ * Shows the sign-in email and every group the user is a member of, and links
+ * to `/join` for another.
+ *
+ * "Join another" used to open a dialog here, and the landing behaviour it
+ * shared with the header's entrance moved to `useJoinGroupCompletion` so the
+ * two could not diverge. Both entrances are now the same route, so they cannot
+ * diverge at all -- `/join` owns the completion.
  */
 const AccountCard: React.FC = () => {
   const { user } = useAuth();
   const { groups } = useGroups();
-  const completeJoin = useJoinGroupCompletion();
-
-  const [showJoinGroup, setShowJoinGroup] = useState(false);
 
   const groupNames = groups.map((group) => group.name).join(", ");
-
-  const handleJoined = async () => {
-    setShowJoinGroup(false);
-    await completeJoin();
-  };
 
   return (
     <Card>
@@ -47,22 +39,15 @@ const AccountCard: React.FC = () => {
 
           <Typography variant="body-sm" color="secondary">Groups you&apos;re in</Typography>
           <Typography>{groupNames}</Typography>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowJoinGroup(true)}
+          <Link
+            to="/join"
+            className={buttonClasses({ variant: "ghost", size: "sm" })}
           >
             Join another
-          </Button>
+          </Link>
         </div>
       </Card.Content>
 
-      <JoinGroupDialog
-        open={showJoinGroup}
-        onClose={() => setShowJoinGroup(false)}
-        onSuccess={handleJoined}
-      />
     </Card>
   );
 };

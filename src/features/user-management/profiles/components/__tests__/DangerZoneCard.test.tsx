@@ -78,7 +78,7 @@ describe("DangerZoneCard", () => {
 
   test("should show Leave Group button", () => {
     render(<DangerZoneCard />);
-    expect(screen.getByRole("button", { name: /leave group/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^leave group$/i })).toBeInTheDocument();
   });
 
   test("should show Delete Account button", () => {
@@ -88,30 +88,30 @@ describe("DangerZoneCard", () => {
 
   test("should open Leave Group confirmation dialog when Leave Group is clicked", async () => {
     render(<DangerZoneCard />);
-    await userEvent.click(screen.getByRole("button", { name: /leave group/i }));
-    expect(screen.getByRole("dialog", { name: /confirm group leave/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^leave group$/i }));
+    expect(screen.getByRole("dialog", { name: /^leave /i })).toBeInTheDocument();
   });
 
   test("should open Delete Account confirmation dialog when Delete Account is clicked", async () => {
     render(<DangerZoneCard />);
     await userEvent.click(screen.getByRole("button", { name: /delete account/i }));
-    expect(screen.getByRole("dialog", { name: /confirm account deletion/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /delete your account/i })).toBeInTheDocument();
   });
 
   test("should close Leave Group dialog when Cancel is clicked inside it", async () => {
     render(<DangerZoneCard />);
-    await userEvent.click(screen.getByRole("button", { name: /leave group/i }));
-    const dialog = screen.getByRole("dialog", { name: /confirm group leave/i });
+    await userEvent.click(screen.getByRole("button", { name: /^leave group$/i }));
+    const dialog = screen.getByRole("dialog", { name: /^leave /i });
     const cancelBtn = within(dialog).getByRole("button", { name: /cancel/i });
     await userEvent.click(cancelBtn);
-    expect(screen.queryByRole("dialog", { name: /confirm group leave/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /^leave /i })).not.toBeInTheDocument();
   });
 
   test("should call the leave-group service when confirmed", async () => {
     render(<DangerZoneCard />);
-    await userEvent.click(screen.getByRole("button", { name: /leave group/i }));
-    const dialog = screen.getByRole("dialog", { name: /confirm group leave/i });
-    const leaveBtn = within(dialog).getByRole("button", { name: /leave group/i });
+    await userEvent.click(screen.getByRole("button", { name: /^leave group$/i }));
+    const dialog = screen.getByRole("dialog", { name: /^leave /i });
+    const leaveBtn = within(dialog).getByRole("button", { name: /^leave group$/i });
     await userEvent.click(leaveBtn);
     await waitFor(() => {
       expect(mockRemoveUserFromGroup).toHaveBeenCalledWith(mockGroup.id, mockUser.uid);

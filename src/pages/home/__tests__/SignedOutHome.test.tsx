@@ -5,9 +5,10 @@ import SignedOutHome from "../SignedOutHome";
 import { SIGNED_OUT_EXAMPLE } from "../signed-out-example";
 
 jest.mock("features/user-management", () => ({
-  SignInForm: () => <div data-testid="sign-in-form" />,
-  JoinGroupDialog: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="join-group-dialog" /> : null,
+  // `SignInForm` and `JoinGroupDialog` were stubbed here until 14.5 deleted
+  // the dialogs. `GatedContent` now links to the routes instead, and needs
+  // only the path builder.
+  signInPathFor: () => "/signin",
 }));
 
 const renderHome = () =>
@@ -53,24 +54,23 @@ describe("SignedOutHome", () => {
     );
   });
 
+  // Both were dialogs until 14.5; they are routes now, so the landing page's
+  // two calls to action are links like any other.
   it("offers signing in and an invite link", () => {
     renderHome();
-    expect(screen.getByRole("button", { name: /^sign in$/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /invite link/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^sign in$/i })).toHaveAttribute(
+      "href",
+      "/signin"
+    );
+    expect(screen.getByRole("link", { name: /invite link/i })).toHaveAttribute(
+      "href",
+      "/join"
+    );
   });
 
-  it("opens the sign-in dialog", () => {
+  it("opens no overlay", () => {
     renderHome();
-    fireEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
-    expect(screen.getByTestId("sign-in-form")).toBeInTheDocument();
-  });
-
-  it("opens the join-group dialog", () => {
-    renderHome();
-    fireEvent.click(screen.getByRole("button", { name: /invite link/i }));
-    expect(screen.getByTestId("join-group-dialog")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("labels the example as an example, in real text", () => {

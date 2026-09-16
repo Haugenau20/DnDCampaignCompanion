@@ -1,12 +1,11 @@
 // src/shared/components/gated/GatedContent.tsx
 import React, { useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   useGroups,
   useCampaigns,
-  SignInForm,
-  JoinGroupDialog,
+  signInPathFor,
 } from "features/user-management";
-import Dialog from "core/components/Dialog";
 import Button from "core/components/Button";
 import Typography from "core/components/Typography";
 import GatedPageState from "./GatedPageState";
@@ -44,13 +43,17 @@ const Skeleton: React.FC = () => (
 /**
  * Renders whichever of the gated states the page is in, or its content.
  *
- * Owns the two dialogs, the cross-group campaign fetch and the switch, so a
- * page adopting the gate writes two lines and wires no dialog state of its own.
+ * Owns the cross-group campaign fetch and the switch, so a page adopting the
+ * gate writes two lines.
+ *
+ * It used to own two dialogs as well. Signing in from a gated page now
+ * navigates to `/signin`, carrying this page as the destination -- which is
+ * the whole point: the dialog had nowhere to put where you were, so signing in
+ * to read one quest returned you to the campaign's front door.
  */
 const GatedContent: React.FC<GatedContentProps> = ({ gate, children }) => {
-  const [showSignIn, setShowSignIn] = useState(false);
-  const [showJoinGroup, setShowJoinGroup] = useState(false);
   const [selectError, setSelectError] = useState<string | null>(null);
+  const location = useLocation();
 
   const { groups, activeGroupId, setActiveGroup } = useGroups();
   const { setActiveCampaign } = useCampaigns();
@@ -86,8 +89,8 @@ const GatedContent: React.FC<GatedContentProps> = ({ gate, children }) => {
         heading={gate.heading}
         blurb={gate.copy.blurb}
         eyebrow={gate.copy.eyebrow}
-        onSignIn={() => setShowSignIn(true)}
-        onJoinGroup={() => setShowJoinGroup(true)}
+        signInHref={signInPathFor(location)}
+        joinHref="/join"
         campaigns={options}
         hasGroups={groups.length > 0}
         campaignsLoading={campaignsLoading}
@@ -120,20 +123,6 @@ const GatedContent: React.FC<GatedContentProps> = ({ gate, children }) => {
 
       {gate.state === "ready" && children}
 
-      <Dialog
-        open={showSignIn}
-        onClose={() => setShowSignIn(false)}
-        title="Sign In"
-        maxWidth="max-w-md"
-      >
-        <SignInForm onSuccess={() => setShowSignIn(false)} />
-      </Dialog>
-
-      <JoinGroupDialog
-        open={showJoinGroup}
-        onClose={() => setShowJoinGroup(false)}
-        onSuccess={() => setShowJoinGroup(false)}
-      />
     </>
   );
 };

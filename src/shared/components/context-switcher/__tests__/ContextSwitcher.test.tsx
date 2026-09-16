@@ -14,23 +14,14 @@ const mockGetCampaigns = jest.fn();
 jest.mock('@/features/user-management', () => ({
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
-  get JoinGroupDialog() {
-    return require('@/features/user-management/groups/components/JoinGroupDialog').default;
-  },
 }));
 
 const { useGroups, useCampaigns } = require('@/features/user-management');
 
-// ContextSwitcher must not mount this itself -- Header owns the single
-// mount. This stub is what `queryByTestId('join-group-dialog')` would find
-// if ContextSwitcher ever reintroduced its own <JoinGroupDialog>; without
-// this mock, a reintroduced import would resolve to `undefined` from the
-// barrel stub above and crash the render instead of being asserted on.
-jest.mock('@/features/user-management/groups/components/JoinGroupDialog', () => ({
-  __esModule: true,
-  default: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="join-group-dialog" /> : null,
-}));
+// The `JoinGroupDialog` stub that used to sit here is gone with the dialog
+// (14.5). The switcher still must not own the destination itself -- it
+// delegates through `onJoinGroup`, whose owner now navigates to `/join`.
+// The assertion below is unchanged in substance: nothing opens here.
 
 // ---------------------------------------------------------------------------
 // CampaignStep now pulls in useStory() / useNPCs(), both of which THROW
@@ -84,8 +75,8 @@ jest.mock('@/core/services/firebase', () => ({
 // ---------------------------------------------------------------------------
 const mockReload = jest.fn();
 
-// ContextSwitcher no longer mounts JoinGroupDialog itself -- its owner does,
-// through this callback.
+// ContextSwitcher never owns the join destination itself -- its owner does,
+// through this callback, which navigates to `/join` since 14.5.
 const mockOnJoinGroup = jest.fn();
 
 // ---------------------------------------------------------------------------
@@ -601,7 +592,7 @@ describe('ContextSwitcher', () => {
       // came through, so the switcher must delegate and render nothing
       // itself.
       expect(onJoinGroup).toHaveBeenCalledTimes(1);
-      expect(screen.queryByTestId('join-group-dialog')).not.toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
 

@@ -36,14 +36,15 @@ export { default as GroupMembershipCard } from './profiles/components/GroupMembe
 export { default as CharactersCard } from './profiles/components/CharactersCard';
 export { default as AppearanceCard } from './profiles/components/AppearanceCard';
 export { default as DangerZoneCard } from './profiles/components/DangerZoneCard';
-export { default as JoinGroupDialog } from './groups/components/JoinGroupDialog';
-export { default as AdminPanel } from './admin/components/AdminPanel';
 
 // Route components
 //
-// The pages that replace the admin, sign-in and join dialogs. Both surfaces
-// are live at once through this phase: the dialogs above are retired in 14-5,
-// once every entry point has moved to a route.
+// These replaced `AdminPanel` and `JoinGroupDialog`, both deleted in 14-5
+// along with every trigger that opened them. There is deliberately no shim:
+// no `openAdminDialog` that redirects, no wrapper rendering a page inside a
+// dialog. This project has already learned that an alias outlives the
+// migration it was meant to enable (colour schema section 10), and the same
+// applies to a surface.
 export { default as AdminLayout } from './admin/pages/AdminLayout';
 export { default as AdminPeoplePage } from './admin/pages/AdminPeoplePage';
 export { default as AdminCampaignsPage } from './admin/pages/AdminCampaignsPage';

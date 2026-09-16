@@ -45,27 +45,21 @@ const mockSetActiveGroup = jest.fn();
 
 // Header consumes these components through the domain barrel, so the barrel
 // mock re-exports the component stubs defined further down.
+// Header mounted three dialogs until 14.5. It mounts none now: admin, sign-in
+// and join are routes, and every control here navigates to one. What the
+// barrel still owes it is the validated `next` builder.
 jest.mock("@/features/user-management", () => ({
   useAuth: jest.fn(),
   useGroups: jest.fn(),
   useCampaigns: jest.fn(),
-  useJoinGroupCompletion: jest.fn(),
-  get JoinGroupDialog() {
-    return require("@/features/user-management/groups/components/JoinGroupDialog").default;
-  },
-  get AdminPanel() {
-    return require("@/features/user-management/admin/components/AdminPanel").default;
-  },
-  get SignInForm() {
-    return require("@/features/user-management/auth/components/SignInForm").default;
-  },
+  signInPathFor: ({ pathname }: { pathname: string }) =>
+    `/signin?next=${encodeURIComponent(pathname)}`,
 }));
 
 const {
   useAuth,
   useGroups,
   useCampaigns,
-  useJoinGroupCompletion,
 } = require("@/features/user-management");
 
 // The shared join-completion behaviour (useJoinGroupCompletion) now owns the
@@ -119,39 +113,11 @@ jest.mock("../Navigation", () => ({
 }));
 
 // The account menu -- one named chip replacing the hamburger -- has its own
-// suite (UserMenu.test.tsx and its four child suites). Here it is a stub
-// that exposes just enough to prove Header wires `onOpenAdmin` through to
-// the admin dialog it still owns.
+// suite (UserMenu.test.tsx and its four child suites). It takes no props now
+// that the admin dialog it used to open is gone.
 jest.mock("shared/components/user-menu/UserMenu", () => ({
   __esModule: true,
-  default: ({ onOpenAdmin }: { onOpenAdmin: () => void }) => (
-    <div data-testid="user-menu">
-      <button onClick={onOpenAdmin}>Open Admin</button>
-    </div>
-  ),
-}));
-
-// ---------------------------------------------------------------------------
-// Mock feature components rendered inside Header dialogs
-// ---------------------------------------------------------------------------
-jest.mock("@/features/user-management/groups/components/JoinGroupDialog", () => ({
-  __esModule: true,
-  default: ({ open, onSuccess }: { open: boolean; onSuccess: () => void }) =>
-    open ? (
-      <button data-testid="trigger-join-success" onClick={onSuccess}>
-        Join
-      </button>
-    ) : null,
-}));
-
-jest.mock("@/features/user-management/admin/components/AdminPanel", () => ({
-  __esModule: true,
-  default: () => <div data-testid="admin-panel" />,
-}));
-
-jest.mock("@/features/user-management/auth/components/SignInForm", () => ({
-  __esModule: true,
-  default: () => <div data-testid="sign-in-form" />,
+  default: () => <div data-testid="user-menu" />,
 }));
 
 // ---------------------------------------------------------------------------
@@ -208,7 +174,6 @@ function setupMocks({
     activeCampaignId,
     campaigns,
   });
-  (useJoinGroupCompletion as jest.Mock).mockReturnValue(mockCompleteJoin);
 }
 
 // A signed-in user for the search-affordance tests below -- same shape as
@@ -315,21 +280,19 @@ describe("Header", () => {
   // -------------------------------------------------------------------------
   // Admin panel wiring
   // -------------------------------------------------------------------------
-  describe("admin panel", () => {
-    // Successor to "should NOT/should show Admin button for ...": which
-    // users see the Admin panel row is now UserMenuLinks's concern (its own
-    // suite: "shows Admin panel only for admins"). What Header still owns is
-    // opening its Dialog when the menu asks it to.
-    test("opens the admin panel when the menu asks to", async () => {
-      const user = userEvent.setup();
+  describe("administration", () => {
+    // Header owned an admin Dialog and the callback that opened it until 14.5.
+    // It owns neither now: `/admin/people` is a route, and the only entrance
+    // is a link inside the account menu (UserMenuLinks's own suite pins that
+    // it is a link, that it points at `/admin/people`, and that a member does
+    // not get one). What is asserted here is the absence -- that Header no
+    // longer mounts an overlay for an admin.
+    test("mounts no admin dialog, even for an admin", () => {
       setupMocks({ user: { uid: "u1" }, isAdmin: true });
       render(<Header />);
 
-      await user.click(screen.getByRole("button", { name: /open admin/i }));
-
-      expect(
-        screen.getByRole("dialog", { name: "Admin Panel" })
-      ).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("admin-panel")).not.toBeInTheDocument();
     });
   });
 
@@ -394,8 +357,15 @@ describe("Header", () => {
   // switcher's own `onJoinGroup` callback (mocked above as a plain button),
   // but Header's own dialog-mounting behaviour is unchanged.
   // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Joining a group (14.5)
+  //
+  // Header used to mount `JoinGroupDialog` and own the post-join landing. Both
+  // belong to `/join` now. What Header owes is the delegation -- the switcher's
+  // chip must lead somewhere, and not to an overlay.
+  // -------------------------------------------------------------------------
   describe("joining a group", () => {
-    test("mounts the join dialog exactly once", async () => {
+    test("navigates to /join rather than opening anything", async () => {
       const user = userEvent.setup();
       setupMocks({
         user: { uid: "u1" },
@@ -405,34 +375,8 @@ describe("Header", () => {
 
       await user.click(screen.getByRole("button", { name: /join group/i }));
 
-      expect(screen.getAllByTestId("trigger-join-success")).toHaveLength(1);
-    });
-
-    // The refresh/find/switch/log sequence itself moved into
-    // useJoinGroupCompletion (see useJoinGroupCompletion.test.tsx, which pins
-    // "switches to the group that appeared", "stays put when none does" and
-    // "logs rather than throwing when the switch fails" -- the three cases
-    // this suite used to cover directly). What Header owns now is just:
-    // close its own dialog, then hand off to that shared callback -- the
-    // exact same one AccountCard's "Join another" entrance calls, which is
-    // the invariant this test protects.
-    test("closes the dialog and calls the shared completion hook -- the same path AccountCard's 'Join another' uses", async () => {
-      const user = userEvent.setup();
-      setupMocks({
-        user: { uid: "u1" },
-        activeGroup: { id: "g1", name: "The Fellowship" },
-        groups: [{ id: "g1", name: "The Fellowship" }],
-      });
-      render(<Header />);
-
-      await user.click(screen.getByRole("button", { name: /join group/i }));
-      expect(screen.getByTestId("trigger-join-success")).toBeInTheDocument();
-
-      await user.click(screen.getByTestId("trigger-join-success"));
-
-      expect(mockCompleteJoin).toHaveBeenCalled();
-      expect(screen.queryByTestId("trigger-join-success")).not.toBeInTheDocument();
-      expect(mockReload).not.toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith("/join");
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 

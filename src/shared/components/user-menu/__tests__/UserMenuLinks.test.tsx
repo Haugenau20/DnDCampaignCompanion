@@ -35,7 +35,7 @@ function setGroups({ isAdmin = false } = {}) {
 async function renderLinks() {
   const result = render(
     <MemoryRouter>
-      <UserMenuLinks open onClose={jest.fn()} onOpenAdmin={jest.fn()} />
+      <UserMenuLinks open onClose={jest.fn()} />
     </MemoryRouter>
   );
   await act(async () => {

@@ -523,30 +523,43 @@ reproducible from the tree alone — it needs rendering.
 
 ---
 
-### T034 — Promoting or demoting a member needs a Cloud Function
-**Type** debt · **Size** M · **Status** blocked · **Verified** 2026-09-16
+### T034 — Promoting or demoting a member: the rules allow it, nothing calls it
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-09-16
 
 Blocks a role control on `/admin/people`, which is why that view renders the
 role as text and offers no way to change it.
 
-`docs/testing/bug-tracking/1409-member-can-escalate-to-group-admin.md` is only
-**partially** fixed. `update` on a group profile now rejects a `role` change,
-but `create` must still permit `role: "admin"` because group-profile creation
-happens client-side — so a member can delete their own profile ("leave group",
-which is permitted) and create it again as an admin.
+**Corrected after reading the rules rather than the bug report.** An earlier
+draft of this entry claimed a Cloud Function was required. It is not.
+`firebase/firestore.rules.prod:202` already carries, on a member's group
+profile:
 
-The rules cannot close this on their own: conditioning `create` on the group
-document's `createdBy` was considered and rejected, because the group doc is
-written in the *same transaction* and a rules `get()` may not see uncommitted
-data.
+```
+// Group admins and global admin can update user profiles, role included
+allow update: if isGroupAdmin(groupId) || isGlobalAdmin();
+```
 
-- **Fix shape**: the one that already fixed group creation — move group-profile
-  creation into a Cloud Function using the Admin SDK
-  (`firebase/functions/src/groupManagement.ts` does exactly this for
-  `createGroup`), then deny `create` to clients entirely. A `setMemberRole`
-  callable belongs in the same file.
-- **Catch**: a promote button shipped before that would either fail, or succeed
-  and prove the hole is open.
+So an admin changing another member's role **is** server-authorised today. What
+is missing is entirely client-side: there is no `setMemberRole` on
+`GroupService`, no hook exposing one, and no control anywhere in the UI.
+
+Two things to settle before building it:
+
+1. **Is the deployed ruleset the one in this repo?**
+   `docs/testing/bug-tracking/1409-member-can-escalate-to-group-admin.md` is
+   still marked *partially fixed, ⚠️ awaiting console deploy*, while
+   `firestore.rules.prod:191` now reads
+   `allow create: if isSignedIn() && request.auth.uid == userId && request.resource.data.role == "member"`
+   and its own comment says that closes #1409 **completely**. The repo copy and
+   the bug's status disagree. Rules live in the Firebase console, so only the
+   maintainer can confirm which is live — and shipping a privilege control while
+   that is unknown is the wrong order.
+2. **Demotion needs the same guard as leaving** — see T035. An admin demoting
+   the last admin is the same limbo by another route.
+
+When both are settled this is a small job: one service method, one hook
+function, one control on the member row.
+
 - **Source**: Phase 14.2, while deciding what `/admin/people` may render
 
 ### T035 — The last admin can strip a group of its administration
@@ -595,6 +608,26 @@ member's notes for every campaign in it.
 - **Meanwhile**: `/admin/group`'s danger zone offers **Leave group** only,
   which is implemented (`removeUserFromGroup`).
 - **Source**: Phase 14.3, while building `/admin/group`
+
+### T038 — The two rumour dialogs each hold a nested scroll region
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-16
+
+`CombineRumorsDialog.tsx:128` and `ConvertToQuestDialog.tsx:184` both render
+`max-h-40 overflow-y-auto` inside the panel — a second scroll region, which the
+dialog rule in `docs/design/plan/00-surface-routing.md` §1 names as a sign that
+a surface wants to be a page.
+
+**Both stay dialogs, and that is the right call for now**: each acts on the
+entries selected on the page behind it, which answers question 1 of the rule
+decisively. Neither has a URL worth returning to, and neither has tabs or a
+table. A list that can outgrow its panel is weaker evidence than those, so
+Phase 14.5 logged them as candidates rather than converting them, exactly as its
+handoff instructed.
+
+- **What to look at**: the scroll region exists because the selected-rumour list
+  is unbounded. Capping the selection, or paginating the list, would remove the
+  symptom without moving the surface.
+- **Source**: Phase 14.5, from its own instruction to check rather than assume
 
 ---
 

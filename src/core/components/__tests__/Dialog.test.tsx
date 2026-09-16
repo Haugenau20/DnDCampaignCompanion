@@ -26,12 +26,14 @@ function DialogHarness({
   children = <p>Dialog body</p>,
   maxWidth,
   isNested,
+  dirty,
 }: {
   onClose?: jest.Mock;
   title?: string;
   children?: React.ReactNode;
   maxWidth?: string;
   isNested?: boolean;
+  dirty?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const handleClose = () => {
@@ -49,6 +51,7 @@ function DialogHarness({
         title={title}
         maxWidth={maxWidth}
         isNested={isNested}
+        dirty={dirty}
       >
         {children}
       </Dialog>
@@ -449,6 +452,147 @@ describe("Dialog", () => {
         await user.tab({ shift: true });
         expect(dialog.contains(document.activeElement)).toBe(true);
       }
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Dismissal once there is something to lose (PR 14.5)
+  //
+  // Backdrop click and Escape may close a dialog nobody has touched. Once any
+  // input inside has changed they must be inert, and the user cancels
+  // explicitly. A backdrop click is the easiest gesture in the product to make
+  // by accident, and it used to discard whatever had been typed without a word.
+  // -------------------------------------------------------------------------
+  describe("dismissal while dirty", () => {
+    function FormDialogHarness({ onClose }: { onClose: jest.Mock }) {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button onClick={() => setOpen(true)} data-testid="open-trigger">
+            Open
+          </button>
+          <Dialog
+            open={open}
+            onClose={() => {
+              onClose();
+              setOpen(false);
+            }}
+            title="Has a field"
+          >
+            <label htmlFor="f">Field</label>
+            <input id="f" />
+          </Dialog>
+        </>
+      );
+    }
+
+    async function overlay() {
+      return await waitFor(() => {
+        const el = document.body.querySelector(
+          "[data-testid^='dialog-overlay-']"
+        );
+        expect(el).toBeTruthy();
+        return el as HTMLElement;
+      });
+    }
+
+    test("an untouched dialog still closes on a backdrop click", async () => {
+      const user = userEvent.setup();
+      const onClose = jest.fn();
+      render(<FormDialogHarness onClose={onClose} />);
+      await openDialog(user);
+      await user.click(await overlay());
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    test("an untouched dialog still closes on Escape", async () => {
+      const user = userEvent.setup();
+      const onClose = jest.fn();
+      render(<FormDialogHarness onClose={onClose} />);
+      await openDialog(user);
+      await user.keyboard("{Escape}");
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    test("a backdrop click does not discard typed input", async () => {
+      const user = userEvent.setup();
+      const onClose = jest.fn();
+      render(<FormDialogHarness onClose={onClose} />);
+      await openDialog(user);
+      await user.type(await screen.findByLabelText("Field"), "half a sentence");
+
+      await user.click(await overlay());
+
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByLabelText("Field")).toHaveValue("half a sentence");
+    });
+
+    test("Escape does not discard typed input", async () => {
+      const user = userEvent.setup();
+      const onClose = jest.fn();
+      render(<FormDialogHarness onClose={onClose} />);
+      await openDialog(user);
+      await user.type(await screen.findByLabelText("Field"), "half a sentence");
+
+      await user.keyboard("{Escape}");
+
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByLabelText("Field")).toHaveValue("half a sentence");
+    });
+
+    test("the close button still works while dirty", async () => {
+      const user = userEvent.setup();
+      const onClose = jest.fn();
+      render(<FormDialogHarness onClose={onClose} />);
+      await openDialog(user);
+      await user.type(await screen.findByLabelText("Field"), "typed");
+
+      await user.click(screen.getByRole("button", { name: /close dialog/i }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    // A confirmation has nothing to lose, which is why the default is clean.
+    test("a dialog with no inputs keeps its one-key exit", async () => {
+      const user = userEvent.setup();
+      const onClose = jest.fn();
+      render(
+        <DialogHarness onClose={onClose} title="Confirm">
+          <p>Are you sure?</p>
+        </DialogHarness>
+      );
+      await openDialog(user);
+      await user.keyboard("{Escape}");
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    test("content can declare itself dirty without any input event", async () => {
+      const user = userEvent.setup();
+      const onClose = jest.fn();
+      render(
+        <DialogHarness onClose={onClose} title="Declared" dirty>
+          <p>An editor with its own model</p>
+        </DialogHarness>
+      );
+      await openDialog(user);
+      await user.keyboard("{Escape}");
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    // Otherwise a dialog opened, typed into, cancelled and reopened would be
+    // permanently undismissable.
+    test("reopening resets the flag", async () => {
+      const user = userEvent.setup();
+      const onClose = jest.fn();
+      render(<FormDialogHarness onClose={onClose} />);
+
+      await openDialog(user);
+      await user.type(await screen.findByLabelText("Field"), "typed");
+      await user.click(screen.getByRole("button", { name: /close dialog/i }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+
+      await openDialog(user);
+      await user.keyboard("{Escape}");
+      expect(onClose).toHaveBeenCalledTimes(2);
     });
   });
 });

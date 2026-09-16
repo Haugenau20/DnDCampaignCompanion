@@ -69,15 +69,18 @@ describe('DeleteConfirmationDialog', () => {
   // -------------------------------------------------------------------------
   // Open / closed state
   // -------------------------------------------------------------------------
+  // 14.5 removed the "Confirm Deletion" sub-heading: the title already names
+  // the object and asks the question, so a second heading underneath repeated
+  // what the reader had just read. These now key off the title itself.
   describe('open/closed state', () => {
     test('should render dialog content when isOpen=true', () => {
-      renderDialog({ isOpen: true });
-      expect(screen.getByText('Confirm Deletion')).toBeInTheDocument();
+      renderDialog({ isOpen: true, itemName: 'Gandalf' });
+      expect(screen.getByText('Delete “Gandalf”?')).toBeInTheDocument();
     });
 
     test('should NOT render dialog content when isOpen=false', () => {
-      renderDialog({ isOpen: false });
-      expect(screen.queryByText('Confirm Deletion')).not.toBeInTheDocument();
+      renderDialog({ isOpen: false, itemName: 'Gandalf' });
+      expect(screen.queryByText('Delete “Gandalf”?')).not.toBeInTheDocument();
     });
   });
 
@@ -85,19 +88,33 @@ describe('DeleteConfirmationDialog', () => {
   // Item name and type rendering
   // -------------------------------------------------------------------------
   describe('item name and type rendering', () => {
+    // Named twice on purpose: the title asks about the object, the sentence
+    // below says what happens to it.
     test('should display the item name in the confirmation message', () => {
       renderDialog({ itemName: 'Gandalf', itemType: 'NPC' });
-      expect(screen.getByText(/Gandalf/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Gandalf/).length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getByText(/“Gandalf” is removed for everyone/)
+      ).toBeInTheDocument();
     });
 
-    test('should display the item type in the dialog title', () => {
+    // The title names the object when there is one; the button always carries
+    // the verb, which is the half that must never read "OK" or a bare "Delete".
+    test('should name the object in the title', () => {
+      renderDialog({ itemName: 'Gandalf', itemType: 'NPC' });
+      expect(screen.getByText('Delete “Gandalf”?')).toBeInTheDocument();
+    });
+
+    test('should put the verb and the type on the confirm button', () => {
       renderDialog({ itemType: 'Quest' });
-      expect(screen.getByText('Delete Quest')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^Delete Quest$/ })
+      ).toBeInTheDocument();
     });
 
     test('should use "item" as default itemType when not provided', () => {
-      renderDialog({ itemType: undefined });
-      expect(screen.getByText('Delete item')).toBeInTheDocument();
+      renderDialog({ itemType: undefined, itemName: '' });
+      expect(screen.getByText('Delete item?')).toBeInTheDocument();
     });
   });
 
@@ -108,7 +125,7 @@ describe('DeleteConfirmationDialog', () => {
     test('should show default message when no custom message is provided', () => {
       renderDialog({ itemName: 'Gandalf', itemType: 'NPC' });
       expect(
-        screen.getByText(/Are you sure you want to delete NPC "Gandalf"/)
+        screen.getByText(/“Gandalf” is removed for everyone/)
       ).toBeInTheDocument();
     });
 
@@ -119,7 +136,11 @@ describe('DeleteConfirmationDialog', () => {
 
     test('should show custom message when provided', () => {
       renderDialog({ message: 'Custom warning message here.' });
-      expect(screen.getByText('Custom warning message here.')).toBeInTheDocument();
+      // "This cannot be undone." is appended when the caller has not said it,
+      // so the last line of a destructive confirm is never left to chance.
+      expect(
+        screen.getByText(/Custom warning message here\. This cannot be undone\./)
+      ).toBeInTheDocument();
     });
 
     test('should not show default message when custom message is provided', () => {
@@ -128,9 +149,9 @@ describe('DeleteConfirmationDialog', () => {
         itemType: 'NPC',
         message: 'Custom warning',
       });
-      expect(screen.getByText('Custom warning')).toBeInTheDocument();
+      expect(screen.getByText(/Custom warning/)).toBeInTheDocument();
       expect(
-        screen.queryByText(/Are you sure you want to delete NPC/)
+        screen.queryByText(/is removed for everyone/)
       ).not.toBeInTheDocument();
     });
   });

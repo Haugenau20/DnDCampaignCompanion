@@ -61,7 +61,7 @@ describe("UserMenu", () => {
     const user = userEvent.setup();
     render(
       <div>
-        <UserMenu onOpenAdmin={jest.fn()} />
+        <UserMenu />
         <button>Outside</button>
       </div>
     );
@@ -75,7 +75,7 @@ describe("UserMenu", () => {
 
   test("closes on Escape and returns focus to the trigger", async () => {
     const user = userEvent.setup();
-    render(<UserMenu onOpenAdmin={jest.fn()} />);
+    render(<UserMenu />);
 
     await user.click(screen.getByText("Trigger"));
     expect(screen.getByRole("menu")).toBeInTheDocument();
@@ -88,7 +88,7 @@ describe("UserMenu", () => {
 
   test("arrow keys move between rows", async () => {
     const user = userEvent.setup();
-    render(<UserMenu onOpenAdmin={jest.fn()} />);
+    render(<UserMenu />);
 
     await user.click(screen.getByText("Trigger"));
 

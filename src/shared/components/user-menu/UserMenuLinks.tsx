@@ -14,8 +14,6 @@ interface UserMenuLinksProps {
   open: boolean;
   /** Called after a row navigates or acts, so the owning popover can close. */
   onClose: () => void;
-  /** Opens the admin panel dialog, owned by the header. */
-  onOpenAdmin: () => void;
 }
 
 /**
@@ -28,11 +26,7 @@ interface UserMenuLinksProps {
  * count is fetched only while the popover is open, and is omitted rather
  * than shown as zero until it resolves.
  */
-const UserMenuLinks: React.FC<UserMenuLinksProps> = ({
-  open,
-  onClose,
-  onOpenAdmin,
-}) => {
+const UserMenuLinks: React.FC<UserMenuLinksProps> = ({ open, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut } = useAuth();
@@ -79,11 +73,6 @@ const UserMenuLinks: React.FC<UserMenuLinksProps> = ({
     navigate(`/contact?from=${encodeURIComponent(location.pathname)}`);
   };
 
-  const handleAdmin = () => {
-    onClose();
-    onOpenAdmin();
-  };
-
   const handleSignOut = async () => {
     await signOut();
     onClose();
@@ -123,9 +112,8 @@ const UserMenuLinks: React.FC<UserMenuLinksProps> = ({
           scanned every session.
 
           A real link, so it can be opened in a new tab, bookmarked and
-          returned to -- which is the entire argument for `/admin` being a
-          route rather than the dialog below it. Both are mounted through
-          this phase; 14-5 removes the dialog and its trigger. */}
+          returned to. The "Admin panel" button that opened a dialog used to
+          sit beside it; 14-5 removed it along with the dialog. */}
       {isAdmin && (
         <Link
           role="menuitem"
@@ -136,18 +124,6 @@ const UserMenuLinks: React.FC<UserMenuLinksProps> = ({
           <ShieldAlert className="w-4 h-4 flex-shrink-0 accent" />
           <Typography>Group administration</Typography>
         </Link>
-      )}
-
-      {isAdmin && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={handleAdmin}
-          className="flex items-center gap-2 px-2 py-2 w-full text-left rounded-md dropdown-item"
-        >
-          <ShieldAlert className="w-4 h-4 flex-shrink-0 accent" />
-          <Typography>Admin panel</Typography>
-        </button>
       )}
 
       <button

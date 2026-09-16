@@ -25,8 +25,8 @@ const renderPanel = (props: Partial<React.ComponentProps<typeof GatedPageState>>
         variant="signed-out"
         heading="Sign in to see your party's quests"
         blurb="Quests are the open threads of a campaign."
-        onSignIn={jest.fn()}
-        onJoinGroup={jest.fn()}
+        signInHref="/signin?next=%2Fquests"
+        joinHref="/join"
         {...props}
       />
     </MemoryRouter>
@@ -48,27 +48,32 @@ describe("GatedPageState, signed out", () => {
     ).toBeInTheDocument();
   });
 
+  // Both actions became links in 14.5, when sign-in and join became routes.
+  // They were buttons because they opened dialogs; a destination should be
+  // openable in a new tab and middle-clickable like any other link.
   it("offers signing in and an invite link, and nothing else", () => {
     renderPanel();
-    expect(screen.getByRole("button", { name: /^sign in$/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^sign in$/i })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /invite link/i })
+      screen.getByRole("link", { name: /invite link/i })
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("button")).toHaveLength(2);
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
 
-  it("calls onSignIn when the primary action is used", () => {
-    const onSignIn = jest.fn();
-    renderPanel({ onSignIn });
-    fireEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
-    expect(onSignIn).toHaveBeenCalledTimes(1);
+  it("sends the primary action to /signin, carrying the destination", () => {
+    renderPanel();
+    expect(screen.getByRole("link", { name: /^sign in$/i })).toHaveAttribute(
+      "href",
+      "/signin?next=%2Fquests"
+    );
   });
 
-  it("calls onJoinGroup when the invite action is used", () => {
-    const onJoinGroup = jest.fn();
-    renderPanel({ onJoinGroup });
-    fireEvent.click(screen.getByRole("button", { name: /invite link/i }));
-    expect(onJoinGroup).toHaveBeenCalledTimes(1);
+  it("sends the invite action to /join", () => {
+    renderPanel();
+    expect(screen.getByRole("link", { name: /invite link/i })).toHaveAttribute(
+      "href",
+      "/join"
+    );
   });
 
   // The footnote used to explain the invite model itself ("a DM invites you
@@ -143,7 +148,7 @@ describe("GatedPageState, pick campaign", () => {
       screen.getByRole("heading", { name: /join a group/i })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /invite link/i })
+      screen.getByRole("link", { name: /invite link/i })
     ).toBeInTheDocument();
   });
 
@@ -182,7 +187,7 @@ describe("GatedPageState, pick campaign", () => {
       screen.getByRole("heading", { name: /join a group/i })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /invite link/i })
+      screen.getByRole("link", { name: /invite link/i })
     ).toBeInTheDocument();
   });
 

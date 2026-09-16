@@ -2,7 +2,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Lock } from "lucide-react";
-import Button from "core/components/Button";
+import { buttonClasses } from "core/components/Button";
 import Typography from "core/components/Typography";
 import { GATED_FOOTNOTE } from "./gated-page-copy";
 import type { CampaignOption } from "./types";
@@ -17,8 +17,17 @@ export interface GatedPageStateProps {
   blurb: string;
   /** Overrides the signed-out eyebrow. See `GatedPageCopy.eyebrow`. */
   eyebrow?: string;
-  onSignIn: () => void;
-  onJoinGroup: () => void;
+  /**
+   * Where "Sign in" goes, already carrying this page as the destination.
+   *
+   * An href rather than a callback because these are now real links: sign-in
+   * and join are routes, so the controls that lead to them should be openable
+   * in a new tab and reachable by a middle click like any other link. They
+   * used to open dialogs, which is why they were buttons.
+   */
+  signInHref: string;
+  /** Where "I have an invite link" goes. */
+  joinHref: string;
   /** Campaigns to offer. `pick-campaign` only. */
   campaigns?: CampaignOption[];
   /** Whether the user belongs to any group at all. `pick-campaign` only. */
@@ -63,8 +72,8 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
   heading,
   blurb,
   eyebrow = "Private campaign",
-  onSignIn,
-  onJoinGroup,
+  signInHref,
+  joinHref,
   campaigns = [],
   hasGroups = false,
   campaignsLoading = false,
@@ -140,12 +149,12 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
       {isSignedOut ? (
         <>
           <div className="flex flex-wrap gap-3">
-            <Button variant="primary" onClick={onSignIn}>
+            <Link to={signInHref} className={buttonClasses({ variant: "primary" })}>
               Sign in
-            </Button>
-            <Button variant="outline" onClick={onJoinGroup}>
+            </Link>
+            <Link to={joinHref} className={buttonClasses({ variant: "outline" })}>
               I have an invite link
-            </Button>
+            </Link>
           </div>
 
           <hr className="my-6 divider" />
@@ -191,9 +200,9 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
           )}
 
           {pickSituation === "no-groups" && (
-            <Button variant="primary" onClick={onJoinGroup}>
+            <Link to={joinHref} className={buttonClasses({ variant: "primary" })}>
               I have an invite link
-            </Button>
+            </Link>
           )}
         </>
       )}

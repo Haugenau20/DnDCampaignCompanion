@@ -8,12 +8,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   useAuth,
   useGroups,
-  useJoinGroupCompletion,
-  JoinGroupDialog,
-  AdminPanel,
-  SignInForm
+  signInPathFor
 } from 'features/user-management';
 import { LogIn } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import ContextSwitcher from 'shared/components/context-switcher/ContextSwitcher';
 import UserMenu from 'shared/components/user-menu/UserMenu';
 import Button from 'core/components/Button';
@@ -25,14 +23,9 @@ import Navigation from './Navigation';
  */
 const Header: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { activeGroup } = useGroups();
-  const completeJoin = useJoinGroupCompletion();
-
-  // Dialog states
-  const [showJoinGroup, setShowJoinGroup] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(false);
 
   // Command palette state -- the trigger and shortcut both gate on `user`
   // (see the effect below), so this state has no visible effect while
@@ -75,22 +68,15 @@ const Header: React.FC = () => {
   }, [user]);
 
   /**
-   * Closes the dialog and lands the user in the group they just joined.
+   * Sign in is a destination now, and it carries where you were.
    *
-   * The landing behaviour itself -- refresh, find the group that appeared,
-   * switch to it, log rather than throw if that fails -- now lives in
-   * {@link useJoinGroupCompletion} so the account card's own "Join another"
-   * entrance can share it exactly. This handler keeps only the header's own
-   * dialog state.
+   * This used to open a dialog, which had nowhere to put the page you were on
+   * -- so signing in from halfway through a campaign returned you to the
+   * beginning of it. `signInPathFor` validates and encodes the current
+   * location; `/signin` hands it back on success.
    */
-  const handleJoinedGroup = async () => {
-    setShowJoinGroup(false);
-    await completeJoin();
-  };
-
-  // Handle sign in click
   const handleSignInClick = () => {
-    setShowSignIn(true);
+    navigate(signInPathFor(location));
   };
 
   return (
@@ -123,7 +109,7 @@ const Header: React.FC = () => {
                   aria-hidden="true"
                   className="w-px h-6 self-center opacity-40 bg-chrome-border"
                 ></span>
-                <ContextSwitcher onJoinGroup={() => setShowJoinGroup(true)} />
+                <ContextSwitcher onJoinGroup={() => navigate('/join')} />
               </>
             )}
 
@@ -156,7 +142,7 @@ const Header: React.FC = () => {
                    profile, group members, report a problem, admin panel and
                    sign out, plus the posting-as switch and the account
                    theme. */
-                <UserMenu onOpenAdmin={() => setShowAdmin(true)} />
+                <UserMenu />
               ) : (
                 <>
                   {/* Theme stays reachable without an account -- the
@@ -186,37 +172,9 @@ const Header: React.FC = () => {
         />
       )}
 
-      {/* Join Group Dialog -- the sole mount; ContextSwitcher's chip opens it
-          through the `onJoinGroup` callback rather than mounting its own. */}
-      <JoinGroupDialog
-        open={showJoinGroup}
-        onClose={() => setShowJoinGroup(false)}
-        onSuccess={handleJoinedGroup}
-      />
-
-      {/* Admin Panel Dialog -- opened by the account menu */}
-      <Dialog
-        open={showAdmin}
-        onClose={() => setShowAdmin(false)}
-        title="Admin Panel"
-        maxWidth="max-w-4xl"
-      >
-        <AdminPanel
-          onClose={() => setShowAdmin(false)}
-        />
-      </Dialog>
-
-      {/* Sign In Dialog */}
-      <Dialog
-        open={showSignIn}
-        onClose={() => setShowSignIn(false)}
-        title="Sign In"
-        maxWidth="max-w-md"
-      >
-        <SignInForm
-          onSuccess={() => setShowSignIn(false)}
-        />
-      </Dialog>
+      {/* No dialogs here any more. Admin, sign-in and join are routes, and
+          every control above navigates to one. 14-5 removed the mounts; the
+          components behind two of them are gone entirely. */}
     </header>
   );
 };

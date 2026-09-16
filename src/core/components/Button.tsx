@@ -60,6 +60,67 @@ const sizeStyles: Record<ButtonSize, string> = {
  * user keeping their place and being dropped at the top of the document, and
  * `<button>` already receives every other prop this way.
  */
+/** Options for {@link buttonClasses}. */
+export interface ButtonClassOptions {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  fullWidth?: boolean;
+  isVertical?: boolean;
+  centered?: boolean;
+  isLoading?: boolean;
+  className?: string;
+}
+
+/**
+ * The class recipe a `Button` wears, available on its own.
+ *
+ * Exported because some things that must *look* like buttons cannot *be*
+ * buttons: a control that navigates is a link, and a link is what lets it be
+ * opened in a new tab or middle-clicked. Putting an `<a>` around a `<button>`
+ * would nest two interactive elements, which is invalid and announces twice.
+ *
+ * Kept here rather than copied at the call site so the two can never drift --
+ * a link styled from a stale copy of this recipe is a button that looks
+ * almost right.
+ */
+export function buttonClasses({
+  variant = 'primary',
+  size = 'md',
+  fullWidth = false,
+  isVertical = false,
+  centered = true,
+  isLoading = false,
+  className,
+}: ButtonClassOptions = {}): string {
+  return twMerge(
+    clsx(
+      // Base styles
+      `button`,
+      `button-${variant}`,
+      'relative rounded-lg font-medium transition-colors duration-200',
+      'focus:outline-none ', //focus:ring-2 focus:ring-offset-2',
+      'disabled:opacity-50 disabled:cursor-not-allowed',
+
+      // Size specific styles
+      variant !== 'link' && sizeStyles[size],
+
+      // Width styles
+      fullWidth ? 'w-full' : 'w-auto',
+
+      // Content alignment
+      'inline-flex items-center',
+      isVertical ? 'flex-col' : 'flex-row',
+      centered && 'justify-center',
+
+      // Loading state styles
+      isLoading && 'cursor-wait',
+
+      // Custom classes
+      className
+    )
+  );
+}
+
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   variant = 'primary',
   size = 'md',
@@ -82,33 +143,15 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   const icon = iconPosition === 'end' ? endIcon : startIcon;
   
   // Combine styles using clsx and tailwind-merge
-  const buttonStyles = twMerge(
-    clsx(
-      // Base styles
-      `button`,
-      `button-${variant}`,
-      'relative rounded-lg font-medium transition-colors duration-200',
-      'focus:outline-none ', //focus:ring-2 focus:ring-offset-2',
-      'disabled:opacity-50 disabled:cursor-not-allowed',
-      
-      // Size specific styles
-      variant !== 'link' && sizeStyles[size],
-      
-      // Width styles
-      fullWidth ? 'w-full' : 'w-auto',
-      
-      // Content alignment
-      'inline-flex items-center',
-      isVertical ? 'flex-col' : 'flex-row',
-      centered && 'justify-center',
-      
-      // Loading state styles
-      isLoading && 'cursor-wait',
-      
-      // Custom classes
-      className
-    )
-  );
+  const buttonStyles = buttonClasses({
+    variant,
+    size,
+    fullWidth,
+    isVertical,
+    centered,
+    isLoading,
+    className,
+  });
 
   return (
     <button
