@@ -52,10 +52,19 @@ const SOURCE_FILTERS: RosterFilterOption[] = [
  * thing the party now knows -- so they take the same hue rather than each
  * directory naming its own.
  */
+/**
+ * A rumour is knowledge, not an outcome.
+ *
+ * `false` used to be `failed`, in the same red as a lost quest, which states
+ * that a disproven rumour is a defeat. It is a *resolved* one, and usually a
+ * good outcome for the party -- so confirmed and false sit on the **same**
+ * rung: both are fully known, and what separates them is the strike cue that
+ * 12-5 adds, not the hue. Schema section 3.
+ */
 const STATUS_TONE: Record<RumorStatus, RosterStatusTone> = {
-  confirmed: 'completed',
-  unconfirmed: 'unknown',
-  false: 'failed',
+  unconfirmed: 'knowledge-0',
+  confirmed: 'knowledge-2',
+  false: 'knowledge-2',
 };
 
 const formatStatus = (status: RumorStatus): string =>
@@ -103,9 +112,13 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
     const count = (status: RumorStatus) =>
       initialRumors.filter(rumor => rumor.status === status).length;
     return [
-      { key: 'confirmed', label: 'confirmed', count: count('confirmed'), colorClass: 'bg-status-completed' },
-      { key: 'unconfirmed', label: 'unconfirmed', count: count('unconfirmed'), colorClass: 'bg-status-unknown' },
-      { key: 'false', label: 'false', count: count('false'), colorClass: 'bg-status-failed' },
+      // Confirmed and false share a rung: both are fully known, and a
+      // disproven rumour is a resolved one rather than a defeat. They are told
+      // apart by their labels here and by 12-5's strike in the rows -- not by
+      // hue, which is what put a false rumour in the red of a lost quest.
+      { key: 'unconfirmed', label: 'unconfirmed', count: count('unconfirmed'), colorClass: 'bg-knowledge-0' },
+      { key: 'confirmed', label: 'confirmed', count: count('confirmed'), colorClass: 'bg-knowledge-2' },
+      { key: 'false', label: 'false', count: count('false'), colorClass: 'bg-knowledge-2' },
     ];
   }, [initialRumors]);
 
@@ -459,7 +472,10 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                       </Typography>
                     </div>
 
-                    <RosterStatus tone={STATUS_TONE[rumor.status]}>
+                    <RosterStatus
+                      tone={STATUS_TONE[rumor.status]}
+                      negated={rumor.status === 'false'}
+                    >
                       {formatStatus(rumor.status)}
                     </RosterStatus>
 

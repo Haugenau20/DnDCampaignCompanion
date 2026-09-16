@@ -3355,6 +3355,308 @@ Answer as the work reaches them; move to a decision when settled.
   future or follows the card families out.
 
 
+### D115 - the knowledge ladder becomes a record, because the schema gave it a sibling
+Date: 2026-09-15   Status: active
+Decision: `ThemeTokens.knowledge` changes from `string[]` to
+`{ 0, 1, 2, wash }`. Token model section 6 prefers an ordered collection here
+and says so for a good reason -- position is the meaning, and a record makes a
+reorder invisible -- so this is a departure, recorded rather than slipped in.
+It is forced, not preferred. Schema section 5.5 names a token `knowledge.wash`,
+a *named sibling of the three steps*, and an array cannot carry one:
+`flattenTokens` branches on `Array.isArray` and emits index-suffixed variables
+only, so a property hung off an array is silently dropped. The alternatives were
+worse -- teaching `flattenTokens` about arrays with extra own properties is a
+change to shared infrastructure to serve one token, and `knowledge.ladder.0`
+spells a path the fixture does not have.
+Because: what the array type was actually buying is still bought, and by
+something stronger. Ordering was never enforced by the shape; it is enforced by
+`token-contrast.test.ts` asserting the ladder rises with the index in both
+modes, and by the fixture pinning all four paths exactly. A record that fails
+those two gates is as loud as an array would have been. `entityPalette` stays an
+array, so the ordered-collection mechanism is still exercised and still tested.
+**Worth a ruling if the model is ever extracted as a package**: the general
+shape "an ordered collection with named siblings" has no representation in
+`TokenTree` today, and this is the first token to want one. Raised as Q19.
+
+### R62 - 12-2b: 26 leaves, and the pairing rule reproduced independently
+Date: 2026-09-15
+Change: the token tree goes from 109 leaves to **135**, in both modes. The token
+baseline diffs to **+26 per mode, 0 changed, 0 removed** -- and `token-values`
+passed without re-baselining, which is a per-value proof of "screenshot
+identical" rather than an eyeball one. Confirmed live: the running app serves
+135 custom properties, the new ones at the fixture's values and every
+pre-existing one unchanged.
+**All 135 leaves reproduced from the contract on the first run, both modes.**
+That is worth recording because the previous revision of the schema did not:
+v4 disagreed with a careful generator on six primitives and 43 leaves. v6 is
+additive over v2 and every value the merged code already shipped is
+byte-identical, so the disagreement is gone rather than papered over. The two
+rules that closed it -- section 4.3 rule 5 (`on` values are authored, never
+searched) and rule 6 (a wash does not constrain the ink it is made from) -- are
+now the reason `outcome.failed.on` resolves to one value in both modes: it is
+`neutral(0.975)`, and a neutral does not vary with the mode, only its lightness
+does.
+**The wash pairing reproduced to the hundredth, which is what makes it a gate
+rather than a preference.** Schema section 5.6 publishes six ratios for
+`feedback.*.ink` on its own `wash`. An independent implementation here measures
+light 5.57 / 4.39 / 4.67 / 4.39 and dark 3.99 / 4.95 / 4.92 / 4.95 -- every one
+of them the schema's own number. Three of eight fall below AA, and which three
+differs by mode: light's warning and progress, dark's error. The asymmetry is
+the point; it is exactly the shape that survives review by eye.
+Two things that mattered in getting there. A wash **has no ratio until it has a
+ground**, so the check composites `rgba()` onto page, card and sunken and
+measures the body ink against the result -- `flattenOnto` in `oklch.ts`. And the
+composite must be **rounded to bytes**, because that is what a browser paints; a
+first pass in floating point put every ratio 0.01-0.02 low and would have made
+the schema look wrong when it was right.
+**What the generator can and cannot gate here, stated plainly.** It cannot see a
+consumer pairing ink with its own wash -- no generator can. So the rule is
+enforced from both ends: `verifyBorrowedRoles` asserts the *legal* banner
+(`wash` background, `edge` border, `surface.*.on` text) clears AA on all three
+content grounds, and `findWashPairingRatios` exists so a test can pin that the
+forbidden pairing genuinely fails. A rule nobody has watched bind is
+indistinguishable from one that does not.
+**The fixture's tree is a plain equality again.** R61 recorded the `additions`
+block as a correct workaround for a fixture that predated 12-2's scales. v6
+carries all 135 leaves in `resolved.<mode>.tree`, so the block is deleted and
+the comparison is equality in both directions. This is the more important half
+of the change: a correct workaround that outlives its reason becomes a second
+source of truth, and this one was load-bearing -- a token the generator invented
+would have been waved through by adding it to the block instead of to the
+schema.
+**A count assertion, because an allow-list fails open.** `token-manifest` now
+also asserts each theme defines exactly 135 variables. The enumerated list names
+what this PR adds and goes stale the moment a later PR deletes something; the
+total does not, so `status.*` leaving in 12-3a has to move a number here rather
+than only in the fixture.
+Also lifted: `WASH_ALPHA` and `RING_ALPHA` into `contract.ts`. They were a
+literal `0.35` and `0.1` inside the generator, which meant the schema's
+top-level `wash` and `ring` values could drift from the code with nothing
+noticing.
+
+### R63 - 12-3a and 12-3b: the semantic migration, in one PR
+Date: 2026-09-15
+Change: `status.*`, `color.primary/secondary/accent` and `state.*` are gone with
+their consumers -- 41 files, 135 leaves down to **123**. The application no
+longer claims that visiting a place is a victory or that a disproven rumour is a
+defeat.
+**Merged into one PR at the maintainer's direction, and it was the right call.**
+`06-colour-schema-rollout.md` section 3 already said the two halves "land
+together or not at all": once `--status-failed` stops existing, a `var()` on it
+resolves to nothing, so merging `12-3a` alone would have deployed an app with
+dead references on every error banner, the session-timeout warning and the usage
+meter. Merge-to-main is a live deploy here, so that window was real rather than
+theoretical. One PR removes it entirely.
+The cost is that the two halves are not separable into two green commits: they
+share `components.css` and `tailwind.config.js`, and the deletion in one is what
+the other's consumers depend on. Split by file, every arrangement leaves one
+commit red. Recorded rather than hidden.
+**The deletion changed no value, and that is proved rather than asserted.**
+Every one of the twelve retired names was pure indirection -- each already
+equalled another token -- so they are recorded in `token-rename-map.json` the
+way Phase 1's retirements were, and `token-values.test.tsx` passes **without
+re-recording the baseline**. Re-baselining would have accepted whatever was
+there; this pins each old variable to the token that carries its value. One
+subtlety worth keeping: `--status-on` maps to `--accent-on`, because that is
+what it was *worth*; its **successor** in the schema is `outcome.failed.on`,
+which is a different question from its value.
+**The fixture is driven by the schema's own retire tags.** `colour-schema.json`
+carries `retire: "12-3a" | "12-3b"` on each legacy role, so the test subtracts
+them rather than hardcoding a new leaf count. The distinction matters: a
+hardcoded 123 would pass for *any* twelve deletions that happened to total 123,
+while this cannot drop a token the schema has not marked. The test states only
+which phases have landed -- one line a reviewer checks against the branch.
+**Three scope gaps in the handoffs, all found by grepping rather than reading.**
+Neither handoff named them and both migrations are impossible without them:
+  - `tailwind.config.js` defines `bg-status-*`, `colors.primary/secondary/
+    accent`, `backgroundColor.accent` and `borderColor.*` against retired
+    tokens. The manifest gate reads it, so it is load-bearing, not config.
+  - `AppearanceCard.tsx` and `ThemeSelector.tsx` read `tokens.color.primary`
+    in **TypeScript** to paint a theme preview swatch. Both now take
+    `accent.fill`.
+  - A **second** `bg-status-*` family: the proportional summary bar above every
+    directory, whose segments are a different set of call sites from the row
+    labels. `12-3a`'s scope list named the rows only.
+**A class name built from a variable is invisible to every gate.**
+`QuestDirectory` assembled `progress-bar-${quest.status}` and `NPCDetailPage`
+assembled `npc-status-${npc.status}`. Neither the compiler nor `grep` can see
+those, so both would have survived a migration that was supposed to delete them
+and failed only when someone looked at the page. Both are now explicit maps.
+This is the third time this phase has been bitten by an invisible reference and
+it is worth a rule: **a token reference assembled at runtime is a token
+reference nothing can audit.**
+**Two dead classes found on the way.** `status-warning`
+(`DeleteConfirmationDialog`) and `status-success` (`FloatingUsageIndicator`)
+were referenced in JSX and defined nowhere -- they have been painting nothing
+for as long as they have existed. Both now resolve, to `feedback-warning` and
+`feedback-success`.
+**One judgement the schema does not decide, and the safe reading taken.**
+Confirmed and false rumours sit on the *same* rung, because both are fully
+known -- that is the schema's own mapping, and the strike cue in `12-5` is what
+separates them. In a row that is right. In the **proportional bar** it means two
+adjacent segments render identically and read as one band. Kept faithful to the
+schema and the legend still labels each, but raised as Q20: the bar may want a
+rule the rows do not.
+**NPC disposition gets its hue back, and the old reason for muting it is gone.**
+`NPCDirectory` deliberately rendered disposition as plain secondary text,
+because as a filled chip in the status hue a green "Alive" sat beside a green
+"Friendly" and read as one fact twice. Presence now carries no hue at all, so
+the collision cannot happen and the scale that genuinely is valenced can have
+one. Worth recording because the old comment looked like a design preference and
+was really a workaround for a defect this PR removes.
+**Reading progress is not a quest outcome.** `ResumeBar` used
+`progress-bar-completed` -- the quest scale -- for "you have read everything".
+It takes `feedback.success` now, via its own class. Finishing the reading is the
+application reporting on itself; one class serving both is how the borrow
+starts, and the borrow is what this whole phase exists to stop.
+Verified in the browser, both modes: the location ladder rises with knowledge
+and inverts direction between modes, rumours carry no valence, "Alive" is plain
+ink while "Hostile" is red, and the live document defines **123** custom
+properties with **none** of the twelve retired names still resolving -- no shims
+survived. The washed banner composites to `wash` background, `edge` border and
+`surface.card.on` text, which is section 5.6's legal pairing measured rather
+than assumed.
+**Still outstanding, as the handoff predicted:** the colour-blind pass fails
+until `12-5` lands. Failure is encoded by hue alone until the hatch arrives, and
+deceased NPCs by weight alone until the strike does. Recorded, not worked around.
+
+### Q20 - does a proportional bar need a rule the rows do not?
+Date: 2026-09-15   Status: open
+Schema section 3 puts confirmed and false rumours on the same knowledge rung,
+which is right: both are fully known, and what separates them is the strike cue,
+not the hue. In a row that reads correctly. In the stacked summary bar above the
+directory, two adjacent segments of the same hue merge into one band, and a
+reader filtering by "false" sees a legend swatch identical to "confirmed".
+R63 kept the schema's mapping rather than inventing a hue. The open question is
+whether a bar segment is a different kind of surface from a label -- one where
+adjacency itself carries meaning -- and therefore whether section 3 owes it a
+separate rule. Related to Q15, which asks whether a legend is where a hue may
+legitimately stand alone.
+
+
+### D116 - a cue's enum branch runs one way only
+Date: 2026-09-15   Status: active
+Decision: the hatch and the strike are the **default**, and `cue.failure: none`
+/ `cue.negation: none` can only remove them. Implemented as
+`@container style(--cue-failure: none)`, which is the only CSS-only way to
+branch on an enum whose value is a word.
+The handoff asks for both cues to be "driven from the `cue` enum, so a theme can
+change cue strength without a code path" (token model section 6). A style query
+does that. What the handoff does not say is which way the branch should run,
+and it matters more than it looks: a browser without style-query support
+ignores the `@container` block entirely. Written the other way -- cue off by
+default, switched on by `style(--cue-failure: hatch)` -- an unsupported browser
+would silently drop the cue, which is the **worst** possible failure for a
+feature whose entire purpose is to not depend on colour. Written this way it
+loses only the ability to opt out.
+Because: browserslist here is `>0.2%, not dead`, which is wider than baseline
+style-query support. A gate pins the direction (`non-colour-cues.test.ts`), so
+someone inverting it later fails a test rather than shipping a silent
+regression on old browsers.
+Rejected: reading `tokens.cue.failure` in the component and mapping it to a
+class. It works everywhere, and it is exactly the code path token model
+section 6 asks not to write.
+
+### R64 - 12-5: the cues, and a type hole they uncovered
+Date: 2026-09-15
+Change: `cue.hatch` on a failed quest's progress fill, `cue.strike` on a
+deceased NPC and a false rumour. Both driven by the enum, both gated.
+**The strike is what makes 12-3a's rumour mapping legible at all.** Confirmed
+and false rumours share the knowledge ladder's top rung -- both are fully known
+-- so by design nothing separates them by hue. Until this PR they were
+genuinely indistinguishable. `negated` is a prop orthogonal to `tone` rather
+than a tone of its own, because a false rumour has not left the ladder; saying
+so in red would claim it went wrong, and it simply turned out not to be true.
+**Verified in the browser at the size that ships.** The seed campaign has no
+failed quests, no deceased NPCs and no false rumours, so none of the three
+states could be reached through the UI -- they were rendered directly into the
+page instead. The hatch reads as a clear diagonal texture at the bar's real
+**6px** height with 3px bands; 2px bands aliased into a flat wash and were
+discarded. The strike's colour computes identical to the label's own
+(`rgb(29, 45, 59)` for both), which is "in the label's own ink" measured rather
+than assumed.
+**A latent bug this PR found, and the type hole that hid it.**
+`NPCDirectory` carried `STATUS_TONE[npc.status] ?? 'unknown'` -- a tone 12-3a
+had deleted. It would have rendered **no class at all** for an unrecorded NPC.
+`npx tsc --noEmit` did not catch it, and the reason generalises: a map typed
+`Record<string, T>` has a **non-nullable** index signature, so TypeScript treats
+the `?? fallback` as unreachable and never type-checks it. Both maps are
+`Partial<Record<string, T>>` now, which makes the lookup `T | undefined` and the
+fallback checked -- confirmed by deliberately substituting a nonsense tone and
+watching `tsc` reject it, where before it passed silently.
+Worth generalising: **`Record<string, T>` plus `?? fallback` is a blind spot,
+not a safety net.** Anywhere that shape appears, the fallback is unverified.
+**A fifth stale reference, reported not fixed:** `handoff/12-5-non-colour-cues.md`
+is titled "PR 12.4" and subtitled "fifth PR" in its own header. The file was
+renamed 12-4 to 12-5 during the 12-3 split and the heading did not follow. Not
+corrected here -- the one-time licence to edit these documents covered the four
+slips reported before 12-2b, and this rule exists precisely so a handoff cannot
+drift under the agent executing it.
+**Still open after this PR:** the colour-blind gate 12-3a recorded as failing
+now has its mechanism, but the formal greyscale and deuteranopia passes over
+all four directories still need states this seed data does not contain. Flagged
+rather than claimed.
+
+
+### R65 - 12-6: the loop was already built; the gate was not
+Date: 2026-09-15
+Change: a gate, and almost nothing else. Two of this handoff's three "Do" items
+were **already done before the PR started**, which is worth recording because
+the handoff reads as though neither was.
+  - **The loop shipped in `12-1`.** `derivePrimitives` has generated the eight
+    hues from `HUE.entity.firstHue`, `.step` and `.c` since the derivation
+    landed; both hand-listed arrays went with the hex literals.
+  - **`--location-type-*` was retired before Phase 12.** All eight are in
+    `token-rename-map.json` as Phase 1 history with a note that their values
+    deliberately became palette hues, and `grep` finds no such variable in
+    `src/` or `tailwind.config.js`. The three surviving `locationType` hits are
+    an entity's **data field** (`region | city | town | ...`), which is a
+    different thing wearing a similar name.
+**What was genuinely missing was the gate, and its absence was the interesting
+part.** Every existing check on this palette measured *values*: eight entries,
+all clearing 4.5:1 against one ink, enough of them for the sigil buckets, each
+id mapping stably to an index. **All four would pass for eight hand-picked hues
+that happen to be legible** -- which is precisely what the theme files used to
+hold. Nothing asserted the property the phase exists to create: that the
+palette is a *loop*.
+`entity-loop.test.ts` asserts the construction instead. The hues divide the
+wheel exactly (`step * count === 360`), each entry is recomputed in the test
+from the contract's own numbers rather than read back from the generator, no
+entry repeats, and the contrast spread against the single ink stays inside 1.5.
+Confirmed to bite: setting `step` to 40 fails the sweep assertion, where before
+the change every gate in the project stayed green.
+That spread bound is deliberately loose. Perceived unevenness across hues is
+real and is **not** compensated for -- varying lightness per entry to balance
+the wheel is the trade the handoff forbids -- so the test allows the honest
+variation and catches a hand-tuned entry.
+**Also pinned: unreachable entries.** `sigilIndexFor` is `hash %
+SIGIL_BUCKET_COUNT`, so a palette longer than the bucket count has entries
+nothing can select. The sigil util keeps that count fixed on purpose, so
+appending a ninth hue does not renumber every mark in the product -- meaning
+`palette.length > buckets` is a legitimate intermediate state rather than a
+bug. It is now pinned at **zero unreachable**, so growing the palette has to
+move a number here and becomes a decision someone made rather than a drift.
+Verified live: 16 NPCs land in **6 of the 8** buckets, which is what hash
+distribution gives at that size, and every rendered mark's colour matches the
+generated palette byte for byte (`rgb(108, 69, 66)` = `#6C4542` =
+`--entity-palette-0`, and so on). The remaining two hues are covered by the
+test rather than by this data set; recorded that way rather than claimed as
+observed.
+**A sixth stale heading, reported not fixed:** `handoff/12-6-entity-loop.md` is
+titled "PR 12.5" and subtitled "sixth PR", the same renumbering slip as `12-5`
+(R64). Left alone for the same reason.
+
+
+### Q19 - can an ordered collection have named siblings?
+Date: 2026-09-15   Status: open
+`TokenTree` supports a record or an array, and `knowledge` is the first token to
+need both at once: three ordered steps plus a `wash`. D115 resolves it for the
+app by making the ladder a record and leaning on the monotonicity gate for
+order. The general question is for the package: does `theme-contract` get a
+shape for "ordered, with siblings", or does a collection that grows a sibling
+stop being ordered? Decide before extraction, alongside Q1.
+
+
 Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32,
 **Q10** by D82 and D83, **Q11** by R9, **Q14** by D61, **Q16** by D103,
 **Q17** by D90, **Q18** by D91. The "where do rendered

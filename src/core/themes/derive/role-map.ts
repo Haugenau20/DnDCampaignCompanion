@@ -16,8 +16,9 @@
 //      contract is incomplete -- raise it, never invent a hex.
 //   2. A borrowed role is re-verified against its new ground. See
 //      `verifyBorrowedRoles` in `generate.ts`.
-//   3. "Retired" means deleted, not aliased. Entries marked `12-3` resolve
-//      here so that no commit is broken, and are removed with their consumers.
+//   3. "Retired" means deleted, not aliased. Entries marked `12-3a`/`12-3b`
+//      resolve here so that no commit is broken, and are removed with their
+//      consumers.
 
 /** Where a token's value comes from: a primitive path, or a literal. */
 export type Role =
@@ -29,28 +30,11 @@ export type Role =
  * are dotted paths into the primitives that section 5.1-5.3 generate.
  */
 export const ROLE_MAP: Readonly<Record<string, Role>> = {
-  // Legacy `color.*`. Three of the five are retired in 12-3.
-  "color.primary": { from: "accent.base", retire: "12-3" },
-  "color.secondary": { from: "accent.hover", retire: "12-3" },
-  "color.accent": { from: "accent.base", retire: "12-3" },
+  // What survives of the pre-pair-model `color.*`. The other three were the
+  // accent under names that said nothing about the job; `accent.*` says it.
   // Was #9A9082 at 2.7:1. Taking the page's muted ink fixes it.
   "color.emphasis": { from: "surface.page.onMuted" },
   "color.heading": { from: "surface.page.on" },
-
-  // Legacy `status.*`. All six go in 12-3, with their consumers, and are
-  // replaced by scales named after meaning rather than appearance.
-  "status.general": { from: "surface.card.onMuted", retire: "12-3" },
-  "status.active": { from: "accent.base", retire: "12-3" },
-  "status.completed": { from: "outcome.succeeded", retire: "12-3" },
-  "status.failed": { from: "outcome.failedInk", retire: "12-3" },
-  "status.unknown": { from: "knowledge.0", retire: "12-3" },
-  "status.on": { from: "accent.on", retire: "12-3" },
-
-  // Legacy `state.*`. A global hover grey is exactly what the pair model
-  // forbids: a state belongs to the surface it lands on.
-  "state.hoverLight": { from: "surface.card.hover", retire: "12-3" },
-  "state.hoverMedium": { from: "surface.card.selected", retire: "12-3" },
-  "state.selected": { from: "surface.card.selected", retire: "12-3" },
 
   // Icons. `icon.border` was #C9BCA3 at 1.8:1; it now reuses the neutral that
   // was solved to 3:1 for field borders.
@@ -100,6 +84,13 @@ export const ROLE_MAP: Readonly<Record<string, Role>> = {
   "danger.deleteBg": { literal: "transparent" },
   "danger.deleteText": { from: "outcome.failedInk" },
   "danger.deleteHover": { from: "outcome.failedWash" },
+  // A *filled* destructive button, as opposed to red text on a plain surface.
+  // Both are borrows of the failure primitives onto a new ground, so they go
+  // through the role map rather than being built directly: that is what puts
+  // them in front of the borrowed-role verification, which is the whole point
+  // of rule 2 in section 5.4.
+  "danger.confirmBg": { from: "outcome.failedFill" },
+  "danger.confirmText": { from: "outcome.failedOn" },
 
   // Type. Identical in both modes: dark shipping a sans heading while light
   // shipped serif was the same class of drift as the colour.

@@ -40,20 +40,112 @@ export interface OutcomePair {
    * `ink` is the word "Failed" and owes AA; `fill` paints bars and hatching
    * and owes 3:1, so it stays a proper deep red.
    */
-  failed: { ink: string; fill: string };
+  failed: {
+    ink: string;
+    fill: string;
+    /**
+     * Ink on the failure fill. Identical in both modes, because it is a
+     * neutral taken straight from the ramp at 0.975 and a neutral does not
+     * vary with the mode -- only its lightness does.
+     */
+    on: string;
+  };
+}
+
+/**
+ * The accent, under the three names that say how it is being spent.
+ *
+ * All three of `ink`, `edge` and `fill` carry the same value today, and that
+ * is not redundancy waiting to be collapsed: the accent was previously a
+ * primitive with no name in the token tree at all, so `color.primary` had no
+ * successor and roughly twenty consumers had nowhere to move to. Naming the
+ * *jobs* is what lets a later schema give a border a different value from a
+ * background without revisiting every call site.
+ */
+export interface AccentScale {
+  /** Text and icons. */
+  ink: string;
+  /** Borders, outlines, rules. */
+  edge: string;
+  /** A background that carries `on`. */
+  fill: string;
+  hover: string;
+  /** The ink that goes on `fill`. */
+  on: string;
+  /** Translucent, for focus rings. Has no ratio until it has a ground. */
+  ring: string;
+}
+
+/** Ink, boundary and background for one feedback state. */
+export interface FeedbackTriple {
+  ink: string;
+  edge: string;
+  /**
+   * Translucent. **`ink` is not legal on its own `wash`** -- three of eight
+   * mode-state combinations fail AA, and which three differs by mode. A washed
+   * banner takes `surface.*.on` for its text; the hue appears as the boundary,
+   * never as the text on top of itself. Schema section 5.6, asserted in
+   * `findBorrowedRoleFailures`.
+   */
+  wash: string;
+}
+
+/**
+ * The application talking about itself.
+ *
+ * A failed quest is a fact about the fiction; a failed save is a fact about
+ * the software. They resolve to the same hues today and are named apart so
+ * they can diverge later without archaeology -- and so that a save error is
+ * never "fixed" by changing what a quest looks like.
+ *
+ * There is deliberately no `info`. Warning and progress both take the accent,
+ * because the accent already means "your attention is needed here".
+ */
+export interface FeedbackScale {
+  error: FeedbackTriple;
+  warning: FeedbackTriple;
+  success: FeedbackTriple;
+  progress: FeedbackTriple;
+}
+
+/**
+ * An NPC's stance toward the party. Valenced, and deliberately so.
+ *
+ * This looks like it contradicts the rule that NPC presence carries no
+ * valence, and does not: *presence* (alive, deceased) is a fact about the
+ * world, while *disposition* has valence from the only point of view the
+ * record keeps -- a hostile NPC is genuinely a threat to the people reading
+ * the page. It is still not an `outcome`, because nothing concluded.
+ */
+export interface DispositionScale {
+  friendly: string;
+  neutral: string;
+  hostile: string;
+  unknown: string;
 }
 
 export interface ThemeTokens {
   /** Sets `color-scheme` on the document element. */
   scheme: ColorSchemeToken;
 
+  /**
+   * What is left of the pre-pair-model `color.*`.
+   *
+   * `primary`, `secondary` and `accent` are gone with their consumers: all
+   * three were the accent under names that said nothing about the job, and
+   * `accent.ink` / `.edge` / `.fill` say it. These two survive because they
+   * name something real -- emphasis is the page's muted ink, heading is its
+   * full-strength ink.
+   */
   color: {
-    primary: string;
-    secondary: string;
-    accent: string;
     emphasis: string;
     heading: string;
   };
+
+  /**
+   * The accent, named by job. `color.primary` moves here and is deleted.
+   */
+  accent: AccentScale;
 
   surface: {
     page: SurfacePair;
@@ -61,25 +153,6 @@ export interface ThemeTokens {
     sunken: SurfacePair;
     chrome: SurfacePair;
     band: SurfacePair;
-  };
-
-  /**
-   * Quest and rumour state. **Retired in 12-3**, with its consumers.
-   *
-   * Named after appearance rather than meaning, which is the defect and not a
-   * tidiness complaint: `status.completed` existed, was green, and was
-   * therefore available for a location to borrow -- which is how "visited"
-   * came to render green and a progress bar came to run red-to-green as though
-   * exploring a place were a win condition. `outcome` and `knowledge` below
-   * are the replacement, and they arrive first so nothing is ever broken.
-   */
-  status: {
-    general: string;
-    active: string;
-    completed: string;
-    failed: string;
-    unknown: string;
-    on: string;
   };
 
   /**
@@ -95,13 +168,30 @@ export interface ThemeTokens {
   /**
    * How much the party knows. An ordered ladder, not a verdict.
    *
-   * Position is the meaning, so this is an array rather than a record: a step
-   * named `visited` would tie a ladder that locations *and* rumours use to one
-   * of them. Contrast against the ground rises monotonically with the index,
-   * in both modes, so the ladder survives greyscale and colour blindness as a
-   * value ramp rather than a hue difference.
+   * Position is the meaning: a step named `visited` would tie a ladder that
+   * locations *and* rumours use to one of them. Contrast against the ground
+   * rises monotonically with the index, in both modes, so the ladder survives
+   * greyscale and colour blindness as a value ramp rather than a hue
+   * difference.
+   *
+   * **Why this is a record and not an array**, against token model section 6's
+   * preference for ordered collections: the schema gives the ladder a named
+   * sibling, `knowledge.wash`, and an array cannot carry one -- `flattenTokens`
+   * branches on `Array.isArray` and emits index-suffixed variables only, so a
+   * property hung off an array would be silently dropped. The ordering the
+   * array type used to express is not lost, because it was never really the
+   * type that enforced it: `token-contrast.test.ts` asserts the ladder rises
+   * with the index in both modes, and the fixture pins all four paths. That
+   * pair is a stronger guarantee than the shape was. `entityPalette` stays an
+   * array, so the ordered-collection mechanism is still exercised.
    */
-  knowledge: string[];
+  knowledge: {
+    0: string;
+    1: string;
+    2: string;
+    /** Translucent. A backdrop for a knowledge-tinted panel. */
+    wash: string;
+  };
 
   /**
    * The shape half of a state, because nothing is encoded by colour alone.
@@ -117,12 +207,11 @@ export interface ThemeTokens {
     negation: CueToken;
   };
 
-  /** Feedback only -- never a resting background. */
-  state: {
-    hoverLight: string;
-    hoverMedium: string;
-    selected: string;
-  };
+  /** The application's own voice, distinct from the campaign's record. */
+  feedback: FeedbackScale;
+
+  /** An NPC's stance toward the party. */
+  disposition: DispositionScale;
 
   icon: {
     bg: string;
@@ -162,6 +251,14 @@ export interface ThemeTokens {
     deleteBg: string;
     deleteText: string;
     deleteHover: string;
+    /**
+     * A *filled* destructive button: the red is the background and carries its
+     * own ink. `deleteText` stays the red-on-a-plain-surface case -- the two
+     * are different grounds, which is exactly the distinction that a single
+     * "delete red" token loses.
+     */
+    confirmBg: string;
+    confirmText: string;
   };
 
   font: {

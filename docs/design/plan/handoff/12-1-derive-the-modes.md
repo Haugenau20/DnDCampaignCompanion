@@ -1,6 +1,18 @@
 # PR 12.1 — Derive both modes from one contract
 
-Phase 12 · first PR · opens the phase
+Phase 12 · first PR · **MERGED on `main` (`1b3cc2d`)**
+
+> Historical. `derive/` holds `contract.ts`, `oklch.ts`, `generate.ts` and
+> `role-map.ts`; both definitions are four lines calling `deriveTokens`, and
+> `schema-fixture.test.ts` is live. Read it for the reasoning; do not re-run it.
+> Schema v6 is additive over what this PR shipped — see schema §11 for the
+> three things `12-3a` must change in the code this PR wrote. · **MERGED**
+
+> Historical record — do not edit, and do not execute. This PR shipped against
+> schema **v2**, so its "101 leaves" gate was correct at the time and is not
+> now: v6 ships 135. What it built is described in schema §7b; the leaves it
+> could not have known about are added by `12-2b`. Read §7b, not this, for the
+> current state.
 
 Light and dark stop being authored files. One hue-and-chroma contract is
 authored; a mode supplies lightness only. This PR changes every colour in the
@@ -53,7 +65,7 @@ The drift log is the one file you append to.
      `var(--other-token)` chain, or a compatibility map.
    - **Tokens marked "Retired · 12-3" resolve here and are deleted there.**
      They exist in this PR only so that no commit is broken. They are not
-     shims and must not outlive `12-3`.
+     shims and must not outlive `12-3a`/`12-3b`.
 4. **Both theme token trees become generated output.** No hex literal survives
    in either definition file.
 5. **A test that the generated trees equal `colour-schema.json`** — the
@@ -72,7 +84,7 @@ The drift log is the one file you append to.
 
 ## Do not
 
-- Do not rename a single token. This PR is values only; `12-2` and `12-3`
+- Do not rename a single token. This PR is values only; `12-2` and `12-3a`
   own the names. Mixing them makes the diff unreviewable.
 - Do not touch `components.css`.
 - Do not hand-correct a generated value you disagree with. Change the contract

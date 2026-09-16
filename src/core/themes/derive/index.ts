@@ -12,6 +12,7 @@ export {
   verifyBorrowedRoles,
   findIllegalEnumValues,
   verifyEnums,
+  findWashPairingRatios,
 } from "./generate";
 export type { Primitives, BorrowedRoleFailure, IllegalEnumValue } from "./generate";
 export {
@@ -27,5 +28,5 @@ export {
 export type { LightnessRamp } from "./contract";
 export { ROLE_MAP } from "./role-map";
 export type { Role } from "./role-map";
-export { oklchToHex, contrastRatio, withAlpha } from "./oklch";
+export { oklchToHex, contrastRatio, withAlpha, flattenOnto } from "./oklch";
 export type { Oklch } from "./oklch";

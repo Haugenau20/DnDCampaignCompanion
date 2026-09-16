@@ -174,7 +174,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => handleBatchStatusUpdate('confirmed')}
-            startIcon={<CheckCircle size={16} className="status-completed" />}
+            startIcon={<CheckCircle size={16} className="feedback-success" />}
             disabled={isProcessing}
           >
             Mark Confirmed
@@ -184,7 +184,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => handleBatchStatusUpdate('unconfirmed')}
-            startIcon={<HelpCircle size={16} className="status-unknown" />}
+            startIcon={<HelpCircle size={16} className="feedback-warning" />}
             disabled={isProcessing}
           >
             Mark Unconfirmed
@@ -194,7 +194,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => handleBatchStatusUpdate('false')}
-            startIcon={<XCircle size={16} className="status-failed" />}
+            startIcon={<XCircle size={16} className="feedback-error" />}
             disabled={isProcessing}
           >
             Mark False
@@ -224,7 +224,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             variant="ghost"
             size="sm"
             onClick={handleBatchDelete}
-            startIcon={<Trash size={16} className="status-failed" />}
+            startIcon={<Trash size={16} className="feedback-error" />}
             disabled={isProcessing}
           >
             Delete
@@ -234,8 +234,8 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
       
       {/* Error notification */}
       {actionError && (
-        <div className="mt-2 p-2 rounded flex items-center gap-2 status-failed bg-opacity-20">
-          <AlertCircle size={18} className="status-failed" />
+        <div className="mt-2 p-2 rounded flex items-center gap-2 feedback-banner feedback-banner-error">
+          <AlertCircle size={18} className="feedback-error" />
           <Typography color="error">{actionError}</Typography>
         </div>
       )}

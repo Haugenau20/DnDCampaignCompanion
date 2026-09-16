@@ -318,8 +318,8 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     if (note?.isUnsaved || hasUnsavedChanges) {
       return (
         <div className="flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 status-unknown" />
-          <Typography variant="body-sm" className="status-unknown">
+          <AlertCircle className="w-4 h-4 feedback-warning" />
+          <Typography variant="body-sm" className="feedback-warning">
             {note?.isUnsaved ? "Not saved to server" : "Unsaved changes"}
           </Typography>
         </div>
@@ -330,7 +330,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
 
     return (
       <div className="flex items-center gap-2">
-        <Check className="w-4 h-4 status-completed" />
+        <Check className="w-4 h-4 feedback-success" />
         <Typography variant="body-sm" color="secondary" className="text-[13px]">
           {`${lastSavedText} · saves as you write`}
         </Typography>

@@ -1,9 +1,16 @@
 {
   "scheme": "torchlight-forge",
-  "version": 2,
-  "warning": "GENERATED FIXTURE. Never hand-edited, and never edited by an implementation agent. Regenerate from the contract in design/colour-schema.md §4 and the role map in §5.4.",
-  "leafCount": 101,
-  "colourCount": 91,
+  "version": 6,
+  "warning": "GENERATED FIXTURE. Never hand-edited, and never edited by an implementation agent. Regenerate from the contract in docs/design/colour-schema.md §4, the role map in §5.4 and the scales in §5.5.",
+  "basedOn": "v2, additively. Every value v2 shipped is byte-identical; v6 only adds tokens.",
+  "inCodeAfter": {
+    "12-1 + 12-2": 109
+  },
+  "pendingIn": {
+    "12-2b": 26
+  },
+  "leafCount": 135,
+  "colourCount": 123,
   "hue": {
     "neutral": {
       "H": 68,
@@ -32,92 +39,22 @@
       "C": 0.055
     }
   },
-  "ramp": {
-    "light": {
-      "chrome": 0.205,
-      "chromeBorder": 0.29,
-      "band": 0.25,
-      "bandBorder": 0.33,
-      "page": 0.945,
-      "card": 0.975,
-      "sunken": 0.915,
-      "inkOnLight": 0.23,
-      "inkOnLightMuted": 0.47,
-      "inkOnDark": 0.955,
-      "inkOnDarkMuted": 0.745,
-      "hairline": -0.06,
-      "fieldBorder": 0.615,
-      "placeholder": 0.5,
-      "accent": 0.49,
-      "accentHover": 0.42,
-      "accentOn": 0.975,
-      "succeeded": 0.46,
-      "failedInk": 0.44,
-      "failedFill": 0.44,
-      "k": [
-        0.48,
-        0.385,
-        0.29
-      ],
-      "secondary": 0.3,
-      "secondaryHover": 0.24,
-      "secondaryOn": 0.975,
-      "entity": 0.435,
-      "entityInk": 0.965,
-      "hover": -0.03,
-      "selected": -0.062,
-      "disabled": -0.025
-    },
-    "dark": {
-      "chrome": 0.13,
-      "chromeBorder": 0.225,
-      "band": 0.175,
-      "bandBorder": 0.265,
-      "page": 0.225,
-      "card": 0.27,
-      "sunken": 0.18,
-      "inkOnLight": 0.915,
-      "inkOnLightMuted": 0.73,
-      "inkOnDark": 0.945,
-      "inkOnDarkMuted": 0.72,
-      "hairline": 0.065,
-      "fieldBorder": 0.62,
-      "placeholder": 0.68,
-      "accent": 0.715,
-      "accentHover": 0.645,
-      "accentOn": 0.165,
-      "succeeded": 0.695,
-      "failedInk": 0.65,
-      "failedFill": 0.56,
-      "k": [
-        0.65,
-        0.735,
-        0.84
-      ],
-      "secondary": 0.35,
-      "secondaryHover": 0.415,
-      "secondaryOn": 0.915,
-      "entity": 0.395,
-      "entityInk": 0.955,
-      "hover": 0.04,
-      "selected": 0.082,
-      "disabled": -0.035
-    }
-  },
+  "wash": 0.1,
+  "ring": 0.35,
   "roles": {
     "color.primary": {
       "from": "accent.base",
-      "retire": "12-3",
-      "note": "consumers move to the accent role"
+      "retire": "12-3b",
+      "note": "consumers move to `accent.ink` / `accent.edge` / `accent.fill`"
     },
     "color.secondary": {
       "from": "accent.hover",
-      "retire": "12-3",
+      "retire": "12-3b",
       "note": "was a darker accent, never a role"
     },
     "color.accent": {
       "from": "accent.base",
-      "retire": "12-3",
+      "retire": "12-3b",
       "note": "duplicate of color.primary"
     },
     "color.emphasis": {
@@ -129,41 +66,41 @@
     },
     "status.general": {
       "from": "surface.card.onMuted",
-      "retire": "12-3"
+      "retire": "12-3a"
     },
     "status.active": {
       "from": "accent.base",
-      "retire": "12-3"
+      "retire": "12-3a"
     },
     "status.completed": {
       "from": "outcome.succeeded",
-      "retire": "12-3"
+      "retire": "12-3a"
     },
     "status.failed": {
       "from": "outcome.failedInk",
-      "retire": "12-3"
+      "retire": "12-3a"
     },
     "status.unknown": {
       "from": "knowledge.0",
-      "retire": "12-3"
+      "retire": "12-3a"
     },
     "status.on": {
       "from": "accent.on",
-      "retire": "12-3"
+      "retire": "12-3a"
     },
     "state.hoverLight": {
       "from": "surface.card.hover",
-      "retire": "12-3",
+      "retire": "12-3b",
       "note": "a global hover grey is what token model §2 forbids"
     },
     "state.hoverMedium": {
       "from": "surface.card.selected",
-      "retire": "12-3",
+      "retire": "12-3b",
       "note": "ditto"
     },
     "state.selected": {
       "from": "surface.card.selected",
-      "retire": "12-3",
+      "retire": "12-3b",
       "note": "ditto"
     },
     "icon.bg": {
@@ -290,7 +227,7 @@
     },
     "font.heading": {
       "literal": "'Zilla Slab', Georgia, serif",
-      "note": "identical in both modes — dark shipping sans here was the same drift as the colour"
+      "note": "identical in both modes"
     },
     "border.radius.sm": {
       "literal": "0.25rem"
@@ -310,6 +247,46 @@
     "border.width.lg": {
       "literal": "4px"
     }
+  },
+  "shippedIn12_2": {
+    "outcome.succeeded": "outcome.succeeded",
+    "outcome.failed.ink": "outcome.failedInk",
+    "outcome.failed.fill": "outcome.failedFill",
+    "knowledge.0": "knowledge.0",
+    "knowledge.1": "knowledge.1",
+    "knowledge.2": "knowledge.2"
+  },
+  "cues": {
+    "cue.failure": "hatch",
+    "cue.negation": "strike"
+  },
+  "scales12_2b": {
+    "accent.ink": "accent.base",
+    "accent.edge": "accent.base",
+    "accent.fill": "accent.base",
+    "accent.hover": "accent.hover",
+    "accent.on": "accent.on",
+    "accent.ring": "accent.ring",
+    "outcome.failed.on": "outcome.failedOn",
+    "knowledge.wash": "knowledgeWash",
+    "feedback.error.ink": "outcome.failedInk",
+    "feedback.error.edge": "outcome.failedInk",
+    "feedback.error.wash": "outcome.failedWash",
+    "feedback.warning.ink": "accent.base",
+    "feedback.warning.edge": "accent.base",
+    "feedback.warning.wash": "accent.wash",
+    "feedback.success.ink": "outcome.succeeded",
+    "feedback.success.edge": "outcome.succeeded",
+    "feedback.success.wash": "outcome.successWash",
+    "feedback.progress.ink": "accent.base",
+    "feedback.progress.edge": "accent.base",
+    "feedback.progress.wash": "accent.wash",
+    "disposition.friendly": "outcome.succeeded",
+    "disposition.hostile": "outcome.failedInk",
+    "disposition.neutral": "surface.card.onMuted",
+    "disposition.unknown": "knowledge.0",
+    "danger.confirmBg": "outcome.failedFill",
+    "danger.confirmText": "outcome.failedOn"
   },
   "resolved": {
     "light": {
@@ -361,13 +338,16 @@
           "base": "#8D4F00",
           "hover": "#723F00",
           "on": "#FDF5ED",
-          "ring": "rgba(141, 79, 0, 0.35)"
+          "ring": "rgba(141, 79, 0, 0.35)",
+          "wash": "rgba(141, 79, 0, 0.1)"
         },
         "outcome": {
           "succeeded": "#3A6437",
           "failedInk": "#951D28",
           "failedFill": "#951D28",
+          "failedOn": "#FDF5ED",
           "failedWash": "rgba(149, 29, 40, 0.1)",
+          "successWash": "rgba(58, 100, 55, 0.1)",
           "successRing": "rgba(58, 100, 55, 0.35)",
           "failedRing": "rgba(149, 29, 40, 0.35)"
         },
@@ -376,6 +356,7 @@
           "#344655",
           "#1D2D3B"
         ],
+        "knowledgeWash": "rgba(78, 96, 112, 0.1)",
         "neutralBorder": "#878079",
         "placeholder": "#69625B",
         "secondary": {
@@ -394,12 +375,7 @@
           "#534B6D",
           "#66455B"
         ],
-        "entityInk": "#FAF2EA",
-        "_meta": {
-          "accentWorst": 5.02,
-          "succWorst": 5.34,
-          "failInkWorst": 6.57
-        }
+        "entityInk": "#FAF2EA"
       },
       "tree": {
         "color.primary": "#8D4F00",
@@ -502,6 +478,40 @@
         "entityPalette.6": "#534B6D",
         "entityPalette.7": "#66455B",
         "entityInk": "#FAF2EA",
+        "outcome.succeeded": "#3A6437",
+        "outcome.failed.ink": "#951D28",
+        "outcome.failed.fill": "#951D28",
+        "knowledge.0": "#4E6070",
+        "knowledge.1": "#344655",
+        "knowledge.2": "#1D2D3B",
+        "cue.failure": "hatch",
+        "cue.negation": "strike",
+        "accent.ink": "#8D4F00",
+        "accent.edge": "#8D4F00",
+        "accent.fill": "#8D4F00",
+        "accent.hover": "#723F00",
+        "accent.on": "#FDF5ED",
+        "accent.ring": "rgba(141, 79, 0, 0.35)",
+        "outcome.failed.on": "#FDF5ED",
+        "knowledge.wash": "rgba(78, 96, 112, 0.1)",
+        "feedback.error.ink": "#951D28",
+        "feedback.error.edge": "#951D28",
+        "feedback.error.wash": "rgba(149, 29, 40, 0.1)",
+        "feedback.warning.ink": "#8D4F00",
+        "feedback.warning.edge": "#8D4F00",
+        "feedback.warning.wash": "rgba(141, 79, 0, 0.1)",
+        "feedback.success.ink": "#3A6437",
+        "feedback.success.edge": "#3A6437",
+        "feedback.success.wash": "rgba(58, 100, 55, 0.1)",
+        "feedback.progress.ink": "#8D4F00",
+        "feedback.progress.edge": "#8D4F00",
+        "feedback.progress.wash": "rgba(141, 79, 0, 0.1)",
+        "disposition.friendly": "#3A6437",
+        "disposition.hostile": "#951D28",
+        "disposition.neutral": "#605953",
+        "disposition.unknown": "#4E6070",
+        "danger.confirmBg": "#951D28",
+        "danger.confirmText": "#FDF5ED",
         "scheme": "light"
       }
     },
@@ -554,13 +564,16 @@
           "base": "#D69253",
           "hover": "#BF7C3C",
           "on": "#120D08",
-          "ring": "rgba(214, 146, 83, 0.35)"
+          "ring": "rgba(214, 146, 83, 0.35)",
+          "wash": "rgba(214, 146, 83, 0.1)"
         },
         "outcome": {
           "succeeded": "#7EAB7A",
           "failedInk": "#E16566",
           "failedFill": "#BE4649",
+          "failedOn": "#FDF5ED",
           "failedWash": "rgba(225, 101, 102, 0.1)",
+          "successWash": "rgba(126, 171, 122, 0.1)",
           "successRing": "rgba(126, 171, 122, 0.35)",
           "failedRing": "rgba(225, 101, 102, 0.35)"
         },
@@ -569,6 +582,7 @@
           "#98ACBE",
           "#B9CDE0"
         ],
+        "knowledgeWash": "rgba(126, 146, 163, 0.1)",
         "neutralBorder": "#8C857D",
         "placeholder": "#9E978F",
         "secondary": {
@@ -587,12 +601,7 @@
           "#484061",
           "#5A3B50"
         ],
-        "entityInk": "#F7EFE6",
-        "_meta": {
-          "accentWorst": 5.85,
-          "succWorst": 5.78,
-          "failInkWorst": 4.52
-        }
+        "entityInk": "#F7EFE6"
       },
       "tree": {
         "color.primary": "#D69253",
@@ -695,6 +704,40 @@
         "entityPalette.6": "#484061",
         "entityPalette.7": "#5A3B50",
         "entityInk": "#F7EFE6",
+        "outcome.succeeded": "#7EAB7A",
+        "outcome.failed.ink": "#E16566",
+        "outcome.failed.fill": "#BE4649",
+        "knowledge.0": "#7E92A3",
+        "knowledge.1": "#98ACBE",
+        "knowledge.2": "#B9CDE0",
+        "cue.failure": "hatch",
+        "cue.negation": "strike",
+        "accent.ink": "#D69253",
+        "accent.edge": "#D69253",
+        "accent.fill": "#D69253",
+        "accent.hover": "#BF7C3C",
+        "accent.on": "#120D08",
+        "accent.ring": "rgba(214, 146, 83, 0.35)",
+        "outcome.failed.on": "#FDF5ED",
+        "knowledge.wash": "rgba(126, 146, 163, 0.1)",
+        "feedback.error.ink": "#E16566",
+        "feedback.error.edge": "#E16566",
+        "feedback.error.wash": "rgba(225, 101, 102, 0.1)",
+        "feedback.warning.ink": "#D69253",
+        "feedback.warning.edge": "#D69253",
+        "feedback.warning.wash": "rgba(214, 146, 83, 0.1)",
+        "feedback.success.ink": "#7EAB7A",
+        "feedback.success.edge": "#7EAB7A",
+        "feedback.success.wash": "rgba(126, 171, 122, 0.1)",
+        "feedback.progress.ink": "#D69253",
+        "feedback.progress.edge": "#D69253",
+        "feedback.progress.wash": "rgba(214, 146, 83, 0.1)",
+        "disposition.friendly": "#7EAB7A",
+        "disposition.hostile": "#E16566",
+        "disposition.neutral": "#AEA69F",
+        "disposition.unknown": "#7E92A3",
+        "danger.confirmBg": "#BE4649",
+        "danger.confirmText": "#FDF5ED",
         "scheme": "dark"
       }
     }

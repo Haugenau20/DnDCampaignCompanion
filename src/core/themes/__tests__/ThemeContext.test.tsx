@@ -211,11 +211,20 @@ describe('ThemeProvider — applyThemeToDOM error handling (line 56)', () => {
 // ---------------------------------------------------------------------------
 
 describe('ThemeProvider — CSS variable application', () => {
-  test('sets --color-primary CSS variable matching the current theme', () => {
+  test('sets --accent-ink CSS variable matching the current theme', () => {
     window.localStorage.setItem(STORAGE_KEY, 'dark');
     renderHook(() => useTheme(), { wrapper });
-    const value = document.documentElement.style.getPropertyValue('--color-primary');
-    expect(value).toBe(themes.dark.tokens.color.primary);
+    const value = document.documentElement.style.getPropertyValue('--accent-ink');
+    expect(value).toBe(themes.dark.tokens.accent.ink);
+  });
+
+  // `--color-primary` was the accent under a name that said nothing about the
+  // job. Asserted gone rather than merely unused: a variable that still
+  // resolves is a shim, and grep cannot tell a shim from an intentional
+  // reference.
+  test('no longer sets the retired --color-primary', () => {
+    renderHook(() => useTheme(), { wrapper });
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('');
   });
 
   test('sets --font-primary CSS variable matching the current theme', () => {
@@ -230,8 +239,8 @@ describe('ThemeProvider — CSS variable application', () => {
     act(() => {
       result.current.setTheme('dark');
     });
-    const value = document.documentElement.style.getPropertyValue('--color-primary');
-    expect(value).toBe(themes.dark.tokens.color.primary);
+    const value = document.documentElement.style.getPropertyValue('--accent-ink');
+    expect(value).toBe(themes.dark.tokens.accent.ink);
   });
 
   // Q16's answer, asserted where it is set. A `<select>`'s popup, a date

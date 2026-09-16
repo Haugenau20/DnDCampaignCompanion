@@ -22,15 +22,12 @@ const SCHEMA_PATH = path.resolve(
   "../../../../docs/design/colour-schema.json"
 );
 
-interface Primitives {
-  outcome: { succeeded: string; failedInk: string; failedFill: string };
-  knowledge: [string, string, string];
-}
-
 interface Schema {
   version: number;
   leafCount: number;
-  resolved: Record<ThemeName, { tree: Record<string, string>; primitives: Primitives }>;
+  /** Section 5.4's role map, including which PR each legacy name retires in. */
+  roles: Record<string, { retire?: string }>;
+  resolved: Record<ThemeName, { tree: Record<string, string> }>;
 }
 
 const schema: Schema = JSON.parse(fs.readFileSync(SCHEMA_PATH, "utf8"));
@@ -58,67 +55,87 @@ const flatten = (node: unknown, trail: string[] = []): Record<string, string> =>
   );
 };
 
+/**
+ * The retirements that have actually landed in this branch.
+ *
+ * The fixture's `tree` is the token set as of 12-2b, and section 5.4 marks
+ * twelve of those names "Retired 12-3a" or "Retired 12-3b" -- they resolve in
+ * the fixture so that no commit is ever broken, and go with their consumers.
+ * So once a migration lands, the generated tree is deliberately *smaller* than
+ * the fixture's, and the comparison has to say so.
+ *
+ * Naming the landed phases is the whole of what this file states on its own
+ * authority, and it is one line a reviewer checks against the branch. Which
+ * *tokens* each phase retires still comes from the schema, so a token cannot
+ * be dropped here without the schema having said it could -- the alternative,
+ * hardcoding a new leaf count, would let any deletion through as long as the
+ * total happened to match.
+ */
+const LANDED: readonly string[] = ["12-3a", "12-3b"];
+
 const MODES: readonly ThemeName[] = ["light", "dark"];
 
 describe("generated themes equal the schema fixture", () => {
+  /** Token paths the schema says are gone once `LANDED` has landed. */
+  const retired = new Set(
+    Object.entries(schema.roles)
+      .filter(([, role]) => role.retire !== undefined && LANDED.includes(role.retire))
+      .map(([token]) => token)
+  );
+
   test("the fixture is the version this generator was written against", () => {
-    expect(schema.version).toBe(2);
-    expect(schema.leafCount).toBe(101);
+    expect(schema.version).toBe(6);
+    expect(schema.leafCount).toBe(135);
+  });
+
+  test("every landed retirement names tokens the schema actually marked", () => {
+    // Guards the mechanism above rather than the tree: a typo in `LANDED`
+    // would silently retire nothing and the comparison would then fail with a
+    // confusing diff instead of this.
+    const tagged = new Set(
+      Object.values(schema.roles)
+        .map((role) => role.retire)
+        .filter((tag): tag is string => tag !== undefined)
+    );
+    expect({ landed: LANDED.filter((p) => !tagged.has(p)), retiredCount: retired.size }).toEqual({
+      landed: [],
+      retiredCount: 12,
+    });
   });
 
   describe.each(MODES)("%s", (mode) => {
     const generated = flatten(deriveTokens(mode) as unknown as Record<string, unknown>);
-    const expected = schema.resolved[mode].tree;
-    const primitives = schema.resolved[mode].primitives;
+    const expected = Object.fromEntries(
+      Object.entries(schema.resolved[mode].tree).filter(([token]) => !retired.has(token))
+    );
 
-    /**
-     * What 12-2 added on top of the fixture's tree.
+    /*
+     * A plain equality over the whole tree, in both directions.
      *
-     * The fixture's `tree` block is the token set as of 12-1, and the phase
-     * changes that set on purpose: 12-2 adds the semantic scales, 12-3 deletes
-     * `status.*`, `color.primary/secondary/accent` and `state.*` with their
-     * consumers. So the tree is no longer an equality, and this names the
-     * difference **exhaustively** rather than loosening the comparison to a
-     * subset check -- a subset check would pass an accidental extra token,
-     * which is most of what this file exists to prevent.
-     *
-     * Every addition still comes from the fixture: the colours are the
-     * `primitives` block, finally carrying the name of what they mean rather
-     * than what they look like.
+     * This used to carry an `additions` block naming 12-2's six colours and
+     * two cues as exceptions, because the fixture predated them. The schema
+     * now carries all 135 leaves in `resolved.<mode>.tree`, so the exception
+     * is gone -- which matters beyond tidiness. A correct workaround that
+     * outlives its reason becomes a second source of truth, and this one was
+     * load-bearing: any token the generator invented would have been waved
+     * through if someone added it to the block instead of to the schema.
      */
-    const additions: Record<string, string> = {
-      "outcome.succeeded": primitives.outcome.succeeded,
-      "outcome.failed.ink": primitives.outcome.failedInk,
-      "outcome.failed.fill": primitives.outcome.failedFill,
-      "knowledge.0": primitives.knowledge[0],
-      "knowledge.1": primitives.knowledge[1],
-      "knowledge.2": primitives.knowledge[2],
-      // Not colours, so not in `primitives`. Schema section 6 is the source.
-      "cue.failure": "hatch",
-      "cue.negation": "strike",
-    };
-
-    test("the generated set is the fixture's tree plus exactly the phase's additions", () => {
-      expect(Object.keys(generated).sort()).toEqual(
-        [...Object.keys(expected), ...Object.keys(additions)].sort()
-      );
+    test("the generated token set is exactly the fixture's, no more and no less", () => {
+      expect(Object.keys(generated).sort()).toEqual(Object.keys(expected).sort());
     });
 
-    test("all 101 leaves of the fixture's tree match exactly", () => {
-      // One assertion over the whole tree rather than 101 assertions: a diff of
+    test("nothing the schema retired survives as a shim", () => {
+      // Retired means deleted, not aliased. An alias is a second way to say
+      // what a pair already says, it outlives the migration it was meant to
+      // enable, and grep cannot tell it from an intentional reference.
+      expect([...retired].filter((token) => token in generated)).toEqual([]);
+    });
+
+    test("every leaf the fixture still expects matches exactly", () => {
+      // One assertion over the whole tree rather than one per leaf: a diff of
       // the two objects names every wrong value at once, which is what you want
       // when a contract change moves fifty of them.
-      const asFixtured = Object.fromEntries(
-        Object.keys(expected).map((key) => [key, generated[key]])
-      );
-      expect(asFixtured).toEqual(expected);
-    });
-
-    test("the semantic scales carry the fixture's own primitive values", () => {
-      const added = Object.fromEntries(
-        Object.keys(additions).map((key) => [key, generated[key]])
-      );
-      expect(added).toEqual(additions);
+      expect(generated).toEqual(expected);
     });
 
     test("the knowledge ladder is monotonic in contrast against every content ground", () => {

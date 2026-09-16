@@ -40,7 +40,7 @@
      properties -- written bare they are dropped, which left Tailwind's default
      blue ring on every focusable control in both themes. */
   :focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--accent-ring);
     outline-offset: 2px;
   }
 

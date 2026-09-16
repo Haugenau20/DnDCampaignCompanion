@@ -19,22 +19,22 @@ const NPCLegend: React.FC = () => {
 
   const statusTypes = [
     { 
-      icon: <Shield className="npc-status-alive" />, 
+      icon: <Shield className="presence-present" />, 
       label: 'Alive', 
       description: 'NPC is alive' 
     },
     { 
-      icon: <Skull className="npc-status-deceased" />, 
+      icon: <Skull className="presence-absent" />, 
       label: 'Deceased', 
       description: 'NPC is no longer living' 
     },
     { 
-      icon: <AlertCircle className="npc-status-missing" />, 
+      icon: <AlertCircle className="knowledge-0" />, 
       label: 'Missing', 
       description: 'NPC\'s whereabouts are unknown' 
     },
     { 
-      icon: <HelpCircle className="npc-status-unknown" />, 
+      icon: <HelpCircle className="knowledge-0" />, 
       label: 'Unknown', 
       description: 'NPC\'s status is uncertain' 
     }
@@ -72,7 +72,7 @@ const NPCLegend: React.FC = () => {
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div className="flex items-center gap-2">
-            <Info size={20} className="status-general" />
+            <Info size={20} className="typography-secondary" />
             <Typography variant="h4">Legend</Typography>
           </div>
           {isExpanded ? <ChevronUp /> : <ChevronDown />}

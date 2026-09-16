@@ -41,11 +41,41 @@ const RELATIONSHIP_FILTERS = [
 
 /** Relationship as a labelled chip. A bare colour stripe needed a legend nobody had. */
 /** NPC state, in the shared status vocabulary. */
-const STATUS_TONE: Record<string, RosterStatusTone> = {
-  alive: 'completed',
-  deceased: 'failed',
-  missing: 'unknown',
-  unknown: 'unknown',
+/**
+ * NPC presence carries no hue, deliberately.
+ *
+ * Alive was green and deceased was red, which reads a death as an error. It is
+ * a fact about the world with no valence -- a slain villain is not a bad
+ * outcome -- so alive is plain ink, deceased is muted ink, and only `missing`
+ * takes a hue, because genuine uncertainty is what the knowledge ladder's
+ * first rung means. 12-5 adds the strike that makes deceased legible without
+ * leaning on weight alone. Schema section 3.
+ */
+/**
+ * An NPC's stance toward the party. Valenced, unlike presence above.
+ *
+ * `unknown` maps to `unsure` rather than sharing a name with presence's
+ * `unknown`: they are different claims -- one is "we have not recorded where
+ * this person stands", the other "we do not know whether they are alive".
+ */
+// `Partial<>` is load-bearing, not pedantry. As a plain `Record<string, T>`
+// the index access is typed non-nullable, so TypeScript treats the `?? fallback`
+// at the call site as unreachable and **never checks it** -- which is how a
+// `?? 'unknown'` naming a tone that no longer exists survived 12-3a's rename
+// and would have rendered no class at all. `Partial` makes the lookup
+// `T | undefined`, so the fallback is type-checked like any other value.
+const DISPOSITION_TONE: Partial<Record<string, RosterStatusTone>> = {
+  friendly: 'friendly',
+  neutral: 'neutral',
+  hostile: 'hostile',
+  unknown: 'unsure',
+};
+
+const STATUS_TONE: Partial<Record<string, RosterStatusTone>> = {
+  alive: 'present',
+  deceased: 'absent',
+  missing: 'knowledge-0',
+  unknown: 'knowledge-0',
 };
 
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({
@@ -120,10 +150,13 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   const statusSegments: RosterSegment[] = useMemo(() => {
     const count = (status: string) => npcs.filter(npc => npc.status === status).length;
     return [
-      { key: 'alive', label: 'alive', count: count('alive'), colorClass: 'bg-status-completed' },
-      { key: 'deceased', label: 'deceased', count: count('deceased'), colorClass: 'bg-status-failed' },
-      { key: 'missing', label: 'missing', count: count('missing'), colorClass: 'bg-status-unknown' },
-      { key: 'unknown', label: 'unrecorded', count: count('unknown'), colorClass: 'bg-status-general' },
+      // Presence differs by *value*, not hue: plain ink, muted ink, and only
+      // genuine uncertainty takes the ladder's first rung. Green for alive and
+      // red for deceased was the bar reading a death as an error.
+      { key: 'alive', label: 'alive', count: count('alive'), colorClass: 'bg-presence-present' },
+      { key: 'deceased', label: 'deceased', count: count('deceased'), colorClass: 'bg-presence-absent' },
+      { key: 'missing', label: 'missing', count: count('missing'), colorClass: 'bg-knowledge-0' },
+      { key: 'unknown', label: 'unrecorded', count: count('unknown'), colorClass: 'bg-knowledge-0' },
     ];
   }, [npcs]);
 
@@ -331,21 +364,26 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                       )}
                     </div>
 
-                    <RosterStatus tone={STATUS_TONE[npc.status] ?? 'unknown'}>
+                    <RosterStatus
+                      tone={STATUS_TONE[npc.status] ?? 'knowledge-0'}
+                      negated={npc.status === 'deceased'}
+                    >
                       {npc.status.charAt(0).toUpperCase() + npc.status.slice(1)}
                     </RosterStatus>
 
-                    {/* Disposition, stated once and plainly. It was a filled chip in the
-                        status hue -- so a row showed a green "Alive" beside a green
-                        "Friendly" and read as one fact twice, while spending the one hue
-                        reserved for state on something that is not state. */}
-                    <Typography
-                      variant="body-sm"
-                      color="secondary"
-                      className="hidden md:block justify-self-start text-sm"
+                    {/* Disposition, and it takes its own hue again.
+                        It was muted for a real reason: as a filled chip in the status
+                        hue, a green "Alive" sat beside a green "Friendly" and read as
+                        one fact twice. That collision is gone -- presence now carries
+                        no hue at all -- so the scale that genuinely is valenced can
+                        have one. A hostile NPC is a threat to the reader, which is a
+                        different claim from anything presence makes. */}
+                    <RosterStatus
+                      tone={DISPOSITION_TONE[npc.relationship] ?? 'unsure'}
+                      className="justify-self-start"
                     >
                       {npc.relationship.charAt(0).toUpperCase() + npc.relationship.slice(1)}
-                    </Typography>
+                    </RosterStatus>
 
                     <Typography
                       variant="body-sm"

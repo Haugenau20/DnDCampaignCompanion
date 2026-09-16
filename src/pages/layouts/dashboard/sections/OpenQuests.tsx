@@ -63,7 +63,7 @@ const OpenQuests: React.FC<OpenQuestsProps> = ({ quests = [], loading = false, l
             >
               <span
                 aria-hidden="true"
-                className="w-2 h-2 rounded-full shrink-0 bg-status-unknown"
+                className="w-2 h-2 rounded-full shrink-0 bg-accent-fill"
               ></span>
               <Typography variant="body" className="flex-1 min-w-0 truncate font-medium">
                 {quest.title}

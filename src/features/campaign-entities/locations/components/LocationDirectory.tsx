@@ -57,12 +57,11 @@ const TYPE_FILTERS: RosterFilterOption[] = [
  * buckets NPC status was. The bar still filters like NPCDirectory's, but ordering and
  * colour read as "how far along", not "which category": known (blue, the starting
  * point) → explored (gold, partway) → visited (green, as far as this axis goes).
- * There is no failure state here, so bg-status-failed is never used.
  */
 const STATUS_ORDER: { key: LocationStatus; colorClass: string }[] = [
-  { key: 'known', colorClass: 'bg-status-general' },
-  { key: 'explored', colorClass: 'bg-status-unknown' },
-  { key: 'visited', colorClass: 'bg-status-completed' },
+  { key: 'known', colorClass: 'bg-knowledge-0' },
+  { key: 'explored', colorClass: 'bg-knowledge-1' },
+  { key: 'visited', colorClass: 'bg-knowledge-2' },
 ];
 
 /**
@@ -74,10 +73,19 @@ const STATUS_ORDER: { key: LocationStatus; colorClass: string }[] = [
  * there only as the "not yet" end of a progression; as row text that would put
  * the accent on a resting row.
  */
+/**
+ * A location rides the knowledge ladder, not the outcome scale.
+ *
+ * `visited` used to be `completed`, which is green -- so the application said
+ * that going somewhere was a win condition, and the progress bar above it ran
+ * red to green as though a place could be failed. Nothing here is a verdict:
+ * the three states are one axis of how much the party has learned, and
+ * contrast rises along it. Schema section 3.
+ */
 const STATUS_TONE: Record<LocationStatus, RosterStatusTone> = {
-  known: 'muted',
-  explored: 'unknown',
-  visited: 'completed',
+  known: 'knowledge-0',
+  explored: 'knowledge-1',
+  visited: 'knowledge-2',
 };
 
 const formatLocationType = (type: LocationType): string => {

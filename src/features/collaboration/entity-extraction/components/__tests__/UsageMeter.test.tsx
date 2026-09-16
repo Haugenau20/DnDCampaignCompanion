@@ -115,9 +115,9 @@ describe('UsageMeter', () => {
       });
       render(<UsageMeter />);
 
-      expect(row('daily')).toHaveClass('status-unknown');
-      expect(row('weekly')).not.toHaveClass('status-unknown');
-      expect(row('monthly')).not.toHaveClass('status-unknown');
+      expect(row('daily')).toHaveClass('feedback-warning');
+      expect(row('weekly')).not.toHaveClass('feedback-warning');
+      expect(row('monthly')).not.toHaveClass('feedback-warning');
     });
 
     test('should flag an exceeded period in the error tone instead', () => {
@@ -128,7 +128,7 @@ describe('UsageMeter', () => {
       );
       render(<UsageMeter />);
 
-      expect(row('daily')).toHaveClass('status-failed');
+      expect(row('daily')).toHaveClass('feedback-error');
     });
 
     test('should name when the binding allowance resets', () => {

@@ -15,25 +15,30 @@ import {
   LEGAL_SCHEMES,
   NON_TEXT_MINIMUM,
   RAMP,
+  RING_ALPHA,
   SOLVE_STEP,
   TEXT_MINIMUM,
+  WASH_ALPHA,
 } from "./contract";
 import { ROLE_MAP, Role } from "./role-map";
-import { contrastRatio, oklchToHex, withAlpha } from "./oklch";
+import { contrastRatio, flattenOnto, oklchToHex, withAlpha } from "./oklch";
 
 /** Section 5.1-5.3: the 91 values every token name resolves to. */
 export interface Primitives {
   surface: Record<"chrome" | "band" | "page" | "card" | "sunken", SurfacePair>;
-  accent: { base: string; hover: string; on: string; ring: string };
+  accent: { base: string; hover: string; on: string; ring: string; wash: string };
   outcome: {
     succeeded: string;
     failedInk: string;
     failedFill: string;
+    failedOn: string;
     failedWash: string;
+    successWash: string;
     successRing: string;
     failedRing: string;
   };
   knowledge: readonly [string, string, string];
+  knowledgeWash: string;
   neutralBorder: string;
   placeholder: string;
   secondary: { bg: string; on: string; hover: string };
@@ -121,6 +126,9 @@ export const derivePrimitives = (mode: ThemeName): Primitives => {
   const accentBase = against(ramp.accent, HUE.accent.c, HUE.accent.h, TEXT_MINIMUM);
   const succeeded = against(ramp.succeeded, HUE.succeeded.c, HUE.succeeded.h, TEXT_MINIMUM);
   const failedInk = against(ramp.failedInk, HUE.failed.c, HUE.failed.h, TEXT_MINIMUM);
+  const knowledge = ramp.knowledge.map((l) =>
+    against(l, HUE.knowledge.c, HUE.knowledge.h, TEXT_MINIMUM)
+  ) as unknown as readonly [string, string, string];
 
   return {
     surface: surfaces,
@@ -130,7 +138,8 @@ export const derivePrimitives = (mode: ThemeName): Primitives => {
       // Ink on the accent, so it is neutral rather than chromatic: it is
       // verified against the accent fill, not against a surface.
       on: neutral(ramp.accentOn, inkChroma),
-      ring: withAlpha(accentBase, 0.35),
+      ring: withAlpha(accentBase, RING_ALPHA),
+      wash: withAlpha(accentBase, WASH_ALPHA),
     },
     outcome: {
       succeeded,
@@ -138,13 +147,21 @@ export const derivePrimitives = (mode: ThemeName): Primitives => {
       // Section 4.4: the fill owes 3:1, not 4.5:1, so it can stay a proper
       // deep red on a dark ground instead of drifting to salmon.
       failedFill: against(ramp.failedFill, HUE.failed.c, HUE.failed.h, NON_TEXT_MINIMUM),
-      failedWash: withAlpha(failedInk, 0.1),
-      successRing: withAlpha(succeeded, 0.35),
-      failedRing: withAlpha(failedInk, 0.35),
+      // Section 4.3 rule 5: an `on` value is authored, not solved. Taken from
+      // the ramp and verified against the fill it sits on, never against a
+      // surface -- which is why it is `neutral(...)` here and not `against(...)`.
+      failedOn: neutral(ramp.failedOn, inkChroma),
+      failedWash: withAlpha(failedInk, WASH_ALPHA),
+      successWash: withAlpha(succeeded, WASH_ALPHA),
+      successRing: withAlpha(succeeded, RING_ALPHA),
+      failedRing: withAlpha(failedInk, RING_ALPHA),
     },
-    knowledge: ramp.knowledge.map((l) =>
-      against(l, HUE.knowledge.c, HUE.knowledge.h, TEXT_MINIMUM)
-    ) as unknown as readonly [string, string, string],
+    knowledge,
+    // Section 4.3 rule 6: derived from the ladder's first step, and it does
+    // not constrain that step in return. Solving an ink against its own wash
+    // is what pushed four primitives brighter than the contract asked for in
+    // version 4 of the schema (D37).
+    knowledgeWash: withAlpha(knowledge[0], WASH_ALPHA),
     neutralBorder: against(ramp.fieldBorder, inkChroma, neutralHue, NON_TEXT_MINIMUM),
     placeholder: against(ramp.placeholder, inkChroma, neutralHue, TEXT_MINIMUM),
     secondary: {
@@ -219,21 +236,20 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
   const tokens: ThemeTokens = {
     scheme: mode,
     color: {
-      primary: role("color.primary"),
-      secondary: role("color.secondary"),
-      accent: role("color.accent"),
       emphasis: role("color.emphasis"),
       heading: role("color.heading"),
     },
-    surface: primitives.surface,
-    status: {
-      general: role("status.general"),
-      active: role("status.active"),
-      completed: role("status.completed"),
-      failed: role("status.failed"),
-      unknown: role("status.unknown"),
-      on: role("status.on"),
+    // One primitive under three usage names. `color.primary` above is the
+    // same value and is deleted in 12-3b; this is what its consumers move to.
+    accent: {
+      ink: primitives.accent.base,
+      edge: primitives.accent.base,
+      fill: primitives.accent.base,
+      hover: primitives.accent.hover,
+      on: primitives.accent.on,
+      ring: primitives.accent.ring,
     },
+    surface: primitives.surface,
     // The semantic scales. These take their values straight from the
     // primitives rather than through the role map, because they are not
     // existing names being resolved -- they *are* the primitives, finally
@@ -245,14 +261,49 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
       failed: {
         ink: primitives.outcome.failedInk,
         fill: primitives.outcome.failedFill,
+        on: primitives.outcome.failedOn,
       },
     },
-    knowledge: [...primitives.knowledge],
+    knowledge: {
+      0: primitives.knowledge[0],
+      1: primitives.knowledge[1],
+      2: primitives.knowledge[2],
+      wash: primitives.knowledgeWash,
+    },
     cue: { failure: CUES.failure, negation: CUES.negation },
-    state: {
-      hoverLight: role("state.hoverLight"),
-      hoverMedium: role("state.hoverMedium"),
-      selected: role("state.selected"),
+    // The application's own voice. Error and success borrow the outcome
+    // primitives; warning and progress borrow the accent, because the accent
+    // already means "your attention is needed here". No `info`, deliberately.
+    feedback: {
+      error: {
+        ink: primitives.outcome.failedInk,
+        edge: primitives.outcome.failedInk,
+        wash: primitives.outcome.failedWash,
+      },
+      warning: {
+        ink: primitives.accent.base,
+        edge: primitives.accent.base,
+        wash: primitives.accent.wash,
+      },
+      success: {
+        ink: primitives.outcome.succeeded,
+        edge: primitives.outcome.succeeded,
+        wash: primitives.outcome.successWash,
+      },
+      progress: {
+        ink: primitives.accent.base,
+        edge: primitives.accent.base,
+        wash: primitives.accent.wash,
+      },
+    },
+    // Valenced, unlike NPC presence -- a hostile NPC is a threat to the
+    // people reading the page. `neutral` is muted ink rather than a hue,
+    // because "no particular stance" is not a colour job.
+    disposition: {
+      friendly: primitives.outcome.succeeded,
+      neutral: primitives.surface.card.onMuted,
+      hostile: primitives.outcome.failedInk,
+      unknown: primitives.knowledge[0],
     },
     icon: {
       bg: role("icon.bg"),
@@ -309,6 +360,8 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
       deleteBg: role("danger.deleteBg"),
       deleteText: role("danger.deleteText"),
       deleteHover: role("danger.deleteHover"),
+      confirmBg: role("danger.confirmBg"),
+      confirmText: role("danger.confirmText"),
     },
     font: {
       primary: role("font.primary"),
@@ -431,16 +484,17 @@ export const findBorrowedRoleFailures = (
 
   /** Ink that lands on page, card or sunken. All three, simultaneously. */
   const inkOnContent: ReadonlyArray<[string, string]> = ([
-    ["color.primary", tokens.color.primary],
-    ["color.secondary", tokens.color.secondary],
-    ["color.accent", tokens.color.accent],
     ["color.emphasis", tokens.color.emphasis],
     ["color.heading", tokens.color.heading],
-    ["status.general", tokens.status.general],
-    ["status.active", tokens.status.active],
-    ["status.completed", tokens.status.completed],
-    ["status.failed", tokens.status.failed],
-    ["status.unknown", tokens.status.unknown],
+    ["accent.ink", tokens.accent.ink],
+    ["feedback.error.ink", tokens.feedback.error.ink],
+    ["feedback.warning.ink", tokens.feedback.warning.ink],
+    ["feedback.success.ink", tokens.feedback.success.ink],
+    ["feedback.progress.ink", tokens.feedback.progress.ink],
+    ["disposition.friendly", tokens.disposition.friendly],
+    ["disposition.neutral", tokens.disposition.neutral],
+    ["disposition.hostile", tokens.disposition.hostile],
+    ["disposition.unknown", tokens.disposition.unknown],
     ["field.placeholder", tokens.field.placeholder],
     ["field.labelText", tokens.field.labelText],
     ["field.helperText", tokens.field.helperText],
@@ -468,6 +522,11 @@ export const findBorrowedRoleFailures = (
     ["field.borderFocus", tokens.field.borderFocus],
     ["field.errorBorder", tokens.field.errorBorder],
     ["field.successBorder", tokens.field.successBorder],
+    ["accent.edge", tokens.accent.edge],
+    ["feedback.error.edge", tokens.feedback.error.edge],
+    ["feedback.warning.edge", tokens.feedback.warning.edge],
+    ["feedback.success.edge", tokens.feedback.success.edge],
+    ["feedback.progress.edge", tokens.feedback.progress.edge],
   ];
 
   /** Ink whose ground is a fill rather than a surface. */
@@ -479,7 +538,14 @@ export const findBorrowedRoleFailures = (
       "action.secondary.bg",
       tokens.action.secondary.bg,
     ],
-    ["status.on", tokens.status.on, "status.active", tokens.status.active],
+    ["accent.on", tokens.accent.on, "accent.fill", tokens.accent.fill],
+    [
+      "outcome.failed.on",
+      tokens.outcome.failed.on,
+      "outcome.failed.fill",
+      tokens.outcome.failed.fill,
+    ],
+    ["danger.confirmText", tokens.danger.confirmText, "danger.confirmBg", tokens.danger.confirmBg],
     ...tokens.entityPalette.map(
       (swatch, index) =>
         ["entityInk", tokens.entityInk, `entityPalette.${index}`, swatch] as [
@@ -513,7 +579,73 @@ export const findBorrowedRoleFailures = (
     check(token, colour, ground, groundColour, TEXT_MINIMUM)
   );
 
+  /**
+   * Body ink on a washed panel -- schema section 5.6, and the one pairing rule
+   * the new scales carry.
+   *
+   * A wash has no ratio of its own (section 4.3 rule 6), so what is gated is
+   * the text that lands on it once it has a ground. The legal banner is a
+   * `wash` background, an `edge` border and **`surface.*.on` for the text**;
+   * the hue appears as the boundary and never as the text on top of itself.
+   *
+   * That rule is not a style preference. `feedback.*.ink` on its own `wash`
+   * fails AA in three of eight mode-state combinations, and *which* three
+   * differs by mode -- light's warning and progress, dark's error. An
+   * asymmetry in that shape is exactly what gets shipped by eye and caught by
+   * a gate, which is why this runs at generation time.
+   */
+  const washes: ReadonlyArray<[string, string]> = [
+    ["feedback.error.wash", tokens.feedback.error.wash],
+    ["feedback.warning.wash", tokens.feedback.warning.wash],
+    ["feedback.success.wash", tokens.feedback.success.wash],
+    ["feedback.progress.wash", tokens.feedback.progress.wash],
+    ["knowledge.wash", tokens.knowledge.wash],
+  ];
+
+  washes.forEach(([washToken, wash]) =>
+    (["page", "card", "sunken"] as const).forEach((name) => {
+      const surface = tokens.surface[name];
+      check(
+        `surface.${name}.on`,
+        surface.on,
+        `${washToken} over ${name}`,
+        flattenOnto(wash, surface.bg),
+        TEXT_MINIMUM
+      );
+    })
+  );
+
   return failures;
+};
+
+/**
+ * The pairing section 5.6 forbids, measured rather than asserted in prose.
+ *
+ * Exported because the rule is only worth having if it can be *seen* to bind:
+ * a gate nobody has watched fail is indistinguishable from one that cannot,
+ * and this one reads as a stylistic preference until the numbers are in front
+ * of you. `themes.test.ts` pins that three of these eight fall below AA.
+ */
+export const findWashPairingRatios = (
+  tokens: ThemeTokens
+): ReadonlyArray<{ scale: string; ground: string; ratio: number }> => {
+  const triples: ReadonlyArray<[string, { ink: string; wash: string }]> = [
+    ["error", tokens.feedback.error],
+    ["warning", tokens.feedback.warning],
+    ["success", tokens.feedback.success],
+    ["progress", tokens.feedback.progress],
+  ];
+
+  // Against the worst of the three content grounds, never a chosen one --
+  // the same rule the solve in section 4.3 follows.
+  return triples.map(([scale, { ink, wash }]) => {
+    const measured = (["page", "card", "sunken"] as const).map((name) => ({
+      ground: name,
+      ratio: contrastRatio(ink, flattenOnto(wash, tokens.surface[name].bg)),
+    }));
+    const worst = measured.reduce((a, b) => (b.ratio < a.ratio ? b : a));
+    return { scale, ground: worst.ground, ratio: Math.round(worst.ratio * 100) / 100 };
+  });
 };
 
 /**

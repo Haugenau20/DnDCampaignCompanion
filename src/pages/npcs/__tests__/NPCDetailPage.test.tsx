@@ -462,10 +462,20 @@ describe("NPCDetailPage", () => {
       expect(fieldValue("Race")).toBe("Maia");
     });
 
-    it("gives status a hue that agrees with the word rather than replacing it", () => {
+    it("states presence as a word, and spends no hue on it", () => {
+      // Alive was green and deceased was red, which reads a death as an error.
+      // Presence is a fact about the world with no valence, so the default
+      // state takes plain ink and the word carries it alone.
       renderPage();
       const status = screen.getByText("Alive");
-      expect(status.className).toContain("npc-status-alive");
+      expect(status.className).toContain("presence-present");
+      expect(status.className).not.toMatch(/status-|outcome-/);
+    });
+
+    it("gives disposition a hue, because a stance toward the party is valenced", () => {
+      renderPage();
+      const disposition = screen.getByText("Friendly");
+      expect(disposition.className).toContain("disposition-friendly");
     });
 
     it("renders the NPC's tags", () => {

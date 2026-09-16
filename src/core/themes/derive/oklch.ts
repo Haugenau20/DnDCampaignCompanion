@@ -112,3 +112,27 @@ export const contrastRatio = (a: string, b: string): number => {
 /** `#8D4F00` at 0.35 becomes `rgba(141, 79, 0, 0.35)`. */
 export const withAlpha = (hex: string, alpha: number): string =>
   `rgba(${parseHex(hex).join(", ")}, ${alpha})`;
+
+/**
+ * An `rgba()` wash flattened onto an opaque ground, as the hex a reader sees.
+ *
+ * Schema section 4.3 rule 6: a translucent value has no contrast ratio until
+ * it has a ground, so it cannot be measured on its own. What *can* be measured
+ * -- and what the schema actually gates -- is the body ink that lands on the
+ * composite, and that requires knowing the surface underneath. Source-over,
+ * in encoded sRGB rather than linear light, because that is what the browser
+ * does when it paints one over the other.
+ */
+export const flattenOnto = (rgba: string, groundHex: string): string => {
+  const parts = rgba.slice(rgba.indexOf("(") + 1, rgba.lastIndexOf(")")).split(",");
+  if (parts.length !== 4) {
+    throw new Error(`Not an rgba() value: "${rgba}". Only washes and rings composite.`);
+  }
+  const alpha = Number(parts[3]);
+  const over = parseHex(groundHex);
+  return `#${[0, 1, 2]
+    .map((i) => Math.round(Number(parts[i]) * alpha + over[i] * (1 - alpha)))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase()}`;
+};

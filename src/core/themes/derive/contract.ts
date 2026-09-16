@@ -64,6 +64,13 @@ export interface LightnessRamp {
   succeeded: number;
   failedInk: number;
   failedFill: number;
+  /**
+   * Ink *on* the failure fill, and the one entry that is identical in both
+   * modes. A neutral ink does not vary with the mode -- only its lightness
+   * does -- so authoring 0.975 twice is what makes `outcome.failed.on`
+   * resolve to one value on both sides rather than two that happen to agree.
+   */
+  failedOn: number;
   /** The knowledge ladder, in order. More knowledge means more contrast. */
   knowledge: readonly [number, number, number];
   secondary: number;
@@ -98,6 +105,7 @@ export const RAMP: Record<ThemeName, LightnessRamp> = {
     succeeded: 0.46,
     failedInk: 0.44,
     failedFill: 0.44,
+    failedOn: 0.975,
     knowledge: [0.48, 0.385, 0.29],
     secondary: 0.3,
     secondaryHover: 0.24,
@@ -132,6 +140,7 @@ export const RAMP: Record<ThemeName, LightnessRamp> = {
     // Lower than the ink, deliberately. Section 4.4: a red that clears 4.5:1
     // on a dark ground is pink, so failure splits by role instead.
     failedFill: 0.56,
+    failedOn: 0.975,
     knowledge: [0.65, 0.735, 0.84],
     secondary: 0.35,
     secondaryHover: 0.415,
@@ -178,6 +187,18 @@ export const AWAY_FROM_GROUND: Record<ThemeName, 1 | -1> = {
 
 /** The step the solve in section 4.3 rule 2 takes. */
 export const SOLVE_STEP = 0.005;
+
+/**
+ * The two translucent strengths, authored once rather than per role.
+ *
+ * Section 4.3 rule 6: a translucent value has no ratio until it has a ground,
+ * so these are never solved. They were previously a literal `0.35` inside the
+ * generator, which meant a wash and a ring could drift apart from the schema
+ * without anything noticing; the JSON carries both at its top level and this
+ * is the transcription of that.
+ */
+export const WASH_ALPHA = 0.1;
+export const RING_ALPHA = 0.35;
 
 /** AA for text. */
 export const TEXT_MINIMUM = 4.5;

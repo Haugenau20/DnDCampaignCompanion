@@ -81,7 +81,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
       <div className="space-y-6">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-full mt-1 error-bg">
-            <AlertTriangle className="w-5 h-5 status-warning" />
+            <AlertTriangle className="w-5 h-5 feedback-warning" />
           </div>
           <div>
             <Typography variant="h4" className="mb-2">
