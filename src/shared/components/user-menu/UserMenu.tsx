@@ -29,7 +29,7 @@ interface UserMenuProps {
  * {@link usePopoverKeys}'s Escape/focus-trap contract.
  */
 const UserMenu: React.FC<UserMenuProps> = ({ onOpenAdmin }) => {
-  const { activeGroup, activeGroupUserProfile } = useGroups();
+  const { activeGroup, activeGroupUserProfile, isAdmin } = useGroups();
 
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -54,7 +54,8 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenAdmin }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const isAdmin = activeGroupUserProfile?.role === "admin";
+  // `isAdmin` comes from `useGroups` rather than a local `role === "admin"`:
+  // one source of truth, and the hook's comparison is case-insensitive.
   const username = activeGroupUserProfile?.username ?? "";
   const groupName = activeGroup?.name ?? "";
 

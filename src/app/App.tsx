@@ -9,7 +9,13 @@ import {
   FirebaseProvider,
   SessionTimeoutWarning,
   SessionManager,
-  PrivacyNotice
+  PrivacyNotice,
+  AdminLayout,
+  AdminPeoplePage,
+  AdminCampaignsPage,
+  AdminGroupPage,
+  SignInPage,
+  JoinPage
 } from 'features/user-management';
 import { QuestProvider } from 'features/campaign-entities';
 import { NoteProvider, UsageProvider } from 'features/collaboration';
@@ -84,6 +90,23 @@ const App: React.FC = () => {
                                 <Route path="/privacy" element={<PrivacyPolicyPage />} />
                                 <Route path="/contact" element={<ContactPage />} />
                                 <Route path="/profile" element={<ProfilePage />} />
+                                {/* Admin and auth are places, not decisions
+                                    taken about the page behind them, so they
+                                    are routes. `AdminLayout` owns the band,
+                                    the sub-navigation and the three states
+                                    that decide whether any of it renders. */}
+                                <Route path="/admin" element={<AdminLayout />}>
+                                  <Route index element={<Navigate to="/admin/people" replace />} />
+                                  {/* Absolute child paths, which React Router
+                                      allows where they extend the parent's:
+                                      the route table then reads as the URLs
+                                      people actually visit. */}
+                                  <Route path="/admin/people" element={<AdminPeoplePage />} />
+                                  <Route path="/admin/campaigns" element={<AdminCampaignsPage />} />
+                                  <Route path="/admin/group" element={<AdminGroupPage />} />
+                                </Route>
+                                <Route path="/signin" element={<SignInPage />} />
+                                <Route path="/join" element={<JoinPage />} />
                               </Routes>
                             </Layout>
                           </SearchProvider>

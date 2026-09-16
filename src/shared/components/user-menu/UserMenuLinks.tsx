@@ -1,6 +1,6 @@
 // src/shared/components/user-menu/UserMenuLinks.tsx
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth, useGroups } from "features/user-management";
 import firebaseServices from "core/services/firebase";
 import Typography from "core/components/Typography";
@@ -36,8 +36,11 @@ const UserMenuLinks: React.FC<UserMenuLinksProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut } = useAuth();
-  const { activeGroupId, activeGroupUserProfile } = useGroups();
-  const isAdmin = activeGroupUserProfile?.role === "admin";
+  // `useGroups` owns this question. A local `role === "admin"` here was a
+  // second source of truth and a case-sensitive one -- the same comparison
+  // bug #702 records elsewhere -- while the hook's own `isAdmin` lower-cases
+  // before comparing.
+  const { activeGroupId, isAdmin } = useGroups();
 
   const [memberCount, setMemberCount] = useState<number | null>(null);
 
@@ -113,6 +116,27 @@ const UserMenuLinks: React.FC<UserMenuLinksProps> = ({
       >
         <Typography>Report a problem</Typography>
       </button>
+
+      {/* This menu is the only entrance to administration, and only admins
+          see it: no nav item, no badge, no entry on the campaign switcher.
+          A few visits per campaign does not earn a slot in chrome that is
+          scanned every session.
+
+          A real link, so it can be opened in a new tab, bookmarked and
+          returned to -- which is the entire argument for `/admin` being a
+          route rather than the dialog below it. Both are mounted through
+          this phase; 14-5 removes the dialog and its trigger. */}
+      {isAdmin && (
+        <Link
+          role="menuitem"
+          to="/admin/people"
+          onClick={onClose}
+          className="flex items-center gap-2 px-2 py-2 w-full text-left rounded-md dropdown-item"
+        >
+          <ShieldAlert className="w-4 h-4 flex-shrink-0 accent" />
+          <Typography>Group administration</Typography>
+        </Link>
+      )}
 
       {isAdmin && (
         <button

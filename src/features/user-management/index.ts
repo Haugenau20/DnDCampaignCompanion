@@ -38,3 +38,19 @@ export { default as AppearanceCard } from './profiles/components/AppearanceCard'
 export { default as DangerZoneCard } from './profiles/components/DangerZoneCard';
 export { default as JoinGroupDialog } from './groups/components/JoinGroupDialog';
 export { default as AdminPanel } from './admin/components/AdminPanel';
+
+// Route components
+//
+// The pages that replace the admin, sign-in and join dialogs. Both surfaces
+// are live at once through this phase: the dialogs above are retired in 14-5,
+// once every entry point has moved to a route.
+export { default as AdminLayout } from './admin/pages/AdminLayout';
+export { default as AdminPeoplePage } from './admin/pages/AdminPeoplePage';
+export { default as AdminCampaignsPage } from './admin/pages/AdminCampaignsPage';
+export { default as AdminGroupPage } from './admin/pages/AdminGroupPage';
+export { default as SignInPage } from './auth/pages/SignInPage';
+export { default as JoinPage } from './groups/pages/JoinPage';
+
+// The validated `next` destination, shared by every guard that redirects to
+// sign-in. An unvalidated one is an open redirect (D45).
+export { safeNextPath, signInPathFor, CAMPAIGN_HOME } from './auth/utils/next-path';
