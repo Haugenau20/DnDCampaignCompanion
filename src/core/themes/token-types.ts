@@ -128,9 +128,9 @@ export interface ValenceStop {
 /**
  * Ranked campaign state, good to bad, in four stops.
  *
- * Position is the meaning, exactly as in `knowledge`: a stop named `failed`
- * would tie a ramp that quests, rumours, locations and NPCs all share to one
- * of them. NPC presence has four states and takes all four stops; a scale with
+ * Position is the meaning, and the stops are deliberately unnamed: a stop
+ * called `failed` would tie a ramp that quests, rumours, locations and NPCs
+ * all share to one of them. NPC presence has four states and takes all four stops; a scale with
  * three takes three of the same four, so every directory draws from one set of
  * colours rather than each getting its own spacing.
  *
@@ -196,7 +196,7 @@ export interface ThemeTokens {
    * Red and green are pre-attentive and cannot be opted out of: a red thing
    * reads as bad whether or not that was the intent. So valence is spent only
    * where the domain actually has it -- a quest succeeds or fails -- and every
-   * other distinction takes `knowledge` instead.
+   * unranked distinction takes `disposition` instead.
    */
   outcome: OutcomePair;
 

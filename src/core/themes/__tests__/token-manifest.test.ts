@@ -245,6 +245,16 @@ describe("every variable a theme defines is either consumed or declared unused",
       "--outcome-succeeded is still painted by .progress-bar-read.",
     "--outcome-failed-fill": "As --outcome-failed-ink.",
     "--outcome-failed-on": "As --outcome-failed-ink.",
+    "--feedback-success-wash":
+      "The feedback scale defines wash and edge for all four states; only " +
+      "error and warning were ever given a banner. `.feedback-banner-success` " +
+      "and `.feedback-banner-progress` were deleted as dead (R73, D122), and " +
+      "each was the sole reader of its wash. The edges survive, because " +
+      "`.feedback-success-edge` and `.feedback-progress-edge` are applied " +
+      "directly. Kept rather than dropped from the scale: the gap is in the " +
+      "consumers, not the contract, and a future success banner should find " +
+      "its ground already defined rather than reach for the error one's.",
+    "--feedback-progress-wash": "As --feedback-success-wash.",
   };
 
   /** Every way a stylesheet can read a variable, including a style query. */

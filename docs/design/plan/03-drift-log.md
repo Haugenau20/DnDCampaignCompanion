@@ -4011,6 +4011,83 @@ the question is whether the scale is complete rather than whether the classes
 are dead.
 
 
+### D122 - R73 is closed: dead classes get a gate, and there were six
+Date: 2026-09-16   Status: landed
+
+R73 listed eight CSS classes with no consumer and declined to remove them,
+because "a class-level sweep needs every template-assembled name enumerated
+first, which is a piece of work in its own right". That enumeration turned out
+to be one pattern, and doing it found that the list was wrong in both
+directions.
+
+**Wrong by three, too many.** `icon-bg`, `feedback-progress` and
+`feedback-error-edge` all have live consumers.
+
+**Wrong by one, too few.** `typography-label` was struck off R73's list as a
+false positive, reached via `` `typography-${variant}` ``. There is no such
+template. `Typography.tsx` writes every one of its eight classes as a whole
+literal, so the ordinary scan reaches all of them and `typography-label` was
+dead exactly as first suspected. An exemption asserted rather than measured is
+the same defect as a list asserted rather than measured; it just fails silently
+instead of loudly.
+
+Six deleted: `bg-primary`, `hero-slot`, `spinner-border`, `typography-label`,
+`feedback-banner-success`, `feedback-banner-progress`.
+
+**The gate, `css-class-manifest.test.ts`**, is `token-manifest`'s shape one
+level up: every class a theme stylesheet defines must be applied by some
+non-test source, and every declared exemption must still match a class that
+exists. It covers `src/core/themes/css/` only; `globals.css`'s four utilities
+are out of scope deliberately, being Tailwind-shaped rather than design-system
+surfaces.
+
+**The second direction paid for itself before the first one did.** The
+exemption list was drafted at six prefixes, from a grep for the backtick form.
+Five of them matched no class at all, and the check said so: `affiliation-`
+names a React key rather than a class, and `npc-status-` / `npc-relationship-`
+appear only inside comments in three directories explaining that they spell
+their classes out *rather than* building the template. Prose about a pattern
+greps identically to the pattern. One real exemption survives,
+`` `button-${variant}` ``, so the exempted surface is six classes rather than
+the forty the first draft would have waved through.
+
+**The two gates compose, which is the part worth keeping.** Deleting the banner
+pair turned the class gate green and the orphan gate red: `--feedback-success-wash`
+and `--feedback-progress-wash` had no other reader. So a class deletion cannot
+quietly strand a token -- R72's check catches what this one causes. The two
+washes are now declared unused with their reason. The edges survive on their own
+classes, and the scale keeps all four states: the gap is in the consumers, not
+the contract, and a future success banner should find its ground defined rather
+than borrow the error one's. Directed by the maintainer, who was given the
+delete / keep-declared / wire-them-up choice.
+
+What this does not cover, stated so the next audit does not have to rediscover
+it: a class applied to the wrong element, and a misspelling inside the one
+exempted prefix.
+
+### D123 - Q5 is answered: the last fallback chain is removed
+Date: 2026-09-16   Status: landed
+
+D5 made every new token resolve to the token it replaced, which is what let
+Phase 1 introduce the whole model while staying screenshot-identical and what
+kept unmigrated themes correct for ten phases. Q5 asked when that scaffolding
+comes down, and proposed: once every remaining theme defines the token.
+
+That condition is met and has been since Phase 11. Medieval is gone (D40);
+light and dark each define all 139 leaves. One chain had survived the sweep --
+`.image-slot-caption` reading
+`var(--surface-sunken-on-muted, var(--surface-page-on-muted))` -- and both
+themes define `--surface-sunken-on-muted` (`#605953` light, `#AEA69F` dark), so
+the second half had been unreachable rather than load-bearing for two phases.
+Now `var(--surface-sunken-on-muted)`.
+
+Worth stating plainly, because the rule was called load-bearing for most of
+this plan's life: nothing in `src` now depends on a fallback, and a variable
+that fails to resolve fails visibly instead of quietly landing on a
+near-neighbour. `token-manifest.test.ts` is what makes that safe to say -- it
+proves every consumed variable is one a theme defines, which is precisely the
+guarantee the fallback was standing in for.
+
 ### Q19 - can an ordered collection have named siblings?
 Date: 2026-09-15   Status: open
 `TokenTree` supports a record or an array, and `knowledge` is the first token to
@@ -4021,7 +4098,7 @@ shape for "ordered, with siblings", or does a collection that grows a sibling
 stop being ordered? Decide before extraction, alongside Q1.
 
 
-Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32,
-**Q10** by D82 and D83, **Q11** by R9, **Q14** by D61, **Q16** by D103,
+Settled: **Q1** by D25, **Q5** by D123, **Q6** by D33, **Q7** by D14, **Q8** by D15,
+**Q9** by D32, **Q10** by D82 and D83, **Q11** by R9, **Q14** by D61, **Q16** by D103,
 **Q17** by D90, **Q18** by D91. The "where do rendered
 notes appear" half of Q10 is settled by D84: nowhere, for now.
