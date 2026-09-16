@@ -59,7 +59,7 @@ against its real consumers (D32), and neither introduced a colour.
 |---|---|---|---|
 | **Accent** | amber | no | Action, interactivity, anything in progress |
 | **Outcome** | green + red | **yes** | A thing that concluded: succeeded, failed |
-| **Knowledge** | slate, three steps | no | How much the party knows |
+| **Knowledge** | indigo, three steps | no | How much the party knows |
 | **Entity** | eight hues | no | Identity marks |
 | **Feedback** | amber, green, red | **yes** | The *application* talking about itself |
 | **Disposition** | green, red, neutral | **yes** | An NPC's stance toward the party |
@@ -161,7 +161,7 @@ This is the authored input. Everything in §5 is derived from it.
 | Accent | 62° | 0.115 |
 | `outcome.succeeded` | 143° | 0.085 |
 | `outcome.failed` | 22° | 0.155 |
-| `knowledge.*` | 245° | 0.034 |
+| `knowledge.*` | 265° | 0.09 |
 | `entity[i]` | 25 + 45i | 0.055 |
 
 The entity palette is a loop, not a list: eight hues at even 45° spacing
@@ -309,10 +309,10 @@ below it. "on fill" means the ink measured against the fill it sits on.
 | `outcome.failed.ink` | `#951D28` | 6.57 | `#E16566` | 4.52 |
 | `outcome.failed.fill` | `#951D28` | 6.57 | `#BE4649` | 3.01 |
 | `outcome.failed.on` | `#FDF5ED` | 7.83 on fill | `#FDF5ED` | 4.68 on fill |
-| `knowledge.0` | `#4E6070` | 5.05 | `#7E92A3` | 4.72 |
-| `knowledge.1` | `#344655` | 7.59 | `#98ACBE` | 6.49 |
-| `knowledge.2` | `#1D2D3B` | 10.96 | `#B9CDE0` | 9.3 |
-| `knowledge.wash` | `rgba(78, 96, 112, 0.1)` | — | `rgba(126, 146, 163, 0.1)` | — |
+| `knowledge.0` | `#445C90` | 5.15 | `#748EC7` | 4.65 |
+| `knowledge.1` | `#2C4173` | 7.76 | `#8EA9E3` | 6.46 |
+| `knowledge.2` | `#152857` | 11.12 | `#B1CAFF` | 9.22 |
+| `knowledge.wash` | `rgba(68, 92, 144, 0.1)` | — | `rgba(116, 142, 199, 0.1)` | — |
 | `field.border` | `#878079` | 3.03 | `#8C857D` | 4.17 |
 | `field.placeholder` | `#69625B` | 4.67 | `#9E978F` | 5.26 |
 | `field.disabledBg` | `#F4EDE6` | — | `#221D18` | — |
@@ -325,7 +325,7 @@ below it. "on fill" means the ink measured against the fill it sits on.
 | `disposition.friendly` | `#3A6437` | 5.34 | `#7EAB7A` | 5.78 |
 | `disposition.hostile` | `#951D28` | 6.57 | `#E16566` | 4.52 |
 | `disposition.neutral` | `#605953` | 5.35 | `#AEA69F` | 6.33 |
-| `disposition.unknown` | `#4E6070` | 5.05 | `#7E92A3` | 4.72 |
+| `disposition.unknown` | `#445C90` | 5.15 | `#748EC7` | 4.65 |
 
 A dash is not a gap. It marks a role the contract makes no threshold claim
 about — a wash, a ring, a hover state, a disabled ground. Asserting a number
@@ -404,7 +404,7 @@ Three rules govern this table:
 | `status.active` | `accent.base` | `#8D4F00` | `#D69253` | **12-3a** |
 | `status.completed` | `outcome.succeeded` | `#3A6437` | `#7EAB7A` | **12-3a** |
 | `status.failed` | `outcome.failedInk` | `#951D28` | `#E16566` | **12-3a** |
-| `status.unknown` | `knowledge.0` | `#4E6070` | `#7E92A3` | **12-3a** |
+| `status.unknown` | `knowledge.0` | `#445C90` | `#748EC7` | **12-3a** |
 | `status.on` | `accent.on` | `#FDF5ED` | `#120D08` | **12-3a** |
 
 **Legacy `state.*`**
@@ -544,7 +544,7 @@ needed here".
 
 | Token | Source | Light | Dark |
 |---|---|---|---|
-| `knowledge.wash` | `knowledgeWash` | `rgba(78, 96, 112, 0.1)` | `rgba(126, 146, 163, 0.1)` |
+| `knowledge.wash` | `knowledgeWash` | `rgba(68, 92, 144, 0.1)` | `rgba(116, 142, 199, 0.1)` |
 
 **`feedback.*`**
 
@@ -570,7 +570,7 @@ needed here".
 | `disposition.friendly` | `outcome.succeeded` | `#3A6437` | `#7EAB7A` |
 | `disposition.hostile` | `outcome.failedInk` | `#951D28` | `#E16566` |
 | `disposition.neutral` | `surface.card.onMuted` | `#605953` | `#AEA69F` |
-| `disposition.unknown` | `knowledge.0` | `#4E6070` | `#7E92A3` |
+| `disposition.unknown` | `knowledge.0` | `#445C90` | `#748EC7` |
 
 **`danger.confirm*`**
 
@@ -692,6 +692,19 @@ Carry these into `../plan/03-drift-log.md` as they are implemented.
   `outcome.failed.on` come from the ramp and are verified against their fill.
   Version 4 picked whichever pole contrasted best, producing `#050301` and a
   light ink in dark mode that no ramp entry could explain.
+- **D40 — The knowledge ladder is indigo, not slate.** Version 6 gave it
+  0.034 chroma at 245°, which renders as three greys; in the directory summary
+  bars the rungs sit 1.4–1.5:1 apart and read as a single band. Nothing in D26
+  required that. The ladder's constraints are that it carries no valence and
+  that its hue does not change along its length, and both hold at any chroma —
+  blue is unvalenced, so saturation costs nothing D25 or D26 protects. 265° at
+  0.09 is the most chroma an indigo can carry while all three light-mode rungs
+  stay in gamut; 245° desaturates its darkest rung above roughly 0.07, and teal
+  and cyan clip harder. Five leaves change per mode. This supersedes "v6 is
+  additive over v2" for this case: that rule existed to keep a multi-PR stack
+  coherent while Phase 12 was in flight, and Phase 12 is merged. It does **not**
+  fix the adjacency — the rungs differ only in lightness, by design, so the
+  bars separate their bands with a hairline instead.
 - **D39 — A merged handoff is history, not an instruction.** `12-2`'s handoff
   was edited to include the feedback and disposition scales after `12-2` had
   merged without them, leaving two PRs consuming names nothing had built. Work

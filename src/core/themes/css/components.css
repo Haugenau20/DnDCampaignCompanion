@@ -643,6 +643,29 @@
   }
 
   /*
+    The summary bar's bands sit flush against one another, so a band's
+    neighbour is the only ground it is ever measured against -- and no gate
+    measures that pairing, because every contrast rule in the schema is written
+    against a surface.
+
+    It bites hardest on the knowledge ladder, whose rungs differ in lightness
+    alone. That is deliberate: an unchanging hue is what lets the ladder
+    survive greyscale and colour blindness as a value ramp (schema section 2).
+    The cost is that adjacent rungs sit at roughly 1.4:1, well under the 3:1
+    a meaningful boundary wants. Raising chroma does not help, since it moves
+    all three rungs together.
+
+    So the bands are separated structurally instead. A hairline in the card's
+    own colour reads as a gap rather than as a fourth colour, and it needs
+    nothing from the scale. The quest bar wants it just as much -- active
+    against completed is 1.06:1, and it has only ever been legible because
+    those two differ in hue.
+  */
+  .roster-band + .roster-band {
+    border-left: 1px solid var(--surface-card-bg);
+  }
+
+  /*
     Anything filling up takes the accent, because the accent means "in play".
     Only a quest's bar switches to the outcome scale, and only once the quest
     has actually concluded -- a bar that ran red-to-green as it filled was the

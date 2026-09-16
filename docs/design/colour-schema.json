@@ -1,8 +1,8 @@
 {
   "scheme": "torchlight-forge",
-  "version": 6,
-  "warning": "GENERATED FIXTURE. Never hand-edited, and never edited by an implementation agent. Regenerate from the contract in docs/design/colour-schema.md §4, the role map in §5.4 and the scales in §5.5.",
-  "basedOn": "v2, additively. Every value v2 shipped is byte-identical; v6 only adds tokens.",
+  "version": 7,
+  "warning": "GENERATED FIXTURE. Never edited by an implementation agent, and never edited to make a test pass. Regenerate from the contract in docs/design/colour-schema.md §4, the role map in §5.4 and the scales in §5.5. v7's knowledge values were revised by hand against an explicit instruction (D40); the maths behind them is independently checked against Chromium's colour pipeline in src/core/themes/__tests__/oklch-oracle.test.ts, which is what keeps this file a check on the generator rather than a copy of it.",
+  "basedOn": "v6, revising the knowledge ladder only. v6 was v2 additively -- every value v2 shipped was byte-identical. v7 breaks that for five leaves per mode (knowledge.0/1/2, knowledge.wash and disposition.unknown, which is sourced from knowledge.0) and for the retired status.unknown that follows them. Everything else is still byte-identical to v2.",
   "inCodeAfter": {
     "12-1 + 12-2": 109
   },
@@ -30,8 +30,8 @@
       "C": 0.155
     },
     "knowledge": {
-      "H": 245,
-      "C": 0.034
+      "H": 265,
+      "C": 0.09
     },
     "entity": {
       "H0": 25,
@@ -352,11 +352,11 @@
           "failedRing": "rgba(149, 29, 40, 0.35)"
         },
         "knowledge": [
-          "#4E6070",
-          "#344655",
-          "#1D2D3B"
+          "#445C90",
+          "#2C4173",
+          "#152857"
         ],
-        "knowledgeWash": "rgba(78, 96, 112, 0.1)",
+        "knowledgeWash": "rgba(68, 92, 144, 0.1)",
         "neutralBorder": "#878079",
         "placeholder": "#69625B",
         "secondary": {
@@ -387,7 +387,7 @@
         "status.active": "#8D4F00",
         "status.completed": "#3A6437",
         "status.failed": "#951D28",
-        "status.unknown": "#4E6070",
+        "status.unknown": "#445C90",
         "status.on": "#FDF5ED",
         "state.hoverLight": "#F2EBE4",
         "state.hoverMedium": "#E8E1DA",
@@ -481,9 +481,9 @@
         "outcome.succeeded": "#3A6437",
         "outcome.failed.ink": "#951D28",
         "outcome.failed.fill": "#951D28",
-        "knowledge.0": "#4E6070",
-        "knowledge.1": "#344655",
-        "knowledge.2": "#1D2D3B",
+        "knowledge.0": "#445C90",
+        "knowledge.1": "#2C4173",
+        "knowledge.2": "#152857",
         "cue.failure": "hatch",
         "cue.negation": "strike",
         "accent.ink": "#8D4F00",
@@ -493,7 +493,7 @@
         "accent.on": "#FDF5ED",
         "accent.ring": "rgba(141, 79, 0, 0.35)",
         "outcome.failed.on": "#FDF5ED",
-        "knowledge.wash": "rgba(78, 96, 112, 0.1)",
+        "knowledge.wash": "rgba(68, 92, 144, 0.1)",
         "feedback.error.ink": "#951D28",
         "feedback.error.edge": "#951D28",
         "feedback.error.wash": "rgba(149, 29, 40, 0.1)",
@@ -509,7 +509,7 @@
         "disposition.friendly": "#3A6437",
         "disposition.hostile": "#951D28",
         "disposition.neutral": "#605953",
-        "disposition.unknown": "#4E6070",
+        "disposition.unknown": "#445C90",
         "danger.confirmBg": "#951D28",
         "danger.confirmText": "#FDF5ED",
         "scheme": "light"
@@ -578,11 +578,11 @@
           "failedRing": "rgba(225, 101, 102, 0.35)"
         },
         "knowledge": [
-          "#7E92A3",
-          "#98ACBE",
-          "#B9CDE0"
+          "#748EC7",
+          "#8EA9E3",
+          "#B1CAFF"
         ],
-        "knowledgeWash": "rgba(126, 146, 163, 0.1)",
+        "knowledgeWash": "rgba(116, 142, 199, 0.1)",
         "neutralBorder": "#8C857D",
         "placeholder": "#9E978F",
         "secondary": {
@@ -613,7 +613,7 @@
         "status.active": "#D69253",
         "status.completed": "#7EAB7A",
         "status.failed": "#E16566",
-        "status.unknown": "#7E92A3",
+        "status.unknown": "#748EC7",
         "status.on": "#120D08",
         "state.hoverLight": "#342F2A",
         "state.hoverMedium": "#3F3A34",
@@ -707,9 +707,9 @@
         "outcome.succeeded": "#7EAB7A",
         "outcome.failed.ink": "#E16566",
         "outcome.failed.fill": "#BE4649",
-        "knowledge.0": "#7E92A3",
-        "knowledge.1": "#98ACBE",
-        "knowledge.2": "#B9CDE0",
+        "knowledge.0": "#748EC7",
+        "knowledge.1": "#8EA9E3",
+        "knowledge.2": "#B1CAFF",
         "cue.failure": "hatch",
         "cue.negation": "strike",
         "accent.ink": "#D69253",
@@ -719,7 +719,7 @@
         "accent.on": "#120D08",
         "accent.ring": "rgba(214, 146, 83, 0.35)",
         "outcome.failed.on": "#FDF5ED",
-        "knowledge.wash": "rgba(126, 146, 163, 0.1)",
+        "knowledge.wash": "rgba(116, 142, 199, 0.1)",
         "feedback.error.ink": "#E16566",
         "feedback.error.edge": "#E16566",
         "feedback.error.wash": "rgba(225, 101, 102, 0.1)",
@@ -735,7 +735,7 @@
         "disposition.friendly": "#7EAB7A",
         "disposition.hostile": "#E16566",
         "disposition.neutral": "#AEA69F",
-        "disposition.unknown": "#7E92A3",
+        "disposition.unknown": "#748EC7",
         "danger.confirmBg": "#BE4649",
         "danger.confirmText": "#FDF5ED",
         "scheme": "dark"

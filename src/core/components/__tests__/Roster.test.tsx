@@ -71,6 +71,30 @@ describe('RosterStatusBar', () => {
     expect(empty.className).toContain('opacity-50');
   });
 
+  test('marks each band so neighbours can be separated', () => {
+    // The bands sit flush against one another, so a band's only ground is the
+    // band beside it -- and the scales do not clear 3:1 against themselves.
+    // `.roster-band` is what the hairline in components.css hangs off; see
+    // themes/__tests__/roster-band-separation.test.ts for the measurement.
+    const { container } = render(
+      <RosterStatusBar
+        total={19}
+        totalLabel="met so far"
+        segments={segments}
+        activeKey="all"
+        onSelect={jest.fn()}
+      />
+    );
+    const bands = container.querySelectorAll('.roster-band');
+    // Two, not three: the empty band is listed in the legend but drawn nowhere,
+    // so it must not contribute a separator to a bar it has no width in.
+    expect(bands).toHaveLength(2);
+    expect([...bands].map(band => band.className)).toEqual([
+      'roster-band bg-status-completed',
+      'roster-band bg-status-failed',
+    ]);
+  });
+
   test('selects a band', () => {
     const onSelect = jest.fn();
     render(
