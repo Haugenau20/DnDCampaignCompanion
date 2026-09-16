@@ -19,22 +19,22 @@ const NPCLegend: React.FC = () => {
 
   const statusTypes = [
     { 
-      icon: <Shield className="presence-present" />, 
+      icon: <Shield className="valence-0" />, 
       label: 'Alive', 
       description: 'NPC is alive' 
     },
     { 
-      icon: <Skull className="presence-absent" />, 
+      icon: <Skull className="valence-3" />, 
       label: 'Deceased', 
       description: 'NPC is no longer living' 
     },
     { 
-      icon: <AlertCircle className="knowledge-0" />, 
+      icon: <AlertCircle className="valence-2" />, 
       label: 'Missing', 
       description: 'NPC\'s whereabouts are unknown' 
     },
     { 
-      icon: <HelpCircle className="knowledge-0" />, 
+      icon: <HelpCircle className="valence-1" />, 
       label: 'Unknown', 
       description: 'NPC\'s status is uncertain' 
     }
@@ -42,22 +42,22 @@ const NPCLegend: React.FC = () => {
 
   const relationshipTypes = [
     { 
-      icon: <Heart className="npc-relationship-friendly" />, 
+      icon: <Heart className="disposition-friendly" />, 
       label: 'Friendly', 
       description: 'Ally or friend to the party' 
     },
     { 
-      icon: <Shield className="npc-relationship-neutral" />, 
+      icon: <Shield className="disposition-neutral" />, 
       label: 'Neutral', 
       description: 'Neither friend nor foe' 
     },
     { 
-      icon: <SwordIcon className="npc-relationship-hostile" />, 
+      icon: <SwordIcon className="disposition-hostile" />, 
       label: 'Hostile', 
       description: 'Enemy or opponent of the party' 
     },
     { 
-      icon: <HelpCircle className="npc-relationship-unknown" />, 
+      icon: <HelpCircle className="disposition-unknown" />, 
       label: 'Unknown', 
       description: 'Relationship not yet determined' 
     }

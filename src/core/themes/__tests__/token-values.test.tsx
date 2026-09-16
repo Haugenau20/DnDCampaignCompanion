@@ -110,15 +110,35 @@ describe("theme token values", () => {
       const revalued: Record<string, { to: string }> =
         (renameMap.revalued ?? {})[themeName] ?? {};
 
+      // A deleted variable has no value left to compare against, so it is
+      // excluded here and held to a different promise by the test below: that
+      // it really is gone. Everything else stays locked to the baseline.
+      const deleted: Record<string, string> = renameMap.deleted ?? {};
+
       const expectedByOldName: TokenMap = {};
       const actualByOldName: TokenMap = {};
-      Object.keys(expected).sort().forEach((oldName) => {
-        expectedByOldName[oldName] =
-          oldName in revalued ? revalued[oldName].to : expected[oldName];
-        actualByOldName[oldName] = actual[resolve(oldName)] ?? "<MISSING>";
-      });
+      Object.keys(expected)
+        .filter((oldName) => !(oldName in deleted))
+        .sort()
+        .forEach((oldName) => {
+          expectedByOldName[oldName] =
+            oldName in revalued ? revalued[oldName].to : expected[oldName];
+          actualByOldName[oldName] = actual[resolve(oldName)] ?? "<MISSING>";
+        });
       expect(actualByOldName).toEqual(expectedByOldName);
     });
+  });
+
+  test("every variable the map calls deleted really is gone", () => {
+    // The assertion that keeps `deleted` from becoming an escape hatch. Listing
+    // a name there excludes it from the value comparison above, so if the name
+    // were still being applied -- with a quietly changed value -- the exclusion
+    // would hide it. It cannot: a deleted name must be absent from both themes.
+    const renameMap = JSON.parse(fs.readFileSync(RENAME_MAP, "utf8"));
+    const stillApplied = Object.keys(renameMap.deleted ?? {}).filter(
+      (name) => THEME_NAMES.some((n) => name in current[n])
+    );
+    expect(stillApplied).toEqual([]);
   });
 
   test("the rename map accounts for every pre-rename variable", () => {
@@ -128,6 +148,7 @@ describe("theme token values", () => {
       (name) =>
         !(name in renameMap.renamed) &&
         !(name in renameMap.retired) &&
+        !(name in (renameMap.deleted ?? {})) &&
         !(name in current.light)
     );
     expect(unaccounted).toEqual([]);

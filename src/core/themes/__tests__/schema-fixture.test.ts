@@ -84,8 +84,8 @@ describe("generated themes equal the schema fixture", () => {
   );
 
   test("the fixture is the version this generator was written against", () => {
-    expect(schema.version).toBe(7);
-    expect(schema.leafCount).toBe(135);
+    expect(schema.version).toBe(10);
+    expect(schema.leafCount).toBe(139);
   });
 
   test("every landed retirement names tokens the schema actually marked", () => {
@@ -138,26 +138,13 @@ describe("generated themes equal the schema fixture", () => {
       expect(generated).toEqual(expected);
     });
 
-    test("the knowledge ladder is monotonic in contrast against every content ground", () => {
-      // Schema gate 6. The ladder means "more knowledge", so it has to *read*
-      // as more in both modes -- darker in light, lighter in dark -- and that
-      // is a property of the ordering, which no per-token threshold can check.
-      const grounds = [
-        generated["surface.page.bg"],
-        generated["surface.card.bg"],
-        generated["surface.sunken.bg"],
-      ];
-      const ratios = [0, 1, 2].map((i) =>
-        Math.min(...grounds.map((g) => contrastRatio(generated[`knowledge.${i}`], g)))
-      );
-      expect({
-        ratios: ratios.map((r) => Math.round(r * 100) / 100),
-        rising: ratios[0] < ratios[1] && ratios[1] < ratios[2],
-      }).toEqual({
-        ratios: ratios.map((r) => Math.round(r * 100) / 100),
-        rising: true,
-      });
-    });
+    /*
+     * The ladder's monotonicity gate is gone with the ladder (D41, D120). It
+     * checked that contrast rose with the index so that "more knowledge" read
+     * as more; nothing in the tree carries that property now, because the
+     * valence ramp orders itself by hue instead. Its equivalent gate is "the
+     * hues run one way" in `valence-ramp.test.ts`.
+     */
   });
 });
 

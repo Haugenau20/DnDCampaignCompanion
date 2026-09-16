@@ -44,16 +44,12 @@ module.exports = {
         // replace was named after appearance, which is what let a location
         // borrow the quest scale and render "visited" as a win condition.
         // Schema section 3 is the mapping table.
-        'outcome-active': 'var(--accent-fill)',
-        'outcome-succeeded': 'var(--outcome-succeeded)',
-        'outcome-failed': 'var(--outcome-failed-fill)',
-        'knowledge-0': 'var(--knowledge-0)',
-        'knowledge-1': 'var(--knowledge-1)',
-        'knowledge-2': 'var(--knowledge-2)',
+        'valence-0': 'var(--valence-0-fill)',
+        'valence-1': 'var(--valence-1-fill)',
+        'valence-2': 'var(--valence-2-fill)',
+        'valence-3': 'var(--valence-3-fill)',
         // Presence carries no hue: a death is a fact, not an error. These are
         // the ink ramp, so the segments differ by value rather than colour.
-        'presence-present': 'var(--surface-page-on)',
-        'presence-absent': 'var(--surface-page-on-muted)',
         'accent-fill': 'var(--accent-fill)',
         
         // Button backgrounds
@@ -78,7 +74,6 @@ module.exports = {
         placeholder: 'var(--field-placeholder)',
         
         // Ink on a filled failure. `status-on` is retired with `status.*`.
-        'outcome-failed-on': 'var(--outcome-failed-on)',
         
         // Button text colors
         'button-primary': 'var(--action-primary-text)',

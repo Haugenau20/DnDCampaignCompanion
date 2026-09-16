@@ -54,13 +54,34 @@ const STATUS_GROUPS: { key: QuestStatus; title: string }[] = [
 /** Segment colour per status, reusing the same tokens as the row chip and bar. */
 /** Quest state, in the shared status vocabulary. */
 /**
- * A quest is the one domain object in this application that genuinely
- * concludes, so it is the one that gets the valenced scale. Schema section 3.
+ * An NPC's stance, as a class name.
+ *
+ * Spelled out rather than built as `npc-relationship-${npc.relationship}`.
+ * That template is how this exact family stayed in the tree after 12-3a
+ * deleted it: the compiler cannot see a string it assembles at runtime and
+ * grep cannot either, so four icons rendered with no colour at all and nothing
+ * failed. `Partial` keeps the fallback type-checked.
+ */
+const DISPOSITION_CLASS: Partial<Record<string, string>> = {
+  friendly: 'disposition-friendly',
+  neutral: 'disposition-neutral',
+  hostile: 'disposition-hostile',
+  unknown: 'disposition-unknown',
+};
+
+/**
+ * Quest state on the shared valence ramp, best to worst.
+ *
+ * Completed is stop 0 and failed is stop 3 -- the ends of the ramp, which
+ * resolve to the same values `outcome.succeeded` and `outcome.failed.ink`
+ * always had, so a quest looks exactly as it did. Active is the middle rather
+ * than the accent now, because the accent means "interactive" everywhere else
+ * and a quest that is merely open is not an action.
  */
 const STATUS_TONE: Record<QuestStatus, RosterStatusTone> = {
-  active: 'active',
-  completed: 'succeeded',
-  failed: 'failed',
+  completed: 'valence-0',
+  active: 'valence-1',
+  failed: 'valence-3',
 };
 
 /**
@@ -72,15 +93,15 @@ const STATUS_TONE: Record<QuestStatus, RosterStatusTone> = {
  * now been bitten by exactly that twice.
  */
 const PROGRESS_FILL: Record<QuestStatus, string> = {
-  active: 'progress-bar-active',
+  active: 'progress-bar-open',
   completed: 'progress-bar-succeeded',
   failed: 'progress-bar-failed',
 };
 
 const STATUS_COLOR: Record<QuestStatus, string> = {
-  active: 'bg-outcome-active',
-  completed: 'bg-outcome-succeeded',
-  failed: 'bg-outcome-failed',
+  active: 'bg-valence-1',
+  completed: 'bg-valence-0',
+  failed: 'bg-valence-3',
 };
 
 /**
@@ -119,8 +140,11 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
     const count = (status: QuestStatus) =>
       quests.filter(q => q.status === status).length;
     return [
-      { key: 'active', label: 'active', count: count('active'), colorClass: STATUS_COLOR.active },
+      // Best to worst, left to right, like every other directory's bar. The
+      // grouped sections below keep active first, because a quest log is read
+      // for what is still open; the bar is read as a ranking.
       { key: 'completed', label: 'completed', count: count('completed'), colorClass: STATUS_COLOR.completed },
+      { key: 'active', label: 'active', count: count('active'), colorClass: STATUS_COLOR.active },
       { key: 'failed', label: 'failed', count: count('failed'), colorClass: STATUS_COLOR.failed },
     ];
   }, [quests]);
@@ -442,7 +466,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                                     centered={false}
                                   >
                                     <div className="flex items-start gap-2 text-left">
-                                      <Users size={16} className={clsx('mt-1', `npc-relationship-${npc.relationship}`)} />
+                                      <Users size={16} className={clsx('mt-1', DISPOSITION_CLASS[npc.relationship] ?? 'disposition-unknown')} />
                                       <div className="flex-1">
                                         <Typography variant="body-sm" className="font-medium">
                                           {npc.name}

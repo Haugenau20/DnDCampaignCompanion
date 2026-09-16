@@ -32,7 +32,7 @@ export interface RosterSegment {
   key: string;
   label: string;
   count: number;
-  /** Tailwind background utility backed by a theme token, e.g. bg-knowledge-0. */
+  /** Tailwind background utility backed by a theme token, e.g. bg-valence-0. */
   colorClass: string;
 }
 
@@ -77,7 +77,7 @@ export const RosterStatusBar: React.FC<RosterStatusBarProps> = ({
 
       <div className="flex-1 flex flex-col gap-2 min-w-0">
         <div
-          className={clsx('flex h-[7px] rounded-full overflow-hidden', `progress-container`)}
+          className={clsx('flex h-[7px] rounded-full roster-bands', `progress-container`)}
         >
           {present.map(segment => (
             <span
@@ -428,36 +428,32 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
  * (this NPC died) is not an error.
  */
 export type RosterStatusTone =
-  // Outcome -- quests only.
-  | 'active'
-  | 'succeeded'
-  | 'failed'
-  // Knowledge -- the shared ladder. Rising index means more knowledge.
-  | 'knowledge-0'
-  | 'knowledge-1'
-  | 'knowledge-2'
-  // Disposition -- an NPC's stance.
+  // Valence -- the shared ramp, good to bad. Every directory that ranks its
+  // states draws from this, which is what makes the four pages read as one
+  // system. NPC presence takes all four; a three-state scale takes three of
+  // the same four, so no directory carries a spacing of its own.
+  | 'valence-0'
+  | 'valence-1'
+  | 'valence-2'
+  | 'valence-3'
+  // Disposition -- an NPC's stance toward the party. Unranked, so it keeps its
+  // own scale: friendly and hostile borrow the ramp's ends because a stance
+  // genuinely is good or bad, but neutral and unknown are not points between
+  // them and must not be painted as though they were.
   | 'friendly'
   | 'neutral'
   | 'hostile'
-  | 'unsure'
-  // Presence, and anything else that should simply be read rather than scanned.
-  | 'present'
-  | 'absent';
+  | 'unsure';
 
 const STATUS_TONE: Record<RosterStatusTone, string> = {
-  active: 'outcome-active',
-  succeeded: 'outcome-succeeded',
-  failed: 'outcome-failed',
-  'knowledge-0': 'knowledge-0',
-  'knowledge-1': 'knowledge-1',
-  'knowledge-2': 'knowledge-2',
+  'valence-0': 'valence-0',
+  'valence-1': 'valence-1',
+  'valence-2': 'valence-2',
+  'valence-3': 'valence-3',
   friendly: 'disposition-friendly',
   neutral: 'disposition-neutral',
   hostile: 'disposition-hostile',
   unsure: 'disposition-unknown',
-  present: 'presence-present',
-  absent: 'presence-absent',
 };
 
 export interface RosterStatusProps {

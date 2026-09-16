@@ -59,7 +59,7 @@ against its real consumers (D32), and neither introduced a colour.
 |---|---|---|---|
 | **Accent** | amber | no | Action, interactivity, anything in progress |
 | **Outcome** | green + red | **yes** | A thing that concluded: succeeded, failed |
-| **Knowledge** | indigo, three steps | no | How much the party knows |
+| **Valence** | green through gold to red, four stops | **yes** | Ranked campaign state, good to bad |
 | **Entity** | eight hues | no | Identity marks |
 | **Feedback** | amber, green, red | **yes** | The *application* talking about itself |
 | **Disposition** | green, red, neutral | **yes** | An NPC's stance toward the party |
@@ -112,18 +112,19 @@ green, and was available to borrow. So the scales are now named after meaning:
 
 | Domain state | Token | Hue |
 |---|---|---|
-| Quest active | `accent` | amber — it is the thing you can act on |
-| Quest completed | `outcome.succeeded` | green |
-| Quest failed | `outcome.failed` | red + hatch cue |
-| Location known | `knowledge.0` | ladder, step 0 |
-| Location explored | `knowledge.1` | ladder, step 1 |
-| Location visited | `knowledge.2` | ladder, step 2 |
-| Rumour unconfirmed | `knowledge.0` | a rumour is knowledge, not outcome |
-| Rumour confirmed | `knowledge.2` | fully known |
-| Rumour false | `knowledge.2` + strike cue | also fully known, and negated |
-| NPC alive | `surface.*.on` | the default state needs no encoding |
-| NPC deceased | `surface.*.onMuted` + strike cue | a fact, not an error |
-| NPC missing | `knowledge.0` | genuinely uncertain |
+| Quest completed | `valence.0` | green — the ramp's best end |
+| Quest active | `valence.1` | gold — still open |
+| Quest failed | `valence.3` + hatch cue | red — the ramp's worst end |
+| Location explored | `valence.0` | green |
+| Location visited | `valence.1` | gold |
+| Location known | `valence.2` | amber — the least of three, not a failure |
+| Rumour confirmed | `valence.0` | green |
+| Rumour unconfirmed | `valence.1` | gold |
+| Rumour false | `valence.3` + strike cue | red, and negated |
+| NPC alive | `valence.0` | green |
+| NPC unknown | `valence.1` | no record of them |
+| NPC missing | `valence.2` | known to be lost |
+| NPC deceased | `valence.3` + strike cue | red — the worst end |
 | NPC friendly / hostile | `disposition.*` | green / red — see below |
 | Save or request failed | `feedback.error` | the app, not the campaign |
 | Unsaved changes, session expiring, quota near | `feedback.warning` | amber: act soon |
@@ -143,10 +144,11 @@ toward the party, which has valence from the only point of view the record
 keeps. A hostile NPC is genuinely a threat to the people reading the page. It
 is still not an `outcome` — nothing concluded — so it gets its own name.
 
-**The ladder runs in one direction in both modes.** More knowledge means more
-contrast against the ground — darker in light, lighter in dark. The hue never
-changes, so the ladder survives greyscale, print, and colour blindness as a
-value ramp rather than a hue difference.
+**The knowledge ladder is gone** (D43). It ran one direction in both modes and
+survived greyscale as a value ramp, which was its whole merit, and it had
+exactly three consumers: locations, rumours and NPC presence. All three are
+ranked now and moved to the valence ramp (D41, D120), leaving the ladder with
+nothing to carry. Its first rung survives as `disposition.unknown`, unchanged.
 
 ## 4. The contract
 
@@ -161,7 +163,8 @@ This is the authored input. Everything in §5 is derived from it.
 | Accent | 62° | 0.115 |
 | `outcome.succeeded` | 143° | 0.085 |
 | `outcome.failed` | 22° | 0.155 |
-| `knowledge.*` | 265° | 0.09 |
+| `disposition.unknown` | 265° | 0.09 |
+| `valence[i]` | 143 / 102.67 / 62.33 / 22° | 0.085 / 0.1083 / 0.1317 / 0.155 |
 | `entity[i]` | 25 + 45i | 0.055 |
 
 The entity palette is a loop, not a list: eight hues at even 45° spacing
@@ -188,7 +191,7 @@ appending a ninth is safe, reordering changes every existing mark.
 | `outcome.failed.fill` | 0.44 | 0.56 |
 | `outcome.failed.on` | 0.975 | 0.975 |
 | `accent.on` | 0.975 | 0.165 |
-| `knowledge.0 / .1 / .2` | 0.48 / 0.385 / 0.29 | 0.65 / 0.735 / 0.84 |
+| `disposition.unknown` | 0.48 | 0.65 |
 | entity | 0.435 | 0.395 |
 | entity ink | 0.965 | 0.955 |
 
@@ -309,10 +312,14 @@ below it. "on fill" means the ink measured against the fill it sits on.
 | `outcome.failed.ink` | `#951D28` | 6.57 | `#E16566` | 4.52 |
 | `outcome.failed.fill` | `#951D28` | 6.57 | `#BE4649` | 3.01 |
 | `outcome.failed.on` | `#FDF5ED` | 7.83 on fill | `#FDF5ED` | 4.68 on fill |
-| `knowledge.0` | `#445C90` | 5.15 | `#748EC7` | 4.65 |
-| `knowledge.1` | `#2C4173` | 7.76 | `#8EA9E3` | 6.46 |
-| `knowledge.2` | `#152857` | 11.12 | `#B1CAFF` | 9.22 |
-| `knowledge.wash` | `rgba(68, 92, 144, 0.1)` | — | `rgba(116, 142, 199, 0.1)` | — |
+| `valence.0.ink` | `#3A6437` | 5.36 | `#7EAB7A` | 5.78 |
+| `valence.0.fill` | `#5C8759` | 3.23 | `#568153` | 3.37 |
+| `valence.1.ink` | `#615800` | 5.64 | `#A59B45` | 5.33 |
+| `valence.1.fill` | `#877C22` | 3.32 | `#81761A` | 3.28 |
+| `valence.2.ink` | `#7C4500` | 6.05 | `#CC7F30` | 4.8 |
+| `valence.2.fill` | `#B06505` | 3.48 | `#A86000` | 3.13 |
+| `valence.3.ink` | `#951D28` | 6.59 | `#E16566` | 4.52 |
+| `valence.3.fill` | `#C54C4F` | 3.62 | `#BE4649` | 3.01 |
 | `field.border` | `#878079` | 3.03 | `#8C857D` | 4.17 |
 | `field.placeholder` | `#69625B` | 4.67 | `#9E978F` | 5.26 |
 | `field.disabledBg` | `#F4EDE6` | — | `#221D18` | — |
@@ -404,8 +411,7 @@ Three rules govern this table:
 | `status.active` | `accent.base` | `#8D4F00` | `#D69253` | **12-3a** |
 | `status.completed` | `outcome.succeeded` | `#3A6437` | `#7EAB7A` | **12-3a** |
 | `status.failed` | `outcome.failedInk` | `#951D28` | `#E16566` | **12-3a** |
-| `status.unknown` | `knowledge.0` | `#445C90` | `#748EC7` | **12-3a** |
-| `status.on` | `accent.on` | `#FDF5ED` | `#120D08` | **12-3a** |
+| `status.unknown` | `status.on` | `accent.on` | `#FDF5ED` | `#120D08` | **12-3a** |
 
 **Legacy `state.*`**
 
@@ -540,12 +546,6 @@ needed here".
 |---|---|---|---|
 | `outcome.failed.on` | `outcome.failedOn` | `#FDF5ED` | `#FDF5ED` |
 
-**`knowledge.wash`**
-
-| Token | Source | Light | Dark |
-|---|---|---|---|
-| `knowledge.wash` | `knowledgeWash` | `rgba(68, 92, 144, 0.1)` | `rgba(116, 142, 199, 0.1)` |
-
 **`feedback.*`**
 
 | Token | Source | Light | Dark |
@@ -570,8 +570,7 @@ needed here".
 | `disposition.friendly` | `outcome.succeeded` | `#3A6437` | `#7EAB7A` |
 | `disposition.hostile` | `outcome.failedInk` | `#951D28` | `#E16566` |
 | `disposition.neutral` | `surface.card.onMuted` | `#605953` | `#AEA69F` |
-| `disposition.unknown` | `knowledge.0` | `#445C90` | `#748EC7` |
-
+| `disposition.unknown` 
 **`danger.confirm*`**
 
 | Token | Source | Light | Dark |
@@ -692,6 +691,49 @@ Carry these into `../plan/03-drift-log.md` as they are implemented.
   `outcome.failed.on` come from the ramp and are verified against their fill.
   Version 4 picked whichever pole contrasted best, producing `#050301` and a
   light ink in dark mode that no ramp entry could explain.
+- **D41 — Ranked campaign state shares one valence ramp.** Directed by the
+  maintainer, and it reverses D26, D27 and D34 for the directories: quests,
+  rumours, locations and NPC presence are now ranked good-to-bad on one
+  four-stop ramp rather than split across `outcome`, `knowledge` and
+  `presence`. Four is the most states any one scale has, and a scale with
+  three takes three of the same four rather than getting its own spacing --
+  an earlier cut used five stops and forced exactly that asymmetry, giving
+  NPC presence two middles no other page showed. The reason is legibility, not semantics. The semantic split was
+  correct and shipped three directories in greys that could not be ranked at a
+  glance, which is a real cost paid for a distinction most readers were not
+  making. What D26 bought is not thrown away: the ramp is **positional**, no
+  stop is named `completed`, and `disposition` still exists for the one thing
+  that genuinely is not ranked — so the specific defect D26 fixed, a green
+  named for success being available to borrow, cannot recur. The accessibility cost is real and is carried by the cues from `12-5`:
+  red/green is the common confusion axis, and every state is already labelled
+  with a word, a failed bar is hatched, and a negated one is struck.
+  Which three a three-state scale takes is a judgement about its domain, not
+  about the ramp: quests and rumours run to the red because a quest can fail
+  and a rumour can be disproved, while **locations stop at stop 2**, since a
+  place merely heard of is only the least of three degrees of familiarity and
+  painting it as a failure would repeat, quietly, the bug this phase opened by
+  fixing.
+  The ends of the ramp **are** `outcome.succeeded` and `outcome.failed.ink` —
+  solved from those roles' own lightness and chroma, so a quest does not change
+  colour — and `outcome` stays for `disposition`, `feedback` and the fields.
+  Stops carry an `ink` and a `fill`, per §4.4: a bar is not text and owes 3:1,
+  which is the whole reason the middle of the ramp is gold rather than olive.
+- **D43 — The knowledge ladder is deleted.** It had exactly three consumers
+  — locations, rumours and NPC presence — and D41 moved all three onto the
+  valence ramp, so the scale had nothing left to carry. This amends D26: there
+  are no longer *two* semantic scales, there is a ranked ramp and an unranked
+  `disposition`. What D26 was really protecting against survives untouched,
+  because that was never the ladder — it was a token named `status.completed`
+  being green and available to borrow, and the ramp's positional names answer
+  it. The ladder's first rung lives on as `disposition.unknown` at the same
+  hue, chroma and lightness, so nothing on screen changed; rungs 1 and 2 and
+  `knowledge.wash` are gone. Its monotonicity gate (schema gate 6) went with
+  it: the ramp carries its ordering in hue, not in contrast, and the equivalent
+  check is "the hues run one way" in `valence-ramp.test.ts`.
+- **D42 — Location ranking is explored, then visited, then known.** The
+  knowledge ladder had `visited` above `explored`, which reads backwards: more
+  ground is covered in a place that was explored than in one merely passed
+  through. Wrong independently of the colour question, and fixed here.
 - **D40 — The knowledge ladder is indigo, not slate.** Version 6 gave it
   0.034 chroma at 245°, which renders as three greys; in the directory summary
   bars the rungs sit 1.4–1.5:1 apart and read as a single band. Nothing in D26

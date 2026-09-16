@@ -71,11 +71,16 @@ const DISPOSITION_TONE: Partial<Record<string, RosterStatusTone>> = {
   unknown: 'unsure',
 };
 
+// NPC presence is the one scale with four ranks, so it takes four stops
+// instead of the three a rumour or a location needs. It keeps the ramp's ends
+// -- alive is the same green a completed quest is, deceased the same red a
+// failed one is -- and spends stops 1 and 3 on the two middles, which is what
+// finally separates "we have no record of them" from "we know they are lost".
 const STATUS_TONE: Partial<Record<string, RosterStatusTone>> = {
-  alive: 'present',
-  deceased: 'absent',
-  missing: 'knowledge-0',
-  unknown: 'knowledge-0',
+  alive: 'valence-0',
+  unknown: 'valence-1',
+  missing: 'valence-2',
+  deceased: 'valence-3',
 };
 
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({
@@ -150,13 +155,11 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   const statusSegments: RosterSegment[] = useMemo(() => {
     const count = (status: string) => npcs.filter(npc => npc.status === status).length;
     return [
-      // Presence differs by *value*, not hue: plain ink, muted ink, and only
-      // genuine uncertainty takes the ladder's first rung. Green for alive and
-      // red for deceased was the bar reading a death as an error.
-      { key: 'alive', label: 'alive', count: count('alive'), colorClass: 'bg-presence-present' },
-      { key: 'deceased', label: 'deceased', count: count('deceased'), colorClass: 'bg-presence-absent' },
-      { key: 'missing', label: 'missing', count: count('missing'), colorClass: 'bg-knowledge-0' },
-      { key: 'unknown', label: 'unrecorded', count: count('unknown'), colorClass: 'bg-knowledge-0' },
+      // Best to worst, left to right, like every other directory's bar.
+      { key: 'alive', label: 'alive', count: count('alive'), colorClass: 'bg-valence-0' },
+      { key: 'unknown', label: 'unknown', count: count('unknown'), colorClass: 'bg-valence-1' },
+      { key: 'missing', label: 'missing', count: count('missing'), colorClass: 'bg-valence-2' },
+      { key: 'deceased', label: 'deceased', count: count('deceased'), colorClass: 'bg-valence-3' },
     ];
   }, [npcs]);
 
@@ -365,7 +368,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                     </div>
 
                     <RosterStatus
-                      tone={STATUS_TONE[npc.status] ?? 'knowledge-0'}
+                      tone={STATUS_TONE[npc.status] ?? 'valence-1'}
                       negated={npc.status === 'deceased'}
                     >
                       {npc.status.charAt(0).toUpperCase() + npc.status.slice(1)}

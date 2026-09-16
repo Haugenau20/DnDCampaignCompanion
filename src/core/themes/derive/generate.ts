@@ -37,8 +37,9 @@ export interface Primitives {
     successRing: string;
     failedRing: string;
   };
-  knowledge: readonly [string, string, string];
-  knowledgeWash: string;
+  dispositionUnknown: string;
+  /** Five stops, good to bad, each with an ink and a fill. */
+  valence: readonly { ink: string; fill: string }[];
   neutralBorder: string;
   placeholder: string;
   secondary: { bg: string; on: string; hover: string };
@@ -126,9 +127,33 @@ export const derivePrimitives = (mode: ThemeName): Primitives => {
   const accentBase = against(ramp.accent, HUE.accent.c, HUE.accent.h, TEXT_MINIMUM);
   const succeeded = against(ramp.succeeded, HUE.succeeded.c, HUE.succeeded.h, TEXT_MINIMUM);
   const failedInk = against(ramp.failedInk, HUE.failed.c, HUE.failed.h, TEXT_MINIMUM);
-  const knowledge = ramp.knowledge.map((l) =>
-    against(l, HUE.knowledge.c, HUE.knowledge.h, TEXT_MINIMUM)
-  ) as unknown as readonly [string, string, string];
+  const dispositionUnknown = against(
+    ramp.dispositionUnknown,
+    HUE.dispositionUnknown.c,
+    HUE.dispositionUnknown.h,
+    TEXT_MINIMUM
+  );
+
+  /*
+   * The valence ramp. Both ends are pinned to the outcome pair by construction
+   * rather than by coincidence: the ink lightness interpolates from the one
+   * `succeeded` was solved from to the one `failedInk` was, and the chromas at
+   * either end are those two roles' own. So stop 0 *is* `outcome.succeeded`
+   * and stop 4 *is* `outcome.failedInk`, and a quest keeps its colour when it
+   * moves onto the ramp.
+   *
+   * Fills solve against 3:1 rather than 4.5:1 -- section 4.4's split, the same
+   * one `outcome.failed` carries. On a cream ground that is the difference
+   * between a gold middle and an olive one.
+   */
+  const valence = HUE.valence.hues.map((h, index) => {
+    const t = index / (HUE.valence.hues.length - 1);
+    const inkLightness = ramp.succeeded + (ramp.failedInk - ramp.succeeded) * t;
+    return {
+      ink: against(inkLightness, HUE.valence.chromas[index], h, TEXT_MINIMUM),
+      fill: against(ramp.valenceFill, HUE.valence.chromas[index], h, NON_TEXT_MINIMUM),
+    };
+  });
 
   return {
     surface: surfaces,
@@ -156,12 +181,12 @@ export const derivePrimitives = (mode: ThemeName): Primitives => {
       successRing: withAlpha(succeeded, RING_ALPHA),
       failedRing: withAlpha(failedInk, RING_ALPHA),
     },
-    knowledge,
+    dispositionUnknown,
+    valence,
     // Section 4.3 rule 6: derived from the ladder's first step, and it does
     // not constrain that step in return. Solving an ink against its own wash
     // is what pushed four primitives brighter than the contract asked for in
     // version 4 of the schema (D37).
-    knowledgeWash: withAlpha(knowledge[0], WASH_ALPHA),
     neutralBorder: against(ramp.fieldBorder, inkChroma, neutralHue, NON_TEXT_MINIMUM),
     placeholder: against(ramp.placeholder, inkChroma, neutralHue, TEXT_MINIMUM),
     secondary: {
@@ -181,7 +206,7 @@ export const derivePrimitives = (mode: ThemeName): Primitives => {
   };
 };
 
-/** Walks a dotted path into the primitives. `knowledge.0` indexes an array. */
+/** Walks a dotted path into the primitives. `valence.0` indexes an array. */
 const lookup = (primitives: Primitives, path: string): string => {
   const value = path.split(".").reduce<unknown>((node, segment) => {
     if (node === undefined || node === null) return undefined;
@@ -264,11 +289,14 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
         on: primitives.outcome.failedOn,
       },
     },
-    knowledge: {
-      0: primitives.knowledge[0],
-      1: primitives.knowledge[1],
-      2: primitives.knowledge[2],
-      wash: primitives.knowledgeWash,
+    // Ranked campaign state, good to bad. A record rather than an array for
+    // `flattenTokens` emits index-suffixed variables for arrays and would drop
+    // the ink/fill pair hung off each stop, so this is a record, not an array.
+    valence: {
+      0: primitives.valence[0],
+      1: primitives.valence[1],
+      2: primitives.valence[2],
+      3: primitives.valence[3],
     },
     cue: { failure: CUES.failure, negation: CUES.negation },
     // The application's own voice. Error and success borrow the outcome
@@ -303,7 +331,7 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
       friendly: primitives.outcome.succeeded,
       neutral: primitives.surface.card.onMuted,
       hostile: primitives.outcome.failedInk,
-      unknown: primitives.knowledge[0],
+      unknown: primitives.dispositionUnknown,
     },
     icon: {
       bg: role("icon.bg"),
@@ -599,7 +627,6 @@ export const findBorrowedRoleFailures = (
     ["feedback.warning.wash", tokens.feedback.warning.wash],
     ["feedback.success.wash", tokens.feedback.success.wash],
     ["feedback.progress.wash", tokens.feedback.progress.wash],
-    ["knowledge.wash", tokens.knowledge.wash],
   ];
 
   washes.forEach(([washToken, wash]) =>

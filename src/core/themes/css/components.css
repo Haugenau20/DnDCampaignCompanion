@@ -486,50 +486,39 @@
     font-weight: 500;
   }
 
-  /* A thing that concluded. Quests only -- this is the one valenced scale. */
-  .outcome-active {
-    color: var(--accent-ink);
-  }
-
-  .outcome-succeeded {
-    color: var(--outcome-succeeded);
-  }
-
-  .outcome-failed {
-    color: var(--outcome-failed-ink);
-  }
-
   /*
-    How much the party knows, as a ladder. Contrast against the ground rises
-    with the index in both modes, so it survives greyscale and colour blindness
-    as a value ramp rather than three hues a reader is asked to rank. The steps
-    are numbered rather than named: a step called `visited` would tie a ladder
-    that locations *and* rumours use to one of them.
+    Ranked campaign state, good to bad, in four stops.
+
+    Every directory that ranks its states draws from this one ramp, which is
+    the whole point: "the best case" is the same green on the quest page, the
+    rumour page, the location page and the NPC page, and "the worst case" is
+    the same red. A three-state scale takes stops 0, 2 and 4; NPC presence,
+    which has four, takes 0, 1, 3 and 4.
+
+    The ends are the outcome pair. Not aliased to it -- the contract solves
+    them from the same lightness and chroma, so they arrive at the same bytes
+    (see valence-ramp.test.ts, which checks it rather than trusting it).
+
+    `ink` is the state as a word and owes 4.5:1. `fill` paints a bar segment or
+    a legend dot, which is not text and owes 3:1 -- and that lower threshold is
+    what lets the middle of the ramp be gold instead of olive, because at the
+    lightness AA demands on a cream ground sRGB has no chroma to give near
+    yellow.
   */
-  .knowledge-0 {
-    color: var(--knowledge-0);
+  .valence-0 {
+    color: var(--valence-0-ink);
   }
 
-  .knowledge-1 {
-    color: var(--knowledge-1);
+  .valence-1 {
+    color: var(--valence-1-ink);
   }
 
-  .knowledge-2 {
-    color: var(--knowledge-2);
+  .valence-2 {
+    color: var(--valence-2-ink);
   }
 
-  /*
-    NPC presence, which carries no hue at all. A slain villain is not a bad
-    outcome, so green and red leave the NPC directory entirely; alive is plain
-    ink and deceased is muted ink. 12-5 adds the strike that makes deceased
-    legible without relying on weight alone.
-  */
-  .presence-present {
-    color: var(--surface-page-on);
-  }
-
-  .presence-absent {
-    color: var(--surface-page-on-muted);
+  .valence-3 {
+    color: var(--valence-3-ink);
   }
 
   /*
@@ -643,26 +632,31 @@
   }
 
   /*
-    The summary bar's bands sit flush against one another, so a band's
-    neighbour is the only ground it is ever measured against -- and no gate
-    measures that pairing, because every contrast rule in the schema is written
-    against a surface.
+    The summary bar's bands, as separate pills.
 
-    It bites hardest on the knowledge ladder, whose rungs differ in lightness
-    alone. That is deliberate: an unchanging hue is what lets the ladder
-    survive greyscale and colour blindness as a value ramp (schema section 2).
-    The cost is that adjacent rungs sit at roughly 1.4:1, well under the 3:1
-    a meaningful boundary wants. Raising chroma does not help, since it moves
-    all three rungs together.
+    A band's only real ground is the band beside it, and no gate measures that
+    pairing because every contrast rule in the schema is written against a
+    surface. The numbers are worse than they look: adjacent stops on the
+    valence ramp sit near 1.1:1, and the quest bar's active-against-completed
+    was 1.06:1 long before this ramp existed. It only ever read because those
+    two differed in hue.
 
-    So the bands are separated structurally instead. A hairline in the card's
-    own colour reads as a gap rather than as a fourth colour, and it needs
-    nothing from the scale. The quest bar wants it just as much -- active
-    against completed is 1.06:1, and it has only ever been legible because
-    those two differ in hue.
+    So the bands are separated structurally rather than by colour. They were a
+    hairline apart first; a gap and a radius do the same job and say it out
+    loud, and the sunken track showing through reads as the rail the pills sit
+    on rather than as a fourth colour.
+
+    `min-width` matches the bar's height so a band holding one item of fifty is
+    still a dot rather than a hairline. Flex will shrink the bands to make room
+    for the gaps, proportionally, and stops at that floor.
   */
-  .roster-band + .roster-band {
-    border-left: 1px solid var(--surface-card-bg);
+  .roster-bands {
+    gap: 3px;
+  }
+
+  .roster-band {
+    border-radius: 999px;
+    min-width: 7px;
   }
 
   /*
@@ -680,12 +674,22 @@
   }
 
   /*
+    A quest still in play. Stop 2 of the valence ramp, not the accent --
+    `.progress-bar-active` above keeps the accent because `ChapterList` and
+    `ResumeBar` use it for reading progress, which is not a rank and must not
+    turn gold when the quest scale does.
+  */
+  .progress-bar-open {
+    background-color: var(--valence-2-fill);
+  }
+
+  /*
     Named `succeeded`, not `completed`, and the rename is the point: the old
     name described a colour that anything could reach for. This one describes a
     quest that was won, and nothing else may use it.
   */
   .progress-bar-succeeded {
-    background-color: var(--outcome-succeeded);
+    background-color: var(--valence-0-fill);
   }
 
   /*
@@ -707,7 +711,7 @@
     the texture reads the same whatever the bar is drawn over.
   */
   .progress-bar-failed {
-    background-color: var(--outcome-failed-fill);
+    background-color: var(--valence-3-fill);
     background-image: repeating-linear-gradient(
       45deg,
       var(--surface-sunken-bg) 0,

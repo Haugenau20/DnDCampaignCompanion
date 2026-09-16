@@ -90,11 +90,12 @@
     "--status-active": "--accent-ink",
     "--status-completed": "--outcome-succeeded",
     "--status-failed": "--outcome-failed-ink",
-    "--status-unknown": "--knowledge-0",
+    "--status-unknown": "--disposition-unknown",
     "--status-on": "--accent-on",
     "--state-hover-light": "--surface-card-hover",
     "--state-hover-medium": "--surface-card-selected",
-    "--state-selected": "--surface-card-selected"
+    "--state-selected": "--surface-card-selected",
+    "--knowledge-0": "--disposition-unknown"
   },
   "_revalued_comment": [
     "Values deliberately changed after the baseline was taken. Listed per theme,",
@@ -229,5 +230,10 @@
         "why": "raised to clear WCAG 1.4.11 (3:1) for a boundary that identifies a control (D32)"
       }
     }
+  },
+  "_deleted_comment": "Variables whose value no longer exists anywhere, as opposed to `retired` ones whose value moved to another name. A deletion cannot be proved value-identical -- there is nothing left to compare against -- so it is recorded here instead, with the reason, and token-values.test.tsx asserts that each name really is absent from both themes. That assertion is what stops this list becoming a way to hide a token that still exists and has quietly changed.",
+  "deleted": {
+    "--knowledge-1": "The knowledge ladder's middle rung. The ladder had three consumers -- locations, rumours and NPC presence -- and all three moved to the valence ramp (D41, D120), so the scale went with them. Its first rung survives as --disposition-unknown, unchanged in value; rungs 1 and 2 have no successor.",
+    "--knowledge-2": "As --knowledge-1: the ladder's last rung, deleted with the scale."
   }
 }

@@ -3763,6 +3763,254 @@ source of truth acquires a second, wrong voice. `basedOn` and `warning` *were*
 updated, because D117 made both of them state something factually untrue.
 
 
+### D119 - ranked campaign state moves onto one shared valence ramp
+Date: 2026-09-16   Status: landed
+
+Directed by the maintainer, and it reverses D26, D27 and D34 for the four
+directories. Quests, rumours, locations and NPC presence are now ranked
+good-to-bad on a single five-stop ramp instead of being split across `outcome`,
+`knowledge` and `presence`.
+
+The semantic split was right and it cost more than it was worth. Three of the
+four directories shipped in greys a reader could not rank at a glance, in
+service of a distinction most readers were not making. Schema D41 records the
+trade; D42 records that location ranking is explored, then visited, then known,
+which inverts what the knowledge ladder had and is wrong there independently of
+colour -- more ground is covered in a place explored than in one passed through.
+
+What keeps D26's actual defect from returning: the ramp is **positional**. D26
+was not really about valence, it was about a token called `status.completed`
+that was green and available to borrow. No stop is named for a domain state, and
+`knowledge`, `disposition` and `presence` all still exist for the things that
+are genuinely unranked.
+
+Two properties make it work and both are gated in `valence-ramp.test.ts`:
+
+- **The ends are the outcome pair, to the byte.** `valence.0.ink` resolves to
+  `outcome.succeeded` and `valence.4.ink` to `outcome.failed.ink`, because the
+  contract solves them from those roles' own lightnesses and chromas. A quest
+  did not change colour. Asserted as equality, not closeness.
+- **Each stop carries an ink and a fill**, per schema section 4.4 -- the same
+  split `outcome.failed` already had. A bar or a legend dot is not text and owes
+  3:1 rather than 4.5:1.
+
+That second one turned out to be the whole reason this looks like anything. At
+the lightness AA demands on a cream ground, sRGB has almost no chroma to give
+near yellow, so the middle of the ramp solves to olive: stop 2 asks for 0.12
+chroma and the ink keeps about 0.092. The fill, solving at 3:1, sits high enough
+to keep nearly all of it and comes out gold. Three variants were tried before
+this -- pushing chroma at a fixed lightness does nothing, because the extra is
+gamut-clipped straight back off.
+
+In dark mode there is no such squeeze; the inks are already light enough to hold
+their chroma, and the fill is *darker* than the ink rather than lighter. The
+property that holds in both modes is that a fill sits nearer the ground than its
+ink, which is what the test asserts. An earlier draft asserted "fills are more
+chromatic", which is false in dark mode and was caught by the test failing.
+
+### R69 - three more dead classes, two of them runtime-assembled
+Date: 2026-09-16   Status: landed
+
+Found while migrating consumers. `npc-relationship-*` was deleted by `12-3a` and
+four consumers were left behind:
+
+- `NPCLegend.tsx` -- four literal `className="npc-relationship-friendly"` and
+  friends, on the relationship icons.
+- `LocationDirectory.tsx:421` and `QuestDirectory.tsx:450` --
+  `` `npc-relationship-${npc.relationship}` ``, assembled at runtime.
+
+Every one of them has painted nothing since `12-3a`. The literal four were
+greppable and were simply missed; the two template ones were invisible to both
+the compiler and grep, which is the **third** time this phase has been bitten by
+exactly that pattern (R63 and the `12-5` `?? 'unknown'` bug were the first two).
+Both now go through a spelled-out `DISPOSITION_CLASS` map typed
+`Partial<Record<string, string>>`, so the fallback is type-checked.
+
+`NPCLegend` was also still using `knowledge-0` for two status icons; it now uses
+the ramp like the directory it documents.
+
+### R70 - knowledge, presence and the outcome classes now have no consumers
+Date: 2026-09-16   Status: open, reported not fixed
+
+With the four directories on the ramp, `.knowledge-0/1/2`, `.presence-present`,
+`.presence-absent` and `.outcome-active/succeeded/failed` are defined in
+`components.css` and referenced from nowhere in the application. The tones
+remain in `RosterStatusTone`.
+
+Deliberately left in place, for two reasons. The maintainer branched this work
+specifically so the colours can be rolled back if they are not liked, and
+deleting the scales they would roll back *to* would make that harder. And schema
+D41's bargain is that the unranked scales survive -- `valence-ramp.test.ts`
+asserts they do, because if they quietly vanished the next unranked thing would
+reach for a red and D26's defect would be back.
+
+The token-level story is smaller than it looks: `outcome.*` still backs
+`disposition`, `feedback` and the field states, and `knowledge.0` still backs
+`disposition.unknown`. It is the CSS classes, not the tokens, that are currently
+unused. Worth a decision once the ramp has been lived with.
+
+
+### R71 - the band separator becomes a pill, and the NPC label says "unknown"
+Date: 2026-09-16   Status: landed
+
+Two maintainer notes on D119's bars.
+
+The separator D118 added was a 1px hairline in the card colour. It is now a 3px
+gap with a 999px radius on each band, so the bands read as separate pills on the
+sunken rail rather than as one bar with seams. Same mechanism, same reason --
+the separation stays structural and asks nothing of the palette -- and the gate
+in `roster-band-separation.test.ts` moved with it, including an assertion that
+the rule carries no colour of its own.
+
+Two details the change needed. The gap lives on a new `.roster-bands` class
+rather than on `.progress-container`, which six single-fill bars share and which
+would have grown a gap it has no use for. And `.roster-band` takes a `min-width`
+equal to the bar's height, because flex shrinks the bands to make room for the
+gaps and a band holding one item out of fifty would otherwise end up thinner
+than the gap beside it.
+
+That file's measurements were also stale: they still read the knowledge ladder
+and the old quest tokens, neither of which any bar paints since D119. They now
+measure the valence fills, and they measure the *widest* spacing the ramp offers
+as well -- stops 0/2/4, what a three-state scale uses -- because the interesting
+claim is that even those neighbours fall short of 3:1. The instinct on seeing a
+bar like this is to pick better colours; the file exists to show that the ramp
+cannot be spread far enough without destroying the ordering it encodes.
+
+The NPC band labelled "unrecorded" now reads "unknown", matching the stored
+`NPCStatus` value and the filter control beside it.
+
+
+### D120 - the ramp is four stops, and every scale samples the same four
+Date: 2026-09-16   Status: landed
+
+D119 shipped five stops, which made three-state scales take 0/2/4 and NPC
+presence take 0/1/3/4. The maintainer spotted what that costs: NPC's two middles
+were colours no other page showed, and NPC never displayed the middle the other
+three shared. One ramp with a private spacing for the scale that needed four is
+not one ramp.
+
+Four stops, because four is the most states any one scale has. A three-state
+scale takes three of the same four. Nothing has a spacing of its own:
+
+| scale | stops |
+|---|---|
+| NPC presence | 0, 1, 2, 3 |
+| Quests | 0, 1, 3 |
+| Rumours | 0, 1, 3 |
+| Locations | **0, 1, 2** |
+
+Five could never have done this. For a set of stops to be divisible evenly by
+both three and four, the count has to leave `n - 1` divisible by 6, so the
+alternatives were four or seven. Seven was modelled and rejected -- the extra
+granularity bought nothing any scale asked for, and put two unused stops between
+every pair a directory actually paints.
+
+**Locations stop at 2 and never reach the red.** Directed by the maintainer, and
+it is the right reading of the domain rather than a softening: quests and rumours
+run to the red end because a quest can fail and a rumour can be disproved, but a
+place merely heard of is the least of three degrees of familiarity, not a bad
+outcome. Painting it as a failure would repeat, in a quieter key, the bug this
+whole phase opened by fixing.
+
+The ends still resolve to `outcome.succeeded` and `outcome.failed.ink` by
+construction, so quests are unchanged at both ends; only "active" moved, from
+the old stop 2 to the new stop 1. Schema v8 -> v9, 143 leaves.
+
+
+### D121 - the knowledge ladder is deleted, and what the audit found
+Date: 2026-09-16   Status: landed
+
+Asked for by the maintainer after D120: is `knowledge.0/1/2` now dead, and what
+else is. Audited rather than assumed, and the answer was larger than the
+question.
+
+**Dead because the ramp took their consumers, now removed:**
+
+| | |
+|---|---|
+| tones | `knowledge-0/1/2`, `present`, `absent` in `RosterStatusTone` |
+| CSS | `.knowledge-0/1/2`, `.presence-present/absent`, `.outcome-active/succeeded/failed` |
+| Tailwind | `bg-outcome-active/succeeded/failed`, `bg-knowledge-0/1/2`, `bg-presence-present/absent`, `text-outcome-failed-on` |
+| tokens | `knowledge.0/1/2`, `knowledge.wash` |
+
+The ladder's first rung survives as `disposition.unknown`, authored directly at
+the same hue, chroma and lightness, so nothing on screen changed. Recorded as
+**D43** in the schema, which amends D26: there are no longer two semantic
+scales, there is a ranked ramp and an unranked `disposition`. Schema v9 -> v10,
+139 leaves.
+
+Schema gate 6, the ladder's monotonicity check, was deleted with the ladder. It
+asserted that contrast rose with the index so "more knowledge" read as more;
+nothing in the tree has that property now, because the ramp orders itself by
+hue. The equivalent gate is "the hues run one way" in `valence-ramp.test.ts`.
+Deleting a gate alongside the thing it guarded is the only honest option, and it
+is noted in place rather than silently dropped.
+
+`--knowledge-1` and `--knowledge-2` are the first tokens this project has
+deleted with **no successor**, which `token-rename-map.json` had no way to say:
+`retired` means "this value lives under another name now", and there is nothing
+to point at. A `deleted` section records them with the reason, and
+`token-values.test.tsx` asserts every name on it really is absent from both
+themes -- without that, listing a name there would excuse it from the value
+comparison and hide a token that still existed and had quietly changed.
+
+### R72 - nothing checked for orphaned variables, which is why this accumulated
+Date: 2026-09-16   Status: landed
+
+`token-manifest.test.ts` walked *consumed to defined*, which is the direction a
+rename breaks, and enumerated *tokens landed ahead of their consumers*, which is
+what an additive PR produces. Between the two sat the case that actually
+accumulates: a token that had consumers and lost them, as a scale is replaced
+and its classes are deleted one PR at a time.
+
+Every gate in the project was green with the whole knowledge ladder, three CSS
+classes, three Tailwind utilities and five tone values dead in the tree. It took
+a human reading a diff.
+
+There is now a third block. An unconsumed variable is allowed but must be
+**declared**, with its reason, and the list is checked both ways: a new orphan
+fails, and so does an entry that has since gained a consumer or been deleted
+from the tree. Verified it bites by removing both of `.progress-bar-read`'s
+references to `--outcome-succeeded`; it named the variable. The first attempt at
+that check passed, because the rule reads the variable twice and only one was
+perturbed -- worth recording, since a perturbation that half-lands looks exactly
+like a gate that works.
+
+Seven variables are declared unused today. Two kinds:
+
+- **`--scheme`, `--accent-on`, `--surface-band-selected`, `--surface-page-border`**
+  -- pre-existing, unrelated to this work. Surface pairs are emitted whole so a
+  surface cannot be given another's state, so an unused member is the shape
+  working, not a defect.
+- **`--outcome-failed-ink`, `--outcome-failed-fill`, `--outcome-failed-on`** --
+  orphaned by the ramp. The scale stays: it is still the documented source for
+  `feedback.error`, `disposition.hostile`, the field error states and
+  `danger.deleteText`, and `--outcome-succeeded` is still painted by
+  `.progress-bar-read`.
+
+### R73 - dead CSS classes that predate this work, reported not removed
+Date: 2026-09-16   Status: open, reported not fixed
+
+The same audit found classes in `components.css` with no consumer that have
+nothing to do with the ramp: `bg-primary`, `hero-slot`, `icon-bg`,
+`spinner-border`, `feedback-progress`, `feedback-error-edge`,
+`feedback-banner-success` and `feedback-banner-progress`.
+
+Left alone. They are unrelated to this change, and removing a CSS class is not
+as safe as it looks here: the first pass of this audit listed `button-outline`
+and `button-secondary` as dead, and both are alive through
+`` `button-${variant}` `` in `Button.tsx`. `typography-label` was on the list for
+the same reason, via `` `typography-${variant}` ``. A class-level sweep needs
+every template-assembled name enumerated first, which is a piece of work in its
+own right and should not ride along with a colour change.
+
+The `feedback-*` four are the interesting subset: `feedback.progress` and the
+success and progress banners may simply never have been wired up, in which case
+the question is whether the scale is complete rather than whether the classes
+are dead.
+
+
 ### Q19 - can an ordered collection have named siblings?
 Date: 2026-09-15   Status: open
 `TokenTree` supports a record or an array, and `knowledge` is the first token to
