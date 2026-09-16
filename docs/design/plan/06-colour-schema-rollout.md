@@ -40,6 +40,12 @@ The schema renames tokens. Renaming tokens in a package that has already been
 published is a breaking change to a consumer contract; renaming them before
 extraction is a diff. The ordering is therefore forced, not preferred.
 
+**Postscript, 2026-09-16.** Extraction is deferred indefinitely — see
+`04-rollout.md` §3, Phase 13. The argument above was never tested, because no
+package was published for a rename to break. It is kept rather than struck: the
+ordering it produced was right for a second reason that did hold, which is that
+the schema work happened while the app's token tree was its only consumer.
+
 ## 3. The seven PRs
 
 | PR | Does | Visual diff | State |
@@ -145,9 +151,11 @@ the source; §5.4 exists because of it. That is the loop working.
 
 ## 5. Gates, in addition to the standing six in `04-rollout.md` §4
 
-1. Generated theme values match `../design/colour-schema.json` exactly — all
-   135 leaves, both modes. A mismatch fails the build; it is never resolved by
-   editing the theme file, and never by editing the fixture.
+1. Generated theme values match `../design/colour-schema.json` exactly — every
+   leaf, both modes. A mismatch fails the build; it is never resolved by
+   editing the theme file, and never by editing the fixture. (Written as "all
+   135 leaves"; the fixture's own `leafCount` is the authority and now reads
+   139.)
 1b. `colour-schema.md` and `colour-schema.json` do not appear in
    `git diff --stat` for any PR in this phase. If either does, the PR is wrong
    regardless of what else is green.
@@ -159,17 +167,33 @@ the source; §5.4 exists because of it. That is the loop working.
    they are the closest pair in the schema.
 5. No token named after an appearance. `status.completed` is the pattern being
    removed; do not introduce its replacement.
-6. The knowledge ladder is monotonic in contrast against its ground, in both
-   modes, in ladder order.
+6. ~~The knowledge ladder is monotonic in contrast against its ground, in both
+   modes, in ladder order.~~ **Deleted with the ladder (D121).** Nothing in the
+   tree has that property now, because the ramp orders itself by hue instead of
+   by contrast. The equivalent gate is "the hues run one way", in
+   `valence-ramp.test.ts`. Retiring a gate alongside the thing it guarded is
+   the only honest option, and it is recorded here rather than dropped quietly.
 
 ## 6. Done
 
 - `lightTheme.ts` and `darkTheme.ts` contain no authored hex values.
-- `status.*` does not exist, and nothing greps for `status-`.
-- Locations, rumours and NPCs carry no valenced hue.
+- `status.*` does not exist, and nothing greps for `status-`. ✅ — the only
+  surviving matches are comments describing the removal.
+- ~~Locations, rumours and NPCs carry no valenced hue.~~ **Reversed after the
+  phase, by the maintainer: D119 and D120.** All four directories now rank on
+  one shared valence ramp. Quests and rumours run to the red end, because a
+  quest can fail and a rumour can be disproved; locations stop at stop 2, since
+  a place merely heard of is the least of three degrees of familiarity and not
+  a bad outcome. Struck rather than deleted — this line was the point of the
+  phase when it was written, and what replaced it is a narrower claim, not an
+  abandoned one.
 - Failure is legible in greyscale.
 - The entity palette is eight generated hues, and `--location-type-*` is gone.
-- Every one of the 135 leaves generated; no hex literal in either definition
-  file; no alias layer anywhere.
-- `finish-generator.py` deleted.
-- D23–D39 recorded in `03-drift-log.md`.
+  ✅ — nothing named `location-type` survives outside `token-rename-map.json`.
+- Every leaf generated; no hex literal in either definition file; no alias
+  layer anywhere. (This said **135 leaves**. The schema is at v10 and
+  `leafCount` is **139** — v8 added the ramp, v10 removed the knowledge ladder.
+  A count in prose dates faster than the thing it counts; the fixture is the
+  authority.)
+- `finish-generator.py` deleted. ✅
+- D23–D39 recorded in `03-drift-log.md`. The log now runs to D123.

@@ -4088,6 +4088,55 @@ near-neighbour. `token-manifest.test.ts` is what makes that safe to say -- it
 proves every consumed variable is one a theme defines, which is precisely the
 guarantee the fallback was standing in for.
 
+### D124 - the phase plans are trued against the tree, and two are left alone
+Date: 2026-09-16   Status: landed
+
+Phase 13's documents described a phase that no longer existed: two of its three
+items were already done and the third was deferred. Reconciled by the
+maintainer's direction, which is the only reason an implementing change touched
+`04-rollout.md` and `06-colour-schema-rollout.md` at all -- the handoff contract
+names the phase plans read-only for exactly the reason that a plan edited by the
+work it describes stops being a check on it.
+
+So the edits are held to one shape: **a claim about the tree that the tree
+contradicts, corrected with the measurement.** Nothing was marked done on
+judgement.
+
+- Phase 13 rewritten: fallbacks done (D123), `--location-type-*` already done
+  in `12-6`, extraction deferred indefinitely. Q1, Q2, Q3 and Q19 are recorded
+  as **dormant rather than open** -- each asks what the package should be, none
+  blocks this repository, and answering them against a consumer that does not
+  exist is the failure D2 was written to avoid.
+- §6's location line promised the eight CSS classes "go in Phase 12". They went
+  in `12-6`; nothing named `location-type` survives outside the rename map.
+- §6's `theme-contract` line is marked deferred, not achieved. The distinction
+  matters: a Done list that quietly drops what was not done is worth less than
+  one that says so.
+- `06`'s §6 claimed "locations, rumours and NPCs carry no valenced hue", which
+  D119 and D120 reversed two days ago. Struck, not deleted, with what replaced
+  it.
+- Two stale counts, both in prose: 135 leaves (the fixture says 139) and the
+  ladder-monotonicity gate (deleted with the ladder, D121). A count written into
+  prose dates faster than the thing it counts; both now defer to the fixture and
+  to `valence-ramp.test.ts`.
+
+**Left alone deliberately, and this is the more useful half of the entry:**
+
+`02-acceptance-criteria.md` has 49 checkboxes and none ticked, which reads as a
+year-stale tracker. It is not. Its own header says it is "written to be pasted
+as an issue" -- the boxes are meant to be ticked in the issue, not in the file,
+so an unticked file is the document working. It was on this phase's list to
+retire, and retiring it would have destroyed a working source because its
+failure mode and staleness look identical from outside. Reading the header cost
+less than the mistake would have.
+
+R67 (two schema records numbered D36) and R68 (`inCodeAfter` and `pendingIn`
+stale now that every PR in the phase has merged) are still open and still
+untouched. Both live in `colour-schema.md` / `.json`, which no implementing
+change may edit under any authorisation short of the maintainer's explicit
+instruction on those files specifically. They need a hand that is allowed to
+hold the pen.
+
 ### Q19 - can an ordered collection have named siblings?
 Date: 2026-09-15   Status: open
 `TokenTree` supports a record or an array, and `knowledge` is the first token to
