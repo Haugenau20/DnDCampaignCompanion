@@ -1,55 +1,10 @@
-# Todo List
+# Inbox
 
-User should be able to change their password.
+Scratch space. Type ideas here as they land — one per block, no structure needed,
+no investigation expected. Nothing here is a tracked item yet.
 
-Have registration tokens expire after X days
+Run `/todo` to drain this file: each entry is checked against the code, located,
+sized and filed into TODO.md, then removed from here. `/todo <idea>` files a
+single item directly without going through this file.
 
-Fix mobile layout issues on certain pages. (story all around)
-
-Make active quests be on the top of the list?
-
-Make completed quests be default hidden with option to expand?
-
-Add batch options (Delete, change status, etc.) for Story, Quest, NPC, and Location features
-
-Implement/review proper highlighting logic to pages.
-
-Admin Panel: (Needs big do-over with Claude Design)
-    - Test if the creation of new groups and campaigns work
-    - Right now the "groups" view only shows the current group. 
-    - Campaigns can be created (but not deleted). 
-    - groups cannot be created (Firestore transactions require all reads to be executed before all writes.)
-    - neither campaigns or groups can be edited.
-    - campaigns cannot be deleted.
-
-New feature idea (partly implemented already): sub-chapters.
-
-PC's are seen as NPCs when doing smart detection in the notes feature. 
-There should be some sort of setup or config so PC's can be defined and not included in smart detection.
-
-Form/Context Responsibility Pattern Standardization (look at docs/backlog/FormContextStandard)
-
-NPCs Page seems to take longer to load than the rest of the pages.
-
-Make project true Single Page Application.
-
-It should be possible to use other services (e.g. Google) to sign in. in this it must still be ensured people
-can't just create their own users, or maybe some kind of limit during a beta roll-out to avoid backend usage runaway (potential firebase cost runaway)
-
-Contact form: let people attach a screenshot to a bug report.
-    - Deliberately left out of the contact page redesign (PR 2, 2026-08-30) rather than shipped
-      as a disabled control that does nothing. The design mock (screenshot 5a) has the drop zone.
-    - Why it is worth doing: for a bug report a screenshot is the single biggest quality win.
-      "Deleting a note takes me back to the list" is three exchanges of questions without one.
-    - Why it was deferred: it is not a UI change. It needs Firebase Storage wiring, security
-      rules scoped so one user cannot read another's uploads, size and MIME-type limits, cleanup
-      of orphaned uploads when a submission is abandoned, and a new failure mode on submit
-      (upload succeeded, email failed, or the reverse). None of that is otherwise touched by the
-      redesign.
-    - Where it would go: src/shared/components/contact/ - a new field component alongside
-      CategoryChips/SenderIdentity, plus a download URL in the callable payload that
-      firebase/functions/src/contact.ts links from the email body.
-
-Quest objectives should be able to cross out objectives directly on the quests page. right now the user has to press edit to update them
-
-add firebase storage so users can upload pictures for their campaigns. also so I can upload default photos for things. 
+Last drained: 2026-09-16
