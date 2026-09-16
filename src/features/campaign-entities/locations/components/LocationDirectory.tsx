@@ -53,39 +53,42 @@ const TYPE_FILTERS: RosterFilterOption[] = [
 ];
 
 /**
- * Status is a progression (known → explored → visited), not the mutually-exclusive
- * buckets NPC status was. The bar still filters like NPCDirectory's, but ordering and
- * colour read as "how far along", not "which category": known (blue, the starting
- * point) → explored (gold, partway) → visited (green, as far as this axis goes).
+ * An NPC's stance, as a class name.
+ *
+ * Spelled out rather than built as `npc-relationship-${npc.relationship}`.
+ * That template is how this exact family stayed in the tree after 12-3a
+ * deleted it: the compiler cannot see a string it assembles at runtime and
+ * grep cannot either, so four icons rendered with no colour at all and nothing
+ * failed. `Partial` keeps the fallback type-checked.
  */
-const STATUS_ORDER: { key: LocationStatus; colorClass: string }[] = [
-  { key: 'known', colorClass: 'bg-knowledge-0' },
-  { key: 'explored', colorClass: 'bg-knowledge-1' },
-  { key: 'visited', colorClass: 'bg-knowledge-2' },
-];
+const DISPOSITION_CLASS: Partial<Record<string, string>> = {
+  friendly: 'disposition-friendly',
+  neutral: 'disposition-neutral',
+  hostile: 'disposition-hostile',
+  unknown: 'disposition-unknown',
+};
 
 /**
- * Location state, in the shared status vocabulary.
+ * Location state, ranked best to worst: explored, then visited, then known.
  *
- * `known` is muted rather than hued. It is the least-advanced point on the axis
- * -- a place you have heard of and not been -- so spending the status hue on it
- * would say the opposite of what it means. The status bar's own band is red
- * there only as the "not yet" end of a progression; as row text that would put
- * the accent on a resting row.
- */
-/**
- * A location rides the knowledge ladder, not the outcome scale.
+ * That ordering is the maintainer's and it inverts what shipped. The knowledge
+ * ladder had `visited` above `explored`, which reads backwards -- you have
+ * covered more ground in a place you explored than in one you merely passed
+ * through -- so the ordering was wrong independently of the colour.
  *
- * `visited` used to be `completed`, which is green -- so the application said
- * that going somewhere was a win condition, and the progress bar above it ran
- * red to green as though a place could be failed. Nothing here is a verdict:
- * the three states are one axis of how much the party has learned, and
- * contrast rises along it. Schema section 3.
+ * Bands, and the ramp stops they take, run in that order too, so the bar reads
+ * left to right from best to worst like every other directory.
  */
+const STATUS_ORDER: { key: LocationStatus; colorClass: string }[] = [
+  { key: 'explored', colorClass: 'bg-valence-0' },
+  { key: 'visited', colorClass: 'bg-valence-2' },
+  { key: 'known', colorClass: 'bg-valence-4' },
+];
+
 const STATUS_TONE: Record<LocationStatus, RosterStatusTone> = {
-  known: 'knowledge-0',
-  explored: 'knowledge-1',
-  visited: 'knowledge-2',
+  explored: 'valence-0',
+  visited: 'valence-2',
+  known: 'valence-4',
 };
 
 const formatLocationType = (type: LocationType): string => {
@@ -431,7 +434,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
                             >
                               <Users
                                 size={14}
-                                className={clsx('shrink-0', `npc-relationship-${npc.relationship}`)}
+                                className={clsx('shrink-0', DISPOSITION_CLASS[npc.relationship] ?? 'disposition-unknown')}
                               />
                               <Typography variant="body-sm">
                                 {npc.name}

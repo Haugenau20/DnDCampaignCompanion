@@ -39,6 +39,8 @@ export interface Primitives {
   };
   knowledge: readonly [string, string, string];
   knowledgeWash: string;
+  /** Five stops, good to bad, each with an ink and a fill. */
+  valence: readonly { ink: string; fill: string }[];
   neutralBorder: string;
   placeholder: string;
   secondary: { bg: string; on: string; hover: string };
@@ -130,6 +132,27 @@ export const derivePrimitives = (mode: ThemeName): Primitives => {
     against(l, HUE.knowledge.c, HUE.knowledge.h, TEXT_MINIMUM)
   ) as unknown as readonly [string, string, string];
 
+  /*
+   * The valence ramp. Both ends are pinned to the outcome pair by construction
+   * rather than by coincidence: the ink lightness interpolates from the one
+   * `succeeded` was solved from to the one `failedInk` was, and the chromas at
+   * either end are those two roles' own. So stop 0 *is* `outcome.succeeded`
+   * and stop 4 *is* `outcome.failedInk`, and a quest keeps its colour when it
+   * moves onto the ramp.
+   *
+   * Fills solve against 3:1 rather than 4.5:1 -- section 4.4's split, the same
+   * one `outcome.failed` carries. On a cream ground that is the difference
+   * between a gold middle and an olive one.
+   */
+  const valence = HUE.valence.hues.map((h, index) => {
+    const t = index / (HUE.valence.hues.length - 1);
+    const inkLightness = ramp.succeeded + (ramp.failedInk - ramp.succeeded) * t;
+    return {
+      ink: against(inkLightness, HUE.valence.chromas[index], h, TEXT_MINIMUM),
+      fill: against(ramp.valenceFill, HUE.valence.chromas[index], h, NON_TEXT_MINIMUM),
+    };
+  });
+
   return {
     surface: surfaces,
     accent: {
@@ -157,6 +180,7 @@ export const derivePrimitives = (mode: ThemeName): Primitives => {
       failedRing: withAlpha(failedInk, RING_ALPHA),
     },
     knowledge,
+    valence,
     // Section 4.3 rule 6: derived from the ladder's first step, and it does
     // not constrain that step in return. Solving an ink against its own wash
     // is what pushed four primitives brighter than the contract asked for in
@@ -269,6 +293,16 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
       1: primitives.knowledge[1],
       2: primitives.knowledge[2],
       wash: primitives.knowledgeWash,
+    },
+    // Ranked campaign state, good to bad. A record rather than an array for
+    // the reason `knowledge` is one: `flattenTokens` emits index-suffixed
+    // variables for arrays and would drop the ink/fill pair hung off each stop.
+    valence: {
+      0: primitives.valence[0],
+      1: primitives.valence[1],
+      2: primitives.valence[2],
+      3: primitives.valence[3],
+      4: primitives.valence[4],
     },
     cue: { failure: CUES.failure, negation: CUES.negation },
     // The application's own voice. Error and success borrow the outcome

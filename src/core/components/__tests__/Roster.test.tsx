@@ -11,6 +11,7 @@ import {
   RosterStatus,
   RosterField,
   type RosterSegment,
+  type RosterStatusTone,
 } from '../Roster';
 
 jest.mock('../Typography', () => ({
@@ -515,9 +516,11 @@ describe('RosterField', () => {
 
 describe('RosterStatus', () => {
   const ALL_TONES = [
-    'active',
-    'succeeded',
-    'failed',
+    'valence-0',
+    'valence-1',
+    'valence-2',
+    'valence-3',
+    'valence-4',
     'knowledge-0',
     'knowledge-1',
     'knowledge-2',
@@ -534,28 +537,46 @@ describe('RosterStatus', () => {
     (container.firstChild as HTMLElement).className;
 
   /** The one class that comes from a scale, with the shape classes dropped. */
-  const SCALE_PREFIXES = ['outcome-', 'knowledge-', 'disposition-', 'presence-'];
+  const SCALE_PREFIXES = ['valence-', 'knowledge-', 'disposition-', 'presence-'];
   const fromScale = (cls: string): string | undefined =>
     cls.split(/\s+/).find(c => SCALE_PREFIXES.some(p => c.startsWith(p)));
 
   test('states the status as a word, always', () => {
-    render(<RosterStatus tone="succeeded">Confirmed</RosterStatus>);
+    render(<RosterStatus tone="valence-0">Confirmed</RosterStatus>);
     expect(screen.getByText('Confirmed')).toBeInTheDocument();
   });
 
-  test('a quest succeeding and a rumour being fully known are not the same fact', () => {
-    // They used to be. `completed` was green and available, so a confirmed
-    // rumour, a visited location and a living NPC all reached for it -- which
-    // is how the application came to claim that exploring a place was a win
-    // condition. A quest concludes and takes `outcome`; a rumour is knowledge
-    // and rides the ladder. Different scales, therefore different classes.
-    const { container: quest } = render(
-      <RosterStatus tone="succeeded">Completed</RosterStatus>
-    );
-    const { container: rumour } = render(
-      <RosterStatus tone="knowledge-2">Confirmed</RosterStatus>
-    );
-    expect(toneClass(quest)).not.toBe(toneClass(rumour));
+  test('the best case is the same colour on every page', () => {
+    // This assertion is the reverse of the one it replaces, and deliberately so.
+    //
+    // 12-3a split these apart: a quest concluded and took `outcome`, while a
+    // rumour was knowledge and rode an unhued ladder, because the application
+    // had been claiming that exploring a place was a win condition. That fixed
+    // the semantics and left four directories that looked like four products,
+    // three of them in greys nobody could rank at a glance.
+    //
+    // The valence ramp is the deliberate trade: the directories that *do* rank
+    // their states now share one scale, so "the best case" is one green
+    // everywhere and "the worst case" one red. What keeps the original bug from
+    // returning is that the ramp is not the outcome scale wearing a new name --
+    // it is positional, nothing on it is called `completed`, and the scales that
+    // genuinely are not ranked (`knowledge`, `disposition`, `presence`) still
+    // exist and still read differently.
+    const render1 = (tone: RosterStatusTone, label: string) => {
+      const { container, unmount } = render(<RosterStatus tone={tone}>{label}</RosterStatus>);
+      const cls = fromScale(toneClass(container));
+      unmount();
+      return cls;
+    };
+    const best = [
+      render1('valence-0', 'Completed'),
+      render1('valence-0', 'Confirmed'),
+      render1('valence-0', 'Explored'),
+      render1('valence-0', 'Alive'),
+    ];
+    expect(new Set(best).size).toBe(1);
+    // ...and a scale that is not ranked still refuses to join them.
+    expect(render1('knowledge-2', 'Fully known')).not.toBe(best[0]);
   });
 
   test('a confirmed and a disproven rumour sit on the same rung', () => {
@@ -583,9 +604,11 @@ describe('RosterStatus', () => {
     });
 
     expect(resolved).toEqual([
-      ['active', 'outcome-active'],
-      ['succeeded', 'outcome-succeeded'],
-      ['failed', 'outcome-failed'],
+      ['valence-0', 'valence-0'],
+      ['valence-1', 'valence-1'],
+      ['valence-2', 'valence-2'],
+      ['valence-3', 'valence-3'],
+      ['valence-4', 'valence-4'],
       ['knowledge-0', 'knowledge-0'],
       ['knowledge-1', 'knowledge-1'],
       ['knowledge-2', 'knowledge-2'],

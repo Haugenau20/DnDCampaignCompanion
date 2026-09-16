@@ -19,6 +19,27 @@ export const HUE = {
   succeeded: { h: 143, c: 0.085 },
   failed: { h: 22, c: 0.155 },
   knowledge: { h: 265, c: 0.09 },
+  /**
+   * The valence ramp: five stops from "good" to "bad", used by every directory
+   * that ranks its states.
+   *
+   * Hue runs evenly from `succeeded` (143) to `failed` (22) the short way --
+   * through yellow and amber, the warm half of the wheel, which is the only
+   * path that reads as a single progression rather than a detour through blue.
+   * Chroma rises with the index so that the reds at the far end carry the
+   * weight the greens at the near end do not need.
+   *
+   * The ends are not merely *near* the outcome pair, they **are** it: stop 0
+   * resolves to `outcome.succeeded` and stop 4 to `outcome.failed`, because
+   * `valenceInk` interpolates between exactly those two lightnesses at exactly
+   * those two chromas. That is what lets quests move onto this ramp without
+   * changing colour, and it is checked rather than asserted -- see
+   * `valence-ramp.test.ts`.
+   */
+  valence: {
+    hues: [143, 113, 83, 52, 22],
+    chromas: [0.085, 0.1, 0.12, 0.14, 0.155],
+  },
   /** A loop, not a list: eight hues at even spacing. Order is the contract. */
   entity: { firstHue: 25, step: 45, c: 0.055 },
 } as const;
@@ -73,6 +94,8 @@ export interface LightnessRamp {
   failedOn: number;
   /** The knowledge ladder, in order. More knowledge means more contrast. */
   knowledge: readonly [number, number, number];
+  /** Start lightness for the valence ramp's fills, solved at 3:1. */
+  valenceFill: number;
   secondary: number;
   secondaryHover: number;
   secondaryOn: number;
@@ -107,6 +130,18 @@ export const RAMP: Record<ThemeName, LightnessRamp> = {
     failedFill: 0.44,
     failedOn: 0.975,
     knowledge: [0.48, 0.385, 0.29],
+    /**
+     * Where the valence ramp's **fills** start solving from.
+     *
+     * A bar or a legend dot is not text, so it owes 3:1 rather than
+     * 4.5:1 (section 4.4, the same split `outcome.failed` already
+     * carries). That difference is not a technicality here: at the
+     * lightness AA demands on a cream ground, sRGB cannot hold chroma
+     * anywhere near yellow, and the middle of the ramp comes out olive.
+     * Solved at 3:1 it comes out gold, which is the same ramp with the
+     * mud taken out.
+     */
+    valenceFill: 0.58,
     secondary: 0.3,
     secondaryHover: 0.24,
     secondaryOn: 0.975,
@@ -142,6 +177,18 @@ export const RAMP: Record<ThemeName, LightnessRamp> = {
     failedFill: 0.56,
     failedOn: 0.975,
     knowledge: [0.65, 0.735, 0.84],
+    /**
+     * Where the valence ramp's **fills** start solving from.
+     *
+     * A bar or a legend dot is not text, so it owes 3:1 rather than
+     * 4.5:1 (section 4.4, the same split `outcome.failed` already
+     * carries). That difference is not a technicality here: at the
+     * lightness AA demands on a cream ground, sRGB cannot hold chroma
+     * anywhere near yellow, and the middle of the ramp comes out olive.
+     * Solved at 3:1 it comes out gold, which is the same ramp with the
+     * mud taken out.
+     */
+    valenceFill: 0.56,
     secondary: 0.35,
     secondaryHover: 0.415,
     secondaryOn: 0.915,

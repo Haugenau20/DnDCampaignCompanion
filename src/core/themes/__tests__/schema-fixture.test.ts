@@ -84,8 +84,8 @@ describe("generated themes equal the schema fixture", () => {
   );
 
   test("the fixture is the version this generator was written against", () => {
-    expect(schema.version).toBe(7);
-    expect(schema.leafCount).toBe(135);
+    expect(schema.version).toBe(8);
+    expect(schema.leafCount).toBe(145);
   });
 
   test("every landed retirement names tokens the schema actually marked", () => {

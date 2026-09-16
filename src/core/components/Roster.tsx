@@ -428,11 +428,15 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
  * (this NPC died) is not an error.
  */
 export type RosterStatusTone =
-  // Outcome -- quests only.
-  | 'active'
-  | 'succeeded'
-  | 'failed'
-  // Knowledge -- the shared ladder. Rising index means more knowledge.
+  // Valence -- the shared ramp, good to bad. Every directory that ranks its
+  // states draws from this, which is what makes the four pages read as one
+  // system. Three-state scales take 0, 2 and 4; NPC presence takes 0, 1, 3, 4.
+  | 'valence-0'
+  | 'valence-1'
+  | 'valence-2'
+  | 'valence-3'
+  | 'valence-4'
+  // Knowledge -- the unranked ladder. Rising index means more knowledge.
   | 'knowledge-0'
   | 'knowledge-1'
   | 'knowledge-2'
@@ -446,9 +450,11 @@ export type RosterStatusTone =
   | 'absent';
 
 const STATUS_TONE: Record<RosterStatusTone, string> = {
-  active: 'outcome-active',
-  succeeded: 'outcome-succeeded',
-  failed: 'outcome-failed',
+  'valence-0': 'valence-0',
+  'valence-1': 'valence-1',
+  'valence-2': 'valence-2',
+  'valence-3': 'valence-3',
+  'valence-4': 'valence-4',
   'knowledge-0': 'knowledge-0',
   'knowledge-1': 'knowledge-1',
   'knowledge-2': 'knowledge-2',

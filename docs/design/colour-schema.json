@@ -1,16 +1,16 @@
 {
   "scheme": "torchlight-forge",
-  "version": 7,
+  "version": 8,
   "warning": "GENERATED FIXTURE. Never edited by an implementation agent, and never edited to make a test pass. Regenerate from the contract in docs/design/colour-schema.md §4, the role map in §5.4 and the scales in §5.5. v7's knowledge values were revised by hand against an explicit instruction (D40); the maths behind them is independently checked against Chromium's colour pipeline in src/core/themes/__tests__/oklch-oracle.test.ts, which is what keeps this file a check on the generator rather than a copy of it.",
-  "basedOn": "v6, revising the knowledge ladder only. v6 was v2 additively -- every value v2 shipped was byte-identical. v7 breaks that for five leaves per mode (knowledge.0/1/2, knowledge.wash and disposition.unknown, which is sourced from knowledge.0) and for the retired status.unknown that follows them. Everything else is still byte-identical to v2.",
+  "basedOn": "v7, adding the valence ramp. Purely additive: no value v7 shipped changes. The ramp's ends resolve to the same bytes as outcome.succeeded and outcome.failed, by construction rather than by alias -- the contract solves them from those roles' own lightnesses and chromas.",
   "inCodeAfter": {
     "12-1 + 12-2": 109
   },
   "pendingIn": {
     "12-2b": 26
   },
-  "leafCount": 135,
-  "colourCount": 123,
+  "leafCount": 145,
+  "colourCount": 133,
   "hue": {
     "neutral": {
       "H": 68,
@@ -37,6 +37,22 @@
       "H0": 25,
       "step": 45,
       "C": 0.055
+    },
+    "valence": {
+      "H": [
+        143,
+        113,
+        83,
+        52,
+        22
+      ],
+      "C": [
+        0.085,
+        0.1,
+        0.12,
+        0.14,
+        0.155
+      ]
     }
   },
   "wash": 0.1,
@@ -375,7 +391,29 @@
           "#534B6D",
           "#66455B"
         ],
-        "entityInk": "#FAF2EA"
+        "entityInk": "#FAF2EA",
+        "valence": [
+          {
+            "ink": "#3A6437",
+            "fill": "#5C8759"
+          },
+          {
+            "ink": "#575C03",
+            "fill": "#7B8034"
+          },
+          {
+            "ink": "#6E4F00",
+            "fill": "#9C7200"
+          },
+          {
+            "ink": "#833D00",
+            "fill": "#B95E17"
+          },
+          {
+            "ink": "#951D28",
+            "fill": "#C54C4F"
+          }
+        ]
       },
       "tree": {
         "color.primary": "#8D4F00",
@@ -512,7 +550,17 @@
         "disposition.unknown": "#445C90",
         "danger.confirmBg": "#951D28",
         "danger.confirmText": "#FDF5ED",
-        "scheme": "light"
+        "scheme": "light",
+        "valence.0.ink": "#3A6437",
+        "valence.0.fill": "#5C8759",
+        "valence.1.ink": "#575C03",
+        "valence.1.fill": "#7B8034",
+        "valence.2.ink": "#6E4F00",
+        "valence.2.fill": "#9C7200",
+        "valence.3.ink": "#833D00",
+        "valence.3.fill": "#B95E17",
+        "valence.4.ink": "#951D28",
+        "valence.4.fill": "#C54C4F"
       }
     },
     "dark": {
@@ -601,7 +649,29 @@
           "#484061",
           "#5A3B50"
         ],
-        "entityInk": "#F7EFE6"
+        "entityInk": "#F7EFE6",
+        "valence": [
+          {
+            "ink": "#7EAB7A",
+            "fill": "#568153"
+          },
+          {
+            "ink": "#9AA054",
+            "fill": "#757A2E"
+          },
+          {
+            "ink": "#BA8E30",
+            "fill": "#956D00"
+          },
+          {
+            "ink": "#D47736",
+            "fill": "#B2580B"
+          },
+          {
+            "ink": "#E16566",
+            "fill": "#BE4649"
+          }
+        ]
       },
       "tree": {
         "color.primary": "#D69253",
@@ -738,7 +808,17 @@
         "disposition.unknown": "#748EC7",
         "danger.confirmBg": "#BE4649",
         "danger.confirmText": "#FDF5ED",
-        "scheme": "dark"
+        "scheme": "dark",
+        "valence.0.ink": "#7EAB7A",
+        "valence.0.fill": "#568153",
+        "valence.1.ink": "#9AA054",
+        "valence.1.fill": "#757A2E",
+        "valence.2.ink": "#BA8E30",
+        "valence.2.fill": "#956D00",
+        "valence.3.ink": "#D47736",
+        "valence.3.fill": "#B2580B",
+        "valence.4.ink": "#E16566",
+        "valence.4.fill": "#BE4649"
       }
     }
   }

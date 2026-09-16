@@ -462,14 +462,23 @@ describe("NPCDetailPage", () => {
       expect(fieldValue("Race")).toBe("Maia");
     });
 
-    it("states presence as a word, and spends no hue on it", () => {
-      // Alive was green and deceased was red, which reads a death as an error.
-      // Presence is a fact about the world with no valence, so the default
-      // state takes plain ink and the word carries it alone.
+    it("states presence as a word, and ranks it on the shared ramp", () => {
+      // This reverses the assertion it replaces, by decision (schema D41).
+      //
+      // 12-3a took the hue off presence because alive-green and deceased-red
+      // read a death as an error. That was right about the semantics and left
+      // the NPC directory unrankable at a glance, so presence now sits on the
+      // same five-stop ramp as every other ranked state -- alive is the same
+      // green a completed quest is, deceased the same red a failed one is.
+      //
+      // What has to survive the reversal is that the hue is never alone. The
+      // word is still rendered, and 12-5's strike still marks a deceased NPC.
       renderPage();
       const status = screen.getByText("Alive");
-      expect(status.className).toContain("presence-present");
-      expect(status.className).not.toMatch(/status-|outcome-/);
+      expect(status.className).toContain("valence-0");
+      // Positional, never named for the domain state -- that naming is what
+      // made a quest's green reachable by anything that wanted green.
+      expect(status.className).not.toMatch(/succeeded|completed|alive/);
     });
 
     it("gives disposition a hue, because a stance toward the party is valenced", () => {

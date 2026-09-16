@@ -3763,6 +3763,93 @@ source of truth acquires a second, wrong voice. `basedOn` and `warning` *were*
 updated, because D117 made both of them state something factually untrue.
 
 
+### D119 - ranked campaign state moves onto one shared valence ramp
+Date: 2026-09-16   Status: landed
+
+Directed by the maintainer, and it reverses D26, D27 and D34 for the four
+directories. Quests, rumours, locations and NPC presence are now ranked
+good-to-bad on a single five-stop ramp instead of being split across `outcome`,
+`knowledge` and `presence`.
+
+The semantic split was right and it cost more than it was worth. Three of the
+four directories shipped in greys a reader could not rank at a glance, in
+service of a distinction most readers were not making. Schema D41 records the
+trade; D42 records that location ranking is explored, then visited, then known,
+which inverts what the knowledge ladder had and is wrong there independently of
+colour -- more ground is covered in a place explored than in one passed through.
+
+What keeps D26's actual defect from returning: the ramp is **positional**. D26
+was not really about valence, it was about a token called `status.completed`
+that was green and available to borrow. No stop is named for a domain state, and
+`knowledge`, `disposition` and `presence` all still exist for the things that
+are genuinely unranked.
+
+Two properties make it work and both are gated in `valence-ramp.test.ts`:
+
+- **The ends are the outcome pair, to the byte.** `valence.0.ink` resolves to
+  `outcome.succeeded` and `valence.4.ink` to `outcome.failed.ink`, because the
+  contract solves them from those roles' own lightnesses and chromas. A quest
+  did not change colour. Asserted as equality, not closeness.
+- **Each stop carries an ink and a fill**, per schema section 4.4 -- the same
+  split `outcome.failed` already had. A bar or a legend dot is not text and owes
+  3:1 rather than 4.5:1.
+
+That second one turned out to be the whole reason this looks like anything. At
+the lightness AA demands on a cream ground, sRGB has almost no chroma to give
+near yellow, so the middle of the ramp solves to olive: stop 2 asks for 0.12
+chroma and the ink keeps about 0.092. The fill, solving at 3:1, sits high enough
+to keep nearly all of it and comes out gold. Three variants were tried before
+this -- pushing chroma at a fixed lightness does nothing, because the extra is
+gamut-clipped straight back off.
+
+In dark mode there is no such squeeze; the inks are already light enough to hold
+their chroma, and the fill is *darker* than the ink rather than lighter. The
+property that holds in both modes is that a fill sits nearer the ground than its
+ink, which is what the test asserts. An earlier draft asserted "fills are more
+chromatic", which is false in dark mode and was caught by the test failing.
+
+### R69 - three more dead classes, two of them runtime-assembled
+Date: 2026-09-16   Status: landed
+
+Found while migrating consumers. `npc-relationship-*` was deleted by `12-3a` and
+four consumers were left behind:
+
+- `NPCLegend.tsx` -- four literal `className="npc-relationship-friendly"` and
+  friends, on the relationship icons.
+- `LocationDirectory.tsx:421` and `QuestDirectory.tsx:450` --
+  `` `npc-relationship-${npc.relationship}` ``, assembled at runtime.
+
+Every one of them has painted nothing since `12-3a`. The literal four were
+greppable and were simply missed; the two template ones were invisible to both
+the compiler and grep, which is the **third** time this phase has been bitten by
+exactly that pattern (R63 and the `12-5` `?? 'unknown'` bug were the first two).
+Both now go through a spelled-out `DISPOSITION_CLASS` map typed
+`Partial<Record<string, string>>`, so the fallback is type-checked.
+
+`NPCLegend` was also still using `knowledge-0` for two status icons; it now uses
+the ramp like the directory it documents.
+
+### R70 - knowledge, presence and the outcome classes now have no consumers
+Date: 2026-09-16   Status: open, reported not fixed
+
+With the four directories on the ramp, `.knowledge-0/1/2`, `.presence-present`,
+`.presence-absent` and `.outcome-active/succeeded/failed` are defined in
+`components.css` and referenced from nowhere in the application. The tones
+remain in `RosterStatusTone`.
+
+Deliberately left in place, for two reasons. The maintainer branched this work
+specifically so the colours can be rolled back if they are not liked, and
+deleting the scales they would roll back *to* would make that harder. And schema
+D41's bargain is that the unranked scales survive -- `valence-ramp.test.ts`
+asserts they do, because if they quietly vanished the next unranked thing would
+reach for a red and D26's defect would be back.
+
+The token-level story is smaller than it looks: `outcome.*` still backs
+`disposition`, `feedback` and the field states, and `knowledge.0` still backs
+`disposition.unknown`. It is the CSS classes, not the tokens, that are currently
+unused. Worth a decision once the ramp has been lived with.
+
+
 ### Q19 - can an ordered collection have named siblings?
 Date: 2026-09-15   Status: open
 `TokenTree` supports a record or an array, and `knowledge` is the first token to

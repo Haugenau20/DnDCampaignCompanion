@@ -117,6 +117,37 @@ export interface FeedbackScale {
  * record keeps -- a hostile NPC is genuinely a threat to the people reading
  * the page. It is still not an `outcome`, because nothing concluded.
  */
+/** One stop on the valence ramp. */
+export interface ValenceStop {
+  /** The state as a word, on a content surface. Owes 4.5:1. */
+  ink: string;
+  /** A bar segment or a legend dot. Not text, so it owes 3:1. */
+  fill: string;
+}
+
+/**
+ * Ranked campaign state, good to bad, in five stops.
+ *
+ * Position is the meaning, exactly as in `knowledge`: a stop named `failed`
+ * would tie a ramp that quests, rumours, locations and NPCs all share to one
+ * of them. A scale with three states takes 0, 2 and 4; NPC presence, which has
+ * four, takes 0, 1, 3 and 4. Both keep the same ends, which is what makes the
+ * four directories read as one system.
+ *
+ * Stops 0 and 4 carry the same values as `outcome.succeeded` and
+ * `outcome.failed` -- not by an alias but because the contract solves them from
+ * the same lightnesses and chromas. `outcome` remains for the things that are
+ * genuinely a verdict rather than a rank, and for `disposition` and `feedback`,
+ * which borrow from it.
+ */
+export interface ValenceScale {
+  0: ValenceStop;
+  1: ValenceStop;
+  2: ValenceStop;
+  3: ValenceStop;
+  4: ValenceStop;
+}
+
 export interface DispositionScale {
   friendly: string;
   neutral: string;
@@ -192,6 +223,9 @@ export interface ThemeTokens {
     /** Translucent. A backdrop for a knowledge-tinted panel. */
     wash: string;
   };
+
+  /** Ranked campaign state, good to bad. See `ValenceScale`. */
+  valence: ValenceScale;
 
   /**
    * The shape half of a state, because nothing is encoded by colour alone.

@@ -443,7 +443,9 @@ describe('QuestDirectory', () => {
     it('renders a proportional progress bar sized to the completion ratio', () => {
       renderPage();
       const row = expandButton('Find the Dragon');
-      const bar = row.querySelector('.progress-bar-active') as HTMLElement;
+      // `.progress-bar-open`, not `.progress-bar-active`: the latter stayed on
+      // the accent for reading progress in storytelling, which is not a rank.
+      const bar = row.querySelector('.progress-bar-open') as HTMLElement;
       expect(bar).toBeTruthy();
       expect(bar.style.width).toBe('50%');
     });

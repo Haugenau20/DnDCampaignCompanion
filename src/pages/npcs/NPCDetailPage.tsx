@@ -37,10 +37,10 @@ import { Pencil } from 'lucide-react';
  * it and nothing would have failed until someone looked at the page.
  */
 const PRESENCE_CLASS: Record<string, string> = {
-  alive: 'presence-present',
-  deceased: 'presence-absent',
-  missing: 'knowledge-0',
-  unknown: 'knowledge-0',
+  alive: 'valence-0',
+  unknown: 'valence-1',
+  missing: 'valence-3',
+  deceased: 'valence-4',
 };
 
 /**
@@ -456,7 +456,7 @@ const NPCDetailPage: React.FC = () => {
                           the hue only agrees with it (design language §2). */}
                       <Typography
                         variant="body-sm"
-                        className={`${PRESENCE_CLASS[npc.status] ?? 'knowledge-0'} font-medium`}
+                        className={`${PRESENCE_CLASS[npc.status] ?? 'valence-1'} font-medium`}
                       >
                         {capitalise(npc.status)}
                       </Typography>
