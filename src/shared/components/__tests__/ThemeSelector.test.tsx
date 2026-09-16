@@ -22,15 +22,11 @@ jest.mock('../../../core/themes/definitions', () => ({
   themes: {
     light: {
       name: 'light',
-      colors: { primary: '#ffffff' },
+      tokens: { accent: { fill: '#ffffff' } },
     },
     dark: {
       name: 'dark',
-      colors: { primary: '#000000' },
-    },
-    medieval: {
-      name: 'medieval',
-      colors: { primary: '#8b4513' },
+      tokens: { accent: { fill: '#000000' } },
     },
   },
 }));
@@ -39,9 +35,8 @@ jest.mock('../../../core/themes/definitions', () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-const lightThemeMock = { name: 'light', colors: { primary: '#ffffff' } };
-const darkThemeMock = { name: 'dark', colors: { primary: '#000000' } };
-const medievalThemeMock = { name: 'medieval', colors: { primary: '#8b4513' } };
+const lightThemeMock = { name: 'light', tokens: { accent: { fill: '#ffffff' } } };
+const darkThemeMock = { name: 'dark', tokens: { accent: { fill: '#000000' } } };
 
 function makeUseThemeMock(currentTheme = lightThemeMock) {
   return {
@@ -71,18 +66,17 @@ describe('ThemeSelector', () => {
 
     test('should render theme options for all available themes', () => {
       render(<ThemeSelector />);
-      // All three theme names should appear
+      // Both theme names should appear
       expect(screen.getByText(/light/i)).toBeInTheDocument();
       expect(screen.getByText(/dark/i)).toBeInTheDocument();
-      expect(screen.getByText(/medieval/i)).toBeInTheDocument();
     });
 
     test('should render a button for each theme', () => {
       render(<ThemeSelector />);
-      // The change-theme icon button + 3 theme buttons
+      // The change-theme icon button + 2 theme buttons
       const buttons = screen.getAllByRole('button');
-      // At least 3 theme buttons
-      expect(buttons.length).toBeGreaterThanOrEqual(3);
+      // At least 2 theme buttons
+      expect(buttons.length).toBeGreaterThanOrEqual(2);
     });
   });
 
@@ -100,12 +94,6 @@ describe('ThemeSelector', () => {
       render(<ThemeSelector />);
       fireEvent.click(screen.getByText(/light/i));
       expect(mockSetTheme).toHaveBeenCalledWith('light');
-    });
-
-    test('should call setTheme with "medieval" when medieval theme button is clicked', () => {
-      render(<ThemeSelector />);
-      fireEvent.click(screen.getByText(/medieval/i));
-      expect(mockSetTheme).toHaveBeenCalledWith('medieval');
     });
 
     test('should call setTheme exactly once per click', () => {
@@ -127,14 +115,13 @@ describe('ThemeSelector', () => {
       expect(useTheme).toHaveBeenCalled();
     });
 
-    test('should reflect medieval as current theme when set', () => {
-      (useTheme as jest.Mock).mockReturnValue(makeUseThemeMock(medievalThemeMock));
+    test('should reflect dark as current theme when set', () => {
+      (useTheme as jest.Mock).mockReturnValue(makeUseThemeMock(darkThemeMock));
       render(<ThemeSelector />);
       expect(useTheme).toHaveBeenCalled();
       // All theme options still rendered
       expect(screen.getByText(/light/i)).toBeInTheDocument();
       expect(screen.getByText(/dark/i)).toBeInTheDocument();
-      expect(screen.getByText(/medieval/i)).toBeInTheDocument();
     });
   });
 

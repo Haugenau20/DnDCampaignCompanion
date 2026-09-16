@@ -321,4 +321,134 @@ describe("Dialog", () => {
       });
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Dialog semantics (PR 8.0 audit)
+  //
+  // The component's own JSDoc claimed a focus trap it did not have, and the
+  // panel was a plain <div>: no role, no aria-modal, no accessible name. To a
+  // screen reader it was an anonymous group of text that happened to appear,
+  // and to a keyboard it was a panel you could tab straight out of into the
+  // page behind it. 8.0's brief is to audit this checklist and fix what is
+  // broken, so these are the four items, asserted.
+  // -------------------------------------------------------------------------
+  describe("dialog semantics", () => {
+    test("should expose the panel as a modal dialog to assistive tech", async () => {
+      const user = userEvent.setup();
+      render(
+        <DialogHarness title="Combine rumors">
+          <p>Content</p>
+        </DialogHarness>
+      );
+
+      await openDialog(user);
+
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog).toHaveAttribute("aria-modal", "true");
+    });
+
+    test("should take its accessible name from its own title", async () => {
+      const user = userEvent.setup();
+      render(
+        <DialogHarness title="Combine rumors">
+          <p>Content</p>
+        </DialogHarness>
+      );
+
+      await openDialog(user);
+
+      expect(await screen.findByRole("dialog", { name: "Combine rumors" }))
+        .toBeInTheDocument();
+    });
+
+    test("should still be a dialog when no title is given", async () => {
+      const user = userEvent.setup();
+      render(
+        <DialogHarness>
+          <p>Content</p>
+        </DialogHarness>
+      );
+
+      await openDialog(user);
+
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog).not.toHaveAttribute("aria-labelledby");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Focus management (PR 8.0 audit)
+  // -------------------------------------------------------------------------
+  describe("focus management", () => {
+    test("should move focus into the dialog when it opens", async () => {
+      const user = userEvent.setup();
+      render(
+        <DialogHarness title="Combine rumors">
+          <p>Content</p>
+        </DialogHarness>
+      );
+
+      await openDialog(user);
+
+      const dialog = await screen.findByRole("dialog");
+      await waitFor(() => {
+        expect(dialog.contains(document.activeElement)).toBe(true);
+      });
+    });
+
+    test("should return focus to the trigger when it closes", async () => {
+      const user = userEvent.setup();
+      render(
+        <DialogHarness title="Combine rumors">
+          <p>Content</p>
+        </DialogHarness>
+      );
+
+      const trigger = screen.getByTestId("open-trigger");
+      await openDialog(user);
+      await screen.findByRole("dialog");
+
+      await user.click(screen.getByLabelText("Close dialog"));
+
+      await waitFor(() => {
+        expect(trigger).toHaveFocus();
+      });
+    });
+
+    test("should keep Tab inside the dialog rather than leaking to the page", async () => {
+      const user = userEvent.setup();
+      render(
+        <DialogHarness title="Combine rumors">
+          <button data-testid="inner">Inner action</button>
+        </DialogHarness>
+      );
+
+      await openDialog(user);
+      const dialog = await screen.findByRole("dialog");
+
+      // Four tabs through a two-control dialog must wrap twice and never land
+      // on the page's own trigger button behind the backdrop.
+      for (let i = 0; i < 4; i++) {
+        await user.tab();
+        expect(dialog.contains(document.activeElement)).toBe(true);
+      }
+    });
+
+    test("should wrap Shift+Tab from the first control to the last", async () => {
+      const user = userEvent.setup();
+      render(
+        <DialogHarness title="Combine rumors">
+          <button data-testid="inner">Inner action</button>
+        </DialogHarness>
+      );
+
+      await openDialog(user);
+      const dialog = await screen.findByRole("dialog");
+
+      for (let i = 0; i < 3; i++) {
+        await user.tab({ shift: true });
+        expect(dialog.contains(document.activeElement)).toBe(true);
+      }
+    });
+  });
 });

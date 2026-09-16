@@ -14,6 +14,17 @@ export interface NPCConnections {
 export interface NPCNote {
   date: string;
   text: string;
+  /**
+   * Who wrote it -- the acting character's name, or their username when they
+   * have no character.
+   *
+   * Optional because every note written before this field existed has no
+   * author and never will. Those render without one rather than being
+   * attributed to a guess: the record's creator is not necessarily the person
+   * who wrote any given note, and inventing that would be showing data that
+   * does not exist.
+   */
+  author?: string;
 }
 
 /**
@@ -53,6 +64,8 @@ export interface NPC extends BaseContent {
   background?: string;
   connections: NPCConnections;
   notes: NPCNote[];
+  /** Free-text labels for grouping, the same shape `Location.tags` uses. */
+  tags?: string[];
 }
 
 // Context types

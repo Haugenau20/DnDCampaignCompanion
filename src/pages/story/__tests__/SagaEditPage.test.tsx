@@ -1,7 +1,55 @@
-﻿// src/pages/story/__tests__/SagaEditPage.test.tsx
+// src/pages/story/__tests__/SagaEditPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import SagaEditPage from "../SagaEditPage";
+import { unnamedControlsIn } from "../../../test-utils/accessible-names";
+import { formAccentsIn } from "../../../test-utils/accent-budget";
+
+// ---------------------------------------------------------------------------
+// Page-suite gate mock (shared across Tasks 8-13 -- see page-suite-mock.md)
+// ---------------------------------------------------------------------------
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: {
+      getCampaigns: jest
+        .fn()
+        .mockResolvedValue([{ id: "campaign-2", name: "Icespire Peak" }]),
+    },
+  },
+}));
 
 // ---------------------------------------------------------------------------
 // Context / hook mocks
@@ -12,22 +60,12 @@ jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 
-let mockUser: { uid: string; displayName: string } | null = {
-  uid: "user-1",
-  displayName: "TestUser",
-};
-
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: mockUser }),
-}));
-
 const mockSaveSaga = jest.fn();
 
 interface SagaDataMock {
   saga: { title: string; content: string; lastUpdated?: string } | null;
   loading: boolean;
   error: string | null;
-  hasRequiredContext: boolean;
   saveSaga: jest.Mock;
 }
 
@@ -35,7 +73,6 @@ let mockSagaData: SagaDataMock = {
   saga: null,
   loading: false,
   error: null,
-  hasRequiredContext: true,
   saveSaga: mockSaveSaga,
 };
 
@@ -59,22 +96,34 @@ jest.mock("shared/utils/export-utils", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, color, variant }: any) => (
-    <div
-      data-testid={
-        color
-          ? `typography-${color}`
-          : variant
-          ? `typography-${variant}`
-          : "typography-default"
-      }
-    >
-      {children}
-    </div>
-  ),
-}));
+// Typography is mapped to its real semantic tag (h1/h2/h3/h4, else `p`) so
+// that `getByRole("heading", ...)` works against both this page's own title
+// (via PageShell) and the shared gated panel's headings (via GatedPageState),
+// while still exposing the same `data-testid` scheme the existing assertions
+// below rely on.
+jest.mock("../../../core/components/Typography", () => {
+  const TAGS: Record<string, string> = { h1: "h1", h2: "h2", h3: "h3", h4: "h4" };
+  return {
+    __esModule: true,
+    default: ({ children, color, variant, className }: any) => {
+      const Tag = (TAGS[variant] || "p") as any;
+      return (
+        <Tag
+          data-testid={
+            color
+              ? `typography-${color}`
+              : variant
+              ? `typography-${variant}`
+              : "typography-default"
+          }
+          className={className}
+        >
+          {children}
+        </Tag>
+      );
+    },
+  };
+});
 
 jest.mock("shared/components/Breadcrumb", () => ({
   __esModule: true,
@@ -89,17 +138,42 @@ jest.mock("shared/components/Breadcrumb", () => ({
   ),
 }));
 
+// Mirrors the real Button's `button button-<variant>` classes, including the
+// primary default. Without them this stub renders every button unpainted, and
+// the accent-budget gate below counts zero filled accents on a page that has
+// one -- a stub laxer than the component it stands in for reports a pass it has
+// not earned (D75, and the third time this pattern has appeared in Phase 8).
+// The stub must not be laxer than the component it stands in for (D75, R28).
+// It previously dropped `aria-label` and `startIcon`, which made an icon-only
+// button — the markdown toolbar's three — render with no accessible name at
+// all, so a test asserting the name failed against a defect that exists only
+// in this file. Fourth time this pattern has cost time; see R33.
 jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
-  default: ({ children, onClick, type, isLoading }: any) => (
+  default: ({
+    children,
+    onClick,
+    type,
+    isLoading,
+    variant = "primary",
+    startIcon,
+    endIcon,
+    "aria-label": ariaLabel,
+    title,
+  }: any) => (
     <button
-      data-testid={`button-${String(children).trim().replace(/\s+/g, "-").toLowerCase()}`}
+      data-testid={`button-${String(ariaLabel ?? children).trim().replace(/\s+/g, "-").toLowerCase()}`}
+      className={`button button-${variant}`}
       onClick={onClick}
       type={type || "button"}
       disabled={!!isLoading}
       data-loading={String(!!isLoading)}
+      aria-label={ariaLabel}
+      title={title}
     >
+      {startIcon}
       {children}
+      {endIcon}
     </button>
   ),
 }));
@@ -122,35 +196,66 @@ jest.mock("../../../core/components/Card", () => {
 });
 
 // Input mock: renders a real <input> or <textarea> so we can change values
-jest.mock("../../../core/components/Input", () => ({
-  __esModule: true,
-  default: ({ label, value, onChange, isTextArea, required, fullWidth }: any) => {
-    if (isTextArea) {
-      return (
-        <div data-testid={`input-wrapper-${label?.replace(/\s+/g, "-").toLowerCase()}`}>
-          <label>{label}</label>
-          <textarea
-            data-testid={`textarea-${label?.replace(/\s+/g, "-").toLowerCase()}`}
-            value={value}
-            onChange={onChange}
-            required={required}
-          />
-        </div>
-      );
-    }
-    return (
-      <div data-testid={`input-wrapper-${label?.replace(/\s+/g, "-").toLowerCase()}`}>
-        <label>{label}</label>
-        <input
-          data-testid={`input-${label?.replace(/\s+/g, "-").toLowerCase()}`}
-          value={value}
-          onChange={onChange}
-          required={required}
-        />
-      </div>
-    );
-  },
-}));
+// The real Input associates its label with its control via htmlFor/id. This stub
+// did not, so every control it rendered was unnamed -- which the accessible-name
+// gate below correctly caught, in the mock rather than in the page. A stub that
+// is laxer than the thing it stands in for turns a real gate into a green light.
+//
+// It happened again in 9.2, in the same file, for two more dropped props: the
+// real Input forwards a `ref` to its control and renders `helperText`, and this
+// stub did neither. The markdown toolbar writes through that ref, so the
+// toolbar appeared broken here while working everywhere else, and the markdown
+// hint appeared missing while being rendered. Both are now passed through.
+jest.mock("../../../core/components/Input", () => {
+  const ReactModule = require("react");
+  return {
+    __esModule: true,
+    default: ReactModule.forwardRef(
+      (
+        { label, value, onChange, isTextArea, required, helperText }: any,
+        ref: any
+      ) => {
+        const controlId = `mock-input-${String(label).replace(/\s+/g, "-").toLowerCase()}`;
+        const slug = label?.replace(/\s+/g, "-").toLowerCase();
+        const help = helperText ? (
+          <p data-testid={`helper-${slug}`}>{helperText}</p>
+        ) : null;
+
+        if (isTextArea) {
+          return (
+            <div data-testid={`input-wrapper-${slug}`}>
+              <label htmlFor={controlId}>{label}</label>
+              <textarea
+                ref={ref}
+                id={controlId}
+                data-testid={`textarea-${slug}`}
+                value={value}
+                onChange={onChange}
+                required={required}
+              />
+              {help}
+            </div>
+          );
+        }
+
+        return (
+          <div data-testid={`input-wrapper-${slug}`}>
+            <label htmlFor={controlId}>{label}</label>
+            <input
+              ref={ref}
+              id={controlId}
+              data-testid={`input-${slug}`}
+              value={value}
+              onChange={onChange}
+              required={required}
+            />
+            {help}
+          </div>
+        );
+      }
+    ),
+  };
+});
 
 // Mock Dialog to render children inline (ref: bug #150)
 jest.mock("../../../core/components/Dialog", () => ({
@@ -167,19 +272,41 @@ jest.mock("../../../core/components/Dialog", () => ({
     ) : null,
 }));
 
-jest.mock("lucide-react", () => ({
-  Book: () => <span data-testid="book-icon" />,
-  Save: () => <span data-testid="save-icon" />,
-  ArrowLeft: () => <span data-testid="arrow-left-icon" />,
-  FileDown: () => <span data-testid="file-down-icon" />,
-  HelpCircle: () => <span data-testid="help-circle-icon" />,
-}));
+// Stubbed by proxy rather than by enumeration, so it cannot go stale.
+//
+// The list used to name the five icons the page happened to render, which
+// meant any component this page later mounted got `undefined` for its icon and
+// failed with "Element type is invalid" pointing at the wrong file. 9.2's
+// toolbar needs Bold, Italic and Quote, and the next PR will need three more.
+// Testids keep the previous kebab-case convention, so existing queries hold.
+jest.mock("lucide-react", () => {
+  const ReactModule = require("react");
+  const toTestId = (name: string) =>
+    `${name.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase()}-icon`;
+
+  return new Proxy(
+    {},
+    {
+      get: (_target, property) => {
+        if (property === "__esModule") return false;
+        if (typeof property !== "string") return undefined;
+        const Icon = () => <span data-testid={toTestId(property)} />;
+        Icon.displayName = property;
+        return Icon;
+      },
+    }
+  );
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 function renderPage() {
-  return render(<SagaEditPage />);
+  return render(
+    <MemoryRouter>
+      <SagaEditPage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -188,7 +315,11 @@ function renderPage() {
 describe("SagaEditPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUser = { uid: "user-1", displayName: "TestUser" };
+    mockUser = { uid: "user-1" };
+    mockIsResolving = false;
+    mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockChapters = [
       { id: "ch-1", title: "Chapter 1", order: 1, content: "Content 1" },
     ];
@@ -196,29 +327,74 @@ describe("SagaEditPage", () => {
       saga: null,
       loading: false,
       error: null,
-      hasRequiredContext: true,
       saveSaga: mockSaveSaga,
     };
     mockSaveSaga.mockResolvedValue(true);
   });
 
   // -------------------------------------------------------------------------
-  // Context missing
+  // Gated states
   // -------------------------------------------------------------------------
-  describe("missing required context", () => {
-    it("shows context missing message when hasRequiredContext is false", () => {
-      mockSagaData = { ...mockSagaData, hasRequiredContext: false };
+  describe("gated states", () => {
+    it("renders the page title while signed out", () => {
+      mockUser = null;
       renderPage();
       expect(
-        screen.getByText(/Please select a group and campaign to edit the saga/i)
+        screen.getByRole("heading", { level: 1, name: "Edit Campaign Saga" })
       ).toBeInTheDocument();
     });
 
-    it("does NOT render the edit form inputs when context is missing", () => {
-      mockSagaData = { ...mockSagaData, hasRequiredContext: false };
+    // Write route: the heading names writing a chapter, the shared copy for
+    // this page key, and never suggests picking a group.
+    it("asks a signed-out visitor to sign in to write a chapter, and never to select a group", () => {
+      mockUser = null;
       renderPage();
+      expect(
+        screen.getByRole("heading", { name: /sign in to write a chapter/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    it("hides the export action while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.queryByTestId("button-export-chapter-content")
+      ).not.toBeInTheDocument();
       expect(screen.queryByTestId("input-saga-title")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("textarea-saga-content")).not.toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    });
+
+    // Rewritten: the pre-gate suite asserted this page's own
+    // "Please select a group and campaign to edit the saga" copy, driven by
+    // `hasRequiredContext` (dropped from this page's guard -- see the file
+    // header). `usePageGate` now derives the state and `GatedContent` renders
+    // the shared pick-campaign panel.
+    it("shows the shared pick-campaign panel, not the old copy, when context is missing", async () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(
+        screen.queryByText(/please select a group and campaign/i)
+      ).not.toBeInTheDocument();
+      expect(
+        await screen.findByRole("heading", { name: /which campaign/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("input-saga-title")).not.toBeInTheDocument();
+    });
+
+    // Rewritten: the pre-gate suite redirected a signed-out visitor straight
+    // back to /story/saga via a `!user` effect, so they never saw why. The
+    // write-mode panel now shows in place instead.
+    it("does NOT redirect a signed-out visitor away from the page", () => {
+      mockUser = null;
+      renderPage();
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
     });
   });
 
@@ -226,10 +402,12 @@ describe("SagaEditPage", () => {
   // Loading state
   // -------------------------------------------------------------------------
   describe("loading state", () => {
-    it("shows loading message while loading", () => {
+    // Rewritten: `loading` now folds into the shared "resolving" state via
+    // `usePageGate`; the page's own bare "Loading..." text is gone.
+    it("shows a skeleton, not the page's own loading text, while loading", () => {
       mockSagaData = { ...mockSagaData, loading: true };
       renderPage();
-      expect(screen.getByText(/Loading\.\.\./i)).toBeInTheDocument();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
     });
 
     it("does NOT render form while loading", () => {
@@ -253,18 +431,6 @@ describe("SagaEditPage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Unauthenticated — redirect
-  // -------------------------------------------------------------------------
-  describe("unauthenticated user", () => {
-    it("returns null (renders nothing) when user is null after loading", () => {
-      mockUser = null;
-      const { container } = renderPage();
-      // The component should render null and call navigateToPage for redirect
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/story/saga");
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // Main rendering
   // -------------------------------------------------------------------------
   describe("main rendering", () => {
@@ -273,11 +439,11 @@ describe("SagaEditPage", () => {
       expect(container).toBeInTheDocument();
     });
 
-    it("renders page heading 'Edit Campaign Saga'", () => {
+    it("renders page heading 'Edit Campaign Saga' as the h1", () => {
       renderPage();
-      expect(screen.getByTestId("typography-h2")).toHaveTextContent(
-        "Edit Campaign Saga"
-      );
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Edit Campaign Saga" })
+      ).toBeInTheDocument();
     });
 
     it("renders breadcrumb with correct items", () => {
@@ -593,4 +759,66 @@ describe("SagaEditPage", () => {
       expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Accessible names (PR 8.1)
+  //
+  // The point of the phase: every control announces itself. A grep proved the
+  // old unassociated `<label>` markup was gone; only walking the DOM proves the
+  // new markup is right, because a primitive whose `label` prop got dropped in
+  // the move looks just as clean in the source.
+  // -------------------------------------------------------------------------
+  describe("accessible names", () => {
+    test("every control in the form has an accessible name", () => {
+      const { container } = renderPage();
+      expect(unnamedControlsIn(container)).toEqual([]);
+    });
+  });
+
+
+  // -------------------------------------------------------------------------
+  // The accent budget (PR 8.3)
+  //
+  // One filled accent on the form, and it is the control that writes (D66).
+  // `Add` and `Add tag` build a draft; the record changes when you save.
+  // -------------------------------------------------------------------------
+  describe("accent budget", () => {
+    test("has exactly one filled accent, and it is the submit", () => {
+      const { container } = renderPage();
+      expect(formAccentsIn(container)).toHaveLength(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The markdown toolbar (PR 9.2)
+  // -------------------------------------------------------------------------
+  describe("markdown toolbar", () => {
+    test("offers bold, italic and quote over the saga body", () => {
+      renderPage();
+      expect(screen.getByRole("group", { name: "Saga content formatting" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /bold/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /italic/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /quote/i })).toBeInTheDocument();
+    });
+
+    test("quotes the selected lines in the field the form submits", () => {
+      renderPage();
+      // Exact, not a regex: /Saga Content/i also matches the toolbar group's
+      // "Saga content formatting" name.
+      const body = screen.getByLabelText("Saga Content") as HTMLTextAreaElement;
+
+      fireEvent.change(body, { target: { value: "They come from the fruit." } });
+      body.focus();
+      body.setSelectionRange(0, 5);
+      fireEvent.click(screen.getByRole("button", { name: /quote/i }));
+
+      expect(body.value).toBe("> They come from the fruit.");
+    });
+
+    test("says once, quietly, that the field takes markdown", () => {
+      renderPage();
+      expect(screen.getByText(/takes markdown/i)).toBeInTheDocument();
+    });
+  });
+
 });

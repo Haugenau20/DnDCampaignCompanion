@@ -4,6 +4,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import NoteEditor from '../NoteEditor';
 import { Note } from '../../types';
+import { unnamedControlsIn } from '@/test-utils/accessible-names';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -845,6 +846,41 @@ describe('NoteEditor', () => {
       renderEditor({ note: makeNote({ content: 'one two three' }) });
       expect(screen.getByText(/ctrl\+s/i)).toBeInTheDocument();
       expect(screen.getByText(/⌘s/i)).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The body field on the shared primitive (PR 9.2)
+  //
+  // NoteEditor kept a hand-rolled textarea while every other field in the
+  // product moved onto `Input` in 8.1 -- its scope was the eleven entity
+  // forms, and this was not one of them. It is the last one.
+  // -------------------------------------------------------------------------
+  describe('body field', () => {
+    test('resolves the body by its label, not only by its placeholder', () => {
+      // A placeholder is the name a control has until someone types in it,
+      // which is to say it is not a name. Every existing test here finds this
+      // field by placeholder; this is the one that proves it has a real label.
+      renderEditor({ note: makeNote({ content: 'written down' }) });
+
+      const body = screen.getByLabelText('Note content') as HTMLTextAreaElement;
+      expect(body.tagName).toBe('TEXTAREA');
+      expect(body.value).toBe('written down');
+    });
+
+    test('every control in the editor has an accessible name', () => {
+      const { container } = renderEditor({ note: makeNote() });
+      expect(unnamedControlsIn(container)).toEqual([]);
+    });
+
+    test('carries no markdown toolbar', () => {
+      // D84: notes stay plain text, so there is nothing for a toolbar to mark
+      // up. The field moved onto the primitive for the label association; it
+      // did not gain a parser.
+      renderEditor({ note: makeNote() });
+      expect(screen.queryByRole('button', { name: /bold/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /italic/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /quote/i })).not.toBeInTheDocument();
     });
   });
 });

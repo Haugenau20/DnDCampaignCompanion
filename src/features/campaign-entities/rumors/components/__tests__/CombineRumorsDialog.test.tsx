@@ -13,7 +13,7 @@ jest.mock('../../../../../core/components/Dialog', () => ({
   __esModule: true,
   default: ({ open, title, children }: any) =>
     open ? (
-      <div data-testid="dialog">
+      <div data-testid="dialog" role="dialog">
         {title && <h3>{title}</h3>}
         {children}
       </div>

@@ -13,7 +13,7 @@ import { SearchProvider, useSearch } from "../../SearchContext";
  *
  * STRATEGY:
  * - Use real SearchProvider wrapping a renderHook consumer
- * - Mock useChapterData, useNPCData, useLocationData, useQuests, useRumorData
+ * - Mock useChapterData, useNPCData, useLocationData, useQuests, useRumorData, useNotes
  * - Mock SearchService (injected via module-level mock) to control search results
  * - Assert on observable state: query, results, isSearching
  */
@@ -26,6 +26,7 @@ const mockUseNPCData = jest.fn();
 const mockUseLocationData = jest.fn();
 const mockUseQuests = jest.fn();
 const mockUseRumorData = jest.fn();
+const mockUseNotes = jest.fn();
 
 jest.mock("features/storytelling", () => ({
   useChapterData: () => mockUseChapterData(),
@@ -36,6 +37,10 @@ jest.mock("features/campaign-entities", () => ({
   useQuests: () => mockUseQuests(),
   useLocationData: () => mockUseLocationData(),
   useRumorData: () => mockUseRumorData(),
+}));
+
+jest.mock("features/collaboration", () => ({
+  useNotes: () => mockUseNotes(),
 }));
 
 // ---------------------------------------------------------------------------
@@ -105,6 +110,13 @@ const defaultRumors = [
     status: "unverified",
   },
 ];
+const defaultNotes = [
+  {
+    id: "note-1",
+    title: "Session recap",
+    content: "The party arrived at the inn",
+  },
+];
 
 function setupDefaultMocks() {
   mockUseChapterData.mockReturnValue({ chapters: defaultChapters });
@@ -112,6 +124,7 @@ function setupDefaultMocks() {
   mockUseLocationData.mockReturnValue({ locations: defaultLocations });
   mockUseQuests.mockReturnValue({ quests: defaultQuests });
   mockUseRumorData.mockReturnValue({ rumors: defaultRumors });
+  mockUseNotes.mockReturnValue({ notes: defaultNotes });
   mockSearch.mockReturnValue([]);
 }
 
@@ -277,6 +290,58 @@ describe("SearchContext Behavioral Testing", () => {
       expect(result.current.isSearching).toBe(false);
     });
 
+    test("should not let a stale search response overwrite a newer one", async () => {
+      // The older query's underlying service call is the one still in flight
+      // when the newer query's already resolved — deliberately out-of-order
+      // resolution, the case a debounced/overlapping caller can produce.
+      // The stale response must not clobber the results the fresh one set.
+      const staleResult = {
+        id: "stale-1",
+        type: "npc",
+        title: "Stale",
+        content: "old",
+        matches: [],
+        matchCount: 1,
+      };
+      const freshResult = {
+        id: "fresh-1",
+        type: "npc",
+        title: "Fresh",
+        content: "new",
+        matches: [],
+        matchCount: 1,
+      };
+
+      let resolveStale!: (value: unknown) => void;
+      const stalePromise = new Promise((resolve) => {
+        resolveStale = resolve;
+      });
+
+      mockSearch
+        .mockImplementationOnce(() => stalePromise)
+        .mockImplementationOnce(() => [freshResult]);
+
+      const { result } = renderHook(() => useSearch(), { wrapper });
+
+      let staleCall!: Promise<void>;
+      await act(async () => {
+        staleCall = result.current.handleSearch("old-query");
+        await result.current.handleSearch("new-query");
+      });
+
+      // The fresh (newer) query already resolved and set its results.
+      expect(result.current.results).toEqual([freshResult]);
+
+      // Now let the stale (older) query's response arrive late.
+      await act(async () => {
+        resolveStale([staleResult]);
+        await staleCall;
+      });
+
+      // It must not have overwritten the fresh results.
+      expect(result.current.results).toEqual([freshResult]);
+    });
+
     test("should return multiple results from multiple types", async () => {
       const multiTypeResults = [
         { id: "npc-1", type: "npc", title: "Gandalf", content: "wizard", matches: [] },
@@ -354,15 +419,61 @@ describe("SearchContext Behavioral Testing", () => {
       });
     });
 
-    test("should NOT call initializeIndex when any collection is empty", async () => {
-      // Quests empty
+    test("should call initializeIndex when one collection is empty but others have data", async () => {
+      // Regression test: the Phandelver campaign has 0 rumors, but chapters, quests,
+      // npcs and locations are all populated. The index must still build so that,
+      // for example, an NPC like "Droop" remains searchable.
+      mockUseRumorData.mockReturnValue({ rumors: [] });
+
+      renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => {
+        expect(mockInitializeIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const [indexArg] = mockInitializeIndex.mock.calls[0];
+      expect(indexArg.rumors).toEqual([]);
+      expect(indexArg.npc).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: "npc-1", type: "npc" })])
+      );
+    });
+
+    test("should NOT call initializeIndex when every collection is empty", async () => {
+      mockUseChapterData.mockReturnValue({ chapters: [] });
+      mockUseNPCData.mockReturnValue({ npcs: [] });
+      mockUseLocationData.mockReturnValue({ locations: [] });
       mockUseQuests.mockReturnValue({ quests: [] });
+      mockUseRumorData.mockReturnValue({ rumors: [] });
+      mockUseNotes.mockReturnValue({ notes: [] });
 
       renderHook(() => useSearch(), { wrapper });
 
       // Short settle — initializeIndex should not be called
       await new Promise((r) => setTimeout(r, 50));
       expect(mockInitializeIndex).not.toHaveBeenCalled();
+    });
+
+    test("should call initializeIndex again when a previously-empty collection arrives later", async () => {
+      // Collections load asynchronously and independently — a collection that
+      // starts empty (still fetching) and later arrives with data must trigger
+      // a rebuild rather than being permanently excluded from the index.
+      mockUseRumorData.mockReturnValue({ rumors: [] });
+
+      const { rerender } = renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => {
+        expect(mockInitializeIndex).toHaveBeenCalledTimes(1);
+      });
+
+      mockUseRumorData.mockReturnValue({ rumors: defaultRumors });
+      rerender();
+
+      await waitFor(() => {
+        expect(mockInitializeIndex).toHaveBeenCalledTimes(2);
+      });
+
+      const [secondIndexArg] = mockInitializeIndex.mock.calls[1];
+      expect(secondIndexArg.rumors).toHaveLength(1);
     });
 
     test("should pass correctly shaped search documents to initializeIndex", async () => {
@@ -374,12 +485,13 @@ describe("SearchContext Behavioral Testing", () => {
 
       const [indexArg] = mockInitializeIndex.mock.calls[0];
 
-      // BEHAVIOR: all five search result types must be present
+      // BEHAVIOR: all six search result types must be present
       expect(indexArg).toHaveProperty("story");
       expect(indexArg).toHaveProperty("quest");
       expect(indexArg).toHaveProperty("npc");
       expect(indexArg).toHaveProperty("location");
       expect(indexArg).toHaveProperty("rumors");
+      expect(indexArg).toHaveProperty("note");
 
       // BEHAVIOR: each collection maps to an array of search documents
       expect(Array.isArray(indexArg.story)).toBe(true);
@@ -387,6 +499,78 @@ describe("SearchContext Behavioral Testing", () => {
       expect(Array.isArray(indexArg.npc)).toBe(true);
       expect(Array.isArray(indexArg.location)).toBe(true);
       expect(Array.isArray(indexArg.rumors)).toBe(true);
+      expect(Array.isArray(indexArg.note)).toBe(true);
+    });
+
+    test("should map note title to search document title metadata and cover title + content", async () => {
+      renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => expect(mockInitializeIndex).toHaveBeenCalledTimes(1));
+
+      const [indexArg] = mockInitializeIndex.mock.calls[0];
+      const noteDoc = indexArg.note[0];
+
+      expect(noteDoc.id).toBe("note-1");
+      expect(noteDoc.type).toBe("note");
+      expect(noteDoc.metadata.title).toBe("Session recap");
+      expect(noteDoc.content).toContain("Session recap");
+      expect(noteDoc.content).toContain("The party arrived at the inn");
+    });
+
+    test("should build the index from notes alone when every other collection is empty", async () => {
+      // A campaign whose only content is notes must still be searchable.
+      mockUseChapterData.mockReturnValue({ chapters: [] });
+      mockUseNPCData.mockReturnValue({ npcs: [] });
+      mockUseLocationData.mockReturnValue({ locations: [] });
+      mockUseQuests.mockReturnValue({ quests: [] });
+      mockUseRumorData.mockReturnValue({ rumors: [] });
+      mockUseNotes.mockReturnValue({ notes: defaultNotes });
+
+      renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => {
+        expect(mockInitializeIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const [indexArg] = mockInitializeIndex.mock.calls[0];
+      expect(indexArg.note).toHaveLength(1);
+      expect(indexArg.note[0].id).toBe("note-1");
+    });
+
+    test("should index only the signed-in user's own notes, never another member's", async () => {
+      // useNotes() is scoped to the signed-in user by its Firestore path
+      // (groups/{groupId}/users/{uid}/notes). SearchProvider must index
+      // exactly what useNotes() returns and nothing else.
+      const userANotes = [
+        { id: "note-a1", title: "User A note one", content: "Only A can see this" },
+        { id: "note-a2", title: "User A note two", content: "Also only A" },
+      ];
+      mockUseNotes.mockReturnValue({ notes: userANotes });
+
+      renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => {
+        expect(mockInitializeIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const [indexArg] = mockInitializeIndex.mock.calls[0];
+      const indexedIds = indexArg.note.map((doc: { id: string }) => doc.id);
+      expect(indexedIds).toEqual(["note-a1", "note-a2"]);
+      expect(indexedIds).not.toContain("note-b1");
+    });
+
+    test("should index zero notes when useNotes returns none, rather than a stale set", async () => {
+      // Signed out, or no active group: useNotes() returns an empty array.
+      mockUseNotes.mockReturnValue({ notes: [] });
+
+      renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => {
+        expect(mockInitializeIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const [indexArg] = mockInitializeIndex.mock.calls[0];
+      expect(indexArg.note).toEqual([]);
     });
 
     test("should map NPC name to search document title metadata", async () => {

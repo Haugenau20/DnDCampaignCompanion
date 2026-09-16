@@ -97,7 +97,11 @@ const ResumeBar: React.FC<ResumeBarProps> = ({ summary, onResume }) => {
         <div
           className={clsx(
             'h-full rounded-full',
-            isFullyComplete ? 'progress-bar-completed' : 'progress-bar-active'
+            // Finishing the reading is the application reporting on itself,
+            // not a campaign outcome, so it takes `feedback` rather than the
+            // quest scale. `.progress-bar-succeeded` is for a quest that was
+            // won, and reading every chapter is not that.
+            isFullyComplete ? 'progress-bar-read' : 'progress-bar-active'
           )}
           style={{ width: `${summary.percentComplete}%` }}
         />

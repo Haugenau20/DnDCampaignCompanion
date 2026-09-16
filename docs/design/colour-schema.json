@@ -1,0 +1,793 @@
+{
+  "scheme": "torchlight-forge",
+  "version": 10,
+  "warning": "GENERATED FIXTURE. Never edited by an implementation agent, and never edited to make a test pass. Regenerate from the contract in docs/design/colour-schema.md §4, the role map in §5.4 and the scales in §5.5. v7's knowledge values were revised by hand against an explicit instruction (D40); the maths behind them is independently checked against Chromium's colour pipeline in src/core/themes/__tests__/oklch-oracle.test.ts, which is what keeps this file a check on the generator rather than a copy of it.",
+  "basedOn": "v9, deleting the knowledge ladder. Its three consumers -- locations, rumours and NPC presence -- all moved to the valence ramp, so the scale had none left. Its first rung survives as disposition.unknown at the same hue, chroma and lightness, so no value on screen changes; rungs 1 and 2 and knowledge.wash are gone. No other value changes.",
+  "inCodeAfter": {
+    "12-1 + 12-2": 109
+  },
+  "pendingIn": {
+    "12-2b": 26
+  },
+  "leafCount": 139,
+  "colourCount": 127,
+  "hue": {
+    "neutral": {
+      "H": 68,
+      "C_surface": 0.012,
+      "C_ink": 0.014
+    },
+    "accent": {
+      "H": 62,
+      "C": 0.115
+    },
+    "succeeded": {
+      "H": 143,
+      "C": 0.085
+    },
+    "failed": {
+      "H": 22,
+      "C": 0.155
+    },
+    "entity": {
+      "H0": 25,
+      "step": 45,
+      "C": 0.055
+    },
+    "valence": {
+      "H": [
+        143,
+        102.67,
+        62.33,
+        22
+      ],
+      "C": [
+        0.085,
+        0.1083,
+        0.1317,
+        0.155
+      ]
+    },
+    "dispositionUnknown": {
+      "H": 265,
+      "C": 0.09
+    }
+  },
+  "wash": 0.1,
+  "ring": 0.35,
+  "roles": {
+    "color.primary": {
+      "from": "accent.base",
+      "retire": "12-3b",
+      "note": "consumers move to `accent.ink` / `accent.edge` / `accent.fill`"
+    },
+    "color.secondary": {
+      "from": "accent.hover",
+      "retire": "12-3b",
+      "note": "was a darker accent, never a role"
+    },
+    "color.accent": {
+      "from": "accent.base",
+      "retire": "12-3b",
+      "note": "duplicate of color.primary"
+    },
+    "color.emphasis": {
+      "from": "surface.page.onMuted",
+      "note": "was #9A9082 at 2.7:1 — this fixes it"
+    },
+    "color.heading": {
+      "from": "surface.page.on"
+    },
+    "status.general": {
+      "from": "surface.card.onMuted",
+      "retire": "12-3a"
+    },
+    "status.active": {
+      "from": "accent.base",
+      "retire": "12-3a"
+    },
+    "status.completed": {
+      "from": "outcome.succeeded",
+      "retire": "12-3a"
+    },
+    "status.failed": {
+      "from": "outcome.failedInk",
+      "retire": "12-3a"
+    },
+    "status.unknown": {
+      "from": "knowledge.0",
+      "retire": "12-3a"
+    },
+    "status.on": {
+      "from": "accent.on",
+      "retire": "12-3a"
+    },
+    "state.hoverLight": {
+      "from": "surface.card.hover",
+      "retire": "12-3b",
+      "note": "a global hover grey is what token model §2 forbids"
+    },
+    "state.hoverMedium": {
+      "from": "surface.card.selected",
+      "retire": "12-3b",
+      "note": "ditto"
+    },
+    "state.selected": {
+      "from": "surface.card.selected",
+      "retire": "12-3b",
+      "note": "ditto"
+    },
+    "icon.bg": {
+      "from": "surface.sunken.bg"
+    },
+    "icon.border": {
+      "from": "neutralBorder",
+      "note": "was #C9BCA3 at 1.8:1 — reuses the 3:1-solved neutral"
+    },
+    "field.bg": {
+      "from": "surface.card.bg"
+    },
+    "field.placeholder": {
+      "from": "placeholder"
+    },
+    "field.border": {
+      "from": "neutralBorder"
+    },
+    "field.borderFocus": {
+      "from": "accent.base"
+    },
+    "field.ringFocus": {
+      "from": "accent.ring"
+    },
+    "field.errorBorder": {
+      "from": "outcome.failedInk"
+    },
+    "field.errorFocus": {
+      "from": "outcome.failedInk"
+    },
+    "field.errorRing": {
+      "from": "outcome.failedRing"
+    },
+    "field.successBorder": {
+      "from": "outcome.succeeded"
+    },
+    "field.successFocus": {
+      "from": "outcome.succeeded"
+    },
+    "field.successRing": {
+      "from": "outcome.successRing"
+    },
+    "field.disabledBg": {
+      "from": "disabledBg"
+    },
+    "field.labelText": {
+      "from": "surface.card.on"
+    },
+    "field.helperText": {
+      "from": "surface.card.onMuted"
+    },
+    "field.errorText": {
+      "from": "outcome.failedInk"
+    },
+    "field.successText": {
+      "from": "outcome.succeeded"
+    },
+    "action.primary.bg": {
+      "from": "accent.base"
+    },
+    "action.primary.text": {
+      "from": "accent.on"
+    },
+    "action.primary.hover": {
+      "from": "accent.hover"
+    },
+    "action.secondary.bg": {
+      "from": "secondary.bg"
+    },
+    "action.secondary.text": {
+      "from": "secondary.on"
+    },
+    "action.secondary.hover": {
+      "from": "secondary.hover"
+    },
+    "action.link.bg": {
+      "literal": "transparent"
+    },
+    "action.link.text": {
+      "from": "accent.base"
+    },
+    "action.link.hover": {
+      "from": "accent.hover"
+    },
+    "action.outline.bg": {
+      "literal": "transparent"
+    },
+    "action.outline.text": {
+      "from": "accent.base"
+    },
+    "action.outline.hover": {
+      "from": "surface.page.hover"
+    },
+    "action.outline.border": {
+      "from": "neutralBorder",
+      "note": "3:1 verified; not a decorative hairline"
+    },
+    "action.ghost.bg": {
+      "literal": "transparent"
+    },
+    "action.ghost.text": {
+      "from": "surface.page.onMuted"
+    },
+    "action.ghost.hover": {
+      "from": "surface.page.hover"
+    },
+    "danger.bg": {
+      "literal": "transparent"
+    },
+    "danger.deleteBg": {
+      "literal": "transparent"
+    },
+    "danger.deleteText": {
+      "from": "outcome.failedInk"
+    },
+    "danger.deleteHover": {
+      "from": "outcome.failedWash"
+    },
+    "font.primary": {
+      "literal": "Archivo, system-ui, sans-serif"
+    },
+    "font.secondary": {
+      "literal": "Archivo, system-ui, sans-serif"
+    },
+    "font.heading": {
+      "literal": "'Zilla Slab', Georgia, serif",
+      "note": "identical in both modes"
+    },
+    "border.radius.sm": {
+      "literal": "0.25rem"
+    },
+    "border.radius.md": {
+      "literal": "0.375rem"
+    },
+    "border.radius.lg": {
+      "literal": "0.5rem"
+    },
+    "border.width.sm": {
+      "literal": "1px"
+    },
+    "border.width.md": {
+      "literal": "2px"
+    },
+    "border.width.lg": {
+      "literal": "4px"
+    }
+  },
+  "shippedIn12_2": {
+    "outcome.succeeded": "outcome.succeeded",
+    "outcome.failed.ink": "outcome.failedInk",
+    "outcome.failed.fill": "outcome.failedFill",
+    "knowledge.0": "knowledge.0",
+    "knowledge.1": "knowledge.1",
+    "knowledge.2": "knowledge.2"
+  },
+  "cues": {
+    "cue.failure": "hatch",
+    "cue.negation": "strike"
+  },
+  "scales12_2b": {
+    "accent.ink": "accent.base",
+    "accent.edge": "accent.base",
+    "accent.fill": "accent.base",
+    "accent.hover": "accent.hover",
+    "accent.on": "accent.on",
+    "accent.ring": "accent.ring",
+    "outcome.failed.on": "outcome.failedOn",
+    "knowledge.wash": "knowledgeWash",
+    "feedback.error.ink": "outcome.failedInk",
+    "feedback.error.edge": "outcome.failedInk",
+    "feedback.error.wash": "outcome.failedWash",
+    "feedback.warning.ink": "accent.base",
+    "feedback.warning.edge": "accent.base",
+    "feedback.warning.wash": "accent.wash",
+    "feedback.success.ink": "outcome.succeeded",
+    "feedback.success.edge": "outcome.succeeded",
+    "feedback.success.wash": "outcome.successWash",
+    "feedback.progress.ink": "accent.base",
+    "feedback.progress.edge": "accent.base",
+    "feedback.progress.wash": "accent.wash",
+    "disposition.friendly": "outcome.succeeded",
+    "disposition.hostile": "outcome.failedInk",
+    "disposition.neutral": "surface.card.onMuted",
+    "disposition.unknown": "knowledge.0",
+    "danger.confirmBg": "outcome.failedFill",
+    "danger.confirmText": "outcome.failedOn"
+  },
+  "resolved": {
+    "light": {
+      "scheme": "light",
+      "primitives": {
+        "surface": {
+          "chrome": {
+            "bg": "#1B1611",
+            "on": "#F7EFE6",
+            "onMuted": "#B2ABA3",
+            "border": "#2F2A25",
+            "hover": "#14100B",
+            "selected": "#0D0905"
+          },
+          "band": {
+            "bg": "#26211C",
+            "on": "#F7EFE6",
+            "onMuted": "#B2ABA3",
+            "border": "#3A342F",
+            "hover": "#1E1A15",
+            "selected": "#17120E"
+          },
+          "page": {
+            "bg": "#F2EBE4",
+            "on": "#211C16",
+            "onMuted": "#605953",
+            "border": "#DFD8D1",
+            "hover": "#E8E2DB",
+            "selected": "#DED7D0"
+          },
+          "card": {
+            "bg": "#FCF5EE",
+            "on": "#211C16",
+            "onMuted": "#605953",
+            "border": "#E8E2DB",
+            "hover": "#F2EBE4",
+            "selected": "#E8E1DA"
+          },
+          "sunken": {
+            "bg": "#E8E2DB",
+            "on": "#211C16",
+            "onMuted": "#605953",
+            "border": "#D5CEC7",
+            "hover": "#DFD8D1",
+            "selected": "#D4CDC7"
+          }
+        },
+        "accent": {
+          "base": "#8D4F00",
+          "hover": "#723F00",
+          "on": "#FDF5ED",
+          "ring": "rgba(141, 79, 0, 0.35)",
+          "wash": "rgba(141, 79, 0, 0.1)"
+        },
+        "outcome": {
+          "succeeded": "#3A6437",
+          "failedInk": "#951D28",
+          "failedFill": "#951D28",
+          "failedOn": "#FDF5ED",
+          "failedWash": "rgba(149, 29, 40, 0.1)",
+          "successWash": "rgba(58, 100, 55, 0.1)",
+          "successRing": "rgba(58, 100, 55, 0.35)",
+          "failedRing": "rgba(149, 29, 40, 0.35)"
+        },
+        "neutralBorder": "#878079",
+        "placeholder": "#69625B",
+        "secondary": {
+          "bg": "#322D27",
+          "on": "#FDF5ED",
+          "hover": "#231E19"
+        },
+        "disabledBg": "#F4EDE6",
+        "entity": [
+          "#6C4542",
+          "#654C2F",
+          "#505531",
+          "#355B47",
+          "#275A60",
+          "#39546F",
+          "#534B6D",
+          "#66455B"
+        ],
+        "entityInk": "#FAF2EA",
+        "valence": [
+          {
+            "ink": "#3A6437",
+            "fill": "#5C8759"
+          },
+          {
+            "ink": "#615800",
+            "fill": "#877C22"
+          },
+          {
+            "ink": "#7C4500",
+            "fill": "#B06505"
+          },
+          {
+            "ink": "#951D28",
+            "fill": "#C54C4F"
+          }
+        ],
+        "dispositionUnknown": "#445C90"
+      },
+      "tree": {
+        "color.primary": "#8D4F00",
+        "color.secondary": "#723F00",
+        "color.accent": "#8D4F00",
+        "color.emphasis": "#605953",
+        "color.heading": "#211C16",
+        "status.general": "#605953",
+        "status.active": "#8D4F00",
+        "status.completed": "#3A6437",
+        "status.failed": "#951D28",
+        "status.unknown": "#445C90",
+        "status.on": "#FDF5ED",
+        "state.hoverLight": "#F2EBE4",
+        "state.hoverMedium": "#E8E1DA",
+        "state.selected": "#E8E1DA",
+        "icon.bg": "#E8E2DB",
+        "icon.border": "#878079",
+        "field.bg": "#FCF5EE",
+        "field.placeholder": "#69625B",
+        "field.border": "#878079",
+        "field.borderFocus": "#8D4F00",
+        "field.ringFocus": "rgba(141, 79, 0, 0.35)",
+        "field.errorBorder": "#951D28",
+        "field.errorFocus": "#951D28",
+        "field.errorRing": "rgba(149, 29, 40, 0.35)",
+        "field.successBorder": "#3A6437",
+        "field.successFocus": "#3A6437",
+        "field.successRing": "rgba(58, 100, 55, 0.35)",
+        "field.disabledBg": "#F4EDE6",
+        "field.labelText": "#211C16",
+        "field.helperText": "#605953",
+        "field.errorText": "#951D28",
+        "field.successText": "#3A6437",
+        "action.primary.bg": "#8D4F00",
+        "action.primary.text": "#FDF5ED",
+        "action.primary.hover": "#723F00",
+        "action.secondary.bg": "#322D27",
+        "action.secondary.text": "#FDF5ED",
+        "action.secondary.hover": "#231E19",
+        "action.link.bg": "transparent",
+        "action.link.text": "#8D4F00",
+        "action.link.hover": "#723F00",
+        "action.outline.bg": "transparent",
+        "action.outline.text": "#8D4F00",
+        "action.outline.hover": "#E8E2DB",
+        "action.outline.border": "#878079",
+        "action.ghost.bg": "transparent",
+        "action.ghost.text": "#605953",
+        "action.ghost.hover": "#E8E2DB",
+        "danger.bg": "transparent",
+        "danger.deleteBg": "transparent",
+        "danger.deleteText": "#951D28",
+        "danger.deleteHover": "rgba(149, 29, 40, 0.1)",
+        "font.primary": "Archivo, system-ui, sans-serif",
+        "font.secondary": "Archivo, system-ui, sans-serif",
+        "font.heading": "'Zilla Slab', Georgia, serif",
+        "border.radius.sm": "0.25rem",
+        "border.radius.md": "0.375rem",
+        "border.radius.lg": "0.5rem",
+        "border.width.sm": "1px",
+        "border.width.md": "2px",
+        "border.width.lg": "4px",
+        "surface.chrome.bg": "#1B1611",
+        "surface.chrome.on": "#F7EFE6",
+        "surface.chrome.onMuted": "#B2ABA3",
+        "surface.chrome.border": "#2F2A25",
+        "surface.chrome.hover": "#14100B",
+        "surface.chrome.selected": "#0D0905",
+        "surface.band.bg": "#26211C",
+        "surface.band.on": "#F7EFE6",
+        "surface.band.onMuted": "#B2ABA3",
+        "surface.band.border": "#3A342F",
+        "surface.band.hover": "#1E1A15",
+        "surface.band.selected": "#17120E",
+        "surface.page.bg": "#F2EBE4",
+        "surface.page.on": "#211C16",
+        "surface.page.onMuted": "#605953",
+        "surface.page.border": "#DFD8D1",
+        "surface.page.hover": "#E8E2DB",
+        "surface.page.selected": "#DED7D0",
+        "surface.card.bg": "#FCF5EE",
+        "surface.card.on": "#211C16",
+        "surface.card.onMuted": "#605953",
+        "surface.card.border": "#E8E2DB",
+        "surface.card.hover": "#F2EBE4",
+        "surface.card.selected": "#E8E1DA",
+        "surface.sunken.bg": "#E8E2DB",
+        "surface.sunken.on": "#211C16",
+        "surface.sunken.onMuted": "#605953",
+        "surface.sunken.border": "#D5CEC7",
+        "surface.sunken.hover": "#DFD8D1",
+        "surface.sunken.selected": "#D4CDC7",
+        "entityPalette.0": "#6C4542",
+        "entityPalette.1": "#654C2F",
+        "entityPalette.2": "#505531",
+        "entityPalette.3": "#355B47",
+        "entityPalette.4": "#275A60",
+        "entityPalette.5": "#39546F",
+        "entityPalette.6": "#534B6D",
+        "entityPalette.7": "#66455B",
+        "entityInk": "#FAF2EA",
+        "outcome.succeeded": "#3A6437",
+        "outcome.failed.ink": "#951D28",
+        "outcome.failed.fill": "#951D28",
+        "cue.failure": "hatch",
+        "cue.negation": "strike",
+        "accent.ink": "#8D4F00",
+        "accent.edge": "#8D4F00",
+        "accent.fill": "#8D4F00",
+        "accent.hover": "#723F00",
+        "accent.on": "#FDF5ED",
+        "accent.ring": "rgba(141, 79, 0, 0.35)",
+        "outcome.failed.on": "#FDF5ED",
+        "feedback.error.ink": "#951D28",
+        "feedback.error.edge": "#951D28",
+        "feedback.error.wash": "rgba(149, 29, 40, 0.1)",
+        "feedback.warning.ink": "#8D4F00",
+        "feedback.warning.edge": "#8D4F00",
+        "feedback.warning.wash": "rgba(141, 79, 0, 0.1)",
+        "feedback.success.ink": "#3A6437",
+        "feedback.success.edge": "#3A6437",
+        "feedback.success.wash": "rgba(58, 100, 55, 0.1)",
+        "feedback.progress.ink": "#8D4F00",
+        "feedback.progress.edge": "#8D4F00",
+        "feedback.progress.wash": "rgba(141, 79, 0, 0.1)",
+        "disposition.friendly": "#3A6437",
+        "disposition.hostile": "#951D28",
+        "disposition.neutral": "#605953",
+        "disposition.unknown": "#445C90",
+        "danger.confirmBg": "#951D28",
+        "danger.confirmText": "#FDF5ED",
+        "scheme": "light",
+        "valence.0.ink": "#3A6437",
+        "valence.0.fill": "#5C8759",
+        "valence.1.ink": "#615800",
+        "valence.1.fill": "#877C22",
+        "valence.2.ink": "#7C4500",
+        "valence.2.fill": "#B06505",
+        "valence.3.ink": "#951D28",
+        "valence.3.fill": "#C54C4F"
+      }
+    },
+    "dark": {
+      "scheme": "dark",
+      "primitives": {
+        "surface": {
+          "chrome": {
+            "bg": "#0A0704",
+            "on": "#F3EBE3",
+            "onMuted": "#ABA39B",
+            "border": "#201B16",
+            "hover": "#130E0A",
+            "selected": "#1D1813"
+          },
+          "band": {
+            "bg": "#14100B",
+            "on": "#F3EBE3",
+            "onMuted": "#ABA39B",
+            "border": "#29241F",
+            "hover": "#1D1814",
+            "selected": "#27221D"
+          },
+          "page": {
+            "bg": "#201B16",
+            "on": "#E9E1D9",
+            "onMuted": "#AEA69F",
+            "border": "#2F2A25",
+            "hover": "#29241F",
+            "selected": "#342F29"
+          },
+          "card": {
+            "bg": "#2A2520",
+            "on": "#E9E1D9",
+            "onMuted": "#AEA69F",
+            "border": "#3B3630",
+            "hover": "#342F2A",
+            "selected": "#3F3A34"
+          },
+          "sunken": {
+            "bg": "#15110C",
+            "on": "#E9E1D9",
+            "onMuted": "#AEA69F",
+            "border": "#241F1A",
+            "hover": "#1E1A15",
+            "selected": "#28231E"
+          }
+        },
+        "accent": {
+          "base": "#D69253",
+          "hover": "#BF7C3C",
+          "on": "#120D08",
+          "ring": "rgba(214, 146, 83, 0.35)",
+          "wash": "rgba(214, 146, 83, 0.1)"
+        },
+        "outcome": {
+          "succeeded": "#7EAB7A",
+          "failedInk": "#E16566",
+          "failedFill": "#BE4649",
+          "failedOn": "#FDF5ED",
+          "failedWash": "rgba(225, 101, 102, 0.1)",
+          "successWash": "rgba(126, 171, 122, 0.1)",
+          "successRing": "rgba(126, 171, 122, 0.35)",
+          "failedRing": "rgba(225, 101, 102, 0.35)"
+        },
+        "neutralBorder": "#8C857D",
+        "placeholder": "#9E978F",
+        "secondary": {
+          "bg": "#3F3934",
+          "on": "#E9E1D9",
+          "hover": "#504B45"
+        },
+        "disabledBg": "#221D18",
+        "entity": [
+          "#613A37",
+          "#594124",
+          "#454A26",
+          "#2A503C",
+          "#1B4F54",
+          "#2F4963",
+          "#484061",
+          "#5A3B50"
+        ],
+        "entityInk": "#F7EFE6",
+        "valence": [
+          {
+            "ink": "#7EAB7A",
+            "fill": "#568153"
+          },
+          {
+            "ink": "#A59B45",
+            "fill": "#81761A"
+          },
+          {
+            "ink": "#CC7F30",
+            "fill": "#A86000"
+          },
+          {
+            "ink": "#E16566",
+            "fill": "#BE4649"
+          }
+        ],
+        "dispositionUnknown": "#748EC7"
+      },
+      "tree": {
+        "color.primary": "#D69253",
+        "color.secondary": "#BF7C3C",
+        "color.accent": "#D69253",
+        "color.emphasis": "#AEA69F",
+        "color.heading": "#E9E1D9",
+        "status.general": "#AEA69F",
+        "status.active": "#D69253",
+        "status.completed": "#7EAB7A",
+        "status.failed": "#E16566",
+        "status.unknown": "#748EC7",
+        "status.on": "#120D08",
+        "state.hoverLight": "#342F2A",
+        "state.hoverMedium": "#3F3A34",
+        "state.selected": "#3F3A34",
+        "icon.bg": "#15110C",
+        "icon.border": "#8C857D",
+        "field.bg": "#2A2520",
+        "field.placeholder": "#9E978F",
+        "field.border": "#8C857D",
+        "field.borderFocus": "#D69253",
+        "field.ringFocus": "rgba(214, 146, 83, 0.35)",
+        "field.errorBorder": "#E16566",
+        "field.errorFocus": "#E16566",
+        "field.errorRing": "rgba(225, 101, 102, 0.35)",
+        "field.successBorder": "#7EAB7A",
+        "field.successFocus": "#7EAB7A",
+        "field.successRing": "rgba(126, 171, 122, 0.35)",
+        "field.disabledBg": "#221D18",
+        "field.labelText": "#E9E1D9",
+        "field.helperText": "#AEA69F",
+        "field.errorText": "#E16566",
+        "field.successText": "#7EAB7A",
+        "action.primary.bg": "#D69253",
+        "action.primary.text": "#120D08",
+        "action.primary.hover": "#BF7C3C",
+        "action.secondary.bg": "#3F3934",
+        "action.secondary.text": "#E9E1D9",
+        "action.secondary.hover": "#504B45",
+        "action.link.bg": "transparent",
+        "action.link.text": "#D69253",
+        "action.link.hover": "#BF7C3C",
+        "action.outline.bg": "transparent",
+        "action.outline.text": "#D69253",
+        "action.outline.hover": "#29241F",
+        "action.outline.border": "#8C857D",
+        "action.ghost.bg": "transparent",
+        "action.ghost.text": "#AEA69F",
+        "action.ghost.hover": "#29241F",
+        "danger.bg": "transparent",
+        "danger.deleteBg": "transparent",
+        "danger.deleteText": "#E16566",
+        "danger.deleteHover": "rgba(225, 101, 102, 0.1)",
+        "font.primary": "Archivo, system-ui, sans-serif",
+        "font.secondary": "Archivo, system-ui, sans-serif",
+        "font.heading": "'Zilla Slab', Georgia, serif",
+        "border.radius.sm": "0.25rem",
+        "border.radius.md": "0.375rem",
+        "border.radius.lg": "0.5rem",
+        "border.width.sm": "1px",
+        "border.width.md": "2px",
+        "border.width.lg": "4px",
+        "surface.chrome.bg": "#0A0704",
+        "surface.chrome.on": "#F3EBE3",
+        "surface.chrome.onMuted": "#ABA39B",
+        "surface.chrome.border": "#201B16",
+        "surface.chrome.hover": "#130E0A",
+        "surface.chrome.selected": "#1D1813",
+        "surface.band.bg": "#14100B",
+        "surface.band.on": "#F3EBE3",
+        "surface.band.onMuted": "#ABA39B",
+        "surface.band.border": "#29241F",
+        "surface.band.hover": "#1D1814",
+        "surface.band.selected": "#27221D",
+        "surface.page.bg": "#201B16",
+        "surface.page.on": "#E9E1D9",
+        "surface.page.onMuted": "#AEA69F",
+        "surface.page.border": "#2F2A25",
+        "surface.page.hover": "#29241F",
+        "surface.page.selected": "#342F29",
+        "surface.card.bg": "#2A2520",
+        "surface.card.on": "#E9E1D9",
+        "surface.card.onMuted": "#AEA69F",
+        "surface.card.border": "#3B3630",
+        "surface.card.hover": "#342F2A",
+        "surface.card.selected": "#3F3A34",
+        "surface.sunken.bg": "#15110C",
+        "surface.sunken.on": "#E9E1D9",
+        "surface.sunken.onMuted": "#AEA69F",
+        "surface.sunken.border": "#241F1A",
+        "surface.sunken.hover": "#1E1A15",
+        "surface.sunken.selected": "#28231E",
+        "entityPalette.0": "#613A37",
+        "entityPalette.1": "#594124",
+        "entityPalette.2": "#454A26",
+        "entityPalette.3": "#2A503C",
+        "entityPalette.4": "#1B4F54",
+        "entityPalette.5": "#2F4963",
+        "entityPalette.6": "#484061",
+        "entityPalette.7": "#5A3B50",
+        "entityInk": "#F7EFE6",
+        "outcome.succeeded": "#7EAB7A",
+        "outcome.failed.ink": "#E16566",
+        "outcome.failed.fill": "#BE4649",
+        "cue.failure": "hatch",
+        "cue.negation": "strike",
+        "accent.ink": "#D69253",
+        "accent.edge": "#D69253",
+        "accent.fill": "#D69253",
+        "accent.hover": "#BF7C3C",
+        "accent.on": "#120D08",
+        "accent.ring": "rgba(214, 146, 83, 0.35)",
+        "outcome.failed.on": "#FDF5ED",
+        "feedback.error.ink": "#E16566",
+        "feedback.error.edge": "#E16566",
+        "feedback.error.wash": "rgba(225, 101, 102, 0.1)",
+        "feedback.warning.ink": "#D69253",
+        "feedback.warning.edge": "#D69253",
+        "feedback.warning.wash": "rgba(214, 146, 83, 0.1)",
+        "feedback.success.ink": "#7EAB7A",
+        "feedback.success.edge": "#7EAB7A",
+        "feedback.success.wash": "rgba(126, 171, 122, 0.1)",
+        "feedback.progress.ink": "#D69253",
+        "feedback.progress.edge": "#D69253",
+        "feedback.progress.wash": "rgba(214, 146, 83, 0.1)",
+        "disposition.friendly": "#7EAB7A",
+        "disposition.hostile": "#E16566",
+        "disposition.neutral": "#AEA69F",
+        "disposition.unknown": "#748EC7",
+        "danger.confirmBg": "#BE4649",
+        "danger.confirmText": "#FDF5ED",
+        "scheme": "dark",
+        "valence.0.ink": "#7EAB7A",
+        "valence.0.fill": "#568153",
+        "valence.1.ink": "#A59B45",
+        "valence.1.fill": "#81761A",
+        "valence.2.ink": "#CC7F30",
+        "valence.2.fill": "#A86000",
+        "valence.3.ink": "#E16566",
+        "valence.3.fill": "#BE4649"
+      }
+    }
+  }
+}

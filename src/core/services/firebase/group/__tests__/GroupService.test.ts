@@ -13,6 +13,14 @@ const mockGetDoc = jest.fn();
 const mockGetDocs = jest.fn();
 const mockRunTransaction = jest.fn();
 const mockHttpsCallable = jest.fn();
+
+// Distinguishes BaseFirebaseService's regioned getFunctions(app, 'europe-west1')
+// call (made once, at construction) from a bare getFunctions() call made from
+// inside a method -- the defect this suite guards against.
+const REGIONED_FUNCTIONS_INSTANCE = { __label: 'regioned-functions' };
+const mockGetFunctions = jest.fn((...args: any[]) =>
+  args[1] === 'europe-west1' ? REGIONED_FUNCTIONS_INSTANCE : { __label: 'bare-functions' }
+);
 const mockCollection = jest.fn((_db: any, ...segs: string[]) => ({ path: segs.join('/') }));
 const mockDoc = jest.fn((_db_or_ref: any, ...segs: string[]) => ({
   path: segs.join('/'),
@@ -44,7 +52,7 @@ jest.mock('firebase/auth', () => ({
 }));
 jest.mock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
 jest.mock('firebase/functions', () => ({
-  getFunctions: jest.fn(() => ({})),
+  getFunctions: function() { return (mockGetFunctions as Function).apply(null, arguments); },
   connectFunctionsEmulator: jest.fn(),
   httpsCallable: function() { return (mockHttpsCallable as Function).apply(null, arguments); },
 }));
@@ -127,7 +135,7 @@ describe('GroupService', () => {
     }));
     jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
     jest.doMock('firebase/functions', () => ({
-      getFunctions: jest.fn(() => ({})),
+      getFunctions: function() { return (mockGetFunctions as Function).apply(null, arguments); },
       connectFunctionsEmulator: jest.fn(),
       httpsCallable: function() { return (mockHttpsCallable as Function).apply(null, arguments); },
     }));
@@ -140,6 +148,7 @@ describe('GroupService', () => {
 
     [mockGetDoc, mockGetDocs, mockRunTransaction, mockIsUsernameAvailableInGroup,
      mockHttpsCallable].forEach(m => m.mockReset());
+    mockGetFunctions.mockClear();
     (mockUserServiceInstance.getGroupUserProfile as jest.Mock).mockReset();
 
     GroupService = require('../GroupService').default;
@@ -397,6 +406,27 @@ describe('GroupService', () => {
   // ─── removeUserFromGroup ────────────────────────────────────────────────────
 
   describe('removeUserFromGroup', () => {
+    test("uses the service's regioned Functions instance, not a fresh getFunctions()", async () => {
+      const mockCallable = jest.fn().mockResolvedValueOnce({ data: 'ok' });
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      // Construct the singleton first -- this is the ONE legitimate call to
+      // getFunctions(app, 'europe-west1'), made by BaseFirebaseService itself.
+      const svc = GroupService.getInstance();
+      mockGetFunctions.mockClear();
+      mockHttpsCallable.mockClear();
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      await svc.removeUserFromGroup('g1', 'uid-to-remove');
+
+      // The method itself must not call getFunctions() again -- that is
+      // exactly the bare, wrongly-regioned call this fix removes.
+      expect(mockGetFunctions).not.toHaveBeenCalled();
+      // httpsCallable must have received the same instance the constructor
+      // registered, not a fresh (and differently regioned) one.
+      expect(mockHttpsCallable).toHaveBeenCalledWith(REGIONED_FUNCTIONS_INSTANCE, 'removeUserFromGroup');
+    });
+
     test('should call the Cloud Function httpsCallable', async () => {
       const mockCallable = jest.fn().mockResolvedValueOnce({ data: 'ok' });
       mockHttpsCallable.mockReturnValueOnce(mockCallable);

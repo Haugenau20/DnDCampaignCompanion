@@ -5,6 +5,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChapterForm from '../ChapterForm';
 import { Chapter } from 'features/storytelling/chapters/types';
+import { unnamedControlsIn } from "../../../../../test-utils/accessible-names";
+import { formAccentsIn } from "../../../../../test-utils/accent-budget";
 
 // ---------------------------------------------------------------------------
 // Mock contexts
@@ -469,4 +471,79 @@ describe('ChapterForm', () => {
       expect(payload.summary).toBe('My custom summary');
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Accessible names (PR 8.1)
+  //
+  // The point of the phase: every control announces itself. A grep proved the
+  // old unassociated `<label>` markup was gone; only walking the DOM proves the
+  // new markup is right, because a primitive whose `label` prop got dropped in
+  // the move looks just as clean in the source.
+  // -------------------------------------------------------------------------
+  describe("accessible names", () => {
+    test("every control in the form has an accessible name", () => {
+      const { container } = render(<ChapterForm mode="create" />);
+      expect(unnamedControlsIn(container)).toEqual([]);
+    });
+  });
+
+
+  // -------------------------------------------------------------------------
+  // The accent budget (PR 8.3)
+  //
+  // One filled accent on the form, and it is the control that writes (D66).
+  // `Add` and `Add tag` build a draft; the record changes when you save.
+  // -------------------------------------------------------------------------
+  describe("accent budget", () => {
+    test("has exactly one filled accent, and it is the submit", () => {
+      const { container } = render(<ChapterForm mode="create" />);
+      expect(formAccentsIn(container)).toHaveLength(1);
+    });
+
+    test("the toolbar adds no accent of its own", () => {
+      // D80: a toolbar button writes a draft, not the record. Three more
+      // filled buttons above the body would be the same defect the chip work
+      // removed in 8.2.
+      const { container } = render(<ChapterForm mode="create" />);
+      expect(formAccentsIn(container)).toEqual(expect.arrayContaining([]));
+      expect(formAccentsIn(container)).toHaveLength(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The markdown toolbar (PR 9.2)
+  // -------------------------------------------------------------------------
+  describe("markdown toolbar", () => {
+    test("offers bold, italic and quote over the body field", () => {
+      render(<ChapterForm mode="create" />);
+      expect(screen.getByRole("group", { name: "Chapter content formatting" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /bold/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /italic/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /quote/i })).toBeInTheDocument();
+    });
+
+    test("writes a mark into the body field the form submits", () => {
+      // The toolbar has to reach the same state the submit reads, or it would
+      // decorate a value that never gets saved.
+      render(<ChapterForm mode="edit" chapter={makeChapter({ content: "quiet" })} />);
+      // Exact, not a regex: /Chapter Content/i also matches the toolbar
+      // group's "Chapter content formatting" name.
+      const body = screen.getByLabelText('Chapter Content') as HTMLTextAreaElement;
+
+      body.focus();
+      body.setSelectionRange(0, 5);
+      fireEvent.click(screen.getByRole("button", { name: /bold/i }));
+
+      expect(body.value).toBe("**quiet**");
+    });
+
+    test("says once, quietly, that the field takes markdown", () => {
+      // 07-2-5 removed a hint like this because the feature did not exist yet
+      // (R18). It exists now, so the hint comes back — one sentence, in the
+      // helper slot Input already has.
+      render(<ChapterForm mode="create" />);
+      expect(screen.getByText(/takes markdown/i)).toBeInTheDocument();
+    });
+  });
+
 });

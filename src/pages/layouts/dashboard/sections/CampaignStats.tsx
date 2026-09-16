@@ -119,7 +119,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
                 i > 1 && 'border-t sm:border-t-0 sm:border-l border-card'
               )}
             >
-              <div className={clsx('w-full h-full rounded-lg', `journal-loading`)}></div>
+              <div className={clsx('w-full h-full rounded-lg', `section-loading`)}></div>
             </div>
           ))}
         </div>

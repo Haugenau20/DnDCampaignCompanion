@@ -41,24 +41,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   // Active tab state
   const [activeTab, setActiveTab] = useState<AdminTab>(AdminTab.Tokens);
 
-  // Log the admin status and relevant state for debugging
-  useEffect(() => {
-    console.log("AdminPanel: Loading state =", loading);
-    console.log("AdminPanel: activeGroupUserProfile =", activeGroupUserProfile);
-    console.log("AdminPanel: isAdmin =", isAdmin);
-    console.log("AdminPanel: activeGroup =", activeGroup);
-    console.log("AdminPanel: activeGroupId =", activeGroupId);
-  }, [loading, activeGroupUserProfile, isAdmin, activeGroup, activeGroupId]);
-
   // Set up a timeout to stop showing the loading state after 3 seconds
   // even if the loading state from the hook hasn't resolved
   useEffect(() => {
     if (!loading) {
       setLocalLoading(false);
     } else {
-      // If still loading after 3 seconds, stop showing loading indicator
+      // If still loading after 3 seconds, stop showing loading indicator.
+      // Kept, deliberately: it looks like a workaround and probably is one,
+      // but nothing has established what it works around, so removing it is a
+      // behaviour change nobody can predict (10-1).
       const timer = setTimeout(() => {
-        console.log("AdminPanel: Forcing loading to complete after timeout");
         setLocalLoading(false);
       }, 3000);
       
@@ -120,13 +113,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
         </Typography>
         
         {/* Tab Navigation */}
-        <div className={clsx("flex flex-wrap border-b", `navigation`)}>
+        <div className={clsx("flex flex-wrap border-b", `navigation`, `nav-on-card`)}>
           <button
             className={clsx(
               "py-2 px-4 font-medium flex items-center gap-2",
               activeTab === AdminTab.Tokens 
-                ? `navigation-item-active` 
-                : `navigation-item`
+                ? `nav-item nav-item-active`
+                : `nav-item`
             )}
             onClick={() => setActiveTab(AdminTab.Tokens)}
           >
@@ -136,8 +129,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             className={clsx(
               "py-2 px-4 font-medium flex items-center gap-2",
               activeTab === AdminTab.Users 
-                ? `navigation-item-active` 
-                : `navigation-item`
+                ? `nav-item nav-item-active`
+                : `nav-item`
             )}
             onClick={() => setActiveTab(AdminTab.Users)}
           >
@@ -147,8 +140,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             className={clsx(
               "py-2 px-4 font-medium flex items-center gap-2",
               activeTab === AdminTab.Campaigns 
-                ? `navigation-item-active` 
-                : `navigation-item`
+                ? `nav-item nav-item-active`
+                : `nav-item`
             )}
             onClick={() => setActiveTab(AdminTab.Campaigns)}
           >
@@ -158,8 +151,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             className={clsx(
               "py-2 px-4 font-medium flex items-center gap-2",
               activeTab === AdminTab.Groups 
-                ? `navigation-item-active` 
-                : `navigation-item`
+                ? `nav-item nav-item-active`
+                : `nav-item`
             )}
             onClick={() => setActiveTab(AdminTab.Groups)}
           >

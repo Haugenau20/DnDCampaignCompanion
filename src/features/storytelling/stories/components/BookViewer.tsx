@@ -5,6 +5,8 @@ import Typography from 'core/components/Typography';
 import Card from 'core/components/Card';
 import Button from 'core/components/Button';
 import clsx from 'clsx';
+import Markdown from 'core/components/Markdown';
+import { paginateProse } from 'features/storytelling/stories/utils/paginate-prose';
 
 interface BookViewerProps {
   content: string;
@@ -35,40 +37,23 @@ const BookViewer: React.FC<BookViewerProps> = ({
   const [pages, setPages] = useState<string[]>([]);
   const [showShortcutHint, setShowShortcutHint] = useState(true);
 
-  // Format content for display, preserving paragraphs
-  const formatContent = useCallback((contentText: string): string => {
-    // Convert explicit \n to actual newlines if they exist
-    return contentText
-      .replace(/\\n/g, '\n')
-      .trim();
-  }, []);
-
-  // Split content into pages
+  // Split content into pages.
+  //
+  // Breaks fall between blocks wherever possible and never inside markup; the
+  // old version sliced `content.split(' ')` into 250-word pages, which cuts
+  // `**a bold phrase**` in half now that a body can contain markdown. The word
+  // budget is unchanged, so a plain-text saga paginates as it always did.
   useEffect(() => {
-    if (!content) {
-      setPages([]);
-      setTotalPages(1);
-      return;
-    }
+    const pageArray = paginateProse(content);
 
-    const formattedContent = formatContent(content);
-    const wordsPerPage = 250;
-    const words = formattedContent.split(' ');
-    const pageArray = [];
-    
-    for (let i = 0; i < words.length; i += wordsPerPage) {
-      pageArray.push(words.slice(i, i + wordsPerPage).join(' '));
-    }
-    
-    // Ensure at least one page
-    if (pageArray.length === 0) {
-      pageArray.push('');
-    }
-    
-    setPages(pageArray);
-    setTotalPages(pageArray.length);
+    // Whitespace-only content passes the `!content` guard below but yields no
+    // pages, and a book with zero pages has nothing to render a page turn for.
+    const resolved = pageArray.length > 0 ? pageArray : [''];
+
+    setPages(resolved);
+    setTotalPages(resolved.length);
     setCurrentPage(1); // Reset to first page when content changes
-  }, [content, formatContent]);
+  }, [content]);
 
   // Handle page navigation
   const handlePageChange = useCallback((newPage: number) => {
@@ -135,23 +120,6 @@ const BookViewer: React.FC<BookViewerProps> = ({
   }, []);
 
   // Render newlines properly
-  const renderContent = (text: string) => {
-    if (!text) return null;
-
-    // Split on newlines and drop blank lines. Emitting a <p class="mb-4"> for every
-    // line meant each blank line in a chapter produced an empty paragraph carrying a
-    // 1rem margin — invisible, uneven gaps between paragraphs, plus empty nodes in
-    // the accessibility tree.
-    return text
-      .split('\n')
-      .map(paragraph => paragraph.trim())
-      .filter(paragraph => paragraph.length > 0)
-      .map((paragraph, index) => (
-        <p key={index} className="mb-4">
-          {paragraph}
-        </p>
-      ));
-  };
 
   if (!content) {
     return (
@@ -217,7 +185,7 @@ const BookViewer: React.FC<BookViewerProps> = ({
           {/* Content Container */}
           <div className="max-w-2xl mx-auto p-8 pb-20 book-content">
             <div className="leading-relaxed book-text">
-              {renderContent(pages[currentPage - 1] || '')}
+              <Markdown content={pages[currentPage - 1] || ''} />
             </div>
           </div>
 

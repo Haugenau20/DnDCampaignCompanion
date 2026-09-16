@@ -2,8 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { NPC, NPCStatus, NPCRelationship } from '../types';
 import { AlertCircle, Save, X, Users, Scroll } from 'lucide-react';
 import Input from '../../../../core/components/Input';
+import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
+import { SelectableChip, RemovableChip } from '../../../../core/components/Chip';
 import Card from '../../../../core/components/Card';
 import Dialog from '../../../../core/components/Dialog';
 import { useQuests } from '../../quests/context/QuestContext';
@@ -31,6 +33,7 @@ interface NPCFormProps {
     appearance?: string;
     personality?: string;
     background?: string;
+    tags?: string[];
   };
   onSuccess?: () => void;
   onCancel?: () => void;
@@ -81,10 +84,28 @@ const NPCForm: React.FC<NPCFormProps> = ({
       appearance: initialData.appearance || '',
       personality: initialData.personality || '',
       background: initialData.background || '',
+      tags: initialData.tags || [],
     } : {}
   });
 
   const [affiliationInput, setAffiliationInput] = useState('');
+  const [tagInput, setTagInput] = useState('');
+
+  const handleTagAdd = () => {
+    if (!tagInput.trim()) return;
+    setFormData(prev => ({
+      ...prev,
+      tags: [...(prev.tags || []), tagInput.trim()],
+    }));
+    setTagInput('');
+  };
+
+  const handleTagRemove = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: (prev.tags || []).filter((_, i) => i !== index),
+    }));
+  };
 
   // NPC Selection Dialog state
   const [isNPCDialogOpen, setIsNPCDialogOpen] = useState(false);
@@ -194,6 +215,7 @@ const NPCForm: React.FC<NPCFormProps> = ({
           relatedQuests: Array.from(selectedQuests)
         },
         notes: [],
+        tags: formData.tags || [],
       };
 
       // Use the context method to add NPC
@@ -233,36 +255,30 @@ const NPCForm: React.FC<NPCFormProps> = ({
                 onChange={(e) => handleInputChange('title', e.target.value)}
               />
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1 form-label">Status *</label>
-                  <select
-                    className="w-full rounded-lg border p-2 input"
-                    value={formData.status}
-                    onChange={(e) => handleInputChange('status', e.target.value)}
-                    required
-                  >
-                    <option value="alive">Alive</option>
-                    <option value="deceased">Deceased</option>
-                    <option value="missing">Missing</option>
-                    <option value="unknown">Unknown</option>
-                  </select>
-                </div>
+              <div className="space-y-4">
+                <Select
+                  label="Status *"
+                  value={formData.status}
+                  onChange={(e) => handleInputChange('status', e.target.value)}
+                  required
+                >
+                  <option value="alive">Alive</option>
+                  <option value="deceased">Deceased</option>
+                  <option value="missing">Missing</option>
+                  <option value="unknown">Unknown</option>
+                </Select>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1 form-label">Relationship *</label>
-                  <select
-                    className="w-full rounded-lg border p-2 input"
-                    value={formData.relationship}
-                    onChange={(e) => handleInputChange('relationship', e.target.value)}
-                    required
-                  >
-                    <option value="friendly">Friendly</option>
-                    <option value="neutral">Neutral</option>
-                    <option value="hostile">Hostile</option>
-                    <option value="unknown">Unknown</option>
-                  </select>
-                </div>
+                <Select
+                  label="Relationship *"
+                  value={formData.relationship}
+                  onChange={(e) => handleInputChange('relationship', e.target.value)}
+                  required
+                >
+                  <option value="friendly">Friendly</option>
+                  <option value="neutral">Neutral</option>
+                  <option value="hostile">Hostile</option>
+                  <option value="unknown">Unknown</option>
+                </Select>
               </div>
 
               <Input
@@ -291,36 +307,40 @@ const NPCForm: React.FC<NPCFormProps> = ({
             <div className="space-y-4">
               <Typography variant="h4">Character Details</Typography>
               <div>
-                <label className="block text-sm font-medium mb-1 form-label">Description</label>
-                <textarea
-                  className="w-full rounded-lg border p-2 h-24 input"
+                <Input
+                  label="Description"
+                  isTextArea
+                  className="h-24"
                   value={formData.description || ''}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 form-label">Appearance</label>
-                <textarea
-                  className="w-full rounded-lg border p-2 h-24 input"
+                <Input
+                  label="Appearance"
+                  isTextArea
+                  className="h-24"
                   value={formData.appearance || ''}
                   onChange={(e) => handleInputChange('appearance', e.target.value)}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 form-label">Personality</label>
-                <textarea
-                  className="w-full rounded-lg border p-2 h-24 input"
+                <Input
+                  label="Personality"
+                  isTextArea
+                  className="h-24"
                   value={formData.personality || ''}
                   onChange={(e) => handleInputChange('personality', e.target.value)}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1 form-label">Background</label>
-                <textarea
-                  className="w-full rounded-lg border p-2 h-24 input"
+                <Input
+                  label="Background"
+                  isTextArea
+                  className="h-24"
                   value={formData.background || ''}
                   onChange={(e) => handleInputChange('background', e.target.value)}
                 />
@@ -345,26 +365,21 @@ const NPCForm: React.FC<NPCFormProps> = ({
                 {formData.connections?.relatedNPCs.map(npcId => {
                   const npc = existingNPCs.find(n => n.id === npcId);
                   return npc ? (
-                    <div
+                    <RemovableChip
                       key={npcId}
-                      className="flex items-center gap-1 px-3 py-1 rounded-full tag"
+                      onRemove={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          connections: {
+                            ...prev.connections!,
+                            relatedNPCs: prev.connections!.relatedNPCs.filter(id => id !== npcId)
+                          }
+                        }));
+                      }}
+                      removeLabel={`Remove ${npc.name}`}
                     >
-                      <span>{npc.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            connections: {
-                              ...prev.connections!,
-                              relatedNPCs: prev.connections!.relatedNPCs.filter(id => id !== npcId)
-                            }
-                          }));
-                        }}
-                        className="typography-secondary hover:opacity-75">
-                        <X size={14} />
-                      </button>
-                    </div>
+                      {npc.name}
+                    </RemovableChip>
                   ) : null;
                 })}
               </div>
@@ -388,22 +403,17 @@ const NPCForm: React.FC<NPCFormProps> = ({
                   {Array.from(selectedQuests).map(questId => {
                     const quest = quests.find(q => q.id === questId);
                     return quest ? (
-                      <div
+                      <RemovableChip
                         key={questId}
-                        className="flex items-center gap-1 px-3 py-1 rounded-full tag"
-                      >
-                        <span>{quest.title}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
+                        onRemove={() => {
                             const newSet = new Set(selectedQuests);
                             newSet.delete(questId);
                             setSelectedQuests(newSet);
                           }}
-                          className="typography-secondary hover:opacity-75">
-                          <X size={14} />
-                        </button>
-                      </div>
+                        removeLabel={`Remove ${quest.title}`}
+                      >
+                        {quest.title}
+                      </RemovableChip>
                     ) : null;
                   })}
                 </div>
@@ -415,6 +425,7 @@ const NPCForm: React.FC<NPCFormProps> = ({
             <Typography variant="h4">Affiliations</Typography>
             <div className="flex gap-2">
               <Input
+                aria-label="Enter affiliation"
                 value={affiliationInput}
                 onChange={(e) => setAffiliationInput(e.target.value)}
                 placeholder="Miners Exchange"
@@ -423,6 +434,7 @@ const NPCForm: React.FC<NPCFormProps> = ({
               />
               <Button 
                 type="button"
+                variant="outline"
                 onClick={handleAffiliationAdd}
                 disabled={!affiliationInput.trim()}
               >
@@ -431,18 +443,46 @@ const NPCForm: React.FC<NPCFormProps> = ({
             </div>
             <div className="flex flex-wrap gap-2">
               {formData.connections?.affiliations.map((affiliation, index) => (
-                <div
+                <RemovableChip
                   key={index}
-                  className="flex items-center gap-1 px-3 py-1 rounded-full tag"
+                  onRemove={() => handleAffiliationRemove(index)}
+                  removeLabel={`Remove affiliation ${affiliation}`}
                 >
-                  <span>{affiliation}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleAffiliationRemove(index)}
-                    className="typography-secondary hover:opacity-75">
-                    <X size={14} />
-                  </button>
-                </div>
+                  {affiliation}
+                </RemovableChip>
+              ))}
+            </div>
+          </div>
+
+            {/* Tags */}
+          <div className="space-y-4">
+            <Typography variant="h4">Tags</Typography>
+            <div className="flex gap-2">
+              <Input
+                aria-label="Enter tag"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                placeholder="merchant"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleTagAdd}
+                disabled={!tagInput.trim()}
+              >
+                Add tag
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formData.tags?.map((tag, index) => (
+                <RemovableChip
+                  key={index}
+                  onRemove={() => handleTagRemove(index)}
+                  removeLabel={`Remove tag ${tag}`}
+                >
+                  {tag}
+                </RemovableChip>
               ))}
             </div>
           </div>
@@ -492,23 +532,14 @@ const NPCForm: React.FC<NPCFormProps> = ({
         <div className="max-h-96 overflow-y-auto mb-4">
           <div className="grid grid-cols-3 gap-2">
             {sortedNPCs.map(npc => (
-              <button
+              <SelectableChip
                 key={npc.id}
-                onClick={() => toggleNPCSelection(npc.id)}
-                className={clsx(
-                  "p-2 rounded text-center transition-colors",
-                  selectedNPCs.has(npc.id)
-                    ? `selected-item`
-                    : `selectable-item`
-                )}
+                selected={selectedNPCs.has(npc.id)}
+                onToggle={() => toggleNPCSelection(npc.id)}
+                className="text-center"
               >
-                <Typography 
-                  variant="body"
-                  className={`${selectedNPCs.has(npc.id) ? 'font-medium' : ''}`}
-                >
-                  {npc.name}
-                </Typography>
-              </button>
+                {npc.name}
+              </SelectableChip>
             ))}
           </div>
         </div>
@@ -549,9 +580,10 @@ const NPCForm: React.FC<NPCFormProps> = ({
         <div className="max-h-96 overflow-y-auto mb-4">
           <div className="space-y-2">
             {quests.map(quest => (
-              <button
+              <SelectableChip
                 key={quest.id}
-                onClick={() => {
+                selected={selectedQuests.has(quest.id)}
+                onToggle={() => {
                   const newSet = new Set(selectedQuests);
                   if (newSet.has(quest.id)) {
                     newSet.delete(quest.id);
@@ -560,17 +592,10 @@ const NPCForm: React.FC<NPCFormProps> = ({
                   }
                   setSelectedQuests(newSet);
                 }}
-                className={clsx(
-                  "w-full p-2 rounded text-left transition-colors",
-                  selectedQuests.has(quest.id)
-                    ? `selected-item`
-                    : `selectable-item`
-                )}
+                className="w-full text-left"
               >
-                <Typography variant="body-sm" className={selectedQuests.has(quest.id) ? 'font-medium' : ''}>
-                  {quest.title}
-                </Typography>
-              </button>
+                {quest.title}
+              </SelectableChip>
             ))}
           </div>
         </div>

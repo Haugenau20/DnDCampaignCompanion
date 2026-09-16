@@ -140,8 +140,12 @@ describe('NPCContext Behavioral Testing', () => {
 
       // BEHAVIOR: NPC context should start with empty list
       expect(npcContext.npcs).toEqual([]);
-      // DISCOVERY: NPC context shows error message when no group selected
-      expect(npcContext.error).toBe('Please select a group to view NPCs');
+      // A missing group is a STATE, not an error. The context reports the
+      // absence by having no NPCs; the words for it live in
+      // shared/components/gated/gated-page-copy.ts, because only the page knows
+      // whether the visitor is signed out, still resolving, or between
+      // campaigns -- three situations this context cannot tell apart.
+      expect(npcContext.error).toBeNull();
       expect(npcContext.isLoading).toBe(false);
     });
 
@@ -210,7 +214,7 @@ describe('NPCContext Behavioral Testing', () => {
       expect(npcContext.error).toBeNull();
     });
 
-    test('contextError becomes "Please select a group..." once restoration finishes and no group is selected', async () => {
+    test('reports no error once restoration finishes with no group selected', async () => {
       mockUseAuth.mockReturnValue({ user: null, loading: false });
       mockUseGroups.mockReturnValue({ activeGroupId: null });
       mockUseCampaigns.mockReturnValue({ activeCampaignId: null });
@@ -221,10 +225,16 @@ describe('NPCContext Behavioral Testing', () => {
         expect(npcContext).toBeDefined();
       });
 
-      expect(npcContext.error).toBe('Please select a group to view NPCs');
+      // This used to assert 'Please select a group to view NPCs'. That
+      // assertion encoded a layering mistake: the context built a user-facing
+      // sentence out of a state it could not fully interpret, and the sentence
+      // named a group switcher that Header only renders for signed-in members --
+      // so a signed-out visitor was told to use a control not on their screen.
+      expect(npcContext.error).toBeNull();
+      expect(npcContext.npcs).toEqual([]);
     });
 
-    test('contextError becomes "Please select a campaign..." once restoration finishes with a group but no campaign', async () => {
+    test('reports no error once restoration finishes with a group but no campaign', async () => {
       mockUseAuth.mockReturnValue({ user: { uid: 'test-user' }, loading: false });
       mockUseGroups.mockReturnValue({ activeGroupId: 'group-1' });
       mockUseCampaigns.mockReturnValue({ activeCampaignId: null });
@@ -235,7 +245,11 @@ describe('NPCContext Behavioral Testing', () => {
         expect(npcContext).toBeDefined();
       });
 
-      expect(npcContext.error).toBe('Please select a campaign to view NPCs');
+      // Same reasoning as the no-group case above: a member who simply has not
+      // picked a campaign yet is not in an error state, and NPCsPage now renders
+      // the campaign picker for exactly this situation.
+      expect(npcContext.error).toBeNull();
+      expect(npcContext.npcs).toEqual([]);
     });
   });
 

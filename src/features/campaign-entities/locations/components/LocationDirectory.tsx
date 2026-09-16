@@ -4,10 +4,9 @@ import { useNPCs } from '../../npcs/context/NPCContext';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useLocations } from '../context/LocationContext';
 import { useAuth } from 'features/user-management';
-import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
-import { MapPin, Mountain, Building, Home, Landmark, Users, Scroll, Tag } from 'lucide-react';
+import { Landmark, Users, Scroll, Tag, Plus } from 'lucide-react';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useNavigation } from 'shared/context/NavigationContext';
 import clsx from 'clsx';
@@ -20,6 +19,10 @@ import {
   RosterField,
   type RosterSegment,
   type RosterFilterOption,
+  RosterSkeleton,
+  RosterEmpty,
+  RosterStatus,
+  type RosterStatusTone,
 } from 'core/components/Roster';
 
 interface LocationDirectoryProps {
@@ -50,48 +53,53 @@ const TYPE_FILTERS: RosterFilterOption[] = [
 ];
 
 /**
- * Status is a progression (known → explored → visited), not the mutually-exclusive
- * buckets NPC status was. The bar still filters like NPCDirectory's, but ordering and
- * colour read as "how far along", not "which category": known (blue, the starting
- * point) → explored (gold, partway) → visited (green, as far as this axis goes).
- * There is no failure state here, so bg-status-failed is never used.
+ * An NPC's stance, as a class name.
+ *
+ * Spelled out rather than built as `npc-relationship-${npc.relationship}`.
+ * That template is how this exact family stayed in the tree after 12-3a
+ * deleted it: the compiler cannot see a string it assembles at runtime and
+ * grep cannot either, so four icons rendered with no colour at all and nothing
+ * failed. `Partial` keeps the fallback type-checked.
+ */
+const DISPOSITION_CLASS: Partial<Record<string, string>> = {
+  friendly: 'disposition-friendly',
+  neutral: 'disposition-neutral',
+  hostile: 'disposition-hostile',
+  unknown: 'disposition-unknown',
+};
+
+/**
+ * Location state, ranked best to worst: explored, then visited, then known.
+ *
+ * That ordering is the maintainer's and it inverts what shipped. The knowledge
+ * ladder had `visited` above `explored`, which reads backwards -- you have
+ * covered more ground in a place you explored than in one you merely passed
+ * through -- so the ordering was wrong independently of the colour.
+ *
+ * Bands, and the ramp stops they take, run in that order too, so the bar reads
+ * left to right from best to worst like every other directory.
+ *
+ * Locations take stops 0, 1 and 2 and never reach the red. Every other ranked
+ * scale ends there because a quest can fail, a rumour can be disproved and an
+ * NPC can die; a place you have merely heard of is only the least of three
+ * degrees of familiarity, and painting it like a failure would repeat in a
+ * quieter key the mistake this whole phase started by fixing.
  */
 const STATUS_ORDER: { key: LocationStatus; colorClass: string }[] = [
-  { key: 'known', colorClass: 'bg-status-general' },
-  { key: 'explored', colorClass: 'bg-status-unknown' },
-  { key: 'visited', colorClass: 'bg-status-completed' },
+  { key: 'explored', colorClass: 'bg-valence-0' },
+  { key: 'visited', colorClass: 'bg-valence-1' },
+  { key: 'known', colorClass: 'bg-valence-2' },
 ];
 
-const STATUS_DOT: Record<LocationStatus, string> = {
-  known: 'bg-status-general',
-  explored: 'bg-status-unknown',
-  visited: 'bg-status-completed',
+const STATUS_TONE: Record<LocationStatus, RosterStatusTone> = {
+  explored: 'valence-0',
+  visited: 'valence-1',
+  known: 'valence-2',
 };
 
 const formatLocationType = (type: LocationType): string => {
   if (type === 'poi') return 'Point of Interest';
   return type.charAt(0).toUpperCase() + type.slice(1);
-};
-
-const getTypeIcon = (type: LocationType) => {
-  const className = clsx('shrink-0', `location-type-${type}`);
-  switch (type) {
-    case 'region':
-      return <Mountain size={16} className={className} />;
-    case 'city':
-      return <Building size={16} className={className} />;
-    case 'town':
-    case 'village':
-      return <Home size={16} className={className} />;
-    case 'dungeon':
-    case 'building':
-      return <Building size={16} className={className} />;
-    case 'landmark':
-      return <Landmark size={16} className={className} />;
-    case 'poi':
-    default:
-      return <MapPin size={16} className={className} />;
-  }
 };
 
 export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
@@ -336,6 +344,8 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
         <RosterRow
           key={location.id}
           id={`location-${location.id}`}
+          entityId={location.id}
+          entityName={location.name}
           gridClassName={ROW_GRID}
           isFirst={index === 0}
           highlighted={highlightedLocationId === location.id}
@@ -368,11 +378,11 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
 
                     <RosterField label="Notes" emptyText="No notes yet">
                       {location.notes?.length ? (
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col divide-y card-divider">
                           {location.notes.map((note, noteIndex) => (
                             <div
                               key={noteIndex}
-                              className="flex gap-3 px-3 py-2.5 rounded-md bg-secondary"
+                              className="flex gap-3 py-2.5 first:pt-0 last:pb-0"
                             >
                               <Typography
                                 variant="body-sm"
@@ -430,7 +440,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
                             >
                               <Users
                                 size={14}
-                                className={clsx('shrink-0', `npc-relationship-${npc.relationship}`)}
+                                className={clsx('shrink-0', DISPOSITION_CLASS[npc.relationship] ?? 'disposition-unknown')}
                               />
                               <Typography variant="body-sm">
                                 {npc.name}
@@ -457,11 +467,17 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
                                 onClick={() => handleQuestClick(questId)}
                                 className="flex items-center gap-2 text-left px-2.5 py-1.5 rounded-md selectable-item"
                               >
-                                <Scroll
-                                  size={14}
-                                  className={clsx('shrink-0', `quest-status-${quest.status}`)}
-                                />
-                                <Typography variant="body-sm">{quest.title}</Typography>
+                                <Scroll size={14} className="shrink-0 typography-secondary" />
+                                <Typography variant="body-sm">
+                                  {quest.title}
+                                  {/* The icon used to carry the quest's status by hue alone,
+                                      with no legend anywhere on the page -- unreadable for
+                                      anyone who cannot separate the hues, and undecodable for
+                                      everyone else. The word states it instead. */}
+                                  <span className="typography-secondary ml-1.5">
+                                    · {quest.status.charAt(0).toUpperCase() + quest.status.slice(1)}
+                                  </span>
+                                </Typography>
                               </button>
                             );
                           })}
@@ -494,6 +510,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
                     <RosterGroup
                       title={`Locations in ${location.name}`}
                       count={subRows.length}
+                      nested
                     >
                       {subRows}
                     </RosterGroup>
@@ -505,8 +522,14 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
         >
           <div className="flex flex-col gap-0.5 min-w-0">
             <div className="flex items-center gap-2 min-w-0">
-              {getTypeIcon(location.type)}
-              <Typography variant="body" className="font-semibold truncate">
+              {/* The type icon is gone from the collapsed row. It was already the
+                  second encoding of the type next to the label, and the sigil now
+                  holds the leading slot -- two glyphs before one name is a row
+                  arguing with itself. It survives wherever the label does not. */}
+              <Typography
+                variant="body"
+                className="font-semibold truncate font-heading"
+              >
                 {location.name}
               </Typography>
             </div>
@@ -517,27 +540,18 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
             )}
           </div>
 
-          {/* Status: dot plus the word, so colour is never the only cue */}
-          <Typography
-            variant="body-sm"
-            className={clsx(
-              'hidden md:flex items-center gap-2 text-sm font-semibold',
-              `location-status-${location.status}`
-            )}
-          >
-            <span
-              aria-hidden="true"
-              className={clsx('w-[7px] h-[7px] rounded-sm shrink-0', STATUS_DOT[location.status])}
-            />
+          <RosterStatus tone={STATUS_TONE[location.status]}>
             {location.status.charAt(0).toUpperCase() + location.status.slice(1)}
-          </Typography>
+          </RosterStatus>
 
+          {/* The type, stated once. It was a chip filled from the entity palette --
+              the same palette the sigil draws from, so the row carried two marks in
+              two hues for two different facts and invited the reader to connect
+              them. The label is the encoding that survives. */}
           <Typography
             variant="body-sm"
-            className={clsx(
-              'hidden md:inline-flex justify-self-start px-2.5 py-1 rounded-md text-xs font-semibold bg-secondary',
-              `location-type-${location.type}`
-            )}
+            color="secondary"
+            className="hidden md:block justify-self-start text-sm"
           >
             {formatLocationType(location.type)}
           </Typography>
@@ -573,13 +587,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
   };
 
   if (isLoading) {
-    return (
-      <Card>
-        <Card.Content>
-          <Typography>Loading locations...</Typography>
-        </Card.Content>
-      </Card>
-    );
+    return <RosterSkeleton label="Loading locations" />;
   }
 
   const rootRows = renderRows('root');
@@ -621,19 +629,25 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
 
       {/* Location hierarchy */}
       {rootRows.length === 0 && orphanRows.length === 0 ? (
-        <Card>
-          <Card.Content className="text-center py-8">
-            <MapPin className="w-12 h-12 mx-auto mb-4 typography-secondary" />
-            <Typography variant="h3" className="mb-2">
-              No Locations Found
-            </Typography>
-            <Typography color="secondary">
-              {searchQuery
-                ? 'No locations match your search criteria'
-                : 'There are no locations to display'}
-            </Typography>
-          </Card.Content>
-        </Card>
+        locations.length > 0 ? (
+          <RosterEmpty
+            title="No locations match these filters"
+            message="Try a different search term, or clear the filters to see everywhere you have charted."
+          />
+        ) : (
+          <RosterEmpty
+            title="Nowhere charted yet"
+            message="Regions, cities, dungeons and the rooms inside them — each one can hold the notes, NPCs and quests you found there."
+            action={
+              <Button
+                onClick={() => navigateToPage('/locations/create')}
+                startIcon={<Plus className="w-4 h-4" />}
+              >
+                Add the first location
+              </Button>
+            }
+          />
+        )
       ) : (
         <>
           {rootRows.length > 0 && (

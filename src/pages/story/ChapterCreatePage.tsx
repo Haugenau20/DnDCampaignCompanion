@@ -1,26 +1,22 @@
 // pages/story/ChapterCreatePage.tsx
-import React, { useEffect } from 'react';
-import Typography from '../../core/components/Typography';
+import React from 'react';
 import { ChapterForm, useStory } from 'features/storytelling';
 import Breadcrumb from 'shared/components/Breadcrumb';
-import { useNavigation } from 'shared/context/NavigationContext';
-import { useAuth } from 'features/user-management';
-import { BookPlus } from 'lucide-react';
+import { usePageGate, GatedContent } from 'shared/components/gated';
+import PageShell from 'shared/components/page-shell/PageShell';
 
 /**
- * Page for creating a new chapter
+ * Page for creating a new chapter.
+ *
+ * Write route ("story", `mode: "write"`) so a signed-out visitor sees "Sign
+ * in to write a chapter" in place, rather than the old `!user` redirect
+ * effect that bounced them straight back to `/story` before the page could
+ * say why.
  */
 const ChapterCreatePage: React.FC = () => {
   const { isLoading } = useStory();
-  const { navigateToPage } = useNavigation();
-  const { user } = useAuth();
 
-  // Redirect if user is not signed in
-  useEffect(() => {
-    if (!isLoading && !user) {
-      navigateToPage('/story');
-    }
-  }, [isLoading, user, navigateToPage]);
+  const gate = usePageGate('story', { loading: isLoading, mode: 'write' });
 
   // Breadcrumb items
   const breadcrumbItems = [
@@ -30,36 +26,15 @@ const ChapterCreatePage: React.FC = () => {
     { label: 'Create Chapter' }
   ];
 
-  if (isLoading) {
-    return (
-      <div className="p-4">
-        <Typography>Loading...</Typography>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null; // Will be redirected by the useEffect
-  }
-
   return (
-    <div className="min-h-screen p-4 content">
-      <div className="max-w-7xl mx-auto">
-        {/* Breadcrumb Navigation */}
-        <Breadcrumb items={breadcrumbItems} className="mb-4" />
-        
-        {/* Page Header */}
-        <div className="mb-6 flex items-center gap-2">
-          <BookPlus className="w-6 h-6 primary" />
-          <Typography variant="h2" className="typography-heading">
-            Create New Chapter
-          </Typography>
-        </div>
-        
-        {/* Chapter Form */}
+    <PageShell
+      title="Create New Chapter"
+      breadcrumb={<Breadcrumb items={breadcrumbItems} className="mb-4" />}
+    >
+      <GatedContent gate={gate}>
         <ChapterForm mode="create" />
-      </div>
-    </div>
+      </GatedContent>
+    </PageShell>
   );
 };
 

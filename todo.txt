@@ -1,30 +1,20 @@
-# Prioritized Todo List
+# Todo List
 
-The note taking feature becomes unstable at times and changes are reverted and then thrown back. 
-I do not know if it is from a mix of use of local storage and firebase saving/fetching?
-Or maybe the autosave feature doing some unwanted stuff?
+User should be able to change their password.
 
-1. User should be able to change their password.
+Have registration tokens expire after X days
 
-2. Have registration tokens expire after X days
+Fix mobile layout issues on certain pages. (story all around)
 
-4. F12 console Error in StoryContext when it is trying to update "current-progress"
-    - I think this is a remnant of purposefully unused functionality and it should just be deleted. 
-    - It seems to be deeply embedded in the codebase. Remove it entirely all around.
+Make active quests be on the top of the list?
 
-5. Fix/Implement proper searching
+Make completed quests be default hidden with option to expand?
 
-6. Fix mobile layout issues on certain pages. (Big update)
+Add batch options (Delete, change status, etc.) for Story, Quest, NPC, and Location features
 
-8. Make active quests be on the top of the list?
+Implement/review proper highlighting logic to pages.
 
-9. Make completed quests be default hidden with option to expand?
-
-10. Add batch options (Delete, change status, etc.) for Story, Quest, NPC, and Location features
-
-11. Implement/review proper highlighting logic to pages.
-
-12. Admin Panel:
+Admin Panel: (Needs big do-over with Claude Design)
     - Test if the creation of new groups and campaigns work
     - Right now the "groups" view only shows the current group. 
     - Campaigns can be created (but not deleted). 
@@ -32,24 +22,14 @@ Or maybe the autosave feature doing some unwanted stuff?
     - neither campaigns or groups can be edited.
     - campaigns cannot be deleted.
 
-13. New feature idea (partly implemented already): sub-chapters.
-
-15. CLAUDE Code: 
-
-15.1. Major do-over of the project structure
-
-Not prioritized yet:
+New feature idea (partly implemented already): sub-chapters.
 
 PC's are seen as NPCs when doing smart detection in the notes feature. 
 There should be some sort of setup or config so PC's can be defined and not included in smart detection.
 
-Make a dedicated page for profile options
-
 Form/Context Responsibility Pattern Standardization (look at docs/backlog/FormContextStandard)
 
 NPCs Page seems to take longer to load than the rest of the pages.
-
-Not signed in UI must be updated and made the same on every page.
 
 Make project true Single Page Application.
 
@@ -69,3 +49,7 @@ Contact form: let people attach a screenshot to a bug report.
     - Where it would go: src/shared/components/contact/ - a new field component alongside
       CategoryChips/SenderIdentity, plus a download URL in the callable payload that
       firebase/functions/src/contact.ts links from the email body.
+
+Quest objectives should be able to cross out objectives directly on the quests page. right now the user has to press edit to update them
+
+add firebase storage so users can upload pictures for their campaigns. also so I can upload default photos for things. 

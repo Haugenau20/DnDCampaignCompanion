@@ -232,8 +232,10 @@ describe('QuestDirectory', () => {
   describe('loading state', () => {
     it('renders a loading indicator and no rows', () => {
       mockQuestContext = { ...mockQuestContext, loading: true, quests: [] };
-      render(<QuestDirectory quests={[]} isLoading />);
-      expect(screen.getByText('Loading quests...')).toBeInTheDocument();
+      const { container } = render(<QuestDirectory quests={[]} isLoading />);
+      expect(screen.getByRole('status', { name: /loading quests/i })).toBeInTheDocument();
+      expect(container.querySelectorAll('.section-loading').length).toBeGreaterThan(3);
+      expect(container.querySelector('.animate-spin')).toBeNull();
       expect(screen.queryByText('Find the Dragon')).not.toBeInTheDocument();
     });
   });
@@ -342,16 +344,21 @@ describe('QuestDirectory', () => {
     it('shows a generic message when there are no quests at all', () => {
       mockQuestContext.quests = [];
       renderPage();
-      expect(screen.getByText('No Quests Found')).toBeInTheDocument();
-      expect(screen.getByText('There are no quests to display')).toBeInTheDocument();
+      expect(screen.getByText(/nothing taken on yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/what the party agreed to do/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /add the first quest/i })
+      ).toBeInTheDocument();
     });
 
     it('shows a status-specific message when a status filter yields nothing', () => {
       mockQuestContext.quests = [questActiveDragon];
       renderPage();
       fireEvent.click(screen.getByRole('button', { name: '0 failed' }));
-      expect(screen.getByText('No Quests Found')).toBeInTheDocument();
-      expect(screen.getByText('No failed quests found')).toBeInTheDocument();
+      expect(screen.getByText(/no quests match these filters/i)).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /add the first quest/i })
+      ).not.toBeInTheDocument();
     });
 
     it('shows a search-specific message when a search yields nothing', () => {
@@ -359,8 +366,10 @@ describe('QuestDirectory', () => {
       fireEvent.change(screen.getByPlaceholderText('Search quests...'), {
         target: { value: 'zzznomatch' },
       });
-      expect(screen.getByText('No Quests Found')).toBeInTheDocument();
-      expect(screen.getByText('No quests match your search criteria')).toBeInTheDocument();
+      expect(screen.getByText(/no quests match these filters/i)).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /add the first quest/i })
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -434,7 +443,9 @@ describe('QuestDirectory', () => {
     it('renders a proportional progress bar sized to the completion ratio', () => {
       renderPage();
       const row = expandButton('Find the Dragon');
-      const bar = row.querySelector('.progress-bar-active') as HTMLElement;
+      // `.progress-bar-open`, not `.progress-bar-active`: the latter stayed on
+      // the accent for reading progress in storytelling, which is not a rank.
+      const bar = row.querySelector('.progress-bar-open') as HTMLElement;
       expect(bar).toBeTruthy();
       expect(bar.style.width).toBe('50%');
     });
@@ -857,4 +868,27 @@ describe('QuestDirectory', () => {
       expect(screen.queryByText('Find the Dragon')).not.toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Row anatomy — one encoding per fact
+  // -------------------------------------------------------------------------
+  describe('row anatomy', () => {
+    test('carries exactly one identity mark, derived from the id', () => {
+      renderPage();
+      const row = within(expandButton('Find the Dragon'));
+      const marks = row.getAllByTestId('entity-sigil');
+      expect(marks).toHaveLength(1);
+      expect(marks[0]).toHaveTextContent('F');
+    });
+
+    test('states status as a word and nothing else', () => {
+      renderPage();
+      const row = expandButton('Find the Dragon');
+      expect(within(row).getByText('Active')).toBeInTheDocument();
+      expect(row.querySelectorAll('.bg-status-active')).toHaveLength(0);
+      expect(row.querySelectorAll('.bg-status-completed')).toHaveLength(0);
+      expect(row.querySelectorAll('.bg-status-failed')).toHaveLength(0);
+    });
+  });
+
 });

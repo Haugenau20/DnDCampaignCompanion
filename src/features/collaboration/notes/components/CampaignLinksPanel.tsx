@@ -6,6 +6,7 @@ import { useNotes } from "../context/NoteContext";
 import { useNoteReferences, normalizeTextForComparison } from "./NoteReferences";
 import Typography from "../../../../core/components/Typography";
 import Button from "../../../../core/components/Button";
+import { EXTRACTION_FACTS } from "../../../../core/constants/privacy";
 import { useEntityExtractor } from "../../entity-extraction/hooks/useEntityExtractor";
 import { useNavigation } from "shared/hooks/useNavigation";
 import { useNPCs, useLocations, useQuests, useRumors } from "features/campaign-entities";
@@ -381,6 +382,19 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
         </Button>
       </div>
 
+      {/*
+        The disclosure belongs where the decision is made, not only on the
+        privacy page. One line: what leaves, and where it goes. Unconditional --
+        the button's disabled state says nothing about where the text travels
+        once it is usable again.
+      */}
+      <Typography variant="body-sm" color="muted" className="mt-2">
+        Sends this note's text to {EXTRACTION_FACTS.provider} to look for names.{" "}
+        <a href="/privacy#entity-extraction" className="underline">
+          How this works
+        </a>
+      </Typography>
+
       {looksUnscanned && (
         <Typography variant="body-sm" color="muted" className="mt-4">
           Not scanned yet.
@@ -394,7 +408,7 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
       )}
 
       {isUsageLimitExceeded && contactInfo && (
-        <div className="mt-4 p-3 rounded-lg border-l-4 status-failed">
+        <div className="mt-4 p-3 rounded-lg border-l-4 feedback-banner feedback-banner-error">
           <Typography variant="body-sm" className="font-medium mb-1">
             Usage Limit Reached
           </Typography>
@@ -414,7 +428,7 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
 
       {(error || hookError) && !isUsageLimitExceeded && (
         <div className="mt-4 flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 mt-0.5 status-failed flex-shrink-0" />
+          <AlertCircle className="w-4 h-4 mt-0.5 feedback-error flex-shrink-0" />
           <Typography variant="body-sm" color="error">
             {error || hookError}
           </Typography>
@@ -457,7 +471,7 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
         <div className="mt-4">
           <Typography
             variant="caption"
-            className="text-[11px] uppercase tracking-wider status-unknown"
+            className="text-[11px] uppercase tracking-wider feedback-warning"
           >
             {`DETECTED, NOT IN YOUR CAMPAIGN · ${detections.length}`}
           </Typography>

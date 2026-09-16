@@ -55,7 +55,7 @@ const ChapterRailList: React.FC<ChapterRailListProps> = ({
   }, [currentChapterId]);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 nav-on-sunken">
       {items.map((item) => {
         const { chapter, state } = item;
         const isCurrentChapter = chapter.id === currentChapterId;
@@ -69,7 +69,8 @@ const ChapterRailList: React.FC<ChapterRailListProps> = ({
             aria-current={isCurrentChapter ? 'page' : undefined}
             className={clsx(
               'w-full flex items-center gap-2 text-left px-2 py-1.5 rounded-lg transition-colors',
-              isCurrentChapter ? 'navigation-item-active' : 'navigation-item'
+              'nav-item',
+              isCurrentChapter && 'nav-item-active'
             )}
           >
             <Typography
@@ -116,7 +117,7 @@ const ChapterRailHeader: React.FC<ChapterRailHeaderProps> = ({
   onBackToIndex,
   onClose,
 }) => (
-  <div className="p-3 border-b card-border shrink-0">
+  <div className="p-3 border-b sunken-divider shrink-0">
     <div className="flex items-center justify-between gap-2">
       <Typography variant="h4">Chapters</Typography>
       {onClose && (
@@ -186,7 +187,7 @@ const ChapterRail: React.FC<ChapterRailProps> = ({
     <>
       {/* Persistent column — lg and up. isOpen/onClose intentionally unused here. */}
       <aside
-        className="hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen w-[236px] shrink-0 card card-border rounded-lg overflow-hidden"
+        className="hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen w-[236px] shrink-0 card-subtle sunken-border rounded-lg overflow-hidden"
         aria-label="Chapter navigation"
       >
         <ChapterRailHeader readCount={readCount} total={items.length} onBackToIndex={onBackToIndex} />
@@ -205,7 +206,7 @@ const ChapterRail: React.FC<ChapterRailProps> = ({
             onClick={onClose}
           />
           <div className="fixed top-0 left-0 h-full w-80 shadow-lg z-50">
-            <div className="h-full flex flex-col card card-border">
+            <div className="h-full flex flex-col card-subtle sunken-border">
               <ChapterRailHeader
                 readCount={readCount}
                 total={items.length}

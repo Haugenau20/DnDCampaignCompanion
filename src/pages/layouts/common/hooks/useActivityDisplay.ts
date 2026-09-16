@@ -1,7 +1,7 @@
 // components/features/layouts/common/hooks/useActivityDisplay.ts
 import { useMemo } from 'react';
 import { Activity } from 'pages/HomePage';
-import { getRelativeTime, formatJournalDate } from 'shared/utils/dateFormatter';
+import { getRelativeTime } from 'shared/utils/dateFormatter';
 import { getContentTypeLabel } from '../utils/contentTypeUtils';
 import { useNavigation } from 'shared/context/NavigationContext';
 
@@ -9,7 +9,6 @@ interface UseActivityDisplayProps {
   activities: Activity[];
   limit?: number;
   filter?: string | null;
-  journalStyle?: boolean;
 }
 
 /**
@@ -18,8 +17,7 @@ interface UseActivityDisplayProps {
 export const useActivityDisplay = ({
   activities,
   limit = 4,
-  filter = null,
-  journalStyle = false
+  filter = null
 }: UseActivityDisplayProps) => {
   const { navigateToPage } = useNavigation();
 
@@ -39,10 +37,9 @@ export const useActivityDisplay = ({
     return result.slice(0, limit);
   }, [activities, filter, limit]);
 
-  // Format date based on style
-  const formatDate = (date: Date) => {
-    return journalStyle ? formatJournalDate(date) : getRelativeTime(date);
-  };
+  // One relative format everywhere. The alternate long form ("the 3rd of
+  // March") existed only for the retired alternate layout (D39).
+  const formatDate = (date: Date) => getRelativeTime(date);
 
   // Handle item click
   const handleActivityClick = (activity: Activity) => {

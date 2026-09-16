@@ -138,7 +138,7 @@ describe("ActivityFeed", () => {
       // LoadingState's `type="card"` has no branch — it silently falls through to a
       // spinner and drops count/height — so the skeleton is inlined instead.
       expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
-      expect(container.querySelectorAll(".journal-loading")).toHaveLength(4);
+      expect(container.querySelectorAll(".section-loading")).toHaveLength(4);
     });
 
     it("shows the heading while loading", () => {
@@ -370,7 +370,10 @@ describe("ActivityFeed", () => {
       setupHook({ activities });
       render(<ActivityFeed activities={activities} loading={false} />);
 
-      expect(screen.getByText("PlayerAlpha")).toBeInTheDocument();
+      // The actor now shares one meta line with the type and the date -- a row
+      // carries a single line of metadata -- so it is no longer its own text
+      // node. It must still be present and still unprefixed.
+      expect(screen.getByText(/PlayerAlpha/)).toBeInTheDocument();
       expect(screen.queryByText(/^By:/)).not.toBeInTheDocument();
     });
 
@@ -398,7 +401,7 @@ describe("ActivityFeed", () => {
       setupHook({ activities });
       render(<ActivityFeed activities={activities} loading={false} />);
 
-      expect(screen.getByText("Jun 1, 2024")).toBeInTheDocument();
+      expect(screen.getByText(/Jun 1, 2024/)).toBeInTheDocument();
     });
 
     it("calls getTypeLabel for each activity type", () => {
@@ -452,15 +455,6 @@ describe("ActivityFeed", () => {
 
       expect(mockUseActivityDisplay).toHaveBeenCalledWith(
         expect.objectContaining({ limit: 4 })
-      );
-    });
-
-    it("passes journalStyle=false to useActivityDisplay", () => {
-      setupHook({ activities: [] });
-      render(<ActivityFeed activities={[]} loading={false} />);
-
-      expect(mockUseActivityDisplay).toHaveBeenCalledWith(
-        expect.objectContaining({ journalStyle: false })
       );
     });
   });

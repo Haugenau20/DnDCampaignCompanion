@@ -2,6 +2,7 @@
 import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import {rethrowHttpsError} from "../shared/httpsErrors";
+import {deleteGroupUserDocument} from "../shared/deleteUserSubtree";
 
 interface DeleteUserData {
   userId: string;
@@ -88,14 +89,23 @@ export const deleteUser = functions.onCall(
           
           batch.delete(usernameRef);
         }
-        
-        // Delete group user profile
-        batch.delete(groupUserRef);
       }
-      
+
       // 2. Delete global user profile
       batch.delete(userDoc.ref);
-      
+
+      // The group-user profile is deleted separately from the batch: it owns
+      // a `notes` subcollection, and a batched delete would orphan every
+      // note rather than remove it. recursiveDelete cannot join a
+      // WriteBatch. It runs before the batch commit so that private notes
+      // are confirmed gone before the account's own records (which are
+      // trivially re-deletable on retry) are removed.
+      await Promise.all(
+        groups.map((groupId: string) =>
+          deleteGroupUserDocument(groupId, userIdToDelete)
+        )
+      );
+
       // 3. Commit all Firestore changes
       await batch.commit();
       

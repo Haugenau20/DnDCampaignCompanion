@@ -5,78 +5,96 @@ module.exports = {
   ],
   theme: {
     extend: {
+      // Named for what yields at them, because the header's shrink order is the
+      // point: the title shortens at `title`, the last two nav items fold at
+      // `nav`. Tailwind's defaults cannot express this -- the definition of done
+      // requires 1024px to be a *folded* width, which `lg` (>=1024) cannot be.
+      // Both control `display` on elements no `xl:` rule touches, so the
+      // append-after-defaults cascade order does not bite.
+      screens: {
+        nav: "1080px",
+        title: "1200px",
+      },
       colors: {
-        primary: 'var(--color-primary)',
-        secondary: 'var(--color-secondary)',
-        accent: 'var(--color-accent)',
+        // Only `accent` survives, and only because `ring-accent` is generated
+        // from here rather than from `borderColor`. A ring is a boundary, so
+        // it takes the edge. `primary` and `secondary` are gone: every
+        // utility they generated was already shadowed by the more specific
+        // `textColor` / `backgroundColor` / `borderColor` entries below.
+        accent: 'var(--accent-edge)',
       },
       backgroundColor: {
         // Main background colors
-        primary: 'var(--bg-primary)',
-        secondary: 'var(--bg-secondary)',
-        accent: 'var(--bg-accent)',
+        primary: 'var(--surface-page-bg)',
+        secondary: 'var(--surface-sunken-bg)',
+        // A selected row's ground belongs to the surface it sits on -- a global
+        // hover grey is what the pair model forbids (token model section 2).
+        accent: 'var(--surface-card-selected)',
         
         // UI element backgrounds
-        card: 'var(--card-bg)',
-        header: 'var(--header-bg)',
-        footer: 'var(--footer-bg)',
-        error: 'var(--error-bg)',
-        input: 'var(--input-bg)',
-        'form-disabled': 'var(--form-disabled-bg)',
+        card: 'var(--surface-card-bg)',
+        header: 'var(--surface-chrome-bg)',
+        footer: 'var(--surface-chrome-bg)',
+        'chrome-border': 'var(--surface-chrome-border)',
+        error: 'var(--danger-bg)',
+        input: 'var(--field-bg)',
+        'form-disabled': 'var(--field-disabled-bg)',
         
-        // Status backgrounds for components
-        'status-general': 'var(--status-general)',
-        'status-active': 'var(--status-active)',
-        'status-completed': 'var(--status-completed)',
-        'status-failed': 'var(--status-failed)',
-        'status-unknown': 'var(--status-unknown)',
+        // Domain state, named after meaning. The `status-*` family these
+        // replace was named after appearance, which is what let a location
+        // borrow the quest scale and render "visited" as a win condition.
+        // Schema section 3 is the mapping table.
+        'valence-0': 'var(--valence-0-fill)',
+        'valence-1': 'var(--valence-1-fill)',
+        'valence-2': 'var(--valence-2-fill)',
+        'valence-3': 'var(--valence-3-fill)',
+        // Presence carries no hue: a death is a fact, not an error. These are
+        // the ink ramp, so the segments differ by value rather than colour.
+        'accent-fill': 'var(--accent-fill)',
         
         // Button backgrounds
-        'button-primary': 'var(--button-primary-bg)',
-        'button-secondary': 'var(--button-secondary-bg)',
-        'button-link': 'var(--button-link-bg)',
-        'button-outline': 'var(--button-outline-bg)',
-        'button-ghost': 'var(--button-ghost-bg)',
-        'delete-button': 'var(--delete-button-bg)',
+        'button-primary': 'var(--action-primary-bg)',
+        'button-secondary': 'var(--action-secondary-bg)',
+        'button-link': 'var(--action-link-bg)',
+        'button-outline': 'var(--action-outline-bg)',
+        'button-ghost': 'var(--action-ghost-bg)',
+        'delete-button': 'var(--danger-delete-bg)',
       },
       textColor: {
-        primary: 'var(--text-primary)',
-        secondary: 'var(--text-secondary)',
-        accent: 'var(--text-accent)',
-        heading: 'var(--heading-color)',
+        primary: 'var(--surface-page-on)',
+        secondary: 'var(--surface-page-on-muted)',
+        accent: 'var(--color-emphasis)',
+        heading: 'var(--color-heading)',
         
         // Form text colors
-        label: 'var(--form-label-text)',
-        helper: 'var(--form-helper-text)',
-        error: 'var(--form-error-text)',
-        success: 'var(--form-success-text)',
-        placeholder: 'var(--input-placeholder)',
+        label: 'var(--field-label-text)',
+        helper: 'var(--field-helper-text)',
+        error: 'var(--field-error-text)',
+        success: 'var(--field-success-text)',
+        placeholder: 'var(--field-placeholder)',
         
-        // Status text colors
-        'status-text': 'var(--status-text)',
+        // Ink on a filled failure. `status-on` is retired with `status.*`.
         
         // Button text colors
-        'button-primary': 'var(--button-primary-text)',
-        'button-secondary': 'var(--button-secondary-text)',
-        'button-link': 'var(--button-link-text)',
-        'button-outline': 'var(--button-outline-text)',
-        'button-ghost': 'var(--button-ghost-text)',
-        'delete-button': 'var(--delete-button-text)',
+        'button-primary': 'var(--action-primary-text)',
+        'button-secondary': 'var(--action-secondary-text)',
+        'button-link': 'var(--action-link-text)',
+        'button-outline': 'var(--action-outline-text)',
+        'button-ghost': 'var(--action-ghost-text)',
+        'delete-button': 'var(--danger-delete-text)',
       },
       borderColor: {
-        primary: 'var(--color-primary)',
-        secondary: 'var(--color-secondary)',
-        accent: 'var(--color-accent)',
-        card: 'var(--card-border)',
+        accent: 'var(--accent-edge)',
+        card: 'var(--surface-card-border)',
         
         // Input borders
-        input: 'var(--input-border)',
-        'input-focus': 'var(--input-border-focus)',
-        'input-error': 'var(--input-error-border)',
-        'input-success': 'var(--input-success-border)',
+        input: 'var(--field-border)',
+        'input-focus': 'var(--field-border-focus)',
+        'input-error': 'var(--field-error-border)',
+        'input-success': 'var(--field-success-border)',
         
         // Button borders
-        'button-outline': 'var(--button-outline-border)',
+        'button-outline': 'var(--action-outline-border)',
         
         // Icon borders
         icon: 'var(--icon-border)',
@@ -97,12 +115,12 @@ module.exports = {
         lg: 'var(--border-width-lg)',
       },
       ringColor: {
-        focus: 'var(--input-ring-focus)',
-        error: 'var(--input-error-ring)',
-        success: 'var(--input-success-ring)',
+        focus: 'var(--field-ring-focus)',
+        error: 'var(--field-error-ring)',
+        success: 'var(--field-success-ring)',
       },
       outlineColor: {
-        focus: 'var(--input-border-focus)',
+        focus: 'var(--field-border-focus)',
       },
       // NOTE: hover is a Tailwind *variant*, not a colour namespace, so there is
       // no `hoverColors` theme key — a block here generated zero utilities and had

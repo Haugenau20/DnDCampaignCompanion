@@ -3,7 +3,9 @@ import React, { useState } from 'react';
 import { Location, LocationType } from '../types';
 import { NPC } from '../../npcs/types';
 import Typography from '../../../../core/components/Typography';
+import { SelectableChip, RemovableChip } from '../../../../core/components/Chip';
 import Input from '../../../../core/components/Input';
+import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
 import Dialog from '../../../../core/components/Dialog';
 import { useQuests } from '../../quests/context/QuestContext';
@@ -65,39 +67,33 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
         required
       />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1 form-label">Type *</label>
-          <select
-            className="w-full rounded-lg border p-2 input"
-            value={formData.type}
-            onChange={(e) => handleInputChange('type', e.target.value as LocationType)}
-            required
-          >
-            <option value="region">Region</option>
-            <option value="city">City</option>
-            <option value="town">Town</option>
-            <option value="village">Village</option>
-            <option value="dungeon">Dungeon</option>
-            <option value="landmark">Landmark</option>
-            <option value="building">Building</option>
-            <option value="poi">Point of Interest</option>
-          </select>
-        </div>
+      <div className="space-y-4">
+        <Select
+          label="Type *"
+          value={formData.type}
+          onChange={(e) => handleInputChange('type', e.target.value as LocationType)}
+          required
+        >
+          <option value="region">Region</option>
+          <option value="city">City</option>
+          <option value="town">Town</option>
+          <option value="village">Village</option>
+          <option value="dungeon">Dungeon</option>
+          <option value="landmark">Landmark</option>
+          <option value="building">Building</option>
+          <option value="poi">Point of Interest</option>
+        </Select>
 
-        <div>
-          <label className="block text-sm font-medium mb-1 form-label">Status *</label>
-          <select
-            className="w-full rounded-lg border p-2 input"
-            value={formData.status}
-            onChange={(e) => handleInputChange('status', e.target.value)}
-            required
-          >
-            <option value="known">Known</option>
-            <option value="explored">Explored</option>
-            <option value="visited">Visited</option>
-          </select>
-        </div>
+        <Select
+          label="Status *"
+          value={formData.status}
+          onChange={(e) => handleInputChange('status', e.target.value)}
+          required
+        >
+          <option value="known">Known</option>
+          <option value="explored">Explored</option>
+          <option value="visited">Visited</option>
+        </Select>
       </div>
 
       <LocationCombobox
@@ -133,6 +129,7 @@ export const FeaturesSection: React.FC<SectionProps> = ({ formData, handleInputC
           type="button"
           variant="ghost"
           onClick={handleAddFeature}
+          aria-label="Add a notable feature"
           startIcon={<PlusCircle />}
         />
         <Typography variant="h4">Notable Features</Typography>
@@ -142,6 +139,7 @@ export const FeaturesSection: React.FC<SectionProps> = ({ formData, handleInputC
           <div key={index} className="flex gap-4">
             <div className="flex-1">
               <Input
+                aria-label={`Feature ${index + 1}`}
                 value={feature}
                 onChange={(e) => handleFeatureChange(index, e.target.value)}
                 placeholder="Feature description"
@@ -154,6 +152,7 @@ export const FeaturesSection: React.FC<SectionProps> = ({ formData, handleInputC
                 const newFeatures = formData.features?.filter((_, i) => i !== index);
                 handleInputChange('features', newFeatures || []);
               }}
+              aria-label={`Remove feature ${index + 1}`}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -204,18 +203,13 @@ export const RelatedQuestsSection: React.FC<RelatedQuestsSectionProps> = ({
         {Array.from(selectedQuests).map(questId => {
           const quest = quests.find(q => q.id === questId);
           return quest ? (
-            <div
+            <RemovableChip
               key={questId}
-              className="flex items-center gap-1 rounded-full px-3 py-1 tag"
+              onRemove={() => handleToggleQuest(questId)}
+              removeLabel={`Remove ${quest.title}`}
             >
-              <span>{quest.title}</span>
-              <button
-                type="button"
-                onClick={() => handleToggleQuest(questId)}
-                className="typography-secondary hover:opacity-70">
-                <X size={14} />
-              </button>
-            </div>
+              {quest.title}
+            </RemovableChip>
           ) : null;
         })}
       </div>
@@ -230,21 +224,14 @@ export const RelatedQuestsSection: React.FC<RelatedQuestsSectionProps> = ({
         <div className="max-h-96 overflow-y-auto mb-4">
           <div className="space-y-2">
             {quests.map(quest => (
-              <button
+              <SelectableChip
                 key={quest.id}
-                type="button"
-                onClick={() => handleToggleQuest(quest.id)}
-                className={clsx(
-                  "w-full p-2 rounded text-left transition-colors",
-                  selectedQuests.has(quest.id)
-                    ? `selected-item`
-                    : `selectable-item`
-                )}
+                selected={selectedQuests.has(quest.id)}
+                onToggle={() => handleToggleQuest(quest.id)}
+                className="w-full text-left"
               >
-                <Typography variant="body-sm">
-                  {quest.title}
-                </Typography>
-              </button>
+                {quest.title}
+              </SelectableChip>
             ))}
           </div>
         </div>
@@ -298,18 +285,13 @@ export const RelatedNPCsSection: React.FC<RelatedNPCsSectionProps> = ({
         {Array.from(selectedNPCs).map(npcId => {
           const npc = npcs.find(n => n.id === npcId);
           return npc ? (
-            <div
+            <RemovableChip
               key={npcId}
-              className="flex items-center gap-1 rounded-full px-3 py-1 tag"
+              onRemove={() => handleToggleNPC(npcId)}
+              removeLabel={`Remove ${npc.name}`}
             >
-              <span>{npc.name}</span>
-              <button
-                type="button"
-                onClick={() => handleToggleNPC(npcId)}
-                className="typography-secondary hover:opacity-70">
-                <X size={14} />
-              </button>
-            </div>
+              {npc.name}
+            </RemovableChip>
           ) : null;
         })}
       </div>
@@ -324,21 +306,14 @@ export const RelatedNPCsSection: React.FC<RelatedNPCsSectionProps> = ({
         <div className="max-h-96 overflow-y-auto mb-4">
           <div className="grid grid-cols-3 gap-2">
             {npcs.map(npc => (
-              <button
+              <SelectableChip
                 key={npc.id}
-                type="button"
-                onClick={() => handleToggleNPC(npc.id)}
-                className={clsx(
-                  "p-2 rounded text-center transition-colors",
-                  selectedNPCs.has(npc.id)
-                    ? `selected-item`
-                    : `selectable-item`
-                )}
+                selected={selectedNPCs.has(npc.id)}
+                onToggle={() => handleToggleNPC(npc.id)}
+                className="text-center"
               >
-                <Typography variant="body-sm">
-                  {npc.name}
-                </Typography>
-              </button>
+                {npc.name}
+              </SelectableChip>
             ))}
           </div>
         </div>
@@ -367,6 +342,7 @@ export const TagsSection: React.FC<SectionProps> = ({ formData, handleInputChang
       <Typography variant="h4">Tags</Typography>
       <div className="flex gap-2">
         <Input
+          aria-label="Enter tag"
           value={tagInput}
           onChange={(e) => setTagInput(e.target.value)}
           placeholder="Enter tag..."
@@ -374,6 +350,7 @@ export const TagsSection: React.FC<SectionProps> = ({ formData, handleInputChang
         />
         <Button 
           type="button"
+          variant="outline"
           onClick={handleAddTag}
           disabled={!tagInput.trim()}
         >
@@ -383,23 +360,18 @@ export const TagsSection: React.FC<SectionProps> = ({ formData, handleInputChang
 
       <div className="flex flex-wrap gap-2">
         {formData.tags?.map((tag, index) => (
-          <div
+          <RemovableChip
             key={index}
-            className="flex items-center gap-1 rounded-full px-3 py-1 tag"
-          >
-            <span>{tag}</span>
-            <button
-              type="button"
-              onClick={() => {
+            onRemove={() => {
                 handleInputChange(
                   'tags',
                   formData.tags?.filter((_, i) => i !== index) || []
                 );
               }}
-              className="typography-secondary hover:opacity-70">
-              <X size={14} />
-            </button>
-          </div>
+            removeLabel={`Remove tag ${tag}`}
+          >
+            {tag}
+          </RemovableChip>
         ))}
       </div>
     </div>

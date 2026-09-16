@@ -1,9 +1,10 @@
 // src/features/storytelling/stories/components/ChapterReader.tsx
-import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
 import Typography from 'core/components/Typography';
 import Card from 'core/components/Card';
 import Button from 'core/components/Button';
+import Markdown from 'core/components/Markdown';
 import clsx from 'clsx';
 import {
   scrollPercent,
@@ -48,24 +49,6 @@ export interface ChapterReaderProps {
   className?: string;
 }
 
-/**
- * Convert raw chapter body into paragraph strings.
- *
- * Two steps, both carried over from `BookViewer` because they fix real bugs
- * there: literal `\n` escape sequences (as opposed to real newlines) are
- * turned into real newlines before splitting, and blank lines are dropped
- * rather than rendered — an empty line used to become an empty `<p
- * class="mb-4">`, an invisible node that still carried a 1rem margin and
- * cluttered the accessibility tree.
- */
-function toParagraphs(rawContent: string): string[] {
-  return rawContent
-    .replace(/\\n/g, '\n')
-    .trim()
-    .split('\n')
-    .map((paragraph) => paragraph.trim())
-    .filter((paragraph) => paragraph.length > 0);
-}
 
 /**
  * Scrolling reader for a single chapter.
@@ -112,8 +95,6 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
   const throttleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Most recent percent computed but not yet emitted — what a flush sends. */
   const pendingPercentRef = useRef<number | null>(null);
-
-  const paragraphs = useMemo(() => toParagraphs(content), [content]);
 
   /**
    * Scroll handler for the prose container. Computes the scroll percentage,
@@ -287,11 +268,7 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
             className="reader-prose mx-auto max-w-[68ch]"
             style={{ fontSize: '19px', lineHeight: 1.75 }}
           >
-            {paragraphs.map((paragraph, index) => (
-              <p key={index} className="mb-4">
-                {paragraph}
-              </p>
-            ))}
+            <Markdown content={content} />
           </div>
         </div>
 

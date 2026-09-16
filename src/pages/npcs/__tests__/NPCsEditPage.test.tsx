@@ -1,6 +1,7 @@
 // src/pages/npcs/__tests__/NPCsEditPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import NPCsEditPage from "../NPCsEditPage";
 
 // ---------------------------------------------------------------------------
@@ -11,6 +12,51 @@ let mockNpcId: string | undefined = "npc-1";
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
   useParams: () => ({ npcId: mockNpcId }),
+}));
+
+// ---------------------------------------------------------------------------
+// Page-suite gate mock (shared across Tasks 8-13 -- see page-suite-mock.md)
+// ---------------------------------------------------------------------------
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: {
+      getCampaigns: jest
+        .fn()
+        .mockResolvedValue([{ id: "campaign-2", name: "Icespire Peak" }]),
+    },
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -47,12 +93,33 @@ jest.mock("features/campaign-entities", () => ({
   ),
 }));
 
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, color }: any) => (
-    <div data-testid={color ? `typography-${color}` : "typography"}>{children}</div>
-  ),
-}));
+// ---------------------------------------------------------------------------
+// Child component mocks
+// ---------------------------------------------------------------------------
+
+// Typography is mapped to its real semantic tag (h1/h2/h3/h4, else `p`) so
+// that `getByRole("heading", ...)` works against both this page's own title
+// (via PageShell) and the shared gated panel's headings (via GatedPageState),
+// while still exposing the same `data-testid` scheme the existing assertions
+// below rely on.
+jest.mock("../../../core/components/Typography", () => {
+  const TAGS: Record<string, string> = { h1: "h1", h2: "h2", h3: "h3", h4: "h4" };
+  return {
+    __esModule: true,
+    default: ({ children, color, variant }: any) => {
+      const Tag = (TAGS[variant] || "p") as any;
+      return (
+        <Tag
+          data-testid={
+            color ? `typography-${color}` : `typography-${variant ?? "default"}`
+          }
+        >
+          {children}
+        </Tag>
+      );
+    },
+  };
+});
 
 jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
@@ -71,14 +138,18 @@ jest.mock("../../../core/components/Card", () => {
 
 jest.mock("lucide-react", () => ({
   ArrowLeft: () => <span data-testid="arrow-left" />,
-  Loader2: () => <span data-testid="loader" />,
+  Lock: () => <span data-testid="lock-icon" />,
 }));
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 function renderPage() {
-  return render(<NPCsEditPage />);
+  return render(
+    <MemoryRouter>
+      <NPCsEditPage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -88,7 +159,65 @@ describe("NPCsEditPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNpcId = "npc-1";
+    mockUser = { uid: "user-1" };
+    mockIsResolving = false;
+    mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockNPCDataReturn = { npcs: mockNPCsList, loading: false };
+  });
+
+  // -------------------------------------------------------------------------
+  // Gated states
+  // -------------------------------------------------------------------------
+  describe("gated states", () => {
+    it("renders the page title while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Edit Gandalf" })
+      ).toBeInTheDocument();
+    });
+
+    it("asks a signed-out visitor to sign in to add an NPC, and never to select a group", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { name: /sign in to add an npc/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    it("hides NPCEditForm while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(screen.queryByTestId("npc-edit-form")).not.toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    });
+
+    it("shows the shared pick-campaign panel when context is missing", async () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(
+        await screen.findByRole("heading", { name: /which campaign/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("npc-edit-form")).not.toBeInTheDocument();
+    });
+
+    // This page never had a `!user` redirect effect of its own, so there is
+    // nothing to delete here -- included for parity with the other five
+    // suites in this task, and to lock in the new behaviour going forward.
+    it("does NOT redirect a signed-out visitor away from the page", () => {
+      mockUser = null;
+      renderPage();
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -102,9 +231,9 @@ describe("NPCsEditPage", () => {
 
     it("renders the heading with the NPC name", () => {
       renderPage();
-      expect(screen.getByTestId("typography")).toHaveTextContent(
-        "Edit Gandalf"
-      );
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Edit Gandalf" })
+      ).toBeInTheDocument();
     });
 
     it("renders NPCEditForm", () => {
@@ -153,7 +282,9 @@ describe("NPCsEditPage", () => {
 
     it("renders fallback heading 'Edit NPC' when NPC is not found", () => {
       renderPage();
-      expect(screen.getByTestId("typography")).toHaveTextContent("Edit NPC");
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Edit NPC" })
+      ).toBeInTheDocument();
     });
   });
 
@@ -183,15 +314,12 @@ describe("NPCsEditPage", () => {
   // -------------------------------------------------------------------------
   // Bug #1424 — while auth and the campaign are still restoring, `npcs` is an
   // empty array, so `editingNPC` is undefined and the page used to commit to
-  // "NPC not found". Measured in the browser before the fix: a direct load of
-  // /npcs/edit/bard showed the red error for ~3.9s before the real form
-  // replaced it. Same defect as #1413, wearing different words.
+  // "NPC not found". Now `loading` folds into the shared gate's "resolving"
+  // state instead, so the skeleton shows and the ready branch (which is where
+  // "NPC not found" lives) never runs until loading has actually finished.
   // -------------------------------------------------------------------------
   describe("still loading (bug #1424)", () => {
     beforeEach(() => {
-      // The state on a fresh page load: the fetch has not resolved, so the
-      // list is empty -- indistinguishable from "this NPC does not exist"
-      // unless the page consults `loading`.
       mockNPCDataReturn = { npcs: [], loading: true };
     });
 
@@ -200,9 +328,9 @@ describe("NPCsEditPage", () => {
       expect(screen.queryByText("NPC not found")).not.toBeInTheDocument();
     });
 
-    it("renders the loading indicator instead", () => {
+    it("renders a skeleton instead", () => {
       renderPage();
-      expect(screen.getByTestId("loader")).toBeInTheDocument();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
     });
 
     it("still reports a genuinely missing NPC once loading has finished", () => {

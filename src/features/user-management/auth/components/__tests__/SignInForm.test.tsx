@@ -4,6 +4,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SignInForm from '../SignInForm';
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 // ---------------------------------------------------------------------------
 // Mock context/firebase
@@ -307,5 +309,31 @@ describe('SignInForm', () => {
         expect(screen.queryByText(/invalid email or password/i)).not.toBeInTheDocument();
       });
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). Every control has a name; the surface spends its one
+// accent on the control that writes, or none where nothing writes.
+// ---------------------------------------------------------------------------
+describe("SignInForm — names and accents", () => {
+  it("names every control", () => {
+    setupMocks();
+    const { container } = render(<SignInForm />);
+
+    // Paired with a positive assertion so an empty list cannot mean "this
+    // rendered nothing at all" (R31).
+    expect(container.querySelectorAll("input, select, textarea, button").length)
+      .toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends its one accent on the control that signs you in", () => {
+    setupMocks();
+    const { container } = render(<SignInForm />);
+
+    // One, and it is the submit: signing in is the write this surface
+    // exists to perform (D66, D80).
+    expect(formAccentsIn(container)).toHaveLength(1);
   });
 });

@@ -1,84 +1,46 @@
 // src/pages/rumors/RumorsPage.tsx
-import React from 'react';
-import Typography from '../../core/components/Typography';
-import Button from '../../core/components/Button';
-import Card from '../../core/components/Card';
-import { RumorDirectory, useRumors } from 'features/campaign-entities';
-import { useAuth } from 'features/user-management';
-import { useNavigation } from 'shared/hooks/useNavigation';
-import {
-  Loader2,
-  Plus
-} from 'lucide-react';
+import React from "react";
+import Button from "core/components/Button";
+import { RumorDirectory, useRumors } from "features/campaign-entities";
+import { usePageGate, GatedContent } from "shared/components/gated";
+import PageShell from "shared/components/page-shell/PageShell";
+import { useNavigation } from "shared/hooks/useNavigation";
+import { Plus } from "lucide-react";
 
+/**
+ * Rumors index.
+ *
+ * `RumorDirectory` carries the progress bar, the category chips, the search
+ * field and bulk-select. Rendering it over an empty array — which is what the
+ * signed-out page used to do — put five controls on screen that could not act,
+ * which reads as broken rather than as gated. `GatedContent` renders it only
+ * in the `ready` state.
+ */
 const RumorsPage: React.FC = () => {
-  // Auth state
-  const { user } = useAuth();
-  const { rumors, isLoading, error } = useRumors();
   const { navigateToPage } = useNavigation();
+  const { rumors, isLoading, error } = useRumors();
 
-  // Handle create new rumor
-  const handleCreateRumor = () => {
-    navigateToPage('/rumors/create');
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8">
-          <div className="flex items-center gap-4">
-            <Loader2 className="w-6 h-6 animate-spin primary" />
-            <Typography>Loading rumors...</Typography>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-8">
-          <Typography color="error">
-            Error Loading Rumors. Sign in to view content.
-          </Typography>
-        </Card>
-      </div>
-    );
-  }
+  const gate = usePageGate("rumors", { loading: isLoading, error });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Page Header */}
-      <div className="mb-8 flex justify-between items-start">
-        <div>
-          <Typography variant="h1" className="mb-2">
-            Rumors
-          </Typography>
-          <Typography color="secondary">
-            Track and investigate rumors from across the realm
-          </Typography>
-        </div>
-
-        {/* Auth actions */}
-        <div className="flex gap-2">
-          {user && (
-            <Button
-              onClick={handleCreateRumor}
-              startIcon={<Plus className="w-5 h-5" />}
-            >
-              Add Rumor
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Rumor Directory */}
-      <RumorDirectory
-        rumors={rumors}
-        isLoading={isLoading}
-      />
-    </div>
+    <PageShell
+      title="Rumors"
+      subtitle="Track and investigate rumors from across the realm"
+      actions={
+        gate.canAct && (
+          <Button
+            onClick={() => navigateToPage("/rumors/create")}
+            startIcon={<Plus className="w-5 h-5" />}
+          >
+            Add Rumor
+          </Button>
+        )
+      }
+    >
+      <GatedContent gate={gate}>
+        <RumorDirectory rumors={rumors} isLoading={false} />
+      </GatedContent>
+    </PageShell>
   );
 };
 

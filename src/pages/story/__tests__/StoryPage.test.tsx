@@ -1,6 +1,7 @@
 // src/pages/story/__tests__/StoryPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import StoryPage from "../StoryPage";
 
 // ---------------------------------------------------------------------------
@@ -11,6 +12,51 @@ let mockChapterId: string | undefined = "chapter-01";
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
   useParams: () => ({ chapterId: mockChapterId }),
+}));
+
+// ---------------------------------------------------------------------------
+// Page-suite gate mock (shared across Tasks 8-13 -- see page-suite-mock.md)
+// ---------------------------------------------------------------------------
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: {
+      getCampaigns: jest
+        .fn()
+        .mockResolvedValue([{ id: "campaign-2", name: "Icespire Peak" }]),
+    },
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -101,34 +147,37 @@ jest.mock("features/storytelling", () => ({
   ),
 }));
 
-let mockUser: { uid: string; displayName: string } | null = {
-  uid: "user-1",
-  displayName: "TestUser",
-};
-
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: mockUser }),
-}));
-
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, color, variant }: any) => (
-    <div
-      data-testid={
-        color
-          ? `typography-${color}`
-          : variant
-          ? `typography-${variant}`
-          : "typography-default"
-      }
-    >
-      {children}
-    </div>
-  ),
-}));
+// Typography is mapped to its real semantic tag (h1/h2/h3/h4, else `p`) so
+// that `getByRole("heading", ...)` works against both this page's own title
+// (via PageShell) and the shared gated panel's headings (via GatedPageState),
+// while still exposing the same `data-testid` scheme the existing assertions
+// below rely on.
+jest.mock("../../../core/components/Typography", () => {
+  const TAGS: Record<string, string> = { h1: "h1", h2: "h2", h3: "h3", h4: "h4" };
+  return {
+    __esModule: true,
+    default: ({ children, color, variant, className }: any) => {
+      const Tag = (TAGS[variant] || "p") as any;
+      return (
+        <Tag
+          data-testid={
+            color
+              ? `typography-${color}`
+              : variant
+              ? `typography-${variant}`
+              : "typography-default"
+          }
+          className={className}
+        >
+          {children}
+        </Tag>
+      );
+    },
+  };
+});
 
 jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
@@ -142,21 +191,9 @@ jest.mock("../../../core/components/Button", () => ({
   ),
 }));
 
-jest.mock("../../../core/components/Card", () => {
-  const Card = ({ children, className }: any) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  );
-  Card.Content = ({ children }: any) => (
-    <div data-testid="card-content">{children}</div>
-  );
-  return { __esModule: true, default: Card };
-});
-
 jest.mock("lucide-react", () => ({
   Menu: () => <span data-testid="menu-icon" />,
-  Loader2: () => <span data-testid="loader-icon" />,
+  Lock: () => <span data-testid="lock-icon" />,
 }));
 
 // ---------------------------------------------------------------------------
@@ -167,7 +204,11 @@ function resolveChapterById(id: string) {
 }
 
 function renderPage() {
-  return render(<StoryPage />);
+  return render(
+    <MemoryRouter>
+      <StoryPage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -177,7 +218,11 @@ describe("StoryPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockChapterId = "chapter-01";
-    mockUser = { uid: "user-1", displayName: "TestUser" };
+    mockUser = { uid: "user-1" };
+    mockIsResolving = false;
+    mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockStoryContext = {
       chapters: [
         { id: "chapter-01", title: "The Beginning", order: 1, content: "Once upon a time..." },
@@ -194,13 +239,62 @@ describe("StoryPage", () => {
   });
 
   // -------------------------------------------------------------------------
+  // Gated states (the standard tests every page suite adds, plus the
+  // StoryPage-specific regression guard -- see Task 11 brief)
+  // -------------------------------------------------------------------------
+  describe("gated states", () => {
+    it("renders the page title while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "1. The Beginning" })
+      ).toBeInTheDocument();
+    });
+
+    it("asks a signed-out visitor to sign in, and never to select a group", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { name: /sign in to read your campaign's story/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    it("hides the chapter reader while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(screen.queryByTestId("chapter-reader")).not.toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    });
+
+    it("shows the campaign picker rather than an empty page when no campaign is chosen", async () => {
+      // Regression guard: this page renders useStory().error, and that error no
+      // longer carries a "please select a group and campaign" sentence.
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(
+        await screen.findByRole("heading", { name: /which campaign/i })
+      ).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Loading state
   // -------------------------------------------------------------------------
   describe("loading state", () => {
-    it("shows loading card when isLoading is true", () => {
+    // Rewritten: `isLoading` now folds into the shared "resolving" state via
+    // `usePageGate`; the page's own Loader2/Card is gone.
+    it("shows a skeleton, not the page's own loading card, while isLoading is true", () => {
       mockStoryContext = { ...mockStoryContext, isLoading: true };
       renderPage();
-      expect(screen.getByText(/Loading chapter\.\.\./i)).toBeInTheDocument();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/Loading chapter/i)).not.toBeInTheDocument();
     });
 
     it("does NOT render the reader while loading", () => {
@@ -412,7 +506,8 @@ describe("StoryPage", () => {
   describe("authenticated user controls", () => {
     // Edit now lives inside the reader card rather than in page chrome, so the
     // page's part of the contract is whether it supplies the handler at all.
-    it("gives the reader an edit handler when a user is signed in", () => {
+    // Gated on `gate.canAct` rather than raw `user` -- see file header.
+    it("gives the reader an edit handler when the page is ready", () => {
       renderPage();
       expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
         "data-has-edit",
@@ -420,15 +515,10 @@ describe("StoryPage", () => {
       );
     });
 
-    it("withholds the edit handler when nobody is signed in", () => {
-      mockUser = null;
-      renderPage();
-      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
-        "data-has-edit",
-        "false"
-      );
-    });
-
+    // Rewritten: with the reader's whole body now behind the gate, a
+    // signed-out visitor never reaches `chapter-reader` at all -- covered by
+    // "hides the chapter reader while signed out" above. This used to assert
+    // the handler was withheld from a reader that still rendered underneath.
     it("navigates to the edit page when the reader's Edit is used", () => {
       renderPage();
       fireEvent.click(screen.getByTestId("reader-edit"));
@@ -481,7 +571,11 @@ describe("StoryPage", () => {
           },
         },
       };
-      rerender(<StoryPage />);
+      rerender(
+        <MemoryRouter>
+          <StoryPage />
+        </MemoryRouter>
+      );
       expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
         "data-position",
         "0"

@@ -1,17 +1,17 @@
 // src/core/services/firebase/data/DocumentService.ts
-import { 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  QueryConstraint, 
-  DocumentData, 
-  WithFieldValue, 
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  QueryConstraint,
+  DocumentData,
+  WithFieldValue,
   DocumentReference,
   writeBatch
 } from 'firebase/firestore';

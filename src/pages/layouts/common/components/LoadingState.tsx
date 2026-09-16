@@ -39,7 +39,7 @@ const LoadingState: React.FC<LoadingStateProps> = ({
             className={clsx(
               height,
               "rounded",
-              `journal-loading`
+              `section-loading`
             )}
           ></div>
         ))}

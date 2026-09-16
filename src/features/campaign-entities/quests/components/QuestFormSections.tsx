@@ -3,7 +3,9 @@ import { NPC } from '../../npcs/types';
 import React from 'react';
 import { Quest, QuestStatus } from '../types';
 import Typography from '../../../../core/components/Typography';
+import { SelectableChip, RemovableChip } from '../../../../core/components/Chip';
 import Input from '../../../../core/components/Input';
+import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
 import LocationCombobox from '../../locations/components/LocationCombobox';
 import Dialog from '../../../../core/components/Dialog';
@@ -58,6 +60,7 @@ interface RelatedNPCsSectionProps extends SectionProps {
             type="button"
             variant="ghost"
             onClick={() => setIsNPCDialogOpen(true)}
+            aria-label="Add a related NPC"
             startIcon={<PlusCircle />}
           ></Button>
           <Typography variant="h4">Related NPCs</Typography>
@@ -66,21 +69,13 @@ interface RelatedNPCsSectionProps extends SectionProps {
           {Array.from(selectedNPCs).map(npcId => {
             const npc = npcs.find(n => n.id === npcId);
             return npc ? (
-              <div
+              <RemovableChip
                 key={npcId}
-                className="flex items-center gap-1 rounded-full px-3 py-1 tag"
+                onRemove={() => handleRemoveNPC(npcId)}
+                removeLabel={`Remove ${npc.name}`}
               >
-                <span>{npc.name}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveNPC(npcId)}
-                  className={clsx(
-                    `typography-secondary hover:opacity-80`
-                  )}
-                >
-                  <X size={14} />
-                </button>
-              </div>
+                {npc.name}
+              </RemovableChip>
             ) : null;
           })}
         </div>
@@ -94,28 +89,14 @@ interface RelatedNPCsSectionProps extends SectionProps {
           <div className="max-h-96 overflow-y-auto mb-4">
             <div className="grid grid-cols-3 gap-2">
               {npcs.map(npc => (
-                <button
-                  type="button"  // Explicitly set type to "button"
+                <SelectableChip
                   key={npc.id}
-                  onClick={(e) => {
-                    e.preventDefault();  // Prevent form submission
-                    e.stopPropagation(); // Stop event bubbling
-                    handleToggleNPC(npc.id);
-                  }}
-                  className={clsx(
-                    "p-2 rounded text-center transition-colors",
-                    selectedNPCs.has(npc.id)
-                      ? `selected-item`
-                      : `selectable-item`
-                  )}
+                  selected={selectedNPCs.has(npc.id)}
+                  onToggle={() => handleToggleNPC(npc.id)}
+                  className="text-center"
                 >
-                  <Typography 
-                    variant="body-sm"
-                    className={selectedNPCs.has(npc.id) ? 'font-medium' : ''}
-                  >
-                    {npc.name}
-                  </Typography>
-                </button>
+                  {npc.name}
+                </SelectableChip>
               ))}
             </div>
           </div>
@@ -156,20 +137,17 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
         required
       />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1 form-label">Status *</label>
-          <select
-            className="w-full rounded-lg border p-2 input"
-            value={formData.status}
-            onChange={(e) => handleInputChange('status', e.target.value as QuestStatus)}
-            required
-          >
-            <option value="active">Active</option>
-            <option value="completed">Completed</option>
-            <option value="failed">Failed</option>
-          </select>
-        </div>
+      <div className="space-y-4">
+        <Select
+          label="Status *"
+          value={formData.status}
+          onChange={(e) => handleInputChange('status', e.target.value as QuestStatus)}
+          required
+        >
+          <option value="active">Active</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+        </Select>
 
         <LocationCombobox
           label="Location"
@@ -220,15 +198,17 @@ export const ObjectivesSection: React.FC<SectionProps> = ({ formData, handleInpu
           type="button"
           variant="ghost"
           onClick={handleAddObjective}
+          aria-label="Add an objective"
           startIcon={<PlusCircle />}
         ></Button>
         <Typography variant="h4">Objectives</Typography>
       </div>
       <div className="space-y-2">
-        {formData.objectives?.map((objective) => (
+        {formData.objectives?.map((objective, index) => (
           <div key={objective.id} className="flex gap-4">
             <input
               type="checkbox"
+              aria-label={`Mark objective ${index + 1} complete`}
               checked={objective.completed}
               onChange={(e) => {
                 const newObjectives = formData.objectives?.map(obj =>
@@ -242,6 +222,7 @@ export const ObjectivesSection: React.FC<SectionProps> = ({ formData, handleInpu
             />
             <div className="flex-1">
               <Input
+                aria-label={`Objective ${index + 1}`}
                 value={objective.description}
                 onChange={(e) => {
                   const newObjectives = formData.objectives?.map(obj =>
@@ -258,6 +239,7 @@ export const ObjectivesSection: React.FC<SectionProps> = ({ formData, handleInpu
               type="button"
               variant="ghost"
               onClick={() => handleRemoveObjective(objective.id)}
+              aria-label={`Remove objective ${index + 1}`}
               className="flex-shrink-0"
             >
               <X className="w-4 h-4" />
@@ -287,6 +269,7 @@ export const LeadsSection: React.FC<SectionProps> = ({ formData, handleInputChan
           type="button"
           variant="ghost"
           onClick={handleAddLead}
+          aria-label="Add a lead"
           startIcon={<PlusCircle />}
         ></Button>
         <Typography variant="h4">Initial Leads</Typography>
@@ -296,6 +279,7 @@ export const LeadsSection: React.FC<SectionProps> = ({ formData, handleInputChan
           <div key={`lead-${index}`} className="flex gap-4">
             <div className="flex-1 space-y-2">
               <Input
+                aria-label={`Initial lead ${index + 1}`}
                 placeholder="Initial Lead"
                 value={lead}
                 onChange={(e) => handleLeadChange(index, e.target.value)}
@@ -308,6 +292,7 @@ export const LeadsSection: React.FC<SectionProps> = ({ formData, handleInputChan
                 const newLeads = formData.leads?.filter((_, i) => i !== index);
                 handleInputChange('leads', newLeads || []);
               }}
+              aria-label={`Remove lead ${index + 1}`}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -333,6 +318,7 @@ export const KeyLocationsSection: React.FC<SectionProps> = ({ formData, handleIn
           type="button"
           variant="ghost"
           onClick={handleAddLocation}
+          aria-label="Add a key location"
           startIcon={<PlusCircle />}
         ></Button>
         <Typography variant="h4">Key Locations</Typography>
@@ -342,6 +328,7 @@ export const KeyLocationsSection: React.FC<SectionProps> = ({ formData, handleIn
           <div key={index} className="flex gap-4">
             <div className="flex-1 space-y-2">
               <Input
+                aria-label={`Key location ${index + 1} name`}
                 placeholder="Location name"
                 value={location.name}
                 onChange={(e) => {
@@ -354,6 +341,7 @@ export const KeyLocationsSection: React.FC<SectionProps> = ({ formData, handleIn
                 }}
               />
               <Input
+                aria-label={`Key location ${index + 1} description`}
                 placeholder="Description"
                 value={location.description}
                 onChange={(e) => {
@@ -374,6 +362,7 @@ export const KeyLocationsSection: React.FC<SectionProps> = ({ formData, handleIn
                 const newLocations = formData.keyLocations?.filter((_, i) => i !== index);
                 handleInputChange('keyLocations', newLocations || []);
               }}
+              aria-label={`Remove key location ${index + 1}`}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -402,6 +391,7 @@ export const ComplicationsSection: React.FC<SectionProps> = ({ formData, handleI
           type="button"
           variant="ghost"
           onClick={handleAddComplication}
+          aria-label="Add a complication"
           startIcon={<PlusCircle />}
         ></Button>
         <Typography variant="h4">Possible Complications</Typography>
@@ -411,6 +401,7 @@ export const ComplicationsSection: React.FC<SectionProps> = ({ formData, handleI
           <div key={`complication-${index}`} className="flex gap-4">
             <div className="flex-1 space-y-2">
               <Input
+                aria-label={`Complication ${index + 1}`}
                 placeholder="Possible Complication"
                 value={complication}
                 onChange={(e) => handleComplicationChange(index, e.target.value)}
@@ -423,6 +414,7 @@ export const ComplicationsSection: React.FC<SectionProps> = ({ formData, handleI
                 const newComplications = formData.complications?.filter((_, i) => i !== index);
                 handleInputChange('complications', newComplications || []);
               }}
+              aria-label={`Remove complication ${index + 1}`}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -451,6 +443,7 @@ export const RewardsSection: React.FC<SectionProps> = ({ formData, handleInputCh
           type="button"
           variant="ghost"
           onClick={handleAddReward}
+          aria-label="Add a reward"
           startIcon={<PlusCircle />}
         ></Button>
         <Typography variant="h4">Rewards</Typography>
@@ -460,6 +453,7 @@ export const RewardsSection: React.FC<SectionProps> = ({ formData, handleInputCh
           <div key={`reward-${index}`} className="flex gap-4">
             <div className="flex-1 space-y-2">
               <Input
+                aria-label={`Reward ${index + 1}`}
                 placeholder="Reward"
                 value={reward}
                 onChange={(e) => handleRewardChange(index, e.target.value)}
@@ -472,6 +466,7 @@ export const RewardsSection: React.FC<SectionProps> = ({ formData, handleInputCh
                 const newRewards = formData.rewards?.filter((_, i) => i !== index);
                 handleInputChange('rewards', newRewards || []);
               }}
+              aria-label={`Remove reward ${index + 1}`}
             >
               <X className="w-4 h-4" />
             </Button>

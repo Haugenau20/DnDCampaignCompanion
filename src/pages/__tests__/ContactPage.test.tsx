@@ -3,6 +3,8 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ContactPage from "../ContactPage";
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 const mockNavigateToPage = jest.fn();
 let mockCampaigns = {
@@ -83,6 +85,32 @@ describe("ContactPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("puts the form on a card, like every other form in the product", () => {
+    // D79: a form sits on `card`. This page was the one that did not -- the
+    // chips, the field and the sender block sat straight on the page ground,
+    // which also left `SenderIdentity`'s recessed block with nothing to be
+    // recessed from.
+    const { container } = render(<ContactPage />);
+
+    const form = screen.getByTestId("contact-form");
+    expect(form.closest(".card")).not.toBeNull();
+    // The callout is page-level, not part of the form, and stays off the card.
+    const callout = container.querySelector(".callout-emphasis");
+    expect(callout).not.toBeNull();
+    expect(callout!.closest(".card")).toBeNull();
+  });
+
+  it("frames itself with the shared page shell at its own column width", () => {
+    // Not tidiness: a page that declares its own frame drifts when the frame
+    // changes. The width is passed rather than merged because two `max-w-*`
+    // utilities do not compose -- see PageShell's own suite.
+    const { container } = render(<ContactPage />);
+
+    const shell = container.firstElementChild as HTMLElement;
+    expect(shell).toHaveClass("max-w-[660px]", "mx-auto");
+    expect(shell.querySelector("header")).not.toBeNull();
+  });
+
   // The four right-hand prose blocks are the thing this redesign removes.
   // Three of them were instructions for a field the reader had already
   // scrolled past; their content now lives under the message field.
@@ -95,5 +123,27 @@ describe("ContactPage", () => {
     expect(
       screen.queryByText(/Our secure contact form ensures your privacy/)
     ).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). ContactForm is stubbed in this suite, so these measure
+// the page around it -- the form's own controls are ContactForm's suite.
+// ---------------------------------------------------------------------------
+describe("ContactPage — names and accents", () => {
+  it("names every control", () => {
+    const { container } = render(<ContactPage />);
+
+    expect(container.querySelectorAll("button").length).toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  it("spends no accent of its own: the send button belongs to the form", () => {
+    const { container } = render(<ContactPage />);
+
+    // The page's chrome is a back link and a callout. The one control that
+    // writes is Send, and it lives inside ContactForm -- so the page must add
+    // nothing beside it (D78: the budget is per surface).
+    expect(formAccentsIn(container)).toEqual([]);
   });
 });

@@ -4,6 +4,7 @@ import Typography from './Typography';
 import Input from './Input';
 import { ChevronDown, Search } from 'lucide-react';
 import clsx from 'clsx';
+import EntitySigil from './EntitySigil';
 
 /**
  * Shared roster primitives for the entity directories.
@@ -31,7 +32,7 @@ export interface RosterSegment {
   key: string;
   label: string;
   count: number;
-  /** Tailwind background utility backed by a theme token, e.g. bg-status-completed. */
+  /** Tailwind background utility backed by a theme token, e.g. bg-valence-0. */
   colorClass: string;
 }
 
@@ -76,12 +77,12 @@ export const RosterStatusBar: React.FC<RosterStatusBarProps> = ({
 
       <div className="flex-1 flex flex-col gap-2 min-w-0">
         <div
-          className={clsx('flex h-[7px] rounded-full overflow-hidden', `progress-container`)}
+          className={clsx('flex h-[7px] rounded-full roster-bands', `progress-container`)}
         >
           {present.map(segment => (
             <span
               key={segment.key}
-              className={segment.colorClass}
+              className={clsx('roster-band', segment.colorClass)}
               style={{ width: `${(segment.count / Math.max(total, 1)) * 100}%` }}
             />
           ))}
@@ -145,19 +146,32 @@ export interface RosterFilterOption {
  */
 export type RosterFilterSize = 'sm' | 'md';
 
+/*
+  Both states carry a border of the same width, so selecting a filter never
+  reflows the row.
+*/
 const PILL_BASE: Record<RosterFilterSize, string> = {
-  sm: 'px-3 py-1.5 rounded-full text-xs font-semibold transition-colors',
-  md: 'px-3 py-1.5 rounded-md text-sm transition-colors',
+  sm: 'px-3 py-1.5 rounded-full text-xs font-semibold transition-colors roster-filter',
+  md: 'px-3 py-1.5 rounded-md text-sm transition-colors roster-filter',
 };
 
+/**
+ * The one accent inside a collection, and it is an outline rather than a fill.
+ *
+ * It used to be `bg-status-general` filled -- which named the *status* hue for
+ * something that is not a status, and happened to look right only because in
+ * finish 3a that token and the accent are the same value. A filled chip is also
+ * the heaviest treatment available, spent on the most repeated control on the
+ * page.
+ */
 const PILL_ACTIVE: Record<RosterFilterSize, string> = {
-  sm: 'bg-status-general text-status-text',
-  md: 'bg-status-general text-status-text font-semibold',
+  sm: 'roster-filter-active',
+  md: 'roster-filter-active font-semibold',
 };
 
 const PILL_IDLE: Record<RosterFilterSize, string> = {
-  sm: 'bg-secondary typography-secondary selectable-item',
-  md: 'card typography-secondary selectable-item',
+  sm: 'roster-filter-idle selectable-item',
+  md: 'roster-filter-idle selectable-item',
 };
 
 export interface RosterFilterPillsProps {
@@ -166,6 +180,12 @@ export interface RosterFilterPillsProps {
   onChange: (value: string) => void;
   /** Accessible name for the group, e.g. "Filter by relationship". */
   label: string;
+  /**
+   * The option meaning "no filter", usually `all`. Selecting it is the absence
+   * of a filter rather than a filter, so it stays idle -- otherwise every
+   * directory would show an accent on load, and the accent would say nothing.
+   */
+  allValue?: string;
   size?: RosterFilterSize;
 }
 
@@ -180,20 +200,27 @@ export const RosterFilterPills: React.FC<RosterFilterPillsProps> = ({
   value,
   onChange,
   label,
+  allValue = 'all',
   size = 'md',
 }) => (
   <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
     {options.map(option => {
-      const isActive = value === option.value;
+      const isSelected = value === option.value;
+      // Selected and accented are two different questions. "All" is the
+      // selected option when nothing is filtered, and a screen reader must be
+      // told so -- but it is the *absence* of a filter, so it earns no accent.
+      // Conflating the two would silently drop `aria-pressed` from the option
+      // every directory loads on.
+      const isAccented = isSelected && option.value !== allValue;
       return (
         <button
           key={option.value}
           type="button"
           onClick={() => onChange(option.value)}
-          aria-pressed={isActive}
+          aria-pressed={isSelected}
           className={clsx(
             PILL_BASE[size],
-            isActive ? PILL_ACTIVE[size] : PILL_IDLE[size]
+            isAccented ? PILL_ACTIVE[size] : PILL_IDLE[size]
           )}
         >
           {option.label}
@@ -307,6 +334,12 @@ export interface RosterGroupProps {
   openLabel?: string;
   /** Marks a placeholder group such as "Location unknown". */
   muted?: boolean;
+  /**
+   * Renders the group as a recessed part of the row above it rather than a card
+   * of its own. A location's sub-locations and a quest's objectives are parts of
+   * one object; boxing them restates a containment the indentation already says.
+   */
+  nested?: boolean;
   children: React.ReactNode;
 }
 
@@ -324,6 +357,7 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
   onOpen,
   openLabel = 'Open location',
   muted = false,
+  nested = false,
   children,
 }) => (
   <section className="flex flex-col gap-2">
@@ -334,23 +368,148 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
       >
         {title}
       </Typography>
-      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-secondary typography-secondary">
+      {/*
+        The count was a filled pill, which gave a number the same weight as a
+        control. It is metadata about the heading beside it, so it reads as
+        muted ink on the same line.
+      */}
+      <Typography variant="body-sm" color="muted" className="text-sm tabular-nums">
         {count}
-      </span>
+      </Typography>
       {onOpen && (
         <button
           type="button"
           onClick={onOpen}
-          className="text-sm font-medium typography-primary"
+          className="text-sm underline underline-offset-2 typography-secondary roster-group-open"
         >
           {openLabel}
         </button>
       )}
-      <span aria-hidden="true" className="flex-1 h-px min-w-4 bg-secondary opacity-60" />
     </div>
 
-    <div className={clsx('rounded-lg overflow-hidden card')}>{children}</div>
+    <div
+      className={clsx(
+        'rounded-lg overflow-hidden',
+        nested ? 'bg-secondary card-border' : 'card'
+      )}
+    >
+      {children}
+    </div>
   </section>
+);
+
+// ---------------------------------------------------------------------------
+// Status
+// ---------------------------------------------------------------------------
+
+/**
+ * The tones a roster row's state can take, named after the scale it belongs to.
+ *
+ * This replaces a five-word vocabulary -- `active`, `completed`, `failed`,
+ * `unknown`, `general` -- that described *hues* rather than meanings, and was
+ * therefore something any entity could reach into. That is not a tidiness
+ * complaint: `completed` was green and available, so a visited location took
+ * it and the application began claiming that exploring a place was a win
+ * condition. A vocabulary that cannot say "green" cannot make that mistake.
+ *
+ * Three scales, and the choice between them is a claim about the domain:
+ *
+ *   - `outcome` is for a thing that **concluded**, and is the only valenced
+ *     scale here. Quests, and nothing else.
+ *   - `knowledge` is a **ladder**, not a verdict: how much the party knows.
+ *     Locations and rumours both ride it, which is why its steps are numbered
+ *     rather than named -- `visited` would tie a shared ladder to one domain.
+ *   - `disposition` is an NPC's stance toward the party. Valenced, and that
+ *     does not contradict presence being unvalenced: a slain villain is not a
+ *     bad outcome, but a hostile NPC is genuinely a threat to the reader.
+ *
+ * `present` and `absent` carry no hue at all, which is the point rather than
+ * an omission. The default state of a thing needs no encoding, and a fact
+ * (this NPC died) is not an error.
+ */
+export type RosterStatusTone =
+  // Valence -- the shared ramp, good to bad. Every directory that ranks its
+  // states draws from this, which is what makes the four pages read as one
+  // system. NPC presence takes all four; a three-state scale takes three of
+  // the same four, so no directory carries a spacing of its own.
+  | 'valence-0'
+  | 'valence-1'
+  | 'valence-2'
+  | 'valence-3'
+  // Disposition -- an NPC's stance toward the party. Unranked, so it keeps its
+  // own scale: friendly and hostile borrow the ramp's ends because a stance
+  // genuinely is good or bad, but neutral and unknown are not points between
+  // them and must not be painted as though they were.
+  | 'friendly'
+  | 'neutral'
+  | 'hostile'
+  | 'unsure';
+
+const STATUS_TONE: Record<RosterStatusTone, string> = {
+  'valence-0': 'valence-0',
+  'valence-1': 'valence-1',
+  'valence-2': 'valence-2',
+  'valence-3': 'valence-3',
+  friendly: 'disposition-friendly',
+  neutral: 'disposition-neutral',
+  hostile: 'disposition-hostile',
+  unsure: 'disposition-unknown',
+};
+
+export interface RosterStatusProps {
+  /** Which state this is, in the vocabulary of the scale it belongs to. */
+  tone: RosterStatusTone;
+  /** The state, as a word. Always rendered -- the hue never carries it alone. */
+  children: React.ReactNode;
+  /**
+   * A fact that is fully known and **negated**: a deceased NPC, a false
+   * rumour. Draws `cue.negation` -- a hairline rule through the label, in the
+   * label's own ink.
+   *
+   * Deliberately not a tone. Negation is orthogonal to which scale a state
+   * belongs to: a false rumour is still at the top of the knowledge ladder,
+   * and saying so in red would claim it went wrong when it simply turned out
+   * not to be true. The strike is what carries that distinction without
+   * spending a hue on it -- and without it, a false rumour and a confirmed
+   * one are indistinguishable, since both are fully known.
+   */
+  negated?: boolean;
+  className?: string;
+}
+
+/**
+ * A status, stated as a word in the status hue.
+ *
+ * One component so that a quest's "Completed" and a rumour's "Confirmed" are
+ * the same kind of fact and look like it -- same weight, same placement, same
+ * vocabulary. Four directories previously reached for four parallel class
+ * families (`quest-status-*`, `rumor-status-*`, `npc-status-*`,
+ * `location-status-*`) that all resolved to the same five tokens, which is how
+ * they drifted apart once already: `location-status-explored` and
+ * `-visited` were swapped against their own legend for as long as a dot was
+ * there to cover it. Those families are gone; a row now names a meaning and
+ * the meaning owns the hue.
+ *
+ * The word is not optional. The hue is a scanning aid on top of it, never a
+ * substitute, so the directories stay fully readable with hue removed.
+ */
+export const RosterStatus: React.FC<RosterStatusProps> = ({
+  tone,
+  children,
+  negated,
+  className,
+}) => (
+  <Typography
+    variant="body-sm"
+    className={clsx(
+      'hidden md:block text-sm font-semibold',
+      STATUS_TONE[tone],
+      negated && 'cue-negated',
+      className
+    )}
+  >
+    {children}
+  </Typography>
 );
 
 // ---------------------------------------------------------------------------
@@ -358,6 +517,19 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
 // ---------------------------------------------------------------------------
 
 export interface RosterRowProps {
+  /**
+   * The entity's own document id — not the prefixed DOM `id` below. It is what
+   * makes the mark stable: the same NPC shows the same hue in this list, in the
+   * activity feed and on any surface that adopts the sigil later.
+   *
+   * Required, and required to be non-empty. Deriving the mark from the name
+   * instead would move it whenever anyone corrects a spelling, and falling back
+   * to `''` would paint every id-less row the same hue — wrong in a way that
+   * looks right.
+   */
+  entityId: string;
+  /** The entity's display name or title. Determines the letter, and only that. */
+  entityName: string;
   /** Grid template for the row's cells, so each directory can size its own columns. */
   gridClassName: string;
   /** The collapsed row's cells, laid out on the grid. */
@@ -377,6 +549,12 @@ export interface RosterRowProps {
   leadingControl?: React.ReactNode;
   isFirst?: boolean;
   highlighted?: boolean;
+  /**
+   * Batch selection. Painted from the row's own surface rather than the accent
+   * or a status hue -- selection is feedback about what you are about to act on,
+   * not a property of the record.
+   */
+  selected?: boolean;
   id?: string;
 }
 
@@ -388,6 +566,8 @@ export interface RosterRowProps {
  * scrolled past a lot of card to find anybody.
  */
 export const RosterRow: React.FC<RosterRowProps> = ({
+  entityId,
+  entityName,
   gridClassName,
   children,
   expanded = false,
@@ -397,14 +577,28 @@ export const RosterRow: React.FC<RosterRowProps> = ({
   leadingControl,
   isFirst = false,
   highlighted = false,
+  selected = false,
   id,
-}) => (
+}) => {
+  // Loud on purpose. A row reaching this component without an id is a data bug,
+  // and the quiet alternatives are both worse than a crash: no mark leaves one
+  // row visibly different from its neighbours for no stated reason, and a mark
+  // derived from `''` paints every such row the same hue, which reads as a
+  // deliberate grouping that does not exist.
+  if (!entityId) {
+    throw new Error(
+      `RosterRow: entityId is required and must be non-empty (row "${entityName}").`
+    );
+  }
+
+  return (
   <div
     id={id}
     className={clsx(
       'transition-colors',
       !isFirst && 'border-t border-card',
       highlighted && `highlighted-item`,
+      selected && 'roster-row-selected',
       expanded && 'bg-secondary'
     )}
   >
@@ -418,26 +612,122 @@ export const RosterRow: React.FC<RosterRowProps> = ({
         onClick={onToggle}
         aria-expanded={expanded}
         aria-label={`${expanded ? 'Collapse' : 'Expand'} ${toggleLabel}`}
-        className={clsx(
-          'flex-1 min-w-0 text-left px-5 py-3.5 items-center gap-4 grid selectable-item',
-          gridClassName
-        )}
+        className="flex-1 min-w-0 text-left flex items-center gap-4 roster-row selectable-item"
       >
-        {children}
-        <ChevronDown
-          size={16}
-          aria-hidden="true"
-          className={clsx(
-            'justify-self-end transition-transform typography-secondary',
-            expanded && 'rotate-180'
-          )}
-        />
+        {/*
+          The mark sits outside the grid rather than as another column, so the
+          four directories keep their own column templates unchanged — a leading
+          `auto` in each of them would be the same slot expressed four times, and
+          would drift the moment one of them was edited.
+        */}
+        <EntitySigil entityId={entityId} name={entityName} size={28} />
+
+        <div className={clsx('flex-1 min-w-0 items-center gap-4 grid', gridClassName)}>
+          {children}
+          <ChevronDown
+            size={16}
+            aria-hidden="true"
+            className={clsx(
+              'justify-self-end transition-transform typography-secondary',
+              expanded && 'rotate-180'
+            )}
+          />
+        </div>
       </button>
     </div>
 
     {expanded && expandedContent && (
       <div className="px-5 pb-5 pt-1 border-t border-card">{expandedContent}</div>
     )}
+  </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Loading
+// ---------------------------------------------------------------------------
+
+export interface RosterSkeletonProps {
+  /** How many placeholder rows to draw. Defaults to a comfortable page. */
+  rows?: number;
+  /** Announced while the rows are standing in for real content. */
+  label?: string;
+}
+
+/**
+ * The shape of the list that is coming, rather than a spinner.
+ *
+ * A spinner says "something is happening"; a skeleton says "a list of rows is
+ * happening, and it will be about this tall", so the page does not jump when it
+ * arrives. Four directories had drifted to three different answers here -- two
+ * spinners with different icons and two bare lines of text.
+ *
+ * The mark, the name and the metadata line are each drawn at their real size, so
+ * this is the row rhythm and not a decorative bar chart.
+ */
+export const RosterSkeleton: React.FC<RosterSkeletonProps> = ({
+  rows = 5,
+  label = 'Loading',
+}) => (
+  <div
+    className={clsx('rounded-lg overflow-hidden card')}
+    role="status"
+    aria-label={label}
+  >
+    {Array.from({ length: rows }, (_, index) => (
+      <div
+        key={index}
+        className={clsx(
+          'flex items-center gap-4 roster-row',
+          index > 0 && 'border-t border-card'
+        )}
+        aria-hidden="true"
+      >
+        <div className="w-7 h-7 rounded-md section-loading shrink-0" />
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+          <div className="h-3.5 rounded section-loading w-[38%]" />
+          <div className="h-3 rounded section-loading w-[22%]" />
+        </div>
+        <div className="hidden md:block h-3 rounded section-loading w-[14%]" />
+      </div>
+    ))}
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Empty
+// ---------------------------------------------------------------------------
+
+export interface RosterEmptyProps {
+  /** What this collection is, stated plainly. */
+  title: string;
+  /** Why it is empty, and what would fill it. */
+  message: string;
+  /** The one action that fills it. Omitted when a filter is what emptied it. */
+  action?: React.ReactNode;
+}
+
+/**
+ * An empty collection, designed rather than blank.
+ *
+ * This is where a returning user is most likely to read the product as
+ * unfinished, so it says what the collection is for and offers the one action
+ * that fills it. No icon: a large grey glyph is decoration on a surface whose
+ * whole problem is that it has nothing to say yet.
+ *
+ * A collection emptied by a *filter* passes no action -- the fix there is to
+ * change the filter, and offering "Add an NPC" would answer a question nobody
+ * asked.
+ */
+export const RosterEmpty: React.FC<RosterEmptyProps> = ({ title, message, action }) => (
+  <div className={clsx('rounded-lg card px-6 py-12 text-center')}>
+    <Typography variant="h3" className="text-lg mb-1.5">
+      {title}
+    </Typography>
+    <Typography color="secondary" className="text-sm max-w-md mx-auto">
+      {message}
+    </Typography>
+    {action && <div className="mt-5 flex justify-center">{action}</div>}
   </div>
 );
 

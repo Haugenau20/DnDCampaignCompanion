@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Typography from 'core/components/Typography';
 import Card from 'core/components/Card';
 import { RosterFilterPills, type RosterFilterOption } from 'core/components/Roster';
+import EntitySigil from 'core/components/EntitySigil';
 import clsx from 'clsx';
 import { Activity } from 'pages/HomePage';
 import { useActivityDisplay } from '../../../layouts/common/hooks/useActivityDisplay';
@@ -58,8 +59,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
   } = useActivityDisplay({
     activities,
     filter,
-    limit: 4,
-    journalStyle: false
+    limit: 4
   });
 
   const heading = (
@@ -83,7 +83,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
               key={i}
               className={clsx('px-5 py-5 h-[92px]', i > 1 && 'border-t border-card')}
             >
-              <div className={clsx('w-full h-full rounded-lg', `journal-loading`)}></div>
+              <div className={clsx('w-full h-full rounded-lg', `section-loading`)}></div>
             </div>
           ))}
         </div>
@@ -128,42 +128,44 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
               type="button"
               onClick={() => handleActivityClick(activity)}
               className={clsx(
-                'w-full text-left px-5 py-4 grid gap-4 items-baseline transition-colors',
-                'grid-cols-[1fr_auto] sm:grid-cols-[88px_1fr_auto]',
+                'w-full text-left px-5 py-4 flex items-center gap-4 transition-colors',
                 'selectable-item',
                 index > 0 && 'border-t border-card'
               )}
             >
-              <Typography
-                variant="body-sm"
-                color="muted"
-                className="text-xs font-medium col-start-1 row-start-2 sm:row-start-1 whitespace-nowrap"
-              >
-                {formatDate(activity.timestamp)}
-              </Typography>
+              {/*
+                The mark leads, then the title, then one meta line.
 
-              <div className="flex flex-col gap-1 min-w-0 col-start-1 row-start-1 sm:col-start-2">
-                <Typography
-                  variant="body-sm"
-                  color="primary"
-                  className="text-[11px] font-semibold uppercase tracking-wider"
-                >
-                  {getTypeLabel(activity.type)}
-                </Typography>
-                <Typography variant="h4" className="text-base sm:text-lg truncate">
-                  {activity.title}
-                </Typography>
-                {activity.actor && (
-                  <Typography variant="body-sm" color="muted" className="text-xs">
-                    {activity.actor}
+                The type used to be a coloured eyebrow above the title, and the
+                date a column of its own -- three stacked lines and two columns
+                for what is one row of information. A row states its type once,
+                and a single line of metadata is the budget: type, who wrote it,
+                when. Folding the date in also removes the separate column,
+                which is what lets the title start at the same place on every
+                row and makes the list scannable down the titles alone.
+              */}
+              <div className="flex gap-3 min-w-0">
+                <EntitySigil
+                  entityId={activity.id}
+                  name={activity.title}
+                  className="mt-0.5"
+                />
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <Typography variant="h4" className="text-base sm:text-lg truncate">
+                    {activity.title}
                   </Typography>
-                )}
+                  <Typography variant="body-sm" color="muted" className="text-xs truncate">
+                    {[getTypeLabel(activity.type), activity.actor, formatDate(activity.timestamp)]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Typography>
+                </div>
               </div>
 
               <Typography
                 variant="body-sm"
                 color="primary"
-                className="text-sm font-medium whitespace-nowrap row-start-1 col-start-2 sm:col-start-3"
+                className="text-sm font-medium whitespace-nowrap ml-auto shrink-0"
               >
                 {activity.type === 'chapter' ? 'Read' : 'Open'}
               </Typography>

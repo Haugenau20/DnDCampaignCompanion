@@ -158,7 +158,12 @@ describe('StoryContext Behavioral Testing', () => {
       // BEHAVIOR: Story context should start with empty chapters list
       expect(storyContext.chapters).toEqual([]);
       expect(storyContext.isLoading).toBe(false);
-      expect(storyContext.error).toBe('Please select a group and campaign');
+      // A missing group/campaign is a STATE, and this context already publishes
+      // it as `hasRequiredContext`. It no longer also fabricates a sentence out
+      // of it: only the page knows whether the visitor is signed out, still
+      // resolving, or between campaigns, and the wording now lives in
+      // shared/components/gated/gated-page-copy.ts.
+      expect(storyContext.error).toBeNull();
       expect(storyContext.hasRequiredContext).toBe(false);
     });
 
@@ -182,15 +187,21 @@ describe('StoryContext Behavioral Testing', () => {
       });
     });
 
-    test('should provide proper error message when no context available', async () => {
+    test('reports missing context as state, not as an error message', async () => {
       renderStoryContext();
 
       await waitFor(() => {
         expect(storyContext).toBeDefined();
       });
 
-      // BEHAVIOR: Should show appropriate error when no group/campaign selected
-      expect(storyContext.error).toBe('Please select a group and campaign');
+      // This used to assert 'Please select a group and campaign'. That
+      // assertion encoded a layering mistake: `error` is for real failures, and
+      // filling it with a selection prompt meant StoryPage rendered that prompt
+      // through its error branch -- telling a signed-out visitor to use a
+      // switcher Header only renders for signed-in members.
+      expect(storyContext.error).toBeNull();
+      // The state itself is still published, for callers that need it.
+      expect(storyContext.hasRequiredContext).toBe(false);
     });
   });
 

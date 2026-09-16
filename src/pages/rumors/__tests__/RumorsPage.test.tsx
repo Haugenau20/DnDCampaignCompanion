@@ -1,113 +1,98 @@
-﻿// src/pages/rumors/__tests__/RumorsPage.test.tsx
+// src/pages/rumors/__tests__/RumorsPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import RumorsPage from "../RumorsPage";
 
 // ---------------------------------------------------------------------------
-// react-router-dom mocks
+// GatedContent and usePageGate are exercised for real (not mocked), so the
+// features/user-management mock below is extended with everything
+// GatedContent needs — see .superpowers/sdd/2026-09-03-gated-page-states/
+// page-suite-mock.md.
 // ---------------------------------------------------------------------------
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
-  useLocation: () => ({ pathname: "/rumors", search: "", hash: "" }),
+
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
 }));
 
-// ---------------------------------------------------------------------------
-// Context mocks
-// ---------------------------------------------------------------------------
-let mockUser: any = { uid: "user-1" };
-
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: mockUser }),
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: { getCampaigns: jest.fn().mockResolvedValue([]) },
+  },
 }));
 
 interface RumorContextMock {
   rumors: any[];
   isLoading: boolean;
   error: string | null;
-  combineRumors: jest.Mock;
-  convertToQuest: jest.Mock;
 }
 
 let mockRumorContext: RumorContextMock = {
   rumors: [],
   isLoading: false,
   error: null,
-  combineRumors: jest.fn(),
-  convertToQuest: jest.fn(),
 };
+
+// The mocked RumorDirectory below mirrors the controls the real component
+// genuinely owns (src/features/campaign-entities/rumors/components/
+// RumorDirectory.tsx), so that a test asserting their absence is proving
+// something about GatedContent's children-gating rather than about an empty
+// div nothing ever populates. Checked against the real component's actual
+// accessible surface, not guessed:
+//   - RosterStatusBar's total line -- "N rumors gathered" (no ARIA
+//     `progressbar` role; it's a plain proportional bar, so this is queried
+//     by its real text instead of an invented role).
+//   - RosterFilterBar's search field -- a bare `<Input placeholder="Search
+//     rumors...">` with no `type` or `aria-label`, so its real role is
+//     "textbox", not "searchbox"; queried by its real placeholder text.
+//   - The "Select Rumors" button -- a real `<Button>`, role "button", name
+//     "Select Rumors" exactly as guessed.
+jest.mock("features/campaign-entities", () => ({
+  useRumors: () => mockRumorContext,
+  RumorDirectory: (props: any) => (
+    <div data-testid="rumor-directory">
+      <span data-testid="rumor-directory-count">{props.rumors?.length}</span>
+      <span>{props.rumors?.length ?? 0} rumors gathered</span>
+      <input placeholder="Search rumors..." />
+      <button type="button">Select Rumors</button>
+    </div>
+  ),
+}));
 
 const mockNavigateToPage = jest.fn();
 
 jest.mock("shared/hooks/useNavigation", () => ({
   useNavigation: () => ({
     navigateToPage: mockNavigateToPage,
-    state: {},
   }),
-}));
-
-// ---------------------------------------------------------------------------
-// Barrel mock: useRumors hook + child components consumed via the
-// campaign-entities public API (RumorDirectory, CombineRumorsDialog,
-// ConvertToQuestDialog). Dialog-dependent components are mocked inline
-// (bug #150 — JSDOM portal limitation).
-// ---------------------------------------------------------------------------
-jest.mock("features/campaign-entities", () => ({
-  useRumors: () => mockRumorContext,
-  RumorDirectory: (props: any) => (
-    <div data-testid="rumor-directory">
-      <span data-testid="rumor-directory-count">{props.rumors?.length}</span>
-    </div>
-  ),
-  CombineRumorsDialog: (props: any) => (
-    <div data-testid="combine-rumors-dialog" data-open={props.open ? "true" : "false"}>
-      <button data-testid="combine-dialog-close" onClick={props.onClose}>
-        close
-      </button>
-    </div>
-  ),
-  ConvertToQuestDialog: (props: any) => (
-    <div data-testid="convert-quest-dialog" data-open={props.open ? "true" : "false"}>
-      <button data-testid="convert-dialog-close" onClick={props.onClose}>
-        close
-      </button>
-    </div>
-  ),
-}));
-
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, variant, color }: any) => {
-    const testId = variant
-      ? `typography-${variant}`
-      : color
-      ? `typography-${color}`
-      : "typography";
-    return <div data-testid={testId}>{children}</div>;
-  },
-}));
-
-jest.mock("../../../core/components/Button", () => ({
-  __esModule: true,
-  default: ({ children, onClick }: any) => (
-    <button onClick={onClick}>{children}</button>
-  ),
-}));
-
-jest.mock("../../../core/components/Card", () => {
-  const Card = ({ children }: any) => <div data-testid="card">{children}</div>;
-  Card.Content = ({ children }: any) => (
-    <div data-testid="card-content">{children}</div>
-  );
-  return { __esModule: true, default: Card };
-});
-
-jest.mock("lucide-react", () => ({
-  MessageSquare: () => <span data-testid="message-square-icon" />,
-  XCircle: () => <span data-testid="x-circle-icon" />,
-  HelpCircle: () => <span data-testid="help-circle-icon" />,
-  Loader2: () => <span data-testid="loader-icon" />,
-  Plus: () => <span data-testid="plus-icon" />,
-  CheckCircle2: () => <span data-testid="check-circle-icon" />,
 }));
 
 // ---------------------------------------------------------------------------
@@ -124,7 +109,11 @@ const sampleRumors = [
 // Helpers
 // ---------------------------------------------------------------------------
 function renderPage() {
-  return render(<RumorsPage />);
+  return render(
+    <MemoryRouter>
+      <RumorsPage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -134,52 +123,104 @@ describe("RumorsPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUser = { uid: "user-1" };
+    mockIsResolving = false;
+    mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockRumorContext = {
       rumors: [...sampleRumors],
       isLoading: false,
       error: null,
-      combineRumors: jest.fn(),
-      convertToQuest: jest.fn(),
     };
   });
 
   // -------------------------------------------------------------------------
-  // Loading state
+  // Gated states
   // -------------------------------------------------------------------------
-  describe("loading state", () => {
-    beforeEach(() => {
-      mockRumorContext = { ...mockRumorContext, isLoading: true };
-    });
-
-    it("renders loading indicator", () => {
-      renderPage();
-      expect(screen.getByText("Loading rumors...")).toBeInTheDocument();
-    });
-
-    it("does NOT render rumor directory while loading", () => {
-      renderPage();
-      expect(screen.queryByTestId("rumor-directory")).not.toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Error state
-  // -------------------------------------------------------------------------
-  describe("error state", () => {
-    beforeEach(() => {
-      mockRumorContext = { ...mockRumorContext, error: "Firebase error" };
-    });
-
-    it("renders error message", () => {
+  describe("gated states", () => {
+    it("renders the page title and subtitle while signed out", () => {
+      mockUser = null;
       renderPage();
       expect(
-        screen.getByText("Error Loading Rumors. Sign in to view content.")
+        screen.getByRole("heading", { level: 1, name: "Rumors" })
       ).toBeInTheDocument();
     });
 
-    it("does NOT render rumor directory on error", () => {
+    it("asks a signed-out visitor to sign in, and never to select a group", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", {
+          name: /sign in to hear what the realm is saying/i,
+        })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    it("hides the create action while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.queryByRole("button", { name: /add rumor/i })
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    });
+
+    // Positive half of the pair below: proves the mocked RumorDirectory's
+    // controls genuinely render (and are queryable the way the assertions
+    // below look for them) once the gate reaches "ready", so their absence
+    // in the signed-out test cannot be vacuously true.
+    it("shows the rumor directory's controls once the gate is ready", () => {
+      renderPage();
+      expect(screen.getByText(/rumors gathered/i)).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Search rumors...")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /select rumors/i })
+      ).toBeInTheDocument();
+    });
+
+    // The DoD line this PR was written for: nothing that cannot act renders
+    // for a signed-out visitor, not even by accident through a directory
+    // that used to be handed an empty array. Paired with the "ready" test
+    // above -- these controls are real, so their absence here is a real
+    // assertion about GatedContent's children-gating.
+    it("shows no control that cannot act while signed out", () => {
+      mockUser = null;
       renderPage();
       expect(screen.queryByTestId("rumor-directory")).not.toBeInTheDocument();
+      expect(screen.queryByText(/rumors gathered/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("Search rumors...")
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /select rumors/i })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /add rumor/i })
+      ).not.toBeInTheDocument();
+    });
+
+    // Rewritten: the old inline error copy is gone; GatedContent's error
+    // panel names the noun and the real error message instead.
+    it("shows the shared error panel, not the old inline copy, on a fetch error", () => {
+      mockRumorContext = { ...mockRumorContext, error: "Firebase error" };
+      renderPage();
+      expect(
+        screen.queryByText("Error Loading Rumors. Sign in to view content.")
+      ).not.toBeInTheDocument();
+      expect(screen.getByText(/couldn't load rumors/i)).toBeInTheDocument();
+      expect(screen.getByText("Firebase error")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("rumor-directory")
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -194,7 +235,9 @@ describe("RumorsPage", () => {
 
     it("renders the page heading 'Rumors'", () => {
       renderPage();
-      expect(screen.getByTestId("typography-h1")).toHaveTextContent("Rumors");
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Rumors" })
+      ).toBeInTheDocument();
     });
 
     it("renders the rumor directory", () => {
@@ -204,7 +247,9 @@ describe("RumorsPage", () => {
 
     it("passes all rumors to the directory", () => {
       renderPage();
-      expect(screen.getByTestId("rumor-directory-count")).toHaveTextContent("4");
+      expect(screen.getByTestId("rumor-directory-count")).toHaveTextContent(
+        "4"
+      );
     });
   });
 
@@ -212,7 +257,7 @@ describe("RumorsPage", () => {
   // Create button
   // -------------------------------------------------------------------------
   describe("Add Rumor button", () => {
-    it("renders 'Add Rumor' button when user is authenticated", () => {
+    it("renders 'Add Rumor' button for a ready user", () => {
       renderPage();
       expect(screen.getByText("Add Rumor")).toBeInTheDocument();
     });
@@ -222,21 +267,13 @@ describe("RumorsPage", () => {
       fireEvent.click(screen.getByText("Add Rumor"));
       expect(mockNavigateToPage).toHaveBeenCalledWith("/rumors/create");
     });
-
-    it("does NOT render 'Add Rumor' button when user is not authenticated", () => {
-      mockUser = null;
-      renderPage();
-      expect(screen.queryByText("Add Rumor")).not.toBeInTheDocument();
-    });
   });
 
   // -------------------------------------------------------------------------
   // Dialogs: RumorsPage no longer owns a batch-actions flow. The working
   // combine/convert flow lives in RumorDirectory -> RumorBatchActions, which
-  // renders its own CombineRumorsDialog/ConvertToQuestDialog instances. The
-  // copies formerly rendered directly by RumorsPage were unreachable dead
-  // code (none of their controlling setters was ever called) and were
-  // removed; assert they are gone rather than present.
+  // renders its own CombineRumorsDialog/ConvertToQuestDialog instances.
+  // RumorsPage itself never imports them.
   // -------------------------------------------------------------------------
   describe("dialogs", () => {
     it("does NOT render its own CombineRumorsDialog", () => {

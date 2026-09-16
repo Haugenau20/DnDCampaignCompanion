@@ -132,7 +132,11 @@ describe('ChapterRail', () => {
       expect(otherRow).not.toHaveAttribute('aria-current');
     });
 
-    test('the current chapter row has navigation-item-active, others have navigation-item', () => {
+    test('the current chapter row has nav-item-active, others have nav-item', () => {
+      // Was `navigation-item-active` / `navigation-item` until D90, which built
+      // `rail-item` to fix an active row measuring ~1.04:1 on the rail's own
+      // surface (R32). D107 replaced both pairs with one `nav-item` that takes
+      // its ink from whichever surface the container declares -- here `sunken`.
       render(
         <ChapterRail
           items={threeMixedChapters()}
@@ -144,11 +148,55 @@ describe('ChapterRail', () => {
         />
       );
       const currentRow = screen.getByText('2. Chapter 2 Title').closest('button') as HTMLElement;
-      expect(currentRow.className).toMatch(/navigation-item-active/);
+      expect(currentRow.className).toMatch(/nav-item-active/);
 
       const otherRow = screen.getByText('3. Chapter 3 Title').closest('button') as HTMLElement;
-      expect(otherRow.className).toMatch(/navigation-item/);
-      expect(otherRow.className).not.toMatch(/navigation-item-active/);
+      expect(otherRow.className).toMatch(/nav-item/);
+      expect(otherRow.className).not.toMatch(/nav-item-active/);
+    });
+
+    test('no row wears a chrome surface class', () => {
+      // The regression guard for R32. The rail does not sit on the chrome, so
+      // a chrome class here is a token used against the wrong ground -- the
+      // exact defect the pair model exists to make unrepresentable.
+      render(
+        <ChapterRail
+          items={threeMixedChapters()}
+          currentChapterId="ch-2"
+          onChapterSelect={jest.fn()}
+          onBackToIndex={jest.fn()}
+          isOpen={false}
+          onClose={jest.fn()}
+        />
+      );
+
+      screen.getAllByRole('button').forEach((row) => {
+        expect(row.className).not.toMatch(/navigation-item/);
+      });
+      // And the surface it does declare is the sunken one.
+      const container = screen.getByText('2. Chapter 2 Title').closest('div');
+      expect(container?.className).toMatch(/nav-on-sunken/);
+    });
+
+    test('the rail sits on the sunken surface, not on card', () => {
+      // Q17, settled as D90: A4 asks for `sunken`, and measurement showed the
+      // rail and the reading column were rendering the *same* colour, so
+      // `card` was expressing no hierarchy at all.
+      const { container } = render(
+        <ChapterRail
+          items={threeMixedChapters()}
+          currentChapterId="ch-2"
+          onChapterSelect={jest.fn()}
+          onBackToIndex={jest.fn()}
+          isOpen={false}
+          onClose={jest.fn()}
+        />
+      );
+
+      const rail = container.querySelector('[class*="w-[236px]"]') as HTMLElement;
+      expect(rail.className).toMatch(/card-subtle/);
+      expect(rail.className).toMatch(/sunken-border/);
+      expect(rail.className).not.toMatch(/(^|\s)card($|\s)/);
     });
 
     test('"All chapters" calls onBackToIndex', () => {

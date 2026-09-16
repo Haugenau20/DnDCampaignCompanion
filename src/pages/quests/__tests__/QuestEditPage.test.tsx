@@ -1,6 +1,7 @@
-﻿// src/pages/quests/__tests__/QuestEditPage.test.tsx
+// src/pages/quests/__tests__/QuestEditPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import QuestEditPage from "../QuestEditPage";
 
 // ---------------------------------------------------------------------------
@@ -11,6 +12,51 @@ let mockQuestId: string | undefined = "quest-1";
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
   useParams: () => ({ questId: mockQuestId }),
+}));
+
+// ---------------------------------------------------------------------------
+// Page-suite gate mock (shared across Tasks 8-13 -- see page-suite-mock.md)
+// ---------------------------------------------------------------------------
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: {
+      getCampaigns: jest
+        .fn()
+        .mockResolvedValue([{ id: "campaign-2", name: "Icespire Peak" }]),
+    },
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -27,7 +73,6 @@ interface QuestContextMock {
   loading: boolean;
   error: string | null;
   refreshQuests: jest.Mock;
-  hasRequiredContext: boolean;
 }
 
 let mockQuestContext: QuestContextMock = {
@@ -38,7 +83,6 @@ let mockQuestContext: QuestContextMock = {
   loading: false,
   error: null,
   refreshQuests: jest.fn(),
-  hasRequiredContext: true,
 };
 
 jest.mock("features/campaign-entities", () => ({
@@ -57,31 +101,33 @@ jest.mock("features/campaign-entities", () => ({
   ),
 }));
 
-// Mutable so a test can represent "auth has not rehydrated yet" (user === null
-// while loading is still true), which is a different state from "signed out".
-let mockAuthUser: { uid: string } | null = { uid: "user-1" };
-
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: mockAuthUser }),
-  useGroups: () => ({ activeGroupId: "group-1" }),
-}));
-
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
 
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, color, variant }: any) => (
-    <div
-      data-testid={
-        color ? `typography-${color}` : variant ? `typography-${variant}` : "typography"
-      }
-    >
-      {children}
-    </div>
-  ),
-}));
+// Typography is mapped to its real semantic tag (h1/h2/h3/h4, else `p`) so
+// that `getByRole("heading", ...)` works against both this page's own title
+// (via PageShell) and the shared gated panel's headings (via GatedPageState),
+// while still exposing the same `data-testid` scheme the existing assertions
+// below rely on.
+jest.mock("../../../core/components/Typography", () => {
+  const TAGS: Record<string, string> = { h1: "h1", h2: "h2", h3: "h3", h4: "h4" };
+  return {
+    __esModule: true,
+    default: ({ children, color, variant }: any) => {
+      const Tag = (TAGS[variant] || "p") as any;
+      return (
+        <Tag
+          data-testid={
+            color ? `typography-${color}` : `typography-${variant ?? "default"}`
+          }
+        >
+          {children}
+        </Tag>
+      );
+    },
+  };
+});
 
 jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
@@ -102,15 +148,18 @@ jest.mock("../../../core/components/Card", () => {
 
 jest.mock("lucide-react", () => ({
   ArrowLeft: () => <span data-testid="arrow-left" />,
-  Loader2: () => <span data-testid="loader" />,
-  AlertCircle: () => <span data-testid="alert-circle" />,
+  Lock: () => <span data-testid="lock-icon" />,
 }));
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 function renderPage() {
-  return render(<QuestEditPage />);
+  return render(
+    <MemoryRouter>
+      <QuestEditPage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -120,7 +169,11 @@ describe("QuestEditPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockQuestId = "quest-1";
-    mockAuthUser = { uid: "user-1" };
+    mockUser = { uid: "user-1" };
+    mockIsResolving = false;
+    mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockQuestContext = {
       quests: [
         { id: "quest-1", title: "Find the Dragon" },
@@ -129,8 +182,61 @@ describe("QuestEditPage", () => {
       loading: false,
       error: null,
       refreshQuests: jest.fn(),
-      hasRequiredContext: true,
     };
+  });
+
+  // -------------------------------------------------------------------------
+  // Gated states
+  // -------------------------------------------------------------------------
+  describe("gated states", () => {
+    it("renders the page title while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Edit Find the Dragon" })
+      ).toBeInTheDocument();
+    });
+
+    it("asks a signed-out visitor to sign in to add a quest, and never to select a group", () => {
+      mockUser = null;
+      renderPage();
+      expect(
+        screen.getByRole("heading", { name: /sign in to add a quest/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    it("hides QuestEditForm while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(screen.queryByTestId("quest-edit-form")).not.toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    });
+
+    it("shows the shared pick-campaign panel when context is missing", async () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(
+        await screen.findByRole("heading", { name: /which campaign/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("quest-edit-form")).not.toBeInTheDocument();
+    });
+
+    // Rewritten: bug #1423's redirect effect (`!loading && !user` ->
+    // navigateToPage('/quests')) is gone. A signed-out visitor now sees the
+    // write-mode gated panel in place instead of being bounced to /quests
+    // before the page could say why -- see QuestEditPage.tsx's file header.
+    it("does NOT redirect a signed-out visitor away from the page", () => {
+      mockUser = null;
+      renderPage();
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -144,7 +250,9 @@ describe("QuestEditPage", () => {
 
     it("renders heading with the quest title", () => {
       renderPage();
-      expect(screen.getByText("Edit Find the Dragon")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Edit Find the Dragon" })
+      ).toBeInTheDocument();
     });
 
     it("renders QuestEditForm", () => {
@@ -190,7 +298,9 @@ describe("QuestEditPage", () => {
 
     it("renders fallback heading 'Edit Quest'", () => {
       renderPage();
-      expect(screen.getByText("Edit Quest")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Edit Quest" })
+      ).toBeInTheDocument();
     });
   });
 
@@ -206,9 +316,15 @@ describe("QuestEditPage", () => {
       };
     });
 
-    it("renders loading indicator", () => {
+    // Rewritten: `loading` now folds into the shared "resolving" state via
+    // `usePageGate`; the page's own bare "Loading quest data..." text and
+    // spinner card are gone.
+    it("shows a skeleton, not the page's own loading text", () => {
       renderPage();
-      expect(screen.getByText("Loading quest data...")).toBeInTheDocument();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(
+        screen.queryByText("Loading quest data...")
+      ).not.toBeInTheDocument();
     });
 
     it("does NOT render QuestEditForm during loading", () => {
@@ -230,50 +346,21 @@ describe("QuestEditPage", () => {
       };
     });
 
-    it("renders error message", () => {
+    // Rewritten: the page's own inline "Error loading quest data. Please try
+    // again later." card is gone. `GatedContent` now owns the error panel and
+    // names the noun and the real error message instead.
+    it("shows the shared error panel, not the old inline copy", () => {
       renderPage();
       expect(
-        screen.getByText("Error loading quest data. Please try again later.")
-      ).toBeInTheDocument();
+        screen.queryByText("Error loading quest data. Please try again later.")
+      ).not.toBeInTheDocument();
+      expect(screen.getByText(/couldn't load quests/i)).toBeInTheDocument();
+      expect(screen.getByText("Firebase error")).toBeInTheDocument();
     });
 
     it("does NOT render QuestEditForm on error", () => {
       renderPage();
       expect(screen.queryByTestId("quest-edit-form")).not.toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // No context (no group / no campaign)
-  // -------------------------------------------------------------------------
-  describe("when hasRequiredContext is false", () => {
-    describe("no activeGroupId", () => {
-      beforeEach(() => {
-        mockQuestContext = {
-          ...mockQuestContext,
-          hasRequiredContext: false,
-        };
-      });
-
-      it("renders context selection message", () => {
-        renderPage();
-        // Either "No Group Selected" or "No Campaign Selected" should appear
-        const hasGroupMsg =
-          screen.queryByText("No Group Selected") !== null;
-        const hasCampaignMsg =
-          screen.queryByText("No Campaign Selected") !== null;
-        expect(hasGroupMsg || hasCampaignMsg).toBe(true);
-      });
-
-      it("does NOT render QuestEditForm", () => {
-        renderPage();
-        expect(screen.queryByTestId("quest-edit-form")).not.toBeInTheDocument();
-      });
-
-      it("renders 'Back to Quests' button in context-guard view", () => {
-        renderPage();
-        expect(screen.getByText("Back to Quests")).toBeInTheDocument();
-      });
     });
   });
 
@@ -297,37 +384,6 @@ describe("QuestEditPage", () => {
     it("navigates to /quests on form cancel", () => {
       renderPage();
       fireEvent.click(screen.getByTestId("edit-form-cancel"));
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/quests");
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Bug #1423 — the redirect must distinguish "still rehydrating" from
-  // "signed out". `user` is null in both cases; only `loading` tells them
-  // apart. Measured in the browser before the fix: a direct load of
-  // /quests/edit/<id> while signed in landed on /quests within ~124ms.
-  // -------------------------------------------------------------------------
-  describe("auth still rehydrating (bug #1423)", () => {
-    beforeEach(() => {
-      // The state on a fresh page load: Firebase Auth has not called back yet,
-      // so there is no user *and* the context still reports itself as loading.
-      mockAuthUser = null;
-      mockQuestContext.loading = true;
-    });
-
-    it("does NOT redirect to /quests while auth is still restoring", () => {
-      renderPage();
-      expect(mockNavigateToPage).not.toHaveBeenCalled();
-    });
-
-    it("shows the loading indicator instead of redirecting", () => {
-      renderPage();
-      expect(screen.getByTestId("loader")).toBeInTheDocument();
-    });
-
-    it("still redirects once loading finishes and there is genuinely no user", () => {
-      mockQuestContext.loading = false;
-      renderPage();
       expect(mockNavigateToPage).toHaveBeenCalledWith("/quests");
     });
   });

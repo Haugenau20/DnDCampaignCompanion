@@ -1,11 +1,12 @@
 // src/features/storytelling/chapters/components/ChapterForm.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Chapter } from '../types';
 import { DomainData } from 'core/types/common';
 import Card from 'core/components/Card';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import Input from 'core/components/Input';
+import MarkdownToolbar from 'core/components/MarkdownToolbar';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { useStory } from '../context/StoryContext';
@@ -33,6 +34,8 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [summary, setSummary] = useState('');
+  /** The body field, so the markdown toolbar can write into it. */
+  const contentRef = useRef<HTMLTextAreaElement>(null);
   const [order, setOrder] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -210,16 +213,24 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
                 rows={3}
               />
               
-              <Input
-                label="Chapter Content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                fullWidth
-                isTextArea
-                rows={15}
-                required
-                helperText="Press Enter for new paragraphs"
-              />
+              <div>
+                <MarkdownToolbar
+                  targetRef={contentRef}
+                  onChange={setContent}
+                  label="Chapter content formatting"
+                />
+                <Input
+                  ref={contentRef}
+                  label="Chapter Content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  fullWidth
+                  isTextArea
+                  rows={15}
+                  required
+                  helperText="Takes markdown: **bold**, *italic*, > quote. One Enter breaks the line, a blank line starts a new paragraph."
+                />
+              </div>
             </div>
           </Card.Content>
           

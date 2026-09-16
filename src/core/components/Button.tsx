@@ -54,7 +54,13 @@ const sizeStyles: Record<ButtonSize, string> = {
  * Supports icons in different positions including above text.
  * Follows accessibility best practices and supports loading states and full width.
  */
-export const Button: React.FC<ButtonProps> = ({
+/**
+ * Forwards its ref so a caller can move focus to the button. Returning focus
+ * to the control that opened an editor is the difference between a keyboard
+ * user keeping their place and being dropped at the top of the document, and
+ * `<button>` already receives every other prop this way.
+ */
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   variant = 'primary',
   size = 'md',
   startIcon,
@@ -67,7 +73,7 @@ export const Button: React.FC<ButtonProps> = ({
   children,
   disabled,
   ...props
-}) => {
+}, ref) => {
   
   // Determine if we're using the vertical layout
   const isVertical = iconPosition === 'top';
@@ -106,6 +112,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
+      ref={ref}
       className={buttonStyles}
       disabled={disabled || isLoading}
       data-variant={variant}
@@ -153,6 +160,8 @@ export const Button: React.FC<ButtonProps> = ({
       </span>
     </button>
   );
-};
+});
+
+Button.displayName = 'Button';
 
 export default Button;

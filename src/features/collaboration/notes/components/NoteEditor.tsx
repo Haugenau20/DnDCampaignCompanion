@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from "react";
 import { Note } from "../types";
 import Typography from "../../../../core/components/Typography";
+import Input from 'core/components/Input';
 import { useNotes } from "../context/NoteContext";
 import { deriveTitle, LEGACY_DEFAULT_TITLE } from "../utils/note-title";
 import { formatLastSaved } from "../utils/save-status";
@@ -317,8 +318,8 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     if (note?.isUnsaved || hasUnsavedChanges) {
       return (
         <div className="flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 status-unknown" />
-          <Typography variant="body-sm" className="status-unknown">
+          <AlertCircle className="w-4 h-4 feedback-warning" />
+          <Typography variant="body-sm" className="feedback-warning">
             {note?.isUnsaved ? "Not saved to server" : "Unsaved changes"}
           </Typography>
         </div>
@@ -329,7 +330,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
 
     return (
       <div className="flex items-center gap-2">
-        <Check className="w-4 h-4 status-completed" />
+        <Check className="w-4 h-4 feedback-success" />
         <Typography variant="body-sm" color="secondary" className="text-[13px]">
           {`${lastSavedText} · saves as you write`}
         </Typography>
@@ -397,14 +398,29 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
           </Typography>
         )}
 
-        <textarea
-          ref={bodyRef}
+        {/*
+          On the primitive every other field uses (09-2, item 5). This comment
+          used to call it "the last hand-rolled textarea element in the
+          product"; it was not. `ContactForm` in `src/shared/components` had
+          one too, and 09-2's gate grepped only `src/features` and
+          `src/pages` -- accurate about what it checked, wrong about what it
+          was taken to prove. Converted in 10-3, with the gate rewritten to
+          cover `src`. The visible label
+          comes with it: the control was already named for a screen reader by
+          its `aria-label`, so that attribute goes rather than sitting on top
+          of a real label element and shadowing it.
+        */}
+        <Input
+          ref={bodyRef as React.Ref<HTMLTextAreaElement>}
+          isTextArea
+          label="Note content"
           value={content}
           onChange={handleContentChange}
           placeholder="Write your note here..."
           disabled={readOnly}
-          aria-label="Note content"
-          className="note-textarea flex-1 w-full mt-5 bg-transparent border-none outline-none resize-none text-[17px] leading-[1.65] placeholder:opacity-40"
+          fullWidth
+          containerClassName="flex-1 mt-5"
+          className="note-textarea flex-1 resize-none text-[17px] leading-[1.65] placeholder:opacity-40"
           style={{ minHeight: "40vh" }}
         />
       </div>

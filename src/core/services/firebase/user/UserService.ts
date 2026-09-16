@@ -1,11 +1,12 @@
 // src/core/services/firebase/user/UserService.ts
-import { 
-    doc, 
-    getDoc, 
-    updateDoc, 
-    setDoc, 
-    runTransaction 
+import {
+    doc,
+    getDoc,
+    updateDoc,
+    setDoc,
+    runTransaction
   } from 'firebase/firestore';
+  import { httpsCallable } from 'firebase/functions';
   import BaseFirebaseService from '../core/BaseFirebaseService';
   import {
     UserProfile,
@@ -49,7 +50,15 @@ import {
             groups: userData.groups || [],
             activeGroupId: userData.activeGroupId || null,
             lastLogin: userData.lastLogin || new Date(),
-            createdAt: userData.createdAt || new Date()
+            createdAt: userData.createdAt || new Date(),
+            // Account-scoped preferences (theme lives here). This mapping is
+            // field-by-field rather than a spread, so anything not named here
+            // is silently dropped on the way out of Firestore -- which is what
+            // happened to `preferences`: the theme was written to the account
+            // correctly and then never read back, so every load behaved as if
+            // the account had no theme and re-migrated the stale group value
+            // over it.
+            preferences: userData.preferences || undefined
             };
         }
         
@@ -235,6 +244,29 @@ import {
     public async isUserAdmin(groupId: string, userId: string): Promise<boolean> {
       const profileData = await this.getGroupUserProfile(groupId, userId);
       return profileData?.role === 'admin';
+    }
+
+    /**
+     * Delete the caller's account and everything owned by it.
+     *
+     * Goes through the `deleteUser` Cloud Function because Firestore cannot
+     * cascade-delete subcollections from a client, and through `this.functions`
+     * because that is the instance bound to `europe-west1`, where every function
+     * in this project is deployed. A bare `getFunctions()` resolves `us-central1`
+     * and reaches nothing -- and in development it also misses the emulator, which
+     * `BaseFirebaseService` wires to the regioned instance only.
+     *
+     * @param userId UID to delete; the function permits self-deletion, and
+     *   deletion of others only for a global admin
+     */
+    public async deleteAccount(userId: string): Promise<void> {
+      try {
+        const deleteUserFn = httpsCallable(this.functions, 'deleteUser');
+        await deleteUserFn({ userId });
+      } catch (err) {
+        console.error('Error deleting account:', err);
+        throw err;
+      }
     }
   }
   

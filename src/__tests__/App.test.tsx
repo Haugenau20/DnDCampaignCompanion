@@ -155,6 +155,7 @@ jest.mock("../pages/npcs", () => ({
   NPCsPage: () => <div data-testid="page-npcs" />,
   NPCsCreatePage: () => <div data-testid="page-npcs-create" />,
   NPCsEditPage: () => <div data-testid="page-npcs-edit" />,
+  NPCDetailPage: () => <div data-testid="page-npc-detail" />,
 }));
 
 jest.mock("../pages/locations", () => ({
@@ -184,6 +185,11 @@ jest.mock("../pages/ContactPage", () => ({
   default: () => <div data-testid="page-contact" />,
 }));
 
+jest.mock("../pages/profile", () => ({
+  __esModule: true,
+  ProfilePage: () => <div data-testid="page-profile" />,
+}));
+
 // ---------------------------------------------------------------------------
 // Import App after all mocks are registered
 // ---------------------------------------------------------------------------
@@ -208,6 +214,7 @@ const EXPECTED_ROUTES = [
   "/npcs",
   "/npcs/create",
   "/npcs/edit/:npcId",
+  "/npcs/:npcId",
   "/locations",
   "/locations/create",
   "/locations/edit/:locationId",
@@ -218,6 +225,7 @@ const EXPECTED_ROUTES = [
   "/notes/:noteId",
   "/privacy",
   "/contact",
+  "/profile",
 ];
 
 // ---------------------------------------------------------------------------

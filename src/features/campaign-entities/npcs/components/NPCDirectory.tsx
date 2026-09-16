@@ -2,12 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { NPC } from '../types';
 import { useLocations } from '../../locations/context/LocationContext';
 import { resolveLocationName } from '../../locations/utils/location-display';
-import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
-import { Users, AlertCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
-import clsx from 'clsx';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -16,6 +14,10 @@ import {
   RosterRow,
   RosterField,
   type RosterSegment,
+  RosterSkeleton,
+  RosterEmpty,
+  RosterStatus,
+  type RosterStatusTone,
 } from 'core/components/Roster';
 
 interface NPCDirectoryProps {
@@ -38,11 +40,47 @@ const RELATIONSHIP_FILTERS = [
 ];
 
 /** Relationship as a labelled chip. A bare colour stripe needed a legend nobody had. */
-const RELATIONSHIP_CHIP: Record<string, string> = {
-  friendly: 'npc-relationship-friendly',
-  hostile: 'npc-relationship-hostile',
-  neutral: 'npc-relationship-neutral',
-  unknown: 'npc-relationship-unknown',
+/** NPC state, in the shared status vocabulary. */
+/**
+ * NPC presence carries no hue, deliberately.
+ *
+ * Alive was green and deceased was red, which reads a death as an error. It is
+ * a fact about the world with no valence -- a slain villain is not a bad
+ * outcome -- so alive is plain ink, deceased is muted ink, and only `missing`
+ * takes a hue, because genuine uncertainty is what the knowledge ladder's
+ * first rung means. 12-5 adds the strike that makes deceased legible without
+ * leaning on weight alone. Schema section 3.
+ */
+/**
+ * An NPC's stance toward the party. Valenced, unlike presence above.
+ *
+ * `unknown` maps to `unsure` rather than sharing a name with presence's
+ * `unknown`: they are different claims -- one is "we have not recorded where
+ * this person stands", the other "we do not know whether they are alive".
+ */
+// `Partial<>` is load-bearing, not pedantry. As a plain `Record<string, T>`
+// the index access is typed non-nullable, so TypeScript treats the `?? fallback`
+// at the call site as unreachable and **never checks it** -- which is how a
+// `?? 'unknown'` naming a tone that no longer exists survived 12-3a's rename
+// and would have rendered no class at all. `Partial` makes the lookup
+// `T | undefined`, so the fallback is type-checked like any other value.
+const DISPOSITION_TONE: Partial<Record<string, RosterStatusTone>> = {
+  friendly: 'friendly',
+  neutral: 'neutral',
+  hostile: 'hostile',
+  unknown: 'unsure',
+};
+
+// NPC presence is the one scale with four ranks, so it takes four stops
+// instead of the three a rumour or a location needs. It keeps the ramp's ends
+// -- alive is the same green a completed quest is, deceased the same red a
+// failed one is -- and spends stops 1 and 3 on the two middles, which is what
+// finally separates "we have no record of them" from "we know they are lost".
+const STATUS_TONE: Partial<Record<string, RosterStatusTone>> = {
+  alive: 'valence-0',
+  unknown: 'valence-1',
+  missing: 'valence-2',
+  deceased: 'valence-3',
 };
 
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({
@@ -117,10 +155,11 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   const statusSegments: RosterSegment[] = useMemo(() => {
     const count = (status: string) => npcs.filter(npc => npc.status === status).length;
     return [
-      { key: 'alive', label: 'alive', count: count('alive'), colorClass: 'bg-status-completed' },
-      { key: 'deceased', label: 'deceased', count: count('deceased'), colorClass: 'bg-status-failed' },
-      { key: 'missing', label: 'missing', count: count('missing'), colorClass: 'bg-status-unknown' },
-      { key: 'unknown', label: 'unrecorded', count: count('unknown'), colorClass: 'bg-status-general' },
+      // Best to worst, left to right, like every other directory's bar.
+      { key: 'alive', label: 'alive', count: count('alive'), colorClass: 'bg-valence-0' },
+      { key: 'unknown', label: 'unknown', count: count('unknown'), colorClass: 'bg-valence-1' },
+      { key: 'missing', label: 'missing', count: count('missing'), colorClass: 'bg-valence-2' },
+      { key: 'deceased', label: 'deceased', count: count('deceased'), colorClass: 'bg-valence-3' },
     ];
   }, [npcs]);
 
@@ -169,18 +208,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   }, [filteredNPCs, locations]);
 
   if (isLoading) {
-    return (
-      <Card>
-        <Card.Content>
-          <div className="flex items-center justify-center p-8">
-            <div className="animate-spin mr-2">
-              <Users className="primary" />
-            </div>
-            <Typography>Loading NPCs...</Typography>
-          </div>
-        </Card.Content>
-      </Card>
-    );
+    return <RosterSkeleton label="Loading NPCs" />;
   }
 
   const groups = Object.entries(groupedNPCs);
@@ -230,6 +258,8 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                   <RosterRow
                     key={npc.id}
                     id={`npc-${npc.id}`}
+                    entityId={npc.id}
+                    entityName={npc.name}
                     gridClassName={ROW_GRID}
                     isFirst={index === 0}
                     highlighted={highlightedNpcId === npc.id}
@@ -286,7 +316,20 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                             ) : undefined}
                           </RosterField>
 
-                          <div className="flex gap-2 mt-1">
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {/* The way into the NPC's own page. It lives in the
+                                expanded content, never in the collapsed row:
+                                the collapsed row is the highest-frequency
+                                surface in the product and does not get a second
+                                control (D41). A row that is already open has
+                                said it wants more. */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigateToPage(`/npcs/${npc.id}`)}
+                            >
+                              More info
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -307,7 +350,10 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                     }
                   >
                     <div className="flex flex-col gap-0.5 min-w-0">
-                      <Typography variant="body" className="font-semibold truncate">
+                      <Typography
+                        variant="body"
+                        className="font-semibold truncate font-heading"
+                      >
                         {npc.name}
                       </Typography>
                       {npc.title && (
@@ -321,36 +367,26 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                       )}
                     </div>
 
-                    {/* Status: dot plus the word, so colour is never the only cue */}
-                    <Typography
-                      variant="body-sm"
-                      className={clsx(
-                        'hidden md:flex items-center gap-2 text-sm font-semibold',
-                        `npc-status-${npc.status}`
-                      )}
+                    <RosterStatus
+                      tone={STATUS_TONE[npc.status] ?? 'valence-1'}
+                      negated={npc.status === 'deceased'}
                     >
-                      <span
-                        aria-hidden="true"
-                        className={clsx(
-                          'w-[7px] h-[7px] rounded-full shrink-0',
-                          npc.status === 'alive' && 'bg-status-completed',
-                          npc.status === 'deceased' && 'bg-status-failed',
-                          (npc.status === 'missing' || npc.status === 'unknown') &&
-                            'bg-status-unknown'
-                        )}
-                      />
                       {npc.status.charAt(0).toUpperCase() + npc.status.slice(1)}
-                    </Typography>
+                    </RosterStatus>
 
-                    <Typography
-                      variant="body-sm"
-                      className={clsx(
-                        'hidden md:inline-flex justify-self-start px-2.5 py-1 rounded-md text-xs font-semibold bg-secondary',
-                        RELATIONSHIP_CHIP[npc.relationship]
-                      )}
+                    {/* Disposition, and it takes its own hue again.
+                        It was muted for a real reason: as a filled chip in the status
+                        hue, a green "Alive" sat beside a green "Friendly" and read as
+                        one fact twice. That collision is gone -- presence now carries
+                        no hue at all -- so the scale that genuinely is valenced can
+                        have one. A hostile NPC is a threat to the reader, which is a
+                        different claim from anything presence makes. */}
+                    <RosterStatus
+                      tone={DISPOSITION_TONE[npc.relationship] ?? 'unsure'}
+                      className="justify-self-start"
                     >
                       {npc.relationship.charAt(0).toUpperCase() + npc.relationship.slice(1)}
-                    </Typography>
+                    </RosterStatus>
 
                     <Typography
                       variant="body-sm"
@@ -365,20 +401,27 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
             </RosterGroup>
           );
         })
+      ) : npcs.length > 0 ? (
+        // Emptied by a filter, not by the campaign. The fix is to change the
+        // filter, so no action is offered -- "Add an NPC" would answer a
+        // question nobody asked.
+        <RosterEmpty
+          title="No NPCs match these filters"
+          message="Try a different search term, or clear the filters to see everyone you have met."
+        />
       ) : (
-        <Card>
-          <Card.Content className="text-center py-8">
-            <AlertCircle className="w-12 h-12 mx-auto mb-4 typography-secondary" />
-            <Typography variant="h3" className="mb-2">
-              No NPCs Found
-            </Typography>
-            <Typography color="secondary">
-              {npcs.length > 0
-                ? "Try adjusting your search criteria"
-                : "Start by adding some NPCs to your campaign"}
-            </Typography>
-          </Card.Content>
-        </Card>
+        <RosterEmpty
+          title="No one recorded yet"
+          message="Every person the party meets can live here — name, standing, where you found them, and what they told you."
+          action={
+            <Button
+              onClick={() => navigateToPage('/npcs/create')}
+              startIcon={<Plus className="w-4 h-4" />}
+            >
+              Add the first NPC
+            </Button>
+          }
+        />
       )}
     </div>
   );

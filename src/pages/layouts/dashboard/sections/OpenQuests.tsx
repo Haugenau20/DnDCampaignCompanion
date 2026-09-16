@@ -33,7 +33,7 @@ const OpenQuests: React.FC<OpenQuestsProps> = ({ quests = [], loading = false, l
         <div className="flex flex-col gap-2.5 animate-pulse">
           {[1, 2].map(i => (
             <div key={i} className={clsx('rounded-lg card h-[52px]')}>
-              <div className={clsx('w-full h-full rounded-lg', `journal-loading`)}></div>
+              <div className={clsx('w-full h-full rounded-lg', `section-loading`)}></div>
             </div>
           ))}
         </div>
@@ -63,7 +63,7 @@ const OpenQuests: React.FC<OpenQuestsProps> = ({ quests = [], loading = false, l
             >
               <span
                 aria-hidden="true"
-                className="w-2 h-2 rounded-full shrink-0 bg-status-unknown"
+                className="w-2 h-2 rounded-full shrink-0 bg-accent-fill"
               ></span>
               <Typography variant="body" className="flex-1 min-w-0 truncate font-medium">
                 {quest.title}

@@ -6,7 +6,9 @@ import { useNPCs } from '../../npcs/context/NPCContext';
 import { useLocations } from '../../locations/context/LocationContext';
 import { useNotes } from 'features/collaboration';
 import Typography from '../../../../core/components/Typography';
+import { SelectableChip, RemovableChip } from '../../../../core/components/Chip';
 import Input from '../../../../core/components/Input';
+import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
 import Card from '../../../../core/components/Card';
 import Dialog from '../../../../core/components/Dialog';
@@ -258,57 +260,48 @@ const RumorForm: React.FC<RumorFormProps> = ({
               disabled={isSubmitting}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1 form-label">Status *</label>
-                <select
-                  className="w-full rounded-lg border p-2 input"
-                  value={formData.status}
-                  onChange={(e) => handleInputChange('status', e.target.value as RumorStatus)}
-                  required
-                  disabled={isSubmitting}
-                >
-                  <option value="unconfirmed">Unconfirmed</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="false">False</option>
-                </select>
-              </div>
+            <div className="space-y-4">
+              <Select
+                label="Status *"
+                value={formData.status}
+                onChange={(e) => handleInputChange('status', e.target.value as RumorStatus)}
+                required
+                disabled={isSubmitting}
+              >
+                <option value="unconfirmed">Unconfirmed</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="false">False</option>
+              </Select>
 
-              <div>
-                <label className="block text-sm font-medium mb-1 form-label">Source Type *</label>
-                <select
-                  className="w-full rounded-lg border p-2 input"
-                  value={formData.sourceType}
-                  onChange={(e) => handleSourceTypeChange(e.target.value as SourceType)}
-                  required
-                  disabled={isSubmitting}
-                >
-                  <option value="npc">NPC</option>
-                  <option value="tavern">Tavern/Inn</option>
-                  <option value="notice">Written Notice</option>
-                  <option value="traveler">Traveler</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
+              <Select
+                label="Source Type *"
+                value={formData.sourceType}
+                onChange={(e) => handleSourceTypeChange(e.target.value as SourceType)}
+                required
+                disabled={isSubmitting}
+              >
+                <option value="npc">NPC</option>
+                <option value="tavern">Tavern/Inn</option>
+                <option value="notice">Written Notice</option>
+                <option value="traveler">Traveler</option>
+                <option value="other">Other</option>
+              </Select>
             </div>
 
             {/* Source information - changes based on source type */}
             {formData.sourceType === 'npc' ? (
-              <div>
-                <label className="block text-sm font-medium mb-1 form-label">Source NPC *</label>
-                <select
-                  className="w-full rounded-lg border p-2 input"
-                  value={formData.sourceNpcId || ''}
-                  onChange={(e) => handleSourceNPCSelect(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                >
-                  <option value="">Select an NPC</option>
-                  {npcs.map(npc => (
-                    <option key={npc.id} value={npc.id}>{npc.name}</option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Source NPC *"
+                value={formData.sourceNpcId || ''}
+                onChange={(e) => handleSourceNPCSelect(e.target.value)}
+                required
+                disabled={isSubmitting}
+              >
+                <option value="">Select an NPC</option>
+                {npcs.map(npc => (
+                  <option key={npc.id} value={npc.id}>{npc.name}</option>
+                ))}
+              </Select>
             ) : (
               <Input
                 label="Source Name *"
@@ -326,20 +319,17 @@ const RumorForm: React.FC<RumorFormProps> = ({
             )}
 
             {/* Location */}
-            <div>
-              <label className="block text-sm font-medium mb-1 form-label">Location</label>
-              <select
-                className="w-full rounded-lg border p-2 input"
-                value={formData.locationId || ''}
-                onChange={(e) => handleLocationSelect(e.target.value)}
-                disabled={isSubmitting}
-              >
-                <option value="">Select a location</option>
-                {locations.map(location => (
-                  <option key={location.id} value={location.id}>{location.name}</option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Location"
+              value={formData.locationId || ''}
+              onChange={(e) => handleLocationSelect(e.target.value)}
+              disabled={isSubmitting}
+            >
+              <option value="">Select a location</option>
+              {locations.map(location => (
+                <option key={location.id} value={location.id}>{location.name}</option>
+              ))}
+            </Select>
           </div>
 
           {/* Related NPCs */}
@@ -363,20 +353,14 @@ const RumorForm: React.FC<RumorFormProps> = ({
               {Array.from(selectedNPCs).map(npcId => {
                 const npc = npcs.find(n => n.id === npcId);
                 return npc ? (
-                  <div
+                  <RemovableChip
                     key={npcId}
-                    className="flex items-center gap-1 rounded-full px-3 py-1 tag"
+                    onRemove={() => handleNPCToggle(npcId)}
+                    removeLabel={`Remove ${npc.name}`}
+                    disabled={isSubmitting}
                   >
-                    <span>{npc.name}</span>
-                    <Button
-                      variant="ghost"
-                      size='sm'
-                      onClick={() => handleNPCToggle(npcId)}
-                      disabled={isSubmitting}
-                    >
-                      <X size={14} />
-                    </Button>
-                  </div>
+                    {npc.name}
+                  </RemovableChip>
                 ) : null;
               })}
               {selectedNPCs.size === 0 && (
@@ -408,20 +392,14 @@ const RumorForm: React.FC<RumorFormProps> = ({
               {Array.from(selectedLocations).map(locationId => {
                 const location = locations.find(l => l.id === locationId);
                 return location ? (
-                  <div
+                  <RemovableChip
                     key={locationId}
-                    className="flex items-center gap-1 rounded-full px-3 py-1 tag"
+                    onRemove={() => handleLocationToggle(locationId)}
+                    removeLabel={`Remove ${location.name}`}
+                    disabled={isSubmitting}
                   >
-                    <span>{location.name}</span>
-                    <Button
-                      variant="ghost"
-                      size='sm'
-                      onClick={() => handleLocationToggle(locationId)}
-                      disabled={isSubmitting}
-                    >
-                      <X size={14}/>
-                    </Button>
-                  </div>
+                    {location.name}
+                  </RemovableChip>
                 ) : null;
               })}
               {selectedLocations.size === 0 && (
@@ -435,7 +413,7 @@ const RumorForm: React.FC<RumorFormProps> = ({
           {/* Error Message */}
           {error && (
             <div className="flex items-center gap-2">
-              <AlertCircle size={16} className={`rumor-status-false`} />
+              <AlertCircle size={16} className="form-error" />
               <Typography color="error">{error}</Typography>
             </div>
           )}
@@ -472,24 +450,14 @@ const RumorForm: React.FC<RumorFormProps> = ({
           <div className="max-h-96 overflow-y-auto mb-4">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {npcs.map(npc => (
-                <button
+                <SelectableChip
                   key={npc.id}
-                  type="button"
-                  onClick={() => handleNPCToggle(npc.id)}
-                  className={clsx(
-                    `p-2 rounded text-center transition-colors`,
-                    selectedNPCs.has(npc.id)
-                      ? `selected-item`
-                      : `selectable-item`
-                  )}
+                  selected={selectedNPCs.has(npc.id)}
+                  onToggle={() => handleNPCToggle(npc.id)}
+                  className="text-center"
                 >
-                  <Typography 
-                    variant="body-sm"
-                    className={selectedNPCs.has(npc.id) ? 'font-medium' : ''}
-                  >
-                    {npc.name}
-                  </Typography>
-                </button>
+                  {npc.name}
+                </SelectableChip>
               ))}
             </div>
           </div>
@@ -513,24 +481,14 @@ const RumorForm: React.FC<RumorFormProps> = ({
           <div className="max-h-96 overflow-y-auto mb-4">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {locations.map(location => (
-                <button
+                <SelectableChip
                   key={location.id}
-                  type="button"
-                  onClick={() => handleLocationToggle(location.id)}
-                  className={clsx(
-                    `p-2 rounded text-center transition-colors`,
-                    selectedLocations.has(location.id)
-                      ? `selected-item`
-                      : `selectable-item`
-                  )}
+                  selected={selectedLocations.has(location.id)}
+                  onToggle={() => handleLocationToggle(location.id)}
+                  className="text-center"
                 >
-                  <Typography 
-                    variant="body-sm"
-                    className={selectedLocations.has(location.id) ? 'font-medium' : ''}
-                  >
-                    {location.name}
-                  </Typography>
-                </button>
+                  {location.name}
+                </SelectableChip>
               ))}
             </div>
           </div>

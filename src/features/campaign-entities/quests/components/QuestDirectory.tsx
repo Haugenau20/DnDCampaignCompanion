@@ -6,13 +6,12 @@ import { useNPCs } from '../../npcs/context/NPCContext';
 import { useLocations } from '../../locations/context/LocationContext';
 import { resolveLocationName } from '../../locations/utils/location-display';
 import { useAuth } from 'features/user-management';
-import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import { useNavigation } from 'shared/hooks/useNavigation';
 import clsx from 'clsx';
-import { Scroll, MapPin, Edit, Trash2, Users } from 'lucide-react';
+import { MapPin, Edit, Trash2, Users, Plus } from 'lucide-react';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -22,6 +21,10 @@ import {
   RosterField,
   type RosterSegment,
   type RosterFilterOption,
+  RosterSkeleton,
+  RosterEmpty,
+  RosterStatus,
+  type RosterStatusTone,
 } from 'core/components/Roster';
 
 interface QuestDirectoryProps {
@@ -49,10 +52,56 @@ const STATUS_GROUPS: { key: QuestStatus; title: string }[] = [
 ];
 
 /** Segment colour per status, reusing the same tokens as the row chip and bar. */
+/** Quest state, in the shared status vocabulary. */
+/**
+ * An NPC's stance, as a class name.
+ *
+ * Spelled out rather than built as `npc-relationship-${npc.relationship}`.
+ * That template is how this exact family stayed in the tree after 12-3a
+ * deleted it: the compiler cannot see a string it assembles at runtime and
+ * grep cannot either, so four icons rendered with no colour at all and nothing
+ * failed. `Partial` keeps the fallback type-checked.
+ */
+const DISPOSITION_CLASS: Partial<Record<string, string>> = {
+  friendly: 'disposition-friendly',
+  neutral: 'disposition-neutral',
+  hostile: 'disposition-hostile',
+  unknown: 'disposition-unknown',
+};
+
+/**
+ * Quest state on the shared valence ramp, best to worst.
+ *
+ * Completed is stop 0 and failed is stop 3 -- the ends of the ramp, which
+ * resolve to the same values `outcome.succeeded` and `outcome.failed.ink`
+ * always had, so a quest looks exactly as it did. Active is the middle rather
+ * than the accent now, because the accent means "interactive" everywhere else
+ * and a quest that is merely open is not an action.
+ */
+const STATUS_TONE: Record<QuestStatus, RosterStatusTone> = {
+  completed: 'valence-0',
+  active: 'valence-1',
+  failed: 'valence-3',
+};
+
+/**
+ * The progress bar's fill, per state.
+ *
+ * Spelled out rather than built as `progress-bar-${quest.status}`. A class
+ * name assembled from a variable is invisible to grep, which is how a token
+ * survives a migration that was supposed to delete it -- and this phase has
+ * now been bitten by exactly that twice.
+ */
+const PROGRESS_FILL: Record<QuestStatus, string> = {
+  active: 'progress-bar-open',
+  completed: 'progress-bar-succeeded',
+  failed: 'progress-bar-failed',
+};
+
 const STATUS_COLOR: Record<QuestStatus, string> = {
-  active: 'bg-status-active',
-  completed: 'bg-status-completed',
-  failed: 'bg-status-failed',
+  active: 'bg-valence-1',
+  completed: 'bg-valence-0',
+  failed: 'bg-valence-3',
 };
 
 /**
@@ -91,8 +140,11 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
     const count = (status: QuestStatus) =>
       quests.filter(q => q.status === status).length;
     return [
-      { key: 'active', label: 'active', count: count('active'), colorClass: STATUS_COLOR.active },
+      // Best to worst, left to right, like every other directory's bar. The
+      // grouped sections below keep active first, because a quest log is read
+      // for what is still open; the bar is read as a ranking.
       { key: 'completed', label: 'completed', count: count('completed'), colorClass: STATUS_COLOR.completed },
+      { key: 'active', label: 'active', count: count('active'), colorClass: STATUS_COLOR.active },
       { key: 'failed', label: 'failed', count: count('failed'), colorClass: STATUS_COLOR.failed },
     ];
   }, [quests]);
@@ -204,13 +256,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
   };
 
   if (isLoading) {
-    return (
-      <Card>
-        <Card.Content>
-          <Typography>Loading quests...</Typography>
-        </Card.Content>
-      </Card>
-    );
+    return <RosterSkeleton label="Loading quests" />;
   }
 
   return (
@@ -253,6 +299,8 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                 <RosterRow
                   key={quest.id}
                   id={`quest-${quest.id}`}
+                  entityId={quest.id}
+                  entityName={quest.title}
                   gridClassName={ROW_GRID}
                   isFirst={index === 0}
                   highlighted={highlightedQuestId === quest.id}
@@ -364,7 +412,10 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                                     centered={false}
                                   >
                                     <div className="flex items-start gap-2 text-left">
-                                      <MapPin size={16} className="mt-1 location-status-explored" />
+                                      {/* A bullet, not a status. This was hard-coded to the `explored` hue for
+                                          every location in the list, so it stated a status the
+                                          location may not have had. */}
+                                      <MapPin size={16} className="mt-1 typography-secondary" />
                                       <div className="flex-1">
                                         <Typography variant="body-sm" className="font-medium">
                                           {location.name}
@@ -415,7 +466,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                                     centered={false}
                                   >
                                     <div className="flex items-start gap-2 text-left">
-                                      <Users size={16} className={clsx('mt-1', `npc-relationship-${npc.relationship}`)} />
+                                      <Users size={16} className={clsx('mt-1', DISPOSITION_CLASS[npc.relationship] ?? 'disposition-unknown')} />
                                       <div className="flex-1">
                                         <Typography variant="body-sm" className="font-medium">
                                           {npc.name}
@@ -479,25 +530,17 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                   }
                 >
                   <div className="flex flex-col gap-0.5 min-w-0">
-                    <Typography variant="body" className="font-semibold truncate">
+                    <Typography
+                      variant="body"
+                      className="font-semibold truncate font-heading"
+                    >
                       {quest.title}
                     </Typography>
                   </div>
 
-                  {/* Status: dot plus the word, so colour is never the only cue */}
-                  <Typography
-                    variant="body-sm"
-                    className={clsx(
-                      'hidden md:flex items-center gap-2 text-sm font-semibold',
-                      `quest-status-${quest.status}`
-                    )}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={clsx('w-[7px] h-[7px] rounded-full shrink-0', STATUS_COLOR[quest.status])}
-                    />
+                  <RosterStatus tone={STATUS_TONE[quest.status]}>
                     {quest.status.charAt(0).toUpperCase() + quest.status.slice(1)}
-                  </Typography>
+                  </RosterStatus>
 
                   {/* Objective progress -- the detail that makes quests more than a
                       plain roster entry, so it stays visible on the collapsed row. */}
@@ -510,7 +553,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                     {totalObjectives > 0 && (
                       <div className="w-full rounded-full h-1.5 progress-container">
                         <div
-                          className={clsx('rounded-full h-1.5', `progress-bar-${quest.status}`)}
+                          className={clsx('rounded-full h-1.5', PROGRESS_FILL[quest.status])}
                           style={{ width: `${(completedObjectives / totalObjectives) * 100}%` }}
                         />
                       </div>
@@ -529,22 +572,24 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
             })}
           </RosterGroup>
         ))
+      ) : quests.length > 0 ? (
+        <RosterEmpty
+          title="No quests match these filters"
+          message="Try a different search term, or clear the filters to see everything the party has taken on."
+        />
       ) : (
-        <Card>
-          <Card.Content className="text-center py-12">
-            <Scroll className="w-12 h-12 mx-auto mb-4 typography-secondary" />
-            <Typography variant="h3" className="mb-2">
-              No Quests Found
-            </Typography>
-            <Typography color="secondary">
-              {searchQuery
-                ? 'No quests match your search criteria'
-                : statusFilter === 'all'
-                  ? 'There are no quests to display'
-                  : `No ${statusFilter} quests found`}
-            </Typography>
-          </Card.Content>
-        </Card>
+        <RosterEmpty
+          title="Nothing taken on yet"
+          message="What the party agreed to do, who asked, and how far along it is — with the objectives ticked off as you go."
+          action={
+            <Button
+              onClick={() => navigateToPage('/quests/create')}
+              startIcon={<Plus className="w-4 h-4" />}
+            >
+              Add the first quest
+            </Button>
+          }
+        />
       )}
 
       {/* Delete Confirmation Dialog */}

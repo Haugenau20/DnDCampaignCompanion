@@ -3,6 +3,8 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import UserManagementView from '../UserManagementView';
+import { unnamedControlsIn } from "@/test-utils/accessible-names";
+import { formAccentsIn } from "@/test-utils/accent-budget";
 
 // ---------------------------------------------------------------------------
 // Mock context/firebase
@@ -354,5 +356,32 @@ describe('UserManagementView', () => {
         expect(adminIdx & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       });
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A5 gates (PR 10.2). Every control has a name; the surface spends its one
+// accent on the control that writes, or none where nothing writes.
+//
+// Admin views are allowed their density (A5), which is a rhythm rule -- it
+// buys no exemption from either gate below.
+// ---------------------------------------------------------------------------
+describe('UserManagementView — names and accents', () => {
+  test('names every control', () => {
+    setupMocks();
+    const { container } = render(<UserManagementView />);
+
+    // Paired with a positive assertion so an empty list cannot mean the view
+    // rendered nothing at all (R31).
+    expect(container.querySelectorAll('input, select, textarea, button').length)
+      .toBeGreaterThan(0);
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
+
+  test('spends at most one filled accent', () => {
+    setupMocks();
+    const { container } = render(<UserManagementView />);
+
+    expect(formAccentsIn(container).length).toBeLessThanOrEqual(1);
   });
 });

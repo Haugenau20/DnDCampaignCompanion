@@ -6,13 +6,11 @@ import { useNPCs } from '../../npcs/context/NPCContext';
 import { useLocations } from '../../locations/context/LocationContext';
 import { resolveLocationName } from '../../locations/utils/location-display';
 import { useAuth } from 'features/user-management';
-import Card from '../../../../core/components/Card';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import RumorBatchActions from './RumorBatchActions';
 import { useNavigation } from 'shared/hooks/useNavigation';
-import clsx from 'clsx';
-import { HelpCircle, RotateCw, Users, MapPin, Scroll } from 'lucide-react';
+import { Users, MapPin, Scroll, Plus } from 'lucide-react';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -22,6 +20,10 @@ import {
   RosterField,
   type RosterSegment,
   type RosterFilterOption,
+  RosterSkeleton,
+  RosterEmpty,
+  RosterStatus,
+  type RosterStatusTone,
 } from 'core/components/Roster';
 
 interface RumorDirectoryProps {
@@ -43,16 +45,26 @@ const SOURCE_FILTERS: RosterFilterOption[] = [
 ];
 
 /** Status as a labelled chip. A bare colour stripe needed a legend nobody had. */
-const STATUS_CLASS: Record<RumorStatus, string> = {
-  confirmed: 'rumor-status-confirmed',
-  unconfirmed: 'rumor-status-unconfirmed',
-  false: 'rumor-status-false',
-};
-
-const STATUS_DOT: Record<RumorStatus, string> = {
-  confirmed: 'bg-status-completed',
-  unconfirmed: 'bg-status-unknown',
-  false: 'bg-status-failed',
+/**
+ * Rumour state, in the shared status vocabulary.
+ *
+ * A confirmed rumour and a completed quest are the same kind of fact -- one
+ * thing the party now knows -- so they take the same hue rather than each
+ * directory naming its own.
+ */
+/**
+ * A rumour is knowledge, not an outcome.
+ *
+ * `false` used to be `failed`, in the same red as a lost quest, which states
+ * that a disproven rumour is a defeat. It is a *resolved* one, and usually a
+ * good outcome for the party -- so confirmed and false sit on the **same**
+ * rung: both are fully known, and what separates them is the strike cue that
+ * 12-5 adds, not the hue. Schema section 3.
+ */
+const STATUS_TONE: Record<RumorStatus, RosterStatusTone> = {
+  confirmed: 'valence-0',
+  unconfirmed: 'valence-1',
+  false: 'valence-3',
 };
 
 const formatStatus = (status: RumorStatus): string =>
@@ -100,9 +112,13 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
     const count = (status: RumorStatus) =>
       initialRumors.filter(rumor => rumor.status === status).length;
     return [
-      { key: 'confirmed', label: 'confirmed', count: count('confirmed'), colorClass: 'bg-status-completed' },
-      { key: 'unconfirmed', label: 'unconfirmed', count: count('unconfirmed'), colorClass: 'bg-status-unknown' },
-      { key: 'false', label: 'false', count: count('false'), colorClass: 'bg-status-failed' },
+      // Confirmed and false share a rung: both are fully known, and a
+      // disproven rumour is a resolved one rather than a defeat. They are told
+      // apart by their labels here and by 12-5's strike in the rows -- not by
+      // hue, which is what put a false rumour in the red of a lost quest.
+      { key: 'confirmed', label: 'confirmed', count: count('confirmed'), colorClass: 'bg-valence-0' },
+      { key: 'unconfirmed', label: 'unconfirmed', count: count('unconfirmed'), colorClass: 'bg-valence-1' },
+      { key: 'false', label: 'false', count: count('false'), colorClass: 'bg-valence-3' },
     ];
   }, [initialRumors]);
 
@@ -222,16 +238,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   };
 
   if (isLoading) {
-    return (
-      <Card>
-        <Card.Content>
-          <div className="flex justify-center items-center py-8">
-            <RotateCw className="w-6 h-6 animate-spin primary mr-3" />
-            <Typography>Loading rumors...</Typography>
-          </div>
-        </Card.Content>
-      </Card>
-    );
+    return <RosterSkeleton label="Loading rumors" />;
   }
 
   const groups = Object.entries(groupedRumors);
@@ -299,12 +306,15 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                   <RosterRow
                     key={rumor.id}
                     id={`rumor-${rumor.id}`}
+                    entityId={rumor.id}
+                    entityName={rumor.title}
                     gridClassName={ROW_GRID}
                     isFirst={index === 0}
                     highlighted={highlightedRumorId === rumor.id}
                     expanded={isExpanded}
                     toggleLabel={rumor.title}
                     onToggle={() => setExpandedRumorId(isExpanded ? null : rumor.id)}
+                    selected={selectedRumors.has(rumor.id)}
                     leadingControl={
                       selectionMode ? (
                         <input
@@ -447,39 +457,34 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                   >
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Typography variant="body" className="font-semibold truncate">
+                        {/* The "Quest" pill that sat here is gone: the last cell in the
+                            same row already reads "Converted to quest", so the pill was
+                            the same fact a second time, in a box, next to the name. */}
+                        <Typography
+                          variant="body"
+                          className="font-semibold truncate font-heading"
+                        >
                           {rumor.title}
                         </Typography>
-                        {rumor.convertedToQuestId && (
-                          <span className="hidden md:inline-flex shrink-0 items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-secondary typography-secondary">
-                            <Scroll size={10} aria-hidden="true" />
-                            Quest
-                          </span>
-                        )}
                       </div>
                       <Typography variant="body-sm" color="secondary" className="text-sm truncate">
                         {rumor.sourceName}
                       </Typography>
                     </div>
 
-                    {/* Status: dot plus the word, so colour is never the only cue */}
-                    <Typography
-                      variant="body-sm"
-                      className={clsx(
-                        'hidden md:flex items-center gap-2 text-sm font-semibold',
-                        STATUS_CLASS[rumor.status]
-                      )}
+                    <RosterStatus
+                      tone={STATUS_TONE[rumor.status]}
+                      negated={rumor.status === 'false'}
                     >
-                      <span
-                        aria-hidden="true"
-                        className={clsx('w-[7px] h-[7px] rounded-full shrink-0', STATUS_DOT[rumor.status])}
-                      />
                       {formatStatus(rumor.status)}
-                    </Typography>
+                    </RosterStatus>
 
+                    {/* Source type, stated once and plainly -- it was a filled chip
+                        saying what a plain label says. */}
                     <Typography
                       variant="body-sm"
-                      className="hidden md:inline-flex justify-self-start px-2.5 py-1 rounded-md text-xs font-semibold bg-secondary typography-secondary"
+                      color="secondary"
+                      className="hidden md:block justify-self-start text-sm"
                     >
                       {formatSourceType(rumor.sourceType)}
                     </Typography>
@@ -504,20 +509,24 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
             </RosterGroup>
           );
         })
+      ) : initialRumors.length > 0 ? (
+        <RosterEmpty
+          title="No rumours match these filters"
+          message="Try a different search term, or clear the filters to see everything the party has heard."
+        />
       ) : (
-        <Card>
-          <Card.Content className="text-center py-8">
-            <HelpCircle className="w-12 h-12 mx-auto typography-secondary mb-4" />
-            <Typography variant="h3" className="mb-2">
-              No Rumors Found
-            </Typography>
-            <Typography color="secondary">
-              {searchQuery || statusFilter !== 'all' || sourceFilter !== 'all'
-                ? 'Try adjusting your search criteria or filters'
-                : 'There are no rumors to display. Add your first rumor to get started.'}
-            </Typography>
-          </Card.Content>
-        </Card>
+        <RosterEmpty
+          title="Nothing heard yet"
+          message="Overheard in a tavern, posted on a notice board, told by someone who may be lying — record it here and mark it confirmed when you find out."
+          action={
+            <Button
+              onClick={() => navigateToPage('/rumors/create')}
+              startIcon={<Plus className="w-4 h-4" />}
+            >
+              Add the first rumour
+            </Button>
+          }
+        />
       )}
     </div>
   );

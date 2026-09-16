@@ -2,6 +2,7 @@
 import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import {rethrowHttpsError} from "../shared/httpsErrors";
+import {deleteGroupUserDocument} from "../shared/deleteUserSubtree";
 
 export const removeUserFromGroup = functions.onCall(
   {
@@ -108,13 +109,23 @@ export const removeUserFromGroup = functions.onCall(
         batch.delete(usernameRef);
       }
       
-      // Delete the group user profile
-      batch.delete(userProfileRef);
-      
+      // Leaving a group takes your private notes with you; they live in a
+      // subcollection of this document, which a batched delete would orphan.
+      //
+      // This runs BEFORE the commit, mirroring deleteUser, and the ordering is
+      // load-bearing. The batch strips this group from the user's global
+      // `groups` array, so committing first and failing here would leave the
+      // notes orphaned with no way back: the leave-group path no longer sees
+      // the membership, so nothing would retry the subtree deletion. Failing
+      // before the commit leaves the user in the group and the operation
+      // retryable. The username was already read above, so deleting the
+      // profile document here costs the batch nothing.
+      await deleteGroupUserDocument(groupId, userId);
+
       // Commit all changes
       await batch.commit();
-      
-      return { 
+
+      return {
         success: true, 
         message: isSelfRemoval ? "Successfully left group" : "User successfully removed from group" 
       };

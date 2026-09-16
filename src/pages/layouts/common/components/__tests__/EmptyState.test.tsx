@@ -133,11 +133,11 @@ describe('EmptyState', () => {
       expect(container.firstChild).toHaveClass('my-custom-class');
     });
 
-    it('always applies the base journal-empty class', () => {
+    it('always applies the base section-empty class', () => {
       const { container } = render(
         <EmptyState icon={defaultIcon} message="No items" />
       );
-      expect(container.firstChild).toHaveClass('journal-empty');
+      expect(container.firstChild).toHaveClass('section-empty');
     });
   });
 });

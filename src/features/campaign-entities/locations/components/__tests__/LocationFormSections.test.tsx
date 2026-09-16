@@ -12,6 +12,7 @@ import {
 } from '../LocationFormSections';
 import { Location } from '../../types';
 import { NPC } from '../../../npcs/types';
+import { unnamedControlsIn } from "../../../../../test-utils/accessible-names";
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -513,4 +514,15 @@ describe('RelatedNPCsSection', () => {
     fireEvent.click(xButton!);
     expect(setSelectedNPCs).toHaveBeenCalled();
   });
+
+  // -------------------------------------------------------------------------
+  // Accessible names (PR 8.1)
+  // -------------------------------------------------------------------------
+  describe("accessible names", () => {
+    test("every control has an accessible name", () => {
+      const { container } = render(<BasicInfoSection formData={makeFormData()} handleInputChange={handleInputChange} />);
+      expect(unnamedControlsIn(container)).toEqual([]);
+    });
+  });
+
 });

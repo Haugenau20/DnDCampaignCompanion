@@ -3,7 +3,6 @@
 import {
   convertFirestoreTimestamp,
   getRelativeTime,
-  formatJournalDate,
   formatDisplayDate,
   formatDateTime,
 } from '../dateFormatter';
@@ -141,57 +140,6 @@ describe('dateFormatter', () => {
     });
   });
 
-  describe('formatJournalDate', () => {
-    // NOTE: formatJournalDate calls toLocaleString('default', { month: 'long' }),
-    // which means the month-name is system-locale dependent. We test the
-    // day/suffix portion structurally and accept any non-empty month name.
-    const journalDateRe = (day: number, suffix: string) =>
-      new RegExp(`^the ${day}${suffix} of \\S+`);
-
-    test('should return empty string for null', () => {
-      expect(formatJournalDate(null)).toBe('');
-    });
-
-    test('should format date with "st" suffix for 1', () => {
-      const d = new Date(2025, 5, 1); // June 1
-      expect(formatJournalDate(d)).toMatch(journalDateRe(1, 'st'));
-    });
-
-    test('should format date with "nd" suffix for 2', () => {
-      const d = new Date(2025, 5, 2);
-      expect(formatJournalDate(d)).toMatch(journalDateRe(2, 'nd'));
-    });
-
-    test('should format date with "rd" suffix for 3', () => {
-      const d = new Date(2025, 5, 3);
-      expect(formatJournalDate(d)).toMatch(journalDateRe(3, 'rd'));
-    });
-
-    test('should format date with "th" suffix for 4-10', () => {
-      expect(formatJournalDate(new Date(2025, 5, 4))).toMatch(journalDateRe(4, 'th'));
-      expect(formatJournalDate(new Date(2025, 5, 10))).toMatch(journalDateRe(10, 'th'));
-    });
-
-    test('should use "th" suffix for special cases 11, 12, 13', () => {
-      expect(formatJournalDate(new Date(2025, 5, 11))).toMatch(journalDateRe(11, 'th'));
-      expect(formatJournalDate(new Date(2025, 5, 12))).toMatch(journalDateRe(12, 'th'));
-      expect(formatJournalDate(new Date(2025, 5, 13))).toMatch(journalDateRe(13, 'th'));
-    });
-
-    test('should use "st" suffix for 21 and 31', () => {
-      expect(formatJournalDate(new Date(2025, 5, 21))).toMatch(journalDateRe(21, 'st'));
-      expect(formatJournalDate(new Date(2025, 0, 31))).toMatch(journalDateRe(31, 'st'));
-    });
-
-    test('should use "nd" suffix for 22', () => {
-      expect(formatJournalDate(new Date(2025, 5, 22))).toMatch(journalDateRe(22, 'nd'));
-    });
-
-    test('should use "rd" suffix for 23', () => {
-      expect(formatJournalDate(new Date(2025, 5, 23))).toMatch(journalDateRe(23, 'rd'));
-    });
-  });
-
   describe('formatDisplayDate', () => {
     test('should return empty string for null', () => {
       expect(formatDisplayDate(null)).toBe('');
@@ -239,7 +187,7 @@ describe('dateFormatter', () => {
 // src/pages/layouts/common/utils/dateFormatter.ts duplicate (originally
 // src/components/features/layouts/common/utils/dateFormatter.ts), preserved
 // verbatim during the shared/core consolidation pass. That copy's
-// getRelativeTime/formatJournalDate/formatDisplayDate took a plain `Date`
+// getRelativeTime/formatDisplayDate took a plain `Date`
 // (no Firestore-timestamp/string/number handling), but produced identical
 // output to the functions above for every Date input these tests exercise,
 // since convertFirestoreTimestamp() passes a Date instance through
@@ -328,73 +276,6 @@ describe('getRelativeTime (additional cases merged from layouts copy)', () => {
   it('uses plural "days" for > 1 day', () => {
     const date = msAgo(2 * DAY + HOUR);
     expect(getRelativeTime(date)).toMatch(/days ago/);
-  });
-});
-
-// Locale-aware month name helper (matches what the implementation uses)
-const localMonth = (monthIndex: number): string =>
-  new Date(2024, monthIndex, 1).toLocaleString('default', { month: 'long' });
-
-describe('formatJournalDate (additional cases merged from layouts copy)', () => {
-  it('formats a date with "st" suffix for the 1st', () => {
-    const date = new Date(2024, 0, 1); // January 1
-    expect(formatJournalDate(date)).toBe(`the 1st of ${localMonth(0)}`);
-  });
-
-  it('formats a date with "nd" suffix for the 2nd', () => {
-    const date = new Date(2024, 0, 2);
-    expect(formatJournalDate(date)).toBe(`the 2nd of ${localMonth(0)}`);
-  });
-
-  it('formats a date with "rd" suffix for the 3rd', () => {
-    const date = new Date(2024, 0, 3);
-    expect(formatJournalDate(date)).toBe(`the 3rd of ${localMonth(0)}`);
-  });
-
-  it('formats a date with "th" suffix for the 4th', () => {
-    const date = new Date(2024, 0, 4);
-    expect(formatJournalDate(date)).toBe(`the 4th of ${localMonth(0)}`);
-  });
-
-  it('uses "th" for 11th (exception to "st" rule)', () => {
-    const date = new Date(2024, 0, 11);
-    expect(formatJournalDate(date)).toBe(`the 11th of ${localMonth(0)}`);
-  });
-
-  it('uses "th" for 12th (exception to "nd" rule)', () => {
-    const date = new Date(2024, 0, 12);
-    expect(formatJournalDate(date)).toBe(`the 12th of ${localMonth(0)}`);
-  });
-
-  it('uses "th" for 13th (exception to "rd" rule)', () => {
-    const date = new Date(2024, 0, 13);
-    expect(formatJournalDate(date)).toBe(`the 13th of ${localMonth(0)}`);
-  });
-
-  it('formats the 21st with "st" suffix', () => {
-    const date = new Date(2024, 0, 21);
-    expect(formatJournalDate(date)).toBe(`the 21st of ${localMonth(0)}`);
-  });
-
-  it('formats the 22nd with "nd" suffix', () => {
-    const date = new Date(2024, 0, 22);
-    expect(formatJournalDate(date)).toBe(`the 22nd of ${localMonth(0)}`);
-  });
-
-  it('formats the 23rd with "rd" suffix', () => {
-    const date = new Date(2024, 0, 23);
-    expect(formatJournalDate(date)).toBe(`the 23rd of ${localMonth(0)}`);
-  });
-
-  it('includes the correct (locale-aware) month name', () => {
-    const date = new Date(2024, 5, 15); // June (locale-dependent)
-    const expected = localMonth(5);
-    expect(formatJournalDate(date)).toMatch(expected);
-  });
-
-  it('produces a string starting with "the "', () => {
-    const date = new Date(2024, 2, 10);
-    expect(formatJournalDate(date)).toMatch(/^the /);
   });
 });
 

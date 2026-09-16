@@ -48,7 +48,7 @@ const ContextTrigger = forwardRef<HTMLButtonElement, ContextTriggerProps>(
         aria-expanded={isOpen}
         aria-label={`Active campaign: ${label}. Change group or campaign`}
         className={clsx(
-          "flex items-center gap-1.5 px-2.5 py-1 rounded-md max-w-[9rem] md:max-w-[14rem]",
+          "flex items-center gap-1.5 px-2.5 py-1 rounded-md min-w-0 max-w-[9rem] md:max-w-[14rem]",
           isOpen ? "dropdown-item-active" : "button-ghost"
         )}
       >

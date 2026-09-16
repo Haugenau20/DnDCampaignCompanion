@@ -61,6 +61,9 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
   const [inputValue, setInputValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Same association Input and Select generate for themselves: the label was
+  // rendered beside the control rather than attached to it, so it named nothing.
+  const inputId = React.useId();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Get unique location names from the locations context
@@ -161,13 +164,14 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
   return (
     <div className={`relative ${className}`}>
       {label && (
-        <label className="block text-sm font-medium mb-1 form-label">
+        <label htmlFor={inputId} className="block text-sm font-medium mb-1 form-label">
           {label}
         </label>
       )}
       <div className="relative">
         <input
           ref={inputRef}
+          id={inputId}
           type="text"
           value={inputValue}
           onChange={handleInputChange}
@@ -185,6 +189,7 @@ const LocationCombobox: React.FC<LocationComboboxProps> = ({
         />
         <button
           type="button"
+          aria-label={isOpen ? "Hide location suggestions" : "Show location suggestions"}
           onClick={() => setIsOpen(!isOpen)}
           className="absolute right-2 top-1/2 transform -translate-y-1/2 typography-secondary"
         >

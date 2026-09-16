@@ -88,10 +88,21 @@ describe('ThemeProvider — initial theme resolution', () => {
     expect(result.current.theme.name).toBe('dark');
   });
 
-  test('uses saved medieval theme from localStorage', () => {
+  test('resolves a stored retired theme name to its replacement', () => {
+    // `medieval` was deleted in Phase 11 (D40). Anyone whose browser still
+    // holds the string must land on a theme that exists rather than on
+    // whatever a lookup miss happens to produce.
     window.localStorage.setItem(STORAGE_KEY, 'medieval');
     const { result } = renderHook(() => useTheme(), { wrapper });
-    expect(result.current.theme.name).toBe('medieval');
+    expect(result.current.theme.name).toBe('light');
+  });
+
+  test('rewrites a stored retired theme name, so the migration happens once', () => {
+    // The value must be replaced in storage, not merely resolved on read --
+    // otherwise every visit for the rest of that browser's life re-resolves it.
+    window.localStorage.setItem(STORAGE_KEY, 'medieval');
+    renderHook(() => useTheme(), { wrapper });
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('light');
   });
 
   test('falls back to default theme when localStorage value is an unknown theme name', () => {
@@ -125,15 +136,6 @@ describe('ThemeProvider — setTheme()', () => {
     expect(result.current.theme).toEqual(themes.dark);
   });
 
-  test('switches theme to medieval', () => {
-    const { result } = renderHook(() => useTheme(), { wrapper });
-    act(() => {
-      result.current.setTheme('medieval');
-    });
-    expect(result.current.theme.name).toBe('medieval');
-    expect(result.current.theme).toEqual(themes.medieval);
-  });
-
   test('switches back to light from dark', () => {
     window.localStorage.setItem(STORAGE_KEY, 'dark');
     const { result } = renderHook(() => useTheme(), { wrapper });
@@ -149,9 +151,9 @@ describe('ThemeProvider — setTheme()', () => {
   test('persists selected theme name to localStorage after setTheme', () => {
     const { result } = renderHook(() => useTheme(), { wrapper });
     act(() => {
-      result.current.setTheme('medieval');
+      result.current.setTheme('dark');
     });
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('medieval');
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('dark');
   });
 
   test('setTheme with an invalid theme name falls back to defaultTheme (lines 189-193 catch-like branch)', () => {
@@ -209,27 +211,67 @@ describe('ThemeProvider — applyThemeToDOM error handling (line 56)', () => {
 // ---------------------------------------------------------------------------
 
 describe('ThemeProvider — CSS variable application', () => {
-  test('sets --color-primary CSS variable matching the current theme', () => {
+  test('sets --accent-ink CSS variable matching the current theme', () => {
     window.localStorage.setItem(STORAGE_KEY, 'dark');
     renderHook(() => useTheme(), { wrapper });
-    const value = document.documentElement.style.getPropertyValue('--color-primary');
-    expect(value).toBe(themes.dark.colors.primary);
+    const value = document.documentElement.style.getPropertyValue('--accent-ink');
+    expect(value).toBe(themes.dark.tokens.accent.ink);
+  });
+
+  // `--color-primary` was the accent under a name that said nothing about the
+  // job. Asserted gone rather than merely unused: a variable that still
+  // resolves is a shim, and grep cannot tell a shim from an intentional
+  // reference.
+  test('no longer sets the retired --color-primary', () => {
+    renderHook(() => useTheme(), { wrapper });
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).toBe('');
   });
 
   test('sets --font-primary CSS variable matching the current theme', () => {
-    window.localStorage.setItem(STORAGE_KEY, 'medieval');
+    window.localStorage.setItem(STORAGE_KEY, 'dark');
     renderHook(() => useTheme(), { wrapper });
     const value = document.documentElement.style.getPropertyValue('--font-primary');
-    expect(value).toBe(themes.medieval.fonts.primary);
+    expect(value).toBe(themes.dark.tokens.font.primary);
   });
 
   test('updates CSS variables when setTheme is called', () => {
     const { result } = renderHook(() => useTheme(), { wrapper });
     act(() => {
-      result.current.setTheme('medieval');
+      result.current.setTheme('dark');
     });
-    const value = document.documentElement.style.getPropertyValue('--color-primary');
-    expect(value).toBe(themes.medieval.colors.primary);
+    const value = document.documentElement.style.getPropertyValue('--accent-ink');
+    expect(value).toBe(themes.dark.tokens.accent.ink);
+  });
+
+  // Q16's answer, asserted where it is set. A `<select>`'s popup, a date
+  // picker and the scrollbars are painted by the browser rather than by this
+  // stylesheet, so no CSS rule can reach them; `color-scheme` is the only
+  // thing that tells the browser which way up the page is. Before this it was
+  // set nowhere in `src`, which is why R22's dark select popup was white.
+  //
+  // Note what these do NOT assert: the popup's appearance. That is drawn
+  // outside the DOM and is not observable from a test -- it was checked by
+  // opening one in the browser in both themes. What is checkable here is that
+  // the document element carries the theme's own declared scheme.
+  test('sets color-scheme on documentElement from the theme token', () => {
+    window.localStorage.setItem(STORAGE_KEY, 'dark');
+    renderHook(() => useTheme(), { wrapper });
+    expect(document.documentElement.style.colorScheme).toBe(themes.dark.tokens.scheme);
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+  });
+
+  test('updates color-scheme when the theme changes', () => {
+    window.localStorage.setItem(STORAGE_KEY, 'dark');
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+
+    act(() => {
+      result.current.setTheme('light');
+    });
+
+    // A stale scheme is worse than none: the page would be light while the
+    // browser kept painting its own controls dark.
+    expect(document.documentElement.style.colorScheme).toBe('light');
   });
 
   test('sets data-theme attribute on documentElement after mount', () => {
@@ -241,9 +283,9 @@ describe('ThemeProvider — CSS variable application', () => {
   test('updates data-theme attribute when theme changes via setTheme', () => {
     const { result } = renderHook(() => useTheme(), { wrapper });
     act(() => {
-      result.current.setTheme('medieval');
+      result.current.setTheme('dark');
     });
-    expect(document.documentElement.dataset.theme).toBe('medieval');
+    expect(document.documentElement.dataset.theme).toBe('dark');
   });
 });
 
@@ -315,9 +357,13 @@ describe('ThemeContextState shape contract', () => {
     const { result } = renderHook(() => useTheme(), { wrapper });
     const { theme } = result.current;
     expect(theme).toHaveProperty('name');
-    expect(theme).toHaveProperty('colors');
-    expect(theme).toHaveProperty('fonts');
-    expect(theme).toHaveProperty('borders');
+    // One token tree replaces the old colors/fonts/borders trio. The groups
+    // below are the ones consumers reach for by name.
+    expect(theme).toHaveProperty('tokens');
+    expect(theme.tokens).toHaveProperty('color');
+    expect(theme.tokens).toHaveProperty('surface');
+    expect(theme.tokens).toHaveProperty('font');
+    expect(theme.tokens).toHaveProperty('border');
   });
 
   test('currentTheme || defaultTheme guard: context always provides a theme (line 199)', () => {

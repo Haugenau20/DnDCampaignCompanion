@@ -1,6 +1,5 @@
 // src/core/services/search/SearchService.ts
 import { SearchResult, SearchResultType, SearchDocument } from '../../types/search';
-import _ from 'lodash';
 
 /**
  * Options for configuring search behavior
@@ -61,7 +60,7 @@ export class SearchService {
       results.push(...typeResults);
     });
 
-    return this.processResults(results);
+    return this.processResults(results, query);
   }
 
   /**
@@ -94,109 +93,217 @@ export class SearchService {
   }
 
   /**
-   * Search through a set of documents
+   * Search through a set of documents, discarding any result that has
+   * nothing to show for itself (no title match and no content snippet).
    */
   private searchDocuments(documents: SearchDocument[], query: string): SearchResult[] {
     return documents
       .filter(doc => this.matchDocument(doc, query))
-      .map(doc => this.createSearchResult(doc, query));
+      .map(doc => this.createSearchResult(doc, query))
+      .filter(result => result.matches.length > 0 || this.titleMatches(result.title, query));
   }
 
   /**
-   * Check if a document matches the search query
+   * Check whether a document's title matches the query, either as a literal
+   * substring or (when fuzzy matching is enabled) as a subsequence.
    */
-  private matchDocument(document: SearchDocument, query: string): boolean {
-    const searchText = this.prepareText(document.content);
+  private titleMatches(title: string, query: string): boolean {
+    const titleText = this.prepareText(title);
     const searchQuery = this.prepareText(query);
-    const titleText = this.prepareText(document.metadata.title as string);
 
-    // Give higher priority to title matches
     if (titleText.includes(searchQuery)) {
       return true;
     }
 
-    if (this.options.fuzzyMatch) {
-      return this.fuzzyMatch(searchText, searchQuery);
-    }
-
-    return searchText.includes(searchQuery);
+    return Boolean(this.options.fuzzyMatch) && this.isSubsequence(titleText, searchQuery);
   }
 
   /**
-   * Calculate relevance score for search results
+   * Check if a document matches the search query. Title matching allows a
+   * literal substring or, when fuzzy matching is enabled, a subsequence
+   * match (typo tolerance). Content matching is always literal and
+   * word-prefix anchored - never a subsequence - to avoid manufacturing
+   * false positives against long document bodies.
+   */
+  private matchDocument(document: SearchDocument, query: string): boolean {
+    const searchQuery = this.prepareText(query);
+
+    if (this.titleMatches(document.metadata.title as string, query)) {
+      return true;
+    }
+
+    const content = this.prepareText(document.content);
+    const words = searchQuery.split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+      return false;
+    }
+
+    return words.every(word => this.findWordMatches(content, word).length > 0);
+  }
+
+  /**
+   * Calculate relevance score for search results. Title matches (especially
+   * exact or prefix ones) are weighted well above content matches, and the
+   * score is always computed against the real query - never a snippet of
+   * the document's own text.
    */
   private calculateRelevance(document: SearchDocument, query: string): number {
     const normalizedQuery = this.prepareText(query);
     const titleText = this.prepareText(document.metadata.title as string);
     const contentText = this.prepareText(document.content);
-    
+
     let score = 0;
-    
+
+    // An exact title match outranks everything else.
+    if (titleText === normalizedQuery) {
+      score += 200;
+    } else if (titleText.startsWith(normalizedQuery)) {
+      score += 50;
+    }
+
     // Title matches are weighted heavily
     if (titleText.includes(normalizedQuery)) {
       score += 100;
     }
-    
+
     // Exact content matches
     if (contentText.includes(normalizedQuery)) {
       score += 50;
     }
-    
+
     // Partial matches
-    const words = normalizedQuery.split(' ');
+    const words = normalizedQuery.split(/\s+/).filter(Boolean);
     words.forEach(word => {
       if (titleText.includes(word)) score += 10;
       if (contentText.includes(word)) score += 5;
     });
-    
+
     return score;
   }
 
   /**
-   * Create a formatted search result from a matching document
+   * Create a formatted search result from a matching document: one context
+   * snippet (if any) plus the total number of content occurrences found.
    */
   private createSearchResult(document: SearchDocument, query: string): SearchResult {
+    const { snippet, count } = this.extractMatches(document.content, query);
     return {
       id: document.id,
       type: document.type,
       title: document.metadata.title as string || '',
       content: document.content,
-      matches: this.extractMatches(document.content, query)
+      matches: snippet ? [snippet] : [],
+      matchCount: count
     };
   }
 
   /**
-   * Extract matching text segments with surrounding context
+   * Find every content occurrence of the query's words and return a single
+   * best snippet plus the total occurrence count. The best occurrence is an
+   * occurrence of the full query string if one exists, otherwise the
+   * earliest occurrence of the longest query word.
    */
-  private extractMatches(text: string, query: string): string[] {
+  private extractMatches(text: string, query: string): { snippet: string | null; count: number } {
     const contextLength = this.options.contextLength || 50;
-    const matches: string[] = [];
-    const words = query.toLowerCase().split(' ');
-    const textLower = text.toLowerCase();
+    // Lowercased but deliberately NOT trimmed: the indices found here are
+    // sliced back out of the original `text`, so `prepareText`'s trim() would
+    // shift every index left by the number of leading whitespace characters
+    // and cut the snippet in the wrong place. Content is assembled by the
+    // document builders as `${title} ${body} ...`, so a document with an empty
+    // leading field really does start with whitespace.
+    const preparedContent = text.toLowerCase();
+    const preparedQuery = this.prepareText(query);
+    const words = preparedQuery.split(/\s+/).filter(Boolean);
 
+    if (words.length === 0) {
+      return { snippet: null, count: 0 };
+    }
+
+    // Occurrences are keyed by start index so two words matching at the
+    // same offset are not double-counted.
+    const occurrencesByIndex = new Map<number, string>();
     words.forEach(word => {
-      let index = textLower.indexOf(word);
-      while (index !== -1) {
-        const start = Math.max(0, index - contextLength);
-        const end = Math.min(text.length, index + word.length + contextLength);
-        matches.push(text.slice(start, end));
-        index = textLower.indexOf(word, index + 1);
-      }
+      this.findWordMatches(preparedContent, word).forEach(index => {
+        if (!occurrencesByIndex.has(index)) {
+          occurrencesByIndex.set(index, word);
+        }
+      });
     });
 
-    return _.uniq(matches);
+    const count = occurrencesByIndex.size;
+    if (count === 0) {
+      return { snippet: null, count: 0 };
+    }
+
+    const fullQueryIndices = this.findWordMatches(preparedContent, preparedQuery);
+    let bestIndex: number;
+    let bestLength: number;
+
+    if (fullQueryIndices.length > 0) {
+      bestIndex = fullQueryIndices[0];
+      bestLength = preparedQuery.length;
+    } else {
+      const longestWord = [...words].sort((a, b) => b.length - a.length)[0];
+      const longestWordIndices = Array.from(occurrencesByIndex.entries())
+        .filter(([, word]) => word === longestWord)
+        .map(([index]) => index)
+        .sort((a, b) => a - b);
+      const fallbackIndices = Array.from(occurrencesByIndex.keys()).sort((a, b) => a - b);
+      bestIndex = longestWordIndices.length > 0 ? longestWordIndices[0] : fallbackIndices[0];
+      bestLength = longestWord.length;
+    }
+
+    const start = Math.max(0, bestIndex - contextLength);
+    const end = Math.min(text.length, bestIndex + bestLength + contextLength);
+    const snippet = text.slice(start, end);
+
+    return { snippet, count };
   }
 
   /**
-   * Perform fuzzy matching between text and query
+   * Two-pointer scan checking whether every character of `needle` appears in
+   * `haystack`, in order (not necessarily contiguously). Used for title
+   * typo-tolerant matching only - never against content, where it would
+   * manufacture false positives over long document bodies.
    */
-  private fuzzyMatch(text: string, query: string): boolean {
-    const words = query.split(' ');
-    return words.every(word => {
-      const pattern = word.split('').join('.*');
-      const regex = new RegExp(pattern, 'i');
-      return regex.test(text);
-    });
+  private isSubsequence(haystack: string, needle: string): boolean {
+    if (needle.length === 0) {
+      return true;
+    }
+
+    let needleIndex = 0;
+    for (let i = 0; i < haystack.length && needleIndex < needle.length; i++) {
+      if (haystack[i] === needle[needleIndex]) {
+        needleIndex++;
+      }
+    }
+
+    return needleIndex === needle.length;
+  }
+
+  /**
+   * Find every start index in `content` where `word` occurs as a literal,
+   * word-prefix-anchored match: the occurrence must start at index 0 or be
+   * preceded by a non-word character. This is what lets "obel" match
+   * "obelisk" while "belisk" does not. Both arguments are expected to
+   * already be prepared (lowercased, trimmed) text.
+   */
+  private findWordMatches(content: string, word: string): number[] {
+    if (!word) {
+      return [];
+    }
+
+    const indices: number[] = [];
+    let index = content.indexOf(word);
+    while (index !== -1) {
+      const precedingChar = index === 0 ? '' : content[index - 1];
+      if (index === 0 || /\W/.test(precedingChar)) {
+        indices.push(index);
+      }
+      index = content.indexOf(word, index + 1);
+    }
+
+    return indices;
   }
 
   /**
@@ -207,32 +314,44 @@ export class SearchService {
   }
 
   /**
-   * Process and sort search results
+   * Process and sort search results: score every result against the real
+   * query, sort the whole list by relevance (globally, not per type, tie-
+   * broken by title so ordering is stable), then cap the sorted list to at
+   * most `maxResultsPerType` results per type while preserving that order.
    */
-  private processResults(results: SearchResult[]): SearchResult[] {
+  private processResults(results: SearchResult[], query: string): SearchResult[] {
     const maxResults = this.options.maxResultsPerType || 10;
-    
-    // Calculate relevance scores for all results
+
     const scoredResults = results.map(result => ({
       ...result,
-      relevance: this.calculateRelevance({ 
-        id: result.id, 
-        type: result.type, 
-        content: result.content, 
-        metadata: { title: result.title } 
-      }, result.matches[0] || '')
+      relevance: this.calculateRelevance({
+        id: result.id,
+        type: result.type,
+        content: result.content,
+        metadata: { title: result.title }
+      }, query)
     }));
-    
-    // Group by type
-    const groupedResults = _.groupBy(scoredResults, 'type');
-    
-    // Sort each group by relevance and limit results
-    return _.flatMap(groupedResults, typeResults => 
-      typeResults
-        .sort((a, b) => b.relevance - a.relevance)
-        .slice(0, maxResults)
-        .map(({ relevance, ...result }) => result)
-    );
+
+    scoredResults.sort((a, b) => {
+      if (b.relevance !== a.relevance) {
+        return b.relevance - a.relevance;
+      }
+      return a.title.localeCompare(b.title);
+    });
+
+    const perTypeCounts = new Map<SearchResultType, number>();
+    const capped: SearchResult[] = [];
+
+    for (const { relevance, ...result } of scoredResults) {
+      const typeCount = perTypeCounts.get(result.type) || 0;
+      if (typeCount >= maxResults) {
+        continue;
+      }
+      perTypeCounts.set(result.type, typeCount + 1);
+      capped.push(result);
+    }
+
+    return capped;
   }
 }
 

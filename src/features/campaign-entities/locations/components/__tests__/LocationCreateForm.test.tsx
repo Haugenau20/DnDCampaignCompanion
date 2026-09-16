@@ -4,6 +4,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LocationCreateForm from '../LocationCreateForm';
+import { unnamedControlsIn } from "../../../../../test-utils/accessible-names";
+import { formAccentsIn } from "../../../../../test-utils/accent-budget";
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -96,27 +98,27 @@ describe('LocationCreateForm', () => {
   // Use getByText() for labels and getAllByRole('textbox') for inputs.
 
   // -------------------------------------------------------------------------
-  // No required context
+  // Gated state moved to the page
+  //
+  // This form used to render its own "No Active Group or Campaign" card when
+  // group/campaign context was missing. That assertion encoded a layering
+  // mistake: a form cannot tell a signed-out visitor from one still
+  // resolving from one simply between campaigns. The gated state now lives
+  // on LocationCreatePage (via usePageGate/GatedContent) -- see that page's
+  // suite for the moved assertions -- and this form renders its fields
+  // whenever it reaches its own render at all, regardless of
+  // activeGroupId/activeCampaignId, since a form that gets here has the
+  // context it needs by construction.
   // -------------------------------------------------------------------------
-  describe('missing context', () => {
-    test('should show "No Active Group or Campaign" when group/campaign missing', () => {
+  describe('rendering regardless of group/campaign context', () => {
+    // Bug #251: the Input component renders labels without htmlFor/id
+    // association, so getByLabelText() does not work here -- use getByText()
+    // against the visible label instead, matching the rest of this suite.
+    test('renders its fields whenever it is rendered at all', () => {
       setupMocks({ activeGroupId: null, activeCampaignId: null });
       render(<LocationCreateForm />);
-      expect(screen.getByText('No Active Group or Campaign')).toBeInTheDocument();
-    });
-
-    test('should show Go Back button when context is missing', () => {
-      setupMocks({ activeGroupId: null, activeCampaignId: null });
-      render(<LocationCreateForm />);
-      expect(screen.getByRole('button', { name: /go back/i })).toBeInTheDocument();
-    });
-
-    test('should call onCancel when Go Back is clicked in missing context state', () => {
-      setupMocks({ activeGroupId: null, activeCampaignId: null });
-      const onCancel = jest.fn();
-      render(<LocationCreateForm onCancel={onCancel} />);
-      fireEvent.click(screen.getByRole('button', { name: /go back/i }));
-      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Name *')).toBeInTheDocument();
+      expect(screen.getByText('Description *')).toBeInTheDocument();
     });
   });
 
@@ -405,4 +407,34 @@ describe('LocationCreateForm', () => {
       ).toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Accessible names (PR 8.1)
+  //
+  // The point of the phase: every control announces itself. A grep proved the
+  // old unassociated `<label>` markup was gone; only walking the DOM proves the
+  // new markup is right, because a primitive whose `label` prop got dropped in
+  // the move looks just as clean in the source.
+  // -------------------------------------------------------------------------
+  describe("accessible names", () => {
+    test("every control in the form has an accessible name", () => {
+      const { container } = render(<LocationCreateForm />);
+      expect(unnamedControlsIn(container)).toEqual([]);
+    });
+  });
+
+
+  // -------------------------------------------------------------------------
+  // The accent budget (PR 8.3)
+  //
+  // One filled accent on the form, and it is the control that writes (D66).
+  // `Add` and `Add tag` build a draft; the record changes when you save.
+  // -------------------------------------------------------------------------
+  describe("accent budget", () => {
+    test("has exactly one filled accent, and it is the submit", () => {
+      const { container } = render(<LocationCreateForm />);
+      expect(formAccentsIn(container)).toHaveLength(1);
+    });
+  });
+
 });

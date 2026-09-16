@@ -1,7 +1,53 @@
-﻿// src/pages/story/__tests__/SagaPage.test.tsx
+// src/pages/story/__tests__/SagaPage.test.tsx
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import SagaPage from "../SagaPage";
+
+// ---------------------------------------------------------------------------
+// Page-suite gate mock (shared across Tasks 8-13 -- see page-suite-mock.md)
+// ---------------------------------------------------------------------------
+let mockUser: { uid: string } | null = { uid: "user-1" };
+let mockIsResolving = false;
+let mockActiveGroupId: string | null = "group-1";
+let mockActiveCampaignId: string | null = "campaign-1";
+let mockGroups: Array<{ id: string; name: string }> = [
+  { id: "group-1", name: "The Fellowship" },
+];
+
+const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
+const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+
+jest.mock("features/user-management", () => ({
+  useAuth: () => ({ user: mockUser, loading: mockIsResolving }),
+  useGroups: () => ({
+    activeGroupId: mockActiveGroupId,
+    groups: mockGroups,
+    setActiveGroup: mockSetActiveGroup,
+  }),
+  useCampaigns: () => ({
+    activeCampaignId: mockActiveCampaignId,
+    activeCampaign: mockActiveCampaignId
+      ? { id: mockActiveCampaignId, name: "Phandelver" }
+      : null,
+    setActiveCampaign: mockSetActiveCampaign,
+  }),
+  SignInForm: () => <div data-testid="sign-in-form" />,
+  JoinGroupDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="join-group-dialog" /> : null,
+}));
+
+// useSelectableCampaigns fetches through this in the pick-campaign state.
+jest.mock("core/services/firebase", () => ({
+  __esModule: true,
+  default: {
+    campaign: {
+      getCampaigns: jest
+        .fn()
+        .mockResolvedValue([{ id: "campaign-2", name: "Icespire Peak" }]),
+    },
+  },
+}));
 
 // ---------------------------------------------------------------------------
 // Context / hook mocks
@@ -12,24 +58,16 @@ jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 
-let mockUser: { uid: string } | null = { uid: "user-1" };
-
-jest.mock("@/features/user-management", () => ({
-  useAuth: () => ({ user: mockUser }),
-}));
-
 interface SagaDataMock {
   saga: { title: string; content: string; lastUpdated?: string } | null;
   loading: boolean;
   error: string | null;
-  hasRequiredContext: boolean;
 }
 
 let mockSagaData: SagaDataMock = {
   saga: null,
   loading: false,
   error: null,
-  hasRequiredContext: true,
 };
 
 jest.mock("features/storytelling", () => ({
@@ -48,22 +86,34 @@ jest.mock("features/storytelling", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-jest.mock("../../../core/components/Typography", () => ({
-  __esModule: true,
-  default: ({ children, color, variant, className }: any) => (
-    <div
-      data-testid={
-        color
-          ? `typography-${color}`
-          : variant
-          ? `typography-${variant}`
-          : "typography-default"
-      }
-    >
-      {children}
-    </div>
-  ),
-}));
+// Typography is mapped to its real semantic tag (h1/h2/h3/h4, else `p`) so
+// that `getByRole("heading", ...)` works against both this page's own title
+// (via PageShell) and the shared gated panel's headings (via GatedPageState),
+// while still exposing the same `data-testid` scheme the existing assertions
+// below rely on.
+jest.mock("../../../core/components/Typography", () => {
+  const TAGS: Record<string, string> = { h1: "h1", h2: "h2", h3: "h3", h4: "h4" };
+  return {
+    __esModule: true,
+    default: ({ children, color, variant, className }: any) => {
+      const Tag = (TAGS[variant] || "p") as any;
+      return (
+        <Tag
+          data-testid={
+            color
+              ? `typography-${color}`
+              : variant
+              ? `typography-${variant}`
+              : "typography-default"
+          }
+          className={className}
+        >
+          {children}
+        </Tag>
+      );
+    },
+  };
+});
 
 jest.mock("shared/components/Breadcrumb", () => ({
   __esModule: true,
@@ -90,19 +140,9 @@ jest.mock("../../../core/components/Button", () => ({
   ),
 }));
 
-jest.mock("../../../core/components/Card", () => {
-  const Card = ({ children }: any) => (
-    <div data-testid="card">{children}</div>
-  );
-  Card.Content = ({ children }: any) => (
-    <div data-testid="card-content">{children}</div>
-  );
-  return { __esModule: true, default: Card };
-});
-
 jest.mock("lucide-react", () => ({
   Edit: () => <span data-testid="edit-icon" />,
-  Loader2: () => <span data-testid="loader-icon" />,
+  Lock: () => <span data-testid="lock-icon" />,
 }));
 
 jest.mock("../components/StoryViewTabs", () => ({
@@ -114,7 +154,11 @@ jest.mock("../components/StoryViewTabs", () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 function renderPage() {
-  return render(<SagaPage />);
+  return render(
+    <MemoryRouter>
+      <SagaPage />
+    </MemoryRouter>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -124,27 +168,71 @@ describe("SagaPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUser = { uid: "user-1" };
+    mockIsResolving = false;
+    mockActiveGroupId = "group-1";
+    mockActiveCampaignId = "campaign-1";
+    mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockSagaData = {
       saga: null,
       loading: false,
       error: null,
-      hasRequiredContext: true,
     };
   });
 
   // -------------------------------------------------------------------------
-  // Context missing
+  // Gated states
   // -------------------------------------------------------------------------
-  describe("missing required context", () => {
-    it("renders context missing message when hasRequiredContext is false", () => {
-      mockSagaData = { ...mockSagaData, hasRequiredContext: false };
+  describe("gated states", () => {
+    it("renders the page title while signed out", () => {
+      mockUser = null;
       renderPage();
-      expect(screen.getByText(/Please select a group and campaign/i)).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "The Campaign Saga" })
+      ).toBeInTheDocument();
     });
 
-    it("does NOT render BookViewer when context is missing", () => {
-      mockSagaData = { ...mockSagaData, hasRequiredContext: false };
+    it("asks a signed-out visitor to sign in, and never to select a group", () => {
+      mockUser = null;
       renderPage();
+      expect(
+        screen.getByRole("heading", { name: /sign in to read your campaign's story/i })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
+    });
+
+    // Rewritten: this used to assert the view tabs were hidden alongside the
+    // Edit Saga action while signed out. That was wrong -- StoryViewTabs is
+    // pure navigation between story views, not a control that acts on data,
+    // and the gated-states spec says navigation stays visible in every state
+    // because it is how someone arrives at these pages in the first place.
+    it("hides the Edit Saga action while signed out, but keeps the view tabs visible", () => {
+      mockUser = null;
+      renderPage();
+      expect(screen.queryByTestId("button-edit-saga")).not.toBeInTheDocument();
+      expect(screen.getByTestId("story-view-tabs")).toBeInTheDocument();
+    });
+
+    it("shows a skeleton and no message while context is still resolving", () => {
+      mockIsResolving = true;
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
+    });
+
+    // Rewritten: the pre-gate suite asserted this page's own
+    // "Please select a group and campaign..." copy, driven by
+    // `hasRequiredContext` (dropped from this page -- see the note above the
+    // component). `usePageGate` now derives the state and `GatedContent`
+    // renders the shared pick-campaign panel.
+    it("shows the shared pick-campaign panel, not the old copy, when context is missing", async () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      expect(
+        screen.queryByText(/please select a group and campaign/i)
+      ).not.toBeInTheDocument();
+      expect(
+        await screen.findByRole("heading", { name: /which campaign/i })
+      ).toBeInTheDocument();
       expect(screen.queryByTestId("book-viewer")).not.toBeInTheDocument();
     });
   });
@@ -153,10 +241,13 @@ describe("SagaPage", () => {
   // Loading state
   // -------------------------------------------------------------------------
   describe("loading state", () => {
-    it("shows loading message when loading is true", () => {
+    // Rewritten: `loading` now folds into the shared "resolving" state via
+    // `usePageGate`; the page's own Loader2/Card is gone.
+    it("shows a skeleton, not the page's own loading card, while loading is true", () => {
       mockSagaData = { ...mockSagaData, loading: true };
       renderPage();
-      expect(screen.getByText(/Loading saga\.\.\./i)).toBeInTheDocument();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+      expect(screen.queryByText(/Loading saga/i)).not.toBeInTheDocument();
     });
 
     it("does NOT render BookViewer while loading", () => {
@@ -282,6 +373,13 @@ describe("SagaPage", () => {
     it("shows last updated date when saga has lastUpdated", () => {
       renderPage();
       expect(screen.getByText(/Last updated:/i)).toBeInTheDocument();
+    });
+
+    it("renders the saga's own title as the page heading", () => {
+      renderPage();
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Epic of the Ages" })
+      ).toBeInTheDocument();
     });
   });
 

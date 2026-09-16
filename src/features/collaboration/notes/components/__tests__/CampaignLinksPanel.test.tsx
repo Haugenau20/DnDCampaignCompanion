@@ -131,6 +131,40 @@ describe('CampaignLinksPanel', () => {
     });
   });
 
+  describe('extraction disclosure', () => {
+    // A privacy page nobody opens is not a disclosure. The line belongs where
+    // the decision is made -- under the button that sends the text.
+    test('should say where the note text goes, beside the button that sends it', () => {
+      setupMocks();
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(
+        screen.getByText(/Sends this note's text to OpenAI/i)
+      ).toBeInTheDocument();
+    });
+
+    test('should link the disclosure to the privacy page section that explains it', () => {
+      setupMocks();
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(screen.getByRole('link', { name: /how this works/i })).toHaveAttribute(
+        'href',
+        '/privacy#entity-extraction'
+      );
+    });
+
+    test('should disclose even when the button is disabled', () => {
+      // The text still leaves the app the moment the button becomes usable,
+      // so the disclosure must not be conditional on the button's state.
+      setupMocks({ isExtractionAvailable: false });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      expect(
+        screen.getByText(/Sends this note's text to OpenAI/i)
+      ).toBeInTheDocument();
+    });
+  });
+
   describe('not scanned yet', () => {
     test('should say so for a note that has never been scanned', () => {
       setupMocks();

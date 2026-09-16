@@ -1,271 +1,265 @@
 // src/core/themes/definitions/__tests__/themes.test.ts
-// Sanity tests for all three theme definition files.
-// Verifies that each theme exports a valid Theme object matching types.ts,
-// and that key nested color values are non-empty strings.
+// Structural validation of both theme definitions.
+//
+// This used to hand-enumerate every key, which meant the test had to be edited
+// in lockstep with the model and could only ever check what someone remembered
+// to list. The token tree is enumerable, so traversal checks the whole set --
+// including the property the old test could not express at all: that the
+// themes define exactly the same token paths as each other.
 
 import { lightTheme } from '../lightTheme';
 import { darkTheme } from '../darkTheme';
-import { medievalTheme } from '../medievalTheme';
 import { themes } from '../index';
-import { Theme, ThemeColors, ThemeFonts, ThemeBorders } from '../../types';
+import { Theme, ThemeName, CueToken, ColorSchemeToken } from '../../types';
+import {
+  findIllegalEnumValues,
+  findWashPairingRatios,
+  verifyBorrowedRoles,
+  LEGAL_CUES,
+  LEGAL_SCHEMES,
+} from '../../derive';
+import { flattenTokens, variableNameFor, TokenTree } from '../../token-variables';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+const ALL: ReadonlyArray<[string, Theme]> = [
+  ['light', lightTheme],
+  ['dark', darkTheme],
+];
 
-/** Assert that a value is a non-empty string (CSS color, font string, etc.) */
-function expectNonEmptyString(value: unknown, path: string) {
-  expect(typeof value).toBe('string');
-  expect((value as string).trim().length).toBeGreaterThan(0);
-}
-
-/** Assert that a button variant has all three required keys with string values */
-function expectButtonVariant(
-  variant: { background: string; text: string; hover: string },
-  name: string
-) {
-  expectNonEmptyString(variant.background, `${name}.background`);
-  expectNonEmptyString(variant.text, `${name}.text`);
-  expectNonEmptyString(variant.hover, `${name}.hover`);
-}
-
-/** Full structural validation for any Theme object */
-function assertValidTheme(theme: Theme, themeName: string) {
-  // ------- Top-level name ---------------------------------------------------
-  describe(`${themeName} — name`, () => {
-    test('has a non-empty name string', () => {
-      expect(typeof theme.name).toBe('string');
-      expect(theme.name.length).toBeGreaterThan(0);
-    });
-  });
-
-  // ------- Colors -----------------------------------------------------------
-  describe(`${themeName} — colors`, () => {
-    test('has primary, secondary, accent colors as non-empty strings', () => {
-      expectNonEmptyString(theme.colors.primary, 'colors.primary');
-      expectNonEmptyString(theme.colors.secondary, 'colors.secondary');
-      expectNonEmptyString(theme.colors.accent, 'colors.accent');
-    });
-
-    test('has background.primary, background.secondary, background.accent', () => {
-      expectNonEmptyString(theme.colors.background.primary, 'background.primary');
-      expectNonEmptyString(theme.colors.background.secondary, 'background.secondary');
-      expectNonEmptyString(theme.colors.background.accent, 'background.accent');
-    });
-
-    test('has text.primary, text.secondary, text.accent', () => {
-      expectNonEmptyString(theme.colors.text.primary, 'text.primary');
-      expectNonEmptyString(theme.colors.text.secondary, 'text.secondary');
-      expectNonEmptyString(theme.colors.text.accent, 'text.accent');
-    });
-
-    test('has card.background and card.border', () => {
-      expectNonEmptyString(theme.colors.card.background, 'card.background');
-      expectNonEmptyString(theme.colors.card.border, 'card.border');
-    });
-
-    test('has all button variants with required sub-properties', () => {
-      expectButtonVariant(theme.colors.button.primary, 'button.primary');
-      expectButtonVariant(theme.colors.button.secondary, 'button.secondary');
-      expectButtonVariant(theme.colors.button.link, 'button.link');
-      expectButtonVariant(theme.colors.button.ghost, 'button.ghost');
-    });
-
-    test('button.outline has background, text, hover, border', () => {
-      expectNonEmptyString(theme.colors.button.outline.background, 'button.outline.background');
-      expectNonEmptyString(theme.colors.button.outline.text, 'button.outline.text');
-      expectNonEmptyString(theme.colors.button.outline.hover, 'button.outline.hover');
-      expectNonEmptyString(theme.colors.button.outline.border, 'button.outline.border');
-    });
-
-    test('has all status color properties', () => {
-      expectNonEmptyString(theme.colors.ui.statusGeneral, 'ui.statusGeneral');
-      expectNonEmptyString(theme.colors.ui.statusActive, 'ui.statusActive');
-      expectNonEmptyString(theme.colors.ui.statusCompleted, 'ui.statusCompleted');
-      expectNonEmptyString(theme.colors.ui.statusFailed, 'ui.statusFailed');
-      expectNonEmptyString(theme.colors.ui.statusUnknown, 'ui.statusUnknown');
-      expectNonEmptyString(theme.colors.ui.statusText, 'ui.statusText');
-    });
-
-    test('has header and footer background colors', () => {
-      expectNonEmptyString(theme.colors.ui.headerBackground, 'ui.headerBackground');
-      expectNonEmptyString(theme.colors.ui.footerBackground, 'ui.footerBackground');
-    });
-
-    test('has icon background and border colors', () => {
-      expectNonEmptyString(theme.colors.ui.iconBackground, 'ui.iconBackground');
-      expectNonEmptyString(theme.colors.ui.iconBorder, 'ui.iconBorder');
-    });
-
-    test('has all input styling properties', () => {
-      expectNonEmptyString(theme.colors.ui.inputBackground, 'ui.inputBackground');
-      expectNonEmptyString(theme.colors.ui.inputPlaceholder, 'ui.inputPlaceholder');
-      expectNonEmptyString(theme.colors.ui.inputBorder, 'ui.inputBorder');
-      expectNonEmptyString(theme.colors.ui.inputBorderFocus, 'ui.inputBorderFocus');
-      expectNonEmptyString(theme.colors.ui.inputRingFocus, 'ui.inputRingFocus');
-    });
-
-    test('has all input error state properties', () => {
-      expectNonEmptyString(theme.colors.ui.inputErrorBorder, 'ui.inputErrorBorder');
-      expectNonEmptyString(theme.colors.ui.inputErrorFocus, 'ui.inputErrorFocus');
-      expectNonEmptyString(theme.colors.ui.inputErrorRing, 'ui.inputErrorRing');
-    });
-
-    test('has all input success state properties', () => {
-      expectNonEmptyString(theme.colors.ui.inputSuccessBorder, 'ui.inputSuccessBorder');
-      expectNonEmptyString(theme.colors.ui.inputSuccessFocus, 'ui.inputSuccessFocus');
-      expectNonEmptyString(theme.colors.ui.inputSuccessRing, 'ui.inputSuccessRing');
-    });
-
-    test('has all form element state properties', () => {
-      expectNonEmptyString(theme.colors.ui.formDisabledBg, 'ui.formDisabledBg');
-      expectNonEmptyString(theme.colors.ui.formLabelText, 'ui.formLabelText');
-      expectNonEmptyString(theme.colors.ui.formHelperText, 'ui.formHelperText');
-      expectNonEmptyString(theme.colors.ui.formErrorText, 'ui.formErrorText');
-      expectNonEmptyString(theme.colors.ui.formSuccessText, 'ui.formSuccessText');
-    });
-
-    test('has delete button colors', () => {
-      // errorBackground and deleteButtonBackground are allowed to be 'transparent'
-      expect(typeof theme.colors.ui.errorBackground).toBe('string');
-      expect(typeof theme.colors.ui.deleteButtonBackground).toBe('string');
-      expectNonEmptyString(theme.colors.ui.deleteButtonText, 'ui.deleteButtonText');
-      expectNonEmptyString(theme.colors.ui.deleteButtonHover, 'ui.deleteButtonHover');
-    });
-
-    test('has all journal-specific color properties', () => {
-      expectNonEmptyString(theme.colors.ui.journalLeather, 'ui.journalLeather');
-      expectNonEmptyString(theme.colors.ui.journalBinding, 'ui.journalBinding');
-      expectNonEmptyString(theme.colors.ui.journalStitch, 'ui.journalStitch');
-      expectNonEmptyString(theme.colors.ui.journalPageShadow, 'ui.journalPageShadow');
-      expectNonEmptyString(theme.colors.ui.journalSectionDivider, 'ui.journalSectionDivider');
-      expectNonEmptyString(theme.colors.ui.journalCharacterCardBg, 'ui.journalCharacterCardBg');
-      expectNonEmptyString(theme.colors.ui.journalCharacterCardHover, 'ui.journalCharacterCardHover');
-      expectNonEmptyString(theme.colors.ui.journalQuestItemBg, 'ui.journalQuestItemBg');
-      expectNonEmptyString(theme.colors.ui.journalQuestItemHover, 'ui.journalQuestItemHover');
-      expectNonEmptyString(theme.colors.ui.journalActivityHover, 'ui.journalActivityHover');
-      expectNonEmptyString(theme.colors.ui.journalNotesArea, 'ui.journalNotesArea');
-    });
-  });
-
-  // ------- Fonts ------------------------------------------------------------
-  describe(`${themeName} — fonts`, () => {
-    test('has primary, secondary, and heading font strings', () => {
-      expectNonEmptyString(theme.fonts.primary, 'fonts.primary');
-      expectNonEmptyString(theme.fonts.secondary, 'fonts.secondary');
-      expectNonEmptyString(theme.fonts.heading, 'fonts.heading');
-    });
-  });
-
-  // ------- Borders ----------------------------------------------------------
-  describe(`${themeName} — borders`, () => {
-    test('has radius sm, md, lg', () => {
-      expectNonEmptyString(theme.borders.radius.sm, 'borders.radius.sm');
-      expectNonEmptyString(theme.borders.radius.md, 'borders.radius.md');
-      expectNonEmptyString(theme.borders.radius.lg, 'borders.radius.lg');
-    });
-
-    test('has width sm, md, lg', () => {
-      expectNonEmptyString(theme.borders.width.sm, 'borders.width.sm');
-      expectNonEmptyString(theme.borders.width.md, 'borders.width.md');
-      expectNonEmptyString(theme.borders.width.lg, 'borders.width.lg');
-    });
+/** Every leaf in a token tree, as dotted paths paired with their value. */
+function leaves(node: TokenTree, trail: string[] = []): Array<[string, string]> {
+  return Object.entries(node).flatMap(([key, value]) => {
+    const path = [...trail, key];
+    if (typeof value === 'string') return [[path.join('.'), value] as [string, string]];
+    // An ordered collection contributes one leaf per entry, indexed, so a
+    // missing or extra palette entry shows up as a path difference.
+    if (Array.isArray(value)) {
+      return value.map(
+        (entry, i) => [`${path.join('.')}[${i}]`, entry] as [string, string]
+      );
+    }
+    return leaves(value, path);
   });
 }
 
-// ---------------------------------------------------------------------------
-// Run structural validation for each theme
-// ---------------------------------------------------------------------------
+const treeOf = (theme: Theme) => theme.tokens as unknown as TokenTree;
 
-describe('lightTheme', () => {
-  test('exports a Theme with name "light"', () => {
-    expect(lightTheme.name).toBe('light');
-  });
+describe('theme definitions', () => {
+  describe.each(ALL)('%s', (name, theme) => {
+    test('declares its own name', () => {
+      expect(theme.name).toBe(name);
+    });
 
-  test('primary color is a hex string starting with #', () => {
-    expect(lightTheme.colors.primary).toMatch(/^#/);
-  });
+    test('every token is a non-empty string', () => {
+      const bad = leaves(treeOf(theme)).filter(
+        ([, value]) => typeof value !== 'string' || value.trim().length === 0
+      );
+      expect(bad).toEqual([]);
+    });
 
-  test('card background is white (#FFFFFF)', () => {
-    expect(lightTheme.colors.card.background.toUpperCase()).toBe('#FFFFFF');
-  });
+    test('defines a substantial number of tokens', () => {
+      expect(leaves(treeOf(theme)).length).toBeGreaterThan(90);
+    });
 
-  assertValidTheme(lightTheme, 'lightTheme');
-});
+    test('no two token paths derive the same variable name', () => {
+      // flattenTokens throws on collision rather than letting one token
+      // silently overwrite another.
+      expect(() => flattenTokens(treeOf(theme))).not.toThrow();
+    });
 
-describe('darkTheme', () => {
-  test('exports a Theme with name "dark"', () => {
-    expect(darkTheme.name).toBe('dark');
-  });
-
-  test('primary color is a hex string starting with #', () => {
-    expect(darkTheme.colors.primary).toMatch(/^#/);
-  });
-
-  test('background primary is dark (not white)', () => {
-    // Dark theme must not accidentally be set to white background
-    expect(darkTheme.colors.background.primary.toUpperCase()).not.toBe('#FFFFFF');
-    expect(darkTheme.colors.background.primary.toUpperCase()).not.toBe('#FFF');
-  });
-
-  assertValidTheme(darkTheme, 'darkTheme');
-});
-
-describe('medievalTheme', () => {
-  test('exports a Theme with name "medieval"', () => {
-    expect(medievalTheme.name).toBe('medieval');
-  });
-
-  test('primary color is deep red (#8B0000)', () => {
-    expect(medievalTheme.colors.primary.toUpperCase()).toBe('#8B0000');
-  });
-
-  test('accent color is golden (#DAA520)', () => {
-    expect(medievalTheme.colors.accent.toUpperCase()).toBe('#DAA520');
-  });
-
-  test('heading font includes a serif or decorative font', () => {
-    // Medieval heading should be a decorative font, not a system sans-serif
-    expect(medievalTheme.fonts.heading).not.toMatch(/sans-serif/i);
-  });
-
-  assertValidTheme(medievalTheme, 'medievalTheme');
-});
-
-// ---------------------------------------------------------------------------
-// definitions/index — themes record
-// ---------------------------------------------------------------------------
-
-describe('themes record (definitions/index)', () => {
-  test('exports a record containing all three themes', () => {
-    expect(themes).toHaveProperty('light');
-    expect(themes).toHaveProperty('dark');
-    expect(themes).toHaveProperty('medieval');
-  });
-
-  test('themes.light is the same object as lightTheme export', () => {
-    expect(themes.light).toBe(lightTheme);
-  });
-
-  test('themes.dark is the same object as darkTheme export', () => {
-    expect(themes.dark).toBe(darkTheme);
-  });
-
-  test('themes.medieval is the same object as medievalTheme export', () => {
-    expect(themes.medieval).toBe(medievalTheme);
-  });
-
-  test('each theme in the record has a name matching its key', () => {
-    (Object.keys(themes) as Array<keyof typeof themes>).forEach((key) => {
-      expect(themes[key].name).toBe(key);
+    test('every surface defines every role', () => {
+      // No partial surfaces: a surface that omits a role forces the consumer
+      // to reach for another surface's value, which is how ink and background
+      // drift apart in the first place.
+      Object.entries(theme.tokens.surface).forEach(([surfaceName, pair]) => {
+        expect({ surface: surfaceName, roles: Object.keys(pair).sort() }).toEqual({
+          surface: surfaceName,
+          roles: ['bg', 'border', 'hover', 'on', 'onMuted', 'selected'].sort(),
+        });
+      });
     });
   });
 
-  test('all three ThemeNames are present — no theme was accidentally removed', () => {
-    const keys = Object.keys(themes);
-    expect(keys).toContain('light');
-    expect(keys).toContain('dark');
-    expect(keys).toContain('medieval');
-    expect(keys).toHaveLength(3);
+  // -------------------------------------------------------------------------
+  // Enum tokens
+  // -------------------------------------------------------------------------
+  //
+  // `scheme` is the first enum token in this model, and it is checked
+  // differently from every colour above it. `01-token-model.md` section 6 is
+  // explicit about why: "Validating an enum means checking the **value** is
+  // legal, not just that the variable exists. That is a stronger guarantee than
+  // a spelling check."
+  //
+  // Everything else here proves a token is *present* and that the themes agree
+  // on the *set* of paths. Neither would notice `scheme: 'drak'`, which would
+  // sail through the manifest as a defined variable and then be silently
+  // ignored by the browser -- `color-scheme` drops values it does not
+  // recognise, so the failure looks exactly like the bug this PR fixes.
+  //
+  // This is Q2's first concrete instance in the app. The package question --
+  // whether `theme-contract` validates enum values or only existence -- is
+  // still open, but it now has a worked answer to inherit rather than a
+  // hypothetical.
+  describe('enum tokens carry a legal value, not merely a present one', () => {
+
+    test.each(ALL)('%s declares a scheme the browser understands', (_name, theme) => {
+      expect(LEGAL_SCHEMES).toContain(theme.tokens.scheme);
+    });
+
+    // The check above passes for a theme that declares nothing, if `scheme`
+    // were ever made optional -- `toContain` on undefined would throw, but a
+    // reader should not have to work that out. Asserted directly.
+    test.each(ALL)('%s declares a scheme at all', (_name, theme) => {
+      expect(typeof theme.tokens.scheme).toBe('string');
+    });
+
+    // The theme's name is not the source of truth, but where a theme *is*
+    // named after its scheme the two must not contradict each other -- that
+    // would be a typo, not a design choice. A future theme named for something
+    // other than its scheme simply is not covered by this.
+    test.each(ALL)('%s does not contradict its own name', (name, theme) => {
+      if (name === 'light' || name === 'dark') {
+        expect(theme.tokens.scheme).toBe(name);
+      }
+    });
+
+    // `cue` is the second instance of the shape, and the first with more than
+    // one member in play. It fails the same silent way: `cue.failure: 'hatchh'`
+    // defines the variable, satisfies the manifest, and paints no hatching --
+    // which matters because 12-4's hatch is not decoration. It is what makes
+    // the accent and `outcome.failed`, 40 degrees apart on a warm palette, safe
+    // for a deuteranopic reader.
+    test.each(ALL)('%s declares legal cue values', (_name, theme) => {
+      expect({
+        failure: LEGAL_CUES.includes(theme.tokens.cue.failure),
+        negation: LEGAL_CUES.includes(theme.tokens.cue.negation),
+      }).toEqual({ failure: true, negation: true });
+    });
+
+    // Existence, asserted separately for the reason given above `scheme`'s:
+    // `toContain` on undefined throws rather than failing usefully.
+    test.each(ALL)('%s declares both cues at all', (_name, theme) => {
+      expect([typeof theme.tokens.cue.failure, typeof theme.tokens.cue.negation]).toEqual([
+        'string',
+        'string',
+      ]);
+    });
+
+    // The checks above are only worth having if they can fail, and a gate that
+    // has never been seen to fail is indistinguishable from one that cannot.
+    // `findIllegalEnumValues` is the same function generation itself runs, so
+    // this pins the real gate rather than a restatement of it.
+    describe('the check rejects what it is meant to reject', () => {
+      test('a misspelt cue is caught, and named', () => {
+        const broken = {
+          ...lightTheme.tokens,
+          cue: { ...lightTheme.tokens.cue, failure: 'hatchh' as CueToken },
+        };
+        expect(findIllegalEnumValues(broken)).toEqual([
+          { token: 'cue.failure', value: 'hatchh', legal: LEGAL_CUES },
+        ]);
+      });
+
+      test("a scheme the browser would drop is caught", () => {
+        const broken = { ...lightTheme.tokens, scheme: 'drak' as ColorSchemeToken };
+        expect(findIllegalEnumValues(broken).map((e) => e.token)).toEqual(['scheme']);
+      });
+
+      test('both real themes are clean', () => {
+        expect(ALL.map(([n, t]) => [n, findIllegalEnumValues(t.tokens)])).toEqual([
+          ['light', []],
+          ['dark', []],
+        ]);
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The wash pairing
+  // -------------------------------------------------------------------------
+  //
+  // Schema section 5.6 forbids one combination: `feedback.*.ink` on its own
+  // `wash`. A washed banner takes `surface.*.on` for its text, so the hue
+  // appears as the boundary and never as the text on top of itself.
+  //
+  // Stated as prose that reads like a stylistic preference, which is exactly
+  // why it is measured here. Three of the eight mode-and-state combinations
+  // fall below AA, and *which* three differs by mode -- light's warning and
+  // progress, dark's error. An asymmetry in that shape is what gets shipped by
+  // eye and caught by a gate.
+  describe('the one pairing rule these scales carry', () => {
+    test.each(ALL)('%s: the legal banner clears AA on every content ground', (_name, theme) => {
+      // Background `wash`, border `edge`, text `surface.*.on`. This is the
+      // composition the generator gates, and it is green -- which is the half
+      // of the rule that says what to *do*.
+      expect(() => verifyBorrowedRoles(theme.tokens)).not.toThrow();
+    });
+
+    // The other half: the forbidden pairing is genuinely unsafe, not merely
+    // discouraged. A rule nobody has watched bind is indistinguishable from
+    // one that does not.
+    test('ink on its own wash fails AA in three of eight combinations', () => {
+      const below = ALL.flatMap(([mode, theme]) =>
+        findWashPairingRatios(theme.tokens)
+          .filter((pairing) => pairing.ratio < 4.5)
+          .map((pairing) => `${mode}.${pairing.scale}`)
+      );
+      expect(below.sort()).toEqual(['dark.error', 'light.progress', 'light.warning']);
+    });
+
+    // Pinned as numbers as well as a count, because "three fail" would still
+    // hold if every ratio moved. These are the schema's own measurements.
+    test.each(ALL)('%s: the measured ratios are the schema section 5.6 table', (name, theme) => {
+      const measured = Object.fromEntries(
+        findWashPairingRatios(theme.tokens).map((p) => [p.scale, p.ratio])
+      );
+      expect(measured).toEqual(
+        name === 'light'
+          ? { error: 5.57, warning: 4.39, success: 4.67, progress: 4.39 }
+          : { error: 3.99, warning: 4.95, success: 4.92, progress: 4.95 }
+      );
+    });
+  });
+
+  test('both themes define exactly the same token paths', () => {
+    const paths = ALL.map(([, t]) => leaves(treeOf(t)).map(([p]) => p).sort());
+    const [light, dark] = paths;
+    // Compared against light in both directions so a missing *or* extra token
+    // in dark is named in the failure.
+    expect(dark).toEqual(light);
+  });
+
+  test('the themes index exposes both by name', () => {
+    expect(Object.keys(themes).sort()).toEqual(['dark', 'light']);
+    (Object.keys(themes) as ThemeName[]).forEach((n) => {
+      expect(themes[n].name).toBe(n);
+    });
+  });
+});
+
+describe('variableNameFor', () => {
+  test('joins path segments with hyphens', () => {
+    expect(variableNameFor(['color', 'primary'])).toBe('--color-primary');
+  });
+
+  test('splits camelCase inside a segment', () => {
+    expect(variableNameFor(['surface', 'card', 'onMuted'])).toBe('--surface-card-on-muted');
+  });
+
+  test('is stable for already-lowercase paths', () => {
+    expect(variableNameFor(['border', 'width', 'sm'])).toBe('--border-width-sm');
+  });
+});
+
+describe('flattenTokens', () => {
+  test('rejects two paths that derive one name', () => {
+    const ambiguous = {
+      surface: { onMuted: '#000', 'on-muted': '#fff' },
+    } as unknown as TokenTree;
+    expect(() => flattenTokens(ambiguous)).toThrow(/Ambiguous token path/);
+  });
+
+  test('produces one entry per leaf', () => {
+    const flat = flattenTokens(treeOf(lightTheme));
+    expect(Object.keys(flat).length).toBe(leaves(treeOf(lightTheme)).length);
   });
 });

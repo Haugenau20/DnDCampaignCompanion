@@ -184,11 +184,6 @@ describe("CampaignBanner", () => {
       expect(screen.queryByText("Group:")).not.toBeInTheDocument();
     });
 
-    it("renders the view toggle passed as `action`", () => {
-      render(<CampaignBanner action={<button type="button">Journal</button>} />);
-      expect(screen.getByRole("button", { name: "Journal" })).toBeInTheDocument();
-    });
-
     it("shows the chapter count in the meta line when given one", () => {
       render(<CampaignBanner chapterCount={39} />);
       expect(screen.getByText("Chapter 39")).toBeInTheDocument();

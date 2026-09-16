@@ -69,7 +69,7 @@ const EntityCard: React.FC<EntityCardProps> = ({
    */
   const getConfidenceColorClass = (confidence: number): string => {
     if (confidence >= 0.8) return "typography-success";
-    if (confidence >= 0.5) return "status-unknown";
+    if (confidence >= 0.5) return "feedback-warning";
     return "typography-error";
   };
 
@@ -92,7 +92,7 @@ const EntityCard: React.FC<EntityCardProps> = ({
 
   return (
     <Card 
-      className={`border-l-4 ${entity.isConverted ? "status-completed" : "status-active"}`}
+      className={`border-l-4 ${entity.isConverted ? "feedback-success-edge" : "feedback-progress-edge"}`}
     >
       <Card.Content className="p-4">
         <div className="flex items-center gap-4">

@@ -2,7 +2,7 @@
 // Behavioral tests for Navigation component.
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Navigation, { navItems } from "../Navigation";
 
@@ -123,7 +123,7 @@ describe("Navigation", () => {
   // Active state
   // -------------------------------------------------------------------------
   describe("active state", () => {
-    test("should mark the active path item with navigation-item-active class", () => {
+    test("should mark the active path item with nav-item-active class", () => {
       setupHook({ activePath: "/npcs" });
       render(<Navigation />);
 
@@ -131,21 +131,38 @@ describe("Navigation", () => {
       const npcBtns = screen.getAllByRole("button", { name: /npcs/i });
       // At least one button should have the active class
       const activeBtn = npcBtns.find((b) =>
-        b.classList.contains("navigation-item-active")
+        b.classList.contains("nav-item-active")
       );
       expect(activeBtn).toBeDefined();
     });
 
-    test("should mark inactive paths with navigation-item class, not navigation-item-active", () => {
+    test("should mark inactive paths with nav-item class, not nav-item-active", () => {
       setupHook({ activePath: "/npcs" });
       render(<Navigation />);
 
       // Story buttons should NOT be active
       const storyBtns = screen.getAllByRole("button", { name: /story/i });
       const anyActive = storyBtns.some((b) =>
-        b.classList.contains("navigation-item-active")
+        b.classList.contains("nav-item-active")
       );
       expect(anyActive).toBe(false);
+    });
+
+    test("each nav list declares the surface it sits on", () => {
+      // R40's defect, generalised: `.nav-item` takes its ink from four
+      // indirection variables, and a list that declares no surface resolves
+      // them to nothing -- unstyled ink, silently. The two lists here sit on
+      // DIFFERENT surfaces: the desktop row is in the chrome, and the mobile
+      // bar wears `.navigation`, which paints a card background. The mobile bar
+      // took chrome ink on that card ground until D107 -- 1.09:1 in light.
+      setupHook({ activePath: "/npcs" });
+      const { container } = render(<Navigation />);
+
+      const lists = Array.from(container.querySelectorAll("nav"));
+      expect(lists.length).toBeGreaterThan(0);
+      lists.forEach((list) => {
+        expect(list.className).toMatch(/nav-on-(chrome|card|sunken|page)/);
+      });
     });
 
     test("should call shouldHighlightPath for each nav item", () => {
@@ -253,6 +270,50 @@ describe("Navigation", () => {
       expect(keyWarning).toBe(false);
 
       errorSpy.mockRestore();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Overflow -- the last two destinations fold into a "More" menu below `nav`
+  // -------------------------------------------------------------------------
+  describe("Navigation overflow", () => {
+    it("keeps the last two destinations out of the inline row below the nav breakpoint", () => {
+      render(<Navigation variant="inline" />);
+      const locations = screen.getByRole("button", { name: "Locations" });
+      expect(locations.className).toContain("hidden");
+      expect(locations.className).toContain("nav:block");
+    });
+
+    it("offers a More menu holding exactly the two folded destinations", async () => {
+      render(<Navigation variant="inline" />);
+      await userEvent.click(screen.getByRole("button", { name: /more/i }));
+      const menu = screen.getByRole("menu", { name: "More destinations" });
+      const items = within(menu).getAllByRole("menuitem");
+      expect(items.map((i) => i.textContent)).toEqual(["Locations", "Notes"]);
+    });
+
+    it("navigates from a More menu item", async () => {
+      render(<Navigation variant="inline" />);
+      await userEvent.click(screen.getByRole("button", { name: /more/i }));
+      await userEvent.click(screen.getByRole("menuitem", { name: "Notes" }));
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/notes");
+    });
+
+    it("hides the More button's wrapper (button and panel together) at and above the nav breakpoint", () => {
+      // Relocated from the button itself: leaving the class on the button
+      // left an empty `div.relative` as a flex item in the nav row above the
+      // breakpoint, costing dead `gap` space and keeping an open panel
+      // rendered (just invisible) if the viewport widened past `nav` while
+      // it was open. The wrapper now carries the class instead.
+      render(<Navigation variant="inline" />);
+      const moreButton = screen.getByRole("button", { name: /more/i });
+      expect(moreButton.parentElement?.className).toContain("nav:hidden");
+      expect(moreButton.className).not.toContain("nav:hidden");
+    });
+
+    it("leaves the mobile strip carrying all seven destinations", () => {
+      render(<Navigation variant="mobile" />);
+      expect(screen.getAllByRole("button")).toHaveLength(7);
     });
   });
 });
