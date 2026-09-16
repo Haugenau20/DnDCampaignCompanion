@@ -3850,6 +3850,37 @@ The token-level story is smaller than it looks: `outcome.*` still backs
 unused. Worth a decision once the ramp has been lived with.
 
 
+### R71 - the band separator becomes a pill, and the NPC label says "unknown"
+Date: 2026-09-16   Status: landed
+
+Two maintainer notes on D119's bars.
+
+The separator D118 added was a 1px hairline in the card colour. It is now a 3px
+gap with a 999px radius on each band, so the bands read as separate pills on the
+sunken rail rather than as one bar with seams. Same mechanism, same reason --
+the separation stays structural and asks nothing of the palette -- and the gate
+in `roster-band-separation.test.ts` moved with it, including an assertion that
+the rule carries no colour of its own.
+
+Two details the change needed. The gap lives on a new `.roster-bands` class
+rather than on `.progress-container`, which six single-fill bars share and which
+would have grown a gap it has no use for. And `.roster-band` takes a `min-width`
+equal to the bar's height, because flex shrinks the bands to make room for the
+gaps and a band holding one item out of fifty would otherwise end up thinner
+than the gap beside it.
+
+That file's measurements were also stale: they still read the knowledge ladder
+and the old quest tokens, neither of which any bar paints since D119. They now
+measure the valence fills, and they measure the *widest* spacing the ramp offers
+as well -- stops 0/2/4, what a three-state scale uses -- because the interesting
+claim is that even those neighbours fall short of 3:1. The instinct on seeing a
+bar like this is to pick better colours; the file exists to show that the ramp
+cannot be spread far enough without destroying the ordering it encodes.
+
+The NPC band labelled "unrecorded" now reads "unknown", matching the stored
+`NPCStatus` value and the filter control beside it.
+
+
 ### Q19 - can an ordered collection have named siblings?
 Date: 2026-09-15   Status: open
 `TokenTree` supports a record or an array, and `knowledge` is the first token to

@@ -157,7 +157,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
     return [
       // Best to worst, left to right, like every other directory's bar.
       { key: 'alive', label: 'alive', count: count('alive'), colorClass: 'bg-valence-0' },
-      { key: 'unknown', label: 'unrecorded', count: count('unknown'), colorClass: 'bg-valence-1' },
+      { key: 'unknown', label: 'unknown', count: count('unknown'), colorClass: 'bg-valence-1' },
       { key: 'missing', label: 'missing', count: count('missing'), colorClass: 'bg-valence-3' },
       { key: 'deceased', label: 'deceased', count: count('deceased'), colorClass: 'bg-valence-4' },
     ];

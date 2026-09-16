@@ -77,7 +77,7 @@ export const RosterStatusBar: React.FC<RosterStatusBarProps> = ({
 
       <div className="flex-1 flex flex-col gap-2 min-w-0">
         <div
-          className={clsx('flex h-[7px] rounded-full overflow-hidden', `progress-container`)}
+          className={clsx('flex h-[7px] rounded-full roster-bands', `progress-container`)}
         >
           {present.map(segment => (
             <span

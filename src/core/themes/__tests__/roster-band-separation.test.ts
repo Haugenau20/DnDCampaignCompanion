@@ -1,19 +1,20 @@
 // src/core/themes/__tests__/roster-band-separation.test.ts
-// Why the directory summary bars separate their bands with a hairline.
+// Why the directory summary bars draw their bands as separate pills.
 //
 // Every contrast rule the schema states is written against a *surface*: an ink
 // against the page, a border against the card. The summary bar breaks that
-// assumption, because its bands sit flush against one another, and a band's
-// only real ground is the band beside it. Nothing measured that pairing, and
-// two of the four directories shipped bars whose bands were hard to tell apart.
+// assumption. Its bands sit side by side, so a band's only real ground is the
+// band beside it, and no gate looks at that pairing.
 //
-// This file measures it, and pins the structural fix. The fix is structural on
-// purpose: the knowledge ladder separates its rungs by lightness alone, which
-// is what lets it survive greyscale and colour blindness as a value ramp
-// (schema section 2), and that same property is what leaves adjacent rungs
-// close together. No choice of hue or chroma escapes it -- raising chroma moves
-// all three rungs together -- so the bands are separated by a gap instead of by
-// asking the scale for a contrast it is not built to give.
+// The numbers are far worse than they look, and this file measures them rather
+// than asserting them, because the instinct is to fix a bar like this by
+// choosing better colours. That does not work here, and the reason is the point
+// of the file: the valence ramp is *supposed* to move smoothly from one stop to
+// the next, so neighbouring stops are necessarily close. Spreading them until
+// each cleared 3:1 against the next would need far more than five stops' worth
+// of room and would wreck the ordering the ramp exists to express.
+//
+// So the separation is structural and costs the palette nothing.
 
 import * as fs from "fs";
 import * as path from "path";
@@ -34,29 +35,24 @@ const NON_TEXT_MINIMUM = 3;
 describe("the bands do not separate themselves", () => {
   describe.each(MODES)("%s", (mode) => {
     const tokens = deriveTokens(mode);
+    const fills = [0, 1, 2, 3, 4].map((i) => tokens.valence[i as 0].fill);
 
-    test("adjacent knowledge rungs fall short of the non-text threshold", () => {
-      // The locations bar, and the rumours bar, in ladder order.
-      const ladder = [tokens.knowledge[0], tokens.knowledge[1], tokens.knowledge[2]];
-      const adjacent = [
-        contrastRatio(ladder[0], ladder[1]),
-        contrastRatio(ladder[1], ladder[2]),
-      ];
+    test("no two neighbouring stops clear the non-text threshold", () => {
+      // What every bar on every directory actually paints, in the order it
+      // paints them. Nothing here comes close to 3:1.
+      const adjacent = fills.slice(1).map((fill, i) => contrastRatio(fills[i], fill));
       expect(Math.max(...adjacent)).toBeLessThan(NON_TEXT_MINIMUM);
     });
 
-    test("so do the quest bar's, which only hue has ever separated", () => {
-      // Worth measuring because it is the counter-intuitive half: the quest bar
-      // looks fine, and its bands are the *closest* of any bar in luminance.
-      // Active against completed is near 1:1. It reads only because those two
-      // differ in hue -- which is exactly what a non-valenced scale refuses to
-      // do, so the moment a scale stops supplying hue the bar has nothing left.
-      const bands = [tokens.accent.fill, tokens.outcome.succeeded, tokens.outcome.failed.fill];
-      const adjacent = [
-        contrastRatio(bands[0], bands[1]),
-        contrastRatio(bands[1], bands[2]),
+    test("not even the two stops a three-state scale skips between", () => {
+      // Rumours, locations and quests use stops 0, 2 and 4 -- the widest
+      // spacing the ramp offers. Even those neighbours fall short, so this is
+      // not a problem confined to the four-stop NPC bar.
+      const widest = [
+        contrastRatio(fills[0], fills[2]),
+        contrastRatio(fills[2], fills[4]),
       ];
-      expect(Math.max(...adjacent)).toBeLessThan(NON_TEXT_MINIMUM);
+      expect(Math.max(...widest)).toBeLessThan(NON_TEXT_MINIMUM);
     });
   });
 });
@@ -68,27 +64,30 @@ describe("so the bar separates them", () => {
     return source.slice(at, source.indexOf("}", at));
   };
 
-  test("every band after the first carries a hairline", () => {
-    // The adjacent-sibling selector matters: a border on every band would draw
-    // one against the rounded end of the track as well.
-    const body = ruleBody(".roster-band + .roster-band");
-    expect(/border-left:\s*1px solid/.test(body)).toBe(true);
+  test("each band is its own pill", () => {
+    // Not a shared rounded track with the bands butting inside it: the radius
+    // is on the band, so every band has two rounded ends and reads as a
+    // separate object rather than as a slice of one bar.
+    expect(ruleBody(".roster-band")).toMatch(/border-radius:\s*999px/);
   });
 
-  test("the hairline is the card's own colour, so it reads as a gap", () => {
-    // Not a fifth colour, and not a hardcoded one. Any other token here would
-    // be a new visual element that means nothing; the card showing through is
-    // the absence of a band, which is what a separator should look like.
-    const body = ruleBody(".roster-band + .roster-band");
-    expect(body).toContain("var(--surface-card-bg)");
-    expect(body).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  test("and the bands are held apart by a gap", () => {
+    // The gap is what the separation actually rests on. A radius with no gap
+    // would put two rounded ends flush against each other and separate nothing.
+    expect(ruleBody(".roster-bands")).toMatch(/gap:\s*[1-9]/);
   });
 
-  test("the separator is not itself a colour cue", () => {
-    // If this rule ever grows a background or an opacity it has stopped being
-    // a gap and started being decoration, which would put it back inside the
-    // colour system it exists to work around.
-    const body = ruleBody(".roster-band + .roster-band");
-    expect(body).not.toMatch(/background|opacity/);
+  test("a band never collapses below the bar's own height", () => {
+    // One item out of fifty is 2% of the width, which at this bar's height is
+    // thinner than the gap beside it. The floor keeps it a dot.
+    expect(ruleBody(".roster-band")).toMatch(/min-width:\s*7px/);
+  });
+
+  test("the separation asks nothing of the palette", () => {
+    // The point of doing this structurally. If the rule ever grows a colour it
+    // has become a fourth thing on the bar competing with the five that carry
+    // meaning -- and it would have to clear its own contrast bar to be seen.
+    const band = ruleBody(".roster-band") + ruleBody(".roster-bands");
+    expect(band).not.toMatch(/#[0-9a-fA-F]{3,8}|var\(--|background|color:/);
   });
 });
