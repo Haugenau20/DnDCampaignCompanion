@@ -24,10 +24,6 @@
     color: var(--accent-ink);
   }
 
-  .bg-primary {
-    background-color: var(--surface-page-bg);
-  }
-
   .bg-secondary {
     background-color: var(--surface-sunken-bg);
   }
@@ -202,11 +198,6 @@
 
   .typography-success {
     color: var(--field-success-text);
-  }
-
-  .typography-label {
-    color: var(--surface-page-on);
-    font-weight: 500;
   }
 
   /* ====== INPUT COMPONENT ====== */
@@ -611,16 +602,6 @@
     border-color: var(--feedback-warning-edge);
   }
 
-  .feedback-banner-success {
-    background-color: var(--feedback-success-wash);
-    border-color: var(--feedback-success-edge);
-  }
-
-  .feedback-banner-progress {
-    background-color: var(--feedback-progress-wash);
-    border-color: var(--feedback-progress-edge);
-  }
-
   /* ====== ICON STYLING ====== */
   .icon-bg {
     background-color: var(--icon-bg);
@@ -823,17 +804,6 @@
     background-color: var(--surface-band-on-muted);
   }
 
-  /*
-    The image slot. It is empty in this phase and will be empty for most campaigns
-    most of the time, so the border and radius are the design rather than a
-    placeholder outline waiting to be replaced.
-  */
-  .hero-slot {
-    border-radius: var(--border-radius-lg);
-    overflow: hidden;
-    box-shadow: 0 0 0 var(--border-width-sm) var(--surface-band-border);
-  }
-
   /* ====== IMAGE SLOT ====== */
 /* The empty state for a reserved image slot. */
 .image-slot {
@@ -851,7 +821,7 @@
   surface it is drawn on rather than the page's.
 */
 .image-slot-caption {
-  color: var(--surface-sunken-on-muted, var(--surface-page-on-muted));
+  color: var(--surface-sunken-on-muted);
 }
 
 /* ====== COLLECTION CHROME ====== */
@@ -1028,12 +998,6 @@
   .hint {
     background-color: var(--surface-card-selected);
     color: var(--accent-ink);
-  }
-
-  /* ====== SPINNER ====== */
-  .spinner-border {
-    border-color: var(--field-border);
-    border-top-color: var(--accent-ink);
   }
 
   /* ====== BOOK VIEWER ====== */

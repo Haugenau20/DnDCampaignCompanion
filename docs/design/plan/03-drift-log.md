@@ -4011,6 +4011,132 @@ the question is whether the scale is complete rather than whether the classes
 are dead.
 
 
+### D122 - R73 is closed: dead classes get a gate, and there were six
+Date: 2026-09-16   Status: landed
+
+R73 listed eight CSS classes with no consumer and declined to remove them,
+because "a class-level sweep needs every template-assembled name enumerated
+first, which is a piece of work in its own right". That enumeration turned out
+to be one pattern, and doing it found that the list was wrong in both
+directions.
+
+**Wrong by three, too many.** `icon-bg`, `feedback-progress` and
+`feedback-error-edge` all have live consumers.
+
+**Wrong by one, too few.** `typography-label` was struck off R73's list as a
+false positive, reached via `` `typography-${variant}` ``. There is no such
+template. `Typography.tsx` writes every one of its eight classes as a whole
+literal, so the ordinary scan reaches all of them and `typography-label` was
+dead exactly as first suspected. An exemption asserted rather than measured is
+the same defect as a list asserted rather than measured; it just fails silently
+instead of loudly.
+
+Six deleted: `bg-primary`, `hero-slot`, `spinner-border`, `typography-label`,
+`feedback-banner-success`, `feedback-banner-progress`.
+
+**The gate, `css-class-manifest.test.ts`**, is `token-manifest`'s shape one
+level up: every class a theme stylesheet defines must be applied by some
+non-test source, and every declared exemption must still match a class that
+exists. It covers `src/core/themes/css/` only; `globals.css`'s four utilities
+are out of scope deliberately, being Tailwind-shaped rather than design-system
+surfaces.
+
+**The second direction paid for itself before the first one did.** The
+exemption list was drafted at six prefixes, from a grep for the backtick form.
+Five of them matched no class at all, and the check said so: `affiliation-`
+names a React key rather than a class, and `npc-status-` / `npc-relationship-`
+appear only inside comments in three directories explaining that they spell
+their classes out *rather than* building the template. Prose about a pattern
+greps identically to the pattern. One real exemption survives,
+`` `button-${variant}` ``, so the exempted surface is six classes rather than
+the forty the first draft would have waved through.
+
+**The two gates compose, which is the part worth keeping.** Deleting the banner
+pair turned the class gate green and the orphan gate red: `--feedback-success-wash`
+and `--feedback-progress-wash` had no other reader. So a class deletion cannot
+quietly strand a token -- R72's check catches what this one causes. The two
+washes are now declared unused with their reason. The edges survive on their own
+classes, and the scale keeps all four states: the gap is in the consumers, not
+the contract, and a future success banner should find its ground defined rather
+than borrow the error one's. Directed by the maintainer, who was given the
+delete / keep-declared / wire-them-up choice.
+
+What this does not cover, stated so the next audit does not have to rediscover
+it: a class applied to the wrong element, and a misspelling inside the one
+exempted prefix.
+
+### D123 - Q5 is answered: the last fallback chain is removed
+Date: 2026-09-16   Status: landed
+
+D5 made every new token resolve to the token it replaced, which is what let
+Phase 1 introduce the whole model while staying screenshot-identical and what
+kept unmigrated themes correct for ten phases. Q5 asked when that scaffolding
+comes down, and proposed: once every remaining theme defines the token.
+
+That condition is met and has been since Phase 11. Medieval is gone (D40);
+light and dark each define all 139 leaves. One chain had survived the sweep --
+`.image-slot-caption` reading
+`var(--surface-sunken-on-muted, var(--surface-page-on-muted))` -- and both
+themes define `--surface-sunken-on-muted` (`#605953` light, `#AEA69F` dark), so
+the second half had been unreachable rather than load-bearing for two phases.
+Now `var(--surface-sunken-on-muted)`.
+
+Worth stating plainly, because the rule was called load-bearing for most of
+this plan's life: nothing in `src` now depends on a fallback, and a variable
+that fails to resolve fails visibly instead of quietly landing on a
+near-neighbour. `token-manifest.test.ts` is what makes that safe to say -- it
+proves every consumed variable is one a theme defines, which is precisely the
+guarantee the fallback was standing in for.
+
+### D124 - the phase plans are trued against the tree, and two are left alone
+Date: 2026-09-16   Status: landed
+
+Phase 13's documents described a phase that no longer existed: two of its three
+items were already done and the third was deferred. Reconciled by the
+maintainer's direction, which is the only reason an implementing change touched
+`04-rollout.md` and `06-colour-schema-rollout.md` at all -- the handoff contract
+names the phase plans read-only for exactly the reason that a plan edited by the
+work it describes stops being a check on it.
+
+So the edits are held to one shape: **a claim about the tree that the tree
+contradicts, corrected with the measurement.** Nothing was marked done on
+judgement.
+
+- Phase 13 rewritten: fallbacks done (D123), `--location-type-*` already done
+  in `12-6`, extraction deferred indefinitely. Q1, Q2, Q3 and Q19 are recorded
+  as **dormant rather than open** -- each asks what the package should be, none
+  blocks this repository, and answering them against a consumer that does not
+  exist is the failure D2 was written to avoid.
+- §6's location line promised the eight CSS classes "go in Phase 12". They went
+  in `12-6`; nothing named `location-type` survives outside the rename map.
+- §6's `theme-contract` line is marked deferred, not achieved. The distinction
+  matters: a Done list that quietly drops what was not done is worth less than
+  one that says so.
+- `06`'s §6 claimed "locations, rumours and NPCs carry no valenced hue", which
+  D119 and D120 reversed two days ago. Struck, not deleted, with what replaced
+  it.
+- Two stale counts, both in prose: 135 leaves (the fixture says 139) and the
+  ladder-monotonicity gate (deleted with the ladder, D121). A count written into
+  prose dates faster than the thing it counts; both now defer to the fixture and
+  to `valence-ramp.test.ts`.
+
+**Left alone deliberately, and this is the more useful half of the entry:**
+
+`02-acceptance-criteria.md` has 49 checkboxes and none ticked, which reads as a
+year-stale tracker. It is not. Its own header says it is "written to be pasted
+as an issue" -- the boxes are meant to be ticked in the issue, not in the file,
+so an unticked file is the document working. It was on this phase's list to
+retire, and retiring it would have destroyed a working source because its
+failure mode and staleness look identical from outside. Reading the header cost
+less than the mistake would have.
+
+R67 (two schema records numbered D36) and R68 (`inCodeAfter` and `pendingIn`
+stale now that every PR in the phase has merged) are still open and still
+untouched. Both live in `colour-schema.md` / `.json`, which no implementing
+change may edit under any authorisation short of the maintainer's explicit
+instruction on those files specifically. They need a hand that is allowed to
+hold the pen.
+
 ### Q19 - can an ordered collection have named siblings?
 Date: 2026-09-15   Status: open
 `TokenTree` supports a record or an array, and `knowledge` is the first token to
@@ -4021,7 +4147,7 @@ shape for "ordered, with siblings", or does a collection that grows a sibling
 stop being ordered? Decide before extraction, alongside Q1.
 
 
-Settled: **Q1** by D25, **Q6** by D33, **Q7** by D14, **Q8** by D15, **Q9** by D32,
-**Q10** by D82 and D83, **Q11** by R9, **Q14** by D61, **Q16** by D103,
+Settled: **Q1** by D25, **Q5** by D123, **Q6** by D33, **Q7** by D14, **Q8** by D15,
+**Q9** by D32, **Q10** by D82 and D83, **Q11** by R9, **Q14** by D61, **Q16** by D103,
 **Q17** by D90, **Q18** by D91. The "where do rendered
 notes appear" half of Q10 is settled by D84: nowhere, for now.

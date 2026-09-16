@@ -62,13 +62,18 @@ no phase since 3 has done that.)
 | 10 | Utility, profile, auth | A5 | `visual/phase-10-utility` |
 | 11 | Retire medieval, dark to parity | — | `visual/phase-11-themes` |
 | 12 | Colour schema — derive the modes | — | `visual/phase-12-schema` |
-| 13 | Cleanup & package extraction | — | `visual/phase-13-cleanup` |
+| 13 | Cleanup (extraction deferred) | — | `visual/phase-13-cleanup` |
 
-Phases 6–11 are merged. **Phase 12 was inserted after them** and is planned in
-`06-colour-schema-rollout.md`; what this document called Phase 12 is now
-Phase 13 and is unchanged. The insertion is not optional ordering: the schema
-renames tokens, and renaming tokens after extracting the package would be a
-breaking change to a published contract.
+Phases 6–12 are merged. **Phase 12 was inserted after 6–11** and is planned in
+`06-colour-schema-rollout.md`; what this document called Phase 12 became
+Phase 13. The insertion was not optional ordering: the schema renames tokens,
+and renaming tokens after extracting the package would have been a breaking
+change to a published contract.
+
+That argument is now moot rather than wrong — extraction is deferred
+indefinitely, so no contract was published for the renames to break. The
+ordering still earned its keep: the schema work happened while the token tree
+was the only consumer, which is the cheapest time for it.
 
 ### Phase 6 — Collections (first, by your call)
 
@@ -194,12 +199,37 @@ See `06-colour-schema-rollout.md`. Derives both modes from one hue contract,
 replaces the status scale with named semantic scales, and adds the non-colour
 cues. Six PRs — `handoff/12-1` … `handoff/12-5`.
 
-### Phase 13 — Cleanup and extraction
+### Phase 13 — Cleanup
 
-Remove the fallbacks (Q5: only once every remaining theme defines the token),
-retire `--location-type-*`, then hand the token model to `theme-contract` as
-the versioned package. Extraction is mechanical by this point, which was the
-whole argument of D2.
+Three items were named here. Measured at the start of the phase, two were
+already true and the third had lost its destination:
+
+- **Remove the fallbacks** (Q5: only once every remaining theme defines the
+  token). One chain survived, in `.image-slot-caption`; both themes define the
+  token it guarded, so the fallback had been unreachable since Phase 11. Done,
+  and Q5 is answered — D123.
+- **Retire `--location-type-*`.** Already done, in `12-6`. No token, no CSS
+  class and no consumer survives; the eight entries in
+  `token-rename-map.json` are the rename gate's record and stay.
+- **Hand the token model to `theme-contract`.** **Deferred indefinitely, by the
+  maintainer.** `theme-contract` is a future project — a theme system meant to
+  serve several repositories — rather than a step in this plan, and it does not
+  exist yet. Nothing in this phase waits on it. The only artifact is branch
+  `codex/theme-contract-poc-20260902`, cut before Phase 6: two flat tokens,
+  medieval alive, `status-*` classes. Every one of those is now wrong, so it is
+  a record that the idea was tried, not a starting point.
+
+What the phase became instead is the audit R72 argued for. Its finding was that
+"nothing checked for orphaned variables, which is why this accumulated", and
+the gate it added walks variables. Classes had the same hole and no gate, which
+is why R73's eight dead ones were found by a human reading a diff — and why
+that list was wrong in both directions when it was finally measured. See D122.
+
+Four questions were filed "decide before package extraction": Q1, Q2, Q3, and
+Q19. They are **dormant, not open.** Each is a question about what the package
+should be, none blocks anything in this repository, and answering them now
+would be designing against a consumer that does not exist — which is the exact
+failure D2 was written to avoid.
 
 ## 4. Gates
 
@@ -229,10 +259,15 @@ Per PR, in addition to whatever the phase's handoff adds:
 ## 6. Done
 
 - All five archetypes migrated; every route inheriting rather than declaring.
-- Light and dark at parity; medieval gone; no fallbacks left.
+- Light and dark at parity; medieval gone; no fallbacks left. ✅ for medieval
+  (D40) and for the fallbacks (D123) — one chain survived to Phase 13 and is
+  gone. Parity is the maintainer's call, not a gate's.
 - No `--journal-*` token at all, and no journal mode. ✅ (D39)
-- `--location-type-*` retired. ✅ at the token level in Phase 3; the eight CSS
-  classes that inherited the name go in Phase 12.
+- `--location-type-*` retired. ✅ at the token level in Phase 3, and the eight
+  CSS classes that inherited the name went in `12-6` — not Phase 12 at large,
+  as this line used to promise. Nothing named `location-type` survives outside
+  `token-rename-map.json`, where it is the rename gate's record.
 - Contrast clean at AA across both themes.
-- `theme-contract` consuming the extracted package.
+- `theme-contract` consuming the extracted package. **Deferred indefinitely**
+  — see Phase 13 above. Not achieved and no longer pending in this plan.
 - `03-drift-log.md` records what actually happened, reversals included.
