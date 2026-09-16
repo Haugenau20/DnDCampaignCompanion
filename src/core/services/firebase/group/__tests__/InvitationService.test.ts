@@ -344,6 +344,28 @@ describe('InvitationService', () => {
       expect(tokens).toHaveLength(1);
       expect(tokens[0].token).toBe('t1');
     });
+
+    // `validateRegistrationToken` looks a token up as a **document id**, so the
+    // value handed out here has to be that id. The document also stores a
+    // `token` field; generation writes the two identically, but nothing
+    // enforces it -- and where they diverge, spreading the document data over
+    // `token: doc.id` silently hands out a value no lookup can ever resolve.
+    // A share link built from it points at an invitation that does not exist.
+    test('should return the document id even when a stored token field disagrees', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(true);
+      mockGetDocs.mockResolvedValueOnce(
+        makeQuerySnapshot([
+          {
+            exists: () => true,
+            data: () => ({ token: 'stale-value', used: false, createdAt: null, usedAt: null }),
+            id: 'the-real-doc-id',
+          },
+        ])
+      );
+      const svc = InvitationService.getInstance();
+      const tokens = await svc.getGroupRegistrationTokens('g1');
+      expect(tokens[0].token).toBe('the-real-doc-id');
+    });
   });
 
   // ─── deleteGroupRegistrationToken ─────────────────────────────────────────

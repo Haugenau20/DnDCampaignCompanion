@@ -12,6 +12,10 @@ jest.mock("@/features/user-management/groups/hooks/useGroups", () => ({
   useGroups: jest.fn(),
 }));
 
+jest.mock("@/features/user-management/groups/hooks/useCampaigns", () => ({
+  useCampaigns: jest.fn(),
+}));
+
 // The back control reaches for campaign context and navigation; neither is
 // what this suite is about.
 jest.mock("@/shared/components/BackToCampaign", () => ({
@@ -21,6 +25,7 @@ jest.mock("@/shared/components/BackToCampaign", () => ({
 
 const { useAuth } = require("@/features/user-management/auth/hooks/useAuth");
 const { useGroups } = require("@/features/user-management/groups/hooks/useGroups");
+const { useCampaigns } = require("@/features/user-management/groups/hooks/useCampaigns");
 
 /** A stand-in for wherever a redirect lands, so the URL can be asserted. */
 const LocationProbe: React.FC = () => {
@@ -40,12 +45,38 @@ function setAuth({
   useAuth.mockReturnValue({ user, loading });
 }
 
+type Member = { userId: string; username: string; role: string };
+
+const TWO_ADMINS: Member[] = [
+  { userId: "u1", username: "Legolas", role: "admin" },
+  { userId: "u2", username: "DungeonMaster", role: "Admin" },
+  { userId: "u3", username: "Aragorn", role: "member" },
+];
+
 function setGroups({
   isAdmin = true,
   activeGroup = { id: "g1", name: "The Fellowship" } as Group,
   loading = false,
+  members = TWO_ADMINS,
+  getAllUsers = jest.fn().mockResolvedValue(members),
 } = {}) {
-  useGroups.mockReturnValue({ isAdmin, activeGroup, loading });
+  useGroups.mockReturnValue({ isAdmin, activeGroup, loading, getAllUsers });
+  return getAllUsers;
+}
+
+function setCampaigns(count = 2) {
+  useCampaigns.mockReturnValue({
+    campaigns: Array.from({ length: count }, (_, i) => ({ id: `c${i}` })),
+  });
+}
+
+/** Renders and lets the member fetch settle, which the band's counts wait on. */
+async function renderSettled(path = "/admin/people") {
+  const result = renderAt(path);
+  await act(async () => {
+    await Promise.resolve();
+  });
+  return result;
 }
 
 function renderAt(path = "/admin/people") {
@@ -69,6 +100,60 @@ describe("AdminLayout", () => {
     jest.clearAllMocks();
     setAuth();
     setGroups();
+    setCampaigns();
+  });
+
+  describe("the band's metadata line", () => {
+    test("counts members and campaigns", async () => {
+      await renderSettled();
+      expect(screen.getByText("3 members")).toBeInTheDocument();
+      expect(screen.getByText("2 campaigns")).toBeInTheDocument();
+    });
+
+    // An admin is any member holding the role, and there may be several.
+    // Nothing may imply one of them is the DM or owns the group.
+    test("counts admins rather than assuming there is one", async () => {
+      await renderSettled();
+      expect(screen.getByText("you are one of 2 admins")).toBeInTheDocument();
+    });
+
+    test("counts the role case-insensitively", async () => {
+      // The fixture's second admin carries "Admin". Bug #702's shape: a
+      // case-sensitive count would report one admin where there are two.
+      await renderSettled();
+      expect(screen.queryByText("you are the only admin")).not.toBeInTheDocument();
+    });
+
+    test("says so plainly when there really is only one admin", async () => {
+      setGroups({ members: [{ userId: "u1", username: "Legolas", role: "admin" }] });
+      await renderSettled();
+      expect(screen.getByText("you are the only admin")).toBeInTheDocument();
+    });
+
+    test("never names a DM or an owner", async () => {
+      await renderSettled();
+      expect(screen.queryByText(/dungeon master|\bDM\b|owner/i)).not.toBeInTheDocument();
+    });
+
+    test("omits a count it does not have yet rather than showing zero", async () => {
+      setCampaigns(0);
+      await renderSettled();
+      expect(screen.queryByText(/0 campaigns/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("the member fetch", () => {
+    test("happens once for the band and the view together", async () => {
+      const getAllUsers = setGroups();
+      await renderSettled();
+      expect(getAllUsers).toHaveBeenCalledTimes(1);
+    });
+
+    test("is not attempted by a non-admin, who may not call it", async () => {
+      const getAllUsers = setGroups({ isAdmin: false });
+      await renderSettled();
+      expect(getAllUsers).not.toHaveBeenCalled();
+    });
   });
 
   describe("as an admin with an active group", () => {

@@ -927,6 +927,21 @@
   .entity-sigil[data-sigil-index="5"] { background-color: var(--entity-palette-5); }
   .entity-sigil[data-sigil-index="6"] { background-color: var(--entity-palette-6); }
   .entity-sigil[data-sigil-index="7"] { background-color: var(--entity-palette-7); }
+
+  /*
+    The mark for a person who does not exist yet.
+
+    A pending invitation has no name, so it cannot have a derived letter or a
+    derived hue -- and borrowing one would promise an identity the row does not
+    have. A dashed outline and no fill says "a slot, not a member", which is
+    exactly what the row is. It takes no entity-palette colour on purpose: the
+    palette identifies *someone*, and there is no-one here yet.
+  */
+  .entity-sigil-placeholder {
+    border: var(--border-width-sm) dashed var(--surface-card-border);
+    border-radius: var(--border-radius-md);
+    background-color: transparent;
+  }
 }
 
 @layer app-state {

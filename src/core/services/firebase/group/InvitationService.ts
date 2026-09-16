@@ -133,10 +133,18 @@ import {
       
       return snapshot.docs.map(doc => {
         const data = doc.data();
-        
+
         return {
-          token: doc.id,
           ...data,
+          // After the spread, not before it. A token is looked up by document
+          // id -- `validateRegistrationToken` does `doc(db, ..., token)` -- and
+          // the document also stores a `token` field. Generation writes the two
+          // identically, but nothing enforces that, and where they diverge the
+          // spread used to overwrite the id with the stored field. The caller
+          // then built a share link around a value no lookup could resolve, so
+          // the invitation appeared valid in the list and was rejected on
+          // arrival. The id is the identity; the stored field is a copy of it.
+          token: doc.id,
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
           usedAt: data.usedAt?.toDate ? data.usedAt.toDate() : data.usedAt
         };

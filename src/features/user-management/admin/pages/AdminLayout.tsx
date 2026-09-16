@@ -1,5 +1,5 @@
 // src/features/user-management/admin/pages/AdminLayout.tsx
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 import clsx from "clsx";
 import Typography from "core/components/Typography";
@@ -7,7 +7,10 @@ import PageShell from "shared/components/page-shell/PageShell";
 import BackToCampaign from "shared/components/BackToCampaign";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { useGroups } from "../../groups/hooks/useGroups";
+import { useCampaigns } from "../../groups/hooks/useCampaigns";
 import { signInPathFor } from "../../auth/utils/next-path";
+import type { AdminOutletContext } from "./admin-outlet";
+import type { GroupMember } from "../types";
 
 /** The three admin views, in the order the sub-navigation lists them. */
 const ADMIN_VIEWS = [
@@ -56,7 +59,12 @@ const AdminBusy: React.FC = () => (
 const AdminLayout: React.FC = () => {
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const { isAdmin, activeGroup, loading: groupsLoading } = useGroups();
+  const { isAdmin, activeGroup, getAllUsers, loading: groupsLoading } = useGroups();
+  const { campaigns } = useCampaigns();
+
+  const [members, setMembers] = useState<GroupMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [membersError, setMembersError] = useState<string | null>(null);
 
   // Local loading state with timeout to avoid infinite loading
   const [localLoading, setLocalLoading] = useState(true);
@@ -78,6 +86,30 @@ const AdminLayout: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [groupsLoading]);
+
+  /**
+   * Read the member list once, for the band's counts and the People view's
+   * rows. Only admins may call `getAllUsers`, so it is gated on the same
+   * answer the rest of the route waits for.
+   */
+  const reloadMembers = useCallback(async () => {
+    if (!isAdmin || !activeGroup) return;
+    setMembersLoading(true);
+    try {
+      setMembers((await getAllUsers()) as GroupMember[]);
+      setMembersError(null);
+    } catch (err) {
+      setMembersError(
+        err instanceof Error ? err.message : "Failed to load members"
+      );
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [isAdmin, activeGroup, getAllUsers]);
+
+  useEffect(() => {
+    reloadMembers();
+  }, [reloadMembers]);
 
   // 1. Auth has not settled. Wait -- do not read `user` as an answer yet.
   //
@@ -127,6 +159,31 @@ const AdminLayout: React.FC = () => {
     );
   }
 
+  const adminCount = members.filter(
+    (member) => member.role?.toLowerCase() === "admin"
+  ).length;
+
+  /**
+   * The band's one metadata line.
+   *
+   * Each part is omitted rather than shown as zero while it is still
+   * unknown -- a band claiming "0 members" during a fetch is worse than a band
+   * that has not said yet.
+   */
+  const metadata = [
+    membersLoading || members.length === 0
+      ? null
+      : `${members.length} ${members.length === 1 ? "member" : "members"}`,
+    campaigns.length === 0
+      ? null
+      : `${campaigns.length} ${campaigns.length === 1 ? "campaign" : "campaigns"}`,
+    adminCount === 0
+      ? null
+      : adminCount === 1
+      ? "you are the only admin"
+      : `you are one of ${adminCount} admins`,
+  ].filter(Boolean) as string[];
+
   return (
     <>
       {/* Cancels `main`'s own 16px padding so the band meets the chrome with
@@ -152,10 +209,36 @@ const AdminLayout: React.FC = () => {
                   <Typography variant="h1" className="text-3xl sm:text-4xl break-words">
                     {activeGroup.name}
                   </Typography>
+
+                  {/* One metadata line. The admin count is counted, never
+                      assumed to be one: an admin is any member holding the
+                      role, there may be several, and nothing here may imply
+                      that one of them is the DM or owns the group. The DM is a
+                      fact about the table, not a fact the software stores. */}
+                  {metadata.length > 0 && (
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      {metadata.map((item, index) => (
+                        <React.Fragment key={item}>
+                          {index > 0 && (
+                            <span
+                              aria-hidden="true"
+                              className="hero-dot w-[3px] h-[3px] rounded-full shrink-0"
+                            />
+                          )}
+                          <Typography variant="body-sm" className="hero-muted">
+                            {item}
+                          </Typography>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
+                {/* 44px minimum, like every other target on these pages.
+                    `Button variant="link"` sets no height of its own, which
+                    leaves a 24px tap target on a phone. */}
                 <div className="shrink-0">
-                  <BackToCampaign />
+                  <BackToCampaign className="min-h-[2.75rem]" />
                 </div>
               </div>
             </div>
@@ -178,7 +261,7 @@ const AdminLayout: React.FC = () => {
                   to={view.to}
                   className={({ isActive }) =>
                     clsx(
-                      "py-2 px-4 font-medium",
+                      "px-4 font-medium flex items-center min-h-[2.75rem]",
                       isActive ? "nav-item nav-item-active" : "nav-item"
                     )
                   }
@@ -191,7 +274,16 @@ const AdminLayout: React.FC = () => {
         </div>
       </nav>
 
-      <Outlet />
+      <Outlet
+        context={
+          {
+            members,
+            membersLoading,
+            membersError,
+            reloadMembers,
+          } satisfies AdminOutletContext
+        }
+      />
     </>
   );
 };
