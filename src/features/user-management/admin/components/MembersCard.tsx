@@ -21,11 +21,20 @@ export interface MembersCardProps {
   onRemove: (member: GroupMember) => void;
 }
 
-/** Shared column template, so the header and the rows cannot drift apart. */
+/**
+ * Shared column template, so the header and the rows cannot drift apart.
+ *
+ * The action column is a fixed width rather than `auto`, and that is the whole
+ * reason this constant exists. Every row is its own grid -- a `<li>` sizes its
+ * tracks from its own content, not from its siblings -- so an `auto` final
+ * column collapsed to nothing on the rows with no Remove button (your own, and
+ * any other admin's) and `minmax(0,1fr)` absorbed the slack. The result was
+ * that Role and Joined sat visibly further right on exactly those rows.
+ */
 const ROW_GRID =
   'grid items-center gap-x-3 gap-y-1 ' +
-  'grid-cols-[auto_minmax(0,1fr)_auto] ' +
-  'sm:grid-cols-[auto_minmax(0,1fr)_7rem_10rem_auto]';
+  'grid-cols-[auto_minmax(0,1fr)_6rem] ' +
+  'sm:grid-cols-[auto_minmax(0,1fr)_7rem_10rem_6rem]';
 
 /**
  * Everyone who accepted an invitation.

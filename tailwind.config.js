@@ -84,6 +84,19 @@ module.exports = {
         'delete-button': 'var(--danger-delete-text)',
       },
       borderColor: {
+        // Tailwind's preflight writes `*, ::before, ::after { border: 0 solid
+        // <borderColor.DEFAULT> }`, and with no DEFAULT configured that is a
+        // hardcoded `#e5e7eb`. Every border drawn by a width utility alone --
+        // `border-t`, `border`, and every `divide-y`, whose children get no
+        // colour because `border-color` is not inherited -- therefore rendered
+        // a fixed light grey in both modes. Against light's own `#E8E2DB` the
+        // difference is invisible, which is why it survived; against dark's
+        // `#3B3630` it is a bright line across every card.
+        //
+        // So the default is the card border token. Nothing that already names
+        // a colour changes; everything that never named one stops being
+        // theme-blind.
+        DEFAULT: 'var(--surface-card-border)',
         accent: 'var(--accent-edge)',
         card: 'var(--surface-card-border)',
         

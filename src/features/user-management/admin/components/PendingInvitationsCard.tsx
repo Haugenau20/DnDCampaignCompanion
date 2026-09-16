@@ -1,7 +1,8 @@
 // src/features/user-management/admin/components/PendingInvitationsCard.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import clsx from 'clsx';
 import Typography from 'core/components/Typography';
+import Input from 'core/components/Input';
 import Button from 'core/components/Button';
 import { formatDisplayDate } from 'shared/utils/dateFormatter';
 import type { RegistrationToken } from '../types';
@@ -13,6 +14,8 @@ export interface PendingInvitationsCardProps {
   loading: boolean;
   onCopyLink: (invitation: RegistrationToken) => void;
   onRevoke: (invitation: RegistrationToken) => void;
+  /** Saves a new note for one invitation. */
+  onRenameNote: (invitation: RegistrationToken, notes: string) => Promise<void>;
 }
 
 /**
@@ -27,7 +30,111 @@ export interface PendingInvitationsCardProps {
 const ROW_GRID =
   'grid items-center gap-x-3 gap-y-1 ' +
   'grid-cols-[auto_minmax(0,1fr)] ' +
-  'sm:grid-cols-[auto_minmax(0,1fr)_10rem_auto]';
+  'sm:grid-cols-[auto_minmax(0,1fr)_10rem_11rem]';
+
+/**
+ * The note on one invitation: who it is for.
+ *
+ * Editable in place, and only here. Creating an invitation asks for nothing --
+ * one click, one link -- because the note is optional and a form in front of
+ * the only thing an admin came for is a form too many. Naming it afterwards is
+ * the same information at a moment when it costs nothing.
+ *
+ * It matters more than it looks: the token string is never rendered, so the
+ * note is the only thing distinguishing one pending invitation from another.
+ */
+const InvitationNote: React.FC<{
+  invitation: RegistrationToken;
+  onSave: (notes: string) => Promise<void>;
+}> = ({ invitation, onSave }) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(invitation.notes ?? '');
+  const [saving, setSaving] = useState(false);
+
+  const open = () => {
+    setDraft(invitation.notes ?? '');
+    setEditing(true);
+  };
+
+  const commit = async () => {
+    if (saving) return;
+    const next = draft.trim();
+    if (next === (invitation.notes ?? '')) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(next);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-2">
+        <Input
+          autoFocus
+          aria-label="Who is this invitation for?"
+          value={draft}
+          disabled={saving}
+          placeholder="Who is this for?"
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              commit();
+            }
+            // Escape abandons the edit. It does not close anything else --
+            // this is not a dialog, and the row keeps its value.
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              event.stopPropagation();
+              setEditing(false);
+            }
+          }}
+        />
+        <Button size="sm" onClick={commit} isLoading={saving} className="min-h-[2.75rem]">
+          Save
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setEditing(false)}
+          disabled={saving}
+          className="min-h-[2.75rem]"
+        >
+          Cancel
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={open}
+      className="text-left min-w-0 w-full rounded min-h-[2.75rem] flex items-center"
+      aria-label={
+        invitation.notes
+          ? `Edit who this invitation is for. Currently ${invitation.notes}`
+          : 'Say who this invitation is for'
+      }
+    >
+      {invitation.notes ? (
+        <Typography className="font-heading font-medium truncate">
+          {invitation.notes}
+        </Typography>
+      ) : (
+        <Typography color="secondary" className="truncate">
+          Not yet sent to anyone
+        </Typography>
+      )}
+    </button>
+  );
+};
 
 /**
  * Invitations nobody has accepted yet.
@@ -46,6 +153,7 @@ const PendingInvitationsCard: React.FC<PendingInvitationsCardProps> = ({
   loading,
   onCopyLink,
   onRevoke,
+  onRenameNote,
 }) => (
   <section className="card rounded-lg" aria-labelledby="invitations-heading">
     <div className="px-4 sm:px-6 pt-5 pb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -103,15 +211,10 @@ const PendingInvitationsCard: React.FC<PendingInvitationsCardProps> = ({
               />
 
               <div className="col-start-2 row-start-1 min-w-0">
-                {invitation.notes ? (
-                  <Typography className="font-heading font-medium truncate">
-                    {invitation.notes}
-                  </Typography>
-                ) : (
-                  <Typography color="secondary" className="truncate">
-                    Not yet sent to anyone
-                  </Typography>
-                )}
+                <InvitationNote
+                  invitation={invitation}
+                  onSave={(notes) => onRenameNote(invitation, notes)}
+                />
               </div>
 
               <div className="col-start-2 row-start-2 sm:row-start-1 sm:col-start-3">

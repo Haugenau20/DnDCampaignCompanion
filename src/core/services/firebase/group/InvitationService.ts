@@ -170,7 +170,47 @@ import {
       
       await deleteDoc(doc(this.db, 'groups', groupId, 'registrationTokens', token));
     }
-  
+
+    /**
+     * Set the note on a registration token (admin only).
+     *
+     * The note is who the invitation is *for*, and it is the only thing that
+     * tells one pending invitation from another in the admin view -- the token
+     * string is never shown. Creating an invitation deliberately asks for
+     * nothing, so this is where a note gets attached: afterwards, on the row.
+     *
+     * Only `notes` is written. The rules already permit a group admin to update
+     * a token (`allow update: if isGroupAdmin(groupId)`), so this needs no rules
+     * change; restricting the payload to one field is this method's own
+     * discipline, so that an admin edit can never touch `used`, `usedAt` or
+     * `usedBy` and resurrect a spent invitation.
+     *
+     * @param groupId ID of the group
+     * @param token ID of the token
+     * @param notes The new note, which may be empty to clear it
+     */
+    public async updateGroupRegistrationTokenNotes(
+      groupId: string,
+      token: string,
+      notes: string
+    ): Promise<void> {
+      const userId = this.getCurrentUser()?.uid;
+      if (!userId) {
+        throw new Error('Not authenticated');
+      }
+
+      // Check if user is admin of this group
+      const isAdmin = await this.userService.isUserAdmin(groupId, userId);
+      if (!isAdmin) {
+        throw new Error('Only group admins can update registration tokens');
+      }
+
+      await updateDoc(
+        doc(this.db, 'groups', groupId, 'registrationTokens', token),
+        { notes }
+      );
+    }
+
     /**
      * Join an existing account to a new group using an invitation token
      * @param token Registration token for the group

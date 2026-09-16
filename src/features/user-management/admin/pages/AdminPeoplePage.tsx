@@ -30,6 +30,7 @@ const AdminPeoplePage: React.FC = () => {
     generateRegistrationToken,
     getRegistrationTokens,
     deleteRegistrationToken,
+    updateRegistrationTokenNotes,
   } = useInvitations();
   const { members, membersLoading, membersError, reloadMembers } =
     useAdminOutlet();
@@ -109,6 +110,32 @@ const AdminPeoplePage: React.FC = () => {
     });
   };
 
+  /**
+   * Name an invitation after the fact.
+   *
+   * The row updates locally rather than re-reading the collection: the write
+   * touches one field this page already holds, and a refetch would cost a
+   * round trip to learn what it just sent.
+   */
+  const handleRenameNote = async (
+    invitation: RegistrationToken,
+    notes: string
+  ) => {
+    setError(null);
+    try {
+      await updateRegistrationTokenNotes(invitation.token, notes);
+      setInvitations((previous) =>
+        previous.map((item) =>
+          item.token === invitation.token ? { ...item, notes } : item
+        )
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to save the invitation note'
+      );
+    }
+  };
+
   const handleConfirmRevoke = async () => {
     if (!pendingRevoke) return;
     setError(null);
@@ -169,6 +196,7 @@ const AdminPeoplePage: React.FC = () => {
         loading={invitationsLoading}
         onCopyLink={handleCopyLink}
         onRevoke={setPendingRevoke}
+        onRenameNote={handleRenameNote}
       />
 
       <InviteLinkDialog

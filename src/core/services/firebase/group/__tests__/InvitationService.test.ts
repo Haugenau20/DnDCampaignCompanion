@@ -368,6 +368,47 @@ describe('InvitationService', () => {
     });
   });
 
+  // ─── updateGroupRegistrationTokenNotes ────────────────────────────────────
+
+  describe('updateGroupRegistrationTokenNotes', () => {
+    test('should throw when user is not admin', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(false);
+      const svc = InvitationService.getInstance();
+      await expect(
+        svc.updateGroupRegistrationTokenNotes('g1', 'tok', 'For Boromir')
+      ).rejects.toThrow('Only group admins can update registration tokens');
+    });
+
+    test('should write the note when user is admin', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(true);
+      mockUpdateDoc.mockResolvedValueOnce(undefined);
+      const svc = InvitationService.getInstance();
+      await svc.updateGroupRegistrationTokenNotes('g1', 'tok', 'For Boromir');
+      expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), {
+        notes: 'For Boromir',
+      });
+    });
+
+    // An admin edit must never be able to resurrect a spent invitation, so the
+    // payload carries one field and nothing else.
+    test('should write only the note, never the used flags', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(true);
+      mockUpdateDoc.mockResolvedValueOnce(undefined);
+      const svc = InvitationService.getInstance();
+      await svc.updateGroupRegistrationTokenNotes('g1', 'tok', 'x');
+      const payload = mockUpdateDoc.mock.calls[0][1];
+      expect(Object.keys(payload)).toEqual(['notes']);
+    });
+
+    test('should allow clearing the note', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(true);
+      mockUpdateDoc.mockResolvedValueOnce(undefined);
+      const svc = InvitationService.getInstance();
+      await svc.updateGroupRegistrationTokenNotes('g1', 'tok', '');
+      expect(mockUpdateDoc).toHaveBeenCalledWith(expect.anything(), { notes: '' });
+    });
+  });
+
   // ─── deleteGroupRegistrationToken ─────────────────────────────────────────
 
   describe('deleteGroupRegistrationToken', () => {

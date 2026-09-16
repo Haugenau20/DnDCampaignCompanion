@@ -40,6 +40,7 @@ const TOKENS: RegistrationToken[] = [
 const deleteUser = jest.fn().mockResolvedValue(undefined);
 const generateRegistrationToken = jest.fn().mockResolvedValue("fresh-token");
 const deleteRegistrationToken = jest.fn().mockResolvedValue(undefined);
+const updateRegistrationTokenNotes = jest.fn().mockResolvedValue(undefined);
 let getRegistrationTokens = jest.fn();
 
 function setup({ members = MEMBERS, tokens = TOKENS, membersLoading = false } = {}) {
@@ -54,6 +55,7 @@ function setup({ members = MEMBERS, tokens = TOKENS, membersLoading = false } = 
     generateRegistrationToken,
     getRegistrationTokens,
     deleteRegistrationToken,
+    updateRegistrationTokenNotes,
   });
 
   const context: AdminOutletContext = {
@@ -232,6 +234,88 @@ describe("AdminPeoplePage", () => {
       expect(
         screen.getByText(/No invitations waiting/i)
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("naming an invitation after the fact", () => {
+    // Creating an invitation asks for nothing, so this is where a note gets
+    // attached. Without it the note could never be set at all, and the note is
+    // the only thing telling one pending invitation from another -- the token
+    // string is never rendered.
+    test("the note is an inline edit on the row, not a field before the action", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Edit who this invitation is for/i })
+      );
+      expect(
+        screen.getByLabelText("Who is this invitation for?")
+      ).toBeInTheDocument();
+    });
+
+    test("saving writes the note and updates the row", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Edit who this invitation is for/i })
+      );
+      const field = screen.getByLabelText("Who is this invitation for?");
+      await userEvent.clear(field);
+      await userEvent.type(field, "For Boromir");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await settle();
+
+      expect(updateRegistrationTokenNotes).toHaveBeenCalledWith(
+        "spare-1",
+        "For Boromir"
+      );
+      expect(
+        within(invitationsList()).getByText("For Boromir")
+      ).toBeInTheDocument();
+    });
+
+    test("cancelling leaves the note alone", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Edit who this invitation is for/i })
+      );
+      await userEvent.type(
+        screen.getByLabelText("Who is this invitation for?"),
+        "discard me"
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(updateRegistrationTokenNotes).not.toHaveBeenCalled();
+      expect(
+        within(invitationsList()).getByText("Spare invitation")
+      ).toBeInTheDocument();
+    });
+
+    test("an unnamed invitation can be named", async () => {
+      setup({ tokens: [{ token: "t", used: false, createdAt: new Date("2025-05-31") }] });
+      await settle();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Say who this invitation is for/i })
+      );
+      await userEvent.type(
+        screen.getByLabelText("Who is this invitation for?"),
+        "For Boromir"
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await settle();
+      expect(updateRegistrationTokenNotes).toHaveBeenCalledWith("t", "For Boromir");
+    });
+
+    test("an unchanged note is not written at all", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Edit who this invitation is for/i })
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await settle();
+      expect(updateRegistrationTokenNotes).not.toHaveBeenCalled();
     });
   });
 
