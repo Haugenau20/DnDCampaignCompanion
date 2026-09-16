@@ -77,7 +77,7 @@ describe.each(MODES)("the valence ramp in %s", (mode) => {
     // In dark mode the inks are already light enough to hold their chroma, so
     // there is nothing to recover and the split is only about depth. Pinning
     // that difference rather than averaging over it is the point: it is why
-    // this ramp needed two tokens per stop and the knowledge ladder did not.
+    // this ramp needed two tokens per stop.
     const chromaOf = (hex: string): number => {
       const n = parseInt(hex.slice(1), 16);
       const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((byte) => {
@@ -137,23 +137,29 @@ describe("the ramp does not bring back the bug that split the scales", () => {
     expect(names).toEqual(["0", "1", "2", "3"]);
   });
 
-  test("the unranked scales still exist and still differ from the ramp", () => {
-    // The trade D41 makes is that *ranked* state shares a ramp. If `knowledge`,
-    // `disposition` and `presence` quietly disappeared into it, the schema
-    // would have lost the distinction rather than traded it, and the next
-    // unranked thing would reach for a red.
+  test("an unranked scale survives, and is not on the ramp", () => {
+    // The trade D41 makes is that *ranked* state shares a ramp. `disposition`
+    // is what keeps the other half of the bargain: a stance toward the party is
+    // not a rank, so `neutral` and `unknown` must not be points between
+    // friendly and hostile. If both collapsed onto the ramp the schema would
+    // have lost the distinction rather than traded it, and the next unranked
+    // thing would reach for a red.
+    //
+    // `friendly` and `hostile` *are* the ramp's ends, and that is correct --
+    // a stance genuinely is good or bad. It is the middle that must stay off it.
     const tokens = deriveTokens("light");
+    const onTheRamp = (colour: string) =>
+      Object.values(tokens.valence).some((stop) => stop.ink === colour);
     expect({
-      knowledge: typeof tokens.knowledge[0],
-      disposition: typeof tokens.disposition.neutral,
-      presenceInk: tokens.surface.page.on !== tokens.valence[0].ink,
-      knowledgeIsNotOnTheRamp:
-        !Object.values(tokens.valence).some((stop) => stop.ink === tokens.knowledge[0]),
+      neutral: onTheRamp(tokens.disposition.neutral),
+      unknown: onTheRamp(tokens.disposition.unknown),
+      friendly: onTheRamp(tokens.disposition.friendly),
+      hostile: onTheRamp(tokens.disposition.hostile),
     }).toEqual({
-      knowledge: "string",
-      disposition: "string",
-      presenceInk: true,
-      knowledgeIsNotOnTheRamp: true,
+      neutral: false,
+      unknown: false,
+      friendly: true,
+      hostile: true,
     });
   });
 });

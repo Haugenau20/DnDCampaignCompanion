@@ -119,9 +119,6 @@ describe("tokens with no consumers yet are still enumerated", () => {
     "--outcome-succeeded",
     "--outcome-failed-ink",
     "--outcome-failed-fill",
-    "--knowledge-0",
-    "--knowledge-1",
-    "--knowledge-2",
     "--cue-failure",
     "--cue-negation",
     // 12-2b
@@ -132,7 +129,6 @@ describe("tokens with no consumers yet are still enumerated", () => {
     "--accent-on",
     "--accent-ring",
     "--outcome-failed-on",
-    "--knowledge-wash",
     // 13 -- the valence ramp
     "--valence-0-ink",
     "--valence-0-fill",
@@ -202,6 +198,93 @@ describe("tokens with no consumers yet are still enumerated", () => {
   test.each(THEMES)("%s defines the schema's leaves, less what has retired", (_name, tokens) => {
     // 135 in the fixture, less the twelve names 12-3a and 12-3b delete:
     // six `status.*`, three `color.*` and three `state.*`.
-    expect(Object.keys(flattenTokens(tokens)).length).toBe(131);
+    expect(Object.keys(flattenTokens(tokens)).length).toBe(127);
+  });
+});
+
+/**
+ * The third direction: a variable a theme defines that nothing consumes.
+ *
+ * Neither block above can see this. The first walks consumed to defined, which
+ * is what a rename breaks; the second enumerates tokens landed ahead of their
+ * consumers, which is what an additive PR produces. Between them sits the case
+ * that actually accumulates: a token that *had* consumers and lost them, when a
+ * scale is replaced and its classes are deleted one PR at a time.
+ *
+ * That is not hypothetical. The valence ramp took every consumer the knowledge
+ * ladder had, and the ladder, its three CSS classes, its three Tailwind
+ * utilities and five `RosterStatusTone` values sat dead in the tree until
+ * somebody read the diff and asked. Nothing was red. Every gate passed.
+ *
+ * So an unconsumed variable is allowed, but it has to be *declared*, with the
+ * reason, and the list is checked in both directions: a new orphan fails, and
+ * so does an entry that has quietly gained a consumer and should have been
+ * removed from the list.
+ */
+describe("every variable a theme defines is either consumed or declared unused", () => {
+  /** Variables no stylesheet reads, each with the reason it is still emitted. */
+  const UNCONSUMED: Readonly<Record<string, string>> = {
+    "--scheme":
+      "Identity, not paint. Names which theme is applied; nothing draws with it.",
+    "--accent-on":
+      "The accent's paired ink. Buttons reach for --action-primary-text, which " +
+      "resolves to the same value through the role map, so this name has never " +
+      "been the one consumed.",
+    "--surface-band-selected":
+      "Surface pairs are emitted whole -- bg, on, onMuted, border, hover, " +
+      "selected -- so that a surface cannot be given a state belonging to " +
+      "another. The band has no selectable element yet; the hole would be the " +
+      "defect, not the unused member.",
+    "--surface-page-border":
+      "As --surface-band-selected: a complete pair, one member unused.",
+    "--outcome-failed-ink":
+      "outcome.* lost its consumers to the valence ramp (D41). The scale stays " +
+      "because it is still the documented source for feedback.error, " +
+      "disposition.hostile, the field error states and danger.deleteText -- " +
+      "each of which emits its own variable carrying this value -- and because " +
+      "--outcome-succeeded is still painted by .progress-bar-read.",
+    "--outcome-failed-fill": "As --outcome-failed-ink.",
+    "--outcome-failed-on": "As --outcome-failed-ink.",
+  };
+
+  /** Every way a stylesheet can read a variable, including a style query. */
+  const consumedVariables = (): Set<string> => {
+    const out = new Set<string>();
+    filesToScan().forEach((file) => {
+      const source = stripComments(fs.readFileSync(file, "utf8"));
+      for (const m of source.matchAll(/var\(\s*(--[A-Za-z0-9-]+)/g)) out.add(m[1]);
+      // `@container style(--cue-failure: none)` reads a variable without var().
+      for (const m of source.matchAll(/style\(\s*(--[A-Za-z0-9-]+)/g)) out.add(m[1]);
+    });
+    return out;
+  };
+
+  const themeVariables = Object.keys(
+    flattenTokens(lightTheme.tokens as unknown as TokenTree)
+  );
+
+  test("no variable is orphaned without being declared", () => {
+    const consumed = consumedVariables();
+    const orphaned = themeVariables
+      .filter((v) => !consumed.has(v))
+      .filter((v) => !(v in UNCONSUMED));
+    expect(orphaned).toEqual([]);
+  });
+
+  test("and nothing on the list has quietly gained a consumer", () => {
+    // The half that keeps the list honest. Without it the list only ever grows,
+    // and a name listed as unused stays listed long after it is wired up --
+    // which is how an exemption stops describing anything.
+    const consumed = consumedVariables();
+    const nowUsed = Object.keys(UNCONSUMED).filter((v) => consumed.has(v));
+    expect(nowUsed).toEqual([]);
+  });
+
+  test("every declared name is still a variable the theme defines", () => {
+    // And the other stale case: a name deleted from the tree but left on the
+    // list, which would silently excuse a future token of the same name.
+    const known = new Set(themeVariables);
+    const gone = Object.keys(UNCONSUMED).filter((v) => !known.has(v));
+    expect(gone).toEqual([]);
   });
 });

@@ -18,7 +18,20 @@ export const HUE = {
   accent: { h: 62, c: 0.115 },
   succeeded: { h: 143, c: 0.085 },
   failed: { h: 22, c: 0.155 },
-  knowledge: { h: 265, c: 0.09 },
+  /**
+   * The one hue `disposition` authors for itself.
+   *
+   * Friendly and hostile borrow the valence ramp's ends, because a stance
+   * toward the party genuinely is good or bad, and neutral takes muted ink.
+   * An *unknown* stance is none of those: it is not a point between friendly
+   * and hostile, so painting it anywhere on the ramp would rank something the
+   * record does not know. Indigo says "no reading" without implying one.
+   *
+   * This was the knowledge ladder's hue. The ladder itself is gone -- the four
+   * directories that rode it are ranked now (D41) -- and this single value is
+   * what outlived it.
+   */
+  dispositionUnknown: { h: 265, c: 0.09 },
   /**
    * The valence ramp: four stops from "good" to "bad", used by every directory
    * that ranks its states.
@@ -105,8 +118,8 @@ export interface LightnessRamp {
    * resolve to one value on both sides rather than two that happen to agree.
    */
   failedOn: number;
-  /** The knowledge ladder, in order. More knowledge means more contrast. */
-  knowledge: readonly [number, number, number];
+  /** Lightness for `disposition.unknown`, the one hue disposition authors. */
+  dispositionUnknown: number;
   /** Start lightness for the valence ramp's fills, solved at 3:1. */
   valenceFill: number;
   secondary: number;
@@ -142,7 +155,7 @@ export const RAMP: Record<ThemeName, LightnessRamp> = {
     failedInk: 0.44,
     failedFill: 0.44,
     failedOn: 0.975,
-    knowledge: [0.48, 0.385, 0.29],
+    dispositionUnknown: 0.48,
     /**
      * Where the valence ramp's **fills** start solving from.
      *
@@ -189,7 +202,7 @@ export const RAMP: Record<ThemeName, LightnessRamp> = {
     // on a dark ground is pink, so failure splits by role instead.
     failedFill: 0.56,
     failedOn: 0.975,
-    knowledge: [0.65, 0.735, 0.84],
+    dispositionUnknown: 0.65,
     /**
      * Where the valence ramp's **fills** start solving from.
      *

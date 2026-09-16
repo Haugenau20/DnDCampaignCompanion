@@ -316,21 +316,21 @@ describe("a field's ink and edge work against the field's own ground", () => {
  */
 describe("domain state hues meet AA as text on every row surface", () => {
   /**
-   * The three scales a directory row can reach for, replacing the five status
-   * hues this block used to check.
+   * The two scales a directory row can reach for: the valence ramp, which every
+   * ranked state now uses, and `disposition`, which is not ranked.
    *
-   * `presence-present` and `presence-absent` are absent on purpose: they are
-   * `surface.*.on` and `surface.*.onMuted`, which the surface-pair block above
-   * already gates against their own grounds. Presence carries no hue, so there
-   * is nothing here for it to have.
+   * `outcome.*` stays listed because it still backs `feedback`, the field
+   * states and `.progress-bar-read`; it is no longer what a directory row
+   * reaches for, but the values are the ramp's ends and are gated either way.
    */
   const HUES = [
     "outcome.active",
     "outcome.succeeded",
     "outcome.failed.ink",
-    "knowledge.0",
-    "knowledge.1",
-    "knowledge.2",
+    "valence.0.ink",
+    "valence.1.ink",
+    "valence.2.ink",
+    "valence.3.ink",
     "disposition.friendly",
     "disposition.neutral",
     "disposition.hostile",
@@ -557,16 +557,12 @@ describe("the semantic scales meet their stated thresholds", () => {
     };
 
     /** The ladder's steps, in order. `wash` is translucent and not a step. */
-    const LADDER = [0, 1, 2] as const;
+    const STOPS = [0, 1, 2, 3] as const;
 
     const asText: ReadonlyArray<[string, string]> = [
       ["outcome.succeeded", tokens.outcome.succeeded],
       ["outcome.failed.ink", tokens.outcome.failed.ink],
-      // The ladder is a record rather than an array now, because the schema
-      // gives it a named sibling (`knowledge.wash`) that an array cannot
-      // carry. The steps are still enumerated in ladder order, which is what
-      // the monotonicity test below depends on.
-      ...LADDER.map((i) => [`knowledge.${i}`, tokens.knowledge[i]] as [string, string]),
+      ...STOPS.map((i) => [`valence.${i}.ink`, tokens.valence[i].ink] as [string, string]),
     ];
 
     test.each(asText)("%s meets AA on page, card and sunken", (token, colour) => {
@@ -581,22 +577,16 @@ describe("the semantic scales meet their stated thresholds", () => {
       });
     });
 
-    /**
-     * Schema gate 6: the ladder is monotonic in contrast, in ladder order.
+    /*
+     * Schema gate 6 -- the ladder's monotonicity -- is deliberately absent.
      *
-     * More knowledge must *read* as more, and it has to do so in both modes --
-     * darker in light, lighter in dark. No per-token threshold can express
-     * that, because every step passing 4.5:1 individually says nothing about
-     * whether they are in the right order. This is what makes the ladder
-     * survive greyscale and colour blindness: it is a value ramp, not three
-     * hues a reader is asked to rank.
+     * It guarded a property of `knowledge`: that contrast rose with the index,
+     * so "more knowledge" read as more in both modes. That scale is gone (D41,
+     * D120), and the valence ramp does not carry its ordering in contrast at
+     * all -- it carries it in hue, which is why the equivalent gate lives in
+     * `valence-ramp.test.ts` as "the hues run one way, from the green end to
+     * the red end". Deleting a gate along with the thing it guarded is the only
+     * honest option; keeping it here would need a scale to point it at.
      */
-    test("the knowledge ladder rises with the index", () => {
-      const ratios = LADDER.map((i) => worst(tokens.knowledge[i]));
-      expect({ ratios, rising: ratios[0] < ratios[1] && ratios[1] < ratios[2] }).toEqual({
-        ratios,
-        rising: true,
-      });
-    });
   });
 });

@@ -521,52 +521,6 @@
     color: var(--valence-3-ink);
   }
 
-  /* A thing that concluded. Quests only -- this is the one valenced scale. */
-  .outcome-active {
-    color: var(--accent-ink);
-  }
-
-  .outcome-succeeded {
-    color: var(--outcome-succeeded);
-  }
-
-  .outcome-failed {
-    color: var(--outcome-failed-ink);
-  }
-
-  /*
-    How much the party knows, as a ladder. Contrast against the ground rises
-    with the index in both modes, so it survives greyscale and colour blindness
-    as a value ramp rather than three hues a reader is asked to rank. The steps
-    are numbered rather than named: a step called `visited` would tie a ladder
-    that locations *and* rumours use to one of them.
-  */
-  .knowledge-0 {
-    color: var(--knowledge-0);
-  }
-
-  .knowledge-1 {
-    color: var(--knowledge-1);
-  }
-
-  .knowledge-2 {
-    color: var(--knowledge-2);
-  }
-
-  /*
-    NPC presence, which carries no hue at all. A slain villain is not a bad
-    outcome, so green and red leave the NPC directory entirely; alive is plain
-    ink and deceased is muted ink. 12-5 adds the strike that makes deceased
-    legible without relying on weight alone.
-  */
-  .presence-present {
-    color: var(--surface-page-on);
-  }
-
-  .presence-absent {
-    color: var(--surface-page-on-muted);
-  }
-
   /*
     Disposition is valenced, and that does not contradict the rule above:
     presence is a fact about the world, while an NPC's stance toward the party

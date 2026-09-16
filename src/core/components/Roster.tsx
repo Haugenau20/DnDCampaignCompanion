@@ -32,7 +32,7 @@ export interface RosterSegment {
   key: string;
   label: string;
   count: number;
-  /** Tailwind background utility backed by a theme token, e.g. bg-knowledge-0. */
+  /** Tailwind background utility backed by a theme token, e.g. bg-valence-0. */
   colorClass: string;
 }
 
@@ -436,33 +436,24 @@ export type RosterStatusTone =
   | 'valence-1'
   | 'valence-2'
   | 'valence-3'
-  // Knowledge -- the unranked ladder. Rising index means more knowledge.
-  | 'knowledge-0'
-  | 'knowledge-1'
-  | 'knowledge-2'
-  // Disposition -- an NPC's stance.
+  // Disposition -- an NPC's stance toward the party. Unranked, so it keeps its
+  // own scale: friendly and hostile borrow the ramp's ends because a stance
+  // genuinely is good or bad, but neutral and unknown are not points between
+  // them and must not be painted as though they were.
   | 'friendly'
   | 'neutral'
   | 'hostile'
-  | 'unsure'
-  // Presence, and anything else that should simply be read rather than scanned.
-  | 'present'
-  | 'absent';
+  | 'unsure';
 
 const STATUS_TONE: Record<RosterStatusTone, string> = {
   'valence-0': 'valence-0',
   'valence-1': 'valence-1',
   'valence-2': 'valence-2',
   'valence-3': 'valence-3',
-  'knowledge-0': 'knowledge-0',
-  'knowledge-1': 'knowledge-1',
-  'knowledge-2': 'knowledge-2',
   friendly: 'disposition-friendly',
   neutral: 'disposition-neutral',
   hostile: 'disposition-hostile',
   unsure: 'disposition-unknown',
-  present: 'presence-present',
-  absent: 'presence-absent',
 };
 
 export interface RosterStatusProps {

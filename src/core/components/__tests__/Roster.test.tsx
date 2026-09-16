@@ -520,15 +520,10 @@ describe('RosterStatus', () => {
     'valence-1',
     'valence-2',
     'valence-3',
-    'knowledge-0',
-    'knowledge-1',
-    'knowledge-2',
     'friendly',
     'neutral',
     'hostile',
     'unsure',
-    'present',
-    'absent',
   ] as const;
 
   /** Every class the rendered status carries. */
@@ -536,7 +531,7 @@ describe('RosterStatus', () => {
     (container.firstChild as HTMLElement).className;
 
   /** The one class that comes from a scale, with the shape classes dropped. */
-  const SCALE_PREFIXES = ['valence-', 'knowledge-', 'disposition-', 'presence-'];
+  const SCALE_PREFIXES = ['valence-', 'disposition-'];
   const fromScale = (cls: string): string | undefined =>
     cls.split(/\s+/).find(c => SCALE_PREFIXES.some(p => c.startsWith(p)));
 
@@ -574,8 +569,8 @@ describe('RosterStatus', () => {
       render1('valence-0', 'Alive'),
     ];
     expect(new Set(best).size).toBe(1);
-    // ...and a scale that is not ranked still refuses to join them.
-    expect(render1('knowledge-2', 'Fully known')).not.toBe(best[0]);
+    // ...and the unranked scale that remains still refuses to join them.
+    expect(render1('unsure', 'Unknown stance')).not.toBe(best[0]);
   });
 
   test('a confirmed and a disproven rumour sit on the same rung', () => {
@@ -584,10 +579,10 @@ describe('RosterStatus', () => {
     // a disproven rumour is a defeat, when it is a resolved one and usually
     // good news for the party.
     const { container: confirmed } = render(
-      <RosterStatus tone="knowledge-2">Confirmed</RosterStatus>
+      <RosterStatus tone="valence-3">Confirmed</RosterStatus>
     );
     const { container: disproven } = render(
-      <RosterStatus tone="knowledge-2">False</RosterStatus>
+      <RosterStatus tone="valence-3">False</RosterStatus>
     );
     expect(toneClass(confirmed)).toBe(toneClass(disproven));
   });
@@ -607,15 +602,10 @@ describe('RosterStatus', () => {
       ['valence-1', 'valence-1'],
       ['valence-2', 'valence-2'],
       ['valence-3', 'valence-3'],
-      ['knowledge-0', 'knowledge-0'],
-      ['knowledge-1', 'knowledge-1'],
-      ['knowledge-2', 'knowledge-2'],
       ['friendly', 'disposition-friendly'],
       ['neutral', 'disposition-neutral'],
       ['hostile', 'disposition-hostile'],
       ['unsure', 'disposition-unknown'],
-      ['present', 'presence-present'],
-      ['absent', 'presence-absent'],
     ]);
   });
 
@@ -656,7 +646,7 @@ describe('RosterStatus negation cue', () => {
   // and neither of them did.
   test('a negated state carries the strike', () => {
     const { container } = render(
-      <RosterStatus tone="knowledge-2" negated>
+      <RosterStatus tone="valence-3" negated>
         False
       </RosterStatus>
     );
@@ -664,7 +654,7 @@ describe('RosterStatus negation cue', () => {
   });
 
   test('an ordinary state does not', () => {
-    const { container } = render(<RosterStatus tone="knowledge-2">Confirmed</RosterStatus>);
+    const { container } = render(<RosterStatus tone="valence-3">Confirmed</RosterStatus>);
     expect((container.firstChild as HTMLElement).className).not.toContain('cue-negated');
   });
 
@@ -676,7 +666,7 @@ describe('RosterStatus negation cue', () => {
     // leave the ladder to say so.
     const cls = (negated: boolean) => {
       const { container, unmount } = render(
-        <RosterStatus tone="knowledge-2" negated={negated}>
+        <RosterStatus tone="valence-3" negated={negated}>
           Word
         </RosterStatus>
       );

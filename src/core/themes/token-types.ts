@@ -200,34 +200,6 @@ export interface ThemeTokens {
    */
   outcome: OutcomePair;
 
-  /**
-   * How much the party knows. An ordered ladder, not a verdict.
-   *
-   * Position is the meaning: a step named `visited` would tie a ladder that
-   * locations *and* rumours use to one of them. Contrast against the ground
-   * rises monotonically with the index, in both modes, so the ladder survives
-   * greyscale and colour blindness as a value ramp rather than a hue
-   * difference.
-   *
-   * **Why this is a record and not an array**, against token model section 6's
-   * preference for ordered collections: the schema gives the ladder a named
-   * sibling, `knowledge.wash`, and an array cannot carry one -- `flattenTokens`
-   * branches on `Array.isArray` and emits index-suffixed variables only, so a
-   * property hung off an array would be silently dropped. The ordering the
-   * array type used to express is not lost, because it was never really the
-   * type that enforced it: `token-contrast.test.ts` asserts the ladder rises
-   * with the index in both modes, and the fixture pins all four paths. That
-   * pair is a stronger guarantee than the shape was. `entityPalette` stays an
-   * array, so the ordered-collection mechanism is still exercised.
-   */
-  knowledge: {
-    0: string;
-    1: string;
-    2: string;
-    /** Translucent. A backdrop for a knowledge-tinted panel. */
-    wash: string;
-  };
-
   /** Ranked campaign state, good to bad. See `ValenceScale`. */
   valence: ValenceScale;
 

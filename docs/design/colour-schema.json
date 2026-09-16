@@ -1,16 +1,16 @@
 {
   "scheme": "torchlight-forge",
-  "version": 9,
+  "version": 10,
   "warning": "GENERATED FIXTURE. Never edited by an implementation agent, and never edited to make a test pass. Regenerate from the contract in docs/design/colour-schema.md §4, the role map in §5.4 and the scales in §5.5. v7's knowledge values were revised by hand against an explicit instruction (D40); the maths behind them is independently checked against Chromium's colour pipeline in src/core/themes/__tests__/oklch-oracle.test.ts, which is what keeps this file a check on the generator rather than a copy of it.",
-  "basedOn": "v8, resampling the valence ramp from five stops to four. Four is the most states any one scale has (NPC presence); a three-state scale takes three of the same four rather than getting its own spacing, which is what five forced. The ramp's ends still resolve to the same bytes as outcome.succeeded and outcome.failed by construction. No value outside valence.* changes.",
+  "basedOn": "v9, deleting the knowledge ladder. Its three consumers -- locations, rumours and NPC presence -- all moved to the valence ramp, so the scale had none left. Its first rung survives as disposition.unknown at the same hue, chroma and lightness, so no value on screen changes; rungs 1 and 2 and knowledge.wash are gone. No other value changes.",
   "inCodeAfter": {
     "12-1 + 12-2": 109
   },
   "pendingIn": {
     "12-2b": 26
   },
-  "leafCount": 143,
-  "colourCount": 131,
+  "leafCount": 139,
+  "colourCount": 127,
   "hue": {
     "neutral": {
       "H": 68,
@@ -28,10 +28,6 @@
     "failed": {
       "H": 22,
       "C": 0.155
-    },
-    "knowledge": {
-      "H": 265,
-      "C": 0.09
     },
     "entity": {
       "H0": 25,
@@ -51,6 +47,10 @@
         0.1317,
         0.155
       ]
+    },
+    "dispositionUnknown": {
+      "H": 265,
+      "C": 0.09
     }
   },
   "wash": 0.1,
@@ -365,12 +365,6 @@
           "successRing": "rgba(58, 100, 55, 0.35)",
           "failedRing": "rgba(149, 29, 40, 0.35)"
         },
-        "knowledge": [
-          "#445C90",
-          "#2C4173",
-          "#152857"
-        ],
-        "knowledgeWash": "rgba(68, 92, 144, 0.1)",
         "neutralBorder": "#878079",
         "placeholder": "#69625B",
         "secondary": {
@@ -407,7 +401,8 @@
             "ink": "#951D28",
             "fill": "#C54C4F"
           }
-        ]
+        ],
+        "dispositionUnknown": "#445C90"
       },
       "tree": {
         "color.primary": "#8D4F00",
@@ -513,9 +508,6 @@
         "outcome.succeeded": "#3A6437",
         "outcome.failed.ink": "#951D28",
         "outcome.failed.fill": "#951D28",
-        "knowledge.0": "#445C90",
-        "knowledge.1": "#2C4173",
-        "knowledge.2": "#152857",
         "cue.failure": "hatch",
         "cue.negation": "strike",
         "accent.ink": "#8D4F00",
@@ -525,7 +517,6 @@
         "accent.on": "#FDF5ED",
         "accent.ring": "rgba(141, 79, 0, 0.35)",
         "outcome.failed.on": "#FDF5ED",
-        "knowledge.wash": "rgba(68, 92, 144, 0.1)",
         "feedback.error.ink": "#951D28",
         "feedback.error.edge": "#951D28",
         "feedback.error.wash": "rgba(149, 29, 40, 0.1)",
@@ -617,12 +608,6 @@
           "successRing": "rgba(126, 171, 122, 0.35)",
           "failedRing": "rgba(225, 101, 102, 0.35)"
         },
-        "knowledge": [
-          "#748EC7",
-          "#8EA9E3",
-          "#B1CAFF"
-        ],
-        "knowledgeWash": "rgba(116, 142, 199, 0.1)",
         "neutralBorder": "#8C857D",
         "placeholder": "#9E978F",
         "secondary": {
@@ -659,7 +644,8 @@
             "ink": "#E16566",
             "fill": "#BE4649"
           }
-        ]
+        ],
+        "dispositionUnknown": "#748EC7"
       },
       "tree": {
         "color.primary": "#D69253",
@@ -765,9 +751,6 @@
         "outcome.succeeded": "#7EAB7A",
         "outcome.failed.ink": "#E16566",
         "outcome.failed.fill": "#BE4649",
-        "knowledge.0": "#748EC7",
-        "knowledge.1": "#8EA9E3",
-        "knowledge.2": "#B1CAFF",
         "cue.failure": "hatch",
         "cue.negation": "strike",
         "accent.ink": "#D69253",
@@ -777,7 +760,6 @@
         "accent.on": "#120D08",
         "accent.ring": "rgba(214, 146, 83, 0.35)",
         "outcome.failed.on": "#FDF5ED",
-        "knowledge.wash": "rgba(116, 142, 199, 0.1)",
         "feedback.error.ink": "#E16566",
         "feedback.error.edge": "#E16566",
         "feedback.error.wash": "rgba(225, 101, 102, 0.1)",

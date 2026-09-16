@@ -3918,6 +3918,99 @@ construction, so quests are unchanged at both ends; only "active" moved, from
 the old stop 2 to the new stop 1. Schema v8 -> v9, 143 leaves.
 
 
+### D121 - the knowledge ladder is deleted, and what the audit found
+Date: 2026-09-16   Status: landed
+
+Asked for by the maintainer after D120: is `knowledge.0/1/2` now dead, and what
+else is. Audited rather than assumed, and the answer was larger than the
+question.
+
+**Dead because the ramp took their consumers, now removed:**
+
+| | |
+|---|---|
+| tones | `knowledge-0/1/2`, `present`, `absent` in `RosterStatusTone` |
+| CSS | `.knowledge-0/1/2`, `.presence-present/absent`, `.outcome-active/succeeded/failed` |
+| Tailwind | `bg-outcome-active/succeeded/failed`, `bg-knowledge-0/1/2`, `bg-presence-present/absent`, `text-outcome-failed-on` |
+| tokens | `knowledge.0/1/2`, `knowledge.wash` |
+
+The ladder's first rung survives as `disposition.unknown`, authored directly at
+the same hue, chroma and lightness, so nothing on screen changed. Recorded as
+**D43** in the schema, which amends D26: there are no longer two semantic
+scales, there is a ranked ramp and an unranked `disposition`. Schema v9 -> v10,
+139 leaves.
+
+Schema gate 6, the ladder's monotonicity check, was deleted with the ladder. It
+asserted that contrast rose with the index so "more knowledge" read as more;
+nothing in the tree has that property now, because the ramp orders itself by
+hue. The equivalent gate is "the hues run one way" in `valence-ramp.test.ts`.
+Deleting a gate alongside the thing it guarded is the only honest option, and it
+is noted in place rather than silently dropped.
+
+`--knowledge-1` and `--knowledge-2` are the first tokens this project has
+deleted with **no successor**, which `token-rename-map.json` had no way to say:
+`retired` means "this value lives under another name now", and there is nothing
+to point at. A `deleted` section records them with the reason, and
+`token-values.test.tsx` asserts every name on it really is absent from both
+themes -- without that, listing a name there would excuse it from the value
+comparison and hide a token that still existed and had quietly changed.
+
+### R72 - nothing checked for orphaned variables, which is why this accumulated
+Date: 2026-09-16   Status: landed
+
+`token-manifest.test.ts` walked *consumed to defined*, which is the direction a
+rename breaks, and enumerated *tokens landed ahead of their consumers*, which is
+what an additive PR produces. Between the two sat the case that actually
+accumulates: a token that had consumers and lost them, as a scale is replaced
+and its classes are deleted one PR at a time.
+
+Every gate in the project was green with the whole knowledge ladder, three CSS
+classes, three Tailwind utilities and five tone values dead in the tree. It took
+a human reading a diff.
+
+There is now a third block. An unconsumed variable is allowed but must be
+**declared**, with its reason, and the list is checked both ways: a new orphan
+fails, and so does an entry that has since gained a consumer or been deleted
+from the tree. Verified it bites by removing both of `.progress-bar-read`'s
+references to `--outcome-succeeded`; it named the variable. The first attempt at
+that check passed, because the rule reads the variable twice and only one was
+perturbed -- worth recording, since a perturbation that half-lands looks exactly
+like a gate that works.
+
+Seven variables are declared unused today. Two kinds:
+
+- **`--scheme`, `--accent-on`, `--surface-band-selected`, `--surface-page-border`**
+  -- pre-existing, unrelated to this work. Surface pairs are emitted whole so a
+  surface cannot be given another's state, so an unused member is the shape
+  working, not a defect.
+- **`--outcome-failed-ink`, `--outcome-failed-fill`, `--outcome-failed-on`** --
+  orphaned by the ramp. The scale stays: it is still the documented source for
+  `feedback.error`, `disposition.hostile`, the field error states and
+  `danger.deleteText`, and `--outcome-succeeded` is still painted by
+  `.progress-bar-read`.
+
+### R73 - dead CSS classes that predate this work, reported not removed
+Date: 2026-09-16   Status: open, reported not fixed
+
+The same audit found classes in `components.css` with no consumer that have
+nothing to do with the ramp: `bg-primary`, `hero-slot`, `icon-bg`,
+`spinner-border`, `feedback-progress`, `feedback-error-edge`,
+`feedback-banner-success` and `feedback-banner-progress`.
+
+Left alone. They are unrelated to this change, and removing a CSS class is not
+as safe as it looks here: the first pass of this audit listed `button-outline`
+and `button-secondary` as dead, and both are alive through
+`` `button-${variant}` `` in `Button.tsx`. `typography-label` was on the list for
+the same reason, via `` `typography-${variant}` ``. A class-level sweep needs
+every template-assembled name enumerated first, which is a piece of work in its
+own right and should not ride along with a colour change.
+
+The `feedback-*` four are the interesting subset: `feedback.progress` and the
+success and progress banners may simply never have been wired up, in which case
+the question is whether the scale is complete rather than whether the classes
+are dead.
+
+
 ### Q19 - can an ordered collection have named siblings?
 Date: 2026-09-15   Status: open
 `TokenTree` supports a record or an array, and `knowledge` is the first token to
