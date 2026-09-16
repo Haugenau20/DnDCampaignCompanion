@@ -2,6 +2,8 @@
 
 This file records the measurements and tool output behind the consolidated review. It is evidence, not a benchmark promise: the browser used the local React development server and Firebase emulators on one Windows machine.
 
+All measurements and static-analysis results refer to repository commit `b73232a`. Later revisions can legitimately produce different behavior, timings, paths, and line numbers.
+
 ## Environment and safeguards
 
 - Frontend: `http://localhost:3000`

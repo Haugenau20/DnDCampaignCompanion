@@ -2,7 +2,9 @@
 
 ## Review status
 
-This is the consolidated performance review for the current worktree. The investigation covered the React application, Firebase client services and hooks, Cloud Functions called during page load, representative runtime workflows against the local emulators, the optimized bundle, dependency cycles, and focused tests.
+This is the consolidated performance review for repository commit `b73232a` (`Merge pull request #33 from Haugenau20/redesign/context-switcher`). The investigation covered the React application, Firebase client services and hooks, Cloud Functions called during page load, representative runtime workflows against the local emulators, the optimized bundle, dependency cycles, and focused tests.
+
+This document is a dated, point-in-time audit. The review branch was later synchronized with `main`, which had advanced substantially; findings and source line numbers must be revalidated before using them as statements about a newer revision.
 
 No application source, package manifest, or lockfile was changed. No campaign entity data was mutated; signing in performed the application's normal emulator `lastLogin` write. The only repository changes from this review are documentation under `docs/performance`.
 
