@@ -41,12 +41,53 @@ describe("SignInPage", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  // `SignInForm` already titles itself, via `Card.Header`. A page heading on
-  // top of that is the "Sign In" twice that 14-4 exists to remove, so this
-  // page contributes none of its own.
-  test("adds no heading of its own on top of the form's", () => {
+  // Inverted by 14.4, deliberately. In 14.1 the form still carried its own
+  // `Card.Header title="Sign In"`, so the page added nothing. Now the card is
+  // gone and the page is the single title -- which is the actual requirement:
+  // "Sign In" appears once in the DOM of `/signin`.
+  test("titles the page exactly once", () => {
     renderAt("/signin");
-    expect(screen.queryAllByRole("heading")).toHaveLength(0);
+    const signInHeadings = screen
+      .getAllByRole("heading")
+      .filter((h) => /^sign in$/i.test((h.textContent ?? "").trim()));
+    expect(signInHeadings).toHaveLength(1);
+  });
+
+  test("frames the page without naming a group it cannot read", () => {
+    renderAt("/signin");
+    expect(screen.getByText(/private campaign/i)).toBeInTheDocument();
+  });
+
+  describe("naming where you were going", () => {
+    test("names a destination it recognises", () => {
+      renderAt("/signin?next=%2Flocations");
+      expect(screen.getByText(/you were heading to/i)).toBeInTheDocument();
+      expect(screen.getByText("Locations")).toBeInTheDocument();
+    });
+
+    test("names the admin route by what it is, not by its path", () => {
+      renderAt("/signin?next=%2Fadmin%2Fpeople");
+      expect(screen.getByText("group administration")).toBeInTheDocument();
+    });
+
+    // A path is not a name. Showing one is worse than saying nothing: it puts
+    // a URL the reader never typed in front of them.
+    test("says nothing at all rather than printing a path", () => {
+      renderAt("/signin?next=%2Fsomething-unknown");
+      expect(screen.queryByText(/you were heading to/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/something-unknown/)).not.toBeInTheDocument();
+    });
+
+    test("says nothing when there is no destination", () => {
+      renderAt("/signin");
+      expect(screen.queryByText(/you were heading to/i)).not.toBeInTheDocument();
+    });
+
+    test("says nothing for a rejected destination", () => {
+      renderAt("/signin?next=https%3A%2F%2Fevil.test");
+      expect(screen.queryByText(/you were heading to/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/evil\.test/)).not.toBeInTheDocument();
+    });
   });
 
   describe("where it sends you afterwards", () => {

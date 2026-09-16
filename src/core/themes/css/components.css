@@ -602,6 +602,16 @@
     border-color: var(--feedback-warning-edge);
   }
 
+  /* Composed the same way as the two above, from tokens the manifest already
+     carries: wash behind, edge at the boundary, body ink on top. Added for the
+     confirmation that an invitation was read from a link -- the one place in
+     the product that reports a success as a standing banner rather than a
+     transient message. */
+  .feedback-banner-success {
+    background-color: var(--feedback-success-wash);
+    border-color: var(--feedback-success-edge);
+  }
+
   /* ====== ICON STYLING ====== */
   .icon-bg {
     background-color: var(--icon-bg);

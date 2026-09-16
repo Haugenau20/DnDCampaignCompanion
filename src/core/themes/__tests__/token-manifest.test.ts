@@ -245,16 +245,20 @@ describe("every variable a theme defines is either consumed or declared unused",
       "--outcome-succeeded is still painted by .progress-bar-read.",
     "--outcome-failed-fill": "As --outcome-failed-ink.",
     "--outcome-failed-on": "As --outcome-failed-ink.",
-    "--feedback-success-wash":
+    // `--feedback-success-wash` used to sit here. Its entry ended: "a future
+    // success banner should find its ground already defined rather than reach
+    // for the error one's." Phase 14.4 is that future -- `/join` confirms an
+    // invitation read from a link with a standing banner, and
+    // `.feedback-banner-success` is back, composed from the wash and edge this
+    // scale had kept waiting. Removed from the list because it now has a
+    // consumer, which is precisely what this gate exists to notice.
+    "--feedback-progress-wash":
       "The feedback scale defines wash and edge for all four states; only " +
-      "error and warning were ever given a banner. `.feedback-banner-success` " +
-      "and `.feedback-banner-progress` were deleted as dead (R73, D122), and " +
-      "each was the sole reader of its wash. The edges survive, because " +
-      "`.feedback-success-edge` and `.feedback-progress-edge` are applied " +
+      "error, warning and now success have banners. `.feedback-banner-progress` " +
+      "was deleted as dead (R73, D122) and was the sole reader of this wash. " +
+      "The edge survives, because `.feedback-progress-edge` is applied " +
       "directly. Kept rather than dropped from the scale: the gap is in the " +
-      "consumers, not the contract, and a future success banner should find " +
-      "its ground already defined rather than reach for the error one's.",
-    "--feedback-progress-wash": "As --feedback-success-wash.",
+      "consumers, not the contract.",
   };
 
   /** Every way a stylesheet can read a variable, including a style query. */
