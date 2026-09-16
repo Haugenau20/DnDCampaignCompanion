@@ -72,7 +72,7 @@ const DISPOSITION_CLASS: Partial<Record<string, string>> = {
 /**
  * Quest state on the shared valence ramp, best to worst.
  *
- * Completed is stop 0 and failed is stop 4 -- the ends of the ramp, which
+ * Completed is stop 0 and failed is stop 3 -- the ends of the ramp, which
  * resolve to the same values `outcome.succeeded` and `outcome.failed.ink`
  * always had, so a quest looks exactly as it did. Active is the middle rather
  * than the accent now, because the accent means "interactive" everywhere else
@@ -80,8 +80,8 @@ const DISPOSITION_CLASS: Partial<Record<string, string>> = {
  */
 const STATUS_TONE: Record<QuestStatus, RosterStatusTone> = {
   completed: 'valence-0',
-  active: 'valence-2',
-  failed: 'valence-4',
+  active: 'valence-1',
+  failed: 'valence-3',
 };
 
 /**
@@ -99,9 +99,9 @@ const PROGRESS_FILL: Record<QuestStatus, string> = {
 };
 
 const STATUS_COLOR: Record<QuestStatus, string> = {
-  active: 'bg-valence-2',
+  active: 'bg-valence-1',
   completed: 'bg-valence-0',
-  failed: 'bg-valence-4',
+  failed: 'bg-valence-3',
 };
 
 /**

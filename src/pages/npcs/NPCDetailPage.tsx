@@ -39,8 +39,8 @@ import { Pencil } from 'lucide-react';
 const PRESENCE_CLASS: Record<string, string> = {
   alive: 'valence-0',
   unknown: 'valence-1',
-  missing: 'valence-3',
-  deceased: 'valence-4',
+  missing: 'valence-2',
+  deceased: 'valence-3',
 };
 
 /**

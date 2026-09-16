@@ -430,12 +430,12 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
 export type RosterStatusTone =
   // Valence -- the shared ramp, good to bad. Every directory that ranks its
   // states draws from this, which is what makes the four pages read as one
-  // system. Three-state scales take 0, 2 and 4; NPC presence takes 0, 1, 3, 4.
+  // system. NPC presence takes all four; a three-state scale takes three of
+  // the same four, so no directory carries a spacing of its own.
   | 'valence-0'
   | 'valence-1'
   | 'valence-2'
   | 'valence-3'
-  | 'valence-4'
   // Knowledge -- the unranked ladder. Rising index means more knowledge.
   | 'knowledge-0'
   | 'knowledge-1'
@@ -454,7 +454,6 @@ const STATUS_TONE: Record<RosterStatusTone, string> = {
   'valence-1': 'valence-1',
   'valence-2': 'valence-2',
   'valence-3': 'valence-3',
-  'valence-4': 'valence-4',
   'knowledge-0': 'knowledge-0',
   'knowledge-1': 'knowledge-1',
   'knowledge-2': 'knowledge-2',

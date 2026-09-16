@@ -79,8 +79,8 @@ const DISPOSITION_TONE: Partial<Record<string, RosterStatusTone>> = {
 const STATUS_TONE: Partial<Record<string, RosterStatusTone>> = {
   alive: 'valence-0',
   unknown: 'valence-1',
-  missing: 'valence-3',
-  deceased: 'valence-4',
+  missing: 'valence-2',
+  deceased: 'valence-3',
 };
 
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({
@@ -158,8 +158,8 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
       // Best to worst, left to right, like every other directory's bar.
       { key: 'alive', label: 'alive', count: count('alive'), colorClass: 'bg-valence-0' },
       { key: 'unknown', label: 'unknown', count: count('unknown'), colorClass: 'bg-valence-1' },
-      { key: 'missing', label: 'missing', count: count('missing'), colorClass: 'bg-valence-3' },
-      { key: 'deceased', label: 'deceased', count: count('deceased'), colorClass: 'bg-valence-4' },
+      { key: 'missing', label: 'missing', count: count('missing'), colorClass: 'bg-valence-2' },
+      { key: 'deceased', label: 'deceased', count: count('deceased'), colorClass: 'bg-valence-3' },
     ];
   }, [npcs]);
 

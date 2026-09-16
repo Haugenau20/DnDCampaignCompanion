@@ -1,16 +1,16 @@
 {
   "scheme": "torchlight-forge",
-  "version": 8,
+  "version": 9,
   "warning": "GENERATED FIXTURE. Never edited by an implementation agent, and never edited to make a test pass. Regenerate from the contract in docs/design/colour-schema.md §4, the role map in §5.4 and the scales in §5.5. v7's knowledge values were revised by hand against an explicit instruction (D40); the maths behind them is independently checked against Chromium's colour pipeline in src/core/themes/__tests__/oklch-oracle.test.ts, which is what keeps this file a check on the generator rather than a copy of it.",
-  "basedOn": "v7, adding the valence ramp. Purely additive: no value v7 shipped changes. The ramp's ends resolve to the same bytes as outcome.succeeded and outcome.failed, by construction rather than by alias -- the contract solves them from those roles' own lightnesses and chromas.",
+  "basedOn": "v8, resampling the valence ramp from five stops to four. Four is the most states any one scale has (NPC presence); a three-state scale takes three of the same four rather than getting its own spacing, which is what five forced. The ramp's ends still resolve to the same bytes as outcome.succeeded and outcome.failed by construction. No value outside valence.* changes.",
   "inCodeAfter": {
     "12-1 + 12-2": 109
   },
   "pendingIn": {
     "12-2b": 26
   },
-  "leafCount": 145,
-  "colourCount": 133,
+  "leafCount": 143,
+  "colourCount": 131,
   "hue": {
     "neutral": {
       "H": 68,
@@ -41,16 +41,14 @@
     "valence": {
       "H": [
         143,
-        113,
-        83,
-        52,
+        102.67,
+        62.33,
         22
       ],
       "C": [
         0.085,
-        0.1,
-        0.12,
-        0.14,
+        0.1083,
+        0.1317,
         0.155
       ]
     }
@@ -398,16 +396,12 @@
             "fill": "#5C8759"
           },
           {
-            "ink": "#575C03",
-            "fill": "#7B8034"
+            "ink": "#615800",
+            "fill": "#877C22"
           },
           {
-            "ink": "#6E4F00",
-            "fill": "#9C7200"
-          },
-          {
-            "ink": "#833D00",
-            "fill": "#B95E17"
+            "ink": "#7C4500",
+            "fill": "#B06505"
           },
           {
             "ink": "#951D28",
@@ -553,14 +547,12 @@
         "scheme": "light",
         "valence.0.ink": "#3A6437",
         "valence.0.fill": "#5C8759",
-        "valence.1.ink": "#575C03",
-        "valence.1.fill": "#7B8034",
-        "valence.2.ink": "#6E4F00",
-        "valence.2.fill": "#9C7200",
-        "valence.3.ink": "#833D00",
-        "valence.3.fill": "#B95E17",
-        "valence.4.ink": "#951D28",
-        "valence.4.fill": "#C54C4F"
+        "valence.1.ink": "#615800",
+        "valence.1.fill": "#877C22",
+        "valence.2.ink": "#7C4500",
+        "valence.2.fill": "#B06505",
+        "valence.3.ink": "#951D28",
+        "valence.3.fill": "#C54C4F"
       }
     },
     "dark": {
@@ -656,16 +648,12 @@
             "fill": "#568153"
           },
           {
-            "ink": "#9AA054",
-            "fill": "#757A2E"
+            "ink": "#A59B45",
+            "fill": "#81761A"
           },
           {
-            "ink": "#BA8E30",
-            "fill": "#956D00"
-          },
-          {
-            "ink": "#D47736",
-            "fill": "#B2580B"
+            "ink": "#CC7F30",
+            "fill": "#A86000"
           },
           {
             "ink": "#E16566",
@@ -811,14 +799,12 @@
         "scheme": "dark",
         "valence.0.ink": "#7EAB7A",
         "valence.0.fill": "#568153",
-        "valence.1.ink": "#9AA054",
-        "valence.1.fill": "#757A2E",
-        "valence.2.ink": "#BA8E30",
-        "valence.2.fill": "#956D00",
-        "valence.3.ink": "#D47736",
-        "valence.3.fill": "#B2580B",
-        "valence.4.ink": "#E16566",
-        "valence.4.fill": "#BE4649"
+        "valence.1.ink": "#A59B45",
+        "valence.1.fill": "#81761A",
+        "valence.2.ink": "#CC7F30",
+        "valence.2.fill": "#A86000",
+        "valence.3.ink": "#E16566",
+        "valence.3.fill": "#BE4649"
       }
     }
   }

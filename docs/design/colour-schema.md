@@ -59,7 +59,7 @@ against its real consumers (D32), and neither introduced a colour.
 |---|---|---|---|
 | **Accent** | amber | no | Action, interactivity, anything in progress |
 | **Outcome** | green + red | **yes** | A thing that concluded: succeeded, failed |
-| **Valence** | green through gold to red, five stops | **yes** | Ranked campaign state, good to bad |
+| **Valence** | green through gold to red, four stops | **yes** | Ranked campaign state, good to bad |
 | **Knowledge** | indigo, three steps | no | How much the party knows |
 | **Entity** | eight hues | no | Identity marks |
 | **Feedback** | amber, green, red | **yes** | The *application* talking about itself |
@@ -114,18 +114,18 @@ green, and was available to borrow. So the scales are now named after meaning:
 | Domain state | Token | Hue |
 |---|---|---|
 | Quest completed | `valence.0` | green — the ramp's best end |
-| Quest active | `valence.2` | gold — still open |
-| Quest failed | `valence.4` + hatch cue | red — the ramp's worst end |
+| Quest active | `valence.1` | gold — still open |
+| Quest failed | `valence.3` + hatch cue | red — the ramp's worst end |
 | Location explored | `valence.0` | green |
-| Location visited | `valence.2` | gold |
-| Location known | `valence.4` | red — heard of, not been |
+| Location visited | `valence.1` | gold |
+| Location known | `valence.2` | amber — the least of three, not a failure |
 | Rumour confirmed | `valence.0` | green |
-| Rumour unconfirmed | `valence.2` | gold |
-| Rumour false | `valence.4` + strike cue | red, and negated |
+| Rumour unconfirmed | `valence.1` | gold |
+| Rumour false | `valence.3` + strike cue | red, and negated |
 | NPC alive | `valence.0` | green |
-| NPC unrecorded | `valence.1` | no record of them |
-| NPC missing | `valence.3` | known to be lost |
-| NPC deceased | `valence.4` + strike cue | red — the worst end |
+| NPC unknown | `valence.1` | no record of them |
+| NPC missing | `valence.2` | known to be lost |
+| NPC deceased | `valence.3` + strike cue | red — the worst end |
 | NPC friendly / hostile | `disposition.*` | green / red — see below |
 | Save or request failed | `feedback.error` | the app, not the campaign |
 | Unsaved changes, session expiring, quota near | `feedback.warning` | amber: act soon |
@@ -164,7 +164,7 @@ This is the authored input. Everything in §5 is derived from it.
 | `outcome.succeeded` | 143° | 0.085 |
 | `outcome.failed` | 22° | 0.155 |
 | `knowledge.*` | 265° | 0.09 |
-| `valence[i]` | 143 / 113 / 83 / 52 / 22° | 0.085 / 0.1 / 0.12 / 0.14 / 0.155 |
+| `valence[i]` | 143 / 102.67 / 62.33 / 22° | 0.085 / 0.1083 / 0.1317 / 0.155 |
 | `entity[i]` | 25 + 45i | 0.055 |
 
 The entity palette is a loop, not a list: eight hues at even 45° spacing
@@ -314,14 +314,12 @@ below it. "on fill" means the ink measured against the fill it sits on.
 | `outcome.failed.on` | `#FDF5ED` | 7.83 on fill | `#FDF5ED` | 4.68 on fill |
 | `valence.0.ink` | `#3A6437` | 5.36 | `#7EAB7A` | 5.78 |
 | `valence.0.fill` | `#5C8759` | 3.23 | `#568153` | 3.37 |
-| `valence.1.ink` | `#575C03` | 5.58 | `#9AA054` | 5.44 |
-| `valence.1.fill` | `#7B8034` | 3.29 | `#757A2E` | 3.31 |
-| `valence.2.ink` | `#6E4F00` | 5.89 | `#BA8E30` | 5.06 |
-| `valence.2.fill` | `#9C7200` | 3.4 | `#956D00` | 3.23 |
-| `valence.3.ink` | `#833D00` | 6.22 | `#D47736` | 4.69 |
-| `valence.3.fill` | `#B95E17` | 3.5 | `#B2580B` | 3.1 |
-| `valence.4.ink` | `#951D28` | 6.59 | `#E16566` | 4.52 |
-| `valence.4.fill` | `#C54C4F` | 3.62 | `#BE4649` | 3.01 |
+| `valence.1.ink` | `#615800` | 5.64 | `#A59B45` | 5.33 |
+| `valence.1.fill` | `#877C22` | 3.32 | `#81761A` | 3.28 |
+| `valence.2.ink` | `#7C4500` | 6.05 | `#CC7F30` | 4.8 |
+| `valence.2.fill` | `#B06505` | 3.48 | `#A86000` | 3.13 |
+| `valence.3.ink` | `#951D28` | 6.59 | `#E16566` | 4.52 |
+| `valence.3.fill` | `#C54C4F` | 3.62 | `#BE4649` | 3.01 |
 | `knowledge.0` | `#445C90` | 5.15 | `#748EC7` | 4.65 |
 | `knowledge.1` | `#2C4173` | 7.76 | `#8EA9E3` | 6.46 |
 | `knowledge.2` | `#152857` | 11.12 | `#B1CAFF` | 9.22 |
@@ -708,8 +706,11 @@ Carry these into `../plan/03-drift-log.md` as they are implemented.
 - **D41 — Ranked campaign state shares one valence ramp.** Directed by the
   maintainer, and it reverses D26, D27 and D34 for the directories: quests,
   rumours, locations and NPC presence are now ranked good-to-bad on one
-  five-stop ramp rather than split across `outcome`, `knowledge` and
-  `presence`. The reason is legibility, not semantics. The semantic split was
+  four-stop ramp rather than split across `outcome`, `knowledge` and
+  `presence`. Four is the most states any one scale has, and a scale with
+  three takes three of the same four rather than getting its own spacing --
+  an earlier cut used five stops and forced exactly that asymmetry, giving
+  NPC presence two middles no other page showed. The reason is legibility, not semantics. The semantic split was
   correct and shipped three directories in greys that could not be ranked at a
   glance, which is a real cost paid for a distinction most readers were not
   making. What D26 bought is not thrown away: the ramp is **positional**, no
@@ -719,6 +720,12 @@ Carry these into `../plan/03-drift-log.md` as they are implemented.
   recur. The accessibility cost is real and is carried by the cues from `12-5`:
   red/green is the common confusion axis, and every state is already labelled
   with a word, a failed bar is hatched, and a negated one is struck.
+  Which three a three-state scale takes is a judgement about its domain, not
+  about the ramp: quests and rumours run to the red because a quest can fail
+  and a rumour can be disproved, while **locations stop at stop 2**, since a
+  place merely heard of is only the least of three degrees of familiarity and
+  painting it as a failure would repeat, quietly, the bug this phase opened by
+  fixing.
   The ends of the ramp **are** `outcome.succeeded` and `outcome.failed.ink` —
   solved from those roles' own lightness and chroma, so a quest does not change
   colour — and `outcome` stays for `disposition`, `feedback` and the fields.

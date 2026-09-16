@@ -3881,6 +3881,43 @@ The NPC band labelled "unrecorded" now reads "unknown", matching the stored
 `NPCStatus` value and the filter control beside it.
 
 
+### D120 - the ramp is four stops, and every scale samples the same four
+Date: 2026-09-16   Status: landed
+
+D119 shipped five stops, which made three-state scales take 0/2/4 and NPC
+presence take 0/1/3/4. The maintainer spotted what that costs: NPC's two middles
+were colours no other page showed, and NPC never displayed the middle the other
+three shared. One ramp with a private spacing for the scale that needed four is
+not one ramp.
+
+Four stops, because four is the most states any one scale has. A three-state
+scale takes three of the same four. Nothing has a spacing of its own:
+
+| scale | stops |
+|---|---|
+| NPC presence | 0, 1, 2, 3 |
+| Quests | 0, 1, 3 |
+| Rumours | 0, 1, 3 |
+| Locations | **0, 1, 2** |
+
+Five could never have done this. For a set of stops to be divisible evenly by
+both three and four, the count has to leave `n - 1` divisible by 6, so the
+alternatives were four or seven. Seven was modelled and rejected -- the extra
+granularity bought nothing any scale asked for, and put two unused stops between
+every pair a directory actually paints.
+
+**Locations stop at 2 and never reach the red.** Directed by the maintainer, and
+it is the right reading of the domain rather than a softening: quests and rumours
+run to the red end because a quest can fail and a rumour can be disproved, but a
+place merely heard of is the least of three degrees of familiarity, not a bad
+outcome. Painting it as a failure would repeat, in a quieter key, the bug this
+whole phase opened by fixing.
+
+The ends still resolve to `outcome.succeeded` and `outcome.failed.ink` by
+construction, so quests are unchanged at both ends; only "active" moved, from
+the old stop 2 to the new stop 1. Schema v8 -> v9, 143 leaves.
+
+
 ### Q19 - can an ordered collection have named siblings?
 Date: 2026-09-15   Status: open
 `TokenTree` supports a record or an array, and `knowledge` is the first token to

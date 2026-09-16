@@ -78,17 +78,23 @@ const DISPOSITION_CLASS: Partial<Record<string, string>> = {
  *
  * Bands, and the ramp stops they take, run in that order too, so the bar reads
  * left to right from best to worst like every other directory.
+ *
+ * Locations take stops 0, 1 and 2 and never reach the red. Every other ranked
+ * scale ends there because a quest can fail, a rumour can be disproved and an
+ * NPC can die; a place you have merely heard of is only the least of three
+ * degrees of familiarity, and painting it like a failure would repeat in a
+ * quieter key the mistake this whole phase started by fixing.
  */
 const STATUS_ORDER: { key: LocationStatus; colorClass: string }[] = [
   { key: 'explored', colorClass: 'bg-valence-0' },
-  { key: 'visited', colorClass: 'bg-valence-2' },
-  { key: 'known', colorClass: 'bg-valence-4' },
+  { key: 'visited', colorClass: 'bg-valence-1' },
+  { key: 'known', colorClass: 'bg-valence-2' },
 ];
 
 const STATUS_TONE: Record<LocationStatus, RosterStatusTone> = {
   explored: 'valence-0',
-  visited: 'valence-2',
-  known: 'valence-4',
+  visited: 'valence-1',
+  known: 'valence-2',
 };
 
 const formatLocationType = (type: LocationType): string => {

@@ -20,8 +20,21 @@ export const HUE = {
   failed: { h: 22, c: 0.155 },
   knowledge: { h: 265, c: 0.09 },
   /**
-   * The valence ramp: five stops from "good" to "bad", used by every directory
+   * The valence ramp: four stops from "good" to "bad", used by every directory
    * that ranks its states.
+   *
+   * Four, because that is the most states any one scale has -- NPC presence --
+   * and a scale with three takes three of the four rather than getting its own
+   * spacing. An earlier cut had five stops, which forced exactly the asymmetry
+   * this avoids: three-state scales took 0/2/4 and NPC took 0/1/3/4, so NPC's
+   * middles were two colours no other page showed and it never displayed the
+   * middle the others shared. One ramp, sampled, keeps every directory drawing
+   * from the same four colours.
+   *
+   * Which three a three-state scale takes is a judgement about the domain, not
+   * about the ramp: quests and rumours end at the red because a quest can fail
+   * and a rumour can be disproved, while locations stop at 2, since a place you
+   * have merely heard of is the least of the three and not a bad outcome.
    *
    * Hue runs evenly from `succeeded` (143) to `failed` (22) the short way --
    * through yellow and amber, the warm half of the wheel, which is the only
@@ -37,8 +50,8 @@ export const HUE = {
    * `valence-ramp.test.ts`.
    */
   valence: {
-    hues: [143, 113, 83, 52, 22],
-    chromas: [0.085, 0.1, 0.12, 0.14, 0.155],
+    hues: [143, 102.67, 62.33, 22],
+    chromas: [0.085, 0.1083, 0.1317, 0.155],
   },
   /** A loop, not a list: eight hues at even spacing. Order is the contract. */
   entity: { firstHue: 25, step: 45, c: 0.055 },

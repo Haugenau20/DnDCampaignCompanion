@@ -63,8 +63,8 @@ const SOURCE_FILTERS: RosterFilterOption[] = [
  */
 const STATUS_TONE: Record<RumorStatus, RosterStatusTone> = {
   confirmed: 'valence-0',
-  unconfirmed: 'valence-2',
-  false: 'valence-4',
+  unconfirmed: 'valence-1',
+  false: 'valence-3',
 };
 
 const formatStatus = (status: RumorStatus): string =>
@@ -117,8 +117,8 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
       // apart by their labels here and by 12-5's strike in the rows -- not by
       // hue, which is what put a false rumour in the red of a lost quest.
       { key: 'confirmed', label: 'confirmed', count: count('confirmed'), colorClass: 'bg-valence-0' },
-      { key: 'unconfirmed', label: 'unconfirmed', count: count('unconfirmed'), colorClass: 'bg-valence-2' },
-      { key: 'false', label: 'false', count: count('false'), colorClass: 'bg-valence-4' },
+      { key: 'unconfirmed', label: 'unconfirmed', count: count('unconfirmed'), colorClass: 'bg-valence-1' },
+      { key: 'false', label: 'false', count: count('false'), colorClass: 'bg-valence-3' },
     ];
   }, [initialRumors]);
 

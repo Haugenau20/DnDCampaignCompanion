@@ -16,7 +16,7 @@ import { ThemeName } from "../types";
 import { HUE } from "../derive/contract";
 
 const MODES: readonly ThemeName[] = ["light", "dark"];
-const STOPS = [0, 1, 2, 3, 4] as const;
+const STOPS = [0, 1, 2, 3] as const;
 
 /** WCAG's floors. Text owes 4.5:1; a bar or a dot is not text and owes 3:1. */
 const TEXT_MINIMUM = 4.5;
@@ -39,7 +39,7 @@ describe.each(MODES)("the valence ramp in %s", (mode) => {
     // that drifts the first time anyone retunes a lightness. They are equal
     // because the contract solves them from the same numbers -- see
     // `derivePrimitives` -- so equality is the right assertion, not closeness.
-    expect({ best: ramp[0].ink, worst: ramp[4].ink }).toEqual({
+    expect({ best: ramp[0].ink, worst: ramp[3].ink }).toEqual({
       best: tokens.outcome.succeeded,
       worst: tokens.outcome.failed.ink,
     });
@@ -64,14 +64,14 @@ describe.each(MODES)("the valence ramp in %s", (mode) => {
     const closer = STOPS.map(
       (i) => contrastRatio(ramp[i].fill, ground) < contrastRatio(ramp[i].ink, ground)
     );
-    expect(closer).toEqual([true, true, true, true, true]);
+    expect(closer).toEqual([true, true, true, true]);
   });
 
   test("the fill recovers chroma the ink cannot hold, where the gamut is tight", () => {
     // The reason the middle of the ramp is gold rather than olive, and it is a
     // light-mode effect specifically. At the lightness AA demands on a cream
-    // ground, sRGB has no room near yellow, so `fitChroma` pulls stops 2 and 3
-    // back -- stop 2 asks for 0.12 and the ink keeps about 0.092. The fill,
+    // ground, sRGB has no room near yellow, so `fitChroma` pulls stops 1 and 2
+    // back -- stop 1 asks for 0.108 and the ink keeps less. The fill,
     // solving at 3:1, sits high enough to keep nearly all of it.
     //
     // In dark mode the inks are already light enough to hold their chroma, so
@@ -91,7 +91,7 @@ describe.each(MODES)("the valence ramp in %s", (mode) => {
       const b2 = 0.0259040371 * lRoot + 0.7827717662 * mRoot - 0.808675766 * sRoot;
       return Math.hypot(a, b2);
     };
-    const squeezed = [2, 3] as const;
+    const squeezed = [1, 2] as const;
     const asked = squeezed.map((i) => HUE.valence.chromas[i]);
     const inkShortfall = squeezed.map((i, n) => asked[n] - chromaOf(ramp[i].ink));
     const fillShortfall = squeezed.map((i, n) => asked[n] - chromaOf(ramp[i].fill));
@@ -119,10 +119,10 @@ describe.each(MODES)("the valence ramp in %s", (mode) => {
   });
 
   test("no two stops collapse into the same colour", () => {
-    // Five stops that are not five colours would be a ramp in name only.
+    // Four stops that are not four colours would be a ramp in name only.
     const inks = new Set(STOPS.map((i) => ramp[i].ink));
     const fills = new Set(STOPS.map((i) => ramp[i].fill));
-    expect({ inks: inks.size, fills: fills.size }).toEqual({ inks: 5, fills: 5 });
+    expect({ inks: inks.size, fills: fills.size }).toEqual({ inks: 4, fills: 4 });
   });
 });
 
@@ -134,7 +134,7 @@ describe("the ramp does not bring back the bug that split the scales", () => {
     // tautology -- it fails the moment someone adds a friendly alias.
     const tokens = deriveTokens("light");
     const names = Object.keys(tokens.valence);
-    expect(names).toEqual(["0", "1", "2", "3", "4"]);
+    expect(names).toEqual(["0", "1", "2", "3"]);
   });
 
   test("the unranked scales still exist and still differ from the ramp", () => {

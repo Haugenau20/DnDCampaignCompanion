@@ -35,7 +35,7 @@ const NON_TEXT_MINIMUM = 3;
 describe("the bands do not separate themselves", () => {
   describe.each(MODES)("%s", (mode) => {
     const tokens = deriveTokens(mode);
-    const fills = [0, 1, 2, 3, 4].map((i) => tokens.valence[i as 0].fill);
+    const fills = [0, 1, 2, 3].map((i) => tokens.valence[i as 0].fill);
 
     test("no two neighbouring stops clear the non-text threshold", () => {
       // What every bar on every directory actually paints, in the order it
@@ -44,15 +44,12 @@ describe("the bands do not separate themselves", () => {
       expect(Math.max(...adjacent)).toBeLessThan(NON_TEXT_MINIMUM);
     });
 
-    test("not even the two stops a three-state scale skips between", () => {
-      // Rumours, locations and quests use stops 0, 2 and 4 -- the widest
-      // spacing the ramp offers. Even those neighbours fall short, so this is
-      // not a problem confined to the four-stop NPC bar.
-      const widest = [
-        contrastRatio(fills[0], fills[2]),
-        contrastRatio(fills[2], fills[4]),
-      ];
-      expect(Math.max(...widest)).toBeLessThan(NON_TEXT_MINIMUM);
+    test("not even the widest pair a three-state scale can take", () => {
+      // Quests and rumours take stops 0, 1 and 3, so their widest neighbouring
+      // pair spans 1 to 3 -- two steps of the ramp at once. Even that falls
+      // short, so this is not an artefact of the four-stop NPC bar being the
+      // most crowded.
+      expect(contrastRatio(fills[1], fills[3])).toBeLessThan(NON_TEXT_MINIMUM);
     });
   });
 });

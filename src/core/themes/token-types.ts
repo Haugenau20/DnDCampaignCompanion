@@ -126,15 +126,20 @@ export interface ValenceStop {
 }
 
 /**
- * Ranked campaign state, good to bad, in five stops.
+ * Ranked campaign state, good to bad, in four stops.
  *
  * Position is the meaning, exactly as in `knowledge`: a stop named `failed`
  * would tie a ramp that quests, rumours, locations and NPCs all share to one
- * of them. A scale with three states takes 0, 2 and 4; NPC presence, which has
- * four, takes 0, 1, 3 and 4. Both keep the same ends, which is what makes the
- * four directories read as one system.
+ * of them. NPC presence has four states and takes all four stops; a scale with
+ * three takes three of the same four, so every directory draws from one set of
+ * colours rather than each getting its own spacing.
  *
- * Stops 0 and 4 carry the same values as `outcome.succeeded` and
+ * Which three is a judgement about the domain. Quests and rumours run to the
+ * red end, because a quest can fail and a rumour can be disproved. Locations
+ * stop at 2: a place you have only heard of is the least of the three, and
+ * that is not the same as a bad outcome.
+ *
+ * Stops 0 and 3 carry the same values as `outcome.succeeded` and
  * `outcome.failed` -- not by an alias but because the contract solves them from
  * the same lightnesses and chromas. `outcome` remains for the things that are
  * genuinely a verdict rather than a rank, and for `disposition` and `feedback`,
@@ -145,7 +150,6 @@ export interface ValenceScale {
   1: ValenceStop;
   2: ValenceStop;
   3: ValenceStop;
-  4: ValenceStop;
 }
 
 export interface DispositionScale {

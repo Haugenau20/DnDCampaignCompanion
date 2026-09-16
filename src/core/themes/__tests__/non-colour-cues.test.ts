@@ -28,7 +28,7 @@ describe("cue.failure -- the hatch", () => {
   test("a failed bar is hatched, not merely filled", () => {
     const body = ruleBody(".progress-bar-failed");
     expect({
-      fill: /background-color:\s*var\(--valence-4-fill\)/.test(body),
+      fill: /background-color:\s*var\(--valence-3-fill\)/.test(body),
       hatch: /background-image:\s*repeating-linear-gradient\(\s*45deg/.test(body),
     }).toEqual({ fill: true, hatch: true });
   });

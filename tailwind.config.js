@@ -51,7 +51,6 @@ module.exports = {
         'valence-1': 'var(--valence-1-fill)',
         'valence-2': 'var(--valence-2-fill)',
         'valence-3': 'var(--valence-3-fill)',
-        'valence-4': 'var(--valence-4-fill)',
         'knowledge-0': 'var(--knowledge-0)',
         'knowledge-1': 'var(--knowledge-1)',
         'knowledge-2': 'var(--knowledge-2)',

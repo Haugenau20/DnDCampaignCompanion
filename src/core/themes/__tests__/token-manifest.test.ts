@@ -142,8 +142,6 @@ describe("tokens with no consumers yet are still enumerated", () => {
     "--valence-2-fill",
     "--valence-3-ink",
     "--valence-3-fill",
-    "--valence-4-ink",
-    "--valence-4-fill",
     "--feedback-error-ink",
     "--feedback-error-edge",
     "--feedback-error-wash",
@@ -204,6 +202,6 @@ describe("tokens with no consumers yet are still enumerated", () => {
   test.each(THEMES)("%s defines the schema's leaves, less what has retired", (_name, tokens) => {
     // 135 in the fixture, less the twelve names 12-3a and 12-3b delete:
     // six `status.*`, three `color.*` and three `state.*`.
-    expect(Object.keys(flattenTokens(tokens)).length).toBe(133);
+    expect(Object.keys(flattenTokens(tokens)).length).toBe(131);
   });
 });

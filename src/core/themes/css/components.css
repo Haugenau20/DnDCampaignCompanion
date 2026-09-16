@@ -487,7 +487,7 @@
   }
 
   /*
-    Ranked campaign state, good to bad, in five stops.
+    Ranked campaign state, good to bad, in four stops.
 
     Every directory that ranks its states draws from this one ramp, which is
     the whole point: "the best case" is the same green on the quest page, the
@@ -519,10 +519,6 @@
 
   .valence-3 {
     color: var(--valence-3-ink);
-  }
-
-  .valence-4 {
-    color: var(--valence-4-ink);
   }
 
   /* A thing that concluded. Quests only -- this is the one valenced scale. */
@@ -761,7 +757,7 @@
     the texture reads the same whatever the bar is drawn over.
   */
   .progress-bar-failed {
-    background-color: var(--valence-4-fill);
+    background-color: var(--valence-3-fill);
     background-image: repeating-linear-gradient(
       45deg,
       var(--surface-sunken-bg) 0,

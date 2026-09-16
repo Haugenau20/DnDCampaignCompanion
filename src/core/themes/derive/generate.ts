@@ -302,7 +302,6 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
       1: primitives.valence[1],
       2: primitives.valence[2],
       3: primitives.valence[3],
-      4: primitives.valence[4],
     },
     cue: { failure: CUES.failure, negation: CUES.negation },
     // The application's own voice. Error and success borrow the outcome

@@ -24,12 +24,12 @@ const NPCLegend: React.FC = () => {
       description: 'NPC is alive' 
     },
     { 
-      icon: <Skull className="valence-4" />, 
+      icon: <Skull className="valence-3" />, 
       label: 'Deceased', 
       description: 'NPC is no longer living' 
     },
     { 
-      icon: <AlertCircle className="valence-3" />, 
+      icon: <AlertCircle className="valence-2" />, 
       label: 'Missing', 
       description: 'NPC\'s whereabouts are unknown' 
     },
