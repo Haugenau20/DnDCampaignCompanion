@@ -72,7 +72,7 @@ Affected code:
 - [`useSearch.ts`](../../src/shared/hooks/useSearch.ts#L51) debounces but passes raw whitespace-bearing queries.
 - [`SearchService.ts`](../../src/core/services/search/SearchService.ts#L171) creates empty terms and contains the non-advancing loop.
 - [`SearchService.ts`](../../src/core/services/search/SearchService.ts#L108) also normalizes every document on every query and builds a regex per term/document.
-- [`SearchBar.tsx`](../../src/shared/components/SearchBar.tsx#L163) renders every returned match snippet without a cap.
+- [`SearchBar.tsx`](https://github.com/Haugenau20/DnDCampaignCompanion/blob/b73232a/src/shared/components/SearchBar.tsx#L163) renders every returned match snippet without a cap.
 
 Measured evidence:
 
@@ -216,8 +216,8 @@ Applying a group/campaign change performs backend writes and refreshes, then unc
 
 Affected code:
 
-- [`ContextSwitcher.tsx`](../../src/shared/components/ContextSwitcher.tsx#L68) awaits group/campaign changes and reloads at line 81.
-- [`ContextSwitcher.tsx`](../../src/shared/components/ContextSwitcher.tsx#L150) also reloads after joining a group.
+- [`ContextSwitcher.tsx`](https://github.com/Haugenau20/DnDCampaignCompanion/blob/b73232a/src/shared/components/ContextSwitcher.tsx#L68) awaits group/campaign changes and reloads at line 81.
+- [`ContextSwitcher.tsx`](https://github.com/Haugenau20/DnDCampaignCompanion/blob/b73232a/src/shared/components/ContextSwitcher.tsx#L150) also reloads after joining a group.
 - [`useGroups.ts`](../../src/features/user-management/groups/hooks/useGroups.ts#L64) writes `activeGroupId`, then reloads the global profile and every group document through `refreshGroups`.
 - [`useCampaigns.ts`](../../src/features/user-management/groups/hooks/useCampaigns.ts#L87) writes the group preference, then rechecks membership and reloads campaigns.
 
@@ -319,7 +319,7 @@ Profile updates call `refreshUserProfile`, which rereads the global profile and,
 Affected code:
 
 - [`useUser.ts`](../../src/features/user-management/profiles/hooks/useUser.ts#L20) global update plus refresh; group update plus refresh at line 42; username change plus refresh at line 90.
-- [`UserProfile.tsx`](../../src/features/user-management/profiles/components/UserProfile.tsx#L199) contains multiple character/preference actions that call `updateGroupUserProfile`.
+- [`UserProfile.tsx`](https://github.com/Haugenau20/DnDCampaignCompanion/blob/b73232a/src/features/user-management/profiles/components/UserProfile.tsx#L199) contains multiple character/preference actions that call `updateGroupUserProfile`.
 
 Campaign administration duplicates in a similar way. The view loads campaigns on mount even when context already has them. Create/update/delete hooks refresh campaigns, then the component calls `getCampaigns` again.
 
