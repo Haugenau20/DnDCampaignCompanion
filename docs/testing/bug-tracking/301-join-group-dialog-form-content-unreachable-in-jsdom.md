@@ -11,6 +11,19 @@
 
 ---
 
+## Addendum — 2026-09-16 (Phase 14.5)
+
+`JoinGroupDialog` no longer exists. The surface became `/join`, a route, and the component and its
+suite were deleted along with every trigger that opened them.
+
+Recorded because this file and #302 were named in `14-5`'s handoff as dialog-only test scaffolding
+to retire. There was nothing to retire: both had already been closed as *no production defect* in
+July, and the audit that closed them is the reason the portal workaround was never written into the
+component. The scaffolding the handoff expected to find does not exist, and the tests that did exist
+were deleted with their subject rather than rewritten around a portal.
+
+---
+
 ## Closing note — 2026-07-28
 
 **Closed: this component never had the defect, and its parent bug is fixed anyway.**

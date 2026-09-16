@@ -45,9 +45,10 @@ jest.mock("features/user-management", () => ({
     setActiveCampaign: jest.fn().mockResolvedValue(undefined),
   }),
   useUser: () => ({ activeGroupUserProfile: mockGroupUserProfile }),
-  SignInForm: () => <div data-testid="sign-in-form" />,
-  JoinGroupDialog: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="join-group-dialog" /> : null,
+  // `SignInForm` and `JoinGroupDialog` were stubbed here until 14.5 deleted
+  // the dialogs. `GatedContent` now links to the routes instead, and needs
+  // only the path builder.
+  signInPathFor: () => "/signin",
 }));
 
 jest.mock("core/services/firebase", () => ({
@@ -222,6 +223,8 @@ jest.mock("../../../core/components/Button", () => {
   const React = jest.requireActual("react");
   return {
     __esModule: true,
+    // Added in 14.5: links that must look like buttons wear this recipe.
+    buttonClasses: () => "button",
     default: React.forwardRef(
       ({ children, onClick, variant, disabled }: any, ref: any) => (
         <button

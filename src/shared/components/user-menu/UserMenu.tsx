@@ -9,14 +9,6 @@ import ThemeSegmented from "./ThemeSegmented";
 import UserMenuLinks from "./UserMenuLinks";
 
 /**
- * Props for {@link UserMenu}.
- */
-interface UserMenuProps {
-  /** Opens the admin panel dialog, owned by the header. */
-  onOpenAdmin: () => void;
-}
-
-/**
  * The one named account menu that replaces the header's hamburger.
  *
  * A single chip (avatar, the posting-as character name, a chevron) opens a
@@ -28,8 +20,8 @@ interface UserMenuProps {
  * trigger rather than a modal, closed by a click outside or by
  * {@link usePopoverKeys}'s Escape/focus-trap contract.
  */
-const UserMenu: React.FC<UserMenuProps> = ({ onOpenAdmin }) => {
-  const { activeGroup, activeGroupUserProfile } = useGroups();
+const UserMenu: React.FC = () => {
+  const { activeGroup, activeGroupUserProfile, isAdmin } = useGroups();
 
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -54,7 +46,8 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenAdmin }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const isAdmin = activeGroupUserProfile?.role === "admin";
+  // `isAdmin` comes from `useGroups` rather than a local `role === "admin"`:
+  // one source of truth, and the hook's comparison is case-insensitive.
   const username = activeGroupUserProfile?.username ?? "";
   const groupName = activeGroup?.name ?? "";
 
@@ -99,7 +92,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenAdmin }) => {
 
           <div className="mx-2 border-t card-divider" />
 
-          <UserMenuLinks open={isOpen} onClose={close} onOpenAdmin={onOpenAdmin} />
+          <UserMenuLinks open={isOpen} onClose={close} />
         </div>
       )}
     </div>

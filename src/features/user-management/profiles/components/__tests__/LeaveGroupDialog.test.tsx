@@ -64,8 +64,8 @@ describe("LeaveGroupDialog", () => {
   test("calls the leave-group service with the group id and user id when confirmed", async () => {
     const onClose = jest.fn();
     render(<LeaveGroupDialog open onClose={onClose} />);
-    const dialog = screen.getByRole("dialog", { name: /confirm group leave/i });
-    const leaveBtn = within(dialog).getByRole("button", { name: /leave group/i });
+    const dialog = screen.getByRole("dialog", { name: /^leave /i });
+    const leaveBtn = within(dialog).getByRole("button", { name: /^leave group$/i });
     await userEvent.click(leaveBtn);
     await waitFor(() => {
       expect(mockRemoveUserFromGroup).toHaveBeenCalledWith(mockGroup.id, mockUser.uid);
@@ -75,8 +75,8 @@ describe("LeaveGroupDialog", () => {
   test("leaves through the group service, refreshes, then navigates home", async () => {
     const onClose = jest.fn();
     render(<LeaveGroupDialog open onClose={onClose} />);
-    const dialog = screen.getByRole("dialog", { name: /confirm group leave/i });
-    const leaveBtn = within(dialog).getByRole("button", { name: /leave group/i });
+    const dialog = screen.getByRole("dialog", { name: /^leave /i });
+    const leaveBtn = within(dialog).getByRole("button", { name: /^leave group$/i });
     await userEvent.click(leaveBtn);
 
     await waitFor(() => {
@@ -97,8 +97,8 @@ describe("LeaveGroupDialog", () => {
     mockRemoveUserFromGroup.mockRejectedValue(new Error("Failed to leave group"));
     const onClose = jest.fn();
     render(<LeaveGroupDialog open onClose={onClose} />);
-    const dialog = screen.getByRole("dialog", { name: /confirm group leave/i });
-    const leaveBtn = within(dialog).getByRole("button", { name: /leave group/i });
+    const dialog = screen.getByRole("dialog", { name: /^leave /i });
+    const leaveBtn = within(dialog).getByRole("button", { name: /^leave group$/i });
     await userEvent.click(leaveBtn);
     await waitFor(() => {
       expect(screen.getByText(/failed to leave group/i)).toBeInTheDocument();
@@ -110,8 +110,8 @@ describe("LeaveGroupDialog", () => {
     mockRemoveUserFromGroup.mockRejectedValue(new Error("Failed to leave group"));
     const onClose = jest.fn();
     render(<LeaveGroupDialog open onClose={onClose} />);
-    const dialog = screen.getByRole("dialog", { name: /confirm group leave/i });
-    const leaveBtn = within(dialog).getByRole("button", { name: /leave group/i });
+    const dialog = screen.getByRole("dialog", { name: /^leave /i });
+    const leaveBtn = within(dialog).getByRole("button", { name: /^leave group$/i });
     await userEvent.click(leaveBtn);
 
     await waitFor(() => {
@@ -125,8 +125,8 @@ describe("LeaveGroupDialog", () => {
     const before = window.location.href;
     const onClose = jest.fn();
     render(<LeaveGroupDialog open onClose={onClose} />);
-    const dialog = screen.getByRole("dialog", { name: /confirm group leave/i });
-    const leaveBtn = within(dialog).getByRole("button", { name: /leave group/i });
+    const dialog = screen.getByRole("dialog", { name: /^leave /i });
+    const leaveBtn = within(dialog).getByRole("button", { name: /^leave group$/i });
     await userEvent.click(leaveBtn);
 
     await waitFor(() => {

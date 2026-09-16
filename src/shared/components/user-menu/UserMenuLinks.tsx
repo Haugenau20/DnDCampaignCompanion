@@ -1,6 +1,6 @@
 // src/shared/components/user-menu/UserMenuLinks.tsx
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth, useGroups } from "features/user-management";
 import firebaseServices from "core/services/firebase";
 import Typography from "core/components/Typography";
@@ -14,8 +14,6 @@ interface UserMenuLinksProps {
   open: boolean;
   /** Called after a row navigates or acts, so the owning popover can close. */
   onClose: () => void;
-  /** Opens the admin panel dialog, owned by the header. */
-  onOpenAdmin: () => void;
 }
 
 /**
@@ -28,16 +26,15 @@ interface UserMenuLinksProps {
  * count is fetched only while the popover is open, and is omitted rather
  * than shown as zero until it resolves.
  */
-const UserMenuLinks: React.FC<UserMenuLinksProps> = ({
-  open,
-  onClose,
-  onOpenAdmin,
-}) => {
+const UserMenuLinks: React.FC<UserMenuLinksProps> = ({ open, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut } = useAuth();
-  const { activeGroupId, activeGroupUserProfile } = useGroups();
-  const isAdmin = activeGroupUserProfile?.role === "admin";
+  // `useGroups` owns this question. A local `role === "admin"` here was a
+  // second source of truth and a case-sensitive one -- the same comparison
+  // bug #702 records elsewhere -- while the hook's own `isAdmin` lower-cases
+  // before comparing.
+  const { activeGroupId, isAdmin } = useGroups();
 
   const [memberCount, setMemberCount] = useState<number | null>(null);
 
@@ -76,11 +73,6 @@ const UserMenuLinks: React.FC<UserMenuLinksProps> = ({
     navigate(`/contact?from=${encodeURIComponent(location.pathname)}`);
   };
 
-  const handleAdmin = () => {
-    onClose();
-    onOpenAdmin();
-  };
-
   const handleSignOut = async () => {
     await signOut();
     onClose();
@@ -114,16 +106,24 @@ const UserMenuLinks: React.FC<UserMenuLinksProps> = ({
         <Typography>Report a problem</Typography>
       </button>
 
+      {/* This menu is the only entrance to administration, and only admins
+          see it: no nav item, no badge, no entry on the campaign switcher.
+          A few visits per campaign does not earn a slot in chrome that is
+          scanned every session.
+
+          A real link, so it can be opened in a new tab, bookmarked and
+          returned to. The "Admin panel" button that opened a dialog used to
+          sit beside it; 14-5 removed it along with the dialog. */}
       {isAdmin && (
-        <button
-          type="button"
+        <Link
           role="menuitem"
-          onClick={handleAdmin}
+          to="/admin/people"
+          onClick={onClose}
           className="flex items-center gap-2 px-2 py-2 w-full text-left rounded-md dropdown-item"
         >
           <ShieldAlert className="w-4 h-4 flex-shrink-0 accent" />
-          <Typography>Admin panel</Typography>
-        </button>
+          <Typography>Group administration</Typography>
+        </Link>
       )}
 
       <button

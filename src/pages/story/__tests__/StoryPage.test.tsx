@@ -42,9 +42,10 @@ jest.mock("features/user-management", () => ({
       : null,
     setActiveCampaign: mockSetActiveCampaign,
   }),
-  SignInForm: () => <div data-testid="sign-in-form" />,
-  JoinGroupDialog: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="join-group-dialog" /> : null,
+  // `SignInForm` and `JoinGroupDialog` were stubbed here until 14.5 deleted
+  // the dialogs. `GatedContent` now links to the routes instead, and needs
+  // only the path builder.
+  signInPathFor: () => "/signin",
 }));
 
 // useSelectableCampaigns fetches through this in the pick-campaign state.
@@ -181,6 +182,8 @@ jest.mock("../../../core/components/Typography", () => {
 
 jest.mock("../../../core/components/Button", () => ({
   __esModule: true,
+  // Added in 14.5: links that must look like buttons wear this recipe.
+  buttonClasses: () => "button",
   default: ({ children, onClick }: any) => (
     <button
       data-testid={`button-${String(children).trim().replace(/\s+/g, "-").toLowerCase()}`}

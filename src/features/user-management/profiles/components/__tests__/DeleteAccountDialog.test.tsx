@@ -50,7 +50,7 @@ const mockUser = { uid: "user-1", email: "player@example.com" };
 
 function getConfirmButton(dialog: HTMLElement) {
   return Array.from(dialog.querySelectorAll("button")).find((b) =>
-    /delete my account/i.test(b.textContent || "")
+    /delete account/i.test(b.textContent || "")
   ) as HTMLButtonElement;
 }
 
@@ -65,7 +65,7 @@ describe("DeleteAccountDialog", () => {
 
   test("keeps the confirm button disabled until the account email is typed", async () => {
     render(<DeleteAccountDialog open onClose={jest.fn()} />);
-    const dialog = screen.getByRole("dialog", { name: /confirm account deletion/i });
+    const dialog = screen.getByRole("dialog", { name: /delete your account\?/i });
     const confirmBtn = getConfirmButton(dialog);
     expect(confirmBtn).toBeDisabled();
 
@@ -77,7 +77,7 @@ describe("DeleteAccountDialog", () => {
 
   test("accepts the email case-insensitively, ignoring surrounding spaces", async () => {
     render(<DeleteAccountDialog open onClose={jest.fn()} />);
-    const dialog = screen.getByRole("dialog", { name: /confirm account deletion/i });
+    const dialog = screen.getByRole("dialog", { name: /delete your account\?/i });
     const confirmBtn = getConfirmButton(dialog);
     const input = screen.getByLabelText(/type .* to confirm/i);
 
@@ -86,9 +86,9 @@ describe("DeleteAccountDialog", () => {
     expect(confirmBtn).not.toBeDisabled();
   });
 
-  test("should call the delete-account service when Delete My Account is confirmed", async () => {
+  test("should call the delete-account service when Delete account is confirmed", async () => {
     render(<DeleteAccountDialog open onClose={jest.fn()} />);
-    const dialog = screen.getByRole("dialog", { name: /confirm account deletion/i });
+    const dialog = screen.getByRole("dialog", { name: /delete your account\?/i });
     const input = screen.getByLabelText(/type .* to confirm/i);
     await userEvent.type(input, mockUser.email);
     const deleteBtn = getConfirmButton(dialog);
@@ -102,7 +102,7 @@ describe("DeleteAccountDialog", () => {
 
   test("signs out and navigates home on success", async () => {
     render(<DeleteAccountDialog open onClose={jest.fn()} />);
-    const dialog = screen.getByRole("dialog", { name: /confirm account deletion/i });
+    const dialog = screen.getByRole("dialog", { name: /delete your account\?/i });
     const input = screen.getByLabelText(/type .* to confirm/i);
     await userEvent.type(input, mockUser.email);
     const deleteBtn = getConfirmButton(dialog);
@@ -123,7 +123,7 @@ describe("DeleteAccountDialog", () => {
   test("should show error when account deletion fails", async () => {
     mockDeleteAccount.mockRejectedValue(new Error("Deletion failed"));
     render(<DeleteAccountDialog open onClose={jest.fn()} />);
-    const dialog = screen.getByRole("dialog", { name: /confirm account deletion/i });
+    const dialog = screen.getByRole("dialog", { name: /delete your account\?/i });
     const input = screen.getByLabelText(/type .* to confirm/i);
     await userEvent.type(input, mockUser.email);
     const deleteBtn = getConfirmButton(dialog);
@@ -137,7 +137,7 @@ describe("DeleteAccountDialog", () => {
   test("does not navigate when deletion fails, and shows why", async () => {
     mockDeleteAccount.mockRejectedValue(new Error("Deletion failed"));
     render(<DeleteAccountDialog open onClose={jest.fn()} />);
-    const dialog = screen.getByRole("dialog", { name: /confirm account deletion/i });
+    const dialog = screen.getByRole("dialog", { name: /delete your account\?/i });
     const input = screen.getByLabelText(/type .* to confirm/i);
     await userEvent.type(input, mockUser.email);
     const deleteBtn = getConfirmButton(dialog);

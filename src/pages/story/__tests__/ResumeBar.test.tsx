@@ -21,6 +21,8 @@ jest.mock("core/components/Typography", () => ({
 
 jest.mock("core/components/Button", () => ({
   __esModule: true,
+  // Added in 14.5: links that must look like buttons wear this recipe.
+  buttonClasses: () => "button",
   default: ({ children, onClick }: any) => (
     <button
       data-testid={`button-${String(children).trim().replace(/\s+/g, "-").toLowerCase()}`}

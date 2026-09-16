@@ -56,27 +56,27 @@ const LeaveGroupDialog: React.FC<LeaveGroupDialogProps> = ({ open, onClose }) =>
   };
 
   return (
-    <Dialog open={open} onClose={onClose} title="Confirm Group Leave" maxWidth="max-w-md">
+    <Dialog open={open} onClose={onClose} title={activeGroup?.name ? `Leave “${activeGroup.name}”?` : "Leave this group?"} maxWidth="max-w-md">
       <div className="space-y-4">
-        <Typography>
-          Are you sure you want to leave the group <strong>{activeGroup?.name}</strong>?
-        </Typography>
-        <Typography color="error">
-          Leaving this group will remove your access to all content within it. You can rejoin
-          later if you have an invitation.
+        {/* The title asks; this says what happens. Body ink, not red: the
+            fill is spent on the confirm button and nowhere else. */}
+        <Typography color="secondary">
+          You lose access to everything recorded in it, and what you have
+          written stays for the others. You can rejoin later only with a new
+          invitation. This cannot be undone from here.
         </Typography>
         <div className="flex justify-end gap-4 mt-6">
           <Button variant="ghost" onClick={onClose} disabled={leaving}>
             Cancel
           </Button>
           <Button
-            variant="outline"
-            color="error"
+            variant="ghost"
             onClick={handleConfirm}
             isLoading={leaving}
+            className="button-danger min-h-[2.75rem]"
             startIcon={<LogOut size={16} />}
           >
-            Leave Group
+            Leave group
           </Button>
         </div>
         {error && (

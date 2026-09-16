@@ -1,0 +1,385 @@
+// src/features/user-management/admin/pages/__tests__/AdminPeoplePage.test.tsx
+import React from "react";
+import { render, screen, within, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
+import AdminPeoplePage from "../AdminPeoplePage";
+import type { AdminOutletContext } from "../admin-outlet";
+import type { GroupMember, RegistrationToken } from "../../types";
+
+jest.mock("@/features/user-management/groups/hooks/useGroups", () => ({
+  useGroups: jest.fn(),
+}));
+
+jest.mock("@/features/user-management/groups/hooks/useInvitations", () => ({
+  useInvitations: jest.fn(),
+}));
+
+const { useGroups } = require("@/features/user-management/groups/hooks/useGroups");
+const {
+  useInvitations,
+} = require("@/features/user-management/groups/hooks/useInvitations");
+
+// Shaped as Firestore actually returns them: the document id **is** the uid,
+// and no `userId` field exists on the document. Measured against the emulator,
+// not assumed -- `GroupService.getGroupUsers` maps `doc.id` to `id` and spreads
+// the rest, and none of the five group-user documents carries a `userId`.
+const MEMBERS: GroupMember[] = [
+  { id: "u1", username: "Legolas", role: "admin", joinedAt: new Date("2025-05-31") },
+  { id: "u2", username: "DungeonMaster", role: "Admin", joinedAt: new Date("2025-05-31") },
+  { id: "u3", username: "Aragorn", role: "member", joinedAt: new Date("2025-05-31") },
+  { id: "u4", username: "Gimli", role: "member", joinedAt: new Date("2025-05-31") },
+];
+
+const TOKENS: RegistrationToken[] = [
+  { token: "spare-1", notes: "Spare invitation", used: false, createdAt: new Date("2025-05-31") },
+  { token: "used-1", notes: "Aragorn", used: true, usedBy: "u3", createdAt: new Date("2025-05-30") },
+  { token: "used-2", used: true, usedBy: "u4", createdAt: new Date("2025-05-30") },
+];
+
+const deleteUser = jest.fn().mockResolvedValue(undefined);
+const generateRegistrationToken = jest.fn().mockResolvedValue("fresh-token");
+const deleteRegistrationToken = jest.fn().mockResolvedValue(undefined);
+const updateRegistrationTokenNotes = jest.fn().mockResolvedValue(undefined);
+let getRegistrationTokens = jest.fn();
+
+function setup({ members = MEMBERS, tokens = TOKENS, membersLoading = false } = {}) {
+  getRegistrationTokens = jest.fn().mockResolvedValue(tokens);
+  useGroups.mockReturnValue({
+    user: { uid: "u1" },
+    activeGroup: { id: "g1", name: "The Fellowship" },
+    activeGroupId: "g1",
+    deleteUser,
+  });
+  useInvitations.mockReturnValue({
+    generateRegistrationToken,
+    getRegistrationTokens,
+    deleteRegistrationToken,
+    updateRegistrationTokenNotes,
+  });
+
+  const context: AdminOutletContext = {
+    members,
+    membersLoading,
+    membersError: null,
+    reloadMembers: jest.fn().mockResolvedValue(undefined),
+  };
+
+  return render(
+    <MemoryRouter initialEntries={["/admin/people"]}>
+      <Routes>
+        <Route path="/admin" element={<OutletHost context={context} />}>
+          <Route path="/admin/people" element={<AdminPeoplePage />} />
+        </Route>
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
+const OutletHost: React.FC<{ context: AdminOutletContext }> = ({ context }) => {
+  const { Outlet } = require("react-router-dom");
+  return <Outlet context={context} />;
+};
+
+async function settle() {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
+function membersList() {
+  return within(screen.getByRole("region", { name: "Members" })).getByRole("list");
+}
+
+function invitationsList() {
+  return within(
+    screen.getByRole("region", { name: "Pending invitations" })
+  ).getByRole("list");
+}
+
+describe("AdminPeoplePage", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  describe("members", () => {
+    test("lists everyone who joined", async () => {
+      setup();
+      await settle();
+      const names = within(membersList())
+        .getAllByRole("listitem")
+        .map((row) => row.textContent);
+      expect(names).toHaveLength(4);
+      expect(names.join(" ")).toContain("Legolas");
+      expect(names.join(" ")).toContain("Gimli");
+    });
+
+    // The identity is the document id, because that is the uid. Reading a
+    // `userId` field instead -- what the view this replaced did -- yields
+    // `undefined` for every member, so nobody is ever "you": the Remove button
+    // appeared on your own row and called `deleteUser(undefined)`.
+    test("marks your own row and offers it no removal", async () => {
+      setup();
+      await settle();
+      const own = within(membersList())
+        .getAllByRole("listitem")
+        .find((row) => row.textContent?.includes("Legolas"))!;
+      expect(within(own).getByText("You")).toBeInTheDocument();
+      expect(within(own).queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+    });
+
+    test("removes by the id the service expects, never undefined", async () => {
+      setup();
+      await settle();
+      const row = within(membersList())
+        .getAllByRole("listitem")
+        .find((r) => r.textContent?.includes("Aragorn"))!;
+      await userEvent.click(within(row).getByRole("button", { name: "Remove" }));
+      const dialog = await screen.findByRole("dialog");
+      await userEvent.click(within(dialog).getByRole("button", { name: /delete/i }));
+      await settle();
+      expect(deleteUser).toHaveBeenCalledWith("u3");
+    });
+
+    test("still identifies you if a document does carry a userId field", async () => {
+      setup({
+        members: [
+          { id: "u1", userId: "u1", username: "Legolas", role: "member" },
+        ],
+      });
+      await settle();
+      expect(within(membersList()).getByText("You")).toBeInTheDocument();
+    });
+
+    // #1409: role escalation is only partially fixed server-side, and the
+    // clean fix is a code change. A promote control would be a button that
+    // either fails or, worse, succeeds.
+    test("offers no way to change anyone's role", async () => {
+      setup();
+      await settle();
+      const region = screen.getByRole("region", { name: "Members" });
+      expect(within(region).queryByRole("button", { name: /promote|make admin|change role/i }))
+        .not.toBeInTheDocument();
+    });
+
+    test("states the role in words, with no badge or status colour", async () => {
+      setup();
+      await settle();
+      const row = within(membersList())
+        .getAllByRole("listitem")
+        .find((r) => r.textContent?.includes("Aragorn"))!;
+      expect(within(row).getByText("Member")).toBeInTheDocument();
+      expect(row.className).not.toMatch(/bg-(red|green|amber|yellow)/);
+    });
+
+    test("removing a member asks first, naming the blast radius", async () => {
+      setup();
+      await settle();
+      const row = within(membersList())
+        .getAllByRole("listitem")
+        .find((r) => r.textContent?.includes("Aragorn"))!;
+      await userEvent.click(within(row).getByRole("button", { name: "Remove" }));
+
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog).toHaveTextContent(/Remove Aragorn from The Fellowship/);
+      expect(dialog).toHaveTextContent(/cannot be undone/i);
+      expect(deleteUser).not.toHaveBeenCalled();
+    });
+
+    test("searching filters the list", async () => {
+      setup();
+      await settle();
+      await userEvent.type(screen.getByLabelText("Search members"), "gimli");
+      expect(within(membersList()).getAllByRole("listitem")).toHaveLength(1);
+    });
+  });
+
+  describe("pending invitations", () => {
+    test("shows only what nobody has accepted", async () => {
+      setup();
+      await settle();
+      const rows = within(invitationsList()).getAllByRole("listitem");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveTextContent("Spare invitation");
+    });
+
+    test("shows no used token anywhere, in any form", async () => {
+      setup();
+      await settle();
+      expect(screen.queryByText(/used-1|used-2/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Used$/)).not.toBeInTheDocument();
+    });
+
+    test("offers no filter or toggle that would bring them back", async () => {
+      setup();
+      await settle();
+      expect(
+        screen.queryByRole("button", { name: /all tokens|show used|filter/i })
+      ).not.toBeInTheDocument();
+    });
+
+    test("never prints the token string itself", async () => {
+      setup();
+      await settle();
+      expect(within(invitationsList()).queryByText(/spare-1/)).not.toBeInTheDocument();
+    });
+
+    test("says so plainly when an invitation has no note", async () => {
+      setup({ tokens: [{ token: "t", used: false, createdAt: new Date("2025-05-31") }] });
+      await settle();
+      expect(screen.getByText("Not yet sent to anyone")).toBeInTheDocument();
+    });
+
+    test("reads as new rather than broken when there are none", async () => {
+      setup({ tokens: [] });
+      await settle();
+      expect(
+        screen.getByText(/No invitations waiting/i)
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("naming an invitation after the fact", () => {
+    // Creating an invitation asks for nothing, so this is where a note gets
+    // attached. Without it the note could never be set at all, and the note is
+    // the only thing telling one pending invitation from another -- the token
+    // string is never rendered.
+    test("the note is an inline edit on the row, not a field before the action", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Edit who this invitation is for/i })
+      );
+      expect(
+        screen.getByLabelText("Who is this invitation for?")
+      ).toBeInTheDocument();
+    });
+
+    test("saving writes the note and updates the row", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Edit who this invitation is for/i })
+      );
+      const field = screen.getByLabelText("Who is this invitation for?");
+      await userEvent.clear(field);
+      await userEvent.type(field, "For Boromir");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await settle();
+
+      expect(updateRegistrationTokenNotes).toHaveBeenCalledWith(
+        "spare-1",
+        "For Boromir"
+      );
+      expect(
+        within(invitationsList()).getByText("For Boromir")
+      ).toBeInTheDocument();
+    });
+
+    test("cancelling leaves the note alone", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Edit who this invitation is for/i })
+      );
+      await userEvent.type(
+        screen.getByLabelText("Who is this invitation for?"),
+        "discard me"
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(updateRegistrationTokenNotes).not.toHaveBeenCalled();
+      expect(
+        within(invitationsList()).getByText("Spare invitation")
+      ).toBeInTheDocument();
+    });
+
+    test("an unnamed invitation can be named", async () => {
+      setup({ tokens: [{ token: "t", used: false, createdAt: new Date("2025-05-31") }] });
+      await settle();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Say who this invitation is for/i })
+      );
+      await userEvent.type(
+        screen.getByLabelText("Who is this invitation for?"),
+        "For Boromir"
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await settle();
+      expect(updateRegistrationTokenNotes).toHaveBeenCalledWith("t", "For Boromir");
+    });
+
+    test("an unchanged note is not written at all", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Edit who this invitation is for/i })
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await settle();
+      expect(updateRegistrationTokenNotes).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("inviting someone", () => {
+    test("takes one click and no form", async () => {
+      setup();
+      await settle();
+      const region = screen.getByRole("region", { name: "Members" });
+      expect(within(region).queryByLabelText(/note/i)).not.toBeInTheDocument();
+
+      await userEvent.click(
+        within(region).getAllByRole("button", { name: "Invite someone" })[0]
+      );
+      await settle();
+      expect(generateRegistrationToken).toHaveBeenCalledWith("");
+    });
+
+    test("opens a dialog holding a working /join link", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getAllByRole("button", { name: "Invite someone" })[0]
+      );
+      await settle();
+
+      const dialog = await screen.findByRole("dialog");
+      expect(within(dialog).getByText(/\/join\?token=fresh-token/)).toBeInTheDocument();
+      expect(within(dialog).getByRole("button", { name: /copy/i })).toBeInTheDocument();
+    });
+
+    test("the dialog names the consequence and has one closing button", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getAllByRole("button", { name: "Invite someone" })[0]
+      );
+      await settle();
+
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog).toHaveTextContent(
+        /Anyone with this link can join The Fellowship once/
+      );
+      expect(within(dialog).getByRole("button", { name: "Done" })).toBeInTheDocument();
+    });
+  });
+
+  describe("revoking an invitation", () => {
+    test("asks first, then removes the row", async () => {
+      setup();
+      await settle();
+      await userEvent.click(screen.getByRole("button", { name: "Revoke" }));
+
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog).toHaveTextContent(/The link stops working immediately/);
+
+      await userEvent.click(within(dialog).getByRole("button", { name: /delete/i }));
+      await settle();
+
+      expect(deleteRegistrationToken).toHaveBeenCalledWith("spare-1");
+      // It was the only one, so the card falls back to its empty state rather
+      // than an empty list.
+      const region = screen.getByRole("region", { name: "Pending invitations" });
+      expect(within(region).queryByText("Spare invitation")).not.toBeInTheDocument();
+      expect(within(region).getByText(/No invitations waiting/i)).toBeInTheDocument();
+    });
+  });
+});

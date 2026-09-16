@@ -110,9 +110,15 @@ const createGroupTokens = async (db: any, groupId: string, users: UserData[], fo
   for (let i = 0; i < tokenUsers.length; i++) {
     const user = tokenUsers[i];
     
+    // `id`, `token` and the document id are deliberately the same string.
+    // Production writes them identically -- `generateGroupRegistrationToken`
+    // uses the token as the document id and stores it in the field too -- so a
+    // fixture where they differ is not representative, and it made every
+    // seeded invite link resolve to a token that does not exist.
+    const tokenId = `token${i+1}-${groupId}`;
     const token = {
-      id: `token${i+1}-${groupId}`,
-      token: `${groupId}-token-${i+1}`,
+      id: tokenId,
+      token: tokenId,
       createdAt: formattedDate,
       createdBy: dmUser.id,
       used: true,
@@ -126,9 +132,10 @@ const createGroupTokens = async (db: any, groupId: string, users: UserData[], fo
   }
   
   // Create one unused token for future members
+  const unusedTokenId = `token-unused-${groupId}`;
   const unusedToken = {
-    id: `token-unused-${groupId}`,
-    token: `${groupId}-unused-token`,
+    id: unusedTokenId,
+    token: unusedTokenId,
     createdAt: formattedDate,
     createdBy: dmUser.id,
     used: false,

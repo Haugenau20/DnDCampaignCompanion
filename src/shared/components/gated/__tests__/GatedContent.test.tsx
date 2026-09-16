@@ -17,9 +17,10 @@ jest.mock("features/user-management", () => ({
     setActiveGroup: mockSetActiveGroup,
   }),
   useCampaigns: () => ({ setActiveCampaign: mockSetActiveCampaign }),
-  SignInForm: () => <div data-testid="sign-in-form" />,
-  JoinGroupDialog: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="join-group-dialog" /> : null,
+  // `SignInForm` and `JoinGroupDialog` were stubbed here until 14.5 deleted
+  // the dialogs. `GatedContent` now links to the routes instead, and needs
+  // only the path builder.
+  signInPathFor: () => "/signin",
 }));
 
 let mockOptions = [
@@ -94,16 +95,29 @@ describe("GatedContent", () => {
     expect(screen.queryByTestId("page-body")).not.toBeInTheDocument();
   });
 
-  it("opens the sign-in dialog from the panel", () => {
+  // Both were dialogs opened from this panel until 14.5. They are routes now,
+  // and the sign-in link carries this page as the destination -- which is the
+  // point: the dialog had nowhere to put where you were, so signing in to read
+  // one quest returned you to the campaign's front door.
+  it("sends the panel's sign-in action to /signin", () => {
     renderGate(gate({ state: "signed-out", canAct: false }));
-    fireEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
-    expect(screen.getByTestId("sign-in-form")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^sign in$/i })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/signin")
+    );
   });
 
-  it("opens the join-group dialog from the panel", () => {
+  it("sends the panel's invite action to /join", () => {
     renderGate(gate({ state: "signed-out", canAct: false }));
-    fireEvent.click(screen.getByRole("button", { name: /invite link/i }));
-    expect(screen.getByTestId("join-group-dialog")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /invite link/i })).toHaveAttribute(
+      "href",
+      "/join"
+    );
+  });
+
+  it("opens no overlay at all", () => {
+    renderGate(gate({ state: "signed-out", canAct: false }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("renders the campaign picker instead of the body", () => {

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { SignInForm, JoinGroupDialog } from "features/user-management";
-import Dialog from "core/components/Dialog";
-import Button from "core/components/Button";
+import { Link } from "react-router-dom";
+import { buttonClasses } from "core/components/Button";
 import Typography from "core/components/Typography";
 import { SIGNED_OUT_EXAMPLE } from "./signed-out-example";
 
@@ -25,8 +24,6 @@ const PRODUCT_LINES = [
  * is not the 560px panel the other twenty routes share.
  */
 const SignedOutHome: React.FC = () => {
-  const [showSignIn, setShowSignIn] = useState(false);
-  const [showJoinGroup, setShowJoinGroup] = useState(false);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
@@ -50,12 +47,12 @@ const SignedOutHome: React.FC = () => {
           </Typography>
 
           <div className="flex flex-wrap gap-3 mb-10">
-            <Button variant="primary" onClick={() => setShowSignIn(true)}>
+            <Link to="/signin" className={buttonClasses({ variant: "primary" })}>
               Sign in
-            </Button>
-            <Button variant="outline" onClick={() => setShowJoinGroup(true)}>
+            </Link>
+            <Link to="/join" className={buttonClasses({ variant: "outline" })}>
               I have an invite link
-            </Button>
+            </Link>
           </div>
 
           <ul className="space-y-2" data-testid="product-lines">
@@ -135,20 +132,6 @@ const SignedOutHome: React.FC = () => {
         </div>
       </div>
 
-      <Dialog
-        open={showSignIn}
-        onClose={() => setShowSignIn(false)}
-        title="Sign In"
-        maxWidth="max-w-md"
-      >
-        <SignInForm onSuccess={() => setShowSignIn(false)} />
-      </Dialog>
-
-      <JoinGroupDialog
-        open={showJoinGroup}
-        onClose={() => setShowJoinGroup(false)}
-        onSuccess={() => setShowJoinGroup(false)}
-      />
     </div>
   );
 };

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import Dialog from 'core/components/Dialog';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 interface DeleteConfirmationDialogProps {
   /**
@@ -68,30 +68,35 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
     }
   };
 
-  const confirmationMessage = message || 
-    `Are you sure you want to delete ${itemType} "${itemName}"? This action cannot be undone.`;
+  /**
+   * The consequence, always ending in the same sentence.
+   *
+   * Callers describe the blast radius -- who loses what -- because only they
+   * know it. This appends "This cannot be undone" when they have not said it,
+   * so the last line of a destructive confirmation is never left to chance.
+   */
+  const blastRadius =
+    message ||
+    `${itemName ? `“${itemName}”` : `This ${itemType}`} is removed for everyone.`;
+  const confirmationMessage = /cannot be undone/i.test(blastRadius)
+    ? blastRadius
+    : `${blastRadius.replace(/\s*$/, "")} This cannot be undone.`;
+
+  /** The button says the verb, never "OK" or a bare "Delete". */
+  const confirmLabel = `Delete ${itemType}`;
 
   return (
     <Dialog
       open={isOpen}
       onClose={onClose}
-      title={`Delete ${itemType}`}
+      title={itemName ? `Delete “${itemName}”?` : `Delete ${itemType}?`}
       maxWidth="max-w-md"
     >
       <div className="space-y-6">
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-full mt-1 error-bg">
-            <AlertTriangle className="w-5 h-5 feedback-warning" />
-          </div>
-          <div>
-            <Typography variant="h4" className="mb-2">
-              Confirm Deletion
-            </Typography>
-            <Typography color="secondary">
-              {confirmationMessage}
-            </Typography>
-          </div>
-        </div>
+        {/* The title already names the object and asks the question, so a
+            second "Confirm Deletion" heading underneath it said nothing the
+            reader had not just read. One title, one sentence of consequence. */}
+        <Typography color="secondary">{confirmationMessage}</Typography>
         
         {error && (
           <div className="p-4 rounded-md note">
@@ -112,10 +117,10 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
             variant="ghost"
             onClick={handleConfirm}
             isLoading={isDeleting}
-            className="delete-button"
+            className="button-danger min-h-[2.75rem]"
             startIcon={<Trash2 size={16} />}
           >
-            Delete
+            {confirmLabel}
           </Button>
         </div>
       </div>

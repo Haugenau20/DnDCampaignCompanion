@@ -16,10 +16,33 @@ jest.mock("react-router-dom", () => {
   const Routes = ({ children }: { children: React.ReactNode }) => (
     <div data-testid="routes">{children}</div>
   );
-  const Route = ({ path, element }: { path: string; element: React.ReactNode }) => {
+  // `path` is optional: an index route (`<Route index>`) declares no path of
+  // its own, so it contributes nothing to the route table and must not be
+  // counted as one.
+  // `children` is rendered alongside `element` so nested routes -- a layout
+  // route with child views, as `/admin` is -- reach this capture at all. Under
+  // the real router only the matching branch renders; here the whole table is
+  // declared at once, which is the point.
+  const Route = ({
+    path,
+    element,
+    children,
+  }: {
+    path?: string;
+    element: React.ReactNode;
+    children?: React.ReactNode;
+  }) => {
+    // An index route (`<Route index>`) declares no path of its own, so it
+    // contributes nothing to the route table and must not be counted as one.
+    if (path === undefined) return <div data-testid="route-index">{element}</div>;
     // Capture path at definition time (module-scope array, reset per test)
     capturedRoutes.push(path);
-    return <div data-testid={`route-${path.replace(/\//g, "_").replace(/^_/, "").replace(/:/g, "")}`}>{element}</div>;
+    return (
+      <div data-testid={`route-${path.replace(/\//g, "_").replace(/^_/, "").replace(/:/g, "")}`}>
+        {element}
+        {children}
+      </div>
+    );
   };
   // App.tsx renders <Navigate> as the /story/selection redirect's element;
   // stub it so that element is a valid renderable component under the mock.
@@ -190,6 +213,39 @@ jest.mock("../pages/profile", () => ({
   ProfilePage: () => <div data-testid="page-profile" />,
 }));
 
+// The admin and auth routes. Mocked at source rather than through the
+// `features/user-management` barrel, the same way the providers above are, so
+// the barrel keeps re-exporting the stubs.
+jest.mock("@/features/user-management/admin/pages/AdminLayout", () => ({
+  __esModule: true,
+  default: () => <div data-testid="page-admin-layout" />,
+}));
+
+jest.mock("@/features/user-management/admin/pages/AdminPeoplePage", () => ({
+  __esModule: true,
+  default: () => <div data-testid="page-admin-people" />,
+}));
+
+jest.mock("@/features/user-management/admin/pages/AdminCampaignsPage", () => ({
+  __esModule: true,
+  default: () => <div data-testid="page-admin-campaigns" />,
+}));
+
+jest.mock("@/features/user-management/admin/pages/AdminGroupPage", () => ({
+  __esModule: true,
+  default: () => <div data-testid="page-admin-group" />,
+}));
+
+jest.mock("@/features/user-management/auth/pages/SignInPage", () => ({
+  __esModule: true,
+  default: () => <div data-testid="page-signin" />,
+}));
+
+jest.mock("@/features/user-management/groups/pages/JoinPage", () => ({
+  __esModule: true,
+  default: () => <div data-testid="page-join" />,
+}));
+
 // ---------------------------------------------------------------------------
 // Import App after all mocks are registered
 // ---------------------------------------------------------------------------
@@ -226,6 +282,14 @@ const EXPECTED_ROUTES = [
   "/privacy",
   "/contact",
   "/profile",
+  // Admin and auth are routes, not dialogs (design doc §1). `/admin` is the
+  // layout route; its index redirects to `/admin/people` and declares no path.
+  "/admin",
+  "/admin/people",
+  "/admin/campaigns",
+  "/admin/group",
+  "/signin",
+  "/join",
 ];
 
 // ---------------------------------------------------------------------------

@@ -365,14 +365,18 @@ kind of note, no for the other", by accident rather than decision.
 This is a decision about the shared record, not about the page: changing a note
 someone else wrote is a question about who owns campaign history.
 
-### T007 — Does `AdminPanel` get a real route?
-**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-16 · `R39`
+### T007 — Does `AdminPanel` get a real route? — **answered: yes**
+**Type** decision · **Size** S · **Status** done · **Verified** 2026-09-16 · `R39`
 
-`AdminPanel` is a dialog, not a page, and has no route. Phase 10 deliberately
-deferred this rather than making a feature change inside a composition phase.
-Left behind with it: the 3-second loading timeout that `10-1` said to keep and
-log. Answer this before T025, which would otherwise rebuild the panel in the
-shape the decision might reject.
+`AdminPanel` was a dialog with no route. Phase 10 deliberately deferred the
+question rather than making a feature change inside a composition phase; left
+behind with it was the 3-second loading timeout that `10-1` said to keep and log.
+
+**Decided by `docs/design/plan/00-surface-routing.md`**: a dialog is one decision
+taken about the thing behind it, and admin is not that. `/admin/people`,
+`/admin/campaigns` and `/admin/group` exist as of Phase 14, and the 3-second
+timeout moved onto the route verbatim, comment and all. Kept here, closed, so
+the question is not asked a third time — and because T025 was waiting on it.
 
 ### T008 — A legend swatch cannot distinguish "confirmed" from "false"
 **Type** decision · **Size** S · **Status** open · **Verified** 2026-09-16 · `Q20`
@@ -483,10 +487,14 @@ before planning the rebuild.
 - **Touches**: `src/features/user-management/admin/components/` (`AdminPanel`,
   `GroupManagementView`, `CampaignManagementView`, `UserManagementView`,
   `TokenManagementView`) and `GroupService`.
-- **Catch**: answer **T007** first — whether the panel becomes a real route
-  rather than a dialog changes what gets rebuilt. T003's console logging lives in
-  the same feature and was originally deferred to "wherever admin lands"; pick it
-  up in the same pass.
+- **Catch**: **T007 is now answered** — the panel became a route, and Phase 14
+  rebuilt it as `/admin/{people,campaigns,group}`. Re-measure this item's six
+  claims against that work before planning anything: the components named above
+  under *Touches* (`AdminPanel`, `UserManagementView`, `TokenManagementView`) do
+  not survive the phase, and the "groups cannot be edited or deleted" claims are
+  now tracked in their own right as T036 and T037. T003's console logging lives
+  in the same feature and was originally deferred to "wherever admin lands";
+  pick it up in the same pass.
 - **Source**: todo.txt, 2026-09-16
 
 ### T026 — Mobile layout on the story pages
@@ -512,6 +520,114 @@ reproducible from the tree alone — it needs rendering.
   container or four separate pages, and the answer changes whether this is an S
   or an L.
 - **Source**: todo.txt, 2026-09-16
+
+---
+
+### T034 — Promoting or demoting a member: the rules allow it, nothing calls it
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-09-16
+
+Blocks a role control on `/admin/people`, which is why that view renders the
+role as text and offers no way to change it.
+
+**Corrected after reading the rules rather than the bug report.** An earlier
+draft of this entry claimed a Cloud Function was required. It is not.
+`firebase/firestore.rules.prod:202` already carries, on a member's group
+profile:
+
+```
+// Group admins and global admin can update user profiles, role included
+allow update: if isGroupAdmin(groupId) || isGlobalAdmin();
+```
+
+So an admin changing another member's role **is** server-authorised today. What
+is missing is entirely client-side: there is no `setMemberRole` on
+`GroupService`, no hook exposing one, and no control anywhere in the UI.
+
+Two things to settle before building it:
+
+1. **Is the deployed ruleset the one in this repo?**
+   `docs/testing/bug-tracking/1409-member-can-escalate-to-group-admin.md` is
+   still marked *partially fixed, ⚠️ awaiting console deploy*, while
+   `firestore.rules.prod:191` now reads
+   `allow create: if isSignedIn() && request.auth.uid == userId && request.resource.data.role == "member"`
+   and its own comment says that closes #1409 **completely**. The repo copy and
+   the bug's status disagree. Rules live in the Firebase console, so only the
+   maintainer can confirm which is live — and shipping a privilege control while
+   that is unknown is the wrong order.
+2. **Demotion needs the same guard as leaving** — see T035. An admin demoting
+   the last admin is the same limbo by another route.
+
+When both are settled this is a small job: one service method, one hook
+function, one control on the member row.
+
+- **Source**: Phase 14.2, while deciding what `/admin/people` may render
+
+### T035 — The last admin can strip a group of its administration
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-09-16
+
+Nothing stops the only admin leaving a group. Afterwards nobody can invite a
+member, manage a campaign, or reach `/admin` at all — the group is not deleted,
+it is simply unadministrable, and there is no recovery path inside the product.
+
+The correct behaviour needs promotion to exist first: "choose who takes over,
+then leave."
+
+- **Blocked by**: T034.
+- **Meanwhile**: `/admin/group` **states the consequence** beside the Leave
+  control when you are the only admin, and does not block the action. Blocking
+  was rejected twice over — with no promotion there would be no way out at all,
+  and the profile page's own Leave control is a second door onto the same call,
+  so a guard on one door is not a guard.
+- **Source**: todo.txt, 2026-09-16; scoped during Phase 14.3
+
+### T036 — A group cannot be renamed
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-16
+
+There is no `updateGroup` in `src/core/services/firebase/group/GroupService.ts`
+and no `updateGroup` Cloud Function — `firebase/functions/src/index.ts` exports
+`createGroup` and nothing else for groups. Confirms T025's "groups still have
+none" claim from the other direction.
+
+- **Note**: the view Phase 14.3 replaced shipped an **"Edit Group" button with
+  no `onClick` at all** — a dead control. It was removed rather than left in
+  place, so restoring the capability means writing the service method first.
+- **Source**: Phase 14.3, while building `/admin/group`
+
+### T037 — A group cannot be deleted
+**Type** debt · **Size** L · **Status** open · **Verified** 2026-09-16
+
+No service method, no Cloud Function. Not a small one either: deleting a group
+means cascading through its campaigns (each with its own subcollections), its
+`users`, its `usernames` reservations and its `registrationTokens`, plus every
+member's notes for every campaign in it.
+
+- **Precedent worth copying**: `deleteCampaign` — an Admin SDK
+  `recursiveDelete` in a callable. Its doc comment at
+  `src/core/services/firebase/campaign/CampaignService.ts:225` explains why a
+  client cannot do this itself.
+- **Meanwhile**: `/admin/group`'s danger zone offers **Leave group** only,
+  which is implemented (`removeUserFromGroup`).
+- **Source**: Phase 14.3, while building `/admin/group`
+
+### T038 — The two rumour dialogs each hold a nested scroll region
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-16
+
+`CombineRumorsDialog.tsx:128` and `ConvertToQuestDialog.tsx:184` both render
+`max-h-40 overflow-y-auto` inside the panel — a second scroll region, which the
+dialog rule in `docs/design/plan/00-surface-routing.md` §1 names as a sign that
+a surface wants to be a page.
+
+**Both stay dialogs, and that is the right call for now**: each acts on the
+entries selected on the page behind it, which answers question 1 of the rule
+decisively. Neither has a URL worth returning to, and neither has tabs or a
+table. A list that can outgrow its panel is weaker evidence than those, so
+Phase 14.5 logged them as candidates rather than converting them, exactly as its
+handoff instructed.
+
+- **What to look at**: the scroll region exists because the selected-rumour list
+  is unbounded. Capping the selection, or paginating the list, would remove the
+  symptom without moving the surface.
+- **Source**: Phase 14.5, from its own instruction to check rather than assume
 
 ---
 

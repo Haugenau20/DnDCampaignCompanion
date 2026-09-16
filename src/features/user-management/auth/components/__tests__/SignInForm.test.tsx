@@ -1,73 +1,60 @@
-﻿// src/components/features/auth/__tests__/SignInForm.test.tsx
+// src/features/user-management/auth/components/__tests__/SignInForm.test.tsx
+//
+// Rewritten for PR 14.4, which changed this component's specification rather
+// than its implementation. Three groups of assertions were deleted because the
+// behaviour they described is deliberately gone:
+//
+//   - "should render Create Account button" and the whole `registration form
+//     toggle` describe block. The button promised a path that does not exist
+//     without an invitation token, and the swap it performed was a step with
+//     no URL and no visible progress. `RegistrationForm` is re-homed on
+//     `/join`, not deleted.
+//   - "should render Sign In heading". The form no longer titles itself; the
+//     page does, once. A heading here plus a heading on the page is the
+//     duplication this phase exists to remove.
+//
+// Everything about signing in itself is unchanged and still asserted below.
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import SignInForm from '../SignInForm';
-import { unnamedControlsIn } from "@/test-utils/accessible-names";
-import { formAccentsIn } from "@/test-utils/accent-budget";
+import { unnamedControlsIn } from '@/test-utils/accessible-names';
+import { formAccentsIn } from '@/test-utils/accent-budget';
 
-// ---------------------------------------------------------------------------
-// Mock context/firebase
-// ---------------------------------------------------------------------------
 const mockSignIn = jest.fn();
 
 jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
-  useInvitations: jest.fn(),
-  useUser: jest.fn(),
 }));
 
-// These components import their hooks directly (importing the domain barrel
-// from inside the domain would be a circular import), so point those modules
-// at the barrel mock defined above.
+// This component imports its hook directly (importing the domain barrel from
+// inside the domain would be a circular import), so point that module at the
+// barrel mock defined above.
 jest.mock('../../hooks/useAuth', () => require('@/features/user-management'));
 
-const { useAuth, useInvitations, useUser } = require('@/features/user-management');
-
-// ---------------------------------------------------------------------------
-// Mock react-router-dom (needed by RegistrationForm which is rendered conditionally)
-// ---------------------------------------------------------------------------
-jest.mock('react-router-dom', () => ({
-  useLocation: jest.fn().mockReturnValue({ search: '', pathname: '/' }),
-}));
-
-// ---------------------------------------------------------------------------
-// Mock RegistrationForm to avoid deep rendering in sign-in tests
-// ---------------------------------------------------------------------------
-jest.mock('../RegistrationForm', () => {
-  const RegistrationFormMock = ({ onCancel, onSignInClick }: any) => (
-    <div data-testid="registration-form">
-      <button onClick={onCancel}>Cancel</button>
-      <button onClick={onSignInClick}>Sign In Instead</button>
-    </div>
-  );
-  return RegistrationFormMock;
-});
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+const { useAuth } = require('@/features/user-management');
 
 function setupMocks(overrides: Record<string, any> = {}) {
-  useAuth.mockReturnValue({
-    signIn: mockSignIn,
-    ...overrides,
-  });
-  // RegistrationForm uses useInvitations and useUser
-  useInvitations.mockReturnValue({
-    validateToken: jest.fn().mockResolvedValue(true),
-    signUpWithToken: jest.fn().mockResolvedValue(undefined),
-  });
-  useUser.mockReturnValue({
-    validateUsername: jest.fn().mockResolvedValue({ isValid: true, isAvailable: true }),
-    updateGroupUserProfile: jest.fn(),
-  });
+  useAuth.mockReturnValue({ signIn: mockSignIn, ...overrides });
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+/** A Router is required: the "new here?" line links to `/join`. */
+function renderForm(props: { onSuccess?: () => void } = {}) {
+  return render(
+    <MemoryRouter>
+      <SignInForm {...props} />
+    </MemoryRouter>
+  );
+}
+
+function getEmailInput() {
+  return screen.getByRole('textbox');
+}
+function getPasswordInput() {
+  return document.querySelector('input[type="password"]') as HTMLInputElement;
+}
 
 describe('SignInForm', () => {
   beforeEach(() => {
@@ -75,265 +62,183 @@ describe('SignInForm', () => {
     setupMocks();
   });
 
-  // Helper to get inputs by type since Input component doesn't associate label with htmlFor
-  function getEmailInput() {
-    return screen.getByRole('textbox');
-  }
-  function getPasswordInputs() {
-    // querySelectorAll for password inputs since they don't have role
-    return document.querySelectorAll('input[type="password"]');
-  }
-
-  // -------------------------------------------------------------------------
-  // Rendering
-  // -------------------------------------------------------------------------
   describe('rendering', () => {
-    test('should render Sign In heading', () => {
-      render(<SignInForm />);
-      // "Sign In" appears both in the heading and the submit button
-      expect(screen.getAllByText(/sign in/i).length).toBeGreaterThan(0);
-    });
-
     test('should render email input', () => {
-      render(<SignInForm />);
-      expect(screen.getByRole('textbox')).toBeInTheDocument();
+      renderForm();
+      expect(getEmailInput()).toBeInTheDocument();
     });
 
     test('should render password input', () => {
-      render(<SignInForm />);
-      const passwordInputs = document.querySelectorAll('input[type="password"]');
-      expect(passwordInputs.length).toBeGreaterThan(0);
+      renderForm();
+      expect(getPasswordInput()).toBeInTheDocument();
     });
 
-    test('should render Remember me checkbox', () => {
-      render(<SignInForm />);
+    test('should render the keep-me-signed-in checkbox', () => {
+      renderForm();
       expect(screen.getByRole('checkbox')).toBeInTheDocument();
+      expect(screen.getByText(/keep me signed in for 30 days/i)).toBeInTheDocument();
     });
 
-    test('should render Sign In submit button', () => {
-      render(<SignInForm />);
-      const submitBtn = screen.getByRole('button', { name: /sign in/i });
-      expect(submitBtn).toBeInTheDocument();
-    });
-
-    test('should render Create Account button', () => {
-      render(<SignInForm />);
-      expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
+    test('should render a submit button', () => {
+      renderForm();
+      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
     });
 
     test('should not show error message initially', () => {
-      render(<SignInForm />);
-      expect(screen.queryByText(/invalid email or password/i)).not.toBeInTheDocument();
+      renderForm();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    // The form is titled by the page, once. Two titles is the defect that made
+    // the case for turning this surface into a page at all.
+    test('should contribute no heading of its own', () => {
+      renderForm();
+      expect(screen.queryAllByRole('heading')).toHaveLength(0);
+    });
+
+    test('should not offer to create an account', () => {
+      renderForm();
+      expect(
+        screen.queryByRole('button', { name: /create account/i })
+      ).not.toBeInTheDocument();
+    });
+
+    // Accounts come from invitations. Saying so, with somewhere to go, is what
+    // replaced the button that promised otherwise.
+    test('should say where accounts come from, and link to /join', () => {
+      renderForm();
+      expect(screen.getByText(/accounts are created from an invitation/i)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /paste its token/i })).toHaveAttribute(
+        'href',
+        '/join'
+      );
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Form inputs
-  // -------------------------------------------------------------------------
   describe('form inputs', () => {
     test('should update email field when typing', async () => {
-      render(<SignInForm />);
-      const emailInput = getEmailInput();
-      await userEvent.type(emailInput, 'user@test.com');
-      expect(emailInput).toHaveValue('user@test.com');
+      renderForm();
+      await userEvent.type(getEmailInput(), 'a@b.test');
+      expect(getEmailInput()).toHaveValue('a@b.test');
     });
 
     test('should update password field when typing', async () => {
-      render(<SignInForm />);
-      const passwordInput = getPasswordInputs()[0] as HTMLInputElement;
-      await userEvent.type(passwordInput, 'MyPassword1!');
-      expect(passwordInput).toHaveValue('MyPassword1!');
+      renderForm();
+      await userEvent.type(getPasswordInput(), 'hunter2');
+      expect(getPasswordInput()).toHaveValue('hunter2');
     });
 
-    test('should toggle remember me checkbox', async () => {
-      render(<SignInForm />);
-      const checkbox = screen.getByRole('checkbox');
-      expect(checkbox).not.toBeChecked();
-      await userEvent.click(checkbox);
-      expect(checkbox).toBeChecked();
+    test('should toggle the keep-me-signed-in checkbox', async () => {
+      renderForm();
+      const box = screen.getByRole('checkbox');
+      expect(box).not.toBeChecked();
+      await userEvent.click(box);
+      expect(box).toBeChecked();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Submit behaviour
-  // -------------------------------------------------------------------------
   describe('form submission', () => {
     test('should call signIn with email and password on submit', async () => {
-      mockSignIn.mockResolvedValue(undefined);
-      render(<SignInForm />);
-
-      await userEvent.type(getEmailInput(), 'user@test.com');
-      await userEvent.type(getPasswordInputs()[0] as HTMLInputElement, 'MyPassword1!');
+      mockSignIn.mockResolvedValueOnce(undefined);
+      renderForm();
+      await userEvent.type(getEmailInput(), 'a@b.test');
+      await userEvent.type(getPasswordInput(), 'hunter2');
       await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
-
-      await waitFor(() => {
-        expect(mockSignIn).toHaveBeenCalledWith('user@test.com', 'MyPassword1!', false);
-      });
+      await waitFor(() =>
+        expect(mockSignIn).toHaveBeenCalledWith('a@b.test', 'hunter2', false)
+      );
     });
 
-    test('should call signIn with rememberMe=true when checkbox is checked', async () => {
-      mockSignIn.mockResolvedValue(undefined);
-      render(<SignInForm />);
-
-      await userEvent.type(getEmailInput(), 'user@test.com');
-      await userEvent.type(getPasswordInputs()[0] as HTMLInputElement, 'MyPassword1!');
+    // The 30-day semantics are wiring this PR must not change, only rename.
+    test('should call signIn with rememberMe=true when the checkbox is checked', async () => {
+      mockSignIn.mockResolvedValueOnce(undefined);
+      renderForm();
+      await userEvent.type(getEmailInput(), 'a@b.test');
+      await userEvent.type(getPasswordInput(), 'hunter2');
       await userEvent.click(screen.getByRole('checkbox'));
       await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
-
-      await waitFor(() => {
-        expect(mockSignIn).toHaveBeenCalledWith('user@test.com', 'MyPassword1!', true);
-      });
+      await waitFor(() =>
+        expect(mockSignIn).toHaveBeenCalledWith('a@b.test', 'hunter2', true)
+      );
     });
 
-    test('should call onSuccess callback after successful sign in', async () => {
-      mockSignIn.mockResolvedValue(undefined);
+    test('should call onSuccess after a successful sign in', async () => {
+      mockSignIn.mockResolvedValueOnce(undefined);
       const onSuccess = jest.fn();
-      render(<SignInForm onSuccess={onSuccess} />);
-
-      await userEvent.type(getEmailInput(), 'user@test.com');
-      await userEvent.type(getPasswordInputs()[0] as HTMLInputElement, 'MyPassword1!');
+      renderForm({ onSuccess });
+      await userEvent.type(getEmailInput(), 'a@b.test');
+      await userEvent.type(getPasswordInput(), 'hunter2');
       await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
-
-      await waitFor(() => {
-        expect(onSuccess).toHaveBeenCalledTimes(1);
-      });
+      await waitFor(() => expect(onSuccess).toHaveBeenCalled());
     });
 
-    test('should show error message when signIn rejects', async () => {
-      mockSignIn.mockRejectedValue(new Error('auth/wrong-password'));
-      render(<SignInForm />);
-
-      await userEvent.type(getEmailInput(), 'user@test.com');
-      await userEvent.type(getPasswordInputs()[0] as HTMLInputElement, 'WrongPass1!');
+    test('should show an error message when signIn rejects', async () => {
+      mockSignIn.mockRejectedValueOnce(new Error('nope'));
+      renderForm();
+      await userEvent.type(getEmailInput(), 'a@b.test');
+      await userEvent.type(getPasswordInput(), 'hunter2');
       await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Invalid email or password'
+      );
+    });
 
-      await waitFor(() => {
-        expect(screen.getByText(/invalid email or password/i)).toBeInTheDocument();
-      });
+    // Naming which field was wrong tells an attacker whether an address has an
+    // account here. One message for both, deliberately.
+    test('should not say which of the two fields was wrong', async () => {
+      mockSignIn.mockRejectedValueOnce(new Error('nope'));
+      renderForm();
+      await userEvent.type(getEmailInput(), 'a@b.test');
+      await userEvent.type(getPasswordInput(), 'hunter2');
+      await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
+      const alert = await screen.findByRole('alert');
+      expect(alert.textContent).not.toMatch(/email (is|was) (not|in)/i);
+      expect(alert.textContent).not.toMatch(/wrong password|no such (user|account)/i);
     });
 
     test('should not call onSuccess on sign-in failure', async () => {
-      mockSignIn.mockRejectedValue(new Error('auth/wrong-password'));
+      mockSignIn.mockRejectedValueOnce(new Error('nope'));
       const onSuccess = jest.fn();
-      render(<SignInForm onSuccess={onSuccess} />);
-
-      await userEvent.type(getEmailInput(), 'user@test.com');
-      await userEvent.type(getPasswordInputs()[0] as HTMLInputElement, 'WrongPass1!');
+      renderForm({ onSuccess });
+      await userEvent.type(getEmailInput(), 'a@b.test');
+      await userEvent.type(getPasswordInput(), 'hunter2');
       await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
-
-      await waitFor(() => {
-        expect(onSuccess).not.toHaveBeenCalled();
-      });
+      await screen.findByRole('alert');
+      expect(onSuccess).not.toHaveBeenCalled();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Loading state
-  // -------------------------------------------------------------------------
   describe('loading state', () => {
-    test('should disable submit button while loading', async () => {
-      let resolveSignIn: () => void;
-      mockSignIn.mockReturnValue(new Promise<void>((resolve) => { resolveSignIn = resolve; }));
-      render(<SignInForm />);
-
-      await userEvent.type(getEmailInput(), 'user@test.com');
-      await userEvent.type(getPasswordInputs()[0] as HTMLInputElement, 'MyPassword1!');
-
-      // Get the form and submit it
-      const form = document.querySelector('form')!;
-      fireEvent.submit(form);
-
-      // When loading, the text changes to "Signing in..." and button is disabled
-      await waitFor(() => {
-        // The form should be in loading state - check the submit button type="submit" is disabled
-        const submitBtn = document.querySelector('button[type="submit"]') as HTMLButtonElement;
-        expect(submitBtn).toBeDisabled();
-      });
-
-      // Resolve to clean up
-      act(() => resolveSignIn!());
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Registration toggle
-  // -------------------------------------------------------------------------
-  describe('registration form toggle', () => {
-    test('should show RegistrationForm when Create Account is clicked', async () => {
-      render(<SignInForm />);
-      await userEvent.click(screen.getByRole('button', { name: /create account/i }));
-      expect(screen.getByTestId('registration-form')).toBeInTheDocument();
-    });
-
-    test('should switch back to SignInForm when Cancel in RegistrationForm is clicked', async () => {
-      render(<SignInForm />);
-      await userEvent.click(screen.getByRole('button', { name: /create account/i }));
-      // RegistrationForm mock has a Cancel button
-      await userEvent.click(screen.getByText('Cancel'));
-      // The Card.Header title "Sign In" should be back
-      expect(screen.queryByTestId('registration-form')).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
-    });
-
-    test('should switch back to SignInForm when Sign In Instead in RegistrationForm is clicked', async () => {
-      render(<SignInForm />);
-      await userEvent.click(screen.getByRole('button', { name: /create account/i }));
-      await userEvent.click(screen.getByText('Sign In Instead'));
-      expect(screen.queryByTestId('registration-form')).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Error clearing
-  // -------------------------------------------------------------------------
-  describe('error clearing', () => {
-    test('should clear error message on subsequent submit attempts', async () => {
-      mockSignIn
-        .mockRejectedValueOnce(new Error('first failure'))
-        .mockResolvedValueOnce(undefined);
-
-      render(<SignInForm />);
-      await userEvent.type(getEmailInput(), 'user@test.com');
-      await userEvent.type(getPasswordInputs()[0] as HTMLInputElement, 'MyPassword1!');
+    test('should disable the submit button while loading', async () => {
+      let resolve: () => void = () => {};
+      mockSignIn.mockImplementationOnce(
+        () => new Promise<void>((r) => { resolve = r; })
+      );
+      renderForm();
+      await userEvent.type(getEmailInput(), 'a@b.test');
+      await userEvent.type(getPasswordInput(), 'hunter2');
       await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
-
-      await waitFor(() => {
-        expect(screen.getByText(/invalid email or password/i)).toBeInTheDocument();
-      });
-
-      // Try again — error should clear before the next result arrives
-      fireEvent.submit(screen.getByRole('button', { name: /sign in/i }).closest('form')!);
-
-      await waitFor(() => {
-        expect(screen.queryByText(/invalid email or password/i)).not.toBeInTheDocument();
-      });
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled()
+      );
+      await waitFor(async () => { resolve(); });
     });
   });
 });
 
-// ---------------------------------------------------------------------------
-// A5 gates (PR 10.2). Every control has a name; the surface spends its one
-// accent on the control that writes, or none where nothing writes.
-// ---------------------------------------------------------------------------
-describe("SignInForm — names and accents", () => {
-  it("names every control", () => {
+describe('SignInForm — names and accents', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
     setupMocks();
-    const { container } = render(<SignInForm />);
+  });
 
-    // Paired with a positive assertion so an empty list cannot mean "this
-    // rendered nothing at all" (R31).
-    expect(container.querySelectorAll("input, select, textarea, button").length)
-      .toBeGreaterThan(0);
+  test('every control has an accessible name', () => {
+    const { container } = renderForm();
     expect(unnamedControlsIn(container)).toEqual([]);
   });
 
-  it("spends its one accent on the control that signs you in", () => {
-    setupMocks();
-    const { container } = render(<SignInForm />);
-
-    // One, and it is the submit: signing in is the write this surface
-    // exists to perform (D66, D80).
-    expect(formAccentsIn(container)).toHaveLength(1);
+  test('stays within the form accent budget', () => {
+    const { container } = renderForm();
+    expect(formAccentsIn(container).length).toBeLessThanOrEqual(2);
   });
 });

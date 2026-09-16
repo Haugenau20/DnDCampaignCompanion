@@ -120,12 +120,36 @@ export function useInvitations() {
     }
   }, [activeGroupId, setError]);
 
+  // Set the note on an existing token
+  const updateRegistrationTokenNotes = useCallback(async (
+    token: string,
+    notes: string
+  ): Promise<void> => {
+    try {
+      setError(null);
+
+      if (!activeGroupId) {
+        throw new Error('No active group selected');
+      }
+
+      await firebaseServices.invitation.updateGroupRegistrationTokenNotes(
+        activeGroupId,
+        token,
+        notes
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update the invitation note');
+      throw err;
+    }
+  }, [activeGroupId, setError]);
+
   return {
     generateRegistrationToken,
     validateToken,
     signUpWithToken,
     joinGroupWithToken,
     getRegistrationTokens,
-    deleteRegistrationToken
+    deleteRegistrationToken,
+    updateRegistrationTokenNotes
   };
 }

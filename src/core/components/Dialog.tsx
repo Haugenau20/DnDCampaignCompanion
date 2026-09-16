@@ -18,6 +18,18 @@ interface DialogProps {
   maxWidth?: string;
   /** Whether this dialog is nested inside another dialog */
   isNested?: boolean;
+  /**
+   * Whether the content holds work that a stray dismissal would discard.
+   *
+   * Defaults to `false`, which is what keeps a confirmation's one-key exit: a
+   * dialog asking "delete this?" has nothing to lose, so Escape and a backdrop
+   * click still close it.
+   *
+   * Content that knows it is dirty for a reason no input event reveals -- a
+   * drag, a canvas, an editor with its own model -- says so here. Everything
+   * that is just fields does not need to: see the `touched` state below.
+   */
+  dirty?: boolean;
 }
 
 /**
@@ -52,7 +64,8 @@ const Dialog: React.FC<DialogProps> = ({
   title,
   children,
   maxWidth = 'max-w-md',
-  isNested = false
+  isNested = false,
+  dirty = false
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   // Portal root lives in state rather than a ref. Assigning a ref does not
@@ -63,6 +76,36 @@ const Dialog: React.FC<DialogProps> = ({
   // forces React to look at `if (!open || !portalRoot) return null` again.
   // State makes the population itself trigger the follow-up render. See bug #150.
   const [portalRoot, setPortalRoot] = useState<HTMLDivElement | null>(null);
+
+  /**
+   * Whether anything inside has been typed into or toggled.
+   *
+   * Detected here rather than demanded from every caller. The rule is about
+   * not discarding input, and an `input`/`change` event inside the panel is
+   * exactly the evidence that some exists -- so every dialog in the product
+   * obeys it without a single call site opting in, and none can forget to.
+   * `dirty` remains for content whose changes never surface as those events.
+   *
+   * Reset when the dialog closes: a dialog reopened later has not been touched
+   * yet, and carrying the flag would make it permanently undismissable.
+   */
+  const [touched, setTouched] = useState(false);
+  const isDirty = dirty || touched;
+
+  /**
+   * The same answer, readable from the Escape listener.
+   *
+   * That listener is bound once per open and deliberately does not depend on
+   * `isDirty`: re-binding a document-level key handler on every keystroke is
+   * both wasteful and a way to lose an event between removal and re-add. A ref
+   * gives it the current value without changing when it is attached.
+   */
+  const isDirtyRef = useRef(isDirty);
+  isDirtyRef.current = isDirty;
+
+  useEffect(() => {
+    if (!open) setTouched(false);
+  }, [open]);
 
   // Create a unique ID for this dialog instance to help with targeting
   const dialogId = useRef(`dialog-${Math.random().toString(36).substr(2, 9)}`);
@@ -124,8 +167,13 @@ const Dialog: React.FC<DialogProps> = ({
         
         // Only close this dialog if it's the top-most one
         if (topDialog && topDialog.id === dialogId.current) {
+          // Escape is still swallowed while dirty -- it must not fall through
+          // to whatever is behind the backdrop -- but it no longer discards
+          // what has been typed. Cancel and the close button remain.
           event.preventDefault();
-          onClose();
+          if (!isDirtyRef.current) {
+            onClose();
+          }
         }
       }
     };
@@ -210,6 +258,12 @@ const Dialog: React.FC<DialogProps> = ({
 
   // Handle backdrop click
   const handleBackdropClick = (e: React.MouseEvent) => {
+    // A backdrop click is the easiest gesture in the product to make by
+    // accident, and until now it silently threw away whatever had been typed.
+    // Once the content is dirty it does nothing at all; the user cancels on
+    // purpose or not at all.
+    if (isDirty) return;
+
     // Check if clicking on the backdrop container and not inside the dialog
     if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
       onClose();
@@ -242,6 +296,9 @@ const Dialog: React.FC<DialogProps> = ({
         aria-labelledby={title ? titleId.current : undefined}
         tabIndex={-1}
         onKeyDown={handlePanelKeyDown}
+        // React's synthetic `change` covers typing as well as toggling, and
+        // both bubble to here from anywhere in the content.
+        onChange={() => setTouched(true)}
         className={clsx(
           "relative rounded-lg shadow-xl p-6 z-10",
           maxWidth,
