@@ -18,7 +18,7 @@ export const HUE = {
   accent: { h: 62, c: 0.115 },
   succeeded: { h: 143, c: 0.085 },
   failed: { h: 22, c: 0.155 },
-  knowledge: { h: 245, c: 0.034 },
+  knowledge: { h: 265, c: 0.09 },
   /** A loop, not a list: eight hues at even spacing. Order is the contract. */
   entity: { firstHue: 25, step: 45, c: 0.055 },
 } as const;

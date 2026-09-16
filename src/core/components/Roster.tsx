@@ -82,7 +82,7 @@ export const RosterStatusBar: React.FC<RosterStatusBarProps> = ({
           {present.map(segment => (
             <span
               key={segment.key}
-              className={segment.colorClass}
+              className={clsx('roster-band', segment.colorClass)}
               style={{ width: `${(segment.count / Math.max(total, 1)) * 100}%` }}
             />
           ))}

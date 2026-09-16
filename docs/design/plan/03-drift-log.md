@@ -3647,6 +3647,122 @@ titled "PR 12.5" and subtitled "sixth PR", the same renumbering slip as `12-5`
 (R64). Left alone for the same reason.
 
 
+### D117 - the knowledge ladder is indigo, not slate
+Date: 2026-09-16   Status: landed
+
+Reported by the maintainer against the live site: the quest bar has colour and
+the other three summary bars are shades of grey, and the greys are hard to tell
+apart. Both halves are real, and they have different causes.
+
+The colour difference is correct and is the bug `12-3a` fixed. Hue carries
+valence, only quests conclude, so only quests are green and red. Locations and
+rumours are a knowledge ladder and NPC presence is a fact; none of them is a
+win or a loss.
+
+The greyness was not a decision. `HUE.knowledge` was 245 degrees at **0.034**
+chroma, the least saturated chromatic scale in the system -- less than the
+`entity` palette's 0.055, which is pure decoration. Nothing required it: schema
+section 2 asks that the ladder carry no valence and that its hue not change
+along its length, and both hold at any chroma, because blue is unvalenced.
+
+Now 265 degrees at 0.09. That is the most chroma an indigo can carry while all
+three light-mode rungs stay in gamut; 245 desaturates its darkest rung above
+roughly 0.07, and teal and cyan clip harder. Contrast against the three content
+grounds rises to 5.15 / 7.76 / 11.12 light and 4.65 / 6.46 / 9.22 dark, still
+monotonic in both modes. Recorded as **D40** in the schema, which supersedes
+"v6 is additive over v2" for this case -- that rule existed to keep a multi-PR
+stack coherent while Phase 12 was in flight, and Phase 12 is merged. Schema
+version 6 -> 7.
+
+Five leaves change per mode: `knowledge.0/1/2`, `knowledge.wash` and
+`disposition.unknown`, which is sourced from `knowledge.0`.
+
+### D118 - a band's ground is the band beside it, and nothing measured that
+Date: 2026-09-16   Status: landed
+
+Every contrast rule the schema states is written against a *surface*. The
+directory summary bars break that assumption: their bands sit flush, so a
+band's only real ground is its neighbour, and no gate looked at that pairing.
+Measured across the bars as they shipped:
+
+| pairing | contrast |
+|---|---|
+| locations, light: known -> explored | 1.50:1 |
+| explored -> visited | 1.44:1 |
+| NPCs: deceased -> missing | 1.06:1 |
+| quests: active -> completed | **1.06:1** |
+| quests: completed -> failed | 1.23:1 |
+
+The quest bar is the instructive row. Its bands are the *closest* of any bar in
+luminance and it is the one that looks fine, because those bands differ in hue.
+The bar has always leaned on hue to separate its segments, so the moment a
+scale correctly stopped supplying hue -- which is what D117's ladder does by
+design -- the bar had nothing left.
+
+Recolouring does not fix this. The ladder's rungs differ in lightness alone,
+deliberately, since an unchanging hue is what lets it survive greyscale, and
+raising chroma moves all three rungs together. So the bands are separated
+structurally: `.roster-band + .roster-band` draws a 1px hairline in
+`--surface-card-bg`, which reads as a gap rather than as a fourth colour and
+asks nothing of the scale. It fixes the quest bar at the same time.
+
+### R66 - the fixture's independence was social, and is now technical
+Date: 2026-09-16   Status: landed
+
+`schema-fixture.test.ts` says a fixture written by the author of the generator
+"compares the implementation to itself and passes by construction", and that
+independent authorship is its entire job. That guarantee holds exactly until
+someone has to change a contract value -- as D117 did -- because the new
+resolved values have to come from somewhere, and running `deriveTokens` and
+pasting the output turns the fixture into a copy of the thing it checks.
+
+New `oklch-oracle.test.ts` replaces the social guarantee with a technical one
+for the part that can carry it. Every value in both themes is `oklchToHex` of
+an authored triple, so the maths is the load-bearing piece, and it is now
+checked against **Chromium's** colour pipeline: 98 in-gamut triples painted to
+a 1x1 canvas and read back as bytes (Chrome 152; the canvas was verified
+byte-exact for plain sRGB first, so nothing colour-manages the pixel).
+
+Results worth keeping:
+
+- The conversion is correct. Ours and Chromium's agree to about 1e-4 per
+  channel, and no channel is ever more than one byte out.
+- Eight of the 98 round to a different byte, and **every one** sits within 0.03
+  of a .5 rounding boundary -- the test asserts that property rather than
+  listing the eight, so a disagreement that is *not* a boundary case fails
+  loudly. One of the eight ships: `knowledge.0` light, where Chromium computes
+  blue as 144.503 and we compute 144.494.
+- Out of gamut the two deliberately differ: Chromium clips, `fitChroma` reduces
+  chroma. `fitChroma`'s comment claimed clipping "moves the hue" and had never
+  been tested. It does: `oklch(0.3 0.2 70)` clips to `#650000`, a dark red **40
+  degrees** off, while reduction lands within 0.3 of the hue asked for.
+- Verified the gate can fail, per the project's own rule. Perturbing one matrix
+  constant by 0.025% trips it.
+
+### R67 - two schema records share the number D36
+Date: 2026-09-16   Status: open, reported not fixed
+
+`colour-schema.md` section 8 has **two** `D36` entries: "The fixture reproduces
+the generator's algorithm, to the byte" and "v6 is additive over v2". They are
+unrelated. `D36` is cited from four places (`colour-schema.md` twice,
+`12-2b-late-scales.md` twice), and this log has its own unrelated `D36`, so the
+citations are already ambiguous.
+
+Not renumbered. Fixing it means editing a read-only handoff, and the consent
+that covered D117 covered the ladder, not a renumbering pass. D40 was assigned
+a fresh number rather than reusing the gap.
+
+### R68 - schema rollout metadata is stale now that Phase 12 has merged
+Date: 2026-09-16   Status: open, reported not fixed
+
+`colour-schema.json` still carries `inCodeAfter: {"12-1 + 12-2": 109}` and
+`pendingIn: {"12-2b": 26}`. Every PR in the phase is merged, so nothing is
+pending and the in-code count is 123. Left alone: these are rollout bookkeeping
+whose intended semantics are the maintainer's, and guessing at them is how a
+source of truth acquires a second, wrong voice. `basedOn` and `warning` *were*
+updated, because D117 made both of them state something factually untrue.
+
+
 ### Q19 - can an ordered collection have named siblings?
 Date: 2026-09-15   Status: open
 `TokenTree` supports a record or an array, and `knowledge` is the first token to
