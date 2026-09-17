@@ -417,6 +417,38 @@ adds has a band header carrying a status chip.
   closed by the phase that found it.
 - **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13
 
+### T041 — "The required pair is unchanged" is true of one entity in four
+**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-17
+
+`00-entity-authoring.md` §1.2 says creating an entity asks for two fields and
+that "the required pair is **unchanged** from today's forms". `15-1` item 1
+sharpens that into an instruction: "do not relax it and do not add to it".
+Measured against the four create forms, the premise holds for the quest only.
+
+- **Quest** — `QuestCreateForm.tsx:122` requires `title` and `description`.
+  Two. The premise is exactly right here.
+- **Location** — `LocationCreateForm.tsx:153` requires `name`, `description`,
+  `type` and `status`, but the last two are defaulted (`poi`, `known`) and
+  never left blank, so the user supplies two. Effectively unchanged.
+- **NPC** — `NPCForm.tsx:190` requires `name`, `status` and `relationship`;
+  the last two are defaulted, so the user supplies **one**. `description` is
+  labelled "Description" with no asterisk and is not validated — yet
+  `NPC.description` is **non-optional** in `types.ts`. Form and type disagree.
+- **Rumour** — `RumorForm.tsx:194` requires `title`, `content` **and**
+  `sourceName`. Three.
+- **What 15-1 did**: built §4's table as written — two fields for the NPC, the
+  quest and the location — which *adds* a required field for the NPC against
+  item 1's letter, and matches `NPC.description`'s own type. The rumour was
+  left on its existing form under item 9's second branch, because a two-field
+  surface cannot supply `sourceName` without relaxing validation.
+- **What needs deciding**: whether the NPC's description is genuinely required
+  (the type says yes, the form says no), and what the rumour's composer row in
+  `15-7` does about `sourceName` — require it as a third field, default it, or
+  make it optional. `15-7` cannot be written until that is answered.
+- **Source**: `docs/design/plan/15-entity-authoring/handoff/15-1-quick-add.md`
+  item 1 against `00-entity-authoring.md` §1.2 and §4
+
+
 ---
 
 ## Tech debt and platform

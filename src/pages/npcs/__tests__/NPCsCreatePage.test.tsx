@@ -44,9 +44,6 @@ jest.mock("features/user-management", () => ({
       : null,
     setActiveCampaign: mockSetActiveCampaign,
   }),
-  // `SignInForm` and `JoinGroupDialog` were stubbed here until 14.5 deleted
-  // the dialogs. `GatedContent` now links to the routes instead, and needs
-  // only the path builder.
   signInPathFor: () => "/signin",
 }));
 
@@ -63,24 +60,16 @@ jest.mock("core/services/firebase", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Context mocks
+// Quick add's form is stubbed: this suite is about the page that mounts it --
+// the gate, the chrome and the handoff it passes down. The form's own
+// behaviour has its own suite.
 // ---------------------------------------------------------------------------
-const mockNPCs = [{ id: "npc-1", name: "Gandalf" }];
-
-jest.mock("features/campaign-entities", () => ({
-  useNPCs: () => ({ npcs: mockNPCs }),
-  NPCForm: (props: any) => (
-    <div data-testid="npc-form">
-      <span data-testid="npc-form-initial-data">
-        {JSON.stringify(props.initialData)}
-      </span>
-      <span data-testid="npc-form-existing-npcs">
-        {JSON.stringify(props.existingNPCs)}
-      </span>
-      <button data-testid="npc-form-success" onClick={props.onSuccess}>
-        success
-      </button>
-      <button data-testid="npc-form-cancel" onClick={props.onCancel}>
+jest.mock("shared/components/quick-add/QuickAddForm", () => ({
+  __esModule: true,
+  default: (props: any) => (
+    <div data-testid="quick-add-form">
+      <span data-testid="quick-add-props">{JSON.stringify(props)}</span>
+      <button data-testid="quick-add-cancel" onClick={props.onCancel}>
         cancel
       </button>
     </div>
@@ -92,7 +81,7 @@ jest.mock("shared/components/Breadcrumb", () => ({
   default: (props: any) => (
     <nav data-testid="breadcrumb">
       {props.items.map((item: any, i: number) => (
-        <span key={i} data-testid={`breadcrumb-item-${i}`}>
+        <span key={i} data-testid={"breadcrumb-item-" + i}>
           {item.label}
         </span>
       ))}
@@ -100,9 +89,8 @@ jest.mock("shared/components/Breadcrumb", () => ({
   ),
 }));
 
-jest.mock("../../../core/components/Button", () => ({
+jest.mock("core/components/Button", () => ({
   __esModule: true,
-  // Added in 14.5: links that must look like buttons wear this recipe.
   buttonClasses: () => "button",
   default: ({ children, onClick }: any) => (
     <button onClick={onClick}>{children}</button>
@@ -125,6 +113,10 @@ function renderPage() {
   );
 }
 
+function quickAddProps() {
+  return JSON.parse(screen.getByTestId("quick-add-props").textContent!);
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -140,14 +132,15 @@ describe("NPCsCreatePage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Gated states
+  // Gated states -- unchanged by 15-1: the route is still reachable while
+  // signed out and must still explain itself rather than redirecting.
   // -------------------------------------------------------------------------
   describe("gated states", () => {
     it("renders the page title while signed out", () => {
       mockUser = null;
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Create New NPC" })
+        screen.getByRole("heading", { level: 1, name: "Add an NPC" })
       ).toBeInTheDocument();
     });
 
@@ -160,10 +153,10 @@ describe("NPCsCreatePage", () => {
       expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
     });
 
-    it("hides the NPC form while signed out", () => {
+    it("hides the create surface while signed out", () => {
       mockUser = null;
       renderPage();
-      expect(screen.queryByTestId("npc-form")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("quick-add-form")).not.toBeInTheDocument();
     });
 
     it("shows a skeleton and no message while context is still resolving", () => {
@@ -179,7 +172,7 @@ describe("NPCsCreatePage", () => {
       expect(
         await screen.findByRole("heading", { name: /which campaign/i })
       ).toBeInTheDocument();
-      expect(screen.queryByTestId("npc-form")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("quick-add-form")).not.toBeInTheDocument();
     });
 
     it("does NOT redirect a signed-out visitor away from the page", () => {
@@ -200,22 +193,25 @@ describe("NPCsCreatePage", () => {
 
     it("renders breadcrumb with NPCs and Create labels", () => {
       renderPage();
-      expect(screen.getByTestId("breadcrumb-item-0")).toHaveTextContent("NPCs");
+      expect(screen.getByTestId("breadcrumb-item-0")).toHaveTextContent(
+        "NPCs"
+      );
       expect(screen.getByTestId("breadcrumb-item-1")).toHaveTextContent(
         "Create"
       );
     });
 
-    it("renders the page heading as the h1", () => {
+    it("titles the page the same as the dialog, so the two mounts do not drift", () => {
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Create New NPC" })
+        screen.getByRole("heading", { level: 1, name: "Add an NPC" })
       ).toBeInTheDocument();
     });
 
-    it("renders the NPCForm", () => {
+    it("mounts quick add for the npc", () => {
       renderPage();
-      expect(screen.getByTestId("npc-form")).toBeInTheDocument();
+      expect(screen.getByTestId("quick-add-form")).toBeInTheDocument();
+      expect(quickAddProps().entity).toBe("npc");
     });
   });
 
@@ -237,61 +233,61 @@ describe("NPCsCreatePage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Initial data derivation
+  // Note conversion handoff -- `15-1` forbids changing this wiring, so the
+  // page still reads `initialData`/`noteId`/`entityId` from router state.
   // -------------------------------------------------------------------------
-  describe("initialData derivation", () => {
-    it("passes undefined to NPCForm.initialData when location.state has no initialData", () => {
+  describe("note conversion handoff", () => {
+    it("pre-fills nothing when location.state is empty", () => {
       mockLocationState = {};
       renderPage();
-      const raw = screen.getByTestId("npc-form-initial-data").textContent;
-      expect(raw).toBe(""); // JSON.stringify(undefined) === undefined → renders as ""
+      const props = quickAddProps();
+      expect(props.initialName).toBe("");
+      expect(props.initialLine).toBe("");
+      expect(props.noteId).toBeUndefined();
     });
 
-    it("merges initialData, noteId and entityId into formInitialData", () => {
+    it("pre-fills the two fields and passes the note wiring through", () => {
       mockLocationState = {
         initialData: { name: "Elrond", description: "Elf lord" },
         noteId: "note-7",
         entityId: "entity-3",
       };
       renderPage();
-      const raw = screen.getByTestId("npc-form-initial-data").textContent!;
-      const parsed = JSON.parse(raw);
-      expect(parsed.name).toBe("Elrond");
-      expect(parsed.noteId).toBe("note-7");
-      expect(parsed.entityId).toBe("entity-3");
+      const props = quickAddProps();
+      expect(props.initialName).toBe("Elrond");
+      expect(props.initialLine).toBe("Elf lord");
+      expect(props.noteId).toBe("note-7");
+      expect(props.entityId).toBe("entity-3");
     });
 
-    it("passes existing NPCs from context to NPCForm", () => {
+    it("carries the extracted fields the two-field surface does not show", () => {
+      mockLocationState = {
+        initialData: {
+          name: "Elrond",
+          description: "Elf lord",
+          race: "Half-elven",
+        },
+      };
       renderPage();
-      const raw = screen.getByTestId("npc-form-existing-npcs").textContent!;
-      const parsed = JSON.parse(raw);
-      expect(parsed).toEqual(mockNPCs);
+      expect(quickAddProps().carry.race).toEqual("Half-elven");
     });
   });
 
   // -------------------------------------------------------------------------
-  // Navigation handlers
+  // Cancel navigation
   // -------------------------------------------------------------------------
-  describe("onSuccess navigation", () => {
-    it("navigates to /npcs on form success", () => {
-      renderPage();
-      fireEvent.click(screen.getByTestId("npc-form-success"));
-      expect(mockNavigate).toHaveBeenCalledWith("/npcs");
-    });
-  });
-
   describe("onCancel navigation", () => {
     it("navigates to /npcs on cancel when no noteId", () => {
       mockLocationState = {};
       renderPage();
-      fireEvent.click(screen.getByTestId("npc-form-cancel"));
+      fireEvent.click(screen.getByTestId("quick-add-cancel"));
       expect(mockNavigate).toHaveBeenCalledWith("/npcs");
     });
 
     it("navigates to the note page on cancel when noteId is present", () => {
       mockLocationState = { noteId: "note-99" };
       renderPage();
-      fireEvent.click(screen.getByTestId("npc-form-cancel"));
+      fireEvent.click(screen.getByTestId("quick-add-cancel"));
       expect(mockNavigate).toHaveBeenCalledWith("/notes/note-99");
     });
   });

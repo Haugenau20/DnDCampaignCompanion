@@ -13,10 +13,7 @@ let mockLocationState: Record<string, any> = {};
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
   useNavigate: () => mockNavigate,
-  useLocation: () => ({
-    state: mockLocationState,
-    pathname: "/locations/create",
-  }),
+  useLocation: () => ({ state: mockLocationState, pathname: "/locations/create" }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -47,9 +44,6 @@ jest.mock("features/user-management", () => ({
       : null,
     setActiveCampaign: mockSetActiveCampaign,
   }),
-  // `SignInForm` and `JoinGroupDialog` were stubbed here until 14.5 deleted
-  // the dialogs. `GatedContent` now links to the routes instead, and needs
-  // only the path builder.
   signInPathFor: () => "/signin",
 }));
 
@@ -66,24 +60,16 @@ jest.mock("core/services/firebase", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Child component mocks
+// Quick add's form is stubbed: this suite is about the page that mounts it --
+// the gate, the chrome and the handoff it passes down. The form's own
+// behaviour has its own suite.
 // ---------------------------------------------------------------------------
-jest.mock("features/campaign-entities", () => ({
-  LocationCreateForm: (props: any) => (
-    <div data-testid="location-create-form">
-      <span data-testid="location-form-initial-data">
-        {JSON.stringify(props.initialData)}
-      </span>
-      <button
-        data-testid="location-form-success"
-        onClick={props.onSuccess}
-      >
-        success
-      </button>
-      <button
-        data-testid="location-form-cancel"
-        onClick={props.onCancel}
-      >
+jest.mock("shared/components/quick-add/QuickAddForm", () => ({
+  __esModule: true,
+  default: (props: any) => (
+    <div data-testid="quick-add-form">
+      <span data-testid="quick-add-props">{JSON.stringify(props)}</span>
+      <button data-testid="quick-add-cancel" onClick={props.onCancel}>
         cancel
       </button>
     </div>
@@ -95,7 +81,7 @@ jest.mock("shared/components/Breadcrumb", () => ({
   default: (props: any) => (
     <nav data-testid="breadcrumb">
       {props.items.map((item: any, i: number) => (
-        <span key={i} data-testid={`breadcrumb-item-${i}`}>
+        <span key={i} data-testid={"breadcrumb-item-" + i}>
           {item.label}
         </span>
       ))}
@@ -103,33 +89,8 @@ jest.mock("shared/components/Breadcrumb", () => ({
   ),
 }));
 
-// Typography is mapped to its real semantic tag (h1/h2/h3/h4, else `p`) so
-// that `getByRole("heading", ...)` works against both this page's own title
-// (via PageShell) and the shared gated panel's headings (via GatedPageState),
-// while still exposing the same `data-testid` scheme the existing assertions
-// below rely on.
-jest.mock("core/components/Typography", () => {
-  const TAGS: Record<string, string> = { h1: "h1", h2: "h2", h3: "h3", h4: "h4" };
-  return {
-    __esModule: true,
-    default: ({ children, color, variant }: any) => {
-      const Tag = (TAGS[variant] || "p") as any;
-      return (
-        <Tag
-          data-testid={
-            color ? `typography-${color}` : `typography-${variant ?? "default"}`
-          }
-        >
-          {children}
-        </Tag>
-      );
-    },
-  };
-});
-
 jest.mock("core/components/Button", () => ({
   __esModule: true,
-  // Added in 14.5: links that must look like buttons wear this recipe.
   buttonClasses: () => "button",
   default: ({ children, onClick }: any) => (
     <button onClick={onClick}>{children}</button>
@@ -152,6 +113,10 @@ function renderPage() {
   );
 }
 
+function quickAddProps() {
+  return JSON.parse(screen.getByTestId("quick-add-props").textContent!);
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -167,19 +132,18 @@ describe("LocationCreatePage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Gated states
+  // Gated states -- unchanged by 15-1: the route is still reachable while
+  // signed out and must still explain itself rather than redirecting.
   // -------------------------------------------------------------------------
   describe("gated states", () => {
     it("renders the page title while signed out", () => {
       mockUser = null;
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Create New Location" })
+        screen.getByRole("heading", { level: 1, name: "Add a place" })
       ).toBeInTheDocument();
     });
 
-    // Write route: the heading names adding a location and never suggests
-    // picking a group.
     it("asks a signed-out visitor to sign in to add a location, and never to select a group", () => {
       mockUser = null;
       renderPage();
@@ -189,12 +153,10 @@ describe("LocationCreatePage", () => {
       expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
     });
 
-    it("hides the location form while signed out", () => {
+    it("hides the create surface while signed out", () => {
       mockUser = null;
       renderPage();
-      expect(
-        screen.queryByTestId("location-create-form")
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId("quick-add-form")).not.toBeInTheDocument();
     });
 
     it("shows a skeleton and no message while context is still resolving", () => {
@@ -210,9 +172,7 @@ describe("LocationCreatePage", () => {
       expect(
         await screen.findByRole("heading", { name: /which campaign/i })
       ).toBeInTheDocument();
-      expect(
-        screen.queryByTestId("location-create-form")
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId("quick-add-form")).not.toBeInTheDocument();
     });
 
     it("does NOT redirect a signed-out visitor away from the page", () => {
@@ -241,18 +201,17 @@ describe("LocationCreatePage", () => {
       );
     });
 
-    // Rewritten: the title now renders via PageShell as the page's h1
-    // (normalised from the old h2) rather than a bare `Typography`.
-    it("renders the page heading as the h1", () => {
+    it("titles the page the same as the dialog, so the two mounts do not drift", () => {
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Create New Location" })
+        screen.getByRole("heading", { level: 1, name: "Add a place" })
       ).toBeInTheDocument();
     });
 
-    it("renders LocationCreateForm", () => {
+    it("mounts quick add for the location", () => {
       renderPage();
-      expect(screen.getByTestId("location-create-form")).toBeInTheDocument();
+      expect(screen.getByTestId("quick-add-form")).toBeInTheDocument();
+      expect(quickAddProps().entity).toBe("location");
     });
   });
 
@@ -260,79 +219,76 @@ describe("LocationCreatePage", () => {
   // Back button label
   // -------------------------------------------------------------------------
   describe("back button label", () => {
-    it("shows 'Back to Locations' when no noteId in state", () => {
+    it("shows 'Back to Locations' when there is no noteId in location state", () => {
       mockLocationState = {};
       renderPage();
       expect(screen.getByText("Back to Locations")).toBeInTheDocument();
     });
 
-    it("shows 'Back to Note' when noteId is in state", () => {
-      mockLocationState = { noteId: "note-33" };
+    it("shows 'Back to Note' when noteId is present in location state", () => {
+      mockLocationState = { noteId: "note-42" };
       renderPage();
       expect(screen.getByText("Back to Note")).toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // initialData derivation
-  // Bug #750 was fixed and this characterization test corrected under
-  // explicit authorization on 2026-07-28 (same terms as #005/#006): it used
-  // to assert the buggy behavior (always passing an object, never undefined)
-  // by name. LocationCreatePage now matches NPCsCreatePage / QuestCreatePage
-  // / RumorCreatePage's `initialData ? {...} : undefined` pattern.
+  // Note conversion handoff -- `15-1` forbids changing this wiring, so the
+  // page still reads `initialData`/`noteId`/`entityId` from router state.
   // -------------------------------------------------------------------------
-  describe("initialData derivation", () => {
-    it("passes undefined initialData when no state is present (matches NPC/Quest/Rumor CreatePages)", () => {
+  describe("note conversion handoff", () => {
+    it("pre-fills nothing when location.state is empty", () => {
       mockLocationState = {};
       renderPage();
-      const raw = screen.getByTestId("location-form-initial-data").textContent;
-      // Fixed behavior: with no location.state, formInitialData is undefined,
-      // so LocationCreateForm receives undefined rather than `{}`. The mock
-      // renders `{JSON.stringify(props.initialData)}`, and JSON.stringify(undefined)
-      // is the value `undefined` (not a string), so React renders no text at all —
-      // hence asserting emptiness here rather than JSON.parse-ing it.
-      expect(raw).toBe("");
+      const props = quickAddProps();
+      expect(props.initialName).toBe("");
+      expect(props.initialLine).toBe("");
+      expect(props.noteId).toBeUndefined();
     });
 
-    it("spreads initialData and attaches noteId and entityId", () => {
+    it("pre-fills the two fields and passes the note wiring through", () => {
       mockLocationState = {
-        initialData: { name: "Rivendell", type: "city" },
-        noteId: "note-11",
-        entityId: "entity-2",
+        initialData: { name: "Bag End", description: "A hobbit hole" },
+        noteId: "note-7",
+        entityId: "entity-3",
       };
       renderPage();
-      const raw = screen.getByTestId("location-form-initial-data").textContent!;
-      const parsed = JSON.parse(raw);
-      expect(parsed.name).toBe("Rivendell");
-      expect(parsed.noteId).toBe("note-11");
-      expect(parsed.entityId).toBe("entity-2");
+      const props = quickAddProps();
+      expect(props.initialName).toBe("Bag End");
+      expect(props.initialLine).toBe("A hobbit hole");
+      expect(props.noteId).toBe("note-7");
+      expect(props.entityId).toBe("entity-3");
     });
-  });
 
-  // -------------------------------------------------------------------------
-  // Navigation handlers
-  // -------------------------------------------------------------------------
-  describe("onSuccess navigation", () => {
-    it("navigates to /locations on form success", () => {
+    it("carries the extracted fields the two-field surface does not show", () => {
+      mockLocationState = {
+        initialData: {
+          name: "Bag End",
+          description: "A hobbit hole",
+          type: "town",
+        },
+      };
       renderPage();
-      fireEvent.click(screen.getByTestId("location-form-success"));
-      expect(mockNavigate).toHaveBeenCalledWith("/locations");
+      expect(quickAddProps().carry.type).toEqual("town");
     });
   });
 
+  // -------------------------------------------------------------------------
+  // Cancel navigation
+  // -------------------------------------------------------------------------
   describe("onCancel navigation", () => {
     it("navigates to /locations on cancel when no noteId", () => {
       mockLocationState = {};
       renderPage();
-      fireEvent.click(screen.getByTestId("location-form-cancel"));
+      fireEvent.click(screen.getByTestId("quick-add-cancel"));
       expect(mockNavigate).toHaveBeenCalledWith("/locations");
     });
 
-    it("navigates to note page on cancel when noteId is present", () => {
-      mockLocationState = { noteId: "note-55" };
+    it("navigates to the note page on cancel when noteId is present", () => {
+      mockLocationState = { noteId: "note-99" };
       renderPage();
-      fireEvent.click(screen.getByTestId("location-form-cancel"));
-      expect(mockNavigate).toHaveBeenCalledWith("/notes/note-55");
+      fireEvent.click(screen.getByTestId("quick-add-cancel"));
+      expect(mockNavigate).toHaveBeenCalledWith("/notes/note-99");
     });
   });
 });
