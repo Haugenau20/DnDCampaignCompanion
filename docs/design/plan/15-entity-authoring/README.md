@@ -7,9 +7,11 @@ Nothing in this phase changes a colour, a font or a token.
 - **The design doc:** `00-entity-authoring.md` — the three rules, the audit,
   the decisions `D15.1`…`D15.12`, the copy.
 - **The handoffs:** `handoff/15-0` … `handoff/15-8`, in order.
-- **The visual reference:** `Authoring UI handover.dc.html` at the project
-  root — surfaces `S1`…`S9`. `Entity authoring direction.dc.html` holds the
-  reasoning and the rejected options; it is not a spec.
+- **The visual reference:** the eight `.png` renders in this folder.
+  `quick-add.png` is `S1` and `phone.png` is `S9`; the rest cover the
+  directory rows, the two new pages and the rumour list. `00-entity-authoring.md`
+  §0 names `Authoring UI handover.dc.html` and `Entity authoring direction.dc.html`
+  at the project root instead — **neither is in the repository**, so use these.
 
 This is the first phase to live in its own folder. Phases 6–14 are flat in
 `../`, with their handoffs in `../handoff/`, so a reference from here to a
