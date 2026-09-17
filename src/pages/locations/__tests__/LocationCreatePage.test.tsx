@@ -140,7 +140,7 @@ describe("LocationCreatePage", () => {
       mockUser = null;
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Add a place" })
+        screen.getByRole("heading", { level: 1, name: "New Location" })
       ).toBeInTheDocument();
     });
 
@@ -204,7 +204,7 @@ describe("LocationCreatePage", () => {
     it("titles the page the same as the dialog, so the two mounts do not drift", () => {
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Add a place" })
+        screen.getByRole("heading", { level: 1, name: "New Location" })
       ).toBeInTheDocument();
     });
 

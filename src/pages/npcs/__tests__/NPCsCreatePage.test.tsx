@@ -140,7 +140,7 @@ describe("NPCsCreatePage", () => {
       mockUser = null;
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Add an NPC" })
+        screen.getByRole("heading", { level: 1, name: "New NPC" })
       ).toBeInTheDocument();
     });
 
@@ -204,7 +204,7 @@ describe("NPCsCreatePage", () => {
     it("titles the page the same as the dialog, so the two mounts do not drift", () => {
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Add an NPC" })
+        screen.getByRole("heading", { level: 1, name: "New NPC" })
       ).toBeInTheDocument();
     });
 

@@ -95,11 +95,11 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
   npc: {
     entity: "npc",
     labels: {
-      title: "Add an NPC",
+      title: "New NPC",
       nameLabel: "Name",
-      namePlaceholder: "Thorin Oakenshield",
-      lineLabel: "Who they are, in a line",
-      linePlaceholder: "Exiled king under the mountain",
+      namePlaceholder: "Bard the Bowman",
+      lineLabel: "Who are they, in a line?",
+      linePlaceholder: "A bargeman of Lake-town…",
       countNoun: "NPCs",
     },
     messages: {
@@ -143,11 +143,11 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
   quest: {
     entity: "quest",
     labels: {
-      title: "Add a quest",
+      title: "New Quest",
       nameLabel: "Title",
       namePlaceholder: "Reclaim Erebor",
-      lineLabel: "What the party was asked to do",
-      linePlaceholder: "Take back the mountain from Smaug",
+      lineLabel: "What was the party asked to do?",
+      linePlaceholder: "Take back the mountain from Smaug…",
       countNoun: "quests",
     },
     messages: {
@@ -185,11 +185,11 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
   location: {
     entity: "location",
     labels: {
-      title: "Add a place",
+      title: "New Location",
       nameLabel: "Name",
-      namePlaceholder: "Bag End",
-      lineLabel: "What this place is, in a line",
-      linePlaceholder: "A hobbit hole in Hobbiton",
+      namePlaceholder: "Gondolin",
+      lineLabel: "What is this place, in a line?",
+      linePlaceholder: "A hidden city of the Noldor…",
       countNoun: "places",
     },
     messages: {

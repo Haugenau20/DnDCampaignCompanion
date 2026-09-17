@@ -322,7 +322,11 @@ const Dialog: React.FC<DialogProps> = ({
           // A sheet is flush with the bottom edge and rounded only at the top;
           // from `sm` up it is the ordinary centred panel again.
           placement === 'sheet-on-phone'
-            ? "rounded-t-lg sm:rounded-lg max-h-[90vh] overflow-y-auto"
+            // `rounded-b-none` is not redundant: `.dialog` in components.css sets
+            // the `border-radius` shorthand, so without it the bottom corners
+            // keep their radius and show the backdrop through them where the
+            // sheet meets the screen edge.
+            ? "rounded-t-lg rounded-b-none sm:rounded-lg max-h-[90vh] overflow-y-auto"
             : "rounded-lg",
           maxWidth,
           "w-full",
@@ -345,6 +349,20 @@ const Dialog: React.FC<DialogProps> = ({
         >
           <X size={20} />
         </button>
+
+        {/*
+          The sheet's grab handle: the affordance that says the panel is
+          anchored to the bottom edge and not a centred dialog. It sits above
+          the title, which is why it lives here rather than in a caller's
+          children -- those render after it. Decoration, so it is hidden from
+          the accessibility tree, and it never appears on a centred dialog.
+        */}
+        {placement === 'sheet-on-phone' && (
+          <div
+            className="sm:hidden mx-auto mb-4 h-1 w-10 rounded-full bg-secondary"
+            aria-hidden="true"
+          />
+        )}
 
         {/* Title */}
         {title && (

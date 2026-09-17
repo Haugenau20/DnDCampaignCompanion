@@ -62,7 +62,7 @@ describe("QuickAddProvider", () => {
   it("names the surface, so the dialog and the route agree", async () => {
     renderWithProvider();
     await userEvent.click(screen.getByText("add npc"));
-    expect(screen.getByRole("dialog", { name: "Add an NPC" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "New NPC" })).toBeInTheDocument();
   });
 
   it("is a real modal dialog, not an anonymous div", async () => {

@@ -177,7 +177,13 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
       */}
       <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 sm:gap-3 pt-1">
         {onCancel && (
-          <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onCancel}
+            disabled={isSubmitting}
+            className="w-full sm:w-auto"
+          >
             {cancelLabel}
           </Button>
         )}
@@ -189,10 +195,17 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
             onClick={() => void handleCreateAndAddAnother()}
             isLoading={isSubmitting}
             disabled={isSubmitting}
+            className="w-full sm:w-auto"
           >
             Create &amp; add another
           </Button>
-          <Button type="submit" variant="primary" isLoading={isSubmitting} disabled={isSubmitting}>
+          <Button
+            type="submit"
+            variant="primary"
+            isLoading={isSubmitting}
+            disabled={isSubmitting}
+            className="w-full sm:w-auto"
+          >
             Create &amp; open
           </Button>
         </div>

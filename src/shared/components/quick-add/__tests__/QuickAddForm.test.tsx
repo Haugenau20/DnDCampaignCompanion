@@ -44,7 +44,7 @@ function renderForm(props: Partial<React.ComponentProps<typeof QuickAddForm>> = 
 }
 
 const nameField = () => screen.getByLabelText("Name");
-const lineField = () => screen.getByLabelText("Who they are, in a line");
+const lineField = () => screen.getByLabelText("Who are they, in a line?");
 const createAndOpen = () => screen.getByRole("button", { name: /create & open/i });
 const createAndAddAnother = () =>
   screen.getByRole("button", { name: /create & add another/i });
@@ -72,7 +72,7 @@ describe("QuickAddForm", () => {
       renderForm({ entity: "quest" });
       expect(screen.getByLabelText("Title")).toBeInTheDocument();
       expect(
-        screen.getByLabelText("What the party was asked to do")
+        screen.getByLabelText("What was the party asked to do?")
       ).toBeInTheDocument();
     });
 
@@ -152,7 +152,7 @@ describe("QuickAddForm", () => {
       renderForm({ entity: "quest" });
       await userEvent.type(screen.getByLabelText("Title"), "Reclaim Erebor");
       await userEvent.type(
-        screen.getByLabelText("What the party was asked to do"),
+        screen.getByLabelText("What was the party asked to do?"),
         "Take the mountain"
       );
       await userEvent.click(createAndOpen());
@@ -177,7 +177,7 @@ describe("QuickAddForm", () => {
       renderForm({ entity: "location", parentId: "hobbiton" });
       await userEvent.type(screen.getByLabelText("Name"), "Bag End");
       await userEvent.type(
-        screen.getByLabelText("What this place is, in a line"),
+        screen.getByLabelText("What is this place, in a line?"),
         "A hobbit hole"
       );
       await userEvent.click(createAndOpen());

@@ -140,7 +140,7 @@ describe("QuestCreatePage", () => {
       mockUser = null;
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Add a quest" })
+        screen.getByRole("heading", { level: 1, name: "New Quest" })
       ).toBeInTheDocument();
     });
 
@@ -204,7 +204,7 @@ describe("QuestCreatePage", () => {
     it("titles the page the same as the dialog, so the two mounts do not drift", () => {
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Add a quest" })
+        screen.getByRole("heading", { level: 1, name: "New Quest" })
       ).toBeInTheDocument();
     });
 
