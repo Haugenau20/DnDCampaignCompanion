@@ -398,6 +398,25 @@ Answered by practice — `.image-slot` sits on `--surface-sunken-bg`, the same i
 both themes — but never written down as a decision. Low stakes; listed so the
 question isn't re-opened from scratch.
 
+### T040 — No accent pair is authored for the band surface
+**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-17
+
+`docs/design/colour-schema.md` §5.2 solves `accent.*` against `page`, `card`
+and `sunken`. It does not solve it against the band, and every page Phase 15
+adds has a band header carrying a status chip.
+
+- **Where**: light `accent.ink` `#8D4F00` on band `#26211C` measures ~1.9:1 —
+  below any usable threshold, and there is no authored pair to reach for.
+- **Touches**: four surfaces in Phase 15 (`/locations/:locationId`,
+  `/quests/:questId`, and the two directories that share the header), which is
+  why it wants answering at the source rather than per page.
+- **Interim**: band chips take the neutral band treatment, which is what the
+  visual reference shows. `handoff/15-4-location-page.md` says so explicitly
+  and forbids inventing a value.
+- **Catch**: the schema is read-only to an implementing PR, so this cannot be
+  closed by the phase that found it.
+- **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13
+
 ---
 
 ## Tech debt and platform
@@ -752,8 +771,8 @@ work that landed after the audit — including the Critical one.
 
 ## Documentation debt
 
-Both need a hand allowed to edit the schema files, which no implementing change
-may touch.
+All three need a hand allowed to edit the schema files and the read-only
+history, which no implementing change may touch.
 
 ### T010 — `colour-schema.md` has two decisions numbered `D36`
 **Type** docs · **Size** S · **Status** open · **Verified** 2026-09-16 · `R67`
@@ -772,6 +791,32 @@ handoff.
 Phase 12 is merged, so nothing is pending and the in-code count is 123. Left
 alone because the intended semantics of those fields are the maintainer's, and
 guessing is how a source of truth grows a second, wrong voice.
+
+### T039 — Documents still tell an agent to write to the retired drift log
+**Type** docs · **Size** M · **Status** open · **Verified** 2026-09-17
+
+`docs/design/plan/03-drift-log.md` is closed and carries a note saying so
+(PR 15.0). The documents that point at it were not all correctable by that PR,
+because almost all of them are read-only to an implementing change.
+
+- **Where**: `docs/design/colour-schema.md` has three live references — §8's
+  "Carry these into `../plan/03-drift-log.md` as they are implemented", §9's
+  "Write the gap down in `../plan/03-drift-log.md` as a question", and §9's
+  read-only table, which still lists `plan/03-drift-log.md` as
+  "**Yes — append only.** This is where findings go."
+- **And**: 29 files under `docs/design/plan/` carry 54 further references —
+  5 phase plans (`00-transition-plan.md`, `00-surface-routing.md`,
+  `02-acceptance-criteria.md`, `04-rollout.md`, `06-colour-schema-rollout.md`)
+  and 24 merged handoffs from Phases 6–14. Measured 2026-09-17.
+- **Catch**: PR 15.0's own gate asks that every remaining hit under
+  `docs/design/plan/` be a citation rather than an instruction. That gate
+  cannot pass as written — a merged handoff is never edited by anyone, and the
+  phase plans are on the read-only list too. The handoff was right about its
+  three-file scope and wrong about the reach of its gate.
+- **Touches**: the schema files and the read-only history. Needs the
+  maintainer's hand, like `T010` and `T011`. The cheapest honest fix may be a
+  single line in each tracker's header rather than 54 edits.
+- **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13
 
 ---
 

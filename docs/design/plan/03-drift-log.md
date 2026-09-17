@@ -1,5 +1,17 @@
 # Drift log
 
+> **Closed 2026-09-16. This log takes no further entries.**
+>
+> Findings now go to `TODO.md` in the repository root, which is the one
+> tracker for them. The open items that were still live here moved there in
+> that harvest; do not migrate anything else across, and do not start a
+> second log — a second log would immediately disagree with `TODO.md`.
+>
+> The file is kept, unedited, because it is the reasoning behind decisions
+> that are still cited by number: `../../design/colour-schema.md` §8 and many
+> `TODO.md` entries point back to its `D`, `R` and `Q` numbers. Nothing here
+> is renumbered, and nothing below this note has been changed.
+
 Every decision that shapes the work, and every later reversal of one. The
 point is that on day nine you can tell the difference between *this was
 decided* and *this drifted*.
