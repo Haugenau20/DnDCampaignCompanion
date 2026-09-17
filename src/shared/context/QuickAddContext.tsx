@@ -11,6 +11,12 @@ export interface QuickAddOptions {
   carry?: QuickAddCarry;
   initialName?: string;
   initialLine?: string;
+  /**
+   * Told the new record's id instead of navigating to it. The attach tray's
+   * escape hatch uses this to attach what was just created and leave the
+   * form you were filling exactly where it was.
+   */
+  onCreated?: (id: string) => void;
 }
 
 interface QuickAddContextValue {

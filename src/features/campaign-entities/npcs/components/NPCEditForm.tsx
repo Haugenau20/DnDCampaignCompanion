@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { NPC } from '../types';
 import Typography from '../../../../core/components/Typography';
-import { SelectableChip, RemovableChip } from '../../../../core/components/Chip';
+import { RemovableChip } from '../../../../core/components/Chip';
+import AttachTray from 'shared/components/attach-tray/AttachTray';
+import { useAttachSet } from 'shared/components/attach-tray/useAttachTray';
 import Input from '../../../../core/components/Input';
 import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
 import Card from '../../../../core/components/Card';
-import Dialog from '../../../../core/components/Dialog';
 import { Save, X, Users, Scroll } from 'lucide-react';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useNPCs } from '../context/NPCContext';
@@ -54,11 +55,22 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
   const [tagInput, setTagInput] = useState('');
   const [selectedNPCs, setSelectedNPCs] = useState<Set<string>>(new Set(npc.connections?.relatedNPCs || []));
   const [selectedQuests, setSelectedQuests] = useState<Set<string>>(new Set(npc.connections?.relatedQuests || []));
-  const [isNPCDialogOpen, setIsNPCDialogOpen] = useState(false);
-  const [isQuestDialogOpen, setIsQuestDialogOpen] = useState(false);
+
 
   // Get quests data
   const { quests } = useQuests();
+  // Built from the collections this form already reads -- T023: no new loader.
+  const attachSources = useMemo(() => ({ npc: existingNPCs, quest: quests }), [existingNPCs, quests]);
+  const {
+    attachedIds: npcIds,
+    onAttach: attachNPC,
+    onDetach: detachNPC,
+  } = useAttachSet(selectedNPCs, setSelectedNPCs);
+  const {
+    attachedIds: questIds,
+    onAttach: attachQuest,
+    onDetach: detachQuest,
+  } = useAttachSet(selectedQuests, setSelectedQuests);
 
   // Handle basic input changes
   const handleInputChange = (field: keyof NPC, value: string) => {
@@ -207,71 +219,36 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
               <Typography variant="h4">Connections</Typography>
 
               {/* Related NPCs */}
+              {/* Related NPCs -- one browse-first tray (`15-2`) */}
               <div>
                 <Typography variant="body" className="font-medium mb-2">
                   Related NPCs
                 </Typography>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsNPCDialogOpen(true)}
-                  startIcon={<Users />}
-                  className="w-full mb-2"
-                  type="button"
-                >
-                  Select Related NPCs
-                </Button>
-                <div className="flex flex-wrap gap-2">
-                  {Array.from(selectedNPCs).map(npcId => {
-                    const relatedNPC = existingNPCs.find(n => n.id === npcId);
-                    return relatedNPC ? (
-                      <RemovableChip
-                        key={npcId}
-                        onRemove={() => {
-                            const newSet = new Set(selectedNPCs);
-                            newSet.delete(npcId);
-                            setSelectedNPCs(newSet);
-                          }}
-                        removeLabel={`Remove ${relatedNPC.name}`}
-                      >
-                        {relatedNPC.name}
-                      </RemovableChip>
-                    ) : null;
-                  })}
-                </div>
+                <AttachTray
+                  kinds={["npc"]}
+                  sources={attachSources}
+                  attachedIds={npcIds}
+                  onAttach={attachNPC}
+                  onDetach={detachNPC}
+                  // An NPC cannot relate to themselves.
+                  excludeIds={[npc.id]}
+                  ariaLabel="Related NPCs"
+                />
               </div>
 
-              {/* Related Quests */}
+              {/* Related Quests -- the same tray, the same verb */}
               <div>
                 <Typography variant="body" className="font-medium mb-2">
                   Related Quests
                 </Typography>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsQuestDialogOpen(true)}
-                  startIcon={<Scroll />}
-                  className="w-full mb-2"
-                  type="button"
-                >
-                  Select Related Quests
-                </Button>
-                <div className="flex flex-wrap gap-2">
-                  {Array.from(selectedQuests).map(questId => {
-                    const quest = quests.find(q => q.id === questId);
-                    return quest ? (
-                      <RemovableChip
-                        key={questId}
-                        onRemove={() => {
-                            const newSet = new Set(selectedQuests);
-                            newSet.delete(questId);
-                            setSelectedQuests(newSet);
-                          }}
-                        removeLabel={`Remove ${quest.title}`}
-                      >
-                        {quest.title}
-                      </RemovableChip>
-                    ) : null;
-                  })}
-                </div>
+                <AttachTray
+                  kinds={["quest"]}
+                  sources={attachSources}
+                  attachedIds={questIds}
+                  onAttach={attachQuest}
+                  onDetach={detachQuest}
+                  ariaLabel="Related Quests"
+                />
               </div>
 
               {/* Affiliations */}
@@ -303,8 +280,12 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                       }
                     }}
                     disabled={!affiliationInput.trim()}
+                    // One visible verb (§5 item 9); the accessible name still
+                    // contains it, so two Attach buttons on one form stay
+                    // distinguishable to a screen reader.
+                    aria-label="Attach affiliation"
                   >
-                    Add
+                    Attach
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -354,8 +335,9 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
                       }
                     }}
                     disabled={!tagInput.trim()}
+                    aria-label="Attach tag"
                   >
-                    Add tag
+                    Attach
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -407,74 +389,6 @@ const NPCEditForm: React.FC<NPCEditFormProps> = ({
       </Card>
 
       {/* NPC Selection Dialog */}
-      <Dialog
-        open={isNPCDialogOpen}
-        onClose={() => setIsNPCDialogOpen(false)}
-        title="Select Related NPCs"
-        maxWidth="max-w-3xl"
-      >
-        <div className="max-h-96 overflow-y-auto mb-4">
-          <div className="grid grid-cols-3 gap-2">
-            {existingNPCs
-              .filter(n => n.id !== npc?.id) // Don't show the current NPC
-              .map(otherNPC => (
-                <SelectableChip
-                  key={otherNPC.id}
-                  selected={selectedNPCs.has(otherNPC.id)}
-                  onToggle={() => {
-                    const newSet = new Set(selectedNPCs);
-                    if (newSet.has(otherNPC.id)) {
-                      newSet.delete(otherNPC.id);
-                    } else {
-                      newSet.add(otherNPC.id);
-                    }
-                    setSelectedNPCs(newSet);
-                  }}
-                  className="text-center"
-                >
-                  {otherNPC.name}
-                </SelectableChip>
-              ))}
-          </div>
-        </div>
-        <div className="flex justify-end">
-          <Button onClick={() => setIsNPCDialogOpen(false)}>Done</Button>
-        </div>
-      </Dialog>
-
-      {/* Quest Selection Dialog */}
-      <Dialog
-        open={isQuestDialogOpen}
-        onClose={() => setIsQuestDialogOpen(false)}
-        title="Select Related Quests"
-        maxWidth="max-w-3xl"
-      >
-        <div className="max-h-96 overflow-y-auto mb-4">
-          <div className="space-y-2">
-            {quests.map(quest => (
-              <SelectableChip
-                key={quest.id}
-                selected={selectedQuests.has(quest.id)}
-                onToggle={() => {
-                  const newSet = new Set(selectedQuests);
-                  if (newSet.has(quest.id)) {
-                    newSet.delete(quest.id);
-                  } else {
-                    newSet.add(quest.id);
-                  }
-                  setSelectedQuests(newSet);
-                }}
-                className="w-full text-left"
-              >
-                {quest.title}
-              </SelectableChip>
-            ))}
-          </div>
-        </div>
-        <div className="flex justify-end">
-          <Button onClick={() => setIsQuestDialogOpen(false)}>Done</Button>
-        </div>
-      </Dialog>
     </>
   );
 };

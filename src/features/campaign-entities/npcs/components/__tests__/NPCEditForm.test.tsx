@@ -1,7 +1,7 @@
 ﻿// src/features/campaign-entities/npcs/components/__tests__/NPCEditForm.test.tsx
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import NPCEditForm from '../NPCEditForm';
 import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs/types';
@@ -154,14 +154,16 @@ describe('NPCEditForm', () => {
       expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
     });
 
-    test('should render "Select Related NPCs" button', () => {
+    test('offers one Attach control for the related NPCs', () => {
       render(<NPCEditForm npc={makeNPC()} existingNPCs={[]} />);
-      expect(screen.getByRole('button', { name: /select related npcs/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Attach to Related NPCs' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /select related npcs/i })).toBeNull();
     });
 
-    test('should render "Select Related Quests" button', () => {
+    test('offers one Attach control for the related quests', () => {
       render(<NPCEditForm npc={makeNPC()} existingNPCs={[]} />);
-      expect(screen.getByRole('button', { name: /select related quests/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Attach to Related Quests' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /select related quests/i })).toBeNull();
     });
   });
 
@@ -308,13 +310,13 @@ describe('NPCEditForm', () => {
       render(<NPCEditForm npc={makeNPC()} existingNPCs={[]} />);
       const input = screen.getByPlaceholderText(/enter affiliation/i);
       await userEvent.type(input, 'Shadow Guild');
-      fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Attach affiliation' }));
       expect(screen.getByText('Shadow Guild')).toBeInTheDocument();
     });
 
     test('should disable Add button when affiliation input is empty', () => {
       render(<NPCEditForm npc={makeNPC()} existingNPCs={[]} />);
-      const addBtn = screen.getByRole('button', { name: /^add$/i });
+      const addBtn = screen.getByRole('button', { name: 'Attach affiliation' });
       expect(addBtn).toBeDisabled();
     });
 
@@ -322,7 +324,7 @@ describe('NPCEditForm', () => {
       render(<NPCEditForm npc={makeNPC()} existingNPCs={[]} />);
       const input = screen.getByPlaceholderText(/enter affiliation/i);
       await userEvent.type(input, 'Shadow Guild');
-      fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Attach affiliation' }));
       expect(input).toHaveValue('');
     });
 
@@ -565,12 +567,18 @@ describe('NPCEditForm', () => {
   // Related NPC exclusion
   // -------------------------------------------------------------------------
   describe('related NPC selection excludes current NPC', () => {
-    test('should open NPC dialog without crashing when existing NPCs include self', () => {
-      const self = makeNPC({ id: 'npc-1' });
+    test('never offers this NPC as a relation of themselves', async () => {
+      // The old picker rendered every NPC including the one being edited; the
+      // tray excludes it, so an invalid choice is unofferable rather than
+      // quietly allowed.
+      const self = makeNPC({ id: 'npc-1', name: 'Self NPC' });
       const other = makeNPC({ id: 'npc-2', name: 'Other NPC' });
       render(<NPCEditForm npc={self} existingNPCs={[self, other]} />);
-      fireEvent.click(screen.getByRole('button', { name: /select related npcs/i }));
-      // Dialog portal blocked in JSDOM (bug #150); verify no crash
+
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Related NPCs' }));
+      const listbox = within(screen.getByRole('listbox', { name: 'Related NPCs' }));
+      expect(listbox.getByRole('option', { name: /Other NPC/ })).toBeInTheDocument();
+      expect(listbox.queryByRole('option', { name: /Self NPC/ })).toBeNull();
     });
   });
 

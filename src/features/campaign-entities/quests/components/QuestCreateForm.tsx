@@ -68,7 +68,6 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
   });
 
   // Dialog and NPC selection state
-  const [isNPCDialogOpen, setIsNPCDialogOpen] = useState(false);
   const [selectedNPCs, setSelectedNPCs] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -200,8 +199,6 @@ const QuestCreateForm: React.FC<QuestCreateFormProps> = ({
           npcs={npcs}
           selectedNPCs={selectedNPCs}
           setSelectedNPCs={setSelectedNPCs}
-          isNPCDialogOpen={isNPCDialogOpen}
-          setIsNPCDialogOpen={setIsNPCDialogOpen}
         />
 
           {/* Error Message */}

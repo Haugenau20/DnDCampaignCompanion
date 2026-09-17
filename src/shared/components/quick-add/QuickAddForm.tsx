@@ -37,6 +37,14 @@ export interface QuickAddFormProps {
   cancelLabel?: string;
   /** Take focus on mount. False for the page mount, which has its own order. */
   autoFocus?: boolean;
+  /**
+   * Whether *Create & open* navigates to the new record.
+   *
+   * False when quick add was opened from the attach tray's escape hatch: the
+   * point there is to add the missing person and carry on filling the form
+   * you were already in, not to be taken somewhere else (§5 item 7).
+   */
+  navigateOnCreate?: boolean;
 }
 
 /**
@@ -62,6 +70,7 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
   onCancel,
   cancelLabel = "Cancel",
   autoFocus = true,
+  navigateOnCreate = true,
 }) => {
   const spec = QUICK_ADD_SPECS[entity];
   const navigate = useNavigate();
@@ -111,11 +120,12 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
     if (!id) return;
 
     onCreated?.(id);
+    if (!navigateOnCreate) return;
     // The destination's first unwritten field is named in router state rather
     // than focused here: the prompts belong to `15-4`…`15-6`, which this PR
     // must not implement. Those PRs read `quickAddFocus`.
     navigate(spec.destinationFor(id), { state: { quickAddFocus: spec.focusField } });
-  }, [submit, onCreated, navigate, spec]);
+  }, [submit, onCreated, navigate, spec, navigateOnCreate]);
 
   const handleCreateAndAddAnother = useCallback(async () => {
     const id = await submit();

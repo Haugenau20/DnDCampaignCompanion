@@ -13,6 +13,7 @@ export interface QuickAddDialogProps {
   carry?: QuickAddCarry;
   initialName?: string;
   initialLine?: string;
+  onCreated?: (id: string) => void;
 }
 
 /**
@@ -38,6 +39,7 @@ const QuickAddDialog: React.FC<QuickAddDialogProps> = ({
   carry,
   initialName,
   initialLine,
+  onCreated,
 }) => {
   if (!entity) return null;
 
@@ -61,7 +63,13 @@ const QuickAddDialog: React.FC<QuickAddDialogProps> = ({
         carry={carry}
         initialName={initialName}
         initialLine={initialLine}
-        onCreated={onClose}
+        // A caller that wants the id handles the close itself -- it opened
+        // this to fill a field, not to go somewhere.
+        onCreated={(id) => {
+          onCreated?.(id);
+          onClose();
+        }}
+        navigateOnCreate={!onCreated}
         onCancel={onClose}
       />
     </Dialog>

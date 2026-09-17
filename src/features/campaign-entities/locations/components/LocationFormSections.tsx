@@ -3,11 +3,12 @@ import React, { useState } from 'react';
 import { Location, LocationType } from '../types';
 import { NPC } from '../../npcs/types';
 import Typography from '../../../../core/components/Typography';
-import { SelectableChip, RemovableChip } from '../../../../core/components/Chip';
+import { RemovableChip } from '../../../../core/components/Chip';
+import AttachTray from 'shared/components/attach-tray/AttachTray';
+import { useAttachSet } from 'shared/components/attach-tray/useAttachTray';
 import Input from '../../../../core/components/Input';
 import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
-import Dialog from '../../../../core/components/Dialog';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useLocations } from '../context/LocationContext';
 import LocationCombobox from './LocationCombobox';
@@ -25,18 +26,20 @@ interface SectionProps {
 }
 
 interface RelatedNPCsSectionProps extends SectionProps {
-  npcs: NPC[];
+  /**
+   * Still accepted, still ignored: the tray reads the collection from the
+   * provider that already owns it rather than from a prop. Kept so the two
+   * location forms need no change beyond deleting their dialog state, which
+   * `15-8` retires along with the forms themselves.
+   */
+  npcs?: NPC[];
   selectedNPCs: Set<string>;
   setSelectedNPCs: (value: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
-  isNPCDialogOpen: boolean;
-  setIsNPCDialogOpen: (isOpen: boolean) => void;
 }
 
 interface RelatedQuestsSectionProps extends SectionProps {
   selectedQuests: Set<string>;
   setSelectedQuests: (value: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
-  isQuestDialogOpen: boolean;
-  setIsQuestDialogOpen: (isOpen: boolean) => void;
 }
 
 export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInputChange }) => {
@@ -167,162 +170,52 @@ export const FeaturesSection: React.FC<SectionProps> = ({ formData, handleInputC
 export const RelatedQuestsSection: React.FC<RelatedQuestsSectionProps> = ({
   selectedQuests,
   setSelectedQuests,
-  isQuestDialogOpen,
-  setIsQuestDialogOpen
 }) => {
   const { quests } = useQuests();
-
-  // This function ONLY updates the local selectedQuests state
-  const handleToggleQuest = (questId: string) => {
-    setSelectedQuests(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(questId)) {
-        newSet.delete(questId);
-      } else {
-        newSet.add(questId);
-      }
-      return newSet;
-    });
-  };
+  const sources = React.useMemo(() => ({ quest: quests }), [quests]);
+  const { attachedIds, onAttach, onDetach } = useAttachSet(
+    selectedQuests,
+    setSelectedQuests as (updater: (previous: Set<string>) => Set<string>) => void
+  );
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => setIsQuestDialogOpen(true)}
-          startIcon={<Scroll />}
-        >
-          Select Related Quests
-        </Button>
-      </div>
-
-      {/* Display selected quests */}
-      <div className="flex flex-wrap gap-2">
-        {Array.from(selectedQuests).map(questId => {
-          const quest = quests.find(q => q.id === questId);
-          return quest ? (
-            <RemovableChip
-              key={questId}
-              onRemove={() => handleToggleQuest(questId)}
-              removeLabel={`Remove ${quest.title}`}
-            >
-              {quest.title}
-            </RemovableChip>
-          ) : null;
-        })}
-      </div>
-
-      {/* Quest Selection Dialog */}
-      <Dialog
-        open={isQuestDialogOpen}
-        onClose={() => setIsQuestDialogOpen(false)}
-        title="Select Related Quests"
-        maxWidth="max-w-3xl"
-      >
-        <div className="max-h-96 overflow-y-auto mb-4">
-          <div className="space-y-2">
-            {quests.map(quest => (
-              <SelectableChip
-                key={quest.id}
-                selected={selectedQuests.has(quest.id)}
-                onToggle={() => handleToggleQuest(quest.id)}
-                className="w-full text-left"
-              >
-                {quest.title}
-              </SelectableChip>
-            ))}
-          </div>
-        </div>
-        <div className="flex justify-end">
-          <Button type="button" onClick={() => setIsQuestDialogOpen(false)}>
-            Done
-          </Button>
-        </div>
-      </Dialog>
+      <Typography variant="h4">Quests here</Typography>
+      <AttachTray
+        kinds={["quest"]}
+        sources={sources}
+        attachedIds={attachedIds}
+        onAttach={onAttach}
+        onDetach={onDetach}
+        ariaLabel="Quests here"
+      />
     </div>
   );
 };
 
 // RelatedNPCsSection.tsx
-export const RelatedNPCsSection: React.FC<RelatedNPCsSectionProps> = ({ 
-  npcs,
+export const RelatedNPCsSection: React.FC<RelatedNPCsSectionProps> = ({
+  npcs = [],
   selectedNPCs,
   setSelectedNPCs,
-  isNPCDialogOpen,
-  setIsNPCDialogOpen
 }) => {
-  
-  // This function ONLY updates the local selectedNPCs state
-  const handleToggleNPC = (npcId: string) => {
-    setSelectedNPCs(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(npcId)) {
-        newSet.delete(npcId);
-      } else {
-        newSet.add(npcId);
-      }
-      return newSet;
-    });
-  };
+  const sources = React.useMemo(() => ({ npc: npcs }), [npcs]);
+  const { attachedIds, onAttach, onDetach } = useAttachSet(
+    selectedNPCs,
+    setSelectedNPCs as (updater: (previous: Set<string>) => Set<string>) => void
+  );
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => setIsNPCDialogOpen(true)}
-          startIcon={<Users />}
-        >
-          Select Connected NPCs
-        </Button>
-      </div>
-
-      {/* Display selected NPCs */}
-      <div className="flex flex-wrap gap-2">
-        {Array.from(selectedNPCs).map(npcId => {
-          const npc = npcs.find(n => n.id === npcId);
-          return npc ? (
-            <RemovableChip
-              key={npcId}
-              onRemove={() => handleToggleNPC(npcId)}
-              removeLabel={`Remove ${npc.name}`}
-            >
-              {npc.name}
-            </RemovableChip>
-          ) : null;
-        })}
-      </div>
-
-      {/* NPC Selection Dialog */}
-      <Dialog
-        open={isNPCDialogOpen}
-        onClose={() => setIsNPCDialogOpen(false)}
-        title="Select Related NPCs"
-        maxWidth="max-w-3xl"
-      >
-        <div className="max-h-96 overflow-y-auto mb-4">
-          <div className="grid grid-cols-3 gap-2">
-            {npcs.map(npc => (
-              <SelectableChip
-                key={npc.id}
-                selected={selectedNPCs.has(npc.id)}
-                onToggle={() => handleToggleNPC(npc.id)}
-                className="text-center"
-              >
-                {npc.name}
-              </SelectableChip>
-            ))}
-          </div>
-        </div>
-        <div className="flex justify-end">
-          <Button type="button" onClick={() => setIsNPCDialogOpen(false)}>
-            Done
-          </Button>
-        </div>
-      </Dialog>
+      <Typography variant="h4">Who is here</Typography>
+      <AttachTray
+        kinds={["npc"]}
+        sources={sources}
+        attachedIds={attachedIds}
+        onAttach={onAttach}
+        onDetach={onDetach}
+        ariaLabel="Who is here"
+      />
     </div>
   );
 };
@@ -352,9 +245,10 @@ export const TagsSection: React.FC<SectionProps> = ({ formData, handleInputChang
           type="button"
           variant="outline"
           onClick={handleAddTag}
+          aria-label="Attach tag"
           disabled={!tagInput.trim()}
         >
-          Add
+          Attach
         </Button>
       </div>
 

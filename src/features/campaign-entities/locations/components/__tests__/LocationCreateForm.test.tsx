@@ -228,24 +228,24 @@ describe('LocationCreateForm', () => {
   // Tags management
   // -------------------------------------------------------------------------
   describe('tags management', () => {
-    test('should add a tag when Add is clicked', async () => {
+    test('should add a tag when Attach is clicked', async () => {
       render(<LocationCreateForm />);
       const tagInput = screen.getByPlaceholderText('Enter tag...');
       await userEvent.type(tagInput, 'trade-hub');
-      fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Attach tag' }));
       expect(screen.getByText('trade-hub')).toBeInTheDocument();
     });
 
-    test('should disable Add button when tag input is empty', () => {
+    test('should disable Attach when the tag input is empty', () => {
       render(<LocationCreateForm />);
-      expect(screen.getByRole('button', { name: /^add$/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Attach tag' })).toBeDisabled();
     });
 
     test('should clear tag input after adding', async () => {
       render(<LocationCreateForm />);
       const tagInput = screen.getByPlaceholderText('Enter tag...');
       await userEvent.type(tagInput, 'trade-hub');
-      fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Attach tag' }));
       expect(tagInput).toHaveValue('');
     });
 
@@ -253,7 +253,7 @@ describe('LocationCreateForm', () => {
       render(<LocationCreateForm />);
       const tagInput = screen.getByPlaceholderText('Enter tag...');
       await userEvent.type(tagInput, 'trade-hub');
-      fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Attach tag' }));
       expect(screen.getByText('trade-hub')).toBeInTheDocument();
       const tagContainer = screen.getByText('trade-hub').closest('div');
       const xButton = tagContainer?.querySelector('button');
@@ -393,18 +393,23 @@ describe('LocationCreateForm', () => {
   // NPCs and Quests dialog buttons
   // -------------------------------------------------------------------------
   describe('dialog buttons', () => {
-    test('should render "Select Related Quests" button', () => {
+    // Since `15-2` both relations are the one browse-first tray, and both
+    // triggers say the same verb -- distinguished for assistive technology by
+    // what they attach to.
+    test('offers one Attach control for the quests here', () => {
       render(<LocationCreateForm />);
       expect(
-        screen.getByRole('button', { name: /select related quests/i })
+        screen.getByRole('button', { name: 'Attach to Quests here' })
       ).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /select related quests/i })).toBeNull();
     });
 
-    test('should render "Select Connected NPCs" button', () => {
+    test('offers one Attach control for who is here', () => {
       render(<LocationCreateForm />);
       expect(
-        screen.getByRole('button', { name: /select connected npcs/i })
+        screen.getByRole('button', { name: 'Attach to Who is here' })
       ).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /select connected npcs/i })).toBeNull();
     });
   });
 

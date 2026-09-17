@@ -3,12 +3,13 @@ import { NPC } from '../../npcs/types';
 import React from 'react';
 import { Quest, QuestStatus } from '../types';
 import Typography from '../../../../core/components/Typography';
-import { SelectableChip, RemovableChip } from '../../../../core/components/Chip';
+import { RemovableChip } from '../../../../core/components/Chip';
+import AttachTray from 'shared/components/attach-tray/AttachTray';
+import { useAttachSet } from 'shared/components/attach-tray/useAttachTray';
+import { useLocations } from '../../locations/context/LocationContext';
 import Input from '../../../../core/components/Input';
 import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
-import LocationCombobox from '../../locations/components/LocationCombobox';
-import Dialog from '../../../../core/components/Dialog';
 import clsx from 'clsx';
 import { PlusCircle, X, Target } from 'lucide-react';
 
@@ -18,104 +19,66 @@ interface SectionProps {
 }
 
 interface RelatedNPCsSectionProps extends SectionProps {
-    npcs: NPC[];
-    selectedNPCs: Set<string>;
-    setSelectedNPCs: (value: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
-    isNPCDialogOpen: boolean;
-    setIsNPCDialogOpen: (isOpen: boolean) => void;
-  }
-  
-  export const RelatedNPCsSection: React.FC<RelatedNPCsSectionProps> = ({ 
-    npcs,
-    selectedNPCs,
-    setSelectedNPCs,
-    isNPCDialogOpen,
-    setIsNPCDialogOpen
-  }) => {
+  /**
+   * Still accepted, still ignored: the tray reads the collection from the
+   * provider that already owns it (T023 -- no new loader). Kept so the quest
+   * forms need no change beyond deleting their dialog state.
+   */
+  npcs?: NPC[];
+  selectedNPCs: Set<string>;
+  setSelectedNPCs: (value: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+}
 
-    const handleRemoveNPC = (npcId: string) => {
-      setSelectedNPCs((prev: Set<string>) => {
-        const newSet = new Set(prev);
-        newSet.delete(npcId);
-        return newSet;
-      });
-    };
-  
-    const handleToggleNPC = (npcId: string) => {
-      setSelectedNPCs((prev: Set<string>) => {
-        const newSet = new Set(prev);
-        if (newSet.has(npcId)) {
-          newSet.delete(npcId);
-        } else {
-          newSet.add(npcId);
-        }
-        return newSet;
-      });
-    };
-  
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setIsNPCDialogOpen(true)}
-            aria-label="Add a related NPC"
-            startIcon={<PlusCircle />}
-          ></Button>
-          <Typography variant="h4">Related NPCs</Typography>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {Array.from(selectedNPCs).map(npcId => {
-            const npc = npcs.find(n => n.id === npcId);
-            return npc ? (
-              <RemovableChip
-                key={npcId}
-                onRemove={() => handleRemoveNPC(npcId)}
-                removeLabel={`Remove ${npc.name}`}
-              >
-                {npc.name}
-              </RemovableChip>
-            ) : null;
-          })}
-        </div>
-  
-        <Dialog
-          open={isNPCDialogOpen}
-          onClose={() => setIsNPCDialogOpen(false)}
-          title="Select Related NPCs"
-          maxWidth="max-w-3xl"
-        >
-          <div className="max-h-96 overflow-y-auto mb-4">
-            <div className="grid grid-cols-3 gap-2">
-              {npcs.map(npc => (
-                <SelectableChip
-                  key={npc.id}
-                  selected={selectedNPCs.has(npc.id)}
-                  onToggle={() => handleToggleNPC(npc.id)}
-                  className="text-center"
-                >
-                  {npc.name}
-                </SelectableChip>
-              ))}
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button
-              type="button"  // Explicitly set type to "button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsNPCDialogOpen(false);
-              }}
-            >
-              Done
-            </Button>
-          </div>
-        </Dialog>
-      </div>
-    );
-  };
+export const RelatedNPCsSection: React.FC<RelatedNPCsSectionProps> = ({
+  npcs = [],
+  selectedNPCs,
+  setSelectedNPCs,
+}) => {
+  const sources = React.useMemo(() => ({ npc: npcs }), [npcs]);
+  const { attachedIds, onAttach, onDetach } = useAttachSet(
+    selectedNPCs,
+    setSelectedNPCs as (updater: (previous: Set<string>) => Set<string>) => void
+  );
+
+  return (
+    <div className="space-y-4">
+      <Typography variant="h4">Related NPCs</Typography>
+      <AttachTray
+        kinds={["npc"]}
+        sources={sources}
+        attachedIds={attachedIds}
+        onAttach={onAttach}
+        onDetach={onDetach}
+        ariaLabel="Related NPCs"
+      />
+    </div>
+  );
+};
+
+/** A quest's location: one relation, so the tray replaces rather than adds. */
+const QuestLocationTray: React.FC<{
+  locationId: string;
+  onChange: (id: string, name: string) => void;
+}> = ({ locationId, onChange }) => {
+  const { locations } = useLocations();
+  const sources = React.useMemo(() => ({ location: locations }), [locations]);
+  const attachedIds = React.useMemo(() => (locationId ? [locationId] : []), [locationId]);
+
+  return (
+    <AttachTray
+      kinds={["location"]}
+      sources={sources}
+      attachedIds={attachedIds}
+      single
+      ariaLabel="Where it happens"
+      onAttach={(id) => {
+        const found = (sources.location ?? []).find((l: any) => l.id === id);
+        onChange(id, found?.name ?? '');
+      }}
+      onDetach={() => onChange('', '')}
+    />
+  );
+};
 
 export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInputChange }) => {
 
@@ -149,12 +112,19 @@ export const BasicInfoSection: React.FC<SectionProps> = ({ formData, handleInput
           <option value="failed">Failed</option>
         </Select>
 
-        <LocationCombobox
-          label="Location"
-          value={formData.location || ''}
-          onChange={(value) => handleInputChange('location', value)}
-          onSelectLocation={(loc) => handleInputChange('locationId', loc?.id ?? '')}
-        />
+        <div className="space-y-2">
+          <Typography variant="body-sm" className="form-label">Where it happens</Typography>
+          <QuestLocationTray
+            locationId={formData.locationId || ''}
+            onChange={(id, name) => {
+              handleInputChange('locationId', id);
+              // `location` stays the human-readable convenience the
+              // `location`/`locationId` contract describes; `locationId` is
+              // the one that is authoritative.
+              handleInputChange('location', name);
+            }}
+          />
+        </div>
       </div>
 
       <Input

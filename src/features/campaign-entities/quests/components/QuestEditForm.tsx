@@ -41,7 +41,6 @@ const QuestEditForm: React.FC<QuestEditFormProps> = ({
 
   // Form state initialized with existing quest data
   const [formData, setFormData] = useState<Quest>(quest);
-  const [isNPCDialogOpen, setIsNPCDialogOpen] = useState(false);
   const [selectedNPCs, setSelectedNPCs] = useState<Set<string>>(
     new Set(quest.relatedNPCIds || [])
   );
@@ -130,8 +129,6 @@ const QuestEditForm: React.FC<QuestEditFormProps> = ({
           npcs={npcs}
           selectedNPCs={selectedNPCs}
           setSelectedNPCs={setSelectedNPCs}
-          isNPCDialogOpen={isNPCDialogOpen}
-          setIsNPCDialogOpen={setIsNPCDialogOpen}
         />
 
           {/* Error Message */}
