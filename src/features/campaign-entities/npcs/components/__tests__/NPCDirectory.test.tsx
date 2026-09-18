@@ -725,7 +725,7 @@ describe('NPCDirectory — 15.3', () => {
       render(<NPCDirectory npcs={[withNote]} />);
       fireEvent.click(screen.getByRole('button', { name: /Expand Dated/ }));
 
-      expect(screen.getByText('2025-05-31')).toBeInTheDocument();
+      expect(screen.getByText('31/05/2025')).toBeInTheDocument();
       expect(screen.queryByText('2025-05-31T19:27:30.387Z')).toBeNull();
     });
   });

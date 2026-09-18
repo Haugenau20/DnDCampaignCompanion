@@ -1,4 +1,5 @@
 // src/utils/attribution-utils.ts
+import { formatCalendarDate } from './dateFormatter';
 
 /**
  * Interface for objects that have attribution data
@@ -25,12 +26,10 @@ export const formatAttributionDate = (dateString?: string): string => {
     // Check if date is valid
     if (isNaN(date.getTime())) return '';
     
-    // Format date in localized format
-    return date.toLocaleDateString('en-uk', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
+    // One shared shape, so the record line and the notes beneath it cannot
+    // drift apart (`15-6`). The output is unchanged: this is the same call,
+    // moved somewhere both callers can reach.
+    return formatCalendarDate(date);
   } catch (error) {
     console.error('Error formatting date:', error);
     return '';

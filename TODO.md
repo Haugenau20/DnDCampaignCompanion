@@ -47,6 +47,13 @@ and `NPCDetailPage`, which previously kept its own copy. No ISO timestamp
 renders anywhere; a value that cannot be parsed is shown as written rather
 than replaced with a guess.
 
+**PR 15.6 finished the display half properly.** `15.3` lifted the helper but
+kept its output at `YYYY-MM-DD` -- the shape the value is *stored* in -- so the
+NPC page printed `2025-05-31` for a note three cards above a record line reading
+`31/05/2025`: one screen, two formats, for the same kind of fact. `formatNoteDate`
+and `formatAttributionDate` now both render through `formatCalendarDate`, so they
+cannot drift apart again.
+
 **The stored-shape half stays open**, and is the real job: `NPCNote.date` still
 has no agreed shape, and this changed four consumers rather than one writer.
 
@@ -412,6 +419,10 @@ deliberately not built, and a test asserts its absence so it cannot arrive by
 accident. When this is answered, the per-section blocks on that page are where
 it goes.
 
+**PR 15.6 held it a third time**, on the page the other two copy: no per-field
+credit under any of the seven editors it added, and no line saying who last
+changed a fact. The record card states the same two points it always has.
+
 **PR 15.5 held it again, against a sharper temptation.** `S3` draws
 "gandlaf ticked *Find the secret door* · last session" on the quest page —
 per-*objective* history, which is further from what the data holds than a
@@ -434,6 +445,11 @@ the NPC page rather than the campaign notes: added, never edited or removed, and
 the composer says so. `LocationNote` gained an optional `author`, as `NPCNote`
 already had, so a note written from here carries its own credit; older ones stay
 blank rather than being attributed to a guess.
+
+**PR 15.6 left it exactly there, deliberately, while making everything around it
+editable.** The NPC page now edits eleven fields in place; its notes are the one
+thing on it that still cannot be changed after it is written. That asymmetry is
+the open question, not an oversight.
 
 ### T007 — Does `AdminPanel` get a real route? — **answered: yes**
 **Type** decision · **Size** S · **Status** done · **Verified** 2026-09-16 · `R39`
@@ -599,7 +615,16 @@ shipped in `15-3`, and every gate green.
 - **Touches**: `core/themes/__tests__/css-class-manifest.test.ts` — a narrow
   consumed-but-undefined check over a closed vocabulary (props whose values are
   known to be theme classes) is the shape that works; a general scan is not.
-- **Source**: found in `15-4` while wiring the location page's band control.
+- **One instance is now gated, and finding it proved the point.** `15-6` wrote
+  `ladder-classes.test.ts` — the file `location-presentation.ts` had *claimed
+  since 15-4 merged* already existed. It did not. The gate's first run found
+  `NPCDirectory` still passing `selectedClassName`: an options array declared as
+  a `const` is a wider type than the prop it is passed to, so TypeScript's
+  excess-property check never runs on it, and the dead key survived every build.
+- **Still open** for the general case: `RosterStatus`'s `tone`, `Button`'s
+  `variant` and `EntitySigil`'s palette are the same pattern with no gate.
+- **Source**: found in `15-4` while wiring the location page's band control; a
+  live instance found in `15-6`.
 
 ### T043 — `importantNPCs` may hold names no NPC record carries
 **Type** decision · **Size** S · **Status** open · **Verified** 2026-09-18

@@ -118,5 +118,25 @@ export const formatNoteDate = (value: string): string => {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return parsed.toISOString().split('T')[0];
+  return formatCalendarDate(parsed);
 };
+
+/**
+ * One calendar date, in the one shape this product writes dates.
+ *
+ * `15-6` found the NPC page printing `2025-05-31` for a note three cards above
+ * a record line reading `31/05/2025` — two formats for the same kind of fact,
+ * on one screen. This is the shape both now use: `formatAttributionDate`
+ * delegates here, so the record line and the notes under it cannot drift apart
+ * again.
+ *
+ * It is deliberately *not* what `formatNoteDate` used to return. `YYYY-MM-DD`
+ * is the shape the data is stored in, and printing a stored shape is how a
+ * page ends up showing its database to a reader (T001).
+ */
+export const formatCalendarDate = (value: Date): string =>
+  value.toLocaleDateString('en-uk', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
