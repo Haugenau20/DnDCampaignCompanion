@@ -177,15 +177,20 @@ describe("quickAddSpecs", () => {
       expect(QUICK_ADD_SPECS.npc.destinationFor("npc-1")).toBe("/npcs/npc-1");
     });
 
-    it.each([
-      ["quest", "/quests?highlight=quest-1"],
-      ["location", "/locations?highlight=location-1"],
-    ] as Array<[QuickAddEntity, string]>)(
-      "sends a new %s to its directory row, since its page lands in 15-4/15-5",
-      (entity, expected) => {
-        expect(QUICK_ADD_SPECS[entity].destinationFor(`${entity}-1`)).toBe(expected);
-      }
-    );
+    it("sends a new quest to its directory row, since its page lands in 15-5", () => {
+      expect(QUICK_ADD_SPECS.quest.destinationFor("quest-1")).toBe(
+        "/quests?highlight=quest-1"
+      );
+    });
+
+    it("sends a new location to its own page, which 15-4 built", () => {
+      // It was `/locations?highlight=` while the route did not exist. The
+      // record a two-field create leaves behind is mostly unwritten, and the
+      // page is where the prompts that finish it are.
+      expect(QUICK_ADD_SPECS.location.destinationFor("location-1")).toBe(
+        "/locations/location-1"
+      );
+    });
 
     it("uses ?highlight= rather than inventing a second parameter", () => {
       // D15.11: the addressable expansion is `?highlight=`, and `15-3`

@@ -1,44 +1,41 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Location, LocationType, LocationStatus } from '../types';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Location } from '../types';
 import { useNPCs } from '../../npcs/context/NPCContext';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useLocations } from '../context/LocationContext';
-import { useAuth } from 'features/user-management';
 import useHighlightTarget, {
   ancestorIdsOf,
   HIGHLIGHT_DEPTH_CAP,
 } from 'shared/hooks/useHighlightTarget';
-import StateLadder from 'shared/components/row-controls/StateLadder';
-import { formatNoteDate } from 'shared/utils/dateFormatter';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
-import { Landmark, Users, Scroll, Tag, Plus } from 'lucide-react';
-import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { Plus } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
-import clsx from 'clsx';
 import {
   RosterStatusBar,
   RosterFilterBar,
   RosterFilterPills,
   RosterGroup,
-  RosterRow,
-  RosterField,
   type RosterSegment,
   type RosterFilterOption,
   RosterSkeleton,
   RosterEmpty,
-  RosterStatus,
-  type RosterStatusTone,
 } from 'core/components/Roster';
+import LocationTreeRow from './LocationTreeRow';
+import LocationRowSummary from './LocationRowSummary';
+import {
+  buildLocationIndex,
+  childrenOf,
+  insideCountOf,
+  parentIdOf,
+  pathLabelOf,
+} from '../utils/location-tree';
+import { STATUS_ORDER } from '../utils/location-presentation';
 
 interface LocationDirectoryProps {
   locations: Location[];
   isLoading?: boolean;
 }
-
-/** Column template shared by every row, so the columns line up across groups and levels. */
-const ROW_GRID =
-  'grid-cols-[1fr_auto] md:grid-cols-[1.6fr_120px_130px_1fr_26px]';
 
 /**
  * Location type is a small fixed enum (8 members, unlike NPCDirectory's free-text
@@ -59,64 +56,29 @@ const TYPE_FILTERS: RosterFilterOption[] = [
 ];
 
 /**
- * An NPC's stance, as a class name.
+ * The locations directory: a tree of rows.
  *
- * Spelled out rather than built as `npc-relationship-${npc.relationship}`.
- * That template is how this exact family stayed in the tree after 12-3a
- * deleted it: the compiler cannot see a string it assembles at runtime and
- * grep cannot either, so four icons rendered with no colour at all and nothing
- * failed. `Partial` keeps the fallback type-checked.
+ * **What this replaces.** A parent used to expand into a full record card —
+ * nine labelled fields, two action buttons — then print a "Locations in X"
+ * heading, then nest a *child record card* inside it. Two records at identical
+ * weight, nested, unbounded as depth grows. Design language §5 is the principle
+ * that breaks: rules inside a card read as one object with parts, and cards
+ * inside cards read as two objects arguing about which one is the record.
+ *
+ * **What it becomes** (§6.1): every place is one line until asked — mark, name,
+ * type in words, knowledge step, what is inside, a way in. Expanding adds the
+ * bounded summary from §3 and then lists what is inside as more one-line rows,
+ * so a child expanded inside an expanded parent still reads as one object with
+ * parts. The row is *not* emptied: §1.3 records the first draft that moved
+ * every readable fact to the page, and why it was rejected.
+ *
+ * **Every traversal here is guarded.** `location-tree.ts` carries the visited
+ * sets and the depth cap. `15-4` makes cycles reachable — *Move elsewhere* on
+ * the page can now write a parent — so a tree render that does not terminate is
+ * no longer a hypothetical (`PERF-11`, T033).
  */
-const DISPOSITION_CLASS: Partial<Record<string, string>> = {
-  friendly: 'disposition-friendly',
-  neutral: 'disposition-neutral',
-  hostile: 'disposition-hostile',
-  unknown: 'disposition-unknown',
-};
-
-/**
- * Location state, ranked best to worst: explored, then visited, then known.
- *
- * That ordering is the maintainer's and it inverts what shipped. The knowledge
- * ladder had `visited` above `explored`, which reads backwards -- you have
- * covered more ground in a place you explored than in one you merely passed
- * through -- so the ordering was wrong independently of the colour.
- *
- * Bands, and the ramp stops they take, run in that order too, so the bar reads
- * left to right from best to worst like every other directory.
- *
- * Locations take stops 0, 1 and 2 and never reach the red. Every other ranked
- * scale ends there because a quest can fail, a rumour can be disproved and an
- * NPC can die; a place you have merely heard of is only the least of three
- * degrees of familiarity, and painting it like a failure would repeat in a
- * quieter key the mistake this whole phase started by fixing.
- */
-const STATUS_ORDER: { key: LocationStatus; colorClass: string }[] = [
-  { key: 'explored', colorClass: 'bg-valence-0' },
-  { key: 'visited', colorClass: 'bg-valence-1' },
-  { key: 'known', colorClass: 'bg-valence-2' },
-];
-
-const STATUS_TONE: Record<LocationStatus, RosterStatusTone> = {
-  explored: 'valence-0',
-  visited: 'valence-1',
-  known: 'valence-2',
-};
-
-const formatLocationType = (type: LocationType): string => {
-  if (type === 'poi') return 'Point of Interest';
-  return type.charAt(0).toUpperCase() + type.slice(1);
-};
-
-export /** The knowledge ladder: known -> explored -> visited. Never a verdict. */
-const KNOWLEDGE_OPTIONS: Array<{ value: LocationStatus; label: string; selectedClassName?: string }> = [
-  { value: 'known', label: 'Known', selectedClassName: 'knowledge-0' },
-  { value: 'explored', label: 'Explored', selectedClassName: 'knowledge-1' },
-  { value: 'visited', label: 'Visited', selectedClassName: 'knowledge-2' },
-];
-
 const LocationDirectory: React.FC<LocationDirectoryProps> = ({
-  locations: initialLocations,
+  locations,
   isLoading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -126,43 +88,17 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
 
   const { getNPCById } = useNPCs();
   const { getQuestById } = useQuests();
-  const { user } = useAuth();
-  const { deleteLocation, updateLocationStatus } = useLocations();
+  const { updateLocationStatus } = useLocations();
 
-  // Use Firebase hook for real-time updates
-  const { data: updatedLocations } = useFirebaseData<Location>({
-    collection: 'locations',
-  });
-
-  // Use the most up-to-date data
-  const locations = updatedLocations.length > 0 ? updatedLocations : initialLocations;
+  // T023: this component used to mount a *fifth* `locations` loader of its own,
+  // under a comment claiming real-time updates -- `getDocs` is not a
+  // subscription, and the extra target fired late enough to miss Firestore's
+  // startup coalescing, so it was two real reads rather than a free one. The
+  // provider owns the collection; `LocationsPage` already passes it in.
   const { navigateToPage, createPath, getCurrentQueryParams } = useNavigation();
   const { highlight: highlightId } = getCurrentQueryParams();
 
-  // Group locations by parent to create hierarchy
-  const locationHierarchy = useMemo(() => {
-    return locations.reduce((acc, location) => {
-      const parentId = location.parentId || 'root';
-      if (!acc[parentId]) {
-        acc[parentId] = [];
-      }
-      acc[parentId].push(location);
-      return acc;
-    }, {} as Record<string, Location[]>);
-  }, [locations]);
-
-  // A `parentId` that names no loaded location leaves its bucket in
-  // locationHierarchy keyed by that dangling id — a key `renderRows` never
-  // visits, since it only ever recurses into 'root' or the id of a row it is
-  // already rendering. Collect those buckets' contents here so they get a
-  // home ("Unplaced") instead of silently vanishing from the tree, the group
-  // count, and the empty state while still counting toward the status bar's
-  // total.
-  const orphanLocations = useMemo(() => {
-    return Object.keys(locationHierarchy)
-      .filter(key => key !== 'root' && !locations.some(loc => loc.id === key))
-      .flatMap(key => locationHierarchy[key]);
-  }, [locationHierarchy, locations]);
+  const index = useMemo(() => buildLocationIndex(locations), [locations]);
 
   /**
    * T014: one hook, four consumers -- and the PERF-11 guard with it.
@@ -170,125 +106,106 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
    * This directory's own parent walk was a `while (current?.parentId)` around
    * repeated `locations.find`, with **no visited set**, so a location inside a
    * parent cycle never terminated. It also matched `?highlight=` against the
-   * name as well as the id, so a renamed place stopped answering its own
-   * links. Both are the shared hook's problem now.
+   * name as well as the id, so a renamed place stopped answering its own links.
    */
   const { highlightedId: highlightedLocationId } = useHighlightTarget({
     items: locations,
     highlight: highlightId,
     idOf: (location) => location.id,
-    parentIdOf: (location) => location.parentId,
+    parentIdOf,
     domIdPrefix: 'location',
     onReveal: (idsToReveal) =>
       setExpandedLocations((previous) => new Set([...previous, ...idsToReveal])),
   });
 
-  // Toggle a row's expansion without losing any other row's state
-  const toggleExpansion = (locationId: string) => {
-    setExpandedLocations(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(locationId)) {
-        newSet.delete(locationId);
-      } else {
-        newSet.add(locationId);
-      }
-      return newSet;
+  const toggleExpansion = useCallback((locationId: string) => {
+    setExpandedLocations((previous) => {
+      const next = new Set(previous);
+      if (next.has(locationId)) next.delete(locationId);
+      else next.add(locationId);
+      return next;
     });
-  };
-
-  // Helper function to check if a location or its children match filters
-  const locationMatchesFilters = useCallback((
-    loc: Location,
-    hierarchy: Record<string, Location[]>,
-    status: string,
-    type: string,
-    search: string,
-    isChild: boolean = false
-  ): boolean => {
-    const matchesStatus = status === 'all' || loc.status === status;
-    const matchesType = type === 'all' || loc.type === type;
-    const matchesSearch = !search ||
-      loc.name.toLowerCase().includes(search.toLowerCase()) ||
-      loc.description.toLowerCase().includes(search.toLowerCase()) ||
-      loc.type.toLowerCase().includes(search.toLowerCase());
-
-    // A child location whose parent already satisfies the type filter is exempt
-    // from the type check on itself — a Building under a City you filtered to
-    // shouldn't disappear just because "Building" isn't the selected type. But
-    // (fix for #1414) that exemption must still fall through to the descendant
-    // check below when the node doesn't match on its own, exactly like a
-    // non-child node does — it must never return early and suppress descendant
-    // matching, or a match nested two or more levels deep becomes unreachable:
-    // renderRows calls this with isChild=true for essentially every child (since
-    // typeFilter defaults to 'all'), so an early return here silently dropped the
-    // connecting ancestor from its own parent's render even though the
-    // auto-expand effect (which always calls with isChild=false) had correctly
-    // decided that ancestor should be expanded.
-    if (matchesStatus && matchesSearch && (isChild || matchesType)) {
-      return true;
-    }
-
-    // Otherwise, a parent location still qualifies if any descendant matches —
-    // this is what lets an ancestor stay visible (and gets auto-expanded below)
-    // purely to reveal a matching descendant. Deliberately always recurse with
-    // isChild=false here, NOT with the current node's isChild propagated down:
-    // the type-filter exemption is re-decided by renderRows fresh at every level
-    // of the hierarchy (based on whichever node is the *immediate* parent being
-    // rendered at that level), so it must not cascade through this function's
-    // own recursion into grandchildren it was never granted for. Propagating it
-    // would let a mismatched-type grandchild several levels down count as a
-    // "match" here while the auto-expand effect — which always recurses with
-    // isChild=false — disagreed about that same grandchild, reintroducing the
-    // exact expander/renderer split this bug was about, just one level further
-    // down.
-    const children = hierarchy[loc.id] || [];
-    return children.some(child =>
-      locationMatchesFilters(child, hierarchy, status, type, search, false)
-    );
   }, []);
 
-  // Auto-expand ancestors of any location that matches an active filter or search,
-  // so narrowing the list never hides a match behind a collapsed row.
+  const search = searchQuery.trim().toLowerCase();
+  const searching = search.length > 0;
+
+  /** Does this place itself answer the active filters? */
+  const matchesSelf = useCallback(
+    (location: Location): boolean => {
+      const byStatus = statusFilter === 'all' || location.status === statusFilter;
+      const byType = typeFilter === 'all' || location.type === typeFilter;
+      const byText =
+        !search ||
+        location.name.toLowerCase().includes(search) ||
+        location.description.toLowerCase().includes(search) ||
+        location.type.toLowerCase().includes(search);
+      return byStatus && byType && byText;
+    },
+    [statusFilter, typeFilter, search]
+  );
+
+  /**
+   * Does this place, or anything inside it, answer the filters?
+   *
+   * Carries its own visited set: this recursion descends the children map, and
+   * a cycle there hangs quite independently of the parent walk.
+   */
+  const matchesWithDescendants = useCallback(
+    (location: Location, visited = new Set<string>(), depth = 0): boolean => {
+      if (visited.has(location.id) || depth > HIGHLIGHT_DEPTH_CAP) return false;
+      visited.add(location.id);
+      if (matchesSelf(location)) return true;
+      return childrenOf(index, location.id).some((child) =>
+        matchesWithDescendants(child, visited, depth + 1)
+      );
+    },
+    [index, matchesSelf]
+  );
+
+  /**
+   * **Search flattens the tree** (§6.1).
+   *
+   * A filtered tree with orphaned parents is unreadable: a hit four levels down
+   * either drags three ancestors on screen that match nothing, or appears under
+   * a parent that has been filtered away. So a search is a flat list of hits,
+   * each carrying its path.
+   *
+   * The type and status pills do *not* flatten. They narrow a tree that is
+   * still a tree, and revealing an ancestor purely to show a matching
+   * descendant is what the auto-expand below is for.
+   */
+  const flatMatches = useMemo(
+    () => (searching ? locations.filter(matchesSelf) : []),
+    [searching, locations, matchesSelf]
+  );
+
+  /**
+   * Narrowing the list must never hide a match behind a collapsed row, so the
+   * ancestors of every match are expanded.
+   *
+   * Only for the pills: a search is flat and has no ancestors to reveal.
+   */
   useEffect(() => {
-    if (typeFilter === 'all' && statusFilter === 'all' && !searchQuery) {
-      return;
+    if (searching || (typeFilter === 'all' && statusFilter === 'all')) return;
+
+    const toExpand = new Set<string>();
+    locations.forEach((location) => {
+      if (!matchesSelf(location)) return;
+      ancestorIdsOf(locations, location.id, {
+        idOf: (candidate) => candidate.id,
+        parentIdOf,
+      }).forEach((id) => toExpand.add(id));
+    });
+
+    if (toExpand.size) {
+      setExpandedLocations((previous) => new Set([...previous, ...toExpand]));
     }
-
-    const locationsToExpand = new Set<string>();
-
-    /**
-     * Walk the tree revealing the ancestors of every match.
-     *
-     * Carries its own visited set as well as using the guarded ancestor walk:
-     * this recursion descends the hierarchy map, and a cycle there would
-     * recurse forever quite independently of the parent walk PERF-11 reports.
-     * `15-3` requires a guard on every traversal it touches, and this is one.
-     */
-    const seen = new Set<string>();
-    const addParentIdsForMatches = (parentId: string = 'root', depth = 0) => {
-      if (seen.has(parentId) || depth > HIGHLIGHT_DEPTH_CAP) return;
-      seen.add(parentId);
-
-      const children = locationHierarchy[parentId] || [];
-
-      children.forEach(child => {
-        if (locationMatchesFilters(child, locationHierarchy, statusFilter, typeFilter, searchQuery)) {
-          ancestorIdsOf(locations, child.id, {
-            idOf: (location) => location.id,
-            parentIdOf: (location) => location.parentId,
-          }).forEach(id => locationsToExpand.add(id));
-        }
-        addParentIdsForMatches(child.id, depth + 1);
-      });
-    };
-
-    addParentIdsForMatches();
-    setExpandedLocations(prev => new Set([...prev, ...locationsToExpand]));
-  }, [typeFilter, statusFilter, searchQuery, locations, locationHierarchy, locationMatchesFilters]);
+  }, [searching, typeFilter, statusFilter, locations, matchesSelf]);
 
   // Status counts drive the one bar that replaced the "All Status" dropdown
   const statusSegments: RosterSegment[] = useMemo(() => {
-    const count = (status: string) => locations.filter(loc => loc.status === status).length;
+    const count = (status: string) => locations.filter((loc) => loc.status === status).length;
     return STATUS_ORDER.map(({ key, colorClass }) => ({
       key,
       label: key,
@@ -297,329 +214,117 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
     }));
   }, [locations]);
 
-  const handleNPCClick = (npcId: string) => {
-    navigateToPage(createPath('/npcs', {}, { highlight: npcId }));
-  };
+  const summaryFor = useCallback(
+    (location: Location) => (
+      <LocationRowSummary
+        location={location}
+        people={(location.connectedNPCs ?? [])
+          .map((id) => getNPCById(id))
+          .filter((npc): npc is NonNullable<typeof npc> => Boolean(npc))
+          .map((npc) => ({ id: npc.id, name: npc.name, detail: npc.title || undefined }))}
+        quests={(location.relatedQuests ?? [])
+          .map((id) => getQuestById(id))
+          .filter((quest): quest is NonNullable<typeof quest> => Boolean(quest))
+          .map((quest) => ({
+            id: quest.id,
+            name: quest.title,
+            // The word, not a hue: the icon used to carry the status by colour
+            // alone with no legend anywhere on the page.
+            detail: quest.status.charAt(0).toUpperCase() + quest.status.slice(1),
+          }))}
+        onChangeStatus={(status) => updateLocationStatus(location.id, status)}
+        onOpenNPC={(npcId) => navigateToPage(createPath('/npcs', {}, { highlight: npcId }))}
+        onOpenQuest={(questId) =>
+          navigateToPage(createPath('/quests', {}, { highlight: questId }))
+        }
+      />
+    ),
+    [getNPCById, getQuestById, updateLocationStatus, navigateToPage, createPath]
+  );
 
-  const handleQuestClick = (questId: string) => {
-    navigateToPage(createPath('/quests', {}, { highlight: questId }));
-  };
+  /**
+   * One row, and the rows for whatever is inside it.
+   *
+   * Recursive, with a visited set and a depth cap: this is the traversal
+   * `PERF-11` is about, and it now renders a control that can create the cycle.
+   */
+  const renderRow = useCallback(
+    (
+      location: Location,
+      depth: number,
+      visited: Set<string>,
+      path?: string
+    ): React.ReactNode => {
+      if (visited.has(location.id) || depth > HIGHLIGHT_DEPTH_CAP) return null;
+      const nextVisited = new Set(visited);
+      nextVisited.add(location.id);
 
-  const handleEdit = (locationId: string) => {
-    navigateToPage(`/locations/edit/${locationId}`);
-  };
-
-  const handleDelete = async (locationId: string) => {
-    try {
-      await deleteLocation(locationId);
-    } catch (error) {
-      console.error('Failed to delete location:', error);
-    }
-  };
-
-  // Renders a pre-resolved, pre-filtered list of locations as RosterRows. This
-  // is the ~230-line row body shared by every caller that has already worked
-  // out *which* locations belong in this list — `renderRows` below (the
-  // hierarchy-driven path) and the "Unplaced" group (locations whose
-  // `parentId` doesn't resolve to anything loaded, so there is no hierarchy
-  // bucket for `renderRows` to walk into). A location with its own children
-  // nests a further RosterGroup of them inside its expandedContent (built by
-  // recursing into `renderRows`, which resolves that child list from
-  // `locationHierarchy` the normal way), so the parent/child structure
-  // survives as nested groups rather than getting flattened into one list —
-  // this holds for an orphan's descendants too, since they sit in
-  // `locationHierarchy` keyed by the orphan's own (perfectly valid) id.
-  const renderLocationRows = (locationsToRender: Location[]): React.ReactNode[] => {
-    return locationsToRender.map((location, index) => {
-      const childIds = locationHierarchy[location.id] || [];
-      const hasChildren = childIds.length > 0;
-      const isExpanded = expandedLocations.has(location.id);
-
-      const connectedNPCs = (location.connectedNPCs || [])
-        .map(id => getNPCById(id))
-        .filter((npc): npc is NonNullable<ReturnType<typeof getNPCById>> => npc !== undefined);
-
-      const npcCount = location.connectedNPCs?.length || 0;
-      const questCount = location.relatedQuests?.length || 0;
-      const connectionsLabel = npcCount || questCount
-        ? `${npcCount} NPCs · ${questCount} Quests`
-        : '—';
+      // A flattened hit renders no children: they are already in the flat list
+      // in their own right, and rendering them twice would put two elements
+      // with the same `id` in the document -- which would also break
+      // `?highlight=`, since it scrolls to the first `#location-<id>` it finds.
+      const flat = Boolean(path);
+      const children = flat
+        ? []
+        : childrenOf(index, location.id).filter((child) => matchesWithDescendants(child));
+      const expanded = expandedLocations.has(location.id);
 
       return (
-        <RosterRow
+        <LocationTreeRow
           key={location.id}
-          id={`location-${location.id}`}
-          entityId={location.id}
-          entityName={location.name}
-          gridClassName={ROW_GRID}
-          isFirst={index === 0}
-          highlighted={highlightedLocationId === location.id}
-          expanded={isExpanded}
-          toggleLabel={location.name}
+          location={location}
+          depth={depth}
+          hasChildren={children.length > 0}
+          expanded={expanded}
           onToggle={() => toggleExpansion(location.id)}
-          expandedContent={
-            isExpanded ? (
-              <div className="flex flex-col gap-4 pt-2">
-                <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-7">
-                  <div className="flex flex-col gap-4">
-                    {/*
-                      The knowledge ladder, changed from the row in one click.
-                      Known / explored / visited is a ladder, not a verdict: a
-                      child may be more known than its parent, which is legal
-                      and is never a warning (§10).
-                    */}
-                    <StateLadder
-                      label="Knowledge"
-                      options={KNOWLEDGE_OPTIONS}
-                      value={location.status}
-                      ariaLabel={`Knowledge of ${location.name}`}
-                      onChange={(status) => updateLocationStatus(location.id, status)}
-                    />
-
-                    <RosterField label="Description" emptyText="Nothing written yet">
-                      {location.description ? (
-                        <Typography variant="body-sm">{location.description}</Typography>
-                      ) : undefined}
-                    </RosterField>
-
-                    <RosterField label="Notable features" emptyText="None recorded">
-                      {location.features?.length ? (
-                        <ul className="flex flex-col gap-1.5">
-                          {location.features.map((feature, featureIndex) => (
-                            <li key={featureIndex} className="flex items-start gap-2">
-                              <Landmark size={14} className="typography-secondary mt-0.5 shrink-0" />
-                              <Typography variant="body-sm">{feature}</Typography>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : undefined}
-                    </RosterField>
-
-                    <RosterField label="Notes" emptyText="No notes yet">
-                      {location.notes?.length ? (
-                        <div className="flex flex-col divide-y card-divider">
-                          {location.notes.map((note, noteIndex) => (
-                            <div
-                              key={noteIndex}
-                              className="flex gap-3 py-2.5 first:pt-0 last:pb-0"
-                            >
-                              <Typography
-                                variant="body-sm"
-                                color="muted"
-                                className="text-xs whitespace-nowrap"
-                              >
-                                {formatNoteDate(note.date)}
-                              </Typography>
-                              <Typography variant="body-sm">{note.text}</Typography>
-                            </div>
-                          ))}
-                        </div>
-                      ) : undefined}
-                    </RosterField>
-                  </div>
-
-                  <div className="flex flex-col gap-4">
-                    <RosterField label="Tags" emptyText="No tags yet">
-                      {location.tags?.length ? (
-                        <div className="flex flex-wrap gap-2">
-                          {location.tags.map((tag, tagIndex) => (
-                            <span
-                              key={tagIndex}
-                              className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-secondary typography-secondary"
-                            >
-                              <Tag size={12} />
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      ) : undefined}
-                    </RosterField>
-
-                    <RosterField label="Last visited" emptyText="Not recorded">
-                      {location.lastVisited ? (
-                        <Typography variant="body-sm">
-                          {new Date(location.lastVisited).toLocaleDateString('en-uk', {
-                            year: 'numeric',
-                            day: '2-digit',
-                            month: '2-digit',
-                          })}
-                        </Typography>
-                      ) : undefined}
-                    </RosterField>
-
-                    <RosterField label="Connected NPCs" emptyText="No NPCs linked">
-                      {connectedNPCs.length ? (
-                        <div className="flex flex-col gap-1.5">
-                          {connectedNPCs.map(npc => (
-                            <button
-                              key={npc.id}
-                              type="button"
-                              onClick={() => handleNPCClick(npc.id)}
-                              className="flex items-center gap-2 text-left px-2.5 py-1.5 rounded-md selectable-item"
-                            >
-                              <Users
-                                size={14}
-                                className={clsx('shrink-0', DISPOSITION_CLASS[npc.relationship] ?? 'disposition-unknown')}
-                              />
-                              <Typography variant="body-sm">
-                                {npc.name}
-                                {npc.title && (
-                                  <span className="typography-secondary ml-1">– {npc.title}</span>
-                                )}
-                              </Typography>
-                            </button>
-                          ))}
-                        </div>
-                      ) : undefined}
-                    </RosterField>
-
-                    <RosterField label="Related quests" emptyText="No quests linked">
-                      {location.relatedQuests?.length ? (
-                        <div className="flex flex-col gap-1.5">
-                          {location.relatedQuests.map(questId => {
-                            const quest = getQuestById(questId);
-                            if (!quest) return null;
-                            return (
-                              <button
-                                key={questId}
-                                type="button"
-                                onClick={() => handleQuestClick(questId)}
-                                className="flex items-center gap-2 text-left px-2.5 py-1.5 rounded-md selectable-item"
-                              >
-                                <Scroll size={14} className="shrink-0 typography-secondary" />
-                                <Typography variant="body-sm">
-                                  {quest.title}
-                                  {/* The icon used to carry the quest's status by hue alone,
-                                      with no legend anywhere on the page -- unreadable for
-                                      anyone who cannot separate the hues, and undecodable for
-                                      everyone else. The word states it instead. */}
-                                  <span className="typography-secondary ml-1.5">
-                                    · {quest.status.charAt(0).toUpperCase() + quest.status.slice(1)}
-                                  </span>
-                                </Typography>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : undefined}
-                    </RosterField>
-
-                    <RosterField label="Recorded by" emptyText="Unknown">
-                      {location.createdByUsername ? (
-                        <Typography variant="body-sm">{location.createdByUsername}</Typography>
-                      ) : undefined}
-                    </RosterField>
-
-                    {user && (
-                      <div className="flex gap-2 mt-1">
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(location.id)}>
-                          Edit
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(location.id)}>
-                          Delete
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {hasChildren && (() => {
-                  const subRows = renderRows(location.id);
-                  return subRows.length > 0 ? (
-                    <RosterGroup
-                      title={`Locations in ${location.name}`}
-                      count={subRows.length}
-                      nested
-                    >
-                      {subRows}
-                    </RosterGroup>
-                  ) : null;
-                })()}
-              </div>
-            ) : undefined
-          }
+          onOpen={() => navigateToPage(`/locations/${location.id}`)}
+          highlighted={highlightedLocationId === location.id}
+          path={path}
+          insideCount={insideCountOf(index, location.id)}
+          npcCount={location.connectedNPCs?.length ?? 0}
+          questCount={location.relatedQuests?.length ?? 0}
+          summary={expanded ? summaryFor(location) : undefined}
         >
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              {/* The type icon is gone from the collapsed row. It was already the
-                  second encoding of the type next to the label, and the sigil now
-                  holds the leading slot -- two glyphs before one name is a row
-                  arguing with itself. It survives wherever the label does not. */}
-              <Typography
-                variant="body"
-                className="font-semibold truncate font-heading"
-              >
-                {location.name}
-              </Typography>
-            </div>
-            {hasChildren && (
-              <Typography variant="body-sm" color="secondary" className="text-sm truncate">
-                {childIds.length} sub-location{childIds.length === 1 ? '' : 's'}
-              </Typography>
-            )}
-          </div>
-
-          <RosterStatus tone={STATUS_TONE[location.status]}>
-            {location.status.charAt(0).toUpperCase() + location.status.slice(1)}
-          </RosterStatus>
-
-          {/* The type, stated once. It was a chip filled from the entity palette --
-              the same palette the sigil draws from, so the row carried two marks in
-              two hues for two different facts and invited the reader to connect
-              them. The label is the encoding that survives. */}
-          <Typography
-            variant="body-sm"
-            color="secondary"
-            className="hidden md:block justify-self-start text-sm"
-          >
-            {formatLocationType(location.type)}
-          </Typography>
-
-          <Typography variant="body-sm" color="secondary" className="hidden md:block text-sm truncate">
-            {connectionsLabel}
-          </Typography>
-        </RosterRow>
+          {children.map((child) => renderRow(child, depth + 1, nextVisited))}
+        </LocationTreeRow>
       );
-    });
-  };
-
-  // Resolves the direct children of `parentId` out of `locationHierarchy`,
-  // applies the existing filter semantics, and delegates the actual row JSX
-  // to `renderLocationRows`. Only ever called with 'root' or the id of a row
-  // that is itself already being rendered (the recursive call inside
-  // `renderLocationRows`'s expandedContent) — never with an unresolvable
-  // parentId, since nothing walks into those buckets this way. That's exactly
-  // why orphans need a separate path: see `orphanLocations` above and its use
-  // below.
-  const renderRows = (parentId: string): React.ReactNode[] => {
-    const childLocations = locationHierarchy[parentId] || [];
-
-    const filteredChildLocations = childLocations.filter(location => {
-      const parentLocation = locations.find(loc => loc.id === parentId);
-      if (parentLocation && (typeFilter === 'all' || parentLocation.type === typeFilter)) {
-        return locationMatchesFilters(location, locationHierarchy, statusFilter, typeFilter, searchQuery, true);
-      }
-      return locationMatchesFilters(location, locationHierarchy, statusFilter, typeFilter, searchQuery, false);
-    });
-
-    return renderLocationRows(filteredChildLocations);
-  };
+    },
+    [
+      index,
+      expandedLocations,
+      matchesWithDescendants,
+      toggleExpansion,
+      navigateToPage,
+      highlightedLocationId,
+      summaryFor,
+    ]
+  );
 
   if (isLoading) {
     return <RosterSkeleton label="Loading locations" />;
   }
 
-  const rootRows = renderRows('root');
+  const rootRows = searching
+    ? flatMatches.map((location) =>
+        // A root's own path is empty, so a hit at the top level needs a
+        // placeholder that still marks it as flattened.
+        renderRow(location, 0, new Set(), pathLabelOf(locations, location.id) || 'the top level')
+      )
+    : index.roots
+        .filter((location) => matchesWithDescendants(location))
+        .map((location) => renderRow(location, 0, new Set()));
 
-  // Orphans have no resolvable parent, so the parentLocation-based type-filter
-  // exemption `renderRows` applies to ordinary children can't apply to them
-  // either — treat them like root-level nodes (isChild=false), same as the
-  // 'root' path above (whose own `parentLocation` lookup already resolves to
-  // undefined and falls into this same branch).
-  const filteredOrphanLocations = orphanLocations.filter(location =>
-    locationMatchesFilters(location, locationHierarchy, statusFilter, typeFilter, searchQuery, false)
-  );
-  const orphanRows = renderLocationRows(filteredOrphanLocations);
+  // Locations whose parentId names an id that isn't in the loaded set —
+  // dangling references from a deleted or renamed parent (see #303). Kept
+  // visible and reconciled against the status bar's total instead of silently
+  // vanishing. A search has already flattened them into the list above.
+  const orphanRows = searching
+    ? []
+    : index.orphans
+        .filter((location) => matchesWithDescendants(location))
+        .map((location) => renderRow(location, 0, new Set()));
+
+  const nothingToShow = rootRows.filter(Boolean).length === 0 && orphanRows.filter(Boolean).length === 0;
 
   return (
     <div className="space-y-6">
@@ -646,8 +351,7 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
         />
       </RosterFilterBar>
 
-      {/* Location hierarchy */}
-      {rootRows.length === 0 && orphanRows.length === 0 ? (
+      {nothingToShow ? (
         locations.length > 0 ? (
           <RosterEmpty
             title="No locations match these filters"
@@ -670,17 +374,26 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
       ) : (
         <>
           {rootRows.length > 0 && (
-            <RosterGroup title="Locations" count={rootRows.length}>
+            <RosterGroup
+              title={searching ? 'Matches' : 'Locations'}
+              count={rootRows.filter(Boolean).length}
+            >
+              {searching && (
+                <Typography
+                  variant="body-sm"
+                  color="secondary"
+                  className="px-5 py-2 text-xs"
+                >
+                  Searching flattens the tree — each place is shown with the path
+                  it sits on.
+                </Typography>
+              )}
               {rootRows}
             </RosterGroup>
           )}
 
-          {/* Locations whose parentId names an id that isn't in the loaded
-              set — dangling references from a deleted or renamed parent (see
-              #303). Kept visible and reconciled against the status bar's
-              total instead of silently vanishing. */}
           {orphanRows.length > 0 && (
-            <RosterGroup title="Unplaced" count={orphanRows.length} muted>
+            <RosterGroup title="Unplaced" count={orphanRows.filter(Boolean).length} muted>
               {orphanRows}
             </RosterGroup>
           )}

@@ -1,4 +1,4 @@
-// src/pages/npcs/InlineEditor.tsx
+// src/shared/components/inline-edit/InlineEditor.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import Button from 'core/components/Button';
 import Input from 'core/components/Input';
@@ -63,6 +63,12 @@ export interface InlineEditorProps {
  *
  * Deliberately not a dialog and not a route: `/npcs/edit/:id` is where you go
  * to change everything, and this is where you fix a sentence (D43).
+ *
+ * It lived in `pages/npcs/` until `15-4`, which is where it was written. It is
+ * now shared because `00-entity-authoring.md` §7 names it **the reference
+ * implementation for every field in this phase** -- the location page edits six
+ * fields with it, and the quest and NPC pages will. A page importing another
+ * page's internals to get at it was the alternative.
  *
  * The rule it exists to enforce is that **nothing claims success before the
  * write resolves**. There is no optimistic update: the value on screen is the

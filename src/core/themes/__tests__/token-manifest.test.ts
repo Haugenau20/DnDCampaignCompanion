@@ -230,13 +230,16 @@ describe("every variable a theme defines is either consumed or declared unused",
       "The accent's paired ink. Buttons reach for --action-primary-text, which " +
       "resolves to the same value through the role map, so this name has never " +
       "been the one consumed.",
-    "--surface-band-selected":
-      "Surface pairs are emitted whole -- bg, on, onMuted, border, hover, " +
-      "selected -- so that a surface cannot be given a state belonging to " +
-      "another. The band has no selectable element yet; the hole would be the " +
-      "defect, not the unused member.",
+    // `--surface-band-selected` left this list in 15-4. It was emitted and
+    // unconsumed because "the band has no selectable element yet"; the entity
+    // page's band carries a knowledge ladder, and `.band-chip-selected` is that
+    // element. The hole would have been the defect, and the pair being whole is
+    // what meant no colour had to be invented for it (T040).
     "--surface-page-border":
-      "As --surface-band-selected: a complete pair, one member unused.",
+      "A complete pair, one member unused. Surface pairs are emitted whole -- " +
+      "bg, on, onMuted, border, hover, selected -- so that a surface cannot be " +
+      "given a state belonging to another; the hole would be the defect, not " +
+      "the unused member.",
     "--outcome-failed-ink":
       "outcome.* lost its consumers to the valence ramp (D41). The scale stays " +
       "because it is still the documented source for feedback.error, " +

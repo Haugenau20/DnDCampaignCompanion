@@ -82,14 +82,23 @@ const formatSourceType = (type: SourceType): string =>
  * reader sees it, because it describes what the party did rather than a data
  * value.
  */
+/**
+ * The rumour ladder: unconfirmed -> confirmed -> disproved. Never a verdict.
+ *
+ * `15-3` gave these steps `selectedClassName: 'knowledge-0'` and friends, which
+ * no stylesheet defines. `StateLadder` no longer takes that prop at all -- the
+ * comment there records why it could not have worked even spelled correctly.
+ *
+ * "Disproved", never "False" -- it describes what the party did, and a
+ * disproved rumour is a good outcome (§10).
+ */
 const RUMOR_KNOWLEDGE_OPTIONS: Array<{
   value: RumorStatus;
   label: string;
-  selectedClassName?: string;
 }> = [
-  { value: 'unconfirmed', label: 'Unconfirmed', selectedClassName: 'knowledge-0' },
-  { value: 'confirmed', label: 'Confirmed', selectedClassName: 'knowledge-1' },
-  { value: 'false', label: 'Disproved', selectedClassName: 'knowledge-2' },
+  { value: 'unconfirmed', label: 'Unconfirmed' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'false', label: 'Disproved' },
 ];
 
 const RumorDirectory: React.FC<RumorDirectoryProps> = ({

@@ -18,10 +18,16 @@ export interface QuestRowSummaryProps {
   prep?: React.ReactNode;
 }
 
+/**
+ * A quest concludes, so its status has real valence -- but the *ladder* does
+ * not paint it. The selected chip says "this is the current one" and takes the
+ * accent, exactly as `S2` draws it; the valence belongs to the status word in
+ * the collapsed row.
+ */
 const STATUS_OPTIONS = [
   { value: 'active' as const, label: 'Active' },
-  { value: 'completed' as const, label: 'Completed', selectedClassName: 'outcome-completed' },
-  { value: 'failed' as const, label: 'Failed', selectedClassName: 'outcome-failed' },
+  { value: 'completed' as const, label: 'Completed' },
+  { value: 'failed' as const, label: 'Failed' },
 ];
 
 /** The uppercase micro-label each part of the summary is introduced by. */

@@ -1,4 +1,20 @@
 // src/features/campaign-entities/locations/components/__tests__/LocationDirectory.test.tsx
+//
+// `15-4` turns this directory into a **tree of rows**. What it replaces expanded
+// a parent into a full record card, printed a "Locations in X" heading, and
+// nested a *child record card* inside it — two records at identical weight,
+// unbounded as depth grows. Large parts of this suite changed with it, and the
+// changes are deliberate rather than convenient:
+//
+// - The whole row was one expand button. §6.1 requires the twisty and the name
+//   to be **different targets**, so the toggle is now named for what it does
+//   ("Expand what is inside X") and the name opens the page.
+// - The expansion held nine labelled fields, Edit and Delete. It now holds the
+//   bounded four-fact summary; notes, tags, last-visited, the record line and
+//   the destructive action moved to `/locations/:locationId` (§3).
+// - Children nested under a "Locations in X" group heading. They are one-line
+//   rows at 30px indent behind a hairline rail.
+// - Searching flattens the tree and shows each hit with its path.
 
 import React from 'react';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
@@ -8,11 +24,6 @@ import { Location } from '../../types';
 // ---------------------------------------------------------------------------
 // Mock external dependencies
 // ---------------------------------------------------------------------------
-
-// LocationDirectory uses useFirebaseData for real-time updates
-jest.mock('shared/hooks/useFirebaseData', () => ({
-  useFirebaseData: jest.fn(() => ({ data: [] })),
-}));
 
 jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: jest.fn(),
@@ -27,7 +38,7 @@ jest.mock('../../../quests/context/QuestContext', () => ({
 
 jest.mock('../../context/LocationContext', () => ({
   useLocations: jest.fn(() => ({
-    deleteLocation: jest.fn(),
+    updateLocationStatus: jest.fn(),
   })),
 }));
 
@@ -44,10 +55,8 @@ jest.mock('core/services/firebase', () => ({ default: {} }));
 
 const { useNavigation } = require('shared/context/NavigationContext');
 const { useLocations } = require('../../context/LocationContext');
-const { useFirebaseData } = require('shared/hooks/useFirebaseData');
 const { useNPCs } = require('../../../npcs/context/NPCContext');
 const { useQuests } = require('../../../quests/context/QuestContext');
-const { useAuth } = require('@/features/user-management');
 
 const mockNavigateToPage = jest.fn();
 const mockUpdateLocationStatus = jest.fn().mockResolvedValue(undefined);
@@ -56,23 +65,17 @@ const mockCreatePath = jest.fn(
     query ? `${path}?${new URLSearchParams(query).toString()}` : path
 );
 
-function setupMocks(
-  user: { uid: string } | null = { uid: 'user-1' },
-  queryParams: Record<string, string> = {}
-) {
-  (useFirebaseData as jest.Mock).mockReturnValue({ data: [] });
+function setupMocks(queryParams: Record<string, string> = {}) {
   (useNavigation as jest.Mock).mockReturnValue({
     navigateToPage: mockNavigateToPage,
     createPath: mockCreatePath,
     getCurrentQueryParams: jest.fn(() => queryParams),
   });
   (useLocations as jest.Mock).mockReturnValue({
-    deleteLocation: jest.fn().mockResolvedValue(undefined),
     updateLocationStatus: mockUpdateLocationStatus,
   });
   (useNPCs as jest.Mock).mockReturnValue({ getNPCById: jest.fn(() => undefined) });
   (useQuests as jest.Mock).mockReturnValue({ getQuestById: jest.fn(() => undefined) });
-  (useAuth as jest.Mock).mockReturnValue({ user });
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +104,15 @@ function makeLocation(id: string, name: string, overrides: Partial<Location> = {
 /** The roster's search box. */
 const searchInput = () => screen.getByPlaceholderText('Search locations...');
 
+/** The twisty, which only exists where something is inside. */
+const twisty = (name: string | RegExp) =>
+  screen.getByRole('button', { name: new RegExp(`Expand what is inside ${name}`) });
+
+const openTwisty = (name: string) => fireEvent.click(twisty(name));
+
+const collapseTwisty = (name: string) =>
+  screen.getByRole('button', { name: new RegExp(`Collapse what is inside ${name}`) });
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -111,14 +123,8 @@ describe('LocationDirectory', () => {
     setupMocks();
   });
 
-  // -------------------------------------------------------------------------
-  // Loading state
-  // -------------------------------------------------------------------------
   describe('loading state', () => {
     test('shows the rhythm of the rows that are coming, not a spinner', () => {
-      // A spinner says "something is happening". A skeleton says "a list of
-      // rows is happening, and it will be about this tall", so the page does
-      // not jump when the rows arrive.
       const { container } = render(<LocationDirectory locations={[]} isLoading={true} />);
       expect(screen.getByRole('status', { name: /loading locations/i })).toBeInTheDocument();
       expect(container.querySelectorAll('.section-loading').length).toBeGreaterThan(3);
@@ -131,9 +137,6 @@ describe('LocationDirectory', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Empty state
-  // -------------------------------------------------------------------------
   describe('empty state', () => {
     test('says what the collection is for, and offers the action that fills it', () => {
       render(<LocationDirectory locations={[]} />);
@@ -146,28 +149,46 @@ describe('LocationDirectory', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Rendering locations
+  // The row: one line until asked
   // -------------------------------------------------------------------------
-  describe('rendering locations', () => {
-    test('should render location name', () => {
-      const locations = [makeLocation('loc-1', 'Silverkeep')];
-      render(<LocationDirectory locations={locations} />);
-      expect(screen.getByText('Silverkeep')).toBeInTheDocument();
-    });
-
-    test('should render multiple locations', () => {
-      const locations = [
-        makeLocation('loc-1', 'Silverkeep'),
-        makeLocation('loc-2', 'Ironhold'),
-      ];
-      render(<LocationDirectory locations={locations} />);
+  describe('one line per place', () => {
+    test('renders every location it is given', () => {
+      render(
+        <LocationDirectory
+          locations={[makeLocation('loc-1', 'Silverkeep'), makeLocation('loc-2', 'Ironhold')]}
+        />
+      );
       expect(screen.getByText('Silverkeep')).toBeInTheDocument();
       expect(screen.getByText('Ironhold')).toBeInTheDocument();
     });
 
-    test('should render search input', () => {
-      render(<LocationDirectory locations={[]} />);
-      expect(searchInput()).toBeInTheDocument();
+    test('carries mark, name, type in words, knowledge step and what is inside', () => {
+      (useNPCs as jest.Mock).mockReturnValue({
+        getNPCById: jest.fn(() => ({ id: 'npc-1', name: 'Aldric', relationship: 'friendly' })),
+      });
+      const parent = makeLocation('loc-1', 'Silverkeep', {
+        type: 'city',
+        status: 'visited',
+        connectedNPCs: ['npc-1'],
+        relatedQuests: ['q-1'],
+      });
+      const child = makeLocation('loc-2', 'The Rusty Anchor', { parentId: 'loc-1' });
+      const { container } = render(<LocationDirectory locations={[parent, child]} />);
+
+      const row = within(container.querySelector('#location-loc-1') as HTMLElement);
+      expect(row.getByText('Silverkeep')).toBeInTheDocument();
+      expect(row.getByText('City')).toBeInTheDocument();
+      expect(row.getByText('Visited')).toBeInTheDocument();
+      expect(row.getByText('1 inside · 1 NPC · 1 quest')).toBeInTheDocument();
+      expect(row.getAllByTestId('entity-sigil')).toHaveLength(1);
+    });
+
+    test('says nothing about what is inside when there is nothing inside', () => {
+      const { container } = render(
+        <LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />
+      );
+      const row = within(container.querySelector('#location-loc-1') as HTMLElement);
+      expect(row.queryByText(/inside/)).not.toBeInTheDocument();
     });
 
     test('renders type filters as visible pills rather than a select', () => {
@@ -179,233 +200,333 @@ describe('LocationDirectory', () => {
     });
 
     test('renders the group name as a real heading, not a control', () => {
-      const locations = [makeLocation('loc-1', 'Silverkeep')];
-      render(<LocationDirectory locations={locations} />);
+      render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
       expect(screen.getByRole('heading', { name: 'Locations' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Locations' })).not.toBeInTheDocument();
-    });
-
-    test('shows each row as one dense row carrying status, type and connection counts', () => {
-      const npcId = 'npc-1';
-      (useNPCs as jest.Mock).mockReturnValue({
-        getNPCById: jest.fn(() => ({ id: npcId, name: 'Aldric', relationship: 'friendly' })),
-      });
-      const location = makeLocation('loc-1', 'Silverkeep', {
-        type: 'city',
-        status: 'visited',
-        connectedNPCs: [npcId],
-        relatedQuests: ['q-1'],
-      });
-      render(<LocationDirectory locations={[location]} />);
-
-      const row = within(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-      expect(row.getByText('Silverkeep')).toBeInTheDocument();
-      expect(row.getByText('Visited')).toBeInTheDocument();
-      expect(row.getByText('City')).toBeInTheDocument();
-      expect(row.getByText('1 NPCs · 1 Quests')).toBeInTheDocument();
-    });
-
-    test('shows a placeholder for connections when a location has none', () => {
-      const location = makeLocation('loc-1', 'Silverkeep');
-      render(<LocationDirectory locations={[location]} />);
-      const row = within(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-      expect(row.getByText('—')).toBeInTheDocument();
     });
   });
 
   // -------------------------------------------------------------------------
-  // Row expansion
+  // §6.1: two targets, not one
   // -------------------------------------------------------------------------
-  describe('row expansion', () => {
-    test('rows start collapsed and expose an expand control', () => {
-      render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
-      const toggle = screen.getByRole('button', { name: /Expand Silverkeep/ });
-      expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    });
+  describe('the twisty and the name are different targets (§6.1)', () => {
+    const parent = makeLocation('parent-1', 'Kingdom of Valor');
+    const child = makeLocation('child-1', 'Silverkeep', { parentId: 'parent-1' });
 
-    test('expands in place when the row is activated', () => {
-      render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-
+    test('a place with nothing inside shows no twisty at all', () => {
+      render(<LocationDirectory locations={[makeLocation('leaf', 'Bare Rock')]} />);
       expect(
-        screen.getByRole('button', { name: /Collapse Silverkeep/ })
-      ).toHaveAttribute('aria-expanded', 'true');
-      expect(screen.getByText('Description')).toBeInTheDocument();
-      expect(screen.getByText('Recorded by')).toBeInTheDocument();
+        screen.queryByRole('button', { name: /what is inside Bare Rock/ })
+      ).not.toBeInTheDocument();
     });
 
-    test('collapses again on a second activation', () => {
-      render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-      fireEvent.click(screen.getByRole('button', { name: /Collapse Silverkeep/ }));
-      expect(screen.queryByText('Description')).not.toBeInTheDocument();
+    test('the twisty opens the branch and does not navigate', () => {
+      render(<LocationDirectory locations={[parent, child]} />);
+      openTwisty('Kingdom of Valor');
+
+      expect(collapseTwisty('Kingdom of Valor')).toHaveAttribute('aria-expanded', 'true');
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
     });
 
-    test('each row toggles independently', () => {
+    test('the name opens the page and does not toggle the branch', () => {
+      render(<LocationDirectory locations={[parent, child]} />);
+      fireEvent.click(screen.getByText('Kingdom of Valor'));
+
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/locations/parent-1');
+      expect(twisty('Kingdom of Valor')).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    test('every row offers a way in, named for the place it opens', () => {
+      render(<LocationDirectory locations={[makeLocation('leaf', 'Bare Rock')]} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Open Bare Rock' }));
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/locations/leaf');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The bounded summary
+  // -------------------------------------------------------------------------
+  describe('the expansion is a bounded summary (§1.3, §3)', () => {
+    const withChild = [
+      makeLocation('loc-1', 'Silverkeep', { features: ['Seven gates', 'White towers'] }),
+      makeLocation('loc-2', 'Cellar', { parentId: 'loc-1' }),
+    ];
+
+    test('holds the four facts a row carries, and nothing else', () => {
+      render(<LocationDirectory locations={withChild} />);
+      openTwisty('Silverkeep');
+
+      expect(screen.getByText('Description for Silverkeep')).toBeInTheDocument();
+      expect(screen.getByText('Seven gates · White towers')).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Knowledge of Silverkeep' })).toBeInTheDocument();
+      expect(screen.getByText('Who is here')).toBeInTheDocument();
+      expect(screen.getByText('Quests here')).toBeInTheDocument();
+    });
+
+    test('does not expand into the record: notes, tags and history are on the page', () => {
       render(
         <LocationDirectory
-          locations={[makeLocation('loc-1', 'Silverkeep'), makeLocation('loc-2', 'Ironhold')]}
+          locations={[
+            makeLocation('loc-1', 'Silverkeep', {
+              tags: ['elven'],
+              notes: [{ date: '2025-05-31T19:27:30.387Z', text: 'A council was held.' }],
+              lastVisited: '2025-05-31',
+            }),
+            makeLocation('loc-2', 'Cellar', { parentId: 'loc-1' }),
+          ]}
         />
       );
-      fireEvent.click(screen.getByRole('button', { name: /Expand Silverkeep/ }));
+      openTwisty('Silverkeep');
 
-      expect(
-        screen.getByRole('button', { name: /Collapse Silverkeep/ })
-      ).toHaveAttribute('aria-expanded', 'true');
-      expect(
-        screen.getByRole('button', { name: /Expand Ironhold/ })
-      ).toHaveAttribute('aria-expanded', 'false');
+      // §3: the row holds what can be read while scanning five of them. These
+      // are read once, while prepping, which is what a page is for.
+      expect(screen.queryByText('elven')).not.toBeInTheDocument();
+      expect(screen.queryByText('A council was held.')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Last visited/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Recorded by/i)).not.toBeInTheDocument();
     });
 
-    test('states empty fields honestly instead of hiding them', () => {
-      const bare = makeLocation('bare', 'Bare Rock', {
-        description: '',
-        features: [],
-        notes: [],
-        tags: [],
-        connectedNPCs: [],
-        relatedQuests: [],
-        lastVisited: undefined,
-        createdByUsername: undefined,
-      });
-      render(<LocationDirectory locations={[bare]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Bare Rock/ }));
+    test('carries no destructive action: Delete is on the page, beside what it destroys', () => {
+      render(<LocationDirectory locations={withChild} />);
+      openTwisty('Silverkeep');
 
-      expect(screen.getByText('Nothing written yet')).toBeInTheDocument();
-      expect(screen.getByText('None recorded')).toBeInTheDocument();
-      expect(screen.getByText('No notes yet')).toBeInTheDocument();
-      expect(screen.getByText('No tags yet')).toBeInTheDocument();
-      expect(screen.getByText('Not recorded')).toBeInTheDocument();
-      expect(screen.getByText('No NPCs linked')).toBeInTheDocument();
-      expect(screen.getByText('No quests linked')).toBeInTheDocument();
-      expect(screen.getByText('Unknown')).toBeInTheDocument();
-    });
-
-    test('shows edit and delete controls when a user is signed in', () => {
-      render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-      expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
-    });
-
-    test('hides edit and delete controls when signed out', () => {
-      setupMocks(null);
-      render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-      expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
     });
 
-    test('navigates to the edit page when Edit is clicked', () => {
-      render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-      fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/locations/edit/loc-1');
+    test('states an empty summary honestly rather than hiding it', () => {
+      render(
+        <LocationDirectory
+          locations={[
+            makeLocation('bare', 'Bare Rock', { description: '' }),
+            makeLocation('in', 'Crack', { parentId: 'bare' }),
+          ]}
+        />
+      );
+      openTwisty('Bare Rock');
+
+      expect(screen.getByText('Nothing written about this place yet')).toBeInTheDocument();
+      expect(screen.getByText('None recorded')).toBeInTheDocument();
+      expect(screen.getByText('Nobody recorded here')).toBeInTheDocument();
+      expect(screen.getByText('No quests here')).toBeInTheDocument();
     });
 
-    test('calls deleteLocation when Delete is clicked', () => {
-      const deleteLocation = jest.fn().mockResolvedValue(undefined);
-      (useLocations as jest.Mock).mockReturnValue({ deleteLocation });
-      render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-      expect(deleteLocation).toHaveBeenCalledWith('loc-1');
-    });
-
-    test('navigates to an NPC when a connected NPC is clicked', () => {
+    test('navigates to an NPC listed in the summary', () => {
       (useNPCs as jest.Mock).mockReturnValue({
-        getNPCById: jest.fn(() => ({ id: 'npc-1', name: 'Aldric', relationship: 'friendly' })),
+        getNPCById: jest.fn(() => ({ id: 'npc-1', name: 'Aldric', title: 'Guard' })),
       });
       render(
         <LocationDirectory
-          locations={[makeLocation('loc-1', 'Silverkeep', { connectedNPCs: ['npc-1'] })]}
+          locations={[
+            makeLocation('loc-1', 'Silverkeep', { connectedNPCs: ['npc-1'] }),
+            makeLocation('loc-2', 'Cellar', { parentId: 'loc-1' }),
+          ]}
         />
       );
-      fireEvent.click(screen.getByRole('button', { name: /Expand Silverkeep/ }));
+      openTwisty('Silverkeep');
       fireEvent.click(screen.getByRole('button', { name: /Aldric/ }));
-      expect(mockNavigateToPage).toHaveBeenCalled();
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/npcs?highlight=npc-1');
     });
 
-    test('navigates to a quest when a related quest is clicked', () => {
+    test('navigates to a quest listed in the summary, whose status is a word', () => {
       (useQuests as jest.Mock).mockReturnValue({
         getQuestById: jest.fn(() => ({ id: 'q-1', title: 'Find the Amulet', status: 'active' })),
       });
       render(
         <LocationDirectory
-          locations={[makeLocation('loc-1', 'Silverkeep', { relatedQuests: ['q-1'] })]}
+          locations={[
+            makeLocation('loc-1', 'Silverkeep', { relatedQuests: ['q-1'] }),
+            makeLocation('loc-2', 'Cellar', { parentId: 'loc-1' }),
+          ]}
         />
       );
-      fireEvent.click(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-      fireEvent.click(screen.getByRole('button', { name: /Find the Amulet/ }));
-      expect(mockNavigateToPage).toHaveBeenCalled();
+      openTwisty('Silverkeep');
+      const quest = screen.getByRole('button', { name: /Find the Amulet/ });
+      expect(within(quest).getByText('· Active')).toBeInTheDocument();
+      fireEvent.click(quest);
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/quests?highlight=q-1');
     });
   });
 
   // -------------------------------------------------------------------------
-  // Search filtering
+  // The tree
   // -------------------------------------------------------------------------
-  describe('search filtering', () => {
-    test('should filter locations by name when searching', () => {
-      const locations = [
-        makeLocation('loc-1', 'Silverkeep'),
-        makeLocation('loc-2', 'Ironhold'),
-      ];
-      render(<LocationDirectory locations={locations} />);
-      fireEvent.change(searchInput(), { target: { value: 'Silver' } });
-      expect(screen.getByText('Silverkeep')).toBeInTheDocument();
-      expect(screen.queryByText('Ironhold')).not.toBeInTheDocument();
+  describe('a tree of rows, not cards inside cards (§6.1)', () => {
+    const region = makeLocation('region-1', 'Kingdom of Valor');
+    const city = makeLocation('city-1', 'Silverkeep', { parentId: 'region-1' });
+    const building = makeLocation('building-1', 'The Rusty Anchor', {
+      parentId: 'city-1',
+      type: 'building',
     });
 
-    test('should filter locations by description', () => {
-      const locations = [
-        makeLocation('loc-1', 'Silverkeep', { description: 'A mighty fortress' }),
-        makeLocation('loc-2', 'Ironhold', { description: 'A quiet mining town' }),
-      ];
-      render(<LocationDirectory locations={locations} />);
-      fireEvent.change(searchInput(), { target: { value: 'mighty fortress' } });
+    test('does not render a child until its parent is opened', () => {
+      render(<LocationDirectory locations={[region, city]} />);
+      expect(screen.queryByText('Silverkeep')).not.toBeInTheDocument();
+
+      openTwisty('Kingdom of Valor');
       expect(screen.getByText('Silverkeep')).toBeInTheDocument();
-      expect(screen.queryByText('Ironhold')).not.toBeInTheDocument();
     });
 
-    test('should be case-insensitive', () => {
-      render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
-      fireEvent.change(searchInput(), { target: { value: 'silverkeep' } });
+    test('never prints a "Locations in X" heading, because the child is a row', () => {
+      render(<LocationDirectory locations={[region, city]} />);
+      openTwisty('Kingdom of Valor');
+
+      expect(
+        screen.queryByRole('heading', { name: /Locations in/ })
+      ).not.toBeInTheDocument();
+    });
+
+    test('carries the hierarchy in indentation, 30px per level', () => {
+      const { container } = render(<LocationDirectory locations={[region, city, building]} />);
+      openTwisty('Kingdom of Valor');
+      openTwisty('Silverkeep');
+
+      const indentOf = (id: string) =>
+        (container.querySelector(`#location-${id} > div`) as HTMLElement).style.paddingLeft;
+
+      expect(indentOf('region-1')).toBe('0px');
+      expect(indentOf('city-1')).toBe('30px');
+      expect(indentOf('building-1')).toBe('60px');
+    });
+
+    test('caps the visual indent at four levels so the name column never collapses', () => {
+      // Six levels of nesting. The logical depth keeps counting; the indent
+      // stops, or a name eight levels down has no column left to sit in.
+      const chain = Array.from({ length: 6 }, (_, i) =>
+        makeLocation(`n${i}`, `Level ${i}`, i === 0 ? {} : { parentId: `n${i - 1}` })
+      );
+      const { container } = render(<LocationDirectory locations={chain} />);
+      for (let i = 0; i < 5; i += 1) openTwisty(`Level ${i}`);
+
+      const indentOf = (id: string) =>
+        (container.querySelector(`#location-${id} > div`) as HTMLElement).style.paddingLeft;
+
+      expect(indentOf('n4')).toBe('120px');
+      expect(indentOf('n5')).toBe('120px');
+      expect(screen.getByText('Level 5')).toBeInTheDocument();
+    });
+
+    test('a child opens its own summary in place, independently of its parent', () => {
+      render(<LocationDirectory locations={[region, city, building]} />);
+      openTwisty('Kingdom of Valor');
+      openTwisty('Silverkeep');
+
+      expect(collapseTwisty('Silverkeep')).toHaveAttribute('aria-expanded', 'true');
+      expect(collapseTwisty('Kingdom of Valor')).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText('The Rusty Anchor')).toBeInTheDocument();
+    });
+
+    test('collapsing a branch takes what is inside with it', () => {
+      render(<LocationDirectory locations={[region, city]} />);
+      openTwisty('Kingdom of Valor');
+      fireEvent.click(collapseTwisty('Kingdom of Valor'));
+      expect(screen.queryByText('Silverkeep')).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // §6.1: search flattens
+  // -------------------------------------------------------------------------
+  describe('search flattens the tree (§6.1)', () => {
+    const region = makeLocation('region-1', 'Beleriand');
+    const city = makeLocation('city-1', 'Gondolin', { parentId: 'region-1' });
+    const square = makeLocation('square-1', "King's Square", { parentId: 'city-1' });
+
+    test('shows a nested match without opening its ancestors', () => {
+      // A filtered tree with orphaned parents is unreadable, and an ancestor
+      // dragged on screen matches nothing the reader asked for.
+      render(<LocationDirectory locations={[region, city, square]} />);
+      fireEvent.change(searchInput(), { target: { value: "King's" } });
+
+      expect(screen.getByText("King's Square")).toBeInTheDocument();
+      expect(screen.queryByText('Beleriand')).not.toBeInTheDocument();
+      expect(screen.queryByText('Gondolin')).not.toBeInTheDocument();
+    });
+
+    test('shows each hit with the path it sits on', () => {
+      render(<LocationDirectory locations={[region, city, square]} />);
+      fireEvent.change(searchInput(), { target: { value: "King's" } });
+      expect(screen.getByText('in Beleriand · Gondolin')).toBeInTheDocument();
+    });
+
+    test('says so, rather than leaving the flattening to be inferred', () => {
+      render(<LocationDirectory locations={[region, city, square]} />);
+      fireEvent.change(searchInput(), { target: { value: 'Gondolin' } });
+      expect(screen.getByText(/Searching flattens the tree/)).toBeInTheDocument();
+    });
+
+    test('renders each match once, never twice', () => {
+      // A flat list that also drew its hits' children would put two elements
+      // with the same id in the document, and `?highlight=` scrolls to the
+      // first one it finds.
+      const { container } = render(<LocationDirectory locations={[region, city, square]} />);
+      fireEvent.change(searchInput(), { target: { value: 'o' } });
+      const ids = Array.from(container.querySelectorAll('[id^="location-"]')).map(
+        (node) => node.id
+      );
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    test('matches on description as well as name, case-insensitively', () => {
+      render(
+        <LocationDirectory
+          locations={[
+            makeLocation('loc-1', 'Silverkeep', { description: 'A mighty fortress' }),
+            makeLocation('loc-2', 'Ironhold', { description: 'A quiet mining town' }),
+          ]}
+        />
+      );
+      fireEvent.change(searchInput(), { target: { value: 'MIGHTY FORTRESS' } });
       expect(screen.getByText('Silverkeep')).toBeInTheDocument();
+      expect(screen.queryByText('Ironhold')).not.toBeInTheDocument();
     });
 
     test('a collection emptied by a filter offers no create action', () => {
-      // The fix here is to change the filter, not to add a location.
-      const locations = [makeLocation('loc-1', 'Silverkeep')];
-      render(<LocationDirectory locations={locations} />);
+      render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
       fireEvent.change(searchInput(), { target: { value: 'zzznomatch' } });
       expect(screen.getByText(/no locations match these filters/i)).toBeInTheDocument();
       expect(
         screen.queryByRole('button', { name: /add the first location/i })
       ).not.toBeInTheDocument();
     });
+
+    test('clearing the search restores the tree', () => {
+      render(<LocationDirectory locations={[region, city, square]} />);
+      fireEvent.change(searchInput(), { target: { value: "King's" } });
+      fireEvent.change(searchInput(), { target: { value: '' } });
+
+      expect(screen.getByText('Beleriand')).toBeInTheDocument();
+      expect(screen.queryByText("King's Square")).not.toBeInTheDocument();
+    });
   });
 
   // -------------------------------------------------------------------------
-  // Type filter
+  // Pills narrow the tree; they do not flatten it
   // -------------------------------------------------------------------------
-  describe('type filter', () => {
+  describe('type and status filters', () => {
     test('should filter locations by type', () => {
-      const locations = [
-        makeLocation('loc-1', 'Silverkeep', { type: 'city' }),
-        makeLocation('loc-2', 'Dark Cave', { type: 'dungeon' }),
-      ];
-      render(<LocationDirectory locations={locations} />);
+      render(
+        <LocationDirectory
+          locations={[
+            makeLocation('loc-1', 'Silverkeep', { type: 'city' }),
+            makeLocation('loc-2', 'Dark Cave', { type: 'dungeon' }),
+          ]}
+        />
+      );
       fireEvent.click(screen.getByRole('button', { name: 'Cities' }));
       expect(screen.getByText('Silverkeep')).toBeInTheDocument();
       expect(screen.queryByText('Dark Cave')).not.toBeInTheDocument();
     });
 
     test('clicking "All" after a type filter restores every location', () => {
-      const locations = [
-        makeLocation('loc-1', 'Silverkeep', { type: 'city' }),
-        makeLocation('loc-2', 'Dark Cave', { type: 'dungeon' }),
-      ];
-      render(<LocationDirectory locations={locations} />);
+      render(
+        <LocationDirectory
+          locations={[
+            makeLocation('loc-1', 'Silverkeep', { type: 'city' }),
+            makeLocation('loc-2', 'Dark Cave', { type: 'dungeon' }),
+          ]}
+        />
+      );
       fireEvent.click(screen.getByRole('button', { name: 'Dungeons' }));
       expect(screen.queryByText('Silverkeep')).not.toBeInTheDocument();
 
@@ -415,17 +536,37 @@ describe('LocationDirectory', () => {
     });
 
     test('marks the active pill as pressed', () => {
-      render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep', { type: 'city' })]} />);
+      render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
       const cities = screen.getByRole('button', { name: 'Cities' });
       expect(cities).toHaveAttribute('aria-pressed', 'false');
       fireEvent.click(cities);
       expect(cities).toHaveAttribute('aria-pressed', 'true');
     });
+
+    test('keeps an ancestor visible, and opens it, to reveal a deep match', () => {
+      // A pill narrows a tree that is still a tree, so the connecting ancestors
+      // have to be both rendered *and* expanded, or the match is unreachable
+      // (#1414 was exactly the two disagreeing).
+      const region = makeLocation('region-1', 'Kingdom of Valor', { status: 'known' });
+      const city = makeLocation('city-1', 'Silverkeep', {
+        parentId: 'region-1',
+        status: 'known',
+      });
+      const building = makeLocation('building-1', 'The Rusty Anchor', {
+        parentId: 'city-1',
+        type: 'building',
+        status: 'visited',
+      });
+      render(<LocationDirectory locations={[region, city, building]} />);
+
+      fireEvent.click(screen.getByRole('button', { name: '1 visited' }));
+
+      expect(collapseTwisty('Kingdom of Valor')).toBeInTheDocument();
+      expect(collapseTwisty('Silverkeep')).toBeInTheDocument();
+      expect(screen.getByText('The Rusty Anchor')).toBeInTheDocument();
+    });
   });
 
-  // -------------------------------------------------------------------------
-  // Status bar — one bar that also filters, replacing the "All Status" dropdown
-  // -------------------------------------------------------------------------
   describe('status bar', () => {
     const known = makeLocation('loc-1', 'Silverkeep', { status: 'known' });
     const explored = makeLocation('loc-2', 'Ironhold', { status: 'explored' });
@@ -433,8 +574,6 @@ describe('LocationDirectory', () => {
 
     test('shows the total charted so far', () => {
       render(<LocationDirectory locations={[known, explored, visited]} />);
-      // Scoped to the h4 total, since the "Locations" group heading's count
-      // badge can render the same digit (3 locations, 3 charted).
       expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('3');
       expect(screen.getByText('charted so far')).toBeInTheDocument();
     });
@@ -452,21 +591,6 @@ describe('LocationDirectory', () => {
       expect(screen.getByRole('button', { name: '0 visited' })).toBeInTheDocument();
     });
 
-    test('should filter by known status', () => {
-      render(<LocationDirectory locations={[known, explored]} />);
-      fireEvent.click(screen.getByRole('button', { name: '1 known' }));
-      expect(screen.getByText('Silverkeep')).toBeInTheDocument();
-      expect(screen.queryByText('Ironhold')).not.toBeInTheDocument();
-    });
-
-    test('should filter by visited status', () => {
-      render(<LocationDirectory locations={[known, explored, visited]} />);
-      fireEvent.click(screen.getByRole('button', { name: '1 visited' }));
-      expect(screen.getByText('Deephaven')).toBeInTheDocument();
-      expect(screen.queryByText('Silverkeep')).not.toBeInTheDocument();
-      expect(screen.queryByText('Ironhold')).not.toBeInTheDocument();
-    });
-
     test('clicking the active band clears the filter', () => {
       render(<LocationDirectory locations={[known, explored]} />);
       const knownBand = () => screen.getByRole('button', { name: '1 known' });
@@ -479,17 +603,16 @@ describe('LocationDirectory', () => {
       expect(knownBand()).toHaveAttribute('aria-pressed', 'false');
       expect(screen.getByText('Ironhold')).toBeInTheDocument();
     });
-  });
 
-  // -------------------------------------------------------------------------
-  // Combined filters
-  // -------------------------------------------------------------------------
-  describe('combined filters', () => {
-    test('should apply search and status filter simultaneously', () => {
-      const knownIronhold = makeLocation('loc-1', 'Ironhold', { status: 'known' });
-      const exploredSilverkeep = makeLocation('loc-2', 'Silverkeep', { status: 'explored' });
-      render(<LocationDirectory locations={[knownIronhold, exploredSilverkeep]} />);
-
+    test('applies search and status together', () => {
+      render(
+        <LocationDirectory
+          locations={[
+            makeLocation('loc-1', 'Ironhold', { status: 'known' }),
+            makeLocation('loc-2', 'Silverkeep', { status: 'explored' }),
+          ]}
+        />
+      );
       fireEvent.change(searchInput(), { target: { value: 'Iron' } });
       fireEvent.click(screen.getByRole('button', { name: '1 known' }));
 
@@ -499,285 +622,62 @@ describe('LocationDirectory', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Hierarchical layout — the main regression risk: flattening parent/child
+  // Dangling parents
   // -------------------------------------------------------------------------
-  describe('hierarchical layout', () => {
-    test('should render parent location', () => {
-      const locations = [makeLocation('parent-1', 'Kingdom of Valor')];
-      render(<LocationDirectory locations={locations} />);
-      expect(screen.getByText('Kingdom of Valor')).toBeInTheDocument();
-    });
-
-    test('renders a top-level location without a sub-location count', () => {
-      const locations = [makeLocation('parent-1', 'Kingdom of Valor')];
-      render(<LocationDirectory locations={locations} />);
-      const row = within(screen.getByRole('button', { name: /Expand Kingdom of Valor/ }));
-      expect(row.queryByText(/sub-location/)).not.toBeInTheDocument();
-    });
-
-    test('advertises how many sub-locations a parent has, singular and plural', () => {
-      const parent = makeLocation('parent-1', 'Kingdom of Valor');
-      const child = makeLocation('child-1', 'Silverkeep', { parentId: 'parent-1' });
-      render(<LocationDirectory locations={[parent, child]} />);
-      const row = within(screen.getByRole('button', { name: /Expand Kingdom of Valor/ }));
-      expect(row.getByText('1 sub-location')).toBeInTheDocument();
-    });
-
-    test('does not render the child until its parent is expanded, then reveals it', () => {
-      const parent = makeLocation('parent-1', 'Kingdom of Valor');
-      const child = makeLocation('child-1', 'Silverkeep', { parentId: 'parent-1' });
-      render(<LocationDirectory locations={[parent, child]} />);
-
-      expect(screen.getByText('Kingdom of Valor')).toBeInTheDocument();
-      expect(screen.queryByText('Silverkeep')).not.toBeInTheDocument();
-
-      fireEvent.click(screen.getByRole('button', { name: /Expand Kingdom of Valor/ }));
-      expect(screen.getByText('Silverkeep')).toBeInTheDocument();
-    });
-
-    test('nests the children under their own group heading, naming the parent', () => {
-      const parent = makeLocation('parent-1', 'Kingdom of Valor');
-      const child = makeLocation('child-1', 'Silverkeep', { parentId: 'parent-1' });
-      render(<LocationDirectory locations={[parent, child]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Kingdom of Valor/ }));
-
-      expect(
-        screen.getByRole('heading', { name: 'Locations in Kingdom of Valor' })
-      ).toBeInTheDocument();
-    });
-
-    test('a child can itself be expanded once revealed, independently of its parent', () => {
-      const parent = makeLocation('parent-1', 'Kingdom of Valor');
-      const child = makeLocation('child-1', 'Silverkeep', { parentId: 'parent-1' });
-      render(<LocationDirectory locations={[parent, child]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Kingdom of Valor/ }));
-      fireEvent.click(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-
-      expect(
-        screen.getByRole('button', { name: /Collapse Silverkeep/ })
-      ).toHaveAttribute('aria-expanded', 'true');
-      expect(
-        screen.getByRole('button', { name: /Collapse Kingdom of Valor/ })
-      ).toHaveAttribute('aria-expanded', 'true');
-    });
-
-    test('preserves multiple levels of nesting', () => {
-      const region = makeLocation('region-1', 'Kingdom of Valor');
-      const city = makeLocation('city-1', 'Silverkeep', { parentId: 'region-1' });
-      const building = makeLocation('building-1', 'The Rusty Anchor', {
-        parentId: 'city-1',
-        type: 'building',
-      });
-      render(<LocationDirectory locations={[region, city, building]} />);
-
-      fireEvent.click(screen.getByRole('button', { name: /Expand Kingdom of Valor/ }));
-      expect(screen.getByText('Silverkeep')).toBeInTheDocument();
-      expect(screen.queryByText('The Rusty Anchor')).not.toBeInTheDocument();
-
-      fireEvent.click(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-      expect(screen.getByText('The Rusty Anchor')).toBeInTheDocument();
-    });
-
-    // REGRESSION TEST for #1414 (previously pinned the defective behaviour;
-    // inverted once the bug was fixed — see the tracker entry for history).
-    //
-    // Root cause was that `locationMatchesFilters`'s `isChild` branch (used by
-    // `renderRows` for every nested level whenever the parent's own type already
-    // satisfies the type filter — i.e. almost always, since typeFilter defaults
-    // to 'all') returned `matchesStatus && matchesSearch` for that node ALONE,
-    // without ever falling through to the descendant-match check the non-child
-    // branch had. The auto-expand `useEffect`, by contrast, always calls with
-    // `isChild=false`, so it correctly marked a two-level-deep match's ancestors
-    // for expansion. The result: a middle ancestor was flagged "should be
-    // expanded" in state, but `renderRows` filtered that same ancestor OUT of
-    // the list it was rendering for its own parent — so the row never appeared,
-    // and the deep match it was meant to reveal was unreachable. The fix lets
-    // the `isChild` branch fall through to the same descendant check the
-    // non-child branch uses, so the two callers agree again.
-    test('a search match nested two levels deep is reachable — the connecting ancestor renders and auto-expands', () => {
-      const region = makeLocation('region-1', 'Kingdom of Valor');
-      const city = makeLocation('city-1', 'Silverkeep', { parentId: 'region-1' });
-      const building = makeLocation('building-1', 'The Rusty Anchor', {
-        parentId: 'city-1',
-        type: 'building',
-      });
-      render(<LocationDirectory locations={[region, city, building]} />);
-
-      fireEvent.change(searchInput(), { target: { value: 'Rusty Anchor' } });
-
-      // The top-level ancestor is found and auto-expands.
-      expect(
-        screen.getByRole('button', { name: /Collapse Kingdom of Valor/ })
-      ).toHaveAttribute('aria-expanded', 'true');
-
-      // The connecting middle ancestor now renders (rather than being filtered
-      // out of its own parent's list) and is itself auto-expanded...
-      expect(
-        screen.getByRole('button', { name: /Collapse Silverkeep/ })
-      ).toHaveAttribute('aria-expanded', 'true');
-
-      // ...which reveals the actual match.
-      expect(screen.getByText('The Rusty Anchor')).toBeInTheDocument();
-    });
-
-    test('a search match nested three levels deep is reachable through every connecting ancestor', () => {
-      const region = makeLocation('region-1', 'Kingdom of Valor');
-      const city = makeLocation('city-1', 'Silverkeep', { parentId: 'region-1' });
-      const district = makeLocation('district-1', 'Old Town', {
-        parentId: 'city-1',
-        type: 'landmark',
-      });
-      const building = makeLocation('building-1', 'The Rusty Anchor', {
-        parentId: 'district-1',
-        type: 'building',
-      });
+  describe('a parentId that names nothing loaded (#303)', () => {
+    test('renders under "Unplaced" rather than vanishing', () => {
       render(
-        <LocationDirectory locations={[region, city, district, building]} />
+        <LocationDirectory
+          locations={[makeLocation('orphan-1', 'Lost Outpost', { parentId: 'nonexistent' })]}
+        />
       );
-
-      fireEvent.change(searchInput(), { target: { value: 'Rusty Anchor' } });
-
-      // Every connecting ancestor down the three-level chain auto-expands...
-      expect(
-        screen.getByRole('button', { name: /Collapse Kingdom of Valor/ })
-      ).toHaveAttribute('aria-expanded', 'true');
-      expect(
-        screen.getByRole('button', { name: /Collapse Silverkeep/ })
-      ).toHaveAttribute('aria-expanded', 'true');
-      expect(
-        screen.getByRole('button', { name: /Collapse Old Town/ })
-      ).toHaveAttribute('aria-expanded', 'true');
-
-      // ...all the way down to the actual match.
-      expect(screen.getByText('The Rusty Anchor')).toBeInTheDocument();
-    });
-
-    test('every location auto-expanded by a filter is actually rendered in the DOM (expander and renderer agree)', () => {
-      // A 3-level chain where only the leaf matches the status filter, mirroring
-      // the #1414 reproduction but asserting the general invariant: whatever
-      // the auto-expand effect decides to expand must be a row that renderRows
-      // actually drew, not one that was filtered out of its own parent's list.
-      const region = makeLocation('region-1', 'Kingdom of Valor', { status: 'known' });
-      const city = makeLocation('city-1', 'Silverkeep', {
-        parentId: 'region-1',
-        status: 'known',
-      });
-      const building = makeLocation('building-1', 'The Rusty Anchor', {
-        parentId: 'city-1',
-        type: 'building',
-        status: 'visited',
-      });
-      render(<LocationDirectory locations={[region, city, building]} />);
-
-      fireEvent.click(screen.getByRole('button', { name: '1 visited' }));
-
-      // Every ancestor that ends up expanded must have a corresponding
-      // "Collapse <name>" toggle actually present in the DOM — i.e. it was
-      // rendered by renderRows, not merely flagged in expandedLocations state
-      // with nothing to show for it.
-      expect(
-        screen.getByRole('button', { name: /Collapse Kingdom of Valor/ })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: /Collapse Silverkeep/ })
-      ).toBeInTheDocument();
-
-      // And the leaf match that motivated the expansion is itself visible.
-      expect(screen.getByText('The Rusty Anchor')).toBeInTheDocument();
-    });
-
-    test('a status match nested under a parent keeps the parent visible via descendant match', () => {
-      const parent = makeLocation('parent-1', 'Kingdom of Valor', { status: 'known' });
-      const child = makeLocation('child-1', 'Silverkeep', {
-        parentId: 'parent-1',
-        status: 'visited',
-      });
-      render(<LocationDirectory locations={[parent, child]} />);
-
-      fireEvent.click(screen.getByRole('button', { name: '1 visited' }));
-
-      // The parent itself is 'known', not 'visited', but stays visible because its
-      // child matches — and gets auto-expanded to reveal that child.
-      expect(screen.getByText('Kingdom of Valor')).toBeInTheDocument();
-      expect(screen.getByText('Silverkeep')).toBeInTheDocument();
-    });
-
-    test('a child keeps showing under a parent that matches the active type filter, even if its own type differs', () => {
-      const parentCity = makeLocation('parent-1', 'Silverkeep', { type: 'city' });
-      const childBuilding = makeLocation('child-1', 'The Rusty Anchor', {
-        parentId: 'parent-1',
-        type: 'building',
-      });
-      render(<LocationDirectory locations={[parentCity, childBuilding]} />);
-
-      fireEvent.click(screen.getByRole('button', { name: 'Cities' }));
-      fireEvent.click(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-
-      expect(screen.getByText('The Rusty Anchor')).toBeInTheDocument();
-    });
-
-    test('expands a highlighted location and its ancestors from a deep link', () => {
-      const parent = makeLocation('parent-1', 'Kingdom of Valor');
-      const child = makeLocation('child-1', 'Silverkeep', { parentId: 'parent-1' });
-      setupMocks({ uid: 'user-1' }, { highlight: 'child-1' });
-      render(<LocationDirectory locations={[parent, child]} />);
-
-      expect(
-        screen.getByRole('button', { name: /Collapse Kingdom of Valor/ })
-      ).toHaveAttribute('aria-expanded', 'true');
-      expect(
-        screen.getByRole('button', { name: /Collapse Silverkeep/ })
-      ).toHaveAttribute('aria-expanded', 'true');
-    });
-
-    // ------------------------------------------------------------------
-    // Unresolvable parentId ("orphans") — a dangling parentId (e.g. #303,
-    // a parent renamed or deleted out from under a child) used to leave
-    // the location bucketed under a hierarchy key nobody ever visits: it
-    // rendered nowhere, wasn't counted in any group, and didn't trigger
-    // the empty state, while still counting toward the status bar's total.
-    // ------------------------------------------------------------------
-    test('a location whose parentId is unresolvable renders under "Unplaced"', () => {
-      const orphan = makeLocation('orphan-1', 'Lost Outpost', { parentId: 'nonexistent-parent' });
-      render(<LocationDirectory locations={[orphan]} />);
-
       expect(screen.getByRole('heading', { name: 'Unplaced' })).toBeInTheDocument();
       expect(screen.getByText('Lost Outpost')).toBeInTheDocument();
     });
 
-    test('an orphan\'s own children still nest under it when it is expanded', () => {
-      const orphan = makeLocation('orphan-1', 'Lost Outpost', { parentId: 'nonexistent-parent' });
-      const child = makeLocation('child-1', 'Cellar', { parentId: 'orphan-1' });
-      render(<LocationDirectory locations={[orphan, child]} />);
-
+    test("an orphan's own children still nest under it", () => {
+      render(
+        <LocationDirectory
+          locations={[
+            makeLocation('orphan-1', 'Lost Outpost', { parentId: 'nonexistent' }),
+            makeLocation('child-1', 'Cellar', { parentId: 'orphan-1' }),
+          ]}
+        />
+      );
       expect(screen.queryByText('Cellar')).not.toBeInTheDocument();
-
-      fireEvent.click(screen.getByRole('button', { name: /Expand Lost Outpost/ }));
-
+      openTwisty('Lost Outpost');
       expect(screen.getByText('Cellar')).toBeInTheDocument();
-      expect(
-        screen.getByRole('heading', { name: 'Locations in Lost Outpost' })
-      ).toBeInTheDocument();
     });
 
     test('root rows and unplaced rows together account for every location', () => {
-      const rootLoc = makeLocation('root-1', 'Silverkeep');
-      const orphan = makeLocation('orphan-1', 'Lost Outpost', { parentId: 'nonexistent-parent' });
-      render(<LocationDirectory locations={[rootLoc, orphan]} />);
+      render(
+        <LocationDirectory
+          locations={[
+            makeLocation('root-1', 'Silverkeep'),
+            makeLocation('orphan-1', 'Lost Outpost', { parentId: 'nonexistent' }),
+          ]}
+        />
+      );
+      const group = (name: string) =>
+        screen.getByRole('heading', { name }).closest('section') as HTMLElement;
 
-      expect(screen.getByRole('heading', { name: 'Locations' })).toBeInTheDocument();
-      const locationsGroup = screen.getByRole('heading', { name: 'Locations' }).closest('section');
-      expect(within(locationsGroup as HTMLElement).getByText('1')).toBeInTheDocument();
-
-      const unplacedGroup = screen.getByRole('heading', { name: 'Unplaced' }).closest('section');
-      expect(within(unplacedGroup as HTMLElement).getByText('1')).toBeInTheDocument();
-
-      // Every location supplied is visible somewhere — none silently dropped.
-      expect(screen.getByText('Silverkeep')).toBeInTheDocument();
-      expect(screen.getByText('Lost Outpost')).toBeInTheDocument();
-
-      // The status bar's total still reflects both locations combined.
+      expect(within(group('Locations')).getByText('1')).toBeInTheDocument();
+      expect(within(group('Unplaced')).getByText('1')).toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 4 })).toHaveTextContent('2');
+    });
+
+    test('a location whose id is "root" does not adopt the top level', () => {
+      // The hierarchy map this replaces keyed its buckets by parentId with
+      // 'root' as the sentinel for "no parent".
+      render(
+        <LocationDirectory
+          locations={[makeLocation('root', 'Root Cellar'), makeLocation('other', 'Elsewhere')]}
+        />
+      );
+      expect(
+        screen.queryByRole('button', { name: /what is inside Root Cellar/ })
+      ).not.toBeInTheDocument();
+      expect(screen.getByText('Elsewhere')).toBeInTheDocument();
     });
 
     test('the empty state still appears when there are genuinely no locations', () => {
@@ -788,9 +688,6 @@ describe('LocationDirectory', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Prop updates
-  // -------------------------------------------------------------------------
   describe('prop updates', () => {
     test('should update location list when locations prop changes', () => {
       const { rerender } = render(
@@ -803,60 +700,27 @@ describe('LocationDirectory', () => {
       expect(screen.getByText('Ironhold')).toBeInTheDocument();
     });
   });
-
-  // -------------------------------------------------------------------------
-  // Row anatomy — one encoding per fact
-  // -------------------------------------------------------------------------
-  describe('row anatomy', () => {
-    const city = makeLocation('loc-anatomy', 'Silverkeep', {
-      type: 'city',
-      status: 'visited',
-    });
-
-    test('carries exactly one identity mark, derived from the id', () => {
-      render(<LocationDirectory locations={[city]} />);
-      const row = within(screen.getByRole('button', { name: /Expand Silverkeep/ }));
-      const marks = row.getAllByTestId('entity-sigil');
-      expect(marks).toHaveLength(1);
-      expect(marks[0]).toHaveTextContent('S');
-    });
-
-    test('states the type once, as a word', () => {
-      // It was a chip filled from the entity palette -- the same palette the
-      // mark draws from -- plus a type-derived icon beside the name. Three
-      // encodings of one fact, two of them colour and shape.
-      render(<LocationDirectory locations={[city]} />);
-      const row = screen.getByRole('button', { name: /Expand Silverkeep/ });
-      expect(within(row).getByText('City')).toBeInTheDocument();
-      expect(row.querySelector('.location-type-city')).toBeNull();
-    });
-
-    test('states status as a word and nothing else', () => {
-      render(<LocationDirectory locations={[city]} />);
-      const row = screen.getByRole('button', { name: /Expand Silverkeep/ });
-      expect(within(row).getByText('Visited')).toBeInTheDocument();
-      expect(row.querySelectorAll('.bg-status-completed')).toHaveLength(0);
-      expect(row.querySelectorAll('.bg-status-general')).toHaveLength(0);
-      expect(row.querySelectorAll('.bg-status-unknown')).toHaveLength(0);
-    });
-  });
-
 });
 
 // ---------------------------------------------------------------------------
-// PR 15.3 -- the knowledge ladder, the highlight contract and the cycle guard
+// The knowledge ladder, the highlight contract, and the cycle guard
 // ---------------------------------------------------------------------------
 
-describe('LocationDirectory — 15.3', () => {
+describe('LocationDirectory — the knowledge ladder and ?highlight=', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     setupMocks();
   });
 
+  const withChild = (id: string, name: string, overrides: Partial<Location> = {}) => [
+    makeLocation(id, name, overrides),
+    makeLocation(`${id}-in`, 'Something inside', { parentId: id }),
+  ];
+
   describe('the knowledge ladder', () => {
     it('changes the knowledge step from the row, in one click', async () => {
-      render(<LocationDirectory locations={[makeLocation('l1', 'Rivendell')]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Rivendell/ }));
+      render(<LocationDirectory locations={withChild('l1', 'Rivendell')} />);
+      openTwisty('Rivendell');
 
       const ladder = screen.getByRole('group', { name: 'Knowledge of Rivendell' });
       fireEvent.click(within(ladder).getByRole('button', { name: 'Visited' }));
@@ -867,8 +731,8 @@ describe('LocationDirectory — 15.3', () => {
     });
 
     it('offers buttons rather than a dropdown, each a word', () => {
-      render(<LocationDirectory locations={[makeLocation('l1', 'Rivendell')]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Rivendell/ }));
+      render(<LocationDirectory locations={withChild('l1', 'Rivendell')} />);
+      openTwisty('Rivendell');
 
       const ladder = screen.getByRole('group', { name: 'Knowledge of Rivendell' });
       ['Known', 'Explored', 'Visited'].forEach((label) => {
@@ -880,7 +744,7 @@ describe('LocationDirectory — 15.3', () => {
 
   describe('?highlight= (T014)', () => {
     it('matches by id', () => {
-      setupMocks({ uid: 'user-1' }, { highlight: 'l2' });
+      setupMocks({ highlight: 'l2' });
       const { container } = render(
         <LocationDirectory
           locations={[makeLocation('l1', 'Rivendell'), makeLocation('l2', 'Gondolin')]}
@@ -890,7 +754,7 @@ describe('LocationDirectory — 15.3', () => {
     });
 
     it('no longer matches by name, because a name does not survive a rename', () => {
-      setupMocks({ uid: 'user-1' }, { highlight: 'Gondolin' });
+      setupMocks({ highlight: 'Gondolin' });
       const { container } = render(
         <LocationDirectory locations={[makeLocation('l2', 'Gondolin')]} />
       );
@@ -898,9 +762,7 @@ describe('LocationDirectory — 15.3', () => {
     });
 
     it('reveals the ancestors needed to see the target', () => {
-      // Note the ids: the hierarchy map uses the literal key `root` for the
-      // top level, so a location whose *id* is "root" collides with it.
-      setupMocks({ uid: 'user-1' }, { highlight: 'kings-square' });
+      setupMocks({ highlight: 'kings-square' });
       render(
         <LocationDirectory
           locations={[
@@ -910,58 +772,46 @@ describe('LocationDirectory — 15.3', () => {
           ]}
         />
       );
-      // Every ancestor is open, so the target is actually on screen.
       expect(screen.getByText("King's Square")).toBeInTheDocument();
     });
   });
 
   describe('cycle safety (PERF-11 / T033)', () => {
+    // Every assertion here is really an assertion that the render *returned*.
+    // Remove a visited set and the suite hangs rather than failing.
+    const cycle = [
+      makeLocation('a', 'Alpha', { parentId: 'b' }),
+      makeLocation('b', 'Beta', { parentId: 'a' }),
+    ];
+
     it('terminates when the highlight target sits inside a parent cycle', () => {
-      // Asserted, not eyeballed: without the visited set the ancestor walk
-      // never returns and this render times the suite out. A cyclic pair is
-      // unreachable from the tree's root, so nothing is expected on screen --
-      // the assertion is that we got here at all.
-      setupMocks({ uid: 'user-1' }, { highlight: 'a' });
-      render(
-        <LocationDirectory
-          locations={[
-            makeLocation('a', 'Alpha', { parentId: 'b' }),
-            makeLocation('b', 'Beta', { parentId: 'a' }),
-          ]}
-        />
-      );
+      setupMocks({ highlight: 'a' });
+      render(<LocationDirectory locations={cycle} />);
       expect(searchInput()).toBeInTheDocument();
     });
 
     it('survives a cycle while filtering, which walks the tree a second way', () => {
-      render(
-        <LocationDirectory
-          locations={[
-            makeLocation('a', 'Alpha', { parentId: 'b' }),
-            makeLocation('b', 'Beta', { parentId: 'a' }),
-          ]}
-        />
-      );
+      render(<LocationDirectory locations={cycle} />);
       fireEvent.change(searchInput(), { target: { value: 'Alpha' } });
       expect(searchInput()).toHaveValue('Alpha');
     });
-  });
 
-  describe('note dates (T001)', () => {
-    it('renders a stored ISO timestamp as a date, not as a timestamp', () => {
+    it('terminates while rendering a cycle reached from a real root', () => {
+      // The tree render itself is the third walk, and the one `Move elsewhere`
+      // can now feed: a root whose subtree contains a pair pointing at each
+      // other.
       render(
         <LocationDirectory
           locations={[
-            makeLocation('l1', 'Rivendell', {
-              notes: [{ date: '2025-05-31T19:27:30.387Z', text: 'A council was held.' }],
-            }),
+            makeLocation('root-1', 'Beleriand'),
+            makeLocation('x', 'Ex', { parentId: 'root-1' }),
+            makeLocation('y', 'Why', { parentId: 'x' }),
+            makeLocation('z', 'Zed', { parentId: 'y' }),
           ]}
         />
       );
-      fireEvent.click(screen.getByRole('button', { name: /Expand Rivendell/ }));
-
-      expect(screen.getByText('2025-05-31')).toBeInTheDocument();
-      expect(screen.queryByText('2025-05-31T19:27:30.387Z')).toBeNull();
+      openTwisty('Beleriand');
+      expect(screen.getByText('Ex')).toBeInTheDocument();
     });
   });
 });
