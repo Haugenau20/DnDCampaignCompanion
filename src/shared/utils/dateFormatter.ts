@@ -93,3 +93,30 @@ export const convertFirestoreTimestamp = (firestoreTimestamp: any): Date | null 
     
     return convertedDate.toLocaleString();
   };
+/**
+ * A note's date, rendered as a date.
+ *
+ * `NPCNote.date` and `LocationNote.date` are plain strings with no agreed
+ * shape: the create forms write `YYYY-MM-DD`, the sample-data generator writes
+ * a full ISO timestamp, and each consumer used to print whatever it was
+ * handed. Two directories printed the raw value, so a row showed
+ * `2025-05-31T19:27:30.387Z` while the NPC detail page rendered the same value
+ * properly (T001).
+ *
+ * This is the display half of that entry, lifted from `NPCDetailPage`'s own
+ * `formatNoteDate`. **The stored shape is not fixed here** -- T001 records that
+ * agreeing it is the actual job, and doing that is a data change, not a
+ * rendering one.
+ *
+ * A value that cannot be parsed is returned untouched: a date the reader
+ * cannot read is not a date, and showing the raw string is more honest than
+ * inventing one.
+ */
+export const formatNoteDate = (value: string): string => {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toISOString().split('T')[0];
+};

@@ -5,6 +5,7 @@ import {
   getRelativeTime,
   formatDisplayDate,
   formatDateTime,
+  formatNoteDate,
 } from '../dateFormatter';
 
 describe('dateFormatter', () => {
@@ -307,5 +308,34 @@ describe('formatDisplayDate (additional cases merged from layouts copy)', () => 
     const fromString = formatDisplayDate(date.toISOString());
     // Both should produce the same calendar date representation
     expect(fromDate).toBe(fromString);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatNoteDate (T001's display half, PR 15.3)
+// ---------------------------------------------------------------------------
+
+describe('formatNoteDate', () => {
+  it('renders a full ISO timestamp as a date', () => {
+    // The exact string T001 reports a row printing raw.
+    expect(formatNoteDate('2025-05-31T19:27:30.387Z')).toBe('2025-05-31');
+  });
+
+  it('leaves an already-short date alone', () => {
+    expect(formatNoteDate('2025-05-31')).toBe('2025-05-31');
+  });
+
+  it('returns an unparseable value untouched rather than inventing one', () => {
+    expect(formatNoteDate('last Tuesday')).toBe('last Tuesday');
+  });
+
+  it('renders an empty value as empty', () => {
+    expect(formatNoteDate('')).toBe('');
+  });
+
+  it('never returns a string containing a time', () => {
+    ['2025-05-31T19:27:30.387Z', '2025-05-31', '2024-12-01T00:00:00Z'].forEach((value) => {
+      expect(formatNoteDate(value)).not.toMatch(/T\d{2}:/);
+    });
   });
 });

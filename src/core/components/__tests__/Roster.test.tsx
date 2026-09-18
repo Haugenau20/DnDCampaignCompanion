@@ -1,6 +1,7 @@
 // src/core/components/__tests__/Roster.test.tsx
 import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -881,5 +882,71 @@ describe('RosterRow identity mark', () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => renderRow({ entityId: '' })).toThrow(/entityId is required/);
     spy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// RosterGroup -- the collapse affordance (T015, PR 15.3)
+// ---------------------------------------------------------------------------
+
+describe('RosterGroup collapse', () => {
+  it('does not collapse unless asked to', () => {
+    render(
+      <RosterGroup title="Rivendell" count={2}>
+        <div>a row</div>
+      </RosterGroup>
+    );
+    // A location group in the NPC list is how the list is organised; hiding it
+    // would hide the list.
+    expect(screen.queryByRole('button', { name: /Rivendell/ })).toBeNull();
+    expect(screen.getByText('a row')).toBeVisible();
+  });
+
+  it('makes the whole heading the control, so the target is not a glyph', () => {
+    render(
+      <RosterGroup title="Completed" count={3} collapsible>
+        <div>a row</div>
+      </RosterGroup>
+    );
+    const trigger = screen.getByRole('button', { name: /Completed/ });
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(within(trigger).getByRole('heading', { name: 'Completed' })).toBeInTheDocument();
+  });
+
+  it('starts collapsed when asked, and still says how many it holds', () => {
+    render(
+      <RosterGroup title="Completed" count={3} collapsible defaultCollapsed>
+        <div>a row</div>
+      </RosterGroup>
+    );
+    expect(screen.getByRole('button', { name: /Completed/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByText('a row')).not.toBeVisible();
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  it('opens and closes on click', async () => {
+    render(
+      <RosterGroup title="Completed" count={3} collapsible defaultCollapsed>
+        <div>a row</div>
+      </RosterGroup>
+    );
+    const trigger = screen.getByRole('button', { name: /Completed/ });
+
+    await userEvent.click(trigger);
+    expect(screen.getByText('a row')).toBeVisible();
+
+    await userEvent.click(trigger);
+    expect(screen.getByText('a row')).not.toBeVisible();
+  });
+
+  it('points the control at the rows it governs', () => {
+    render(
+      <RosterGroup title="Completed" count={1} collapsible>
+        <div>a row</div>
+      </RosterGroup>
+    );
+    const trigger = screen.getByRole('button', { name: /Completed/ });
+    const controlled = document.getElementById(trigger.getAttribute('aria-controls')!);
+    expect(controlled).toContainElement(screen.getByText('a row'));
   });
 });

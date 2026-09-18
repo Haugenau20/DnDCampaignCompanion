@@ -15,6 +15,7 @@ import {
 } from 'features/campaign-entities';
 import { useUser } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
+import { formatNoteDate } from 'shared/utils/dateFormatter';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import { usePageGate, GatedContent } from 'shared/components/gated';
@@ -58,22 +59,6 @@ const DISPOSITION_CLASS: Record<string, string> = {
 const capitalise = (value: string): string =>
   value.charAt(0).toUpperCase() + value.slice(1);
 
-/**
- * A note's date, as a date.
- *
- * `NPCNote.date` is a plain string with no agreed shape: the form writes
- * `YYYY-MM-DD`, while the sample-data generator writes a full ISO timestamp.
- * A date the reader cannot read is not a date, so the page normalises what it
- * can and returns anything unparseable untouched -- the same principle as an
- * unresolved location reference: show it as itself rather than invent a value.
- */
-const formatNoteDate = (value: string): string => {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toISOString().split('T')[0];
-};
 
 /** The uppercase micro-label every field on this page is introduced by. */
 const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (

@@ -1,7 +1,7 @@
 ﻿// src/features/campaign-entities/npcs/components/__tests__/NPCDirectory.test.tsx
 
 import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import NPCDirectory from '../NPCDirectory';
 import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs/types';
 
@@ -56,6 +56,9 @@ const mockGetCurrentQueryParams = jest.fn(() => ({}));
 const { useNavigation } = require('shared/context/NavigationContext');
 const { useQuests } = require('../../../quests/context/QuestContext');
 const { useNPCs } = require('features/campaign-entities/npcs/context/NPCContext');
+
+// `15-3` puts stance on the row, using the mutation the context already had.
+const mockUpdateNPCRelationship = jest.fn().mockResolvedValue(undefined);
 const { useAuth } = require('@/features/user-management');
 
 function setupMocks(
@@ -74,6 +77,7 @@ function setupMocks(
   (useNPCs as jest.Mock).mockReturnValue({
     updateNPCNote: jest.fn().mockResolvedValue(undefined),
     deleteNPC: jest.fn().mockResolvedValue(undefined),
+    updateNPCRelationship: mockUpdateNPCRelationship,
   });
 }
 
@@ -636,4 +640,93 @@ describe('NPCDirectory', () => {
     });
   });
 
+});
+
+
+// ---------------------------------------------------------------------------
+// PR 15.3 -- stance from the row, the highlight contract and note dates
+// ---------------------------------------------------------------------------
+
+describe('NPCDirectory — 15.3', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupMocks();
+  });
+
+  describe('the stance ladder', () => {
+    it('changes a stance from the row, in one click', async () => {
+      render(<NPCDirectory npcs={[aldric]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Aldric/ }));
+
+      const ladder = screen.getByRole('group', { name: 'Stance of Aldric' });
+      fireEvent.click(within(ladder).getByRole('button', { name: 'Hostile' }));
+
+      await waitFor(() =>
+        expect(mockUpdateNPCRelationship).toHaveBeenCalledWith('npc-1', 'hostile')
+      );
+    });
+
+    it('offers four steps, each a word, and marks the current one', () => {
+      render(<NPCDirectory npcs={[aldric]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Aldric/ }));
+
+      const ladder = screen.getByRole('group', { name: 'Stance of Aldric' });
+      ['Friendly', 'Neutral', 'Hostile', 'Unknown'].forEach((label) => {
+        expect(within(ladder).getByRole('button', { name: label })).toBeInTheDocument();
+      });
+      expect(within(ladder).getByRole('button', { name: 'Friendly' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+    });
+
+    it('does not claim the change before the write resolves', async () => {
+      let resolve!: () => void;
+      mockUpdateNPCRelationship.mockImplementationOnce(
+        () => new Promise<void>((r) => { resolve = r; })
+      );
+      render(<NPCDirectory npcs={[aldric]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Aldric/ }));
+
+      const ladder = screen.getByRole('group', { name: 'Stance of Aldric' });
+      fireEvent.click(within(ladder).getByRole('button', { name: 'Hostile' }));
+
+      expect(within(ladder).getByRole('button', { name: 'Friendly' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(screen.getByText('Saving…')).toBeInTheDocument();
+      resolve();
+      await waitFor(() => expect(screen.queryByText('Saving…')).not.toBeInTheDocument());
+    });
+  });
+
+  describe('?highlight= (T014)', () => {
+    it('opens the target row, so a link lands on something readable', () => {
+      setupMocks({ uid: 'user-1' }, { highlight: 'npc-1' });
+      render(<NPCDirectory npcs={[aldric, mira]} />);
+      expect(screen.getByRole('button', { name: /Collapse Aldric/ })).toBeInTheDocument();
+    });
+
+    it('no longer matches by name', () => {
+      setupMocks({ uid: 'user-1' }, { highlight: 'Aldric' });
+      const { container } = render(<NPCDirectory npcs={[aldric]} />);
+      expect(container.querySelector('#npc-npc-1')?.className).not.toContain('highlighted-item');
+    });
+  });
+
+  describe('note dates (T001)', () => {
+    it('renders a stored ISO timestamp as a date', () => {
+      const withNote = makeNPC({
+        id: 'npc-9',
+        name: 'Dated',
+        notes: [{ date: '2025-05-31T19:27:30.387Z', text: 'Spoke at the council.' }],
+      });
+      render(<NPCDirectory npcs={[withNote]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Dated/ }));
+
+      expect(screen.getByText('2025-05-31')).toBeInTheDocument();
+      expect(screen.queryByText('2025-05-31T19:27:30.387Z')).toBeNull();
+    });
+  });
 });

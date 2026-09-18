@@ -1,7 +1,7 @@
 // src/features/campaign-entities/rumors/components/__tests__/RumorDirectory.test.tsx
 
 import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import RumorDirectory from '../RumorDirectory';
 import { Rumor, RumorStatus, SourceType } from '../../types';
 
@@ -632,4 +632,59 @@ describe('RumorDirectory', () => {
     });
   });
 
+});
+
+
+// ---------------------------------------------------------------------------
+// PR 15.3 -- the knowledge ladder and the highlight contract
+// ---------------------------------------------------------------------------
+
+describe('RumorDirectory — 15.3', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupMocks();
+  });
+
+  describe('the knowledge ladder', () => {
+    it('resolves a rumour from the row, in one click', async () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Missing merchant/ }));
+
+      const ladder = screen.getByRole('group', { name: 'Status of Missing merchant' });
+      fireEvent.click(within(ladder).getByRole('button', { name: 'Confirmed' }));
+
+      await waitFor(() =>
+        expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r2', 'confirmed')
+      );
+    });
+
+    it('says "Disproved", never "False"', () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Missing merchant/ }));
+
+      const ladder = screen.getByRole('group', { name: 'Status of Missing merchant' });
+      expect(within(ladder).getByRole('button', { name: 'Disproved' })).toBeInTheDocument();
+      expect(within(ladder).queryByRole('button', { name: 'False' })).toBeNull();
+    });
+
+    it('writes the stored value behind the readable label', async () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Missing merchant/ }));
+
+      const ladder = screen.getByRole('group', { name: 'Status of Missing merchant' });
+      fireEvent.click(within(ladder).getByRole('button', { name: 'Disproved' }));
+
+      await waitFor(() => expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r2', 'false'));
+    });
+  });
+
+  describe('?highlight= (T014)', () => {
+    it('opens the target row, which it never used to do', () => {
+      setupMocks({ uid: 'user-1' }, { highlight: 'r2' }, [r1, r2]);
+      render(<RumorDirectory rumors={[r1, r2]} />);
+      expect(
+        screen.getByRole('button', { name: /Collapse Missing merchant/ })
+      ).toBeInTheDocument();
+    });
+  });
 });

@@ -1,11 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { NPC } from '../types';
+import { NPC, NPCRelationship } from '../types';
 import { useLocations } from '../../locations/context/LocationContext';
+import { useNPCs } from '../context/NPCContext';
 import { resolveLocationName } from '../../locations/utils/location-display';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import { Plus } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
+import useHighlightTarget from 'shared/hooks/useHighlightTarget';
+import StateLadder from 'shared/components/row-controls/StateLadder';
+import { formatNoteDate } from 'shared/utils/dateFormatter';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -83,6 +87,21 @@ const STATUS_TONE: Partial<Record<string, RosterStatusTone>> = {
   deceased: 'valence-3',
 };
 
+/**
+ * Stance: the only valenced thing in the NPC list, and always also a word
+ * (design language §2).
+ */
+const STANCE_OPTIONS: Array<{
+  value: NPCRelationship;
+  label: string;
+  selectedClassName?: string;
+}> = [
+  { value: 'friendly', label: 'Friendly', selectedClassName: 'disposition-friendly' },
+  { value: 'neutral', label: 'Neutral', selectedClassName: 'disposition-neutral' },
+  { value: 'hostile', label: 'Hostile', selectedClassName: 'disposition-hostile' },
+  { value: 'unknown', label: 'Unknown', selectedClassName: 'disposition-unknown' },
+];
+
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   npcs: initialNpcs,
   isLoading = false,
@@ -94,14 +113,12 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all');
-  const [highlightedNpcId, setHighlightedNpcId] = useState<string | null>(null);
   const [expandedNpcId, setExpandedNpcId] = useState<string | null>(null);
   const { locations } = useLocations();
+  const { updateNPCRelationship } = useNPCs();
   const { navigateToPage, createPath } = useNavigation();
 
-  // Get URL search params for highlighted NPC
   const { getCurrentQueryParams } = useNavigation();
-  const { highlight: highlightId } = getCurrentQueryParams();
 
   // Update when props change
   useEffect(() => {
@@ -121,35 +138,31 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
 
   // Handle location click
   const handleLocationClick = (location: string) => {
-    navigateToPage(createPath('/locations', {}, { highlight: location }));
+    // `?highlight=` matches by id (T014), so the link has to carry one. The
+    // stored value may already be an id, or the free text a player wrote.
+    const match = locations.find(
+      (loc) => loc.id === location || loc.name.toLowerCase() === location.toLowerCase()
+    );
+    navigateToPage(createPath('/locations', {}, { highlight: match?.id ?? location }));
   };
 
-  // Handle highlighted NPC from URL
-  useEffect(() => {
-    if (highlightId) {
-      setHighlightedNpcId(highlightId);
-      // Open the highlighted entry, so arriving from a link shows its detail.
-      setExpandedNpcId(highlightId);
-
-      // Deliberately no location filtering here. Arriving from a link used to
-      // set locationFilter to the target's location, which silently hid every
-      // other group and explained itself only through a small "Clear location:"
-      // ghost button. The roster already groups by location, so the target's
-      // group is visually separated anyway — highlighting, expanding and
-      // scrolling is the whole job. RumorDirectory reaches the same conclusion
-      // for the same reason ("Location is deliberately not part of this filter
-      // set — see the grouping rationale below").
-      const highlightedNpc = npcs.find(npc => npc.id === highlightId);
-      if (highlightedNpc) {
-        setTimeout(() => {
-          const element = document.getElementById(`npc-${highlightId}`);
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }, 100);
-      }
-    }
-  }, [highlightId, npcs]);
+  /**
+   * T014: one hook, four consumers.
+   *
+   * Deliberately no location filtering here. Arriving from a link used to set
+   * `locationFilter` to the target's location, which silently hid every other
+   * group and explained itself only through a small "Clear location:" ghost
+   * button. The roster already groups by location, so the target's group is
+   * visually separated anyway -- highlighting, expanding and scrolling is the
+   * whole job.
+   */
+  const { highlightedId: highlightedNpcId } = useHighlightTarget({
+    items: npcs,
+    highlight: getCurrentQueryParams().highlight,
+    idOf: (npc) => npc.id,
+    domIdPrefix: 'npc',
+    onReveal: ([npcId]) => setExpandedNpcId(npcId),
+  });
 
   // Status counts drive the one bar that replaced four stat cards
   const statusSegments: RosterSegment[] = useMemo(() => {
@@ -278,6 +291,23 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                             ) : undefined}
                           </RosterField>
 
+                          {/*
+                            Stance, changed from the row in one click. It is the
+                            field that changes most and the one people currently
+                            open a whole form for (S6). Presence -- deceased --
+                            is a different thing and stays where it is: muted ink
+                            and a strike, never a valenced step on this ladder.
+                          */}
+                          <StateLadder
+                            label="Stance"
+                            options={STANCE_OPTIONS}
+                            value={npc.relationship}
+                            ariaLabel={`Stance of ${npc.name}`}
+                            onChange={(relationship) =>
+                              updateNPCRelationship(npc.id, relationship)
+                            }
+                          />
+
                           <RosterField label="Notes" emptyText="No notes yet">
                             {npc.notes?.length ? (
                               <div className="flex flex-col gap-2">
@@ -291,7 +321,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                                       color="muted"
                                       className="text-xs whitespace-nowrap"
                                     >
-                                      {note.date}
+                                      {formatNoteDate(note.date)}
                                     </Typography>
                                     <Typography variant="body-sm">{note.text}</Typography>
                                   </div>

@@ -1,5 +1,5 @@
 // src/features/campaign-entities/quests/components/QuestDirectory.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Quest, QuestStatus } from '../types';
 import { useQuests } from '../context/QuestContext';
 import { useNPCs } from '../../npcs/context/NPCContext';
@@ -11,6 +11,8 @@ import Typography from '../../../../core/components/Typography';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import { useNavigation } from 'shared/hooks/useNavigation';
 import clsx from 'clsx';
+import useHighlightTarget from 'shared/hooks/useHighlightTarget';
+import QuestRowSummary from './QuestRowSummary';
 import { MapPin, Edit, Trash2, Users, Plus } from 'lucide-react';
 import {
   RosterStatusBar,
@@ -119,12 +121,20 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
   quests,
   isLoading = false,
 }) => {
-  const { deleteQuest } = useQuests();
+  const { deleteQuest, updateQuest, updateQuestObjective } = useQuests();
   const { getNPCById } = useNPCs();
   const { locations } = useLocations();
   const { user } = useAuth();
   const { navigateToPage, createPath, getCurrentQueryParams } = useNavigation();
-  const { highlight: highlightedQuestId } = getCurrentQueryParams();
+  // T014: one hook, four consumers. This directory used to set a prop and do
+  // nothing else, so a highlighted quest could sit off screen entirely.
+  const { highlightedId: highlightedQuestId } = useHighlightTarget({
+    items: quests,
+    highlight: getCurrentQueryParams().highlight,
+    idOf: (quest) => quest.id,
+    domIdPrefix: 'quest',
+    onReveal: ([questId]) => setExpandedQuestId(questId),
+  });
 
   const [statusFilter, setStatusFilter] = useState<QuestStatus | 'all'>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
@@ -242,11 +252,25 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
     })).filter(group => group.quests.length > 0);
   }, [filteredQuests]);
 
+  /** An NPC id as a name and the line that tells two of them apart. */
+  const npcFor = useCallback(
+    (npcId: string) => {
+      const npc = getNPCById(npcId);
+      if (!npc) return null;
+      return { name: npc.name, line: npc.occupation || '' };
+    },
+    [getNPCById]
+  );
+
   const locationExists = (locationName: string): boolean =>
     locations.some(loc => loc.name.toLowerCase() === locationName.toLowerCase());
 
   const handleOpenLocation = (locationName: string) => {
-    navigateToPage(createPath('/locations', {}, { highlight: locationName }));
+    // `?highlight=` matches by id now (T014), so the link has to carry one.
+    const match = locations.find(
+      (loc) => loc.name.toLowerCase() === locationName.toLowerCase()
+    );
+    navigateToPage(createPath('/locations', {}, { highlight: match?.id ?? locationName }));
   };
 
   const handleDeleteConfirm = async () => {
@@ -289,7 +313,16 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
       {/* Quest roster by status */}
       {groupedQuests.length > 0 ? (
         groupedQuests.map(group => (
-          <RosterGroup key={group.key} title={group.title} count={group.quests.length}>
+          <RosterGroup
+            key={group.key}
+            title={group.title}
+            count={group.quests.length}
+            // T015: completed and failed quests are history, not work. They
+            // stay reachable and stay counted; they stop taking the top of the
+            // list.
+            collapsible={group.key === 'completed' || group.key === 'failed'}
+            defaultCollapsed={group.key === 'completed' || group.key === 'failed'}
+          >
             {group.quests.map((quest, index) => {
               const isExpanded = expandedQuestId === quest.id;
               const completedObjectives = quest.objectives.filter(obj => obj.completed).length;
@@ -308,46 +341,23 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                   toggleLabel={quest.title}
                   onToggle={() => setExpandedQuestId(isExpanded ? null : quest.id)}
                   expandedContent={
-                    <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-7 pt-4">
-                      <div className="flex flex-col gap-4">
-                        <RosterField label="Description">
-                          <Typography variant="body-sm">{quest.description}</Typography>
-                        </RosterField>
-
+                    <QuestRowSummary
+                      quest={quest}
+                      npcFor={npcFor}
+                      onToggleObjective={(objectiveId, completed) =>
+                        updateQuestObjective(quest.id, objectiveId, completed)
+                      }
+                      onChangeStatus={(status) => updateQuest({ ...quest, status })}
+                      onOpenNPC={(npcId) =>
+                        navigateToPage(createPath('/npcs', {}, { highlight: npcId }))
+                      }
+                      prep={
+                        <>
                         <RosterField label="Background" emptyText="No background written yet">
                           {quest.background ? (
                             <Typography variant="body-sm">{quest.background}</Typography>
                           ) : undefined}
                         </RosterField>
-
-                        <RosterField
-                          label="Objectives"
-                          emptyText="No objectives recorded"
-                        >
-                          {quest.objectives.length ? (
-                            <div className="space-y-2">
-                              {quest.objectives.map(objective => (
-                                <div key={objective.id} className="flex items-center gap-2">
-                                  <div
-                                    aria-hidden="true"
-                                    className={clsx(
-                                      'w-4 h-4 rounded border shrink-0',
-                                      objective.completed ? 'objective-completed' : 'objective-pending'
-                                    )}
-                                  />
-                                  <Typography
-                                    variant="body-sm"
-                                    color={objective.completed ? 'secondary' : 'default'}
-                                    className={objective.completed ? 'line-through' : ''}
-                                  >
-                                    {objective.description}
-                                  </Typography>
-                                </div>
-                              ))}
-                            </div>
-                          ) : undefined}
-                        </RosterField>
-
                         <RosterField label="Initial Leads" emptyText="No leads recorded">
                           {quest.leads?.length ? (
                             <ul className="list-disc pl-5 space-y-1">
@@ -359,7 +369,6 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                             </ul>
                           ) : undefined}
                         </RosterField>
-
                         <RosterField label="Possible Complications" emptyText="No complications recorded">
                           {quest.complications?.length ? (
                             <ul className="list-disc pl-5 space-y-1">
@@ -371,7 +380,6 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                             </ul>
                           ) : undefined}
                         </RosterField>
-
                         <RosterField label="Rewards" emptyText="No rewards recorded">
                           {quest.rewards?.length ? (
                             <ul className="list-disc pl-5 space-y-1">
@@ -383,21 +391,16 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                             </ul>
                           ) : undefined}
                         </RosterField>
-                      </div>
-
-                      <div className="flex flex-col gap-4">
                         <RosterField label="Level Range" emptyText="Not recorded">
                           {quest.levelRange ? (
                             <Typography variant="body-sm">{quest.levelRange}</Typography>
                           ) : undefined}
                         </RosterField>
-
                         <RosterField label="Completed on" emptyText={quest.status === 'completed' ? 'Date not recorded' : 'Not yet completed'}>
                           {quest.status === 'completed' && quest.dateCompleted ? (
                             <Typography variant="body-sm">{quest.dateCompleted}</Typography>
                           ) : undefined}
                         </RosterField>
-
                         <RosterField label="Key Locations" emptyText="No key locations recorded">
                           {quest.keyLocations?.length ? (
                             <div className="flex flex-col gap-2">
@@ -443,51 +446,6 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                             </div>
                           ) : undefined}
                         </RosterField>
-
-                        <RosterField label="Related NPCs" emptyText="No related NPCs recorded">
-                          {quest.relatedNPCIds?.length ? (
-                            <div className="flex flex-col gap-2">
-                              {quest.relatedNPCIds.map(npcId => {
-                                const npc = getNPCById(npcId);
-                                if (!npc) {
-                                  return (
-                                    <Typography key={npcId} variant="body-sm" color="secondary" className="italic">
-                                      {npcId} (not found in NPC directory)
-                                    </Typography>
-                                  );
-                                }
-                                return (
-                                  <Button
-                                    key={npcId}
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => navigateToPage(createPath('/npcs', {}, { highlight: npcId }))}
-                                    className="w-full"
-                                    centered={false}
-                                  >
-                                    <div className="flex items-start gap-2 text-left">
-                                      <Users size={16} className={clsx('mt-1', DISPOSITION_CLASS[npc.relationship] ?? 'disposition-unknown')} />
-                                      <div className="flex-1">
-                                        <Typography variant="body-sm" className="font-medium">
-                                          {npc.name}
-                                          {npc.title && (
-                                            <span className="typography-secondary ml-1">- {npc.title}</span>
-                                          )}
-                                        </Typography>
-                                        {npc.location && (
-                                          <Typography variant="body-sm" color="secondary">
-                                            {npc.location}
-                                          </Typography>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </Button>
-                                );
-                              })}
-                            </div>
-                          ) : undefined}
-                        </RosterField>
-
                         <RosterField label="Important NPCs" emptyText="No important NPCs recorded">
                           {quest.importantNPCs?.length ? (
                             <div className="flex flex-col gap-2">
@@ -505,28 +463,37 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                           ) : undefined}
                         </RosterField>
 
-                        {user && (
-                          <div className="flex gap-2 mt-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigateToPage(`/quests/edit/${quest.id}`)}
-                              startIcon={<Edit size={16} />}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeleteTarget(quest)}
-                              startIcon={<Trash2 size={16} />}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                          {/*
+                            Edit and Delete. `15-3` says delete does not belong
+                            in a row -- it belongs on the page, next to
+                            everything it would destroy -- but that page is
+                            `15-5`'s. Removing them now would strand both, so
+                            they sit with the rest of the material that moves
+                            there, rather than among the row's four facts.
+                          */}
+                          {user && (
+                            <div className="flex gap-2 mt-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigateToPage(`/quests/edit/${quest.id}`)}
+                                startIcon={<Edit size={16} />}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeleteTarget(quest)}
+                                startIcon={<Trash2 size={16} />}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      }
+                    />
                   }
                 >
                   <div className="flex flex-col gap-0.5 min-w-0">

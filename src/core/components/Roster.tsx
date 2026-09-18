@@ -2,7 +2,7 @@
 import React from 'react';
 import Typography from './Typography';
 import Input from './Input';
-import { ChevronDown, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, Search } from 'lucide-react';
 import clsx from 'clsx';
 import EntitySigil from './EntitySigil';
 
@@ -340,6 +340,20 @@ export interface RosterGroupProps {
    * one object; boxing them restates a containment the indentation already says.
    */
   nested?: boolean;
+  /**
+   * Makes the heading a disclosure for its own rows.
+   *
+   * Opt-in, because most groups should not collapse: a location group in the
+   * NPC list is how the list is *organised*, and hiding it hides the list. It
+   * exists for a group a reader is done with -- the quest directory's Completed
+   * and Failed (T015), which are history rather than work.
+   *
+   * T017 wants this same primitive grown for batch selection. Coordinate with
+   * it rather than forking the component.
+   */
+  collapsible?: boolean;
+  /** Start collapsed. Only meaningful with `collapsible`. */
+  defaultCollapsed?: boolean;
   children: React.ReactNode;
 }
 
@@ -358,16 +372,46 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
   openLabel = 'Open location',
   muted = false,
   nested = false,
+  collapsible = false,
+  defaultCollapsed = false,
   children,
-}) => (
+}) => {
+  const [isCollapsed, setIsCollapsed] = React.useState(collapsible && defaultCollapsed);
+  const bodyId = React.useId();
+
+  const heading = (
+    <Typography
+      variant="h3"
+      className={clsx('text-lg', muted && 'typography-secondary')}
+    >
+      {title}
+    </Typography>
+  );
+
+  return (
   <section className="flex flex-col gap-2">
     <div className="flex items-center gap-3 flex-wrap">
-      <Typography
-        variant="h3"
-        className={clsx('text-lg', muted && 'typography-secondary')}
-      >
-        {title}
-      </Typography>
+      {collapsible ? (
+        // The whole heading is the control, because a heading that toggles
+        // something needs a target bigger than a glyph. The heading itself
+        // stays a heading inside it, so the page's outline is unchanged.
+        <button
+          type="button"
+          onClick={() => setIsCollapsed((collapsed) => !collapsed)}
+          aria-expanded={!isCollapsed}
+          aria-controls={bodyId}
+          className="flex items-center gap-2 text-left"
+        >
+          <ChevronRight
+            size={16}
+            aria-hidden="true"
+            className={clsx('transition-transform shrink-0', !isCollapsed && 'rotate-90')}
+          />
+          {heading}
+        </button>
+      ) : (
+        heading
+      )}
       {/*
         The count was a filled pill, which gave a number the same weight as a
         control. It is metadata about the heading beside it, so it reads as
@@ -388,6 +432,8 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
     </div>
 
     <div
+      id={bodyId}
+      hidden={isCollapsed}
       className={clsx(
         'rounded-lg overflow-hidden',
         nested ? 'bg-secondary card-border' : 'card'
@@ -396,7 +442,8 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
       {children}
     </div>
   </section>
-);
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Status

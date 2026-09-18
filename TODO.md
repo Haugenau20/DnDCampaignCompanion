@@ -41,6 +41,15 @@ not copied.
 ### T001 — Note dates render as raw ISO strings in two directories
 **Type** bug · **Size** S · **Status** open · **Verified** 2026-09-16 · `R16` `R17`
 
+**Display half closed by PR 15.3.** `formatNoteDate` is lifted to
+`shared/utils/dateFormatter` and used by `LocationDirectory`, `NPCDirectory`
+and `NPCDetailPage`, which previously kept its own copy. No ISO timestamp
+renders anywhere; a value that cannot be parsed is shown as written rather
+than replaced with a guess.
+
+**The stored-shape half stays open**, and is the real job: `NPCNote.date` still
+has no agreed shape, and this changed four consumers rather than one writer.
+
 An expanded row shows `2025-05-31T19:27:30.387Z` where it should read
 `31/05/2025`.
 
@@ -86,6 +95,19 @@ An expanded row shows `2025-05-31T19:27:30.387Z` where it should read
 
 ### T014 — Highlighting works four different ways, and not at all on `/story`
 **Type** bug · **Size** M · **Status** open · **Verified** 2026-09-16
+
+**Closed by PR 15.3**, except the `/story` half. All four directories now read
+`?highlight=` through one hook (`shared/hooks/useHighlightTarget`): matched by
+**id**, target and ancestors revealed, brought into view, and the parameter is
+not cleared on unrelated state changes.
+
+- **Behavioural change**: name-matching is dropped. `NPCDirectory` and
+  `LocationDirectory` matched the name as well as the id, so a renamed record
+  stopped answering its own links. The three emitters that sent a *name*
+  (`QuestDirectory`, `NPCDirectory`, `RumorDirectory` location links) now
+  resolve it to an id first.
+- **Still open**: `/story` reads `?highlight=` not at all, and `15-3` left it
+  that way deliberately. That is what keeps this entry open.
 
 Navigating to an entity from search or from a cross-link passes `?highlight=`.
 Four directories read it, each differently, and one route ignores it.
@@ -157,7 +179,13 @@ A group registration token is valid forever until somebody uses or deletes it.
 - **Source**: todo.txt, 2026-09-16
 
 ### T015 — Completed and failed quests should collapse by default
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-09-16
+**Type** feature · **Size** M · **Status** done · **Verified** 2026-09-16
+
+**Closed by PR 15.3.** `RosterGroup` grew an opt-in `collapsible` /
+`defaultCollapsed` pair -- the whole heading is the control, so the target is
+not a glyph -- and `QuestDirectory` collapses Completed and Failed by default.
+They stay counted and stay reachable. T017 wants the same primitive grown for
+batch selection: grow it, do not fork it.
 
 - **Where**: `src/features/campaign-entities/quests/components/QuestDirectory.tsx:290`
   renders every non-empty status group unconditionally.
@@ -171,7 +199,15 @@ A group registration token is valid forever until somebody uses or deletes it.
 - **Source**: todo.txt, 2026-09-16
 
 ### T016 — Tick a quest objective without opening the edit form
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-16
+**Type** feature · **Size** S · **Status** done · **Verified** 2026-09-16
+
+**Closed by PR 15.3** (`design-handoff/15-3-directory-rows`). `QuestDirectory`'s
+objectives are real checkboxes wired to `updateQuestObjective`, which had been
+on the context and covered by an eight-case suite with no production caller.
+They obey §7's save contract: pending state on the row, never an optimistic
+tick, and a visible revert with the reason when the write is refused. The
+`aria-hidden` decorative box is gone, so each objective is now reachable and
+operable by keyboard and named by its own text.
 
 Marking one objective done means opening the edit form and saving the whole
 quest.

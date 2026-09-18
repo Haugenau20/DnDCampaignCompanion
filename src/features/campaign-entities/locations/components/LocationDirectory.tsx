@@ -4,6 +4,12 @@ import { useNPCs } from '../../npcs/context/NPCContext';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useLocations } from '../context/LocationContext';
 import { useAuth } from 'features/user-management';
+import useHighlightTarget, {
+  ancestorIdsOf,
+  HIGHLIGHT_DEPTH_CAP,
+} from 'shared/hooks/useHighlightTarget';
+import StateLadder from 'shared/components/row-controls/StateLadder';
+import { formatNoteDate } from 'shared/utils/dateFormatter';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import { Landmark, Users, Scroll, Tag, Plus } from 'lucide-react';
@@ -102,20 +108,26 @@ const formatLocationType = (type: LocationType): string => {
   return type.charAt(0).toUpperCase() + type.slice(1);
 };
 
-export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
+export /** The knowledge ladder: known -> explored -> visited. Never a verdict. */
+const KNOWLEDGE_OPTIONS: Array<{ value: LocationStatus; label: string; selectedClassName?: string }> = [
+  { value: 'known', label: 'Known', selectedClassName: 'knowledge-0' },
+  { value: 'explored', label: 'Explored', selectedClassName: 'knowledge-1' },
+  { value: 'visited', label: 'Visited', selectedClassName: 'knowledge-2' },
+];
+
+const LocationDirectory: React.FC<LocationDirectoryProps> = ({
   locations: initialLocations,
   isLoading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [highlightedLocationId, setHighlightedLocationId] = useState<string | null>(null);
   const [expandedLocations, setExpandedLocations] = useState<Set<string>>(new Set());
 
   const { getNPCById } = useNPCs();
   const { getQuestById } = useQuests();
   const { user } = useAuth();
-  const { deleteLocation } = useLocations();
+  const { deleteLocation, updateLocationStatus } = useLocations();
 
   // Use Firebase hook for real-time updates
   const { data: updatedLocations } = useFirebaseData<Location>({
@@ -152,45 +164,24 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
       .flatMap(key => locationHierarchy[key]);
   }, [locationHierarchy, locations]);
 
-  // Helper function to get parent location IDs
-  const getParentLocationIds = useCallback((locationId: string): string[] => {
-    const parentIds: string[] = [];
-    let currentLocation = locations.find(loc => loc.id === locationId);
-
-    while (currentLocation?.parentId) {
-      parentIds.push(currentLocation.parentId);
-      currentLocation = locations.find(loc => loc.id === currentLocation?.parentId);
-    }
-
-    return parentIds;
-  }, [locations]);
-
-  // Handle highlighted location from URL
-  useEffect(() => {
-    if (highlightId) {
-      const highlightedLocation = locations.find(loc =>
-        loc.id === highlightId ||
-        loc.name.toLowerCase() === highlightId.toLowerCase()
-      );
-
-      if (highlightedLocation) {
-        setHighlightedLocationId(highlightedLocation.id);
-
-        // Expand this location and all of its ancestors, so arriving from a link
-        // reveals both its own detail and the path down to it.
-        const parentIds = getParentLocationIds(highlightedLocation.id);
-        setExpandedLocations(prev => new Set([...prev, highlightedLocation.id, ...parentIds]));
-
-        // Scroll to the highlighted location
-        setTimeout(() => {
-          const element = document.getElementById(`location-${highlightedLocation.id}`);
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }, 100);
-      }
-    }
-  }, [highlightId, locations, getParentLocationIds]);
+  /**
+   * T014: one hook, four consumers -- and the PERF-11 guard with it.
+   *
+   * This directory's own parent walk was a `while (current?.parentId)` around
+   * repeated `locations.find`, with **no visited set**, so a location inside a
+   * parent cycle never terminated. It also matched `?highlight=` against the
+   * name as well as the id, so a renamed place stopped answering its own
+   * links. Both are the shared hook's problem now.
+   */
+  const { highlightedId: highlightedLocationId } = useHighlightTarget({
+    items: locations,
+    highlight: highlightId,
+    idOf: (location) => location.id,
+    parentIdOf: (location) => location.parentId,
+    domIdPrefix: 'location',
+    onReveal: (idsToReveal) =>
+      setExpandedLocations((previous) => new Set([...previous, ...idsToReveal])),
+  });
 
   // Toggle a row's expansion without losing any other row's state
   const toggleExpansion = (locationId: string) => {
@@ -265,21 +256,35 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
 
     const locationsToExpand = new Set<string>();
 
-    const addParentIdsForMatches = (parentId: string = 'root') => {
+    /**
+     * Walk the tree revealing the ancestors of every match.
+     *
+     * Carries its own visited set as well as using the guarded ancestor walk:
+     * this recursion descends the hierarchy map, and a cycle there would
+     * recurse forever quite independently of the parent walk PERF-11 reports.
+     * `15-3` requires a guard on every traversal it touches, and this is one.
+     */
+    const seen = new Set<string>();
+    const addParentIdsForMatches = (parentId: string = 'root', depth = 0) => {
+      if (seen.has(parentId) || depth > HIGHLIGHT_DEPTH_CAP) return;
+      seen.add(parentId);
+
       const children = locationHierarchy[parentId] || [];
 
       children.forEach(child => {
         if (locationMatchesFilters(child, locationHierarchy, statusFilter, typeFilter, searchQuery)) {
-          const parentIds = getParentLocationIds(child.id);
-          parentIds.forEach(id => locationsToExpand.add(id));
+          ancestorIdsOf(locations, child.id, {
+            idOf: (location) => location.id,
+            parentIdOf: (location) => location.parentId,
+          }).forEach(id => locationsToExpand.add(id));
         }
-        addParentIdsForMatches(child.id);
+        addParentIdsForMatches(child.id, depth + 1);
       });
     };
 
     addParentIdsForMatches();
     setExpandedLocations(prev => new Set([...prev, ...locationsToExpand]));
-  }, [typeFilter, statusFilter, searchQuery, locations, locationHierarchy, locationMatchesFilters, getParentLocationIds]);
+  }, [typeFilter, statusFilter, searchQuery, locations, locationHierarchy, locationMatchesFilters]);
 
   // Status counts drive the one bar that replaced the "All Status" dropdown
   const statusSegments: RosterSegment[] = useMemo(() => {
@@ -357,6 +362,20 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
               <div className="flex flex-col gap-4 pt-2">
                 <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-7">
                   <div className="flex flex-col gap-4">
+                    {/*
+                      The knowledge ladder, changed from the row in one click.
+                      Known / explored / visited is a ladder, not a verdict: a
+                      child may be more known than its parent, which is legal
+                      and is never a warning (§10).
+                    */}
+                    <StateLadder
+                      label="Knowledge"
+                      options={KNOWLEDGE_OPTIONS}
+                      value={location.status}
+                      ariaLabel={`Knowledge of ${location.name}`}
+                      onChange={(status) => updateLocationStatus(location.id, status)}
+                    />
+
                     <RosterField label="Description" emptyText="Nothing written yet">
                       {location.description ? (
                         <Typography variant="body-sm">{location.description}</Typography>
@@ -389,7 +408,7 @@ export const LocationDirectory: React.FC<LocationDirectoryProps> = ({
                                 color="muted"
                                 className="text-xs whitespace-nowrap"
                               >
-                                {note.date}
+                                {formatNoteDate(note.date)}
                               </Typography>
                               <Typography variant="body-sm">{note.text}</Typography>
                             </div>

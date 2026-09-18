@@ -10,6 +10,8 @@ import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import RumorBatchActions from './RumorBatchActions';
 import { useNavigation } from 'shared/hooks/useNavigation';
+import useHighlightTarget from 'shared/hooks/useHighlightTarget';
+import StateLadder from 'shared/components/row-controls/StateLadder';
 import { Users, MapPin, Scroll, Plus } from 'lucide-react';
 import {
   RosterStatusBar,
@@ -73,6 +75,23 @@ const formatStatus = (status: RumorStatus): string =>
 const formatSourceType = (type: SourceType): string =>
   type === 'npc' ? 'NPC' : type.charAt(0).toUpperCase() + type.slice(1);
 
+/**
+ * The rumour's knowledge ladder.
+ *
+ * `false` is the stored value; **"Disproved"** is what it is called wherever a
+ * reader sees it, because it describes what the party did rather than a data
+ * value.
+ */
+const RUMOR_KNOWLEDGE_OPTIONS: Array<{
+  value: RumorStatus;
+  label: string;
+  selectedClassName?: string;
+}> = [
+  { value: 'unconfirmed', label: 'Unconfirmed', selectedClassName: 'knowledge-0' },
+  { value: 'confirmed', label: 'Confirmed', selectedClassName: 'knowledge-1' },
+  { value: 'false', label: 'Disproved', selectedClassName: 'knowledge-2' },
+];
+
 const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   rumors: initialRumors,
   isLoading = false,
@@ -80,30 +99,30 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RumorStatus | 'all'>('all');
   const [sourceFilter, setSourceFilter] = useState<SourceType | 'all'>('all');
-  const [highlightedRumorId, setHighlightedRumorId] = useState<string | null>(null);
   const [expandedRumorId, setExpandedRumorId] = useState<string | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedRumors, setSelectedRumors] = useState<Set<string>>(new Set());
 
-  const { deleteRumor } = useRumors();
+  const { deleteRumor, updateRumorStatus } = useRumors();
   const { getNPCById } = useNPCs();
   const { locations, getLocationById } = useLocations();
   const { user } = useAuth();
   const { navigateToPage, createPath, getCurrentQueryParams } = useNavigation();
   const { highlight: highlightId } = getCurrentQueryParams();
 
-  // Check for a highlighted rumor from the URL and scroll to it
-  useEffect(() => {
-    if (highlightId) {
-      setHighlightedRumorId(highlightId);
-      setTimeout(() => {
-        const element = document.getElementById(`rumor-${highlightId}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-    }
-  }, [highlightId, initialRumors]);
+  /**
+   * T014: one hook, four consumers.
+   *
+   * This directory matched by id already, but never expanded the target -- so
+   * a link landed on a row that was still closed.
+   */
+  const { highlightedId: highlightedRumorId } = useHighlightTarget({
+    items: initialRumors,
+    highlight: highlightId,
+    idOf: (rumor: Rumor) => rumor.id,
+    domIdPrefix: 'rumor',
+    onReveal: ([rumorId]) => setExpandedRumorId(rumorId),
+  });
 
   // Status counts drive the one bar that replaced the "All Status" dropdown.
   // Confirmed / unconfirmed / false are the entire status enum, so the three
@@ -328,6 +347,21 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                     expandedContent={
                       <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-7 pt-4">
                         <div className="flex flex-col gap-4">
+                          {/*
+                            Status is the knowledge ladder, not a verdict. A
+                            disproved rumour is *fully known* and a good
+                            outcome -- `knowledge.2` plus a strike, never
+                            failure red (§10, colour schema §3). "Disproved"
+                            replaces "False" in every string a reader sees.
+                          */}
+                          <StateLadder
+                            label="Is it true?"
+                            options={RUMOR_KNOWLEDGE_OPTIONS}
+                            value={rumor.status}
+                            ariaLabel={`Status of ${rumor.title}`}
+                            onChange={(status) => updateRumorStatus(rumor.id, status)}
+                          />
+
                           <RosterField label="Content" emptyText="No details recorded">
                             {rumor.content ? (
                               <Typography variant="body-sm">{rumor.content}</Typography>
