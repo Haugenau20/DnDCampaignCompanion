@@ -47,6 +47,13 @@ and `NPCDetailPage`, which previously kept its own copy. No ISO timestamp
 renders anywhere; a value that cannot be parsed is shown as written rather
 than replaced with a guess.
 
+**PR 15.6 finished the display half properly.** `15.3` lifted the helper but
+kept its output at `YYYY-MM-DD` -- the shape the value is *stored* in -- so the
+NPC page printed `2025-05-31` for a note three cards above a record line reading
+`31/05/2025`: one screen, two formats, for the same kind of fact. `formatNoteDate`
+and `formatAttributionDate` now both render through `formatCalendarDate`, so they
+cannot drift apart again.
+
 **The stored-shape half stays open**, and is the real job: `NPCNote.date` still
 has no agreed shape, and this changed four consumers rather than one writer.
 
@@ -108,6 +115,14 @@ not cleared on unrelated state changes.
   resolve it to an id first.
 - **Still open**: `/story` reads `?highlight=` not at all, and `15-3` left it
   that way deliberately. That is what keeps this entry open.
+- **Shrinking, as pages arrive.** `15-4` and `15-5` gave locations and quests
+  their own addresses, so the links that used to carry `?highlight=` to those
+  two directories now name the record itself. `?highlight=` is becoming what it
+  should always have been — the way to find a row *in a list* — rather than the
+  product's substitute for a URL. Two emitters still send it where a page now
+  exists: the command palette's `npc` and `location` cases, and the note panels'
+  `npc`, `location` and `rumor` cases. `15-6` owns the NPC half; the rest wants
+  one sweep once every entity has a page.
 
 Navigating to an entity from search or from a cross-link passes `?highlight=`.
 Four directories read it, each differently, and one route ignores it.
@@ -201,7 +216,13 @@ batch selection: grow it, do not fork it.
 ### T016 — Tick a quest objective without opening the edit form
 **Type** feature · **Size** S · **Status** done · **Verified** 2026-09-16
 
-**Closed by PR 15.3** (`design-handoff/15-3-directory-rows`). `QuestDirectory`'s
+**Closed by PR 15.3** (`design-handoff/15-3-directory-rows`), and extended by
+**15.5**, which gave the same objectives a place to be *authored*: add, reword
+and reorder on `/quests/:questId`, through the same §7 contract. 15.5 also took
+one behaviour away — ticking the last objective no longer completes the quest by
+itself; the page offers completion instead.
+
+`QuestDirectory`'s
 objectives are real checkboxes wired to `updateQuestObjective`, which had been
 on the context and covered by an eight-case suite with no production caller.
 They obey §7's save contract: pending state on the row, never an optimistic
@@ -398,6 +419,17 @@ deliberately not built, and a test asserts its absence so it cannot arrive by
 accident. When this is answered, the per-section blocks on that page are where
 it goes.
 
+**PR 15.6 held it a third time**, on the page the other two copy: no per-field
+credit under any of the seven editors it added, and no line saying who last
+changed a fact. The record card states the same two points it always has.
+
+**PR 15.5 held it again, against a sharper temptation.** `S3` draws
+"gandlaf ticked *Find the secret door* · last session" on the quest page —
+per-*objective* history, which is further from what the data holds than a
+per-field line: nothing records who ticked a box or when. `/quests/:questId`
+states the same two facts as the location page, and its suite asserts that
+neither "ticked" nor "last session" appears in the record card.
+
 ### T006 — Can a note be edited or deleted after it is written?
 **Type** decision · **Size** M · **Status** open · **Verified** 2026-09-16 · `Q13`
 
@@ -413,6 +445,11 @@ the NPC page rather than the campaign notes: added, never edited or removed, and
 the composer says so. `LocationNote` gained an optional `author`, as `NPCNote`
 already had, so a note written from here carries its own credit; older ones stay
 blank rather than being attributed to a guess.
+
+**PR 15.6 left it exactly there, deliberately, while making everything around it
+editable.** The NPC page now edits eleven fields in place; its notes are the one
+thing on it that still cannot be changed after it is written. That asymmetry is
+the open question, not an oversight.
 
 ### T007 — Does `AdminPanel` get a real route? — **answered: yes**
 **Type** decision · **Size** S · **Status** done · **Verified** 2026-09-16 · `R39`
@@ -578,7 +615,46 @@ shipped in `15-3`, and every gate green.
 - **Touches**: `core/themes/__tests__/css-class-manifest.test.ts` — a narrow
   consumed-but-undefined check over a closed vocabulary (props whose values are
   known to be theme classes) is the shape that works; a general scan is not.
-- **Source**: found in `15-4` while wiring the location page's band control.
+- **One instance is now gated, and finding it proved the point.** `15-6` wrote
+  `ladder-classes.test.ts` — the file `location-presentation.ts` had *claimed
+  since 15-4 merged* already existed. It did not. The gate's first run found
+  `NPCDirectory` still passing `selectedClassName`: an options array declared as
+  a `const` is a wider type than the prop it is passed to, so TypeScript's
+  excess-property check never runs on it, and the dead key survived every build.
+- **Still open** for the general case: `RosterStatus`'s `tone`, `Button`'s
+  `variant` and `EntitySigil`'s palette are the same pattern with no gate.
+- **Source**: found in `15-4` while wiring the location page's band control; a
+  live instance found in `15-6`.
+
+### T043 — `importantNPCs` may hold names no NPC record carries
+**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-18
+
+`15.5` deleted `Quest.importantNPCs` (`D15.7`): two fields for one relationship,
+both rendered, which is why the same person appeared twice on a quest card.
+`relatedNPCIds` survives, and it is the only one of the two that can be resolved
+to a record, a page and an occupation.
+
+**Nothing stored was destroyed.** Every write goes through `updateDoc`, which
+merges field by field, so a document that carries `importantNPCs` still carries
+it — the app has simply stopped reading and writing it.
+
+**What could not be answered from here**: whether the maintainer's real campaign
+holds names in that field which `relatedNPCIds` does not already say. Production
+Firestore is not reachable from a development session. In the sample data it is
+measurable, and the answer is: 48 names across 20 quests, 45 of them already
+said by `relatedNPCIds`; the remaining 3 ("Master of Lake-town", "Mandos", "Tom
+Bombadil") name people who **have no NPC record at all**, so there is no id to
+migrate them into — they are prep notes about somebody who was never entered.
+
+- **How to answer it**:
+  `npx ts-node ./src/utils/__dev__/auditQuestImportantNPCs.ts` — read-only,
+  signs in as a real user, prints per quest which names are covered, which match
+  an NPC record (migratable by attaching that person), and which match nobody.
+- **The decision**: for a name matching no record, attaching is impossible
+  without first creating the NPC. Whether those lines are worth keeping at all
+  is a judgement about a campaign, not a data repair, which is why the script
+  has no `migrate` mode.
+- **Source**: PR 15.5, from its handoff's instruction to check before deleting
 
 ### T024 — Remove the `?route=` 404 redirect hack, and the duplicate `NavigationProvider`
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-16 · `PERF-15`
@@ -768,6 +844,10 @@ handoff instructed.
 - **What to look at**: the scroll region exists because the selected-rumour list
   is unbounded. Capping the selection, or paginating the list, would remove the
   symptom without moving the surface.
+- **15.5 left the dialog alone and changed only what it leads to.** Converting
+  rumours into a quest now lands on that quest's page, and the rumour's own
+  "View quest" link opens it too. That was the missing half of the conversion:
+  the quest was created and then nothing in the product referred to it.
 - **Source**: Phase 14.5, from its own instruction to check rather than assume
 
 ---

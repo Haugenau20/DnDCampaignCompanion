@@ -483,25 +483,27 @@ describe('QuestContext Behavioral Testing', () => {
 
   describe('Quest Relationship Filtering Behavior', () => {
     test('should filter quests by NPC correctly', async () => {
-      // Mock quest data with NPC relationships
+      // CHANGED DELIBERATELY in `15-5`: `importantNPCs` is deleted (`D15.7`),
+      // so quest 2 -- which named the NPC only in that free-text list -- is no
+      // longer found. The clause that found it compared `npc.name === npcId`,
+      // a display name against a document id, and could only ever match when
+      // someone had typed an id into a name field. The fixture keeps that
+      // shape to record what was dropped.
       const mockQuests = [
         {
           id: '1',
           title: 'Quest with NPC ID',
           relatedNPCIds: ['npc-123', 'npc-456'],
-          importantNPCs: []
         },
         {
           id: '2',
-          title: 'Quest with NPC name',
+          title: 'Quest naming the NPC in free text only',
           relatedNPCIds: [],
-          importantNPCs: [{ name: 'npc-123', description: 'Important NPC' }]
         },
         {
           id: '3',
           title: 'Quest without NPC',
           relatedNPCIds: ['other-npc'],
-          importantNPCs: []
         },
       ];
 
@@ -520,12 +522,11 @@ describe('QuestContext Behavioral Testing', () => {
         expect(questContext).toBeDefined();
       });
 
-      // BEHAVIOR: Should find quests by NPC ID and NPC name
+      // BEHAVIOR: one relation list, matched by id
       const npcQuests = questContext.getQuestsByNPC('npc-123');
 
-      expect(npcQuests).toHaveLength(2); // Should find both ID and name matches
+      expect(npcQuests).toHaveLength(1);
       expect(npcQuests[0].id).toBe('1');
-      expect(npcQuests[1].id).toBe('2');
     });
 
     test('should filter quests by location correctly', async () => {

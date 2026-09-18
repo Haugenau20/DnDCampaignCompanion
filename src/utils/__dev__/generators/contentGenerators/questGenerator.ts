@@ -78,11 +78,6 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
         { name: 'The Shire', description: 'Where the ring has been kept hidden for decades' },
         { name: 'Rivendell', description: 'Where the Council will decide the ring\'s fate' }
       ],
-      importantNPCs: [
-        { name: 'Gandalf', description: 'Has knowledge of the ring\'s history' },
-        { name: 'Frodo Baggins', description: 'The new ring-bearer' },
-        { name: 'Bilbo Baggins', description: 'The former ring-bearer' }
-      ],
       relatedNPCIds: ['frodo', 'bilbo', 'gandalf'],
       complications: ['The Nazgûl are hunting for the ring', 'The ring corrupts its bearer over time'],
       rewards: ['Knowledge of the ring\'s true nature', 'Understanding the threat to Middle-earth'],
@@ -124,11 +119,6 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
       keyLocations: [
         { name: 'Rivendell', description: 'The location of the Council' },
         { name: 'Mordor', description: 'The only place where the Ring can be destroyed' }
-      ],
-      importantNPCs: [
-        { name: 'Elrond', description: 'Host of the Council' },
-        { name: 'Gandalf', description: 'Advisor and guide' },
-        { name: 'Frodo Baggins', description: 'The Ring-bearer' }
       ],
       relatedNPCIds: ['frodo', 'elrond', 'gandalf', 'gimli'],
       complications: ['Disagreements between races', 'The corruption of the Ring affects the Council'],
@@ -172,11 +162,6 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Doors of Durin', description: 'The western entrance to Moria' },
         { name: 'Bridge of Khazad-dûm', description: 'Where Gandalf confronts the Balrog' }
       ],
-      importantNPCs: [
-        { name: 'Gandalf', description: 'Guide through the mines' },
-        { name: 'Gimli', description: 'Dwarf with knowledge of Moria\'s history' },
-        { name: 'Balrog', description: 'Ancient demon awakened in the depths' }
-      ],
       relatedNPCIds: ['gandalf', 'gimli', 'balrog'],
       complications: ['Cave-in blocking the western entrance', 'Orcs and trolls patrolling the mines', 'The Balrog\'s awakening'],
       rewards: ['Passage through the mountains', 'Discovery of the fate of Balin\'s expedition'],
@@ -219,11 +204,6 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Mordor', description: 'The dark land ruled by Sauron' },
         { name: 'Mount Doom', description: 'The volcano where the Ring must be destroyed' }
       ],
-      importantNPCs: [
-        { name: 'Frodo Baggins', description: 'The Ring-bearer' },
-        { name: 'Gollum', description: 'Guide with knowledge of secret paths' },
-        { name: 'Sauron', description: 'The Dark Lord who seeks the Ring' }
-      ],
       relatedNPCIds: ['frodo', 'sauron', 'gollum'],
       complications: ['The Ring\'s corruption grows stronger near Mordor', 'Sauron\'s forces patrol the land', 'Gollum\'s trustworthiness is questionable'],
       rewards: ['The destruction of the One Ring', 'The downfall of Sauron', 'Freedom for Middle-earth'],
@@ -265,10 +245,6 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
       keyLocations: [
         { name: 'Isengard', description: 'Saruman\'s fortress and base of operations' },
         { name: 'Orthanc', description: 'The tower at the center of Isengard where Saruman resides' }
-      ],
-      importantNPCs: [
-        { name: 'Saruman', description: 'The traitorous wizard' },
-        { name: 'Gandalf', description: 'Now returned as Gandalf the White' }
       ],
       relatedNPCIds: ['gandalf', 'saruman'],
       complications: ['Saruman\'s voice is unnaturally persuasive', 'The Uruk-hai are stronger than ordinary orcs'],
@@ -318,11 +294,6 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Bag End', description: 'Bilbo\'s home where the company assembles' },
         { name: 'The Trollshaws', description: 'Where the company encounters three trolls' }
       ],
-      importantNPCs: [
-        { name: 'Gandalf', description: 'The wizard who organized the expedition' },
-        { name: 'Thorin Oakenshield', description: 'Leader of the company and rightful King under the Mountain' },
-        { name: 'Bilbo Baggins', description: 'Reluctant burglar hired for the quest' }
-      ],
       relatedNPCIds: ['bilbo', 'gandalf', 'thorin'],
       complications: ['Bilbo\'s inexperience', 'Hostile lands', 'The company\'s skepticism of Bilbo'],
       rewards: ['Finding trolls\' treasure', 'Acquiring Sting and other treasures'],
@@ -364,10 +335,6 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
       keyLocations: [
         { name: 'Goblin tunnels', description: 'Labyrinthine passages under the Misty Mountains' },
         { name: 'Gollum\'s lake', description: 'The underground lake where Gollum lives' }
-      ],
-      importantNPCs: [
-        { name: 'Gollum', description: 'A strange creature living in the depths who possesses a magical ring' },
-        { name: 'Great Goblin', description: 'Leader of the goblins of the Misty Mountains' }
       ],
       relatedNPCIds: ['bilbo', 'gollum', 'great-goblin'],
       complications: ['The darkness of the tunnels', 'Gollum\'s desire to eat Bilbo', 'Finding the way out'],
@@ -411,10 +378,6 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Elvenking\'s Halls', description: 'The underground palace of Thranduil' },
         { name: 'Forest River', description: 'The river that flows from Mirkwood to the Long Lake' }
       ],
-      importantNPCs: [
-        { name: 'Thranduil', description: 'The Elvenking who imprisoned the dwarves' },
-        { name: 'Master of Lake-town', description: 'The greedy ruler of Esgaroth' }
-      ],
       relatedNPCIds: ['bilbo', 'thranduil'],
       complications: ['Bilbo must remain invisible', 'The rushing river is dangerous', 'The need for secrecy'],
       rewards: ['Reaching Lake-town', 'Freedom for the company', 'The last leg of the journey'],
@@ -457,10 +420,6 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Secret door', description: 'Hidden entrance on the western side of the mountain' },
         { name: 'Great hall', description: 'The main hall of Erebor where Smaug may be' }
       ],
-      importantNPCs: [
-        { name: 'Thorin Oakenshield', description: 'Rightful King under the Mountain' },
-        { name: 'Smaug', description: 'The dragon who seized Erebor and its treasure' }
-      ],
       relatedNPCIds: ['bilbo', 'thorin', 'smaug'],
       complications: ['Limited time to find the door', 'The threat of waking Smaug', 'Thorin\'s growing obsession with the Arkenstone'],
       rewards: ['Access to Erebor', 'Potential recovery of the Arkenstone', 'First steps to reclaiming the kingdom'],
@@ -502,10 +461,6 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
       keyLocations: [
         { name: 'Treasury', description: 'The vast hall where Smaug sleeps on his hoard' },
         { name: 'Lake-town', description: 'The town on the Long Lake that may be in danger' }
-      ],
-      importantNPCs: [
-        { name: 'Smaug', description: 'The terrifying dragon' },
-        { name: 'Bard the Bowman', description: 'A skilled archer from Lake-town' }
       ],
       relatedNPCIds: ['bilbo', 'smaug', 'bard'],
       complications: ['Smaug\'s intelligence', 'The risk to Lake-town', 'The sheer power of the dragon'],
@@ -555,10 +510,6 @@ const getSilmarillionQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Tirion', description: 'City of the Noldor in Valinor' },
         { name: 'Two Trees', description: 'Source of the light captured in the Silmarils' }
       ],
-      importantNPCs: [
-        { name: 'Fëanor', description: 'The brilliant craftsman who creates the Silmarils' },
-        { name: 'Varda', description: 'The Vala who hallows the jewels' }
-      ],
       relatedNPCIds: ['feanor', 'varda'],
       complications: ['The growing pride of Fëanor', 'Melkor\'s spreading of lies', 'The dispute with Fingolfin'],
       rewards: ['The completion of the Silmarils', 'Prestige among the Eldar', 'The blessing of the Valar'],
@@ -600,10 +551,6 @@ const getSilmarillionQuests = (dmUid: string, formattedDate: string) => {
       keyLocations: [
         { name: 'Formenos', description: 'Fëanor\'s stronghold where Finwë was slain' },
         { name: 'Alqualondë', description: 'Haven of the Teleri, site of the first Kinslaying' }
-      ],
-      importantNPCs: [
-        { name: 'Fëanor', description: 'Leader of the rebellion' },
-        { name: 'Mandos', description: 'The Vala who pronounces doom upon the Noldor' }
       ],
       relatedNPCIds: ['feanor', 'melkor'],
       complications: ['The terrible oath and its consequences', 'The opposition of the Valar', 'The division among the Noldor'],
@@ -647,11 +594,6 @@ const getSilmarillionQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Doriath', description: 'Woodland realm of King Thingol' },
         { name: 'Angband', description: 'Fortress of Morgoth where the Silmarils are kept' }
       ],
-      importantNPCs: [
-        { name: 'Beren', description: 'Mortal man who loves Lúthien' },
-        { name: 'Lúthien', description: 'Daughter of Thingol and Melian' },
-        { name: 'Morgoth', description: 'The Dark Enemy who wears the Silmarils in his crown' }
-      ],
       relatedNPCIds: ['beren', 'luthien', 'morgoth'],
       complications: ['The seemingly impossible task', 'The guard dog Carcharoth', 'The power of Morgoth'],
       rewards: ['A Silmaril', 'The union of Beren and Lúthien', 'A blow against Morgoth'],
@@ -694,11 +636,6 @@ const getSilmarillionQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Gondolin', description: 'The hidden city under attack' },
         { name: 'Cirith Thoronath', description: 'Eagle\'s Cleft, the escape route from the city' }
       ],
-      importantNPCs: [
-        { name: 'Turgon', description: 'King of Gondolin who dies in its fall' },
-        { name: 'Ecthelion', description: 'Lord who slays Gothmog, Lord of Balrogs' },
-        { name: 'Glorfindel', description: 'Lord who fights a Balrog to protect the refugees' }
-      ],
       relatedNPCIds: ['turgon', 'ecthelion', 'glorfindel'],
       complications: ['Overwhelming enemy forces', 'The need to protect civilians', 'The treachery of Maeglin'],
       rewards: ['Survival', 'Preservation of some of Gondolin\'s legacy', 'The escape of Eärendil'],
@@ -740,11 +677,6 @@ const getSilmarillionQuests = (dmUid: string, formattedDate: string) => {
       keyLocations: [
         { name: 'Angband', description: 'Fortress of Morgoth, the final objective' },
         { name: 'Beleriand', description: 'The land that will sink beneath the sea in the cataclysm' }
-      ],
-      importantNPCs: [
-        { name: 'Eönwë', description: 'Herald of Manwë, leader of the Host' },
-        { name: 'Morgoth', description: 'The Dark Enemy who will be defeated' },
-        { name: 'Ancalagon the Black', description: 'Greatest of the winged dragons' }
       ],
       relatedNPCIds: ['eonwe', 'morgoth', 'ancalagon'],
       complications: ['The sheer scale of the battle', 'The unleashing of the winged dragons', 'The breaking of Beleriand'],
@@ -794,10 +726,6 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Weather Hills', description: 'Where troll sightings have increased' },
         { name: 'Ranger Refuge', description: 'Hidden outpost used by the Rangers' }
       ],
-      importantNPCs: [
-        { name: 'Aragorn', description: 'Chieftain of the Dúnedain' },
-        { name: 'Halbarad', description: 'Trusted lieutenant of Aragorn' }
-      ],
       relatedNPCIds: ['aragorn-young', 'halbarad'],
       complications: ['The vast area to patrol', 'Limited Rangers to cover all threats', 'Keeping their identity secret'],
       rewards: ['Safety for the northern settlements', 'Preventing a larger incursion', 'Gathering intelligence on enemy movements'],
@@ -839,10 +767,6 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
       keyLocations: [
         { name: 'Bounds of the Shire', description: 'The borders the Rangers patrol' },
         { name: 'Bree', description: 'Town where information can be gathered' }
-      ],
-      importantNPCs: [
-        { name: 'Aragorn', description: 'Chieftain who places special importance on protecting the Shire' },
-        { name: 'Butterbur', description: 'Innkeeper at the Prancing Pony who sometimes provides information' }
       ],
       relatedNPCIds: ['aragorn-young', 'butterbur'],
       complications: ['Maintaining secrecy', 'The hobbits\' obliviousness to danger', 'Limited resources'],
@@ -886,10 +810,6 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Dead Marshes', description: 'Where Gollum may be hiding' },
         { name: 'Mirkwood', description: 'Where Gollum should be delivered if captured' }
       ],
-      importantNPCs: [
-        { name: 'Gandalf', description: 'The wizard who requested the hunt' },
-        { name: 'Gollum', description: 'The elusive creature being hunted' }
-      ],
       relatedNPCIds: ['aragorn-young', 'gandalf', 'gollum'],
       complications: ['Gollum\'s cunning and evasiveness', 'The need to take him alive', 'The vast area to search'],
       rewards: ['Information about the Ring', 'Assisting Gandalf\'s investigation', 'Preventing Gollum from falling into enemy hands'],
@@ -932,10 +852,6 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Barrow-downs', description: 'Ancient burial mounds haunted by evil spirits' },
         { name: 'Great Barrow', description: 'The largest and most dangerous of the burial mounds' }
       ],
-      importantNPCs: [
-        { name: 'Tom Bombadil', description: 'Mysterious figure who knows much about the Barrow-downs' },
-        { name: 'Barrow-wights', description: 'Evil spirits that possess the dead' }
-      ],
       relatedNPCIds: ['aragorn-young', 'barrow-wights'],
       complications: ['The supernatural nature of the threat', 'The bewildering magic of the downs', 'Rescuing victims before they are killed'],
       rewards: ['Safer travel near the downs', 'Ancient artifacts from the barrows', 'Knowledge about the growing darkness'],
@@ -977,10 +893,6 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
       keyLocations: [
         { name: 'Annúminas', description: 'Ruined capital of Arnor by Lake Evendim' },
         { name: 'Ranger Refuge', description: 'Where recovered artifacts can be safely stored' }
-      ],
-      importantNPCs: [
-        { name: 'Aragorn', description: 'Heir to the throne of both Arnor and Gondor' },
-        { name: 'Elder Ranger', description: 'Keeper of the history and traditions of the Dúnedain' }
       ],
       relatedNPCIds: ['aragorn-young', 'elder-ranger'],
       complications: ['Dangerous ruins', 'Brigands who may have claimed the area', 'The fragility of ancient artifacts'],

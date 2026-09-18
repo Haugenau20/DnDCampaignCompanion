@@ -49,7 +49,12 @@ export const STATUS_TONE: Record<LocationStatus, RosterStatusTone> = {
  * `chip-toggle-selected` was doing all the work and the extra class was inert.
  * The class manifest checks that every class the theme defines is applied; it
  * cannot check the other direction without flagging every Tailwind utility, so
- * nothing caught it. `ladder-classes.test.ts` now does.
+ * nothing caught it.
+ *
+ * `ladder-classes.test.ts` does now. It did not when this comment first
+ * claimed it: the file was named here in `15-4` and never written, and `15-6`
+ * found the NPC directory still passing the retired prop while this line said
+ * it was watched.
  *
  * Nothing replaces them, because nothing should: §10 says knowledge is a
  * ladder, not a verdict, and the reference shows the selected step as the same

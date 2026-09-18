@@ -15,11 +15,6 @@ export interface QuestLocation {
   description: string;
 }
 
-export interface QuestNPC {
-  name: string;
-  description: string;
-}
-
 /**
  * Represents a quest in the game world
  */
@@ -31,8 +26,22 @@ export interface Quest extends BaseContent {
   objectives: QuestObjective[];
   leads?: string[];
   keyLocations?: QuestLocation[];
-  importantNPCs?: QuestNPC[];
-  relatedNPCIds?: string[];  // References to NPCs in the NPC directory
+  /**
+   * The quest's people, as ids into the NPC directory.
+   *
+   * The one relation list (`D15.7`). A second field -- `importantNPCs`, free
+   * text `{name, description}` -- used to sit beside this one and was rendered
+   * beside it too, which is why Thorin and Smaug appeared twice on the same
+   * quest card. `15-5` deleted it: two fields for one relationship cannot be
+   * kept in agreement, and only this one can be resolved to a record, a page
+   * and an occupation.
+   *
+   * Documents written before that keep whatever `importantNPCs` they carry --
+   * every write goes through `updateDoc`, which merges field by field and
+   * never removes one. `src/utils/__dev__/auditQuestImportantNPCs.ts` reports
+   * any name in it that this list does not already name.
+   */
+  relatedNPCIds?: string[];
   complications?: string[];
   rewards?: string[];
   /**

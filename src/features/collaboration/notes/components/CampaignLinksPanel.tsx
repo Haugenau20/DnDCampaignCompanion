@@ -325,10 +325,18 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
    * Navigate to the entity detail page
    */
   const navigateToEntity = (reference: { type: EntityType; id: string }) => {
+    // A quest has its own address since `15-5`, so a note that mentions one
+    // opens the quest rather than its row in the directory. The other three
+    // still highlight: `/npcs/:id` and `/locations/:id` exist but are `15-6`'s
+    // and a later PR's to route here, and a rumour has no page at all yet.
+    if (reference.type === "quest") {
+      navigateToPage(`/quests/${reference.id}`);
+      return;
+    }
+
     const paths: Record<string, string> = {
       npc: "/npcs",
       location: "/locations",
-      quest: "/quests",
       rumor: "/rumors",
     };
 

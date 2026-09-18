@@ -581,10 +581,12 @@ describe('LocationDetailPage — features are not children (§6.4, item 7)', () 
 });
 
 describe('LocationDetailPage — what the record may claim (§8)', () => {
-  it('formats every date, and never prints an ISO timestamp', () => {
+  it('formats every date, and never prints an ISO timestamp or a stored shape', () => {
     renderPage();
-    expect(screen.getByText('2025-05-31')).toBeInTheDocument();
+    // `15-6` moved the shared helper onto the same shape the record line uses.
+    expect(screen.getByText('31/05/2025')).toBeInTheDocument();
     expect(screen.queryByText('2025-05-31T19:27:30.387Z')).toBeNull();
+    expect(screen.queryByText('2025-05-31')).toBeNull();
   });
 
   it('credits a note to its own author, and leaves an older one blank', () => {

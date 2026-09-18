@@ -172,6 +172,7 @@ jest.mock("../pages/quests", () => ({
   QuestsPage: () => <div data-testid="page-quests" />,
   QuestCreatePage: () => <div data-testid="page-quest-create" />,
   QuestEditPage: () => <div data-testid="page-quest-edit" />,
+  QuestDetailPage: () => <div data-testid="page-quest-detail" />,
 }));
 
 jest.mock("../pages/npcs", () => ({
@@ -268,6 +269,9 @@ const EXPECTED_ROUTES = [
   "/quests",
   "/quests/create",
   "/quests/edit/:questId",
+  // `15-5`. Declared after the two literal segments, for the same reason
+  // `/locations/:locationId` is below.
+  "/quests/:questId",
   "/npcs",
   "/npcs/create",
   "/npcs/edit/:npcId",

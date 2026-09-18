@@ -90,16 +90,23 @@ const STATUS_TONE: Partial<Record<string, RosterStatusTone>> = {
 /**
  * Stance: the only valenced thing in the NPC list, and always also a word
  * (design language §2).
+ *
+ * These four carried `selectedClassName: 'disposition-*'` until `15-6`.
+ * `StateLadder` stopped reading that prop in `15-4`, and nothing failed: an
+ * options array declared as a `const` is a wider type than the prop it is
+ * passed to, so TypeScript's excess-property check never runs on it. The
+ * classes are real and are still what paints the *word* in the row -- they
+ * were simply being handed to something that had stopped listening.
+ * `ladder-classes.test.ts` is the gate that now says so.
  */
 const STANCE_OPTIONS: Array<{
   value: NPCRelationship;
   label: string;
-  selectedClassName?: string;
 }> = [
-  { value: 'friendly', label: 'Friendly', selectedClassName: 'disposition-friendly' },
-  { value: 'neutral', label: 'Neutral', selectedClassName: 'disposition-neutral' },
-  { value: 'hostile', label: 'Hostile', selectedClassName: 'disposition-hostile' },
-  { value: 'unknown', label: 'Unknown', selectedClassName: 'disposition-unknown' },
+  { value: 'friendly', label: 'Friendly' },
+  { value: 'neutral', label: 'Neutral' },
+  { value: 'hostile', label: 'Hostile' },
+  { value: 'unknown', label: 'Unknown' },
 ];
 
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({

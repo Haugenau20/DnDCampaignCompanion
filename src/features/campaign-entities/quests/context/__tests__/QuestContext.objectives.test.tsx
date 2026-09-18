@@ -163,7 +163,21 @@ describe('QuestContext Objective Management Behavior', () => {
       // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
     });
 
-    test('should auto-complete quest when all objectives completed', async () => {
+    test('does not complete the quest when the last objective is ticked', async () => {
+      // CHANGED DELIBERATELY in `15-5` (item 7, and the handoff's gate
+      // "completing the last objective does not silently complete the
+      // quest"). This suite previously asserted the opposite -- that ticking
+      // the last box flipped `status` to `completed` and stamped
+      // `dateCompleted` in the same write.
+      //
+      // That behaviour decided something nobody asked it to. A party that
+      // ticks the last objective has usually done the last thing on the list,
+      // not finished the quest: the reward is unclaimed, the patron
+      // unvisited. And it was invisible -- the write went out with the tick,
+      // with nothing on screen saying the quest had just concluded.
+      //
+      // The page now *offers* completion instead (`QuestObjectives`), and
+      // `markQuestCompleted` remains the one write that concludes a quest.
       const questNearCompletion: Quest = {
         id: 'test-quest',
         title: 'Almost Complete Quest',
@@ -194,7 +208,6 @@ describe('QuestContext Objective Management Behavior', () => {
         expect(questContext).toBeDefined();
       });
 
-      // BEHAVIOR: Completing last objective should auto-complete quest
       await act(async () => {
         await questContext.updateQuestObjective('test-quest', 'obj-2', true);
       });
@@ -202,21 +215,15 @@ describe('QuestContext Objective Management Behavior', () => {
       expect(mockUpdateData).toHaveBeenCalledTimes(1);
       const [questId, updatedQuestData] = mockUpdateData.mock.calls[0];
 
-      // BEHAVIOR: All objectives should be completed
-      const updatedObjectives = updatedQuestData.objectives;
-      expect(updatedObjectives.every((obj: any) => obj.completed)).toBe(true);
-
-      // BEHAVIOR: Quest should be auto-completed
-      expect(updatedQuestData.status).toBe('completed');
-      expect(updatedQuestData.dateCompleted).toBeDefined();
-      
-      // Verify completion date is recent
-      const completionDate = new Date(updatedQuestData.dateCompleted);
-      const now = new Date();
-      expect(completionDate.getTime()).toBeCloseTo(now.getTime(), -2); // Within 100ms
+      expect(questId).toBe('test-quest');
+      // Every objective is ticked...
+      expect(updatedQuestData.objectives.every((obj: any) => obj.completed)).toBe(true);
+      // ...and the quest is still open, with no completion date invented.
+      expect(updatedQuestData.status).toBe('active');
+      expect(updatedQuestData.dateCompleted).toBeUndefined();
     });
 
-    test('should not auto-complete quest if already completed', async () => {
+    test('leaves a completed quest completed, with its original date', async () => {
       const alreadyCompletedQuest: Quest = {
         id: 'test-quest',
         title: 'Already Complete Quest',
@@ -247,7 +254,7 @@ describe('QuestContext Objective Management Behavior', () => {
         expect(questContext).toBeDefined();
       });
 
-      // BEHAVIOR: Should update objective but not change quest completion
+      // BEHAVIOR: the objective is updated and the status is left alone
       await act(async () => {
         await questContext.updateQuestObjective('test-quest', 'obj-2', true);
       });
@@ -262,7 +269,7 @@ describe('QuestContext Objective Management Behavior', () => {
       expect(updatedQuestData.dateCompleted).toBe('2023-01-01T00:00:00.000Z');
     });
 
-    test('should not auto-complete failed quest', async () => {
+    test('leaves a failed quest failed', async () => {
       const failedQuest: Quest = {
         id: 'test-quest',
         title: 'Failed Quest',

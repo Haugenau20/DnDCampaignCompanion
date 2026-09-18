@@ -1,11 +1,12 @@
 // src/features/campaign-entities/quests/components/QuestRowSummary.tsx
-import React, { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import React from 'react';
+import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import EntitySigil from 'core/components/EntitySigil';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import ObjectiveCheckbox from 'shared/components/row-controls/ObjectiveCheckbox';
 import { Quest, QuestStatus } from '../types';
+import { QUEST_STATUS_OPTIONS } from '../utils/quest-presentation';
 
 export interface QuestRowSummaryProps {
   quest: Quest;
@@ -14,21 +15,17 @@ export interface QuestRowSummaryProps {
   onToggleObjective: (objectiveId: string, completed: boolean) => Promise<unknown>;
   onChangeStatus: (status: QuestStatus) => Promise<unknown>;
   onOpenNPC: (npcId: string) => void;
-  /** The surplus the quest page takes over in `15-5`. */
-  prep?: React.ReactNode;
+  /** The way into `/quests/:questId`, where the prep material now lives. */
+  onOpenQuest: () => void;
 }
 
 /**
- * A quest concludes, so its status has real valence -- but the *ladder* does
- * not paint it. The selected chip says "this is the current one" and takes the
- * accent, exactly as `S2` draws it; the valence belongs to the status word in
- * the collapsed row.
+ * The status options moved to `quest-presentation.ts` in `15-5`, so the row and
+ * `/quests/:questId` offer the same three words in the same order. A quest
+ * concludes, so its status has real valence -- but the *ladder* does not paint
+ * it: the selected chip says "this is the current one", and the valence belongs
+ * to the status word in the collapsed row.
  */
-const STATUS_OPTIONS = [
-  { value: 'active' as const, label: 'Active' },
-  { value: 'completed' as const, label: 'Completed' },
-  { value: 'failed' as const, label: 'Failed' },
-];
 
 /** The uppercase micro-label each part of the summary is introduced by. */
 const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -51,10 +48,10 @@ const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
  * status control pass it. Background, leads, complications, rewards, level
  * range and the rest are read once while prepping, which is what a page is for.
  *
- * Until `/quests/:questId` exists (`15-5`) that surplus has nowhere to go, so
- * it stays here behind a second, closed disclosure -- reachable, but no longer
- * the thing the row costs you. `15-1` item 1 allows exactly this and asks that
- * the PR say which was done.
+ * `15-5` built that page, so the surplus has gone to it and the second,
+ * closed disclosure that held it here in the meantime is gone with it. What is
+ * left is the four facts and a way in: description, objectives, who is in it,
+ * the status control, and *More info*.
  */
 export const QuestRowSummary: React.FC<QuestRowSummaryProps> = ({
   quest,
@@ -62,11 +59,8 @@ export const QuestRowSummary: React.FC<QuestRowSummaryProps> = ({
   onToggleObjective,
   onChangeStatus,
   onOpenNPC,
-  prep,
+  onOpenQuest,
 }) => {
-  const [showPrep, setShowPrep] = useState(false);
-  const prepId = React.useId();
-
   const relatedNPCIds = quest.relatedNPCIds ?? [];
 
   return (
@@ -144,44 +138,22 @@ export const QuestRowSummary: React.FC<QuestRowSummaryProps> = ({
 
         <StateLadder
           label="Status"
-          options={STATUS_OPTIONS}
+          options={QUEST_STATUS_OPTIONS}
           value={quest.status}
           ariaLabel={`Status of ${quest.title}`}
           onChange={onChangeStatus}
         />
 
-        {prep && (
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => setShowPrep((shown) => !shown)}
-              aria-expanded={showPrep}
-              aria-controls={prepId}
-              className="flex items-center gap-1 text-sm typography-secondary text-left"
-            >
-              <ChevronRight
-                size={14}
-                aria-hidden="true"
-                className={showPrep ? 'rotate-90 transition-transform' : 'transition-transform'}
-              />
-              Prep — background, leads, rewards
-            </button>
-            {/*
-              The display class is applied only while open. `hidden` is an
-              attribute selector, so a class like `flex` outranks
-              `[hidden] { display: none }` and the block stays on screen --
-              which is how the "bounded" expansion measured 1,040px in the
-              running app while every test passed.
-            */}
-            <div
-              id={prepId}
-              hidden={!showPrep}
-              className={showPrep ? 'flex flex-col gap-4' : undefined}
-            >
-              {prep}
-            </div>
-          </div>
-        )}
+        {/*
+          The way into the quest's own page, where the prep material lives
+          since `15-5`. It sits in the expanded content and never in the
+          collapsed row: the collapsed row is the highest-frequency surface in
+          the product and does not get a second control (D41). A row that is
+          already open has said it wants more.
+        */}
+        <Button variant="outline" size="sm" onClick={onOpenQuest} className="self-start">
+          More info
+        </Button>
       </div>
     </div>
   );

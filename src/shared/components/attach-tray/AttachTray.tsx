@@ -41,6 +41,20 @@ export interface AttachTrayProps {
    * so every tray gets the hatch without each call site wiring it.
    */
   onCreateNew?: (kind: AttachKind) => void;
+  /**
+   * Whether the tray draws its own chips for what is already attached.
+   *
+   * On by default, because §5 wants the picked set visible above the list the
+   * whole time. An entity page turns it off: `/quests/:questId` and
+   * `/locations/:locationId` already list the attached records in full -- with
+   * the occupation and place that tell two NPCs apart -- and a chip repeating
+   * each name below that list is the same person twice on one screen, which is
+   * exactly the defect `D15.7` exists to remove.
+   *
+   * The tray is still *told* what is attached either way, so its own rows say
+   * "Attached" rather than offering to attach someone who already is.
+   */
+  showAttachedChips?: boolean;
   /** The trigger's label. "Attach" everywhere, which is the point (§5 item 9). */
   triggerLabel?: string;
   /** Names the tray for assistive technology, e.g. "Who is in it". */
@@ -72,6 +86,7 @@ export const AttachTray: React.FC<AttachTrayProps> = ({
   onDetach,
   excludeIds,
   single = false,
+  showAttachedChips = true,
   onCreateNew,
   triggerLabel = "Attach",
   ariaLabel,
@@ -227,7 +242,7 @@ export const AttachTray: React.FC<AttachTrayProps> = ({
         The already-picked chips stay visible above the list the whole time
         (§5). Removing a chip and un-attaching a row are the same operation.
       */}
-      {attached.length > 0 && (
+      {showAttachedChips && attached.length > 0 && (
         <ul className="flex flex-wrap gap-2 list-none p-0 m-0">
           {attached.map((candidate) => (
             <li key={candidate.id}>

@@ -344,7 +344,8 @@ describe('LocationDirectory', () => {
       const quest = screen.getByRole('button', { name: /Find the Amulet/ });
       expect(within(quest).getByText('· Active')).toBeInTheDocument();
       fireEvent.click(quest);
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/quests?highlight=q-1');
+      // The quest's own page since `15-5`; a highlighted directory row until then.
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/quests/q-1');
     });
   });
 

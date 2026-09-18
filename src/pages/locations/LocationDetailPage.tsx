@@ -180,7 +180,7 @@ const LocationDetailPage: React.FC = () => {
           id: quest.id,
           name: quest.title,
           detail: `quest, ${quest.status}`,
-          href: `/quests?highlight=${quest.id}`,
+          href: `/quests/${quest.id}`,
         })
       );
 
@@ -406,7 +406,13 @@ const LocationDetailPage: React.FC = () => {
                   <AttachTray
                     kinds={['npc']}
                     sources={{ npc: npcs, location: locations }}
-                    attachedIds={[]}
+                    // `15-4` passed `[]` here to stop the tray drawing chips
+                    // under the list that already names everyone. The side
+                    // effect was that the tray then offered "Attach" beside
+                    // someone who was already attached. `15-5` gave the tray a
+                    // way to say both things at once.
+                    attachedIds={location.connectedNPCs ?? []}
+                    showAttachedChips={false}
                     ariaLabel={`the people in ${location.name}`}
                     onAttach={(id) =>
                       void save({

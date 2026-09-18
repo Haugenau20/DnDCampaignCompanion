@@ -7,6 +7,7 @@ import {
   formatDateTime,
   formatNoteDate,
 } from '../dateFormatter';
+import { formatAttributionDate } from '../attribution-utils';
 
 describe('dateFormatter', () => {
   describe('convertFirestoreTimestamp', () => {
@@ -316,13 +317,24 @@ describe('formatDisplayDate (additional cases merged from layouts copy)', () => 
 // ---------------------------------------------------------------------------
 
 describe('formatNoteDate', () => {
-  it('renders a full ISO timestamp as a date', () => {
+  // CHANGED DELIBERATELY in `15-6` item 5. This used to return `YYYY-MM-DD` --
+  // which is the shape the value is *stored* in, and which the NPC page was
+  // printing three cards above a record line reading `31/05/2025`. Two formats
+  // for the same kind of fact, on one screen. Both now come from
+  // `formatCalendarDate`.
+  it('renders a full ISO timestamp as a date, in the shape the record line uses', () => {
     // The exact string T001 reports a row printing raw.
-    expect(formatNoteDate('2025-05-31T19:27:30.387Z')).toBe('2025-05-31');
+    expect(formatNoteDate('2025-05-31T19:27:30.387Z')).toBe('31/05/2025');
   });
 
-  it('leaves an already-short date alone', () => {
-    expect(formatNoteDate('2025-05-31')).toBe('2025-05-31');
+  it('renders a stored short date too, rather than passing the stored shape through', () => {
+    expect(formatNoteDate('2025-05-31')).toBe('31/05/2025');
+  });
+
+  it('agrees with the attribution line, which is the disagreement that prompted this', () => {
+    expect(formatNoteDate('2025-05-31T19:27:30.387Z')).toBe(
+      formatAttributionDate('2025-05-31T19:27:30.387Z')
+    );
   });
 
   it('returns an unparseable value untouched rather than inventing one', () => {

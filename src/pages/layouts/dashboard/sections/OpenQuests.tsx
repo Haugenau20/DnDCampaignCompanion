@@ -55,7 +55,7 @@ const OpenQuests: React.FC<OpenQuestsProps> = ({ quests = [], loading = false, l
             <button
               key={quest.id}
               type="button"
-              onClick={() => navigateToPage(`/quests?highlight=${quest.id}`)}
+              onClick={() => navigateToPage(`/quests/${quest.id}`)}
               className={clsx(
                 'flex items-center gap-3 px-4 py-3.5 rounded-lg text-left w-full',
                 'card selectable-item transition-colors'

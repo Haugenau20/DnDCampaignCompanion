@@ -7,6 +7,7 @@ import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { generateUniqueEntityId } from 'core/utils/entity-id';
 import { referencesLocation } from '../../locations/utils/location-display';
+import { moveObjective } from '../utils/quest-presentation';
 import { Location } from '../../locations/types';
 
 // Context interface
@@ -21,6 +22,9 @@ interface QuestContextValue {
   getQuestsByNPC: (npcId: string) => Quest[];
   updateQuestStatus: (questId: string, status: QuestStatus) => Promise<void>;
   updateQuestObjective: (questId: string, objectiveId: string, completed: boolean) => Promise<void>;
+  addQuestObjective: (questId: string, description: string) => Promise<void>;
+  editQuestObjective: (questId: string, objectiveId: string, description: string) => Promise<void>;
+  moveQuestObjective: (questId: string, objectiveId: string, direction: 'up' | 'down') => Promise<void>;
   addQuest: (quest: DomainData<Quest>) => Promise<string>;
   updateQuest: (quest: Quest) => Promise<void>;
   deleteQuest: (questId: string) => Promise<void>;
@@ -84,11 +88,11 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [quests]);
 
   // Get quests by NPC
+  // One relation list (D15.7). This used to also match `importantNPCs` by
+  // `npc.name === npcId` -- comparing a free-text name against an id, which
+  // could only ever match by accident.
   const getQuestsByNPC = useCallback((npcId: string) => {
-    return quests.filter(quest => 
-      quest.relatedNPCIds?.includes(npcId) || 
-      quest.importantNPCs?.some(npc => npc.name === npcId)
-    );
+    return quests.filter(quest => quest.relatedNPCIds?.includes(npcId));
   }, [quests]);
 
   // Ids issued during this session but not yet reflected in `quests` (loaded
@@ -128,8 +132,12 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await refreshQuests();
   }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, refreshQuests]);
 
-  // Update quest objective completion status
-  const updateQuestObjective = useCallback(async (questId: string, objectiveId: string, completed: boolean) => {
+  /**
+   * The one guard every objective write shares: signed in, a campaign in
+   * context, and a quest that exists. Returns the quest so the caller can
+   * work from it.
+   */
+  const questForObjectiveWrite = useCallback((questId: string): Quest => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to update objectives');
     }
@@ -143,29 +151,98 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Quest not found');
     }
 
-    const now = new Date().toISOString();
+    return quest;
+  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById]);
 
-    // Update the specific objective
-    const updatedObjectives = quest.objectives.map(obj => 
+  /** Write a new objective list, leaving every other field of the quest alone. */
+  const writeObjectives = useCallback(
+    async (quest: Quest, objectives: Quest['objectives']) => {
+      await updateData(quest.id, { ...quest, objectives });
+      await refreshQuests();
+    },
+    [updateData, refreshQuests]
+  );
+
+  /**
+   * Tick or untick one objective.
+   *
+   * **Completing the last objective no longer completes the quest** (`15-5`
+   * item 7). It used to, silently: ticking the third of three flipped the
+   * status to `completed` and stamped `dateCompleted` in the same write, with
+   * nothing on screen saying so. A party that ticks the last objective has
+   * usually not finished the quest -- the reward is unclaimed, the patron
+   * unvisited -- and a status nobody chose is a status nobody trusts.
+   *
+   * The offer lives on the page (`QuestObjectives`), which shows *"Every
+   * objective is ticked -- mark the quest completed?"* and completes only when
+   * asked. `markQuestCompleted` is still the one write that concludes a quest.
+   *
+   * A ticked objective keeps its place in the list: the array is mapped, never
+   * reordered or partitioned, so nothing moves under someone mid-session.
+   */
+  const updateQuestObjective = useCallback(async (questId: string, objectiveId: string, completed: boolean) => {
+    const quest = questForObjectiveWrite(questId);
+
+    const updatedObjectives = quest.objectives.map(obj =>
       obj.id === objectiveId ? { ...obj, completed } : obj
     );
 
-    // Check if all objectives are completed
-    const allCompleted = updatedObjectives.every(obj => obj.completed);
+    await writeObjectives(quest, updatedObjectives);
+  }, [questForObjectiveWrite, writeObjectives]);
 
-    const updatedQuest = {
-      ...quest,
-      objectives: updatedObjectives,
-      // Auto-update status to completed if all objectives are done
-      ...(allCompleted && quest.status === 'active' && {
-        status: 'completed' as QuestStatus,
-        dateCompleted: now
-      })
-    };
+  /**
+   * Add an objective to the end of the list.
+   *
+   * Appended, never inserted: the order is the party's plan, and a new
+   * objective is the next thing to do rather than a correction to the order of
+   * what came before. `crypto.randomUUID` matches how every other nested
+   * record in the product (rumour notes, extracted entities) issues an id.
+   */
+  const addQuestObjective = useCallback(async (questId: string, description: string) => {
+    const quest = questForObjectiveWrite(questId);
+    const trimmed = description.trim();
+    if (!trimmed) {
+      throw new Error('An objective needs something to say.');
+    }
 
-    await updateData(questId, updatedQuest);
-    await refreshQuests();
-  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, refreshQuests]);
+    await writeObjectives(quest, [
+      ...quest.objectives,
+      { id: crypto.randomUUID(), description: trimmed, completed: false },
+    ]);
+  }, [questForObjectiveWrite, writeObjectives]);
+
+  /** Reword an objective, keeping whether it is ticked and where it sits. */
+  const editQuestObjective = useCallback(async (questId: string, objectiveId: string, description: string) => {
+    const quest = questForObjectiveWrite(questId);
+    const trimmed = description.trim();
+    if (!trimmed) {
+      throw new Error('An objective needs something to say.');
+    }
+
+    await writeObjectives(
+      quest,
+      quest.objectives.map(obj =>
+        obj.id === objectiveId ? { ...obj, description: trimmed } : obj
+      )
+    );
+  }, [questForObjectiveWrite, writeObjectives]);
+
+  /**
+   * Move one objective one place up or down.
+   *
+   * A move that would fall off either end writes nothing at all, rather than
+   * writing the list back unchanged: a no-op write would still stamp
+   * `dateModified` and credit a modification nobody made (§8).
+   */
+  const moveQuestObjective = useCallback(async (questId: string, objectiveId: string, direction: 'up' | 'down') => {
+    const quest = questForObjectiveWrite(questId);
+    const reordered = moveObjective(quest.objectives, objectiveId, direction);
+    if (reordered === quest.objectives) {
+      return;
+    }
+
+    await writeObjectives(quest, reordered);
+  }, [questForObjectiveWrite, writeObjectives]);
 
   // Add quest
   const addQuest = useCallback(async (questData: DomainData<Quest>) => {
@@ -194,7 +271,6 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       relatedNPCIds: questData.relatedNPCIds || [],
       leads: questData.leads || [],
       keyLocations: questData.keyLocations || [],
-      importantNPCs: questData.importantNPCs || [],
       complications: questData.complications || [],
       rewards: questData.rewards || []
     };
@@ -313,6 +389,9 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     getQuestsByNPC,
     updateQuestStatus,
     updateQuestObjective,
+    addQuestObjective,
+    editQuestObjective,
+    moveQuestObjective,
     addQuest,
     updateQuest,
     deleteQuest,

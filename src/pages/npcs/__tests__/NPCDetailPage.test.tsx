@@ -1,6 +1,6 @@
 // src/pages/npcs/__tests__/NPCDetailPage.test.tsx
 import React from "react";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import { MemoryRouter, matchRoutes } from "react-router-dom";
 import NPCDetailPage from "../NPCDetailPage";
 
@@ -124,7 +124,12 @@ const mockRefreshNPCs = jest.fn().mockResolvedValue(undefined);
 
 const mockLocations = [{ id: "mines-of-moria", name: "Mines of Moria" }];
 const mockDeleteNPC = jest.fn().mockResolvedValue(undefined);
+const mockUpdateRumor = jest.fn().mockResolvedValue(undefined);
 let mockRumors: any[] = [];
+let mockQuests: any[] = [
+  { id: "quest-1", title: "Destroy the Ring", status: "active" },
+  { id: "quest-2", title: "Find the Entwives", status: "active" },
+];
 
 jest.mock("features/campaign-entities", () => ({
   useNPCData: () => ({ ...mockNPCDataReturn, refreshNPCs: mockRefreshNPCs }),
@@ -133,8 +138,8 @@ jest.mock("features/campaign-entities", () => ({
     updateNPCNote: mockUpdateNPCNote,
     deleteNPC: mockDeleteNPC,
   }),
-  useQuests: () => ({ getQuestById: mockGetQuestById }),
-  useRumors: () => ({ rumors: mockRumors }),
+  useQuests: () => ({ getQuestById: mockGetQuestById, quests: mockQuests }),
+  useRumors: () => ({ rumors: mockRumors, updateRumor: mockUpdateRumor }),
   useLocations: () => ({ locations: mockLocations }),
   // The real resolver, not a stub: the page's contract is that it reuses the
   // directories' answer rather than inventing its own.
@@ -225,12 +230,20 @@ jest.mock("../../../core/components/Button", () => {
     __esModule: true,
     // Added in 14.5: links that must look like buttons wear this recipe.
     buttonClasses: () => "button",
+    // `startIcon` and the rest are dropped on purpose; `aria-label` is not.
+    // Four pencils on this page all read "Edit", and what tells them apart is
+    // the accessible name -- a mock that swallowed it would hide exactly the
+    // thing these tests need to distinguish.
     default: React.forwardRef(
-      ({ children, onClick, variant, disabled }: any, ref: any) => (
+      (
+        { children, onClick, variant, disabled, "aria-label": ariaLabel }: any,
+        ref: any
+      ) => (
         <button
           ref={ref}
           onClick={onClick}
           disabled={disabled}
+          aria-label={ariaLabel}
           data-variant={variant ?? "primary"}
         >
           {children}
@@ -276,6 +289,11 @@ describe("NPCDetailPage", () => {
       error: null,
     };
     mockRumors = [];
+    mockQuests = [
+      { id: "quest-1", title: "Destroy the Ring", status: "active" },
+      { id: "quest-2", title: "Find the Entwives", status: "active" },
+    ];
+    mockUpdateRumor.mockResolvedValue(undefined);
     mockGroupUserProfile = {
       username: "gandlaf",
       activeCharacterId: "char-1",
@@ -387,20 +405,57 @@ describe("NPCDetailPage", () => {
       expect(screen.queryByText(/quest-missing/)).not.toBeInTheDocument();
     });
 
-    it("says so in words when all six are empty, rather than hiding the fields", () => {
+    it("asks for what is missing, instead of dropping the fields or showing blanks", () => {
+      // CHANGED DELIBERATELY in `15-6` item 3. This suite used to assert that
+      // the three prose fields vanish when all three are empty -- "an empty
+      // card is worse than no card". True of an empty card; not true of a
+      // question. An NPC created through quick add has a name and a line, and
+      // a page that answers that by hiding five of its seven fields reads as
+      // broken rather than new (§10, design language §8).
       mockNpcId = "npc-3";
       renderPage();
-      // The three prose fields share a card that is dropped entirely when all
-      // three are empty -- an empty card is worse than no card.
-      expect(screen.queryByText("Appearance")).not.toBeInTheDocument();
-      expect(screen.queryByText("Personality")).not.toBeInTheDocument();
-      expect(screen.queryByText("Background")).not.toBeInTheDocument();
-      // The sidebar cards stay, and say they are empty rather than vanishing.
+
+      expect(
+        screen.getByRole("button", { name: /What do they look like\?/ })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /How do they treat the party\?/ })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Where do they come from\?/ })
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Who are they\?/ })).toBeInTheDocument();
+
+      // The sidebar cards stay, as they did.
       expect(screen.getByText(/Relationships/)).toBeInTheDocument();
       expect(screen.getByText("Nothing linked yet")).toBeInTheDocument();
       expect(screen.getByText("Tags")).toBeInTheDocument();
-      expect(screen.getByText("No tags yet")).toBeInTheDocument();
-      expect(screen.getByText("Nothing written yet")).toBeInTheDocument();
+    });
+
+    it("shows a signed-out reader the gate rather than the prompts", () => {
+      // A prompt is an invitation, and `usePageGate` only reports `canAct` for
+      // a viewer the page is ready for -- so a signed-out reader never reaches
+      // the record at all, let alone an invitation to fill it in.
+      mockNpcId = "npc-3";
+      mockUser = null;
+      renderPage();
+      expect(screen.queryByText(/What do they look like/)).not.toBeInTheDocument();
+      expect(screen.queryByText("Appearance")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { level: 1, name: "Nameless Guard" })
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows no prompt where something is written", () => {
+      // "An NPC with two of five sections written looks deliberately
+      // incomplete; one with all five shows no prompts at all."
+      renderPage();
+      expect(screen.queryByText(/What do they look like/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/How do they treat the party/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Where do they come from/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Who are they\?/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/What race are they/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/What do they do\?/)).not.toBeInTheDocument();
     });
   });
 
@@ -518,15 +573,44 @@ describe("NPCDetailPage", () => {
       expect(
         screen.getByText("Edit all fields").getAttribute("data-variant")
       ).toBe("outline");
-      expect(screen.getByText("Edit").getAttribute("data-variant")).toBe(
-        "ghost"
-      );
+      expect(
+        screen
+          .getByRole("button", { name: "Edit description" })
+          .getAttribute("data-variant")
+      ).toBe("ghost");
     });
 
-    it("navigates to the full form from the identity card", () => {
+    it("opens every editor on the page, and navigates nowhere", () => {
+      // CHANGED DELIBERATELY in `15-6` item 2. "Change five things at once" is
+      // a real thing to want; leaving the page to do it is not. `/npcs/edit/:id`
+      // still exists -- `15-8` retires it -- but nothing here routes to it.
       renderPage();
-      screen.getByText("Edit all fields").click();
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/npcs/edit/npc-1");
+      fireEvent.click(screen.getByText("Edit all fields"));
+
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+      expect(screen.getByLabelText("Name")).toBeInTheDocument();
+      expect(screen.getByLabelText("Description")).toBeInTheDocument();
+      expect(screen.getByLabelText("Appearance")).toBeInTheDocument();
+      expect(screen.getByLabelText("Personality")).toBeInTheDocument();
+      expect(screen.getByLabelText("Background")).toBeInTheDocument();
+      expect(screen.getByLabelText("Role")).toBeInTheDocument();
+      expect(screen.getByLabelText("Race")).toBeInTheDocument();
+      expect(
+        screen.getByRole("group", { name: "Status of Gandalf" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("group", { name: "Disposition of Gandalf" })
+      ).toBeInTheDocument();
+    });
+
+    it("opens one editor at a time when a section is opened on its own (\u00a77)", () => {
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Edit description" }));
+      expect(screen.getByLabelText("Description")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Edit appearance" }));
+      expect(screen.getByLabelText("Appearance")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Description")).not.toBeInTheDocument();
     });
 
     it("navigates to an associate's own page", () => {
@@ -542,7 +626,9 @@ describe("NPCDetailPage", () => {
   describe("notes", () => {
     it("shows a note's date, text and author", () => {
       renderPage();
-      expect(screen.getByText("2025-05-31")).toBeInTheDocument();
+      // `15-6` item 5: the same shape the record line uses, not the shape the
+      // note is stored in.
+      expect(screen.getByText("31/05/2025")).toBeInTheDocument();
       expect(screen.getByText("Rode to Isengard.")).toBeInTheDocument();
       expect(screen.getByText("Zendikarr")).toBeInTheDocument();
     });
@@ -550,9 +636,9 @@ describe("NPCDetailPage", () => {
     it("reads oldest first, and says so", () => {
       renderPage();
       const dates = screen
-        .getAllByText(/^\d{4}-\d{2}-\d{2}$/)
+        .getAllByText(/^\d{2}\/\d{2}\/\d{4}$/)
         .map((n) => n.textContent);
-      expect(dates).toEqual(["2025-04-02", "2025-05-31"]);
+      expect(dates).toEqual(["02/04/2025", "31/05/2025"]);
       expect(screen.getByText(/oldest first/)).toBeInTheDocument();
     });
 
@@ -580,10 +666,13 @@ describe("NPCDetailPage", () => {
         error: null,
       };
       renderPage();
-      expect(screen.getByText("2025-05-31")).toBeInTheDocument();
+      expect(screen.getByText("31/05/2025")).toBeInTheDocument();
       expect(
         screen.queryByText("2025-05-31T19:27:30.387Z")
       ).not.toBeInTheDocument();
+      // And not the stored shape either: `2025-05-31` is what this page used
+      // to print beside a record line reading `31/05/2025`.
+      expect(screen.queryByText("2025-05-31")).not.toBeInTheDocument();
     });
 
     it("leaves an unparseable date exactly as it was stored", () => {
@@ -650,9 +739,17 @@ describe("NPCDetailPage", () => {
       expect(
         screen.getByRole("heading", { level: 1, name: "Nameless Guard" })
       ).toBeInTheDocument();
+      // Status and disposition always have a value -- the type requires one --
+      // so they still state it.
       expect(fieldValue("Status")).toBe("Unknown");
-      expect(fieldValue("Role")).toBe("Unrecorded");
-      expect(screen.getByText("Nothing written yet")).toBeInTheDocument();
+      // Role and race do not, and now ask instead of reporting "Unrecorded"
+      // (`15-6` item 3).
+      expect(
+        screen.getByRole("button", { name: /What do they do\?/ })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /What race are they\?/ })
+      ).toBeInTheDocument();
     });
 
     it("names the page even when the record cannot be loaded", () => {
@@ -681,8 +778,11 @@ describe("NPCDetailPage", () => {
   // Editing in place (7.2)
   // -------------------------------------------------------------------------
   describe("editing the description in place", () => {
+    const editButton = () =>
+      screen.getByRole("button", { name: "Edit description" });
+
     const openEditor = () => {
-      fireEvent.click(screen.getByText("Edit"));
+      fireEvent.click(editButton());
       return screen.getByLabelText("Description");
     };
 
@@ -736,11 +836,9 @@ describe("NPCDetailPage", () => {
 
     it("returns focus to the control that opened it", async () => {
       renderPage();
-      fireEvent.click(screen.getByText("Edit"));
+      fireEvent.click(editButton());
       fireEvent.click(screen.getByText("Cancel"));
-      await waitFor(() =>
-        expect(screen.getByText("Edit")).toHaveFocus()
-      );
+      await waitFor(() => expect(editButton()).toHaveFocus());
     });
 
     it("discards the typed value on cancel", () => {
@@ -782,11 +880,15 @@ describe("NPCDetailPage", () => {
       ).toBe("outline");
     });
 
-    it("still offers the editor when there is no description to edit", () => {
+    it("asks for a description when there is none, rather than showing a blank", () => {
+      // The prompt replaces both the "Nothing written yet" line and the pencil
+      // beside it: one control, and it says what to write.
       mockNpcId = "npc-3";
       renderPage();
-      expect(screen.getByText("Nothing written yet")).toBeInTheDocument();
-      expect(screen.getByText("Edit")).toBeInTheDocument();
+      expect(screen.queryByText("Nothing written yet")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /Who are they\?/ }));
+      expect(screen.getByLabelText("Description")).toBeInTheDocument();
     });
   });
 
@@ -794,7 +896,7 @@ describe("NPCDetailPage", () => {
     it("keeps every character the user typed", async () => {
       mockUpdateNPC.mockRejectedValue(new Error("Network unavailable"));
       renderPage();
-      fireEvent.click(screen.getByText("Edit"));
+      fireEvent.click(screen.getByRole("button", { name: "Edit description" }));
       const field = screen.getByLabelText("Description");
       fireEvent.change(field, { target: { value: "Hard-won sentence." } });
       fireEvent.click(screen.getByText("Save description"));
@@ -812,7 +914,7 @@ describe("NPCDetailPage", () => {
     it("says what happened rather than only that something did", async () => {
       mockUpdateNPC.mockRejectedValue(new Error("Network unavailable"));
       renderPage();
-      fireEvent.click(screen.getByText("Edit"));
+      fireEvent.click(screen.getByRole("button", { name: "Edit description" }));
       fireEvent.change(screen.getByLabelText("Description"), {
         target: { value: "x" },
       });
@@ -825,7 +927,7 @@ describe("NPCDetailPage", () => {
     it("never claims success for a write the server refused", async () => {
       mockUpdateNPC.mockRejectedValue(new Error("nope"));
       renderPage();
-      fireEvent.click(screen.getByText("Edit"));
+      fireEvent.click(screen.getByRole("button", { name: "Edit description" }));
       fireEvent.change(screen.getByLabelText("Description"), {
         target: { value: "x" },
       });
@@ -839,7 +941,7 @@ describe("NPCDetailPage", () => {
     it("lets the user try again without retyping", async () => {
       mockUpdateNPC.mockRejectedValueOnce(new Error("nope"));
       renderPage();
-      fireEvent.click(screen.getByText("Edit"));
+      fireEvent.click(screen.getByRole("button", { name: "Edit description" }));
       fireEvent.change(screen.getByLabelText("Description"), {
         target: { value: "Second time lucky." },
       });
@@ -873,7 +975,7 @@ describe("NPCDetailPage", () => {
     const startNeverSettlingSave = () => {
       mockUpdateNPC.mockImplementation(() => new Promise(() => {}));
       renderPage();
-      fireEvent.click(screen.getByText("Edit"));
+      fireEvent.click(screen.getByRole("button", { name: "Edit description" }));
       fireEvent.change(screen.getByLabelText("Description"), {
         target: { value: "A sentence worth keeping." },
       });
@@ -1048,6 +1150,242 @@ describe("NPCDetailPage", () => {
       expect(
         screen.getByRole("heading", { level: 1, name: "NPC" })
       ).toBeInTheDocument();
+    });
+  });
+
+
+  // -------------------------------------------------------------------------
+  // Editing the rest of the record in place (`15-6` item 1)
+  // -------------------------------------------------------------------------
+  describe("editing every other field in place", () => {
+    const openValue = (name: string) =>
+      fireEvent.click(screen.getByRole("button", { name }));
+
+    it("renames the NPC from the name itself", async () => {
+      renderPage();
+      openValue("Edit the name Gandalf");
+      fireEvent.change(screen.getByLabelText("Name"), {
+        target: { value: "Gandalf the White" },
+      });
+      fireEvent.click(screen.getByText("Save name"));
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "npc-1", name: "Gandalf the White" })
+        )
+      );
+    });
+
+    it("edits appearance, personality and background where they are read", async () => {
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Edit personality" }));
+      fireEvent.change(screen.getByLabelText("Personality"), {
+        target: { value: "Short-tempered with fools." },
+      });
+      fireEvent.click(screen.getByText("Save personality"));
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ personality: "Short-tempered with fools." })
+        )
+      );
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+    });
+
+    it("changes presence from the header strip, as a ladder of words", async () => {
+      renderPage();
+      openValue("Edit status");
+
+      const ladder = screen.getByRole("group", { name: "Status of Gandalf" });
+      expect(ladder.textContent).toContain("Deceased");
+      fireEvent.click(
+        within(ladder).getByRole("button", { name: "Deceased" })
+      );
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ status: "deceased" })
+        )
+      );
+    });
+
+    it("changes disposition the same way", async () => {
+      renderPage();
+      openValue("Edit disposition");
+      fireEvent.click(
+        within(screen.getByRole("group", { name: "Disposition of Gandalf" })).getByRole(
+          "button",
+          { name: "Hostile" }
+        )
+      );
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ relationship: "hostile" })
+        )
+      );
+    });
+
+    it("edits the role and the race, which are free text", async () => {
+      renderPage();
+      openValue("Edit role");
+      fireEvent.change(screen.getByLabelText("Role"), {
+        target: { value: "Istari" },
+      });
+      fireEvent.click(screen.getByText("Save role"));
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ occupation: "Istari" })
+        )
+      );
+    });
+
+    it("keeps the typed text and says why when one of these writes is refused", async () => {
+      mockUpdateNPC.mockRejectedValueOnce(new Error("Permission denied"));
+      renderPage();
+      openValue("Edit role");
+      fireEvent.change(screen.getByLabelText("Role"), {
+        target: { value: "Istari" },
+      });
+      fireEvent.click(screen.getByText("Save role"));
+
+      await waitFor(() =>
+        expect(screen.getByText(/Permission denied/)).toBeInTheDocument()
+      );
+      expect(screen.getByLabelText("Role")).toHaveValue("Istari");
+    });
+
+    it("adds and removes a tag", async () => {
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: /Add another tag/ }));
+      fireEvent.change(screen.getByLabelText("Add a tag"), {
+        target: { value: "grey" },
+      });
+      fireEvent.click(screen.getByText("Add tag"));
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ tags: ["wizard", "istari", "grey"] })
+        )
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Remove the tag wizard" }));
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ tags: ["istari"] })
+        )
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The rail gains a way in (`15-6` item 4)
+  // -------------------------------------------------------------------------
+  describe("attaching a relation from the rail", () => {
+    const openTray = () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: /Attach to what Gandalf is linked to/ })
+      );
+    };
+
+    it("offers the four kinds the card already groups, without typing", () => {
+      // A kind with nothing in it shows no heading, so all four need a
+      // candidate for this to be a test of the grouping rather than of the
+      // fixture.
+      mockRumors = [
+        { id: "rumor-1", title: "A wizard is coming", status: "confirmed", relatedNPCs: [] },
+      ];
+      renderPage();
+      openTray();
+      // Scoped to the tray: the rail groups by the same four words, which is
+      // the point -- the tray was given the grouping the card already had.
+      const tray = screen.getByRole("listbox");
+      expect(within(tray).getByText("People")).toBeInTheDocument();
+      expect(within(tray).getByText("Places")).toBeInTheDocument();
+      expect(within(tray).getByText("Quests")).toBeInTheDocument();
+      expect(within(tray).getByText("Rumours")).toBeInTheDocument();
+      // Browsing is the primary act: the filter is there, and nothing was
+      // typed into it to get this list.
+      expect(within(tray).getAllByRole("option").length).toBeGreaterThan(1);
+    });
+
+    it("never offers the NPC themselves", () => {
+      renderPage();
+      openTray();
+      const tray = screen.getByRole("listbox");
+      expect(within(tray).queryByText("Gandalf")).not.toBeInTheDocument();
+    });
+
+    it("attaches a quest to the NPC's own connections", async () => {
+      renderPage();
+      openTray();
+      fireEvent.click(
+        within(screen.getByRole("listbox")).getByText("Find the Entwives")
+      );
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({
+            connections: expect.objectContaining({
+              relatedQuests: ["quest-1", "quest-missing", "quest-2"],
+            }),
+          })
+        )
+      );
+    });
+
+    it("writes the rumour, because that is the record that holds the link", async () => {
+      // A rumour names the NPCs it concerns; an NPC does not list its rumours.
+      // The relationship is real in both directions and only one direction has
+      // a field for it.
+      mockRumors = [
+        { id: "rumor-1", title: "A wizard is coming", status: "confirmed", relatedNPCs: [] },
+      ];
+      renderPage();
+      openTray();
+      fireEvent.click(
+        within(screen.getByRole("listbox")).getByText("A wizard is coming")
+      );
+
+      await waitFor(() =>
+        expect(mockUpdateRumor).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "rumor-1", relatedNPCs: ["npc-1"] })
+        )
+      );
+      expect(mockUpdateNPC).not.toHaveBeenCalled();
+    });
+
+    it("replaces the place rather than collecting several, because someone is in one place", async () => {
+      renderPage();
+      openTray();
+      fireEvent.click(
+        within(screen.getByRole("listbox")).getByText("Mines of Moria")
+      );
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({
+            locationId: "mines-of-moria",
+            location: "Mines of Moria",
+          })
+        )
+      );
+    });
+
+    it("says what is already attached instead of offering it again", () => {
+      renderPage();
+      openTray();
+      const quest = within(screen.getByRole("listbox"))
+        .getByText("Destroy the Ring")
+        .closest('[role="option"]');
+      expect(quest).toHaveAttribute("aria-selected", "true");
+    });
+
+    it("draws no chips of its own, because the card below is the list", () => {
+      renderPage();
+      // Saruman is attached, and appears once: in the relationships list.
+      expect(screen.getAllByText(/Saruman/)).toHaveLength(1);
     });
   });
 

@@ -306,9 +306,7 @@ describe('RumorDirectory', () => {
       fireEvent.click(screen.getByRole('button', { name: /Expand Bandit trouble/ }));
 
       fireEvent.click(screen.getByRole('button', { name: /view quest/i }));
-      expect(mockNavigateToPage).toHaveBeenCalledWith(
-        expect.stringContaining('highlight=quest-1')
-      );
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/quests/quest-1');
     });
   });
 

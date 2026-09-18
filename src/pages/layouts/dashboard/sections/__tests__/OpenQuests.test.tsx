@@ -119,10 +119,10 @@ describe("OpenQuests", () => {
     expect(screen.getByText("1 more open quest")).toBeInTheDocument();
   });
 
-  it("navigates to the highlighted quest when a row is clicked", async () => {
+  it("opens the quest’s own page when a row is clicked", async () => {
     render(<OpenQuests quests={[makeQuest("q7", "Find Obelisken")]} />);
     await userEvent.click(screen.getByText("Find Obelisken").closest("button")!);
-    expect(mockNavigateToPage).toHaveBeenCalledWith("/quests?highlight=q7");
+    expect(mockNavigateToPage).toHaveBeenCalledWith("/quests/q7");
   });
 
   it("navigates to the quests page from the remainder link", async () => {

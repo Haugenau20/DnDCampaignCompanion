@@ -83,10 +83,17 @@
   ├─ keyLocations?: QuestLocation[] (optional)
   │   ├─ name: string
   │   └─ description: string
-  ├─ importantNPCs?: QuestNPC[] (optional)
+  ├─ relatedNPCIds?: string[] (optional)
+  │   (the quest's people, by id -- the one relation list, D15.7)
+  ├─ importantNPCs?: QuestNPC[] (RETIRED -- may still be present on documents)
   │   ├─ name: string
   │   └─ description: string
-  ├─ relatedNPCIds?: string[] (optional)
+  │   (Deleted from the type in PR 15.5: a second, free-text NPC list rendered
+  │    beside relatedNPCIds, which is why the same person appeared twice on a
+  │    quest card. Nothing removes it from stored documents -- every write is an
+  │    updateDoc, which merges field by field -- so documents written before
+  │    that still carry it, unread. See T043 and
+  │    src/utils/__dev__/auditQuestImportantNPCs.ts.)
   ├─ complications?: string[] (optional)
   ├─ rewards?: string[] (optional)
   ├─ location?: string (optional)

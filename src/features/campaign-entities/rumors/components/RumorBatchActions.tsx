@@ -5,6 +5,7 @@ import Typography from '../../../../core/components/Typography';
 import { RumorStatus } from '../types';
 import { useRumors } from '../context/RumorContext';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
+import { useNavigation } from 'shared/hooks/useNavigation';
 import { 
   CheckCircle, 
   HelpCircle, 
@@ -31,6 +32,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
   onComplete
 }) => {
   const { rumors, updateRumorStatus, deleteRumor, combineRumors, convertToQuest } = useRumors();
+  const { navigateToPage } = useNavigation();
   
   // Dialog state
   const [showCombineDialog, setShowCombineDialog] = useState(false);
@@ -115,6 +117,10 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
       const questId = await convertToQuest(rumorIds, questData);
       setShowConvertDialog(false);
       onComplete?.();
+      // The quest that was just authored, at its own address (`15-5` item 11).
+      // Conversion used to leave you in the rumour list with the new quest
+      // nowhere on screen -- the record existed and nothing linked to it.
+      navigateToPage(`/quests/${questId}`);
       return questId;
     } catch (err) {
       setActionError(`Failed to convert rumors to quest: ${err instanceof Error ? err.message : 'Unknown error'}`);

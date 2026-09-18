@@ -138,7 +138,7 @@ useEffect(() => {
           description: quest.description,
           actor: determineActor(quest),
           timestamp: new Date(quest.dateModified || quest.dateAdded),
-          link: `/quests?highlight=${quest.id}`
+          link: `/quests/${quest.id}`
         });
       }
     });

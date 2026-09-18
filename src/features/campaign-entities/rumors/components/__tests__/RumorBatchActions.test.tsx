@@ -46,6 +46,13 @@ jest.mock('../ConvertToQuestDialog', () => ({
     ) : null,
 }));
 
+// Converting now lands on the quest that was just authored (`15-5` item 11),
+// so this component navigates.
+const mockNavigateToPage = jest.fn();
+jest.mock('shared/hooks/useNavigation', () => ({
+  useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
+}));
+
 jest.mock('shared/components/DeleteConfirmationDialog', () => ({
   __esModule: true,
   default: ({ isOpen, onClose, onConfirm, itemName, message }: any) =>
@@ -255,6 +262,11 @@ describe('RumorBatchActions', () => {
       fireEvent.click(screen.getByText('submit-convert'));
       await waitFor(() => {
         expect(mockConvertToQuest).toHaveBeenCalledWith(['r1', 'r2'], { title: 't' });
+      });
+      // A rumour could be converted into a quest and then not refer to it --
+      // the quest existed and nothing on screen led to it.
+      await waitFor(() => {
+        expect(mockNavigateToPage).toHaveBeenCalledWith('/quests/new-quest-id');
       });
       expect(onComplete).toHaveBeenCalledTimes(1);
     });

@@ -17,8 +17,20 @@ export { default as QuestDirectory } from './quests/components/QuestDirectory';
 export { default as QuestCreateForm } from './quests/components/QuestCreateForm';
 export { default as QuestEditForm } from './quests/components/QuestEditForm';
 export { BasicInfoSection, ObjectivesSection, LeadsSection, KeyLocationsSection, ComplicationsSection, RewardsSection, RelatedNPCsSection } from './quests/components/QuestFormSections';
+export { default as QuestObjectives } from './quests/components/QuestObjectives';
+export { default as DeleteQuestDialog } from './quests/components/DeleteQuestDialog';
+// How a quest says what it is, shared by the row and the page.
+export {
+  QUEST_STATUS_OPTIONS,
+  formatQuestStatus,
+  moveObjective,
+  objectiveProgressLabel,
+  objectiveProgressOf,
+  questMetaLine,
+} from './quests/utils/quest-presentation';
+export type { ObjectiveProgress } from './quests/utils/quest-presentation';
 // Quest types
-export type { Quest, QuestStatus, QuestObjective, QuestLocation, QuestNPC, QuestContextState, QuestContextValue } from './quests/types';
+export type { Quest, QuestStatus, QuestObjective, QuestLocation, QuestContextState, QuestContextValue } from './quests/types';
 
 // Location context and hooks
 export { LocationProvider, useLocations } from './locations/context/LocationContext';

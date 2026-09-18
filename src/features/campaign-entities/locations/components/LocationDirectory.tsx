@@ -235,7 +235,7 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
         onChangeStatus={(status) => updateLocationStatus(location.id, status)}
         onOpenNPC={(npcId) => navigateToPage(createPath('/npcs', {}, { highlight: npcId }))}
         onOpenQuest={(questId) =>
-          navigateToPage(createPath('/quests', {}, { highlight: questId }))
+          navigateToPage(`/quests/${questId}`)
         }
       />
     ),
