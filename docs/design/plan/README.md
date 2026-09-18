@@ -31,8 +31,8 @@ route to replace it is an outage, which is why `14-5` is fifth and not first.
 `../../design/colour-schema.json`, `../01-token-model.md`, this folder's
 `00-surface-routing.md`, and every `handoff/14-*.md`.
 
-A handoff that is wrong is **reported, not rewritten**: append the finding to
-`../03-drift-log.md` and stop. A merged handoff is never edited by anyone.
+A handoff that is wrong is **reported, not rewritten**: file the finding in
+`TODO.md` and stop. A merged handoff is never edited by anyone.
 
 ## The phase number is proposed
 
@@ -43,7 +43,7 @@ number except the filenames.
 ## What this phase does not do
 
 - No token changes. If a surface here seems to need a colour no primitive
-  provides, the colour schema is incomplete — drift log, not a hex.
+  provides, the colour schema is incomplete — a `TODO.md` item, not a hex.
 - No new permissions model. `14-2` renders roles and may not invent role
   editing beyond what the server already enforces; see
   `docs/testing/bug-tracking/1409-member-can-escalate-to-group-admin.md`.

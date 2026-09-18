@@ -13,10 +13,7 @@ let mockLocationState: Record<string, any> = {};
 jest.mock("react-router-dom", () => ({
   ...jest.requireActual("react-router-dom"),
   useNavigate: () => mockNavigate,
-  useLocation: () => ({
-    state: mockLocationState,
-    pathname: "/quests/create",
-  }),
+  useLocation: () => ({ state: mockLocationState, pathname: "/quests/create" }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -47,9 +44,6 @@ jest.mock("features/user-management", () => ({
       : null,
     setActiveCampaign: mockSetActiveCampaign,
   }),
-  // `SignInForm` and `JoinGroupDialog` were stubbed here until 14.5 deleted
-  // the dialogs. `GatedContent` now links to the routes instead, and needs
-  // only the path builder.
   signInPathFor: () => "/signin",
 }));
 
@@ -66,18 +60,16 @@ jest.mock("core/services/firebase", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Child component mocks
+// Quick add's form is stubbed: this suite is about the page that mounts it --
+// the gate, the chrome and the handoff it passes down. The form's own
+// behaviour has its own suite.
 // ---------------------------------------------------------------------------
-jest.mock("features/campaign-entities", () => ({
-  QuestCreateForm: (props: any) => (
-    <div data-testid="quest-create-form">
-      <span data-testid="quest-form-initial-data">
-        {JSON.stringify(props.initialData)}
-      </span>
-      <button data-testid="quest-form-success" onClick={props.onSuccess}>
-        success
-      </button>
-      <button data-testid="quest-form-cancel" onClick={props.onCancel}>
+jest.mock("shared/components/quick-add/QuickAddForm", () => ({
+  __esModule: true,
+  default: (props: any) => (
+    <div data-testid="quick-add-form">
+      <span data-testid="quick-add-props">{JSON.stringify(props)}</span>
+      <button data-testid="quick-add-cancel" onClick={props.onCancel}>
         cancel
       </button>
     </div>
@@ -89,7 +81,7 @@ jest.mock("shared/components/Breadcrumb", () => ({
   default: (props: any) => (
     <nav data-testid="breadcrumb">
       {props.items.map((item: any, i: number) => (
-        <span key={i} data-testid={`breadcrumb-item-${i}`}>
+        <span key={i} data-testid={"breadcrumb-item-" + i}>
           {item.label}
         </span>
       ))}
@@ -97,9 +89,8 @@ jest.mock("shared/components/Breadcrumb", () => ({
   ),
 }));
 
-jest.mock("../../../core/components/Button", () => ({
+jest.mock("core/components/Button", () => ({
   __esModule: true,
-  // Added in 14.5: links that must look like buttons wear this recipe.
   buttonClasses: () => "button",
   default: ({ children, onClick }: any) => (
     <button onClick={onClick}>{children}</button>
@@ -122,6 +113,10 @@ function renderPage() {
   );
 }
 
+function quickAddProps() {
+  return JSON.parse(screen.getByTestId("quick-add-props").textContent!);
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -137,14 +132,15 @@ describe("QuestCreatePage", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Gated states
+  // Gated states -- unchanged by 15-1: the route is still reachable while
+  // signed out and must still explain itself rather than redirecting.
   // -------------------------------------------------------------------------
   describe("gated states", () => {
     it("renders the page title while signed out", () => {
       mockUser = null;
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Create New Quest" })
+        screen.getByRole("heading", { level: 1, name: "New Quest" })
       ).toBeInTheDocument();
     });
 
@@ -157,10 +153,10 @@ describe("QuestCreatePage", () => {
       expect(screen.queryByText(/select a group/i)).not.toBeInTheDocument();
     });
 
-    it("hides the quest form while signed out", () => {
+    it("hides the create surface while signed out", () => {
       mockUser = null;
       renderPage();
-      expect(screen.queryByTestId("quest-create-form")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("quick-add-form")).not.toBeInTheDocument();
     });
 
     it("shows a skeleton and no message while context is still resolving", () => {
@@ -176,7 +172,7 @@ describe("QuestCreatePage", () => {
       expect(
         await screen.findByRole("heading", { name: /which campaign/i })
       ).toBeInTheDocument();
-      expect(screen.queryByTestId("quest-create-form")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("quick-add-form")).not.toBeInTheDocument();
     });
 
     it("does NOT redirect a signed-out visitor away from the page", () => {
@@ -205,16 +201,17 @@ describe("QuestCreatePage", () => {
       );
     });
 
-    it("renders the page heading as the h1", () => {
+    it("titles the page the same as the dialog, so the two mounts do not drift", () => {
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Create New Quest" })
+        screen.getByRole("heading", { level: 1, name: "New Quest" })
       ).toBeInTheDocument();
     });
 
-    it("renders the QuestCreateForm", () => {
+    it("mounts quick add for the quest", () => {
       renderPage();
-      expect(screen.getByTestId("quest-create-form")).toBeInTheDocument();
+      expect(screen.getByTestId("quick-add-form")).toBeInTheDocument();
+      expect(quickAddProps().entity).toBe("quest");
     });
   });
 
@@ -222,77 +219,76 @@ describe("QuestCreatePage", () => {
   // Back button label
   // -------------------------------------------------------------------------
   describe("back button label", () => {
-    it("shows 'Back to Quests' when no noteId in state", () => {
+    it("shows 'Back to Quests' when there is no noteId in location state", () => {
       mockLocationState = {};
       renderPage();
       expect(screen.getByText("Back to Quests")).toBeInTheDocument();
     });
 
-    it("shows 'Back to Note' when noteId is in state", () => {
-      mockLocationState = { noteId: "note-10" };
+    it("shows 'Back to Note' when noteId is present in location state", () => {
+      mockLocationState = { noteId: "note-42" };
       renderPage();
       expect(screen.getByText("Back to Note")).toBeInTheDocument();
     });
-
-    // The back button is navigation, not a data action, so it stays visible
-    // even while the gate is not ready.
-    it("still shows the back button while signed out", () => {
-      mockUser = null;
-      renderPage();
-      expect(screen.getByText("Back to Quests")).toBeInTheDocument();
-    });
   });
 
   // -------------------------------------------------------------------------
-  // initialData derivation
+  // Note conversion handoff -- `15-1` forbids changing this wiring, so the
+  // page still reads `initialData`/`noteId`/`entityId` from router state.
   // -------------------------------------------------------------------------
-  describe("initialData derivation", () => {
-    it("passes undefined when no initialData in state", () => {
+  describe("note conversion handoff", () => {
+    it("pre-fills nothing when location.state is empty", () => {
       mockLocationState = {};
       renderPage();
-      const raw = screen.getByTestId("quest-form-initial-data").textContent;
-      expect(raw).toBe("");
+      const props = quickAddProps();
+      expect(props.initialName).toBe("");
+      expect(props.initialLine).toBe("");
+      expect(props.noteId).toBeUndefined();
     });
 
-    it("merges initialData, noteId, entityId into formInitialData", () => {
+    it("pre-fills the two fields and passes the note wiring through", () => {
       mockLocationState = {
-        initialData: { title: "Rescue the Princess", description: "..." },
-        noteId: "note-5",
-        entityId: "entity-9",
+        initialData: { title: "Reclaim Erebor", description: "Take the mountain" },
+        noteId: "note-7",
+        entityId: "entity-3",
       };
       renderPage();
-      const raw = screen.getByTestId("quest-form-initial-data").textContent!;
-      const parsed = JSON.parse(raw);
-      expect(parsed.title).toBe("Rescue the Princess");
-      expect(parsed.noteId).toBe("note-5");
-      expect(parsed.entityId).toBe("entity-9");
+      const props = quickAddProps();
+      expect(props.initialName).toBe("Reclaim Erebor");
+      expect(props.initialLine).toBe("Take the mountain");
+      expect(props.noteId).toBe("note-7");
+      expect(props.entityId).toBe("entity-3");
     });
-  });
 
-  // -------------------------------------------------------------------------
-  // Navigation handlers
-  // -------------------------------------------------------------------------
-  describe("onSuccess navigation", () => {
-    it("navigates to /quests on form success", () => {
+    it("carries the extracted fields the two-field surface does not show", () => {
+      mockLocationState = {
+        initialData: {
+          title: "Reclaim Erebor",
+          description: "Take the mountain",
+          relatedNPCIds: ["thorin"],
+        },
+      };
       renderPage();
-      fireEvent.click(screen.getByTestId("quest-form-success"));
-      expect(mockNavigate).toHaveBeenCalledWith("/quests");
+      expect(quickAddProps().carry.relatedNPCIds).toEqual(["thorin"]);
     });
   });
 
+  // -------------------------------------------------------------------------
+  // Cancel navigation
+  // -------------------------------------------------------------------------
   describe("onCancel navigation", () => {
     it("navigates to /quests on cancel when no noteId", () => {
       mockLocationState = {};
       renderPage();
-      fireEvent.click(screen.getByTestId("quest-form-cancel"));
+      fireEvent.click(screen.getByTestId("quick-add-cancel"));
       expect(mockNavigate).toHaveBeenCalledWith("/quests");
     });
 
-    it("navigates to note page on cancel when noteId is present", () => {
-      mockLocationState = { noteId: "note-77" };
+    it("navigates to the note page on cancel when noteId is present", () => {
+      mockLocationState = { noteId: "note-99" };
       renderPage();
-      fireEvent.click(screen.getByTestId("quest-form-cancel"));
-      expect(mockNavigate).toHaveBeenCalledWith("/notes/note-77");
+      fireEvent.click(screen.getByTestId("quick-add-cancel"));
+      expect(mockNavigate).toHaveBeenCalledWith("/notes/note-99");
     });
   });
 });

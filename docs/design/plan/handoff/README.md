@@ -22,7 +22,10 @@ agent executing one**: `../../design/colour-schema.md`,
 `../../design/colour-schema.json`, `../../design/design-language.md`,
 `../01-token-model.md`, the phase plans, and the handoffs themselves.
 
-`../03-drift-log.md` is append-only and is where findings go.
+Findings go to `TODO.md` in the repository root. `../03-drift-log.md` is
+closed and takes no further entries; it is kept because this folder,
+`../../design/colour-schema.md` and many `TODO.md` entries cite its `D`, `R`
+and `Q` numbers.
 
 A handoff that is wrong is **reported, not rewritten**. When a document does
 not answer something, stop and raise it rather than extending the document —
@@ -41,15 +44,15 @@ around.
 
 ## Contract every handoff follows
 
-- **Scope** — the files it may touch. Anything else is out of scope; log it in
-  `../03-drift-log.md` rather than doing it.
+- **Scope** — the files it may touch. Anything else is out of scope; file it in
+  `TODO.md` rather than doing it.
 - **Do** — the change, concretely.
 - **Do not** — the adjacent temptations, named.
 - **Gates** — what must be green, plus the phase's own checks.
 - **Design language references** — the section that decides any judgement call
   the handoff did not anticipate.
 - **Read-only** — for any handoff that names a source of truth, that document
-  is out of bounds for the PR. Finding it wrong is a drift-log entry.
+  is out of bounds for the PR. Finding it wrong is a `TODO.md` entry.
 
 Read `../../design/design-language.md` and `../01-token-model.md` before the
 first one. When a handoff and the design language disagree, the design

@@ -30,6 +30,10 @@ jest.mock('../../../quests/context/QuestContext', () => ({
 
 const { useQuests } = require('../../../quests/context/QuestContext');
 
+let trayNPCs: any[] = [];
+let trayQuests: any[] = [];
+
+
 function setupQuestsMock(quests: any[] = []) {
   (useQuests as jest.Mock).mockReturnValue({ quests });
 }
@@ -316,19 +320,19 @@ describe('TagsSection', () => {
     expect(screen.getByText('safe')).toBeInTheDocument();
   });
 
-  test('should disable Add button when tag input is empty', () => {
+  test('should disable Attach when the tag input is empty', () => {
     render(<TagsSection formData={makeFormData()} handleInputChange={handleInputChange} />);
-    expect(screen.getByRole('button', { name: /^add$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Attach tag' })).toBeDisabled();
   });
 
-  test('should enable Add button when tag input has content', async () => {
+  test('should enable Attach when the tag input has content', async () => {
     render(<TagsSection formData={makeFormData()} handleInputChange={handleInputChange} />);
     const tagInput = screen.getByPlaceholderText('Enter tag...');
     await userEvent.type(tagInput, 'new-tag');
-    expect(screen.getByRole('button', { name: /^add$/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Attach tag' })).not.toBeDisabled();
   });
 
-  test('should call handleInputChange with new tag when Add is clicked', async () => {
+  test('should call handleInputChange with the new tag when Attach is clicked', async () => {
     render(
       <TagsSection
         formData={makeFormData({ tags: ['existing'] })}
@@ -337,7 +341,7 @@ describe('TagsSection', () => {
     );
     const tagInput = screen.getByPlaceholderText('Enter tag...');
     await userEvent.type(tagInput, 'new-tag');
-    fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Attach tag' }));
     expect(handleInputChange).toHaveBeenCalledWith('tags', ['existing', 'new-tag']);
   });
 
@@ -357,81 +361,64 @@ describe('TagsSection', () => {
 });
 
 // ---------------------------------------------------------------------------
-// RelatedQuestsSection Tests
+// RelatedQuestsSection / RelatedNPCsSection
+//
+// Both are now the shared attach tray (`15-2`). The picker they used to own --
+// a modal grid of centred chips with no filter, no count and a `Done` button
+// that committed nothing -- is gone, so these assert the tray's contract
+// rather than that dialog's.
 // ---------------------------------------------------------------------------
 
 describe('RelatedQuestsSection', () => {
   const handleInputChange = jest.fn();
   const setSelectedQuests = jest.fn();
-  const setIsQuestDialogOpen = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
     setupQuestsMock([
-      { id: 'q-1', title: 'Quest Alpha', status: 'active' },
-      { id: 'q-2', title: 'Quest Beta', status: 'active' },
+      { id: 'q-1', title: 'Quest Alpha', status: 'active', dateAdded: '2026-02-01T00:00:00.000Z' },
+      { id: 'q-2', title: 'Quest Beta', status: 'active', dateAdded: '2026-01-01T00:00:00.000Z' },
     ]);
   });
 
-  test('should render "Select Related Quests" button', () => {
+  const renderSection = (selected: Set<string> = new Set()) =>
     render(
       <RelatedQuestsSection
         formData={makeFormData()}
         handleInputChange={handleInputChange}
-        selectedQuests={new Set()}
+        selectedQuests={selected}
         setSelectedQuests={setSelectedQuests}
-        isQuestDialogOpen={false}
-        setIsQuestDialogOpen={setIsQuestDialogOpen}
       />
     );
-    expect(screen.getByRole('button', { name: /select related quests/i })).toBeInTheDocument();
+
+  test('offers one Attach control, not "Select Related Quests"', () => {
+    renderSection();
+    expect(screen.getByRole('button', { name: /attach/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /select related quests/i })).toBeNull();
   });
 
-  test('should call setIsQuestDialogOpen(true) when "Select Related Quests" is clicked', () => {
-    render(
-      <RelatedQuestsSection
-        formData={makeFormData()}
-        handleInputChange={handleInputChange}
-        selectedQuests={new Set()}
-        setSelectedQuests={setSelectedQuests}
-        isQuestDialogOpen={false}
-        setIsQuestDialogOpen={setIsQuestDialogOpen}
-      />
-    );
-    fireEvent.click(screen.getByRole('button', { name: /select related quests/i }));
-    expect(setIsQuestDialogOpen).toHaveBeenCalledWith(true);
+  test('browses what exists without anything being typed', async () => {
+    renderSection();
+    await userEvent.click(screen.getByRole('button', { name: /attach/i }));
+    expect(screen.getAllByRole('option')).toHaveLength(2);
   });
 
-  test('should render selected quest as a tag', () => {
-    setupQuestsMock([{ id: 'q-1', title: 'Quest Alpha', status: 'active' }]);
-    render(
-      <RelatedQuestsSection
-        formData={makeFormData()}
-        handleInputChange={handleInputChange}
-        selectedQuests={new Set(['q-1'])}
-        setSelectedQuests={setSelectedQuests}
-        isQuestDialogOpen={false}
-        setIsQuestDialogOpen={setIsQuestDialogOpen}
-      />
-    );
+  test('attaches a quest from the list', async () => {
+    renderSection();
+    await userEvent.click(screen.getByRole('button', { name: /attach/i }));
+    await userEvent.click(screen.getByRole('option', { name: /Quest Alpha/ }));
+    expect(setSelectedQuests).toHaveBeenCalled();
+  });
+
+  test('shows an attached quest by name, never by id', () => {
+    renderSection(new Set(['q-1']));
     expect(screen.getByText('Quest Alpha')).toBeInTheDocument();
+    expect(screen.queryByText('q-1')).toBeNull();
   });
 
-  test('should call setSelectedQuests when X is clicked on a selected quest', () => {
-    setupQuestsMock([{ id: 'q-1', title: 'Quest Alpha', status: 'active' }]);
-    render(
-      <RelatedQuestsSection
-        formData={makeFormData()}
-        handleInputChange={handleInputChange}
-        selectedQuests={new Set(['q-1'])}
-        setSelectedQuests={setSelectedQuests}
-        isQuestDialogOpen={false}
-        setIsQuestDialogOpen={setIsQuestDialogOpen}
-      />
-    );
-    const tagContainer = screen.getByText('Quest Alpha').closest('div');
-    const xButton = tagContainer?.querySelector('button');
-    fireEvent.click(xButton!);
+  test('detaches from the chip', async () => {
+    renderSection(new Set(['q-1']));
+    await userEvent.click(screen.getByRole('button', { name: 'Detach Quest Alpha' }));
     expect(setSelectedQuests).toHaveBeenCalled();
   });
 });
@@ -443,86 +430,73 @@ describe('RelatedQuestsSection', () => {
 describe('RelatedNPCsSection', () => {
   const handleInputChange = jest.fn();
   const setSelectedNPCs = jest.fn();
-  const setIsNPCDialogOpen = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
+    setupQuestsMock([]);
   });
 
-  test('should render "Select Connected NPCs" button', () => {
-    render(
-      <RelatedNPCsSection
-        formData={makeFormData()}
-        handleInputChange={handleInputChange}
-        npcs={[makeNPC('n-1', 'Aldric')]}
-        selectedNPCs={new Set()}
-        setSelectedNPCs={setSelectedNPCs}
-        isNPCDialogOpen={false}
-        setIsNPCDialogOpen={setIsNPCDialogOpen}
-      />
-    );
-    expect(screen.getByRole('button', { name: /select connected npcs/i })).toBeInTheDocument();
-  });
+  // The section reads the collection from the prop the form already passes it.
+  const npcs = [
+    { ...makeNPC('npc-1', 'Alice'), occupation: 'Scribe', dateAdded: '2026-02-01T00:00:00.000Z' },
+    { ...makeNPC('npc-2', 'Bob'), occupation: 'Smith', dateAdded: '2026-01-01T00:00:00.000Z' },
+  ];
 
-  test('should call setIsNPCDialogOpen(true) when button is clicked', () => {
-    render(
-      <RelatedNPCsSection
-        formData={makeFormData()}
-        handleInputChange={handleInputChange}
-        npcs={[makeNPC('n-1', 'Aldric')]}
-        selectedNPCs={new Set()}
-        setSelectedNPCs={setSelectedNPCs}
-        isNPCDialogOpen={false}
-        setIsNPCDialogOpen={setIsNPCDialogOpen}
-      />
-    );
-    fireEvent.click(screen.getByRole('button', { name: /select connected npcs/i }));
-    expect(setIsNPCDialogOpen).toHaveBeenCalledWith(true);
-  });
-
-  test('should render selected NPC as a tag', () => {
-    const npcs = [makeNPC('n-1', 'Aldric')];
+  const renderSection = (selected: Set<string> = new Set()) =>
     render(
       <RelatedNPCsSection
         formData={makeFormData()}
         handleInputChange={handleInputChange}
         npcs={npcs}
-        selectedNPCs={new Set(['n-1'])}
+        selectedNPCs={selected}
         setSelectedNPCs={setSelectedNPCs}
-        isNPCDialogOpen={false}
-        setIsNPCDialogOpen={setIsNPCDialogOpen}
       />
     );
-    expect(screen.getByText('Aldric')).toBeInTheDocument();
+
+  test('offers one Attach control, not "Select Connected NPCs"', () => {
+    renderSection();
+    expect(screen.getByRole('button', { name: /attach/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /select connected npcs/i })).toBeNull();
   });
 
-  test('should call setSelectedNPCs when X is clicked on a selected NPC', () => {
-    const npcs = [makeNPC('n-1', 'Aldric')];
-    render(
-      <RelatedNPCsSection
-        formData={makeFormData()}
-        handleInputChange={handleInputChange}
-        npcs={npcs}
-        selectedNPCs={new Set(['n-1'])}
-        setSelectedNPCs={setSelectedNPCs}
-        isNPCDialogOpen={false}
-        setIsNPCDialogOpen={setIsNPCDialogOpen}
-      />
-    );
-    const tagContainer = screen.getByText('Aldric').closest('div');
-    const xButton = tagContainer?.querySelector('button');
-    fireEvent.click(xButton!);
+  test('carries the line that tells two people apart', async () => {
+    renderSection();
+    await userEvent.click(screen.getByRole('button', { name: /attach/i }));
+    expect(screen.getByText('Scribe')).toBeInTheDocument();
+    expect(screen.getByText('Smith')).toBeInTheDocument();
+  });
+
+  test('attaches an NPC from the list', async () => {
+    renderSection();
+    await userEvent.click(screen.getByRole('button', { name: /attach/i }));
+    await userEvent.click(screen.getByRole('option', { name: /Alice/ }));
     expect(setSelectedNPCs).toHaveBeenCalled();
   });
 
-  // -------------------------------------------------------------------------
-  // Accessible names (PR 8.1)
-  // -------------------------------------------------------------------------
-  describe("accessible names", () => {
-    test("every control has an accessible name", () => {
-      const { container } = render(<BasicInfoSection formData={makeFormData()} handleInputChange={handleInputChange} />);
-      expect(unnamedControlsIn(container)).toEqual([]);
-    });
+  test('shows an attached NPC by name, never by id', () => {
+    renderSection(new Set(['npc-1']));
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.queryByText('npc-1')).toBeNull();
   });
 
+  test('detaches from the chip', async () => {
+    renderSection(new Set(['npc-1']));
+    await userEvent.click(screen.getByRole('button', { name: 'Detach Alice' }));
+    expect(setSelectedNPCs).toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Accessible names (PR 8.1)
+// ---------------------------------------------------------------------------
+
+describe("accessible names", () => {
+  const handleInputChange = jest.fn();
+
+  test("every control has an accessible name", () => {
+    const { container } = render(
+      <BasicInfoSection formData={makeFormData()} handleInputChange={handleInputChange} />
+    );
+    expect(unnamedControlsIn(container)).toEqual([]);
+  });
 });

@@ -1,7 +1,7 @@
 // src/components/features/quests/__tests__/QuestEditForm.test.tsx
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import QuestEditForm from '../QuestEditForm';
 import { Quest, QuestObjective } from '../../types';
@@ -266,12 +266,16 @@ describe('QuestEditForm', () => {
   // -------------------------------------------------------------------------
   // locationId capture (LocationCombobox wiring)
   // -------------------------------------------------------------------------
-  describe('locationId capture', () => {
+  describe('locationId capture (attach tray wiring)', () => {
+    // Since `15-2` a quest's location is picked from the browse-first tray,
+    // not typed into a combobox. A location that does not exist can no longer
+    // be entered as free text: an invalid choice is unofferable rather than
+    // silently stored.
     beforeEach(() => {
       (useLocations as jest.Mock).mockReturnValue({
         locations: [
-          { id: 'loc-1', name: 'Ironhold' },
-          { id: 'loc-2', name: 'Shadowfen' },
+          { id: 'loc-1', name: 'Ironhold', type: 'city', dateAdded: '2026-02-01T00:00:00.000Z' },
+          { id: 'loc-2', name: 'Shadowfen', type: 'region', dateAdded: '2026-01-01T00:00:00.000Z' },
         ],
       });
     });
@@ -280,11 +284,11 @@ describe('QuestEditForm', () => {
       (useLocations as jest.Mock).mockReturnValue({ locations: [] });
     });
 
-    test('should write both locationId and location when a real Location is selected', async () => {
-      render(<QuestEditForm quest={makeQuest({ location: '' })} />);
-      // Textbox order: Title(0), Description(1), Location(2), Level Range(3), Background(4), objective(5)...
-      const locationInput = screen.getAllByRole('textbox')[2];
-      fireEvent.change(locationInput, { target: { value: 'Ironhold' } });
+    test('writes both locationId and the readable name when a location is attached', async () => {
+      render(<QuestEditForm quest={makeQuest()} />);
+      
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Where it happens' }));
+      await userEvent.click(screen.getByRole('option', { name: /Ironhold/ }));
       fireEvent.submit(document.querySelector('form')!);
 
       await waitFor(() => {
@@ -294,45 +298,28 @@ describe('QuestEditForm', () => {
       });
     });
 
-    test('should write free text and leave locationId empty when text matches no Location', async () => {
-      render(<QuestEditForm quest={makeQuest({ location: '' })} />);
-      const locationInput = screen.getAllByRole('textbox')[2];
-      fireEvent.change(locationInput, { target: { value: 'Somewhere in Mirkwood' } });
+    test('offers only real locations, so a typo cannot become a reference', async () => {
+      render(<QuestEditForm quest={makeQuest()} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Where it happens' }));
+      // Scoped to the tray: this form also renders a native <select> for
+      // status, whose <option> elements carry the same ARIA role.
+      const tray = within(screen.getByRole('listbox', { name: 'Where it happens' }));
+      expect(tray.getAllByRole('option')).toHaveLength(2);
+    });
+
+    test('clears both fields when the location is detached', async () => {
+      render(<QuestEditForm quest={makeQuest()} />);
+      
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Where it happens' }));
+      await userEvent.click(screen.getByRole('option', { name: /Ironhold/ }));
+      await userEvent.click(screen.getByRole('button', { name: 'Detach Ironhold' }));
       fireEvent.submit(document.querySelector('form')!);
 
       await waitFor(() => {
         expect(mockUpdateQuest).toHaveBeenCalledWith(
-          expect.objectContaining({ location: 'Somewhere in Mirkwood', locationId: '' })
+          expect.objectContaining({ location: '', locationId: '' })
         );
       });
-    });
-
-    test('should clear a previously-set locationId when switching to free text (regression)', async () => {
-      render(<QuestEditForm quest={makeQuest({ location: 'Ironhold', locationId: 'loc-1' })} />);
-      const locationInput = screen.getAllByRole('textbox')[2];
-      fireEvent.change(locationInput, { target: { value: 'Somewhere else entirely' } });
-      fireEvent.submit(document.querySelector('form')!);
-
-      await waitFor(() => {
-        expect(mockUpdateQuest).toHaveBeenCalledWith(
-          expect.objectContaining({ location: 'Somewhere else entirely', locationId: '' })
-        );
-      });
-    });
-
-    test('should load and submit an un-migrated Quest (location set, no locationId) without inventing an id', async () => {
-      const quest = makeQuest({ location: 'Ironhold' });
-      delete (quest as any).locationId;
-      render(<QuestEditForm quest={quest} />);
-      fireEvent.submit(document.querySelector('form')!);
-
-      await waitFor(() => {
-        expect(mockUpdateQuest).toHaveBeenCalledTimes(1);
-      });
-
-      const payload = mockUpdateQuest.mock.calls[0][0];
-      expect(payload.location).toBe('Ironhold');
-      expect(payload.locationId).toBeUndefined();
     });
   });
 

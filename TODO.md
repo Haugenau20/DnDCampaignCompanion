@@ -41,6 +41,15 @@ not copied.
 ### T001 — Note dates render as raw ISO strings in two directories
 **Type** bug · **Size** S · **Status** open · **Verified** 2026-09-16 · `R16` `R17`
 
+**Display half closed by PR 15.3.** `formatNoteDate` is lifted to
+`shared/utils/dateFormatter` and used by `LocationDirectory`, `NPCDirectory`
+and `NPCDetailPage`, which previously kept its own copy. No ISO timestamp
+renders anywhere; a value that cannot be parsed is shown as written rather
+than replaced with a guess.
+
+**The stored-shape half stays open**, and is the real job: `NPCNote.date` still
+has no agreed shape, and this changed four consumers rather than one writer.
+
 An expanded row shows `2025-05-31T19:27:30.387Z` where it should read
 `31/05/2025`.
 
@@ -86,6 +95,19 @@ An expanded row shows `2025-05-31T19:27:30.387Z` where it should read
 
 ### T014 — Highlighting works four different ways, and not at all on `/story`
 **Type** bug · **Size** M · **Status** open · **Verified** 2026-09-16
+
+**Closed by PR 15.3**, except the `/story` half. All four directories now read
+`?highlight=` through one hook (`shared/hooks/useHighlightTarget`): matched by
+**id**, target and ancestors revealed, brought into view, and the parameter is
+not cleared on unrelated state changes.
+
+- **Behavioural change**: name-matching is dropped. `NPCDirectory` and
+  `LocationDirectory` matched the name as well as the id, so a renamed record
+  stopped answering its own links. The three emitters that sent a *name*
+  (`QuestDirectory`, `NPCDirectory`, `RumorDirectory` location links) now
+  resolve it to an id first.
+- **Still open**: `/story` reads `?highlight=` not at all, and `15-3` left it
+  that way deliberately. That is what keeps this entry open.
 
 Navigating to an entity from search or from a cross-link passes `?highlight=`.
 Four directories read it, each differently, and one route ignores it.
@@ -157,7 +179,13 @@ A group registration token is valid forever until somebody uses or deletes it.
 - **Source**: todo.txt, 2026-09-16
 
 ### T015 — Completed and failed quests should collapse by default
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-09-16
+**Type** feature · **Size** M · **Status** done · **Verified** 2026-09-16
+
+**Closed by PR 15.3.** `RosterGroup` grew an opt-in `collapsible` /
+`defaultCollapsed` pair -- the whole heading is the control, so the target is
+not a glyph -- and `QuestDirectory` collapses Completed and Failed by default.
+They stay counted and stay reachable. T017 wants the same primitive grown for
+batch selection: grow it, do not fork it.
 
 - **Where**: `src/features/campaign-entities/quests/components/QuestDirectory.tsx:290`
   renders every non-empty status group unconditionally.
@@ -171,7 +199,15 @@ A group registration token is valid forever until somebody uses or deletes it.
 - **Source**: todo.txt, 2026-09-16
 
 ### T016 — Tick a quest objective without opening the edit form
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-16
+**Type** feature · **Size** S · **Status** done · **Verified** 2026-09-16
+
+**Closed by PR 15.3** (`design-handoff/15-3-directory-rows`). `QuestDirectory`'s
+objectives are real checkboxes wired to `updateQuestObjective`, which had been
+on the context and covered by an eight-case suite with no production caller.
+They obey §7's save contract: pending state on the row, never an optimistic
+tick, and a visible revert with the reason when the write is refused. The
+`aria-hidden` decorative box is gone, so each objective is now reachable and
+operable by keyboard and named by its own text.
 
 Marking one objective done means opening the edit form and saving the whole
 quest.
@@ -397,6 +433,57 @@ the rows do not. Related to T004.
 Answered by practice — `.image-slot` sits on `--surface-sunken-bg`, the same in
 both themes — but never written down as a decision. Low stakes; listed so the
 question isn't re-opened from scratch.
+
+### T040 — No accent pair is authored for the band surface
+**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-17
+
+`docs/design/colour-schema.md` §5.2 solves `accent.*` against `page`, `card`
+and `sunken`. It does not solve it against the band, and every page Phase 15
+adds has a band header carrying a status chip.
+
+- **Where**: light `accent.ink` `#8D4F00` on band `#26211C` measures ~1.9:1 —
+  below any usable threshold, and there is no authored pair to reach for.
+- **Touches**: four surfaces in Phase 15 (`/locations/:locationId`,
+  `/quests/:questId`, and the two directories that share the header), which is
+  why it wants answering at the source rather than per page.
+- **Interim**: band chips take the neutral band treatment, which is what the
+  visual reference shows. `handoff/15-4-location-page.md` says so explicitly
+  and forbids inventing a value.
+- **Catch**: the schema is read-only to an implementing PR, so this cannot be
+  closed by the phase that found it.
+- **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13
+
+### T041 — "The required pair is unchanged" is true of one entity in four
+**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-17
+
+`00-entity-authoring.md` §1.2 says creating an entity asks for two fields and
+that "the required pair is **unchanged** from today's forms". `15-1` item 1
+sharpens that into an instruction: "do not relax it and do not add to it".
+Measured against the four create forms, the premise holds for the quest only.
+
+- **Quest** — `QuestCreateForm.tsx:122` requires `title` and `description`.
+  Two. The premise is exactly right here.
+- **Location** — `LocationCreateForm.tsx:153` requires `name`, `description`,
+  `type` and `status`, but the last two are defaulted (`poi`, `known`) and
+  never left blank, so the user supplies two. Effectively unchanged.
+- **NPC** — `NPCForm.tsx:190` requires `name`, `status` and `relationship`;
+  the last two are defaulted, so the user supplies **one**. `description` is
+  labelled "Description" with no asterisk and is not validated — yet
+  `NPC.description` is **non-optional** in `types.ts`. Form and type disagree.
+- **Rumour** — `RumorForm.tsx:194` requires `title`, `content` **and**
+  `sourceName`. Three.
+- **What 15-1 did**: built §4's table as written — two fields for the NPC, the
+  quest and the location — which *adds* a required field for the NPC against
+  item 1's letter, and matches `NPC.description`'s own type. The rumour was
+  left on its existing form under item 9's second branch, because a two-field
+  surface cannot supply `sourceName` without relaxing validation.
+- **What needs deciding**: whether the NPC's description is genuinely required
+  (the type says yes, the form says no), and what the rumour's composer row in
+  `15-7` does about `sourceName` — require it as a third field, default it, or
+  make it optional. `15-7` cannot be written until that is answered.
+- **Source**: `docs/design/plan/15-entity-authoring/handoff/15-1-quick-add.md`
+  item 1 against `00-entity-authoring.md` §1.2 and §4
+
 
 ---
 
@@ -752,8 +839,8 @@ work that landed after the audit — including the Critical one.
 
 ## Documentation debt
 
-Both need a hand allowed to edit the schema files, which no implementing change
-may touch.
+All three need a hand allowed to edit the schema files and the read-only
+history, which no implementing change may touch.
 
 ### T010 — `colour-schema.md` has two decisions numbered `D36`
 **Type** docs · **Size** S · **Status** open · **Verified** 2026-09-16 · `R67`
@@ -772,6 +859,32 @@ handoff.
 Phase 12 is merged, so nothing is pending and the in-code count is 123. Left
 alone because the intended semantics of those fields are the maintainer's, and
 guessing is how a source of truth grows a second, wrong voice.
+
+### T039 — Documents still tell an agent to write to the retired drift log
+**Type** docs · **Size** M · **Status** open · **Verified** 2026-09-17
+
+`docs/design/plan/03-drift-log.md` is closed and carries a note saying so
+(PR 15.0). The documents that point at it were not all correctable by that PR,
+because almost all of them are read-only to an implementing change.
+
+- **Where**: `docs/design/colour-schema.md` has three live references — §8's
+  "Carry these into `../plan/03-drift-log.md` as they are implemented", §9's
+  "Write the gap down in `../plan/03-drift-log.md` as a question", and §9's
+  read-only table, which still lists `plan/03-drift-log.md` as
+  "**Yes — append only.** This is where findings go."
+- **And**: 29 files under `docs/design/plan/` carry 54 further references —
+  5 phase plans (`00-transition-plan.md`, `00-surface-routing.md`,
+  `02-acceptance-criteria.md`, `04-rollout.md`, `06-colour-schema-rollout.md`)
+  and 24 merged handoffs from Phases 6–14. Measured 2026-09-17.
+- **Catch**: PR 15.0's own gate asks that every remaining hit under
+  `docs/design/plan/` be a citation rather than an instruction. That gate
+  cannot pass as written — a merged handoff is never edited by anyone, and the
+  phase plans are on the read-only list too. The handoff was right about its
+  three-file scope and wrong about the reach of its gate.
+- **Touches**: the schema files and the read-only history. Needs the
+  maintainer's hand, like `T010` and `T011`. The cheapest honest fix may be a
+  single line in each tracker's header rather than 54 edits.
+- **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13
 
 ---
 

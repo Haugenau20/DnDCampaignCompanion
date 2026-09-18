@@ -81,7 +81,7 @@ export interface NPCContextValue extends NPCContextState {
   getNPCsByLocation: (location: Location) => NPC[];
   getNPCsByRelationship: (relationship: NPCRelationship) => NPC[];
   updateNPCNote: (npcId: string, note: NPCNote) => void;
-  updateNPCRelationship: (npcId: string, relationship: NPCRelationship) => void;
+  updateNPCRelationship: (npcId: string, relationship: NPCRelationship) => Promise<void>;
   addNPC: (npc: DomainData<NPC>) => Promise<string>;
   updateNPC: (npc: NPC) => Promise<void>;
   deleteNPC: (npcId: string) => Promise<void>;

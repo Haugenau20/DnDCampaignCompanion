@@ -94,9 +94,7 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // Dialog and selection state - moved to local state
-  const [isQuestDialogOpen, setIsQuestDialogOpen] = useState(false);
   const [selectedQuests, setSelectedQuests] = useState<Set<string>>(new Set());
-  const [isNPCDialogOpen, setIsNPCDialogOpen] = useState(false);
   const [selectedNPCs, setSelectedNPCs] = useState<Set<string>>(new Set()); 
   
   // Firebase user for attribution
@@ -207,8 +205,6 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
             handleInputChange={handleInputChange}
             selectedQuests={selectedQuests}
             setSelectedQuests={setSelectedQuests}
-            isQuestDialogOpen={isQuestDialogOpen}
-            setIsQuestDialogOpen={setIsQuestDialogOpen}
           />
 
           <RelatedNPCsSection
@@ -217,8 +213,6 @@ const LocationCreateForm: React.FC<LocationCreateFormProps> = ({
             npcs={npcs}
             selectedNPCs={selectedNPCs}
             setSelectedNPCs={setSelectedNPCs}
-            isNPCDialogOpen={isNPCDialogOpen}
-            setIsNPCDialogOpen={setIsNPCDialogOpen}
           />
 
           <TagsSection 

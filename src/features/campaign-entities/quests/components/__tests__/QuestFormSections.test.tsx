@@ -1,7 +1,7 @@
 // src/components/features/quests/__tests__/QuestFormSections.test.tsx
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   BasicInfoSection,
@@ -24,6 +24,10 @@ jest.mock('../../../locations/context/LocationContext', () => ({
 }));
 
 const { useLocations } = require('../../../locations/context/LocationContext');
+
+let trayNPCs: any[] = [];
+let trayLocations: any[] = [];
+
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -130,12 +134,16 @@ describe('BasicInfoSection', () => {
     expect(screen.getByDisplayValue('Prefilled Quest')).toBeInTheDocument();
   });
 
-  describe('locationId capture (LocationCombobox wiring)', () => {
+  describe('locationId capture (attach tray wiring)', () => {
+    // Since `15-2` the quest's location is picked from the same browse-first
+    // tray as every other relation, not from a typeahead combobox. A location
+    // that does not exist can no longer be typed in, which is the point: an
+    // invalid choice is unofferable rather than silently stored as free text.
     beforeEach(() => {
       (useLocations as jest.Mock).mockReturnValue({
         locations: [
-          { id: 'loc-1', name: 'Ironhold' },
-          { id: 'loc-2', name: 'Shadowfen' },
+          { id: 'loc-1', name: 'Ironhold', type: 'city', dateAdded: '2026-02-01T00:00:00.000Z' },
+          { id: 'loc-2', name: 'Shadowfen', type: 'region', dateAdded: '2026-01-01T00:00:00.000Z' },
         ],
       });
     });
@@ -144,21 +152,35 @@ describe('BasicInfoSection', () => {
       (useLocations as jest.Mock).mockReturnValue({ locations: [] });
     });
 
-    test('should call handleInputChange with locationId when a real Location is selected', () => {
+    test('stores both the id and the readable name when a location is attached', async () => {
       render(<BasicInfoSection formData={makeFormData()} handleInputChange={handleInputChange} />);
-      // Textbox order: Title(0), Description(1), Location/LocationCombobox(2), Level Range(3), Background(4).
-      const locationInput = screen.getAllByRole('textbox')[2];
-      fireEvent.change(locationInput, { target: { value: 'Ironhold' } });
-      expect(handleInputChange).toHaveBeenCalledWith('location', 'Ironhold');
+      await userEvent.click(screen.getByRole('button', { name: /attach/i }));
+      await userEvent.click(screen.getByRole('option', { name: /Ironhold/ }));
+
       expect(handleInputChange).toHaveBeenCalledWith('locationId', 'loc-1');
+      expect(handleInputChange).toHaveBeenCalledWith('location', 'Ironhold');
     });
 
-    test('should call handleInputChange with an empty locationId when text matches no Location', () => {
-      render(<BasicInfoSection formData={makeFormData()} handleInputChange={handleInputChange} />);
-      const locationInput = screen.getAllByRole('textbox')[2];
-      fireEvent.change(locationInput, { target: { value: 'Nowhere Real' } });
-      expect(handleInputChange).toHaveBeenCalledWith('location', 'Nowhere Real');
+    test('clears both when the location is detached', async () => {
+      render(
+        <BasicInfoSection
+          formData={makeFormData({ locationId: 'loc-1', location: 'Ironhold' })}
+          handleInputChange={handleInputChange}
+        />
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Detach Ironhold' }));
+
       expect(handleInputChange).toHaveBeenCalledWith('locationId', '');
+      expect(handleInputChange).toHaveBeenCalledWith('location', '');
+    });
+
+    test('offers only real locations, so a typo cannot become a reference', async () => {
+      render(<BasicInfoSection formData={makeFormData()} handleInputChange={handleInputChange} />);
+      await userEvent.click(screen.getByRole('button', { name: /attach/i }));
+      // Scoped to the tray: this section also renders a native <select> for
+      // status, whose <option> elements carry the same ARIA role.
+      const tray = within(screen.getByRole('listbox'));
+      expect(tray.getAllByRole('option')).toHaveLength(2);
     });
   });
 });
@@ -440,74 +462,65 @@ describe('RewardsSection', () => {
 describe('RelatedNPCsSection', () => {
   const handleInputChange = jest.fn();
   const setSelectedNPCs = jest.fn();
-  const setIsNPCDialogOpen = jest.fn();
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-  test('should render "Related NPCs" heading', () => {
+  // The section reads the collection from the prop the form already passes it.
+  const npcs = [
+    { ...makeNPC('n-1', 'Aldric'), occupation: 'Captain', dateAdded: '2026-02-01T00:00:00.000Z' },
+    { ...makeNPC('n-2', 'Brenna'), occupation: 'Healer', dateAdded: '2026-01-01T00:00:00.000Z' },
+  ];
+
+  const renderSection = (selected: Set<string> = new Set()) =>
     render(
       <RelatedNPCsSection
         formData={makeFormData()}
         handleInputChange={handleInputChange}
-        npcs={[]}
-        selectedNPCs={new Set()}
+        npcs={npcs}
+        selectedNPCs={selected}
         setSelectedNPCs={setSelectedNPCs}
-        isNPCDialogOpen={false}
-        setIsNPCDialogOpen={setIsNPCDialogOpen}
       />
     );
+
+  test('keeps the section heading it already had', () => {
+    renderSection();
     expect(screen.getByText('Related NPCs')).toBeInTheDocument();
   });
 
-  test('should call setIsNPCDialogOpen(true) when + button is clicked', () => {
-    render(
-      <RelatedNPCsSection
-        formData={makeFormData()}
-        handleInputChange={handleInputChange}
-        npcs={[makeNPC('n-1', 'Aldric')]}
-        selectedNPCs={new Set()}
-        setSelectedNPCs={setSelectedNPCs}
-        isNPCDialogOpen={false}
-        setIsNPCDialogOpen={setIsNPCDialogOpen}
-      />
-    );
-    const addButton = screen.getAllByRole('button')[0];
-    fireEvent.click(addButton);
-    expect(setIsNPCDialogOpen).toHaveBeenCalledWith(true);
+  test('replaces the bare + glyph with one named Attach control', () => {
+    renderSection();
+    const trigger = screen.getByRole('button', { name: /attach/i });
+    expect(trigger).toBeInTheDocument();
+    // The old affordance was an icon-only button whose accessible name came
+    // from an aria-label four words long, beside a heading it did not name.
+    expect(trigger).toHaveAccessibleName();
   });
 
-  test('should render selected NPC as a tag', () => {
-    const npcs = [makeNPC('n-1', 'Aldric')];
-    render(
-      <RelatedNPCsSection
-        formData={makeFormData()}
-        handleInputChange={handleInputChange}
-        npcs={npcs}
-        selectedNPCs={new Set(['n-1'])}
-        setSelectedNPCs={setSelectedNPCs}
-        isNPCDialogOpen={false}
-        setIsNPCDialogOpen={setIsNPCDialogOpen}
-      />
-    );
+  test('browses the campaign without anything being typed', async () => {
+    renderSection();
+    await userEvent.click(screen.getByRole('button', { name: /attach/i }));
+    expect(screen.getAllByRole('option')).toHaveLength(2);
+    expect(screen.getByText('Captain')).toBeInTheDocument();
+  });
+
+  test('attaches an NPC from the list', async () => {
+    renderSection();
+    await userEvent.click(screen.getByRole('button', { name: /attach/i }));
+    await userEvent.click(screen.getByRole('option', { name: /Aldric/ }));
+    expect(setSelectedNPCs).toHaveBeenCalled();
+  });
+
+  test('shows an attached NPC by name, never by id', () => {
+    renderSection(new Set(['n-1']));
     expect(screen.getByText('Aldric')).toBeInTheDocument();
+    expect(screen.queryByText('n-1')).toBeNull();
   });
 
-  test('should call setSelectedNPCs when X is clicked on a selected NPC tag', () => {
-    const npcs = [makeNPC('n-1', 'Aldric')];
-    render(
-      <RelatedNPCsSection
-        formData={makeFormData()}
-        handleInputChange={handleInputChange}
-        npcs={npcs}
-        selectedNPCs={new Set(['n-1'])}
-        setSelectedNPCs={setSelectedNPCs}
-        isNPCDialogOpen={false}
-        setIsNPCDialogOpen={setIsNPCDialogOpen}
-      />
-    );
-    const tagContainer = screen.getByText('Aldric').closest('div');
-    const xButton = tagContainer?.querySelector('button');
-    fireEvent.click(xButton!);
+  test('detaches from the chip', async () => {
+    renderSection(new Set(['n-1']));
+    await userEvent.click(screen.getByRole('button', { name: 'Detach Aldric' }));
     expect(setSelectedNPCs).toHaveBeenCalled();
   });
 });

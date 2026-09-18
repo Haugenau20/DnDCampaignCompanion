@@ -11,14 +11,25 @@ jest.mock("../../context/NavigationContext", () => ({
 jest.mock("features/collaboration", () => ({
   useCreateNote: jest.fn(),
 }));
+jest.mock("../../context/QuickAddContext", () => ({
+  useQuickAdd: jest.fn(),
+}));
 
 const { useNavigation } = require("../../context/NavigationContext");
 const { useCreateNote } = require("features/collaboration");
+const { useQuickAdd } = require("../../context/QuickAddContext");
+
+const mockOpenQuickAdd = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
   useNavigation.mockReturnValue({ navigateToPage: mockNavigateToPage, createPath: jest.fn() });
   useCreateNote.mockReturnValue({ createAndOpen: mockCreateAndOpen });
+  useQuickAdd.mockReturnValue({
+    openQuickAdd: mockOpenQuickAdd,
+    closeQuickAdd: jest.fn(),
+    openEntity: null,
+  });
 });
 
 describe("useCreateActions", () => {
@@ -45,13 +56,14 @@ describe("useCreateActions", () => {
     });
   });
 
-  it("navigates to the create route for the five navigating actions", () => {
+  it("navigates to the create route for the two actions that still have one", () => {
+    // Since `15-1` only the chapter and the rumour navigate. The chapter has
+    // no quick-add surface at all -- Phase 15 is about the four campaign
+    // entities -- and the rumour keeps its form until `15-7` builds its
+    // composer row, because `RumorForm` requires a third field.
     const { result } = renderHook(() => useCreateActions());
     const routes: Record<string, string> = {
-      location: "/locations/create",
-      npc: "/npcs/create",
       rumor: "/rumors/create",
-      quest: "/quests/create",
       chapter: "/story/chapters/create",
     };
     Object.entries(routes).forEach(([id, path]) => {
@@ -61,6 +73,22 @@ describe("useCreateActions", () => {
       expect(mockNavigateToPage).toHaveBeenCalledWith(path);
     });
     expect(mockCreateAndOpen).not.toHaveBeenCalled();
+  });
+
+  it("opens quick add in place for the NPC, the location and the quest", () => {
+    // The whole point of `15-1`: adding an NPC while you are looking at the
+    // NPC list must not take the list away. The `/{entity}/create` route still
+    // exists and still renders the same component; the menu just stops
+    // sending you to it.
+    const { result } = renderHook(() => useCreateActions());
+    (["npc", "location", "quest"] as const).forEach((id) => {
+      act(() => {
+        result.current.find((a) => a.id === id)!.run();
+      });
+      expect(mockOpenQuickAdd).toHaveBeenCalledWith(id);
+    });
+    expect(mockOpenQuickAdd).toHaveBeenCalledTimes(3);
+    expect(mockNavigateToPage).not.toHaveBeenCalled();
   });
 
   it("creates and opens a note rather than navigating, for the note action", async () => {

@@ -327,25 +327,23 @@ describe('NPCForm', () => {
       expect(screen.getByText('Affiliations')).toBeInTheDocument();
     });
 
-    test('should disable Add button when affiliation input is empty', () => {
+    test('should disable Attach when the affiliation input is empty', () => {
       render(<NPCForm existingNPCs={[]} />);
-      const addButtons = screen.getAllByRole('button', { name: /^add$/i });
-      expect(addButtons[0]).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Attach affiliation' })).toBeDisabled();
     });
 
-    test('should enable Add button when affiliation input has content', async () => {
+    test('should enable Attach when the affiliation input has content', async () => {
       render(<NPCForm existingNPCs={[]} />);
       const input = screen.getByPlaceholderText(/miners exchange/i);
       await userEvent.type(input, 'The Guild');
-      const addButtons = screen.getAllByRole('button', { name: /^add$/i });
-      expect(addButtons[0]).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Attach affiliation' })).not.toBeDisabled();
     });
 
-    test('should add affiliation tag when Add is clicked', async () => {
+    test('should add an affiliation chip when Attach is clicked', async () => {
       render(<NPCForm existingNPCs={[]} />);
       const input = screen.getByPlaceholderText(/miners exchange/i);
       await userEvent.type(input, 'The Guild');
-      fireEvent.click(screen.getAllByRole('button', { name: /^add$/i })[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'Attach affiliation' }));
       expect(screen.getByText('The Guild')).toBeInTheDocument();
     });
 
@@ -353,7 +351,7 @@ describe('NPCForm', () => {
       render(<NPCForm existingNPCs={[]} />);
       const input = screen.getByPlaceholderText(/miners exchange/i);
       await userEvent.type(input, 'The Guild');
-      fireEvent.click(screen.getAllByRole('button', { name: /^add$/i })[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'Attach affiliation' }));
       expect(input).toHaveValue('');
     });
 
@@ -361,7 +359,7 @@ describe('NPCForm', () => {
       render(<NPCForm existingNPCs={[]} />);
       const input = screen.getByPlaceholderText(/miners exchange/i);
       await userEvent.type(input, 'The Guild');
-      fireEvent.click(screen.getAllByRole('button', { name: /^add$/i })[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'Attach affiliation' }));
       expect(screen.getByText('The Guild')).toBeInTheDocument();
       // Find and click the X button next to the tag
       const tagContainer = screen.getByText('The Guild').closest('div');
@@ -375,39 +373,56 @@ describe('NPCForm', () => {
   // -------------------------------------------------------------------------
   // Related NPCs dialog
   // -------------------------------------------------------------------------
-  describe('related NPCs dialog', () => {
-    test('should render "Select Related NPCs" button', () => {
+  describe('related NPCs tray', () => {
+    // Since `15-2` both relations use the one browse-first tray. The modal
+    // grid of centred chips -- no filter, no count, no keyboard order, and a
+    // `Done` button that committed nothing -- is retired.
+    test('offers an Attach control rather than "Select Related NPCs"', () => {
       render(<NPCForm existingNPCs={[]} />);
-      expect(screen.getByRole('button', { name: /select related npcs/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /select related npcs/i })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Attach to Related NPCs' })).toBeInTheDocument();
+    });
+
+    test('browses the existing NPCs with nothing typed', async () => {
+      const existing = [makeNPC({ id: 'e1', name: 'Existing NPC A' })];
+      render(<NPCForm existingNPCs={existing} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Related NPCs' }));
+      expect(screen.getByRole('option', { name: /Existing NPC A/ })).toBeInTheDocument();
+    });
+
+    test('attaching writes the id the form submits', async () => {
+      const existing = [makeNPC({ id: 'e1', name: 'Existing NPC A' })];
+      render(<NPCForm existingNPCs={existing} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Related NPCs' }));
+      await userEvent.click(screen.getByRole('option', { name: /Existing NPC A/ }));
+
+      fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'Aldric' } });
+      fireEvent.submit(document.querySelector('form')!);
+      await waitFor(() => {
+        expect(mockAddNPC).toHaveBeenCalledWith(
+          expect.objectContaining({
+            connections: expect.objectContaining({ relatedNPCs: ['e1'] }),
+          })
+        );
+      });
     });
   });
 
   // -------------------------------------------------------------------------
   // Related Quests dialog
   // -------------------------------------------------------------------------
-  describe('related quests section', () => {
-    test('should render "Select Related Quests" button', () => {
+  describe('related quests tray', () => {
+    test('offers an Attach control rather than "Select Related Quests"', () => {
       render(<NPCForm existingNPCs={[]} />);
-      expect(screen.getByRole('button', { name: /select related quests/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /select related quests/i })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Attach to Related Quests' })).toBeInTheDocument();
     });
 
-    test('should display selected quest as a tag when quest is in selectedQuests and context', () => {
-      const quest = makeQuest('quest-1', 'The Dark Rift');
-      setupMocks({ quests: [quest] });
-      // selectedQuests is initialized from formData.connections.relatedQuests
-      render(
-        <NPCForm
-          existingNPCs={[]}
-          // initialData has no direct relatedQuests — the formData.connections default is []
-          // So we test via initialData stub that connects.relatedQuests = ['quest-1']
-          // The form state spread means: initialData doesn't set connections directly;
-          // connections is always default { relatedNPCs: [], affiliations: [], relatedQuests: [] }
-          // Covered by the selectedQuests logic below via the quest tag X button
-        />
-      );
-      // Without dialog interaction, selectedQuests starts empty.
-      // The "Select Related Quests" button is present.
-      expect(screen.getByRole('button', { name: /select related quests/i })).toBeInTheDocument();
+    test('browses the campaign quests, with the status that tells two apart', async () => {
+      setupMocks({ quests: [makeQuest('quest-1', 'The Dark Rift')] });
+      render(<NPCForm existingNPCs={[]} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Related Quests' }));
+      expect(screen.getByRole('option', { name: /The Dark Rift/ })).toBeInTheDocument();
     });
   });
 
@@ -646,13 +661,15 @@ describe('NPCForm', () => {
   // -------------------------------------------------------------------------
   // Existing NPCs in dialog
   // -------------------------------------------------------------------------
-  describe('existing NPCs shown in dialog', () => {
-    test('should show existing NPC count in dialog when "Select Related NPCs" is opened', () => {
+  describe('existing NPCs shown in the tray', () => {
+    test('shows each candidate by name, never by id', async () => {
       const existing = [makeNPC({ id: 'e1', name: 'Existing NPC A' })];
       render(<NPCForm existingNPCs={existing} />);
-      fireEvent.click(screen.getByRole('button', { name: /select related npcs/i }));
-      // Dialog opens (may be blocked by portal bug #150 in JSDOM)
-      // At minimum the button should be clickable without crashing
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Related NPCs' }));
+
+      const listbox = screen.getByRole('listbox');
+      expect(listbox).toHaveTextContent('Existing NPC A');
+      expect(listbox).not.toHaveTextContent('e1');
     });
   });
 

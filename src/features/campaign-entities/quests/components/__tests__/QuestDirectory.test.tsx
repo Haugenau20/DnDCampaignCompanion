@@ -31,15 +31,22 @@ interface QuestContextMock {
   loading: boolean;
   error: string | null;
   deleteQuest: jest.Mock;
+  updateQuest?: jest.Mock;
+  updateQuestObjective?: jest.Mock;
 }
 
 const mockDeleteQuest = jest.fn().mockResolvedValue(undefined);
+// `15-3` wires the row to the two mutations it already had but never called.
+const mockUpdateQuest = jest.fn().mockResolvedValue(undefined);
+const mockUpdateQuestObjective = jest.fn().mockResolvedValue(undefined);
 
 let mockQuestContext: QuestContextMock = {
   quests: [],
   loading: false,
   error: null,
   deleteQuest: mockDeleteQuest,
+  updateQuest: mockUpdateQuest,
+  updateQuestObjective: mockUpdateQuestObjective,
 };
 
 let mockGetNPCById: (id: string) => NPC | undefined = () => undefined;
@@ -209,16 +216,38 @@ const collapseButton = (title: string) =>
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+/**
+ * Open the surplus a quest row keeps behind a second disclosure.
+ *
+ * `15-3` bounds the expansion to four facts -- description, objectives, who is
+ * in it and the status control. Background, leads, complications, rewards,
+ * level range, completion date and key locations are prep, and move to
+ * `/quests/:questId` in `15-5`; until that page exists they stay reachable
+ * here, but closed.
+ */
+const openPrep = () => {
+  fireEvent.click(screen.getByRole('button', { name: /^Prep/ }));
+};
+
+/** Open a status group that `15-3` collapses by default (T015). */
+const openGroup = (name: RegExp | string) => {
+  fireEvent.click(screen.getByRole('button', { name }));
+};
+
 describe('QuestDirectory', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDeleteQuest.mockResolvedValue(undefined);
+    mockUpdateQuest.mockResolvedValue(undefined);
+    mockUpdateQuestObjective.mockResolvedValue(undefined);
     mockUser = { uid: 'user-1' };
     mockQuestContext = {
       quests: [...sampleQuests],
       loading: false,
       error: null,
       deleteQuest: mockDeleteQuest,
+      updateQuest: mockUpdateQuest,
+      updateQuestObjective: mockUpdateQuestObjective,
     };
     mockGetNPCById = (id: string) => (id === 'npc-1' ? makeNPC() : undefined);
     mockLocations = [makeLocation({ name: 'Forest Clearing' })];
@@ -325,8 +354,10 @@ describe('QuestDirectory', () => {
       renderPage();
       const activeHeading = screen.getByRole('heading', { name: 'Active Quests' });
       expect(activeHeading.parentElement).toHaveTextContent('2');
+      // The completed group's heading now lives inside its collapse control,
+      // so the count is a sibling of that button rather than of the heading.
       const completedHeading = screen.getByRole('heading', { name: 'Completed Quests' });
-      expect(completedHeading.parentElement).toHaveTextContent('1');
+      expect(completedHeading.closest('section')).toHaveTextContent('1');
     });
 
     it('omits a group entirely once filtering leaves it empty', () => {
@@ -452,6 +483,7 @@ describe('QuestDirectory', () => {
 
     it('says "No objectives" and omits the progress bar when there are none', () => {
       renderPage();
+      openGroup('Failed Quests');
       const row = expandButton('Rescue the Princess');
       expect(within(row).getByText('No objectives')).toBeInTheDocument();
       expect(row.querySelector('.progress-bar-failed')).toBeNull();
@@ -471,20 +503,25 @@ describe('QuestDirectory', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
       expect(collapseButton('Find the Dragon')).toHaveAttribute('aria-expanded', 'true');
-      expect(screen.getByText('Description')).toBeInTheDocument();
+      // `15-3` bounds the expansion to four facts. The description is the text
+      // itself rather than a labelled field, and the objectives are tickable.
+      expect(screen.getByText('A quest about a red dragon terrorizing the valley')).toBeInTheDocument();
       expect(screen.getByText('Objectives')).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: /Status of Find the Dragon/ })).toBeInTheDocument();
     });
 
     it('collapses again on a second activation', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
       fireEvent.click(collapseButton('Find the Dragon'));
-      expect(screen.queryByText('Description')).not.toBeInTheDocument();
+      expect(screen.queryByText('A quest about a red dragon terrorizing the valley')).not.toBeInTheDocument();
     });
 
     it('only expands one row at a time', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      // T015 collapses this group by default; open it to reach the row.
+      openGroup('Completed Quests');
       fireEvent.click(expandButton('Slay the Lich'));
 
       expect(expandButton('Find the Dragon')).toHaveAttribute('aria-expanded', 'false');
@@ -505,15 +542,102 @@ describe('QuestDirectory', () => {
   // Expanded content — the richest part of the quest model
   // -------------------------------------------------------------------------
   describe('expanded content — objectives', () => {
-    it('lists every objective with a completed/pending marker and description', () => {
+    it('gives every objective a real checkbox, named by the objective (T016)', () => {
+      // The marker it replaces was a decorative `<div aria-hidden>`: a keyboard
+      // could not reach it and a screen reader never saw it.
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
 
-      const completedText = screen.getByText('Scout the lair entrance');
-      const pendingText = screen.getByText('Slay the dragon');
+      expect(screen.getByRole('checkbox', { name: 'Scout the lair entrance' })).toBeChecked();
+      expect(screen.getByRole('checkbox', { name: 'Slay the dragon' })).not.toBeChecked();
+    });
 
-      expect(completedText.closest('div')?.querySelector('.objective-completed')).toBeTruthy();
-      expect(pendingText.closest('div')?.querySelector('.objective-pending')).toBeTruthy();
+    it('writes through updateQuestObjective when one is ticked', async () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Slay the dragon' }));
+
+      await waitFor(() =>
+        expect(mockUpdateQuestObjective).toHaveBeenCalledWith('q1', 'o2', true)
+      );
+    });
+
+    it('does not tick optimistically: the box waits for the write', async () => {
+      let resolve!: () => void;
+      mockUpdateQuestObjective.mockImplementationOnce(
+        () => new Promise<void>((r) => { resolve = r; })
+      );
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Slay the dragon' }));
+
+      expect(screen.getByRole('checkbox', { name: 'Slay the dragon' })).not.toBeChecked();
+      expect(screen.getByText('Saving…')).toBeInTheDocument();
+      resolve();
+      await waitFor(() => expect(screen.queryByText('Saving…')).not.toBeInTheDocument());
+    });
+
+    it('reverts and says why when the write is refused', async () => {
+      mockUpdateQuestObjective.mockRejectedValueOnce(new Error('Permission denied'));
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Slay the dragon' }));
+
+      await waitFor(() =>
+        expect(screen.getByRole('alert')).toHaveTextContent('Permission denied')
+      );
+      expect(screen.getByRole('checkbox', { name: 'Slay the dragon' })).not.toBeChecked();
+    });
+
+    it('keeps the prep disclosure closed, and carries no display class while closed', () => {
+      // jsdom applies no CSS, so `toBeVisible()` cannot catch the real bug
+      // here: `hidden` is an attribute selector and a `flex` class outranks
+      // `[hidden] { display: none }`, so the block stayed on screen in the
+      // browser while every test passed. Asserting the class is the part of
+      // that a unit test can actually see.
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+
+      const trigger = screen.getByRole('button', { name: /^Prep/ });
+      expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+      const panel = document.getElementById(trigger.getAttribute('aria-controls')!);
+      expect(panel).toHaveAttribute('hidden');
+      expect(panel?.className ?? '').not.toMatch(/flex/);
+    });
+
+    it('shows the prep material once the disclosure is opened', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
+
+      const trigger = screen.getByRole('button', { name: /^Prep/ });
+      expect(trigger).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText('The dragon arrived three winters ago.')).toBeInTheDocument();
+    });
+
+    it('offers the status ladder as buttons, not a dropdown', () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+
+      const ladder = screen.getByRole('group', { name: /Status of Find the Dragon/ });
+      expect(within(ladder).getByRole('button', { name: 'Active' })).toHaveAttribute('aria-pressed', 'true');
+      expect(within(ladder).getByRole('button', { name: 'Completed' })).toBeInTheDocument();
+      expect(within(ladder).getByRole('button', { name: 'Failed' })).toBeInTheDocument();
+    });
+
+    it('changes a quest status from the row, in one click', async () => {
+      renderPage();
+      fireEvent.click(expandButton('Find the Dragon'));
+
+      const ladder = screen.getByRole('group', { name: /Status of Find the Dragon/ });
+      fireEvent.click(within(ladder).getByRole('button', { name: 'Completed' }));
+
+      await waitFor(() =>
+        expect(mockUpdateQuest).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'q1', status: 'completed' })
+        )
+      );
     });
 
     it('shows completed objectives struck through and muted, pending ones plain', () => {
@@ -526,10 +650,17 @@ describe('QuestDirectory', () => {
       expect(completedText.className).toContain('line-through');
       expect(completedText.className).toContain('typography-secondary');
       expect(pendingText.className).not.toContain('line-through');
+      // A ticked objective keeps its place: it is not moved to the bottom.
+      const descriptions = screen
+        .getAllByRole('checkbox')
+        .map((box) => box.closest('label')?.textContent);
+      expect(descriptions[0]).toContain('Scout the lair entrance');
     });
 
     it('states "No objectives recorded" honestly instead of hiding the field', () => {
       renderPage();
+      // T015 collapses this group by default; open it to reach the row.
+      openGroup('Failed Quests');
       fireEvent.click(expandButton('Rescue the Princess'));
       expect(screen.getByText('No objectives recorded')).toBeInTheDocument();
     });
@@ -539,6 +670,7 @@ describe('QuestDirectory', () => {
     it('always shows the description', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       expect(
         screen.getByText('A quest about a red dragon terrorizing the valley')
       ).toBeInTheDocument();
@@ -547,12 +679,16 @@ describe('QuestDirectory', () => {
     it('shows background text when present', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       expect(screen.getByText('The dragon arrived three winters ago.')).toBeInTheDocument();
     });
 
     it('states "No background written yet" when absent', () => {
       renderPage();
+      // T015 collapses this group by default; open it to reach the row.
+      openGroup('Failed Quests');
       fireEvent.click(expandButton('Rescue the Princess'));
+      openPrep();
       expect(screen.getByText('No background written yet')).toBeInTheDocument();
     });
   });
@@ -561,6 +697,7 @@ describe('QuestDirectory', () => {
     it('lists leads, complications and rewards when present', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       expect(screen.getByText('Ask the blacksmith about dragon scales')).toBeInTheDocument();
       expect(screen.getByText('The lair is full of traps')).toBeInTheDocument();
       expect(screen.getByText('500 gold')).toBeInTheDocument();
@@ -569,7 +706,10 @@ describe('QuestDirectory', () => {
 
     it('states emptiness honestly for leads, complications and rewards', () => {
       renderPage();
+      // T015 collapses this group by default; open it to reach the row.
+      openGroup('Failed Quests');
       fireEvent.click(expandButton('Rescue the Princess'));
+      openPrep();
       expect(screen.getByText('No leads recorded')).toBeInTheDocument();
       expect(screen.getByText('No complications recorded')).toBeInTheDocument();
       expect(screen.getByText('No rewards recorded')).toBeInTheDocument();
@@ -580,22 +720,30 @@ describe('QuestDirectory', () => {
     it('shows the level range when present, and "Not recorded" when absent', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       expect(screen.getByText('3-5')).toBeInTheDocument();
       fireEvent.click(collapseButton('Find the Dragon'));
 
+      // T015 collapses this group by default; open it to reach the row.
+      openGroup('Failed Quests');
       fireEvent.click(expandButton('Rescue the Princess'));
+      openPrep();
       expect(screen.getByText('Not recorded')).toBeInTheDocument();
     });
 
     it('shows "Not yet completed" for an active quest', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       expect(screen.getByText('Not yet completed')).toBeInTheDocument();
     });
 
     it('shows the recorded date for a completed quest that has one', () => {
       renderPage();
+      // T015 collapses this group by default; open it to reach the row.
+      openGroup('Completed Quests');
       fireEvent.click(expandButton('Slay the Lich'));
+      openPrep();
       expect(screen.getByText('1492-03-10')).toBeInTheDocument();
     });
 
@@ -604,7 +752,10 @@ describe('QuestDirectory', () => {
         makeQuest({ id: 'q-nodate', title: 'Undated Victory', status: 'completed' }),
       ];
       renderPage();
+      // T015 collapses this group by default; open it to reach the row.
+      openGroup('Completed Quests');
       fireEvent.click(expandButton('Undated Victory'));
+      openPrep();
       expect(screen.getByText('Date not recorded')).toBeInTheDocument();
     });
   });
@@ -613,15 +764,17 @@ describe('QuestDirectory', () => {
     it('renders a known location as a clickable button that navigates to it', () => {
       renderPage();
       fireEvent.click(expandButton('Collect Herbs'));
+      openPrep();
       fireEvent.click(screen.getByRole('button', { name: /Forest Clearing/ }));
       expect(mockNavigateToPage).toHaveBeenCalledWith(
-        '/locations?highlight=Forest+Clearing'
+        '/locations?highlight=loc-1'
       );
     });
 
     it('renders an unknown location as plain, non-interactive text', () => {
       renderPage();
       fireEvent.click(expandButton('Collect Herbs'));
+      openPrep();
       expect(screen.getByText('Unknown Ruins')).toBeInTheDocument();
       expect(
         screen.queryByRole('button', { name: /Unknown Ruins/ })
@@ -630,7 +783,10 @@ describe('QuestDirectory', () => {
 
     it('states "No key locations recorded" when there are none', () => {
       renderPage();
+      // T015 collapses this group by default; open it to reach the row.
+      openGroup('Failed Quests');
       fireEvent.click(expandButton('Rescue the Princess'));
+      openPrep();
       expect(screen.getByText('No key locations recorded')).toBeInTheDocument();
     });
   });
@@ -639,6 +795,7 @@ describe('QuestDirectory', () => {
     it('renders a resolvable related NPC as a clickable button that navigates to it', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       fireEvent.click(screen.getByRole('button', { name: /Elder Willow/ }));
       expect(mockNavigateToPage).toHaveBeenCalledWith('/npcs?highlight=npc-1');
     });
@@ -646,22 +803,27 @@ describe('QuestDirectory', () => {
     it('flags a related NPC id that does not resolve, instead of silently dropping it', () => {
       renderPage();
       fireEvent.click(expandButton('Collect Herbs'));
+      openPrep();
       expect(
-        screen.getByText('npc-missing (not found in NPC directory)')
+        screen.getByText('Someone no longer in the directory')
       ).toBeInTheDocument();
     });
 
     it('renders important NPCs (name + description) when present', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       expect(screen.getByText('Old Hunter')).toBeInTheDocument();
       expect(screen.getByText("Knows the dragon's habits")).toBeInTheDocument();
     });
 
     it('states emptiness honestly for related and important NPCs', () => {
       renderPage();
+      // T015 collapses this group by default; open it to reach the row.
+      openGroup('Failed Quests');
       fireEvent.click(expandButton('Rescue the Princess'));
-      expect(screen.getByText('No related NPCs recorded')).toBeInTheDocument();
+      openPrep();
+      expect(screen.getByText('Nobody attached yet')).toBeInTheDocument();
       expect(screen.getByText('No important NPCs recorded')).toBeInTheDocument();
     });
   });
@@ -673,6 +835,7 @@ describe('QuestDirectory', () => {
     it('shows Edit and Delete for an authenticated user, hides them otherwise', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       expect(screen.getByRole('button', { name: /Edit/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     });
@@ -681,6 +844,7 @@ describe('QuestDirectory', () => {
       mockUser = null;
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       expect(screen.queryByRole('button', { name: /Edit/ })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
     });
@@ -688,6 +852,7 @@ describe('QuestDirectory', () => {
     it('navigates to the edit page when Edit is clicked', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       fireEvent.click(screen.getByRole('button', { name: /Edit/ }));
       expect(mockNavigateToPage).toHaveBeenCalledWith('/quests/edit/q1');
     });
@@ -695,6 +860,7 @@ describe('QuestDirectory', () => {
     it('opens a confirmation dialog naming the quest when Delete is clicked', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
       expect(
         screen.getByText('“Find the Dragon” is removed for everyone. This cannot be undone.')
@@ -704,6 +870,7 @@ describe('QuestDirectory', () => {
     it('does not delete when the confirmation is cancelled', () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(mockDeleteQuest).not.toHaveBeenCalled();
@@ -712,6 +879,7 @@ describe('QuestDirectory', () => {
     it('calls deleteQuest with the quest id when the deletion is confirmed', async () => {
       renderPage();
       fireEvent.click(expandButton('Find the Dragon'));
+      openPrep();
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
       // The row's Delete and the dialog's confirm used to read identically,

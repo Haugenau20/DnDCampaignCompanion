@@ -1,17 +1,17 @@
 // src/features/campaign-entities/rumors/components/RumorForm.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Rumor, RumorStatus, SourceType } from '../types';
 import { useRumors } from '../context/RumorContext';
 import { useNPCs } from '../../npcs/context/NPCContext';
 import { useLocations } from '../../locations/context/LocationContext';
 import { useNotes } from 'features/collaboration';
 import Typography from '../../../../core/components/Typography';
-import { SelectableChip, RemovableChip } from '../../../../core/components/Chip';
+import AttachTray from 'shared/components/attach-tray/AttachTray';
+import { useAttachSet } from 'shared/components/attach-tray/useAttachTray';
 import Input from '../../../../core/components/Input';
 import Select from '../../../../core/components/Select';
 import Button from '../../../../core/components/Button';
 import Card from '../../../../core/components/Card';
-import Dialog from '../../../../core/components/Dialog';
 import { useAuth, useUser } from 'features/user-management';
 import clsx from 'clsx';
 import { AlertCircle, Save, X, Users, MapPin } from 'lucide-react';
@@ -59,11 +59,10 @@ const RumorForm: React.FC<RumorFormProps> = ({
     notes: []
   });
 
-  // Dialog and selection state
-  const [isNPCDialogOpen, setIsNPCDialogOpen] = useState(false);
-  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  // Relation selection state
   const [selectedNPCs, setSelectedNPCs] = useState<Set<string>>(new Set());
   const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
+
 
   // Form validation and submission state
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +71,19 @@ const RumorForm: React.FC<RumorFormProps> = ({
   // Get NPCs and Locations for selection
   const { npcs } = useNPCs();
   const { locations } = useLocations();
+  // Built from the collections this form already reads -- T023: no new
+  // loader, and no dependency on a provider the form does not need.
+  const attachSources = useMemo(() => ({ npc: npcs, location: locations }), [npcs, locations]);
+  const {
+    attachedIds: npcIds,
+    onAttach: attachNPC,
+    onDetach: detachNPC,
+  } = useAttachSet(selectedNPCs, setSelectedNPCs);
+  const {
+    attachedIds: locationIds,
+    onAttach: attachLocation,
+    onDetach: detachLocation,
+  } = useAttachSet(selectedLocations, setSelectedLocations);
   const { addRumor, updateRumor } = useRumors();
   const { markEntityAsConverted } = useNotes();
   const { user } = useAuth();
@@ -135,7 +147,7 @@ const RumorForm: React.FC<RumorFormProps> = ({
 
   // Handle location selection
   const handleLocationSelect = (locationId: string) => {
-    // The "Select a location" placeholder option carries value '' -- clear both fields
+    // Detaching passes '' -- clear both fields
     // rather than leaving a stale locationId/location pair behind. Before this fix,
     // choosing the placeholder found no match below and silently left whatever was
     // previously selected in place: a stale id paired with a blank-looking selection.
@@ -290,18 +302,18 @@ const RumorForm: React.FC<RumorFormProps> = ({
 
             {/* Source information - changes based on source type */}
             {formData.sourceType === 'npc' ? (
-              <Select
-                label="Source NPC *"
-                value={formData.sourceNpcId || ''}
-                onChange={(e) => handleSourceNPCSelect(e.target.value)}
-                required
-                disabled={isSubmitting}
-              >
-                <option value="">Select an NPC</option>
-                {npcs.map(npc => (
-                  <option key={npc.id} value={npc.id}>{npc.name}</option>
-                ))}
-              </Select>
+              <div className="space-y-2">
+                <Typography variant="body-sm" className="form-label">Source NPC *</Typography>
+                <AttachTray
+                  kinds={["npc"]}
+                  sources={attachSources}
+                  attachedIds={formData.sourceNpcId ? [formData.sourceNpcId] : []}
+                  single
+                  ariaLabel="Source NPC"
+                  onAttach={(id) => handleSourceNPCSelect(id)}
+                  onDetach={() => handleSourceNPCSelect('')}
+                />
+              </div>
             ) : (
               <Input
                 label="Source Name *"
@@ -318,96 +330,47 @@ const RumorForm: React.FC<RumorFormProps> = ({
               />
             )}
 
-            {/* Location */}
-            <Select
-              label="Location"
-              value={formData.locationId || ''}
-              onChange={(e) => handleLocationSelect(e.target.value)}
-              disabled={isSubmitting}
-            >
-              <option value="">Select a location</option>
-              {locations.map(location => (
-                <option key={location.id} value={location.id}>{location.name}</option>
-              ))}
-            </Select>
-          </div>
-
-          {/* Related NPCs */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Typography variant="h4">Related NPCs</Typography>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setIsNPCDialogOpen(true)}
-                startIcon={<Users />}
-                disabled={isSubmitting}
-              >
-                Select NPCs
-              </Button>
-            </div>
-            
-            {/* Display selected NPCs */}
-            <div className="flex flex-wrap gap-2">
-              {Array.from(selectedNPCs).map(npcId => {
-                const npc = npcs.find(n => n.id === npcId);
-                return npc ? (
-                  <RemovableChip
-                    key={npcId}
-                    onRemove={() => handleNPCToggle(npcId)}
-                    removeLabel={`Remove ${npc.name}`}
-                    disabled={isSubmitting}
-                  >
-                    {npc.name}
-                  </RemovableChip>
-                ) : null;
-              })}
-              {selectedNPCs.size === 0 && (
-                <Typography variant="body-sm" color="secondary">
-                  No NPCs selected
-                </Typography>
-              )}
+            {/* Where it was heard -- one tray, not a flat list of every
+                location in the campaign, which said nothing about any of
+                them (§5). */}
+            <div className="space-y-2">
+              <Typography variant="body-sm" className="form-label">Location</Typography>
+              <AttachTray
+                kinds={["location"]}
+                sources={attachSources}
+                attachedIds={formData.locationId ? [formData.locationId] : []}
+                single
+                ariaLabel="Location"
+                onAttach={(id) => handleLocationSelect(id)}
+                onDetach={() => handleLocationSelect('')}
+              />
             </div>
           </div>
 
-          {/* Related Locations */}
+          {/* Related NPCs -- one browse-first tray */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Typography variant="h4">Related Locations</Typography>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setIsLocationDialogOpen(true)}
-                startIcon={<MapPin />}
-                disabled={isSubmitting}
-              >
-                Select Locations
-              </Button>
-            </div>
-            
-            {/* Display selected Locations */}
-            <div className="flex flex-wrap gap-2">
-              {Array.from(selectedLocations).map(locationId => {
-                const location = locations.find(l => l.id === locationId);
-                return location ? (
-                  <RemovableChip
-                    key={locationId}
-                    onRemove={() => handleLocationToggle(locationId)}
-                    removeLabel={`Remove ${location.name}`}
-                    disabled={isSubmitting}
-                  >
-                    {location.name}
-                  </RemovableChip>
-                ) : null;
-              })}
-              {selectedLocations.size === 0 && (
-                <Typography variant="body-sm" color="secondary">
-                  No locations selected
-                </Typography>
-              )}
-            </div>
+            <Typography variant="h4">Related NPCs</Typography>
+            <AttachTray
+              kinds={["npc"]}
+              sources={attachSources}
+              attachedIds={npcIds}
+              onAttach={attachNPC}
+              onDetach={detachNPC}
+              ariaLabel="Related NPCs"
+            />
+          </div>
+
+          {/* Related Locations -- the same tray, the same verb */}
+          <div className="space-y-4">
+            <Typography variant="h4">Related Locations</Typography>
+            <AttachTray
+              kinds={["location"]}
+              sources={attachSources}
+              attachedIds={locationIds}
+              onAttach={attachLocation}
+              onDetach={detachLocation}
+              ariaLabel="Related Locations"
+            />
           </div>
 
           {/* Error Message */}
@@ -441,66 +404,6 @@ const RumorForm: React.FC<RumorFormProps> = ({
         </form>
 
         {/* NPC Selection Dialog */}
-        <Dialog
-          open={isNPCDialogOpen}
-          onClose={() => setIsNPCDialogOpen(false)}
-          title="Select Related NPCs"
-          maxWidth="max-w-3xl"
-        >
-          <div className="max-h-96 overflow-y-auto mb-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {npcs.map(npc => (
-                <SelectableChip
-                  key={npc.id}
-                  selected={selectedNPCs.has(npc.id)}
-                  onToggle={() => handleNPCToggle(npc.id)}
-                  className="text-center"
-                >
-                  {npc.name}
-                </SelectableChip>
-              ))}
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              onClick={() => setIsNPCDialogOpen(false)}
-            >
-              Done
-            </Button>
-          </div>
-        </Dialog>
-
-        {/* Location Selection Dialog */}
-        <Dialog
-          open={isLocationDialogOpen}
-          onClose={() => setIsLocationDialogOpen(false)}
-          title="Select Related Locations"
-          maxWidth="max-w-3xl"
-        >
-          <div className="max-h-96 overflow-y-auto mb-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {locations.map(location => (
-                <SelectableChip
-                  key={location.id}
-                  selected={selectedLocations.has(location.id)}
-                  onToggle={() => handleLocationToggle(location.id)}
-                  className="text-center"
-                >
-                  {location.name}
-                </SelectableChip>
-              ))}
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              onClick={() => setIsLocationDialogOpen(false)}
-            >
-              Done
-            </Button>
-          </div>
-        </Dialog>
       </Card.Content>
     </Card>
   );

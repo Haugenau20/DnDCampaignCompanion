@@ -314,14 +314,16 @@ describe('LocationEditForm', () => {
   // Dialog buttons
   // -------------------------------------------------------------------------
   describe('dialog buttons', () => {
-    test('should render "Select Related Quests" button', () => {
+    test('offers one Attach control for the quests here', () => {
       render(<LocationEditForm location={makeLocation()} />);
-      expect(screen.getByRole('button', { name: /select related quests/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Attach to Quests here' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /select related quests/i })).toBeNull();
     });
 
-    test('should render "Select Connected NPCs" button', () => {
+    test('offers one Attach control for who is here', () => {
       render(<LocationEditForm location={makeLocation()} />);
-      expect(screen.getByRole('button', { name: /select connected npcs/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Attach to Who is here' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /select connected npcs/i })).toBeNull();
     });
   });
 

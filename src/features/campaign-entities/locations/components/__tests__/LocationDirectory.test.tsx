@@ -1,7 +1,7 @@
 // src/features/campaign-entities/locations/components/__tests__/LocationDirectory.test.tsx
 
 import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import LocationDirectory from '../LocationDirectory';
 import { Location } from '../../types';
 
@@ -50,6 +50,7 @@ const { useQuests } = require('../../../quests/context/QuestContext');
 const { useAuth } = require('@/features/user-management');
 
 const mockNavigateToPage = jest.fn();
+const mockUpdateLocationStatus = jest.fn().mockResolvedValue(undefined);
 const mockCreatePath = jest.fn(
   (path: string, _p: unknown, query?: Record<string, string>) =>
     query ? `${path}?${new URLSearchParams(query).toString()}` : path
@@ -67,6 +68,7 @@ function setupMocks(
   });
   (useLocations as jest.Mock).mockReturnValue({
     deleteLocation: jest.fn().mockResolvedValue(undefined),
+    updateLocationStatus: mockUpdateLocationStatus,
   });
   (useNPCs as jest.Mock).mockReturnValue({ getNPCById: jest.fn(() => undefined) });
   (useQuests as jest.Mock).mockReturnValue({ getQuestById: jest.fn(() => undefined) });
@@ -839,4 +841,127 @@ describe('LocationDirectory', () => {
     });
   });
 
+});
+
+// ---------------------------------------------------------------------------
+// PR 15.3 -- the knowledge ladder, the highlight contract and the cycle guard
+// ---------------------------------------------------------------------------
+
+describe('LocationDirectory — 15.3', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupMocks();
+  });
+
+  describe('the knowledge ladder', () => {
+    it('changes the knowledge step from the row, in one click', async () => {
+      render(<LocationDirectory locations={[makeLocation('l1', 'Rivendell')]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Rivendell/ }));
+
+      const ladder = screen.getByRole('group', { name: 'Knowledge of Rivendell' });
+      fireEvent.click(within(ladder).getByRole('button', { name: 'Visited' }));
+
+      await waitFor(() =>
+        expect(mockUpdateLocationStatus).toHaveBeenCalledWith('l1', 'visited')
+      );
+    });
+
+    it('offers buttons rather than a dropdown, each a word', () => {
+      render(<LocationDirectory locations={[makeLocation('l1', 'Rivendell')]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Rivendell/ }));
+
+      const ladder = screen.getByRole('group', { name: 'Knowledge of Rivendell' });
+      ['Known', 'Explored', 'Visited'].forEach((label) => {
+        expect(within(ladder).getByRole('button', { name: label })).toBeInTheDocument();
+      });
+      expect(within(ladder).queryByRole('combobox')).toBeNull();
+    });
+  });
+
+  describe('?highlight= (T014)', () => {
+    it('matches by id', () => {
+      setupMocks({ uid: 'user-1' }, { highlight: 'l2' });
+      const { container } = render(
+        <LocationDirectory
+          locations={[makeLocation('l1', 'Rivendell'), makeLocation('l2', 'Gondolin')]}
+        />
+      );
+      expect(container.querySelector('#location-l2')?.className).toContain('highlighted-item');
+    });
+
+    it('no longer matches by name, because a name does not survive a rename', () => {
+      setupMocks({ uid: 'user-1' }, { highlight: 'Gondolin' });
+      const { container } = render(
+        <LocationDirectory locations={[makeLocation('l2', 'Gondolin')]} />
+      );
+      expect(container.querySelector('#location-l2')?.className).not.toContain('highlighted-item');
+    });
+
+    it('reveals the ancestors needed to see the target', () => {
+      // Note the ids: the hierarchy map uses the literal key `root` for the
+      // top level, so a location whose *id* is "root" collides with it.
+      setupMocks({ uid: 'user-1' }, { highlight: 'kings-square' });
+      render(
+        <LocationDirectory
+          locations={[
+            makeLocation('beleriand', 'Beleriand'),
+            makeLocation('gondolin', 'Gondolin', { parentId: 'beleriand' }),
+            makeLocation('kings-square', "King's Square", { parentId: 'gondolin' }),
+          ]}
+        />
+      );
+      // Every ancestor is open, so the target is actually on screen.
+      expect(screen.getByText("King's Square")).toBeInTheDocument();
+    });
+  });
+
+  describe('cycle safety (PERF-11 / T033)', () => {
+    it('terminates when the highlight target sits inside a parent cycle', () => {
+      // Asserted, not eyeballed: without the visited set the ancestor walk
+      // never returns and this render times the suite out. A cyclic pair is
+      // unreachable from the tree's root, so nothing is expected on screen --
+      // the assertion is that we got here at all.
+      setupMocks({ uid: 'user-1' }, { highlight: 'a' });
+      render(
+        <LocationDirectory
+          locations={[
+            makeLocation('a', 'Alpha', { parentId: 'b' }),
+            makeLocation('b', 'Beta', { parentId: 'a' }),
+          ]}
+        />
+      );
+      expect(searchInput()).toBeInTheDocument();
+    });
+
+    it('survives a cycle while filtering, which walks the tree a second way', () => {
+      render(
+        <LocationDirectory
+          locations={[
+            makeLocation('a', 'Alpha', { parentId: 'b' }),
+            makeLocation('b', 'Beta', { parentId: 'a' }),
+          ]}
+        />
+      );
+      fireEvent.change(searchInput(), { target: { value: 'Alpha' } });
+      expect(searchInput()).toHaveValue('Alpha');
+    });
+  });
+
+  describe('note dates (T001)', () => {
+    it('renders a stored ISO timestamp as a date, not as a timestamp', () => {
+      render(
+        <LocationDirectory
+          locations={[
+            makeLocation('l1', 'Rivendell', {
+              notes: [{ date: '2025-05-31T19:27:30.387Z', text: 'A council was held.' }],
+            }),
+          ]}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Expand Rivendell/ }));
+
+      expect(screen.getByText('2025-05-31')).toBeInTheDocument();
+      expect(screen.queryByText('2025-05-31T19:27:30.387Z')).toBeNull();
+    });
+  });
 });

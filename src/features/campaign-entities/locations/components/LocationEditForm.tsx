@@ -54,11 +54,9 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
     const { activeCampaignId } = useCampaigns();
     
     // Keep selection state local until form submission
-    const [isQuestDialogOpen, setIsQuestDialogOpen] = useState(false);
     const [selectedQuests, setSelectedQuests] = useState<Set<string>>(
       new Set(location.relatedQuests || [])
     );
-    const [isNPCDialogOpen, setIsNPCDialogOpen] = useState(false);
     const [selectedNPCs, setSelectedNPCs] = useState<Set<string>>(
       new Set(location.connectedNPCs || [])
     );
@@ -135,8 +133,6 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
               handleInputChange={handleInputChange}
               selectedQuests={selectedQuests}
               setSelectedQuests={setSelectedQuests}
-              isQuestDialogOpen={isQuestDialogOpen}
-              setIsQuestDialogOpen={setIsQuestDialogOpen}
             />
 
             <RelatedNPCsSection
@@ -145,8 +141,6 @@ const LocationEditForm: React.FC<LocationEditFormProps> = ({
               npcs={npcs}
               selectedNPCs={selectedNPCs}
               setSelectedNPCs={setSelectedNPCs}
-              isNPCDialogOpen={isNPCDialogOpen}
-              setIsNPCDialogOpen={setIsNPCDialogOpen}
             />
 
             <TagsSection 

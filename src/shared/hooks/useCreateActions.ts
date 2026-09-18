@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import type { LucideIcon } from "lucide-react";
 import { BookOpen, FileText, MapPin, MessageSquare, Scroll, User } from "lucide-react";
 import { useNavigation } from "../context/NavigationContext";
+import { useQuickAdd } from "../context/QuickAddContext";
 import { useCreateNote } from "features/collaboration";
 
 /**
@@ -36,17 +37,25 @@ export interface CreateAction {
 export function useCreateActions(): CreateAction[] {
   const { navigateToPage } = useNavigation();
   const { createAndOpen } = useCreateNote();
+  const { openQuickAdd } = useQuickAdd();
 
   return useMemo(
     () => [
       { id: "note", entityLabel: "Note", icon: FileText, sectionPath: "/notes", shortcut: "N", run: () => createAndOpen() },
       { id: "chapter", entityLabel: "Chapter", icon: BookOpen, sectionPath: "/story", shortcut: "C", run: () => navigateToPage("/story/chapters/create") },
-      { id: "npc", entityLabel: "NPC", icon: User, sectionPath: "/npcs", shortcut: "P", run: () => navigateToPage("/npcs/create") },
-      { id: "location", entityLabel: "Location", icon: MapPin, sectionPath: "/locations", shortcut: "L", run: () => navigateToPage("/locations/create") },
+      // The three entities with a quick-add surface open it in place rather
+      // than navigating to a create page. The route still exists and still
+      // renders the same component -- note conversion and pasted links need a
+      // destination -- but the menu no longer sends you to one.
+      { id: "npc", entityLabel: "NPC", icon: User, sectionPath: "/npcs", shortcut: "P", run: () => openQuickAdd("npc") },
+      { id: "location", entityLabel: "Location", icon: MapPin, sectionPath: "/locations", shortcut: "L", run: () => openQuickAdd("location") },
+      // The rumour keeps its form: `15-1` item 9 leaves its composer row to
+      // `15-7`, because `RumorForm` requires a third field a two-field
+      // surface cannot supply without relaxing validation.
       { id: "rumor", entityLabel: "Rumor", icon: MessageSquare, sectionPath: "/rumors", shortcut: "R", run: () => navigateToPage("/rumors/create") },
-      { id: "quest", entityLabel: "Quest", icon: Scroll, sectionPath: "/quests", shortcut: "Q", run: () => navigateToPage("/quests/create") },
+      { id: "quest", entityLabel: "Quest", icon: Scroll, sectionPath: "/quests", shortcut: "Q", run: () => openQuickAdd("quest") },
     ],
-    [navigateToPage, createAndOpen]
+    [navigateToPage, createAndOpen, openQuickAdd]
   );
 }
 

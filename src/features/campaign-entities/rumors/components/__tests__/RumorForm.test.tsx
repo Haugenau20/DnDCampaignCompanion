@@ -1,7 +1,7 @@
 ﻿// src/features/campaign-entities/rumors/components/__tests__/RumorForm.test.tsx
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RumorForm from '../RumorForm';
 import { Rumor } from '../../types';
@@ -184,32 +184,29 @@ describe('RumorForm', () => {
       expect(screen.getByText('Source NPC *')).toBeInTheDocument();
     });
 
-    test('should populate sourceName when an NPC is selected as source', () => {
+    test('should populate sourceName when an NPC is attached as source', async () => {
+      // Since `15-2` the source NPC is picked from the tray, not from a
+      // dropdown of bare names.
       render(<RumorForm title="Add" />);
       const selects = screen.getAllByRole('combobox');
       const sourceSelect = selects.find(
         (s) => (s as HTMLSelectElement).value === 'other',
       )!;
       fireEvent.change(sourceSelect, { target: { value: 'npc' } });
-      // Now Source NPC select appeared
-      const npcSelect = screen.getAllByRole('combobox').find(
-        (s) => (s as HTMLSelectElement).value === '',
-      )!;
-      fireEvent.change(npcSelect, { target: { value: 'npc-1' } });
-      // sourceName is internal; verify it persists during submit
-      // (separately tested in submit tests below)
-      expect((npcSelect as HTMLSelectElement).value).toBe('npc-1');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Source NPC' }));
+      await userEvent.click(screen.getByRole('option', { name: /Gandalf/ }));
+
+      expect(screen.getByRole('button', { name: 'Detach Gandalf' })).toBeInTheDocument();
     });
   });
 
   describe('location selection', () => {
-    test('should populate location field when a location is selected', () => {
+    test('should show the attached location by name', async () => {
       render(<RumorForm title="Add" />);
-      const selects = screen.getAllByRole('combobox');
-      // Location select shows "Select a location" placeholder option (value '')
-      const locationSelect = selects[selects.length - 1];
-      fireEvent.change(locationSelect, { target: { value: 'loc-1' } });
-      expect((locationSelect as HTMLSelectElement).value).toBe('loc-1');
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Location' }));
+      await userEvent.click(screen.getByRole('option', { name: /Bree/ }));
+      expect(screen.getByRole('button', { name: 'Detach Bree' })).toBeInTheDocument();
     });
 
     // Covers the write-side contract: selecting a real Location writes both
@@ -220,9 +217,8 @@ describe('RumorForm', () => {
       await userEvent.type(inputs[0], 'T');
       await userEvent.type(inputs[1], 'C');
       await userEvent.type(inputs[2], 'S');
-      const selects = screen.getAllByRole('combobox');
-      const locationSelect = selects[selects.length - 1];
-      fireEvent.change(locationSelect, { target: { value: 'loc-1' } });
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Location' }));
+      await userEvent.click(screen.getByRole('option', { name: /Bree/ }));
       fireEvent.submit(screen.getByText('Add Rumor').closest('form')!);
 
       await waitFor(() => {
@@ -243,12 +239,10 @@ describe('RumorForm', () => {
       await userEvent.type(inputs[0], 'T');
       await userEvent.type(inputs[1], 'C');
       await userEvent.type(inputs[2], 'S');
-      const selects = screen.getAllByRole('combobox');
-      const locationSelect = selects[selects.length - 1];
-      // First select a real location.
-      fireEvent.change(locationSelect, { target: { value: 'loc-1' } });
-      // Then switch back to the blank placeholder.
-      fireEvent.change(locationSelect, { target: { value: '' } });
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Location' }));
+      await userEvent.click(screen.getByRole('option', { name: /Bree/ }));
+      // Then detach it again: both fields must clear, not keep a stale pair.
+      await userEvent.click(screen.getByRole('button', { name: 'Detach Bree' }));
       fireEvent.submit(screen.getByText('Add Rumor').closest('form')!);
 
       await waitFor(() => {
@@ -396,26 +390,28 @@ describe('RumorForm', () => {
   });
 
   describe('dialogs (mocked)', () => {
-    test('should open NPC dialog when Select NPCs clicked', () => {
+    test('opens the related-NPC tray in place, not in a dialog', async () => {
       render(<RumorForm title="Add" />);
-      fireEvent.click(screen.getByText('Select NPCs'));
-      expect(screen.getByText('Select Related NPCs')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Related NPCs' }));
+
+      expect(screen.getByRole('listbox', { name: 'Related NPCs' })).toBeInTheDocument();
+      // §5 / Phase 14 §1: the tray is part of the form, never an overlay over it.
+      expect(screen.queryByRole('dialog')).toBeNull();
     });
 
-    test('should open Location dialog when Select Locations clicked', () => {
+    test('opens the related-location tray in place', async () => {
       render(<RumorForm title="Add" />);
-      fireEvent.click(screen.getByText('Select Locations'));
-      expect(screen.getByText('Select Related Locations')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Attach to Related Locations' }));
+
+      expect(screen.getByRole('listbox', { name: 'Related Locations' })).toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).toBeNull();
     });
 
-    test('should show "No NPCs selected" placeholder when no related NPCs', () => {
+    test('retires the flat list of every location in the campaign', () => {
       render(<RumorForm title="Add" />);
-      expect(screen.getByText('No NPCs selected')).toBeInTheDocument();
-    });
-
-    test('should show "No locations selected" placeholder when no related locations', () => {
-      render(<RumorForm title="Add" />);
-      expect(screen.getByText('No locations selected')).toBeInTheDocument();
+      expect(screen.queryByText('Select a location')).toBeNull();
+      expect(screen.queryByText('Select Locations')).toBeNull();
+      expect(screen.queryByText('Select NPCs')).toBeNull();
     });
 
     test('should pre-render selected NPC tags when editing rumor with relatedNPCs', () => {
@@ -465,46 +461,41 @@ describe('RumorForm', () => {
   // form and leave the control that actually writes competing with them.
   // -------------------------------------------------------------------------
   describe("accent budget", () => {
-    test("should keep exactly one filled accent no matter how many chips are chosen", async () => {
+    test("keeps exactly one filled accent no matter how many relations are attached", async () => {
       const user = userEvent.setup();
       const { container } = render(<RumorForm title="Add Rumor" />);
 
-      await user.click(screen.getByRole("button", { name: /select npcs/i }));
+      await user.click(screen.getByRole("button", { name: "Attach to Related NPCs" }));
+      // Attach whatever is still unattached, re-querying each time: clicking a
+      // row that is already attached would detach it again.
+      // Scoped to the tray: this form also renders native <select>s whose
+      // <option> children carry the same ARIA role and never become selected,
+      // so an unscoped query would loop forever.
+      const tray = () => within(screen.getByRole("listbox", { name: "Related NPCs" }));
+      const total = tray().getAllByRole("option").length;
+      expect(total).toBeGreaterThan(0);
 
-      const chips = screen
-        .getAllByRole("button")
-        .filter((b) => b.hasAttribute("aria-pressed"));
-      expect(chips.length).toBeGreaterThan(1);
+      const unattached = () =>
+        tray()
+          .getAllByRole("option")
+          .filter((option) => option.getAttribute("aria-selected") !== "true");
 
-      for (const chip of chips) {
-        await user.click(chip);
+      let next = unattached();
+      while (next.length > 0) {
+        await user.click(next[0]);
+        next = unattached();
       }
 
-      const chosen = screen
-        .getAllByRole("button")
-        .filter((b) => b.getAttribute("aria-pressed") === "true");
-      expect(chosen.length).toBe(chips.length);
-
-      // Every chosen chip wears the outline treatment, and none of them wears
-      // the filled one.
-      chosen.forEach((chip) => {
-        expect(chip).toHaveClass("chip-toggle-selected");
-        expect(chip).not.toHaveClass("button-primary");
+      // Every attached row is marked, and none of them is filled: the one
+      // filled accent on the form belongs to the control that writes.
+      const attached = tray()
+        .getAllByRole("option")
+        .filter((option) => option.getAttribute("aria-selected") === "true");
+      expect(attached).toHaveLength(total);
+      attached.forEach((option) => {
+        expect(option).not.toHaveClass("button-primary");
       });
-
-      // One filled accent per surface, counted per surface rather than per DOM
-      // tree: a modal is its own surface and is entitled to its own primary
-      // action, while the form behind it is inert. What must never happen is the
-      // *chips* adding to either count, and they do not.
-      const filledInDialog = Array.from(
-        container.querySelectorAll<HTMLElement>(".button-primary")
-      ).filter((el) => el.closest('[role="dialog"]') !== null);
-      const filledOnForm = Array.from(
-        container.querySelectorAll<HTMLElement>(".button-primary")
-      ).filter((el) => el.closest('[role="dialog"]') === null);
-
-      expect(filledOnForm.length).toBeLessThanOrEqual(1);
-      expect(filledInDialog.length).toBeLessThanOrEqual(1);
+      expect(formAccentsIn(container)).toHaveLength(1);
     });
   });
 
