@@ -148,7 +148,7 @@ describe("QuickAddForm", () => {
       });
     });
 
-    it("sends a new quest to its directory row, since its page lands in 15-5", async () => {
+    it("sends a new quest to its own page, naming the first unwritten field", async () => {
       renderForm({ entity: "quest" });
       await userEvent.type(screen.getByLabelText("Title"), "Reclaim Erebor");
       await userEvent.type(
@@ -158,7 +158,7 @@ describe("QuickAddForm", () => {
       await userEvent.click(createAndOpen());
 
       await waitFor(() => expect(mockAddQuest).toHaveBeenCalledTimes(1));
-      expect(mockNavigate).toHaveBeenCalledWith("/quests?highlight=quest-1", {
+      expect(mockNavigate).toHaveBeenCalledWith("/quests/quest-1", {
         state: { quickAddFocus: "objectives" },
       });
     });

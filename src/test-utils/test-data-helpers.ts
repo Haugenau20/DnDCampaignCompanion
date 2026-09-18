@@ -1,7 +1,7 @@
 // src/test-utils/test-data-helpers.ts
 
 import { NPC } from 'features/campaign-entities';
-import { Quest, QuestObjective, QuestLocation, QuestNPC, QuestStatus } from 'features/campaign-entities';
+import { Quest, QuestObjective, QuestLocation, QuestStatus } from 'features/campaign-entities';
 import type { Location } from 'features/campaign-entities';
 import { Rumor } from 'features/campaign-entities';
 
@@ -42,10 +42,6 @@ export const createTestQuest = (overrides: Partial<Quest> = {}): Quest => ({
     name: 'Test Location',
     description: 'A location important to this quest'
   }],
-  importantNPCs: [{
-    name: 'Test NPC',
-    description: 'An NPC important to this quest'
-  }],
   relatedNPCIds: [],
   complications: ['Potential complication'],
   rewards: ['Test reward'],
@@ -68,12 +64,6 @@ export const createTestQuestObjective = (overrides: Partial<QuestObjective> = {}
 export const createTestQuestLocation = (overrides: Partial<QuestLocation> = {}): QuestLocation => ({
   name: 'Test Quest Location',
   description: 'A location related to the quest',
-  ...overrides
-});
-
-export const createTestQuestNPC = (overrides: Partial<QuestNPC> = {}): QuestNPC => ({
-  name: 'Test Quest NPC',
-  description: 'An NPC related to the quest',
   ...overrides
 });
 

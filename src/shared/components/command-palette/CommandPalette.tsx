@@ -83,7 +83,9 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
           navigateToPage(createPath("/story", {}, { highlight: result.id }));
           break;
         case "quest":
-          navigateToPage(createPath("/quests", {}, { highlight: result.id }));
+          // The quest's own page, since `15-5`. The palette is the fastest way
+          // to a record in the product, and it was landing on a directory row.
+          navigateToPage(`/quests/${result.id}`);
           break;
         case "npc":
           navigateToPage(createPath("/npcs", {}, { highlight: result.id }));

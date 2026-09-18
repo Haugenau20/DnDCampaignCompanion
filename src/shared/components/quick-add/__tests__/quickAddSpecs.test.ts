@@ -177,10 +177,10 @@ describe("quickAddSpecs", () => {
       expect(QUICK_ADD_SPECS.npc.destinationFor("npc-1")).toBe("/npcs/npc-1");
     });
 
-    it("sends a new quest to its directory row, since its page lands in 15-5", () => {
-      expect(QUICK_ADD_SPECS.quest.destinationFor("quest-1")).toBe(
-        "/quests?highlight=quest-1"
-      );
+    it("sends a new quest to its own page, which `15-5` added", () => {
+      // It landed on the directory with the row highlighted until then,
+      // because a quest had no address at all.
+      expect(QUICK_ADD_SPECS.quest.destinationFor("quest-1")).toBe("/quests/quest-1");
     });
 
     it("sends a new location to its own page, which 15-4 built", () => {

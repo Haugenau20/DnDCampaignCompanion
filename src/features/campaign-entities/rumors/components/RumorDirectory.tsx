@@ -221,8 +221,11 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
     navigateToPage(createPath('/locations', {}, { highlight: locationId }));
   };
 
+  // The quest this rumour became, at its own address (`15-5` item 11). A
+  // rumour could be converted into a quest and then not refer to it; this is
+  // the link that closes that.
   const handleQuestClick = (questId: string) => {
-    navigateToPage(createPath('/quests', {}, { highlight: questId }));
+    navigateToPage(`/quests/${questId}`);
   };
 
   const handleEdit = (rumorId: string) => {

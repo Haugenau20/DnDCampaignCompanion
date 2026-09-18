@@ -161,10 +161,6 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
         objectives: [],
         leads: [],
         keyLocations: [],
-        // `importantNPCs` is written empty rather than omitted because
-        // `QuestDirectory` still reads it today. `15-5` deletes the field
-        // (D15.7); removing it here would be that PR's work done early.
-        importantNPCs: [],
         relatedNPCIds: [],
         complications: [],
         rewards: [],
@@ -178,7 +174,10 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
       };
       return doc;
     },
-    destinationFor: (id) => `/quests?highlight=${id}`,
+    // The quest's own page, which `15-5` added. A quest created here used to
+    // land on the directory with its row highlighted, because a quest had no
+    // address at all -- the very gap that PR closed.
+    destinationFor: (id) => `/quests/${id}`,
     focusField: "objectives",
   },
 

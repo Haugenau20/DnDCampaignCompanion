@@ -287,7 +287,7 @@ const NPCDetailPage: React.FC = () => {
         name: quest.title,
         kind: 'quests',
         detail: capitalise(quest.status),
-        href: `/quests?highlight=${id}`,
+        href: `/quests/${id}`,
       });
     });
 

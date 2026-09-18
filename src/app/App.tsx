@@ -33,7 +33,7 @@ import {
   ChapterCreatePage,
   ChapterEditPage
 } from 'pages/story';
-import { QuestsPage, QuestCreatePage, QuestEditPage } from 'pages/quests';
+import { QuestsPage, QuestCreatePage, QuestEditPage, QuestDetailPage } from 'pages/quests';
 import { NPCsPage, NPCsCreatePage, NPCsEditPage, NPCDetailPage } from 'pages/npcs';
 import { LocationsPage, LocationCreatePage, LocationEditPage, LocationDetailPage } from 'pages/locations';
 import { RumorsPage, RumorCreatePage, RumorEditPage } from 'pages/rumors';
@@ -79,6 +79,11 @@ const App: React.FC = () => {
                                   <Route path="/quests" element={<QuestsPage />} />
                                   <Route path="/quests/create" element={<QuestCreatePage />} />
                                   <Route path="/quests/edit/:questId" element={<QuestEditPage />} />
+                                  {/* After the two literal segments, so
+                                      `/quests/create` and `/quests/edit/x` keep
+                                      their own pages rather than being read as
+                                      a quest id. */}
+                                  <Route path="/quests/:questId" element={<QuestDetailPage />} />
                                   <Route path="/npcs" element={<NPCsPage />} />
                                   <Route path="/npcs/create" element={<NPCsCreatePage />} />
                                   <Route path="/npcs/edit/:npcId" element={<NPCsEditPage />} />
