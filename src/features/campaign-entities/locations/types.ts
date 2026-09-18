@@ -56,6 +56,19 @@ export interface Location extends BaseContent {
 export interface LocationNote {
   date: string;
   text: string;
+  /**
+   * Who wrote it -- the acting character's name, or their username when they
+   * have no character.
+   *
+   * Optional, and for the same reason `NPCNote.author` is: every note written
+   * before this field existed has none and never will. Those render without an
+   * author rather than being attributed to a guess -- the record's creator is
+   * not necessarily the person who wrote any given note.
+   *
+   * This is the one place §8 allows a per-entry credit, because a note really
+   * does carry its own author and date. Nothing else on the page may.
+   */
+  author?: string;
 }
 
 /**
@@ -66,6 +79,17 @@ export interface LocationContextState {
   isLoading: boolean;
   error: string | null;
 }
+
+/**
+ * What happens to the places inside a location when it is deleted.
+ *
+ * `00-entity-authoring.md` §6.2: deleting a parent must ask, and never orphan.
+ * There is no default worth having -- both outcomes are reasonable and only the
+ * person deleting knows which they mean -- so the caller states one and
+ * `deleteLocation` keeps today's subtree delete only for the callers that
+ * predate the question.
+ */
+export type LocationChildStrategy = 'delete-subtree' | 'promote-to-grandparent';
 
 /**
  * Context value including state and methods
@@ -79,7 +103,16 @@ export interface LocationContextValue extends LocationContextState {
   updateLocation: (locationId: string, updatedLocation: Partial<Location>) => Promise<void>;
   updateLocationNote: (locationId: string, note: LocationNote) => Promise<void>;
   updateLocationStatus: (locationId: string, status: LocationStatus) => Promise<void>;
-  deleteLocation: (locationId: string) => Promise<void>;
+  /**
+   * Move a location under a new parent, or to the top level with `undefined`.
+   *
+   * Rejects rather than writing when the move would close a cycle. The tray
+   * that offers parents already excludes self and every descendant, so this is
+   * the second line: a cycle written once poisons every walk over that
+   * campaign's data, for everyone.
+   */
+  moveLocation: (locationId: string, nextParentId: string | undefined) => Promise<void>;
+  deleteLocation: (locationId: string, childStrategy?: LocationChildStrategy) => Promise<void>;
   createLocation: (locationData: DomainData<Location>) => Promise<string>;
   refreshLocations: () => Promise<Location[]>;
   hasRequiredContext: boolean;

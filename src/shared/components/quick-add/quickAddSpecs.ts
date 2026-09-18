@@ -216,7 +216,9 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
       };
       return doc;
     },
-    destinationFor: (id) => `/locations?highlight=${id}`,
+    // `15-4` gives a location a page, so *Create & open* lands on it rather
+    // than on the directory with the row expanded.
+    destinationFor: (id) => `/locations/${id}`,
     focusField: "parent",
   },
 };

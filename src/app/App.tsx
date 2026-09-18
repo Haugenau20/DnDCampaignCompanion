@@ -35,7 +35,7 @@ import {
 } from 'pages/story';
 import { QuestsPage, QuestCreatePage, QuestEditPage } from 'pages/quests';
 import { NPCsPage, NPCsCreatePage, NPCsEditPage, NPCDetailPage } from 'pages/npcs';
-import { LocationsPage, LocationCreatePage, LocationEditPage } from 'pages/locations';
+import { LocationsPage, LocationCreatePage, LocationEditPage, LocationDetailPage } from 'pages/locations';
 import { RumorsPage, RumorCreatePage, RumorEditPage } from 'pages/rumors';
 import { NotesPage, NotePage } from 'pages/notes';
 import PrivacyPolicyPage from 'pages/PrivacyPolicyPage';
@@ -86,6 +86,11 @@ const App: React.FC = () => {
                                   <Route path="/locations" element={<LocationsPage />} />
                                   <Route path="/locations/create" element={<LocationCreatePage />} />
                                   <Route path="/locations/edit/:locationId" element={<LocationEditPage />} />
+                                  {/* After the two literal segments, so
+                                      `/locations/create` and `/locations/edit/x`
+                                      keep their own pages rather than being read
+                                      as a location id. */}
+                                  <Route path="/locations/:locationId" element={<LocationDetailPage />} />
                                   <Route path="/rumors" element={<RumorsPage />} />
                                   <Route path="/rumors/create" element={<RumorCreatePage />} />
                                   <Route path="/rumors/edit/:rumorId" element={<RumorEditPage />} />

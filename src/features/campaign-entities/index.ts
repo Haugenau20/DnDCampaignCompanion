@@ -28,12 +28,38 @@ export { default as LocationCombobox } from './locations/components/LocationComb
 export { default as LocationCreateForm } from './locations/components/LocationCreateForm';
 export { default as LocationDirectory } from './locations/components/LocationDirectory';
 export { default as LocationEditForm } from './locations/components/LocationEditForm';
+export { default as WhereThisSits } from './locations/components/WhereThisSits';
+export { default as DeleteLocationDialog } from './locations/components/DeleteLocationDialog';
 // Location types
-export type { Location, LocationType, LocationStatus, LocationNote, LocationContextState, LocationContextValue } from './locations/types';
+export type { Location, LocationType, LocationStatus, LocationNote, LocationChildStrategy, LocationContextState, LocationContextValue } from './locations/types';
 // The shared answer to "what location is this entity at?" -- see #1412 for why
 // an unresolved reference is shown as itself rather than prettified.
-export { resolveLocationName } from './locations/utils/location-display';
+export { resolveLocationName, referencesLocation } from './locations/utils/location-display';
 export type { LocationReference } from './locations/utils/location-display';
+// Every walk over the tree, guarded. `15-4` makes cycles reachable, so nothing
+// outside this module may hand-roll a parent or descendant walk.
+export {
+  ancestorPathOf,
+  buildLocationIndex,
+  childrenOf,
+  descendantIdsOf,
+  insideCountOf,
+  invalidParentIdsFor,
+  parentIdOf,
+  pathLabelOf,
+  siblingsOf,
+  wouldCreateCycle,
+} from './locations/utils/location-tree';
+export type { LocationIndex } from './locations/utils/location-tree';
+// How a location says what it is, shared by the tree and the page.
+export {
+  formatLocationType,
+  formatLocationStatus,
+  locationMetaLine,
+  KNOWLEDGE_OPTIONS,
+  STATUS_ORDER,
+  STATUS_TONE,
+} from './locations/utils/location-presentation';
 
 // Rumor context and hooks
 export { RumorProvider, useRumors } from './rumors/context/RumorContext';

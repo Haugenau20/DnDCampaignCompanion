@@ -814,6 +814,38 @@
     background-color: var(--surface-band-on-muted);
   }
 
+  /*
+    A chip that is a control, drawn on the band.
+
+    `chip-toggle` cannot be used here: its selected state reaches for
+    `--accent-ink`, and `colour-schema.md` §5.2 solves `accent.*` against page,
+    card and sunken only. Light `accent.ink` #8D4F00 on band #26211C measures
+    ~1.9:1 -- there is no authored pair to reach for, the gap is T040, and
+    `handoff/15-4-location-page.md` forbids inventing one. So a band chip takes
+    the neutral band treatment the visual reference shows, from the band's own
+    pair and nothing else.
+
+    `--surface-band-selected` is that pair's selected member. It was emitted and
+    unconsumed -- "the band has no selectable element yet", per the token
+    manifest -- and this is the element.
+  */
+  .band-chip {
+    background-color: transparent;
+    color: var(--surface-band-on-muted);
+    border: var(--border-width-sm) solid var(--surface-band-border);
+  }
+
+  .band-chip:hover:not(:disabled) {
+    background-color: var(--surface-band-hover);
+    color: var(--surface-band-on);
+  }
+
+  .band-chip-selected {
+    background-color: var(--surface-band-selected);
+    color: var(--surface-band-on);
+    border-color: var(--surface-band-on-muted);
+  }
+
   /* ====== IMAGE SLOT ====== */
 /* The empty state for a reserved image slot. */
 .image-slot {

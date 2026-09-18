@@ -21,7 +21,7 @@ import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog
 import { usePageGate, GatedContent } from 'shared/components/gated';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
-import InlineEditor from './InlineEditor';
+import { InlineEditor } from 'shared/components/inline-edit';
 import { Pencil } from 'lucide-react';
 
 /** Sentence-cases one of the short enum values the type stores lowercase. */

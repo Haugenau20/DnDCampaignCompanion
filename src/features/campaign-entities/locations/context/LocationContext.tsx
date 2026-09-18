@@ -1,6 +1,7 @@
 // src/features/campaign-entities/locations/context/LocationContext.tsx
 import React, { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react';
-import { Location, LocationStatus, LocationContextValue, LocationNote } from '../types';
+import { Location, LocationStatus, LocationContextValue, LocationNote, LocationChildStrategy } from '../types';
+import { descendantIdsDeepestFirst, wouldCreateCycle } from '../utils/location-tree';
 import { DomainData } from 'core/types/common';
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
@@ -167,8 +168,60 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     dispatchLocationChangedEvent();
   }, [user, activeGroupId, activeCampaignId, getLocationById, updateData, dispatchLocationChangedEvent]);
 
-  // Delete location and all its children
-  const deleteLocation = useCallback(async (locationId: string): Promise<void> => {
+  /**
+   * Move a location under a new parent.
+   *
+   * The write the whole cycle guard exists for. Nothing in the product could
+   * choose a parent before `15-4`, so `PERF-11`'s unterminating walks needed
+   * hand-edited data to reach; *Move elsewhere* makes them one click away. The
+   * tray refuses to offer self or a descendant and this refuses to write one,
+   * because the two failures have very different blast radii: an unofferable
+   * choice is a UI gap, a written cycle is a campaign nobody can open.
+   */
+  const moveLocation = useCallback(async (
+    locationId: string,
+    nextParentId: string | undefined
+  ): Promise<void> => {
+    if (!user || !activeGroupId || !activeCampaignId) {
+      throw new Error('User must be authenticated and group/campaign context must be set to move a location');
+    }
+
+    const location = getLocationById(locationId);
+    if (!location) {
+      throw new Error('Location not found');
+    }
+
+    if (wouldCreateCycle(locations, locationId, nextParentId)) {
+      const parent = nextParentId ? getLocationById(nextParentId) : undefined;
+      throw new Error(
+        nextParentId === locationId
+          ? `${location.name} cannot be inside itself.`
+          : `${parent?.name ?? 'That place'} is already inside ${location.name}.`
+      );
+    }
+
+    // '' rather than `undefined`: Firestore rejects `undefined`, and it is what
+    // both the form and quick add already write for "no parent".
+    await updateLocation(locationId, { parentId: nextParentId ?? '' });
+  }, [user, activeGroupId, activeCampaignId, getLocationById, locations, updateLocation]);
+
+  /**
+   * Delete a location, and say what happens to the places inside it.
+   *
+   * §6.2: **never orphan, never decide silently.** `promote-to-grandparent`
+   * moves the direct children up one level -- to this location's own parent, or
+   * to the top level when it had none -- before the record goes; each child's
+   * own subtree travels with it untouched, because only the edge that pointed
+   * at the deleted location is broken.
+   *
+   * `delete-subtree` stays the default only because it is what every caller
+   * written before this question existed already does. Every caller that asks
+   * passes a strategy explicitly.
+   */
+  const deleteLocation = useCallback(async (
+    locationId: string,
+    childStrategy: LocationChildStrategy = 'delete-subtree'
+  ): Promise<void> => {
     if (!user || !activeGroupId || !activeCampaignId) {
       throw new Error('User must be authenticated and group/campaign context must be set to delete a location');
     }
@@ -178,44 +231,59 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('Location not found');
     }
 
-    // Recursively get all child location IDs in depth-first post-order: for each
-    // direct child, its own descendants come first, then the child itself. This
-    // guarantees deepest-first ordering so referential integrity is preserved when
-    // the IDs are deleted in sequence below (parent is never removed before any of
-    // its descendants).
-    const getAllChildrenIds = (parentId: string): string[] => {
-      const directChildren = locations.filter(loc => loc.parentId === parentId);
-      return directChildren.flatMap(child => [
-        ...getAllChildrenIds(child.id),
-        child.id
-      ]);
-    };
+    if (childStrategy === 'promote-to-grandparent') {
+      const grandparentId = location.parentId || '';
+      const directChildren = locations.filter(loc => loc.parentId === locationId);
 
-    const childrenIds = getAllChildrenIds(locationId);
+      // The children are re-homed *before* the parent goes. The other order
+      // leaves a window in which a reader loading the campaign sees children
+      // pointing at an id that no longer resolves -- the dangling-parent state
+      // #303 catalogued, created deliberately by the fix for orphaning.
+      for (const child of directChildren) {
+        await updateData(child.id, { parentId: grandparentId });
+      }
 
-    // Delete all children first, sequentially and in depth-first order. Sequential
-    // (rather than Promise.all) execution is required here: it is the only way to
-    // guarantee descendants are actually removed from the database before their
-    // ancestors. This trades throughput (N round trips instead of one batch) for
-    // that guarantee — for deep or wide location trees this is slower than the
-    // previous parallel deletion, but ordering is the point of the fix.
+      await deleteData(locationId);
+
+      setLocations(prevLocations =>
+        prevLocations
+          .filter(loc => loc.id !== locationId)
+          .map(loc =>
+            loc.parentId === locationId ? { ...loc, parentId: grandparentId } : loc
+          )
+      );
+
+      dispatchLocationChangedEvent();
+      return;
+    }
+
+    // Every descendant, deepest first: the ordering bug #010 was filed about,
+    // unchanged. What changed is that the walk now carries a visited set and a
+    // depth cap -- the recursion it replaces had neither, so a parent cycle
+    // meant deleting a location never returned.
+    const childrenIds = descendantIdsDeepestFirst(locations, locationId);
+
+    // Sequential (rather than Promise.all) execution is required here: it is the
+    // only way to guarantee descendants are actually removed from the database
+    // before their ancestors. This trades throughput (N round trips instead of
+    // one batch) for that guarantee.
     for (const id of childrenIds) {
       await deleteData(id);
     }
 
     // Then delete the parent location
     await deleteData(locationId);
-    
+
     // Optimistically update local state by removing deleted locations
-    setLocations(prevLocations => 
-      prevLocations.filter(loc => 
+    setLocations(prevLocations =>
+      prevLocations.filter(loc =>
         loc.id !== locationId && !childrenIds.includes(loc.id)
       )
     );
-    
+
     // Also trigger a full refresh to ensure data consistency
     dispatchLocationChangedEvent();
-  }, [user, activeGroupId, activeCampaignId, getLocationById, locations, deleteData, dispatchLocationChangedEvent]);
+  }, [user, activeGroupId, activeCampaignId, getLocationById, locations, deleteData, updateData, dispatchLocationChangedEvent]);
 
   // Ids issued during this session but not yet reflected in `locations`
   // (local state). Two locations can be created back-to-back within a single
@@ -276,6 +344,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     getChildLocations,
     getParentLocation,
     updateLocation,
+    moveLocation,
     updateLocationNote,
     updateLocationStatus,
     deleteLocation,

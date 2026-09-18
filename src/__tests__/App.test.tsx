@@ -185,6 +185,7 @@ jest.mock("../pages/locations", () => ({
   LocationsPage: () => <div data-testid="page-locations" />,
   LocationCreatePage: () => <div data-testid="page-location-create" />,
   LocationEditPage: () => <div data-testid="page-location-edit" />,
+  LocationDetailPage: () => <div data-testid="page-location-detail" />,
 }));
 
 jest.mock("../pages/rumors", () => ({
@@ -274,6 +275,9 @@ const EXPECTED_ROUTES = [
   "/locations",
   "/locations/create",
   "/locations/edit/:locationId",
+  // `15-4`. Declared after the two literal segments, so `/locations/create`
+  // still reaches its own page rather than being read as a location id.
+  "/locations/:locationId",
   "/rumors",
   "/rumors/create",
   "/rumors/edit/:rumorId",

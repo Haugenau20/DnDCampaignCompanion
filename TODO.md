@@ -391,6 +391,13 @@ last-modified-by and **nothing in between**. The "timeline of edits" that Phase 
 was scoped around cannot exist without a data change. Answer before anything in
 the UI promises a timeline.
 
+**PR 15.4 held the line and recorded where.** `/locations/:locationId` states two
+facts in its record card and nothing else. The visual reference (`S5`) prints
+"DungeonMaster · 31 May · click to edit" under the description; that line is
+deliberately not built, and a test asserts its absence so it cannot arrive by
+accident. When this is answered, the per-section blocks on that page are where
+it goes.
+
 ### T006 — Can a note be edited or deleted after it is written?
 **Type** decision · **Size** M · **Status** open · **Verified** 2026-09-16 · `Q13`
 
@@ -400,6 +407,12 @@ kind of note, no for the other", by accident rather than decision.
 
 This is a decision about the shared record, not about the page: changing a note
 someone else wrote is a question about who owns campaign history.
+
+**PR 15.4 adds a third append-only notes list**, on the location page, matching
+the NPC page rather than the campaign notes: added, never edited or removed, and
+the composer says so. `LocationNote` gained an optional `author`, as `NPCNote`
+already had, so a note written from here carries its own credit; older ones stay
+blank rather than being attributed to a guess.
 
 ### T007 — Does `AdminPanel` get a real route? — **answered: yes**
 **Type** decision · **Size** S · **Status** done · **Verified** 2026-09-16 · `R39`
@@ -446,9 +459,16 @@ adds has a band header carrying a status chip.
 - **Touches**: four surfaces in Phase 15 (`/locations/:locationId`,
   `/quests/:questId`, and the two directories that share the header), which is
   why it wants answering at the source rather than per page.
-- **Interim**: band chips take the neutral band treatment, which is what the
-  visual reference shows. `handoff/15-4-location-page.md` says so explicitly
-  and forbids inventing a value.
+- **Interim, now implemented (PR 15.4)**: `.band-chip` / `.band-chip-selected`
+  in `components.css` draw a band control from the band's own pair and nothing
+  else. The selected state consumes `--surface-band-selected`, which was emitted
+  and unconsumed — the token manifest's note read "the band has no selectable
+  element yet", and the entity page's knowledge ladder is that element. No value
+  was invented, and `StateLadder` takes a `tone="band"` rather than each page
+  spelling it out.
+- **Still open**: an accent *pair* for the band. A band chip cannot be an accent
+  chip, so a band can carry no primary action drawn the way every other primary
+  action is drawn.
 - **Catch**: the schema is read-only to an implementing PR, so this cannot be
   closed by the phase that found it.
 - **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13
@@ -505,8 +525,13 @@ Measured against the four create forms, the premise holds for the quest only.
   `shared/context/SearchContext.tsx` builds fresh chapter, NPC, location and
   rumor hooks rather than consuming the providers; `pages/npcs/NPCsPage.tsx` and
   `NPCsEditPage.tsx` load NPCs independently of `NPCProvider`; and
-  `LocationDirectory.tsx:112` mounts another `locations` loader under a comment
+  `LocationDirectory.tsx:112` mounted another `locations` loader under a comment
   claiming "real-time updates" — `getDocs` is not a subscription.
+  **That last one is gone as of PR 15.4**, which was the owner this entry
+  singled out as producing two real Firestore targets rather than one coalesced
+  one. The directory consumes the `locations` prop `LocationsPage` already reads
+  from the provider. Everything else on this list is untouched, and the two
+  instances per context remain.
 - **Touches**: `useFirebaseData` (give the write instance a way to skip the
   fetch), or the contexts (have the write path reuse the read instance's data),
   plus the page- and search-level loaders above.
@@ -525,6 +550,35 @@ Measured against the four create forms, the premise holds for the quest only.
 - **Source**: todo.txt, 2026-09-16 ("NPCs Page seems to take longer to load");
   merged with `PERF-08` from the performance review, which is the same finding
   measured.
+
+### T042 — A theme class passed as *data* has no manifest coverage
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-18
+
+`StateLadder` took a `selectedClassName` prop naming the theme class its
+selected chip should wear. Every option that used it named a class **no
+stylesheet defines**: `knowledge-0/1/2` on the location and rumour ladders,
+`outcome-completed` / `outcome-failed` on the quest one. Five dead names,
+shipped in `15-3`, and every gate green.
+
+- **Why nothing caught it**: `css-class-manifest.test.ts` walks
+  defined-but-unapplied, and says in its own header that it deliberately does
+  not walk the reverse — over the whole tree that direction would report every
+  Tailwind utility in the product. A class name reaching a component as a
+  *string prop* is therefore invisible to both directions.
+- **Why it looked right**: `chip-toggle-selected` was doing all the work, so the
+  ladders rendered correctly and the extra class was inert. It could not have
+  worked in any case: `.chip-toggle-selected` sets `color` and is declared later
+  in `components.css` than `.valence-*`, so at equal specificity it wins.
+- **Fixed for now by deletion**: `15-4` removed the prop rather than correcting
+  the spelling — the visual reference draws every selected ladder chip as the
+  same chip, because a ladder is a control and the selected chip says "this is
+  the current one", not what the state means. The gap stays open because the
+  *pattern* will recur: `RosterStatus`'s `tone`, `Button`'s `variant` and
+  `EntitySigil`'s palette are all class families selected by data.
+- **Touches**: `core/themes/__tests__/css-class-manifest.test.ts` — a narrow
+  consumed-but-undefined check over a closed vocabulary (props whose values are
+  known to be theme classes) is the shape that works; a general scan is not.
+- **Source**: found in `15-4` while wiring the location page's band control.
 
 ### T024 — Remove the `?route=` 404 redirect hack, and the duplicate `NavigationProvider`
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-16 · `PERF-15`
@@ -830,9 +884,17 @@ work that landed after the audit — including the Critical one.
   files have since moved or been deleted outright (`SearchBar.tsx`,
   `ContextSwitcher.tsx`). The review links some findings as GitHub permalinks at
   that revision for exactly this reason. Locate by symbol, not by line.
-- **Note for T014**: `PERF-11` claims `LocationDirectory`'s parent walk has no
-  visited set, so highlighting a node in a parent cycle never terminates. If it
-  holds, it belongs to T014's shared-highlight work rather than here.
+- **`PERF-11` is confirmed and closed.** It held: the walk was a
+  `while (current?.parentId)` around repeated `locations.find` with no visited
+  set. `15-3` moved it into `shared/hooks/useHighlightTarget` behind a visited
+  set and a depth cap; `15-4` put every other walk over the location tree —
+  render, breadcrumb, descendant exclusion, delete ordering, filter recursion —
+  behind `locations/utils/location-tree.ts`, which carries the same guards, and
+  made the cycle tests hang the suite rather than fail if a guard is removed.
+  That mattered more than it looked: `15-4` is the PR that makes a cycle
+  *reachable*, because until *Move elsewhere* shipped nothing in the product
+  could choose a parent. **The other eight findings are still unchecked**, which
+  is what keeps this entry open.
 - **Source**: performance review
 
 ---
