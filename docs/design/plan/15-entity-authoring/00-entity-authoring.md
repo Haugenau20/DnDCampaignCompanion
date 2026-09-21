@@ -188,8 +188,16 @@ what is inside as more one-line rows. **A child expanded inside an expanded
 parent still reads as one object with parts**, because the summary is bounded
 and the rows are uniform. That is the whole fix.
 
-- The twisty and the name are **different targets**: the twisty toggles the
-  branch, the name opens the page. A place with nothing inside shows no twisty.
+- ~~The twisty and the name are **different targets**: the twisty toggles the
+  branch, the name opens the page. A place with nothing inside shows no
+  twisty.~~ **Superseded after `15-8`, from the running app.** This was written
+  before §1.3 gave every row a bounded summary, and once it had one the two
+  halves together left a leaf with no control that opened it at all — its
+  description, features, knowledge step, people and quests were unreachable
+  from the directory, and its name simply left for the page. Every row now
+  opens, from the twisty or from the name, and the page is reached through
+  *More info* inside the expansion (D41), which is what a quest row and an NPC
+  row already did.
 - **Search flattens the tree** and shows each match with its path ("Gondolin ·
   in Beleriand"). A filtered tree with orphaned parents is unreadable.
 - Visual indent caps at four levels; logical indent continues. The name column

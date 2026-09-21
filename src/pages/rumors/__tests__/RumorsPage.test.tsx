@@ -179,16 +179,19 @@ describe("RumorsPage", () => {
       expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
     });
 
-    it("keeps the list on screen while a write refetches behind it", () => {
-      // The defect this pins was found in Chrome, not here: every write ends
-      // with a refresh, the refresh set `isLoading` again, and passing that
-      // straight to the gate swapped the whole page for the skeleton --
-      // unmounting the directory, closing the open row and discarding the
-      // text being typed into it.
+    it("asks the gate exactly what the data hook told it, and nothing else", () => {
+      // CHANGED DELIBERATELY: this used to assert that the page itself
+      // discounted `isLoading` while it had rumors to show, because the page
+      // was the only place that knew the difference between "nothing to show
+      // yet" and "a fetch is in flight". `useRumorData` draws that line now,
+      // for every consumer at once -- the same defect was live on `/quests`,
+      // `/locations`, `/npcs` and `/` while only this page was guarded -- so
+      // the guarantee is tested where it is implemented (see
+      // `useQuestData.test.ts`, and each sibling hook's suite) and what is
+      // left here is that this page does not second-guess it.
       mockRumorContext = { ...mockRumorContext, isLoading: true };
       renderPage();
-      expect(screen.queryByTestId("gated-skeleton")).not.toBeInTheDocument();
-      expect(screen.getByText(/rumors gathered/i)).toBeInTheDocument();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
     });
 
     // Positive half of the pair below: proves the mocked RumorDirectory's

@@ -6,9 +6,10 @@
 // unbounded as depth grows. Large parts of this suite changed with it, and the
 // changes are deliberate rather than convenient:
 //
-// - The whole row was one expand button. §6.1 requires the twisty and the name
-//   to be **different targets**, so the toggle is now named for what it does
-//   ("Expand what is inside X") and the name opens the page.
+// - The whole row was one expand button, and §6.1 split it into two targets so
+//   the name could open the page. That split is now reverted, deliberately —
+//   see the "the row opens the row" block for the defect it caused and the
+//   rule that replaces it.
 // - The expansion held nine labelled fields, Edit and Delete. It now holds the
 //   bounded four-fact summary; notes, tags, last-visited, the record line and
 //   the destructive action moved to `/locations/:locationId` (§3).
@@ -104,14 +105,17 @@ function makeLocation(id: string, name: string, overrides: Partial<Location> = {
 /** The roster's search box. */
 const searchInput = () => screen.getByPlaceholderText('Search locations...');
 
-/** The twisty, which only exists where something is inside. */
+/**
+ * The twisty, which is on every row -- see the §6.1 block below for why it is
+ * no longer conditional on having something inside.
+ */
 const twisty = (name: string | RegExp) =>
-  screen.getByRole('button', { name: new RegExp(`Expand what is inside ${name}`) });
+  screen.getByRole('button', { name: new RegExp(`^Expand ${name}$`) });
 
 const openTwisty = (name: string) => fireEvent.click(twisty(name));
 
 const collapseTwisty = (name: string) =>
-  screen.getByRole('button', { name: new RegExp(`Collapse what is inside ${name}`) });
+  screen.getByRole('button', { name: new RegExp(`^Collapse ${name}$`) });
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -207,20 +211,35 @@ describe('LocationDirectory', () => {
   });
 
   // -------------------------------------------------------------------------
-  // §6.1: two targets, not one
+  // The row opens the row; *More info* opens the page
   // -------------------------------------------------------------------------
-  describe('the twisty and the name are different targets (§6.1)', () => {
+  //
+  // CHANGED DELIBERATELY, and this block is the spec that changed. §6.1 split
+  // the row into two targets -- the twisty opened the branch, the name opened
+  // the page -- and gave a place with nothing inside no twisty at all. That
+  // was written when a location row had nothing to expand into *except* its
+  // children. §1.3 then gave every row a bounded summary, and the two rules
+  // together left a leaf with no control that opened it: its description,
+  // features, knowledge ladder, people and quests were unreachable from the
+  // directory, and clicking its name left for the page.
+  //
+  // Reported from the running app and confirmed on `/locations`, where all
+  // five places were leaves and not one could be opened. So the row now
+  // behaves like a quest row and an NPC row: the row opens the row, and the
+  // page is reached through *More info* in the expansion (D41).
+  describe('the row opens the row, and More info opens the page', () => {
     const parent = makeLocation('parent-1', 'Kingdom of Valor');
     const child = makeLocation('child-1', 'Silverkeep', { parentId: 'parent-1' });
 
-    test('a place with nothing inside shows no twisty at all', () => {
+    test('a place with nothing inside can still be opened', () => {
       render(<LocationDirectory locations={[makeLocation('leaf', 'Bare Rock')]} />);
-      expect(
-        screen.queryByRole('button', { name: /what is inside Bare Rock/ })
-      ).not.toBeInTheDocument();
+      openTwisty('Bare Rock');
+
+      expect(collapseTwisty('Bare Rock')).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText('Description for Bare Rock')).toBeInTheDocument();
     });
 
-    test('the twisty opens the branch and does not navigate', () => {
+    test('the twisty opens the row and does not navigate', () => {
       render(<LocationDirectory locations={[parent, child]} />);
       openTwisty('Kingdom of Valor');
 
@@ -228,17 +247,27 @@ describe('LocationDirectory', () => {
       expect(mockNavigateToPage).not.toHaveBeenCalled();
     });
 
-    test('the name opens the page and does not toggle the branch', () => {
+    test('the name opens the row too, and does not navigate', () => {
       render(<LocationDirectory locations={[parent, child]} />);
       fireEvent.click(screen.getByText('Kingdom of Valor'));
 
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/locations/parent-1');
-      expect(twisty('Kingdom of Valor')).toHaveAttribute('aria-expanded', 'false');
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+      expect(collapseTwisty('Kingdom of Valor')).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText('Silverkeep')).toBeInTheDocument();
     });
 
-    test('every row offers a way in, named for the place it opens', () => {
+    test('the collapsed row carries no second control at all (D41)', () => {
       render(<LocationDirectory locations={[makeLocation('leaf', 'Bare Rock')]} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Open Bare Rock' }));
+
+      expect(screen.queryByRole('button', { name: 'Open Bare Rock' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'More info' })).not.toBeInTheDocument();
+    });
+
+    test('More info, once the row is open, is the way to the place', () => {
+      render(<LocationDirectory locations={[makeLocation('leaf', 'Bare Rock')]} />);
+      openTwisty('Bare Rock');
+
+      fireEvent.click(screen.getByRole('button', { name: 'More info' }));
       expect(mockNavigateToPage).toHaveBeenCalledWith('/locations/leaf');
     });
   });

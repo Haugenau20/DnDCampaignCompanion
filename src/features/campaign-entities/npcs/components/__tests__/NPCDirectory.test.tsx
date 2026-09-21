@@ -550,11 +550,44 @@ describe('NPCDirectory', () => {
 
   // -------------------------------------------------------------------------
   describe('parent callbacks', () => {
-    test('should propagate onNPCUpdate callback to parent when NPC is updated', () => {
+    test('tells the parent about a stance change, so the list stops disagreeing with the record', async () => {
+      // CHANGED DELIBERATELY. This test used to render the directory with the
+      // prop and assert that a name appeared -- it never called the callback
+      // and could not have failed if the callback were never called either,
+      // which is what was happening: `onNPCUpdate` was declared, destructured
+      // and dead. `updateNPCRelationship` refreshes the provider's copy of
+      // the collection, `NPCsPage` renders from a loader of its own, and
+      // nothing connected the two, so a stance picked in the row showed the
+      // old word until a reload. Found in Chrome on `/npcs`.
       const onNPCUpdate = jest.fn();
       render(<NPCDirectory npcs={[aldric]} onNPCUpdate={onNPCUpdate} />);
-      // The row renders; we verify the Directory accepts the prop without error
-      expect(screen.getByText('Aldric')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /Expand Aldric/ }));
+
+      const ladder = screen.getByRole('group', { name: 'Stance of Aldric' });
+      fireEvent.click(within(ladder).getByRole('button', { name: 'Hostile' }));
+
+      await waitFor(() =>
+        expect(onNPCUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'npc-1', relationship: 'hostile' })
+        )
+      );
+    });
+
+    test('does not tell the parent until the write has resolved (§7)', async () => {
+      let resolve!: () => void;
+      mockUpdateNPCRelationship.mockImplementationOnce(
+        () => new Promise<void>((r) => { resolve = r; })
+      );
+      const onNPCUpdate = jest.fn();
+      render(<NPCDirectory npcs={[aldric]} onNPCUpdate={onNPCUpdate} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Aldric/ }));
+
+      const ladder = screen.getByRole('group', { name: 'Stance of Aldric' });
+      fireEvent.click(within(ladder).getByRole('button', { name: 'Hostile' }));
+
+      expect(onNPCUpdate).not.toHaveBeenCalled();
+      resolve();
+      await waitFor(() => expect(onNPCUpdate).toHaveBeenCalled());
     });
 
     test('should propagate onNPCDelete callback to parent when NPC is deleted', () => {

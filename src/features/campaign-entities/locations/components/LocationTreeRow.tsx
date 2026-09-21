@@ -1,7 +1,7 @@
 // src/features/campaign-entities/locations/components/LocationTreeRow.tsx
 import React from 'react';
 import clsx from 'clsx';
-import { ArrowUpRight, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import Typography from 'core/components/Typography';
 import EntitySigil from 'core/components/EntitySigil';
 import { RosterStatus } from 'core/components/Roster';
@@ -20,11 +20,9 @@ export interface LocationTreeRowProps {
   location: Location;
   /** Logical depth. Keeps counting past four; the indent does not. */
   depth: number;
-  hasChildren: boolean;
   expanded: boolean;
+  /** Opens the row: the summary, and then whatever is inside it. */
   onToggle: () => void;
-  /** Opens `/locations/:locationId`. A different target from the twisty. */
-  onOpen: () => void;
   highlighted?: boolean;
   /** "Beleriand · Gondolin" -- shown only in the flattened search results. */
   path?: string;
@@ -40,11 +38,21 @@ export interface LocationTreeRowProps {
 /**
  * One place, on one line, at every depth.
  *
- * Not a `RosterRow`, and the difference is the point: a roster row is a single
- * button, so the whole row toggles. §6.1 requires the **twisty and the name to
- * be different targets** -- the twisty opens the branch, the name opens the
- * page -- which a row that is one button cannot express. A place with nothing
- * inside shows no twisty at all rather than a disabled one.
+ * **The row opens the row.** §6.1 originally split the targets -- the twisty
+ * opened the branch, the name opened the page -- and showed no twisty at all
+ * on a place with nothing inside. That was written while a location row had
+ * nothing to expand *into* except its children. §1.3 then gave every row a
+ * bounded summary, and the two rules together left a leaf with **no control
+ * that opened it at all**: its description, its features, its knowledge
+ * ladder, who is there and the quests there were unreachable from the
+ * directory, and clicking its name left the page. Reported from the running
+ * app, and confirmed on `/locations`, where every one of the five places was
+ * a leaf and not one of them could be opened.
+ *
+ * So a location row now behaves like every other row in this product: the
+ * name opens it, and the way to its page is *More info* inside the expansion
+ * (D41 -- the collapsed row is the highest-frequency surface and does not get
+ * a second control). The twisty is on every row, because every row opens.
  *
  * Indentation plus a 1px rail carries the hierarchy, and that is the whole fix
  * for what this replaces: a parent expanded into a full record card, printed a
@@ -55,10 +63,8 @@ export interface LocationTreeRowProps {
 export const LocationTreeRow: React.FC<LocationTreeRowProps> = ({
   location,
   depth,
-  hasChildren,
   expanded,
   onToggle,
-  onOpen,
   highlighted = false,
   path,
   insideCount,
@@ -93,31 +99,36 @@ export const LocationTreeRow: React.FC<LocationTreeRowProps> = ({
         {/* The rail. A hairline, not a box. */}
         <div className={clsx('self-stretch', depth > 0 && 'border-l card-border')} />
 
-        {hasChildren ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={expanded}
-            aria-label={`${expanded ? 'Collapse' : 'Expand'} what is inside ${location.name}`}
-            className="shrink-0 p-2 rounded-md selectable-item"
-          >
-            <ChevronRight
-              size={16}
-              aria-hidden="true"
-              className={clsx('transition-transform', expanded && 'rotate-90')}
-            />
-          </button>
-        ) : (
-          // A place with nothing inside shows no twisty (§6.1). The slot is
-          // kept so the names still line up down the column.
-          <span className="shrink-0 w-8" aria-hidden="true" />
-        )}
+        {/*
+          On every row, since every row opens. Whether anything is *inside*
+          no longer decides whether the control exists; the counts to the
+          right already say that in words ("3 inside · 2 NPCs").
+        */}
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-label={`${expanded ? 'Collapse' : 'Expand'} ${location.name}`}
+          className="shrink-0 p-2 rounded-md selectable-item"
+        >
+          <ChevronRight
+            size={16}
+            aria-hidden="true"
+            className={clsx('transition-transform', expanded && 'rotate-90')}
+          />
+        </button>
 
         <EntitySigil entityId={location.id} name={location.name} size={24} className="shrink-0" />
 
+        {/*
+          The name opens the row rather than leaving for the page. It carries
+          `aria-expanded` as well as the twisty: they are one disclosure with
+          two handles, not two different promises.
+        */}
         <button
           type="button"
-          onClick={onOpen}
+          onClick={onToggle}
+          aria-expanded={expanded}
           className="min-w-0 flex-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-left py-2 px-1 rounded-md selectable-item"
         >
           {/* A place name is the campaign's voice (design language §4). */}
@@ -146,16 +157,6 @@ export const LocationTreeRow: React.FC<LocationTreeRowProps> = ({
             {inside}
           </Typography>
         )}
-
-        <button
-          type="button"
-          onClick={onOpen}
-          aria-label={`Open ${location.name}`}
-          className="shrink-0 flex items-center gap-1 text-sm px-2 py-1.5 rounded-md selectable-item"
-        >
-          <span className="hidden sm:inline">Open</span>
-          <ArrowUpRight size={14} aria-hidden="true" />
-        </button>
       </div>
 
       {expanded && summary && (
