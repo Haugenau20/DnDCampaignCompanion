@@ -269,7 +269,17 @@ const NPCDetailPage: React.FC = () => {
   // and the campaign restore, and without this the page would claim "no NPC
   // with that id" for the found-but-not-yet-loaded case.
   const gate = usePageGate('npcs', {
-    loading,
+    /*
+      `loading` means **"there is nothing to show yet"**, not "a fetch is in
+      flight". Every write in this app ends with a refresh, and that refresh
+      sets the data hook's `loading` flag again -- so passing it raw made the
+      gate re-enter `resolving` after *every* save, swap the whole page for the
+      skeleton, and unmount what was on screen. Measured in Chrome: one
+      skeleton flash per write, and an open row closing under the cursor.
+
+      Once the page has something to show, a refetch happens behind it.
+    */
+    loading: loading && !npc,
     error,
     onRetry: () => {
       void refreshNPCs();

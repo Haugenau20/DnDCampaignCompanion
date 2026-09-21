@@ -149,7 +149,17 @@ const QuestDetailPage: React.FC = () => {
   // auth and the campaign restore, and without this the page would claim "no
   // quest with that id" for the found-but-not-yet-loaded case.
   const gate = usePageGate('quests', {
-    loading: isLoading,
+    /*
+      `loading` means **"there is nothing to show yet"**, not "a fetch is in
+      flight". Every write in this app ends with a refresh, and that refresh
+      sets the data hook's `loading` flag again -- so passing it raw made the
+      gate re-enter `resolving` after *every* save, swap the whole page for the
+      skeleton, and unmount what was on screen. Measured in Chrome: one
+      skeleton flash per write, and an open row closing under the cursor.
+
+      Once the page has something to show, a refetch happens behind it.
+    */
+    loading: isLoading && !quest,
     error,
     onRetry: () => {
       void refreshQuests();

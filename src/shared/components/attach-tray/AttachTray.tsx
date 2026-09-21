@@ -253,7 +253,10 @@ export const AttachTray: React.FC<AttachTrayProps> = ({
                   type="button"
                   onClick={() => onDetach(candidate.id)}
                   aria-label={`Detach ${candidate.name}`}
-                  className="button-ghost rounded-full p-0.5"
+                  // Measured at 18px square in `15-7`'s 320px pass, which is
+                  // under WCAG 2.5.8's 24px floor. The icon is unchanged; only
+                  // the area you have to hit is.
+                  className="button-ghost rounded-full p-0.5 min-w-[24px] min-h-[24px] flex items-center justify-center"
                 >
                   <X size={14} aria-hidden="true" />
                 </button>

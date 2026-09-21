@@ -5,21 +5,27 @@ import { useRumors } from '../context/RumorContext';
 import { useNPCs } from '../../npcs/context/NPCContext';
 import { useLocations } from '../../locations/context/LocationContext';
 import { resolveLocationName } from '../../locations/utils/location-display';
-import { useAuth } from 'features/user-management';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import RumorBatchActions from './RumorBatchActions';
+import RumorComposer from './RumorComposer';
+import RumorRowEditor, { draftFromRumor, type RumorDraft } from './RumorRowEditor';
 import { useNavigation } from 'shared/hooks/useNavigation';
 import useHighlightTarget from 'shared/hooks/useHighlightTarget';
-import StateLadder from 'shared/components/row-controls/StateLadder';
-import { Users, MapPin, Scroll, Plus } from 'lucide-react';
+import type { AttachKind } from 'shared/components/attach-tray/attachCandidates';
+import { Scroll } from 'lucide-react';
+import {
+  RUMOR_STATUS_FILL,
+  RUMOR_STATUS_TONE,
+  formatRumorStatus,
+  formatSourceType,
+} from '../utils/rumor-presentation';
 import {
   RosterStatusBar,
   RosterFilterBar,
   RosterFilterPills,
   RosterGroup,
   RosterRow,
-  RosterField,
   type RosterSegment,
   type RosterFilterOption,
   RosterSkeleton,
@@ -46,60 +52,16 @@ const SOURCE_FILTERS: RosterFilterOption[] = [
   { value: 'other', label: 'Other' },
 ];
 
-/** Status as a labelled chip. A bare colour stripe needed a legend nobody had. */
 /**
- * Rumour state, in the shared status vocabulary.
+ * Status, the status word, the ramp stop and the source label all now live in
+ * `utils/rumor-presentation.ts`.
  *
- * A confirmed rumour and a completed quest are the same kind of fact -- one
- * thing the party now knows -- so they take the same hue rather than each
- * directory naming its own.
+ * They were here, and one of them was wrong in a way nothing could see: the
+ * comment above the tone map said confirmed and disproved "sit on the same
+ * rung", and the map under it gave disproved `valence-3` -- the red a failed
+ * quest wears. `15-7` moved them out and made the code match what the comment,
+ * the colour schema and T008 all already said.
  */
-/**
- * A rumour is knowledge, not an outcome.
- *
- * `false` used to be `failed`, in the same red as a lost quest, which states
- * that a disproven rumour is a defeat. It is a *resolved* one, and usually a
- * good outcome for the party -- so confirmed and false sit on the **same**
- * rung: both are fully known, and what separates them is the strike cue that
- * 12-5 adds, not the hue. Schema section 3.
- */
-const STATUS_TONE: Record<RumorStatus, RosterStatusTone> = {
-  confirmed: 'valence-0',
-  unconfirmed: 'valence-1',
-  false: 'valence-3',
-};
-
-const formatStatus = (status: RumorStatus): string =>
-  status.charAt(0).toUpperCase() + status.slice(1);
-
-const formatSourceType = (type: SourceType): string =>
-  type === 'npc' ? 'NPC' : type.charAt(0).toUpperCase() + type.slice(1);
-
-/**
- * The rumour's knowledge ladder.
- *
- * `false` is the stored value; **"Disproved"** is what it is called wherever a
- * reader sees it, because it describes what the party did rather than a data
- * value.
- */
-/**
- * The rumour ladder: unconfirmed -> confirmed -> disproved. Never a verdict.
- *
- * `15-3` gave these steps `selectedClassName: 'knowledge-0'` and friends, which
- * no stylesheet defines. `StateLadder` no longer takes that prop at all -- the
- * comment there records why it could not have worked even spelled correctly.
- *
- * "Disproved", never "False" -- it describes what the party did, and a
- * disproved rumour is a good outcome (§10).
- */
-const RUMOR_KNOWLEDGE_OPTIONS: Array<{
-  value: RumorStatus;
-  label: string;
-}> = [
-  { value: 'unconfirmed', label: 'Unconfirmed' },
-  { value: 'confirmed', label: 'Confirmed' },
-  { value: 'false', label: 'Disproved' },
-];
 
 const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   rumors: initialRumors,
@@ -111,11 +73,23 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   const [expandedRumorId, setExpandedRumorId] = useState<string | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedRumors, setSelectedRumors] = useState<Set<string>>(new Set());
+  /** The rumour the composer just made, so its row opens with the caret in it. */
+  const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
-  const { deleteRumor, updateRumorStatus } = useRumors();
-  const { getNPCById } = useNPCs();
-  const { locations, getLocationById } = useLocations();
-  const { user } = useAuth();
+  /**
+   * Typed text for every open (or recently open) row, keyed by rumour id.
+   *
+   * **Held here rather than in the editor** (item 8). Filtering, sorting, or
+   * another player's status change re-renders this list, and a row that stops
+   * matching the filter unmounts with whatever was being typed in it. A draft
+   * kept in the row's own state dies at that moment; kept here it survives the
+   * re-render, the filter, and the trip back.
+   */
+  const [drafts, setDrafts] = useState<Record<string, RumorDraft>>({});
+
+  const { addRumor, deleteRumor, updateRumor, updateRumorStatus } = useRumors();
+  const { npcs } = useNPCs();
+  const { locations } = useLocations();
   const { navigateToPage, createPath, getCurrentQueryParams } = useNavigation();
   const { highlight: highlightId } = getCurrentQueryParams();
 
@@ -144,9 +118,10 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
       // disproven rumour is a resolved one rather than a defeat. They are told
       // apart by their labels here and by 12-5's strike in the rows -- not by
       // hue, which is what put a false rumour in the red of a lost quest.
-      { key: 'confirmed', label: 'confirmed', count: count('confirmed'), colorClass: 'bg-valence-0' },
-      { key: 'unconfirmed', label: 'unconfirmed', count: count('unconfirmed'), colorClass: 'bg-valence-1' },
-      { key: 'false', label: 'false', count: count('false'), colorClass: 'bg-valence-3' },
+      { key: 'confirmed', label: 'confirmed', count: count('confirmed'), colorClass: RUMOR_STATUS_FILL.confirmed },
+      { key: 'unconfirmed', label: 'unconfirmed', count: count('unconfirmed'), colorClass: RUMOR_STATUS_FILL.unconfirmed },
+      // "Disproved", never "false", even here (item 6).
+      { key: 'false', label: 'disproved', count: count('false'), colorClass: RUMOR_STATUS_FILL.false },
     ];
   }, [initialRumors]);
 
@@ -213,14 +188,6 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
     navigateToPage(createPath('/locations', {}, { highlight: location }));
   };
 
-  const handleNPCClick = (npcId: string) => {
-    navigateToPage(createPath('/npcs', {}, { highlight: npcId }));
-  };
-
-  const handleRelatedLocationClick = (locationId: string) => {
-    navigateToPage(createPath('/locations', {}, { highlight: locationId }));
-  };
-
   // The quest this rumour became, at its own address (`15-5` item 11). A
   // rumour could be converted into a quest and then not refer to it; this is
   // the link that closes that.
@@ -228,16 +195,103 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
     navigateToPage(`/quests/${questId}`);
   };
 
-  const handleEdit = (rumorId: string) => {
-    navigateToPage(`/rumors/edit/${rumorId}`);
+  /**
+   * Create a rumour from the composer and open its row.
+   *
+   * Everything but the title is left for the row underneath: a rumour is
+   * recorded while somebody is still talking, and asking for a source before
+   * accepting the sentence is how a note ends up not written at all.
+   */
+  const handleAdd = async (title: string): Promise<string> => {
+    const id = await addRumor({
+      title,
+      content: '',
+      status: 'unconfirmed',
+      // Not a source kind -- the absence of one. See `UNCHOSEN_SOURCE`.
+      sourceType: 'other',
+      sourceName: '',
+      relatedNPCs: [],
+      relatedLocations: [],
+      notes: [],
+    });
+    setExpandedRumorId(id);
+    setJustAddedId(id);
+    return id;
+  };
+
+  const setDraft = (rumorId: string, patch: Partial<RumorDraft>, rumor: Rumor) =>
+    setDrafts((previous) => ({
+      ...previous,
+      [rumorId]: { ...(previous[rumorId] ?? draftFromRumor(rumor)), ...patch },
+    }));
+
+  const clearDraft = (rumorId: string) =>
+    setDrafts((previous) => {
+      const next = { ...previous };
+      delete next[rumorId];
+      return next;
+    });
+
+  /** Every write here re-reads through the context, as the pages do. */
+  const handleSave = async (rumor: Rumor, draft: RumorDraft) => {
+    await updateRumor({
+      ...rumor,
+      title: draft.title,
+      content: draft.content,
+      sourceType: draft.sourceType,
+      sourceName: draft.sourceName,
+      ...(draft.sourceNpcId ? { sourceNpcId: draft.sourceNpcId } : { sourceNpcId: '' }),
+    });
+    clearDraft(rumor.id);
   };
 
   const handleDelete = async (rumorId: string) => {
-    try {
-      await deleteRumor(rumorId);
-    } catch (error) {
-      console.error('Failed to delete rumor:', error);
+    await deleteRumor(rumorId);
+    clearDraft(rumorId);
+    setExpandedRumorId((open) => (open === rumorId ? null : open));
+  };
+
+  /**
+   * What a rumour points at, attached in place.
+   *
+   * A location can mean two things to a rumour -- where it was heard
+   * (`locationId`) and what it is about (`relatedLocations`) -- and the tray
+   * cannot ask which. It writes the one the record is missing: the first place
+   * attached becomes where it was heard, because that is what the directory
+   * groups by and what a reader sees first; later ones are what it points at.
+   */
+  const handleAttach = async (rumor: Rumor, id: string, kind: AttachKind) => {
+    if (kind === 'npc') {
+      await updateRumor({
+        ...rumor,
+        relatedNPCs: Array.from(new Set([...(rumor.relatedNPCs ?? []), id])),
+      });
+      return;
     }
+
+    const place = locations.find((candidate) => candidate.id === id);
+    if (!rumor.locationId) {
+      await updateRumor({ ...rumor, locationId: id, location: place?.name ?? '' });
+      return;
+    }
+
+    await updateRumor({
+      ...rumor,
+      relatedLocations: Array.from(new Set([...(rumor.relatedLocations ?? []), id])),
+    });
+  };
+
+  const handleDetach = async (rumor: Rumor, id: string) => {
+    if (id === rumor.locationId) {
+      await updateRumor({ ...rumor, locationId: '', location: '' });
+      return;
+    }
+
+    await updateRumor({
+      ...rumor,
+      relatedNPCs: (rumor.relatedNPCs ?? []).filter((existing) => existing !== id),
+      relatedLocations: (rumor.relatedLocations ?? []).filter((existing) => existing !== id),
+    });
   };
 
   // Handle rumor selection for batch actions
@@ -315,6 +369,18 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
         />
       )}
 
+      {/*
+        The composer, permanently at the top of the list (item 1). Not behind a
+        button and not on a route: a rumour is written down while somebody is
+        still talking.
+
+        Hidden only in selection mode, where every row has become a checkbox
+        and the bar above acts on what is ticked -- adding a new rumour in the
+        middle of choosing which ones to combine is not a thing anyone is
+        doing.
+      */}
+      {!selectionMode && <RumorComposer onAdd={handleAdd} />}
+
       {/* Rumor roster by location */}
       {groups.length > 0 ? (
         groups.map(([location, locationRumors]) => {
@@ -357,148 +423,28 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                       ) : undefined
                     }
                     expandedContent={
-                      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-7 pt-4">
-                        <div className="flex flex-col gap-4">
-                          {/*
-                            Status is the knowledge ladder, not a verdict. A
-                            disproved rumour is *fully known* and a good
-                            outcome -- `knowledge.2` plus a strike, never
-                            failure red (§10, colour schema §3). "Disproved"
-                            replaces "False" in every string a reader sees.
-                          */}
-                          <StateLadder
-                            label="Is it true?"
-                            options={RUMOR_KNOWLEDGE_OPTIONS}
-                            value={rumor.status}
-                            ariaLabel={`Status of ${rumor.title}`}
-                            onChange={(status) => updateRumorStatus(rumor.id, status)}
-                          />
-
-                          <RosterField label="Content" emptyText="No details recorded">
-                            {rumor.content ? (
-                              <Typography variant="body-sm">{rumor.content}</Typography>
-                            ) : undefined}
-                          </RosterField>
-
-                          <RosterField label="Notes" emptyText="No notes yet">
-                            {rumor.notes?.length ? (
-                              <div className="flex flex-col gap-2">
-                                {rumor.notes.map(note => (
-                                  <div
-                                    key={note.id}
-                                    className="flex gap-3 px-3 py-2.5 rounded-md bg-secondary"
-                                  >
-                                    <Typography
-                                      variant="body-sm"
-                                      color="muted"
-                                      className="text-xs whitespace-nowrap"
-                                    >
-                                      {new Date(note.dateAdded).toLocaleDateString()}
-                                    </Typography>
-                                    <Typography variant="body-sm">{note.content}</Typography>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : undefined}
-                          </RosterField>
-                        </div>
-
-                        <div className="flex flex-col gap-4">
-                          <RosterField label="Heard from" emptyText="Not recorded">
-                            {rumor.sourceName ? (
-                              <Typography variant="body-sm">
-                                {rumor.sourceName} ({formatSourceType(rumor.sourceType)})
-                              </Typography>
-                            ) : undefined}
-                          </RosterField>
-
-                          <RosterField label="Related NPCs" emptyText="No NPCs linked">
-                            {relatedNPCs.length ? (
-                              <div className="flex flex-col gap-1.5">
-                                {relatedNPCs.map(npcId => {
-                                  const npc = getNPCById(npcId);
-                                  return (
-                                    <button
-                                      key={npcId}
-                                      type="button"
-                                      onClick={() => handleNPCClick(npcId)}
-                                      className="flex items-center gap-2 text-left px-2.5 py-1.5 rounded-md selectable-item"
-                                    >
-                                      <Users size={14} className="shrink-0 typography-secondary" />
-                                      <Typography variant="body-sm">{npc?.name || npcId}</Typography>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            ) : undefined}
-                          </RosterField>
-
-                          <RosterField label="Related locations" emptyText="No locations linked">
-                            {relatedLocations.length ? (
-                              <div className="flex flex-col gap-1.5">
-                                {relatedLocations.map(locationId => {
-                                  const relatedLocation = getLocationById(locationId);
-                                  return (
-                                    <button
-                                      key={locationId}
-                                      type="button"
-                                      onClick={() => handleRelatedLocationClick(locationId)}
-                                      className="flex items-center gap-2 text-left px-2.5 py-1.5 rounded-md selectable-item"
-                                    >
-                                      <MapPin size={14} className="shrink-0 typography-secondary" />
-                                      <Typography variant="body-sm">
-                                        {relatedLocation?.name || locationId}
-                                      </Typography>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            ) : undefined}
-                          </RosterField>
-
-                          {/* convertedToQuestId is meaningful, not incidental: it is the
-                              one signal that a rumor stopped being a rumor and became a
-                              tracked quest, so it gets its own field and a live link
-                              rather than being folded into "notes" or omitted. */}
-                          <RosterField label="Converted to quest" emptyText="Not converted to a quest">
-                            {rumor.convertedToQuestId ? (
-                              <button
-                                type="button"
-                                onClick={() => handleQuestClick(rumor.convertedToQuestId!)}
-                                className="flex items-center gap-2 text-left px-2.5 py-1.5 rounded-md selectable-item"
-                              >
-                                <Scroll size={14} className="shrink-0 typography-secondary" />
-                                <Typography variant="body-sm">View quest</Typography>
-                              </button>
-                            ) : undefined}
-                          </RosterField>
-
-                          <RosterField label="Recorded by" emptyText="Unknown">
-                            {rumor.createdByUsername ? (
-                              <Typography variant="body-sm">{rumor.createdByUsername}</Typography>
-                            ) : undefined}
-                          </RosterField>
-
-                          {user && (
-                            <div className="flex gap-2 mt-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEdit(rumor.id)}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(rumor.id)}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      /*
+                        The whole record, in the row (item 2). This is the one
+                        entity where §1.3's four-fact bound does not apply,
+                        because there is no page holding the remainder.
+                      */
+                      <RumorRowEditor
+                        rumor={rumor}
+                        draft={drafts[rumor.id]}
+                        onDraftChange={(patch) => setDraft(rumor.id, patch, rumor)}
+                        onSave={(draft) => handleSave(rumor, draft)}
+                        onCollapse={() => {
+                          clearDraft(rumor.id);
+                          setExpandedRumorId(null);
+                        }}
+                        onDelete={() => handleDelete(rumor.id)}
+                        onStatusChange={(status) => updateRumorStatus(rumor.id, status)}
+                        onAttach={(id, kind) => handleAttach(rumor, id, kind)}
+                        onDetach={(id) => handleDetach(rumor, id)}
+                        sources={{ npc: npcs, location: locations }}
+                        autoFocus={justAddedId === rumor.id}
+                        onOpenQuest={handleQuestClick}
+                      />
                     }
                   >
                     <div className="flex flex-col gap-0.5 min-w-0">
@@ -518,11 +464,17 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                       </Typography>
                     </div>
 
+                    {/*
+                      Fully known plus a strike, never failure red: a party
+                      that disproves a rumour has done the work (colour schema
+                      §3). `negated` is orthogonal to `tone` for exactly this
+                      reason -- the rumour has not left the ladder.
+                    */}
                     <RosterStatus
-                      tone={STATUS_TONE[rumor.status]}
+                      tone={RUMOR_STATUS_TONE[rumor.status]}
                       negated={rumor.status === 'false'}
                     >
-                      {formatStatus(rumor.status)}
+                      {formatRumorStatus(rumor.status)}
                     </RosterStatus>
 
                     {/* Source type, stated once and plainly -- it was a filled chip
@@ -561,17 +513,15 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
           message="Try a different search term, or clear the filters to see everything the party has heard."
         />
       ) : (
+        /*
+          No action here any more: the composer above *is* the way to add the
+          first rumour, and it is already on screen. A button pointing at
+          `/rumors/create` would send someone away from the control they are
+          looking at (item 1, and the empty-campaign gate).
+        */
         <RosterEmpty
           title="Nothing heard yet"
-          message="Overheard in a tavern, posted on a notice board, told by someone who may be lying — record it here and mark it confirmed when you find out."
-          action={
-            <Button
-              onClick={() => navigateToPage('/rumors/create')}
-              startIcon={<Plus className="w-4 h-4" />}
-            >
-              Add the first rumour
-            </Button>
-          }
+          message="Overheard in a tavern, posted on a notice board, told by someone who may be lying — title it above and mark it confirmed when you find out."
         />
       )}
     </div>

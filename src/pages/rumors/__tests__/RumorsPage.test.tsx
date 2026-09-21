@@ -173,6 +173,24 @@ describe("RumorsPage", () => {
       expect(screen.queryByText(/sign in/i)).not.toBeInTheDocument();
     });
 
+    it("shows the skeleton on the first load, when there is nothing to show yet", () => {
+      mockRumorContext = { ...mockRumorContext, rumors: [], isLoading: true };
+      renderPage();
+      expect(screen.getByTestId("gated-skeleton")).toBeInTheDocument();
+    });
+
+    it("keeps the list on screen while a write refetches behind it", () => {
+      // The defect this pins was found in Chrome, not here: every write ends
+      // with a refresh, the refresh set `isLoading` again, and passing that
+      // straight to the gate swapped the whole page for the skeleton --
+      // unmounting the directory, closing the open row and discarding the
+      // text being typed into it.
+      mockRumorContext = { ...mockRumorContext, isLoading: true };
+      renderPage();
+      expect(screen.queryByTestId("gated-skeleton")).not.toBeInTheDocument();
+      expect(screen.getByText(/rumors gathered/i)).toBeInTheDocument();
+    });
+
     // Positive half of the pair below: proves the mocked RumorDirectory's
     // controls genuinely render (and are queryable the way the assertions
     // below look for them) once the gate reaches "ready", so their absence
@@ -257,16 +275,15 @@ describe("RumorsPage", () => {
   // -------------------------------------------------------------------------
   // Create button
   // -------------------------------------------------------------------------
-  describe("Add Rumor button", () => {
-    it("renders 'Add Rumor' button for a ready user", () => {
+  describe("how a rumour gets added", () => {
+    it("carries no header action, because the composer is in the list", () => {
+      // CHANGED DELIBERATELY in `15-7` item 1. A rumour is written down while
+      // somebody is still talking, so the way in is a composer at the top of
+      // the list -- and a header button that leaves for `/rumors/create`
+      // would be the page contradicting the control directly below it.
       renderPage();
-      expect(screen.getByText("Add Rumor")).toBeInTheDocument();
-    });
-
-    it("navigates to /rumors/create on click", () => {
-      renderPage();
-      fireEvent.click(screen.getByText("Add Rumor"));
-      expect(mockNavigateToPage).toHaveBeenCalledWith("/rumors/create");
+      expect(screen.queryByText("Add Rumor")).not.toBeInTheDocument();
+      expect(mockNavigateToPage).not.toHaveBeenCalledWith("/rumors/create");
     });
   });
 

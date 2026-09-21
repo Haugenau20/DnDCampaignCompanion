@@ -57,7 +57,10 @@ jest.mock('../../context/RumorContext', () => ({
 }));
 
 jest.mock('../../../npcs/context/NPCContext', () => ({
-  useNPCs: jest.fn(() => ({ getNPCById: jest.fn(() => undefined) })),
+  useNPCs: jest.fn(() => ({
+    npcs: [{ id: 'npc-1', name: 'Gandalf the Grey', occupation: 'Wizard' }],
+    getNPCById: jest.fn(() => undefined),
+  })),
 }));
 
 // `locations` feeds the group-heading resolution added for #1412. These tests
@@ -65,7 +68,7 @@ jest.mock('../../../npcs/context/NPCContext', () => ({
 // resolveLocationName passes through verbatim.
 jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(() => ({
-    locations: [],
+    locations: [{ id: 'high-pass', name: 'The High Pass', type: 'landmark', status: 'known' }],
     getLocationById: jest.fn(() => undefined),
   })),
 }));
@@ -83,6 +86,8 @@ const mockCreatePath = jest.fn(
     query ? `${path}?${new URLSearchParams(query).toString()}` : path
 );
 const mockDeleteRumor = jest.fn().mockResolvedValue(undefined);
+const mockAddRumor = jest.fn().mockResolvedValue('new-rumor');
+const mockUpdateRumor = jest.fn().mockResolvedValue(undefined);
 const mockUpdateRumorStatus = jest.fn().mockResolvedValue(undefined);
 const mockCombineRumors = jest.fn().mockResolvedValue('new-rumor-id');
 const mockConvertToQuest = jest.fn().mockResolvedValue('quest-id');
@@ -104,6 +109,8 @@ function setupMocks(
   });
   (useRumors as jest.Mock).mockReturnValue({
     rumors: rumorList,
+    addRumor: mockAddRumor,
+    updateRumor: mockUpdateRumor,
     deleteRumor: mockDeleteRumor,
     updateRumorStatus: mockUpdateRumorStatus,
     combineRumors: mockCombineRumors,
@@ -172,12 +179,19 @@ describe('RumorDirectory', () => {
   // Empty state
   // -------------------------------------------------------------------------
   describe('empty state', () => {
-    test('says what the collection is for, and offers the action that fills it', () => {
+    test('says what the collection is for, and leaves the composer to fill it', () => {
       render(<RumorDirectory rumors={[]} />);
       expect(screen.getByText(/nothing heard yet/i)).toBeInTheDocument();
       expect(screen.getByText(/overheard in a tavern/i)).toBeInTheDocument();
+      // CHANGED DELIBERATELY in `15-7`: the empty state's action used to
+      // navigate to `/rumors/create`. The composer is already on screen above
+      // it, so the button would have sent someone away from the control they
+      // were looking at.
       expect(
-        screen.getByRole('button', { name: /add the first rumour/i })
+        screen.queryByRole('button', { name: /add the first rumour/i })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByLabelText('Heard something? Title it here')
       ).toBeInTheDocument();
     });
   });
@@ -257,14 +271,21 @@ describe('RumorDirectory', () => {
       expect(toggle).toHaveAttribute('aria-expanded', 'false');
     });
 
-    test('expands in place when the row is activated', () => {
+    test('expands in place, and holds the whole record rather than a summary', () => {
+      // CHANGED DELIBERATELY in `15-7` item 2. The expansion used to be a
+      // read-only summary with an Edit button that left for
+      // `/rumors/edit/:id`. A rumour is the one entity with no page, so
+      // §1.3's four-fact bound does not apply to it: the row holds all of it.
       render(<RumorDirectory rumors={[r1]} />);
       fireEvent.click(screen.getByRole('button', { name: /Expand Dragon spotted/ }));
 
       expect(
         screen.getByRole('button', { name: /Collapse Dragon spotted/ })
       ).toHaveAttribute('aria-expanded', 'true');
-      expect(screen.getByText('Content')).toBeInTheDocument();
+      expect(screen.getByLabelText('What was heard')).toBeInTheDocument();
+      expect(screen.getByLabelText('Rumour')).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Heard from' })).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: /Status of Dragon spotted/ })).toBeInTheDocument();
       expect(screen.getByText('Recorded by')).toBeInTheDocument();
     });
 
@@ -272,7 +293,7 @@ describe('RumorDirectory', () => {
       render(<RumorDirectory rumors={[r1]} />);
       fireEvent.click(screen.getByRole('button', { name: /Expand Dragon spotted/ }));
       fireEvent.click(screen.getByRole('button', { name: /Collapse Dragon spotted/ }));
-      expect(screen.queryByText('Content')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('What was heard')).not.toBeInTheDocument();
     });
 
     test('only one row is expanded at a time', () => {
@@ -288,16 +309,56 @@ describe('RumorDirectory', () => {
       ).toHaveAttribute('aria-expanded', 'true');
     });
 
-    test('states empty fields honestly instead of hiding them', () => {
-      const bare = makeRumor({ id: 'bare', title: 'Bare rumor', content: '', notes: [], relatedNPCs: [], relatedLocations: [] });
+    test('offers an empty rumour somewhere to write rather than a list of absences', () => {
+      // CHANGED DELIBERATELY in `15-7`. The old expansion answered every
+      // unwritten field with a sentence saying it was unwritten -- five of
+      // them, stacked. The fields are editable now, so an empty one is an
+      // empty control with its own label, which says the same thing and can be
+      // acted on.
+      const bare = makeRumor({
+        id: 'bare',
+        title: 'Bare rumor',
+        content: '',
+        sourceType: 'other',
+        sourceName: '',
+        notes: [],
+        relatedNPCs: [],
+        relatedLocations: [],
+      });
       render(<RumorDirectory rumors={[bare]} />);
       fireEvent.click(screen.getByRole('button', { name: /Expand Bare rumor/ }));
 
-      expect(screen.getByText('No details recorded')).toBeInTheDocument();
-      expect(screen.getByText('No notes yet')).toBeInTheDocument();
-      expect(screen.getByText('No NPCs linked')).toBeInTheDocument();
-      expect(screen.getByText('No locations linked')).toBeInTheDocument();
-      expect(screen.getByText('Not converted to a quest')).toBeInTheDocument();
+      expect(screen.getByLabelText('What was heard')).toHaveValue('');
+      expect(screen.queryByText('No details recorded')).not.toBeInTheDocument();
+      // "Who exactly" waits for a source kind (item 3).
+      expect(screen.queryByLabelText('Who exactly')).not.toBeInTheDocument();
+    });
+
+    test('asks who exactly only once a source kind is chosen', () => {
+      const bare = makeRumor({
+        id: 'bare',
+        title: 'Bare rumor',
+        sourceType: 'other',
+        sourceName: '',
+      });
+      render(<RumorDirectory rumors={[bare]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Bare rumor/ }));
+
+      fireEvent.click(screen.getByRole('button', { name: 'A traveller' }));
+      expect(screen.getByLabelText('Who exactly')).toBeInTheDocument();
+    });
+
+    test('turns who exactly into an NPC picker when the kind is an NPC', () => {
+      const bare = makeRumor({ id: 'bare', title: 'Bare rumor', sourceType: 'other', sourceName: '' });
+      render(<RumorDirectory rumors={[bare]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Bare rumor/ }));
+
+      fireEvent.click(screen.getByRole('button', { name: 'An NPC' }));
+      // A browse-first tray, not a text field: you attach the NPC you can see.
+      expect(screen.queryByLabelText('Who exactly')).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Attach to the source of Bare rumor/ })
+      ).toBeInTheDocument();
     });
 
     test('shows a live link to the quest when a rumor was converted', () => {
@@ -305,7 +366,7 @@ describe('RumorDirectory', () => {
       render(<RumorDirectory rumors={[converted]} />);
       fireEvent.click(screen.getByRole('button', { name: /Expand Bandit trouble/ }));
 
-      fireEvent.click(screen.getByRole('button', { name: /view quest/i }));
+      fireEvent.click(screen.getByRole('button', { name: /open the quest/i }));
       expect(mockNavigateToPage).toHaveBeenCalledWith('/quests/quest-1');
     });
   });
@@ -367,12 +428,15 @@ describe('RumorDirectory', () => {
       render(<RumorDirectory rumors={[r1, r2, r3]} />);
       expect(screen.getByRole('button', { name: '1 confirmed' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '1 unconfirmed' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '1 false' })).toBeInTheDocument();
+      // "Disproved", never "false" -- even in the bar (`15-7` item 6). It
+      // describes what the party did, not the stored value.
+      expect(screen.getByRole('button', { name: '1 disproved' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '1 false' })).not.toBeInTheDocument();
     });
 
     test('keeps zero-value statuses visible rather than hiding them', () => {
       render(<RumorDirectory rumors={[r1]} />);
-      expect(screen.getByRole('button', { name: '0 false' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '0 disproved' })).toBeInTheDocument();
     });
 
     test('should filter by confirmed status', () => {
@@ -389,9 +453,9 @@ describe('RumorDirectory', () => {
       expect(screen.queryByText('Dragon spotted')).not.toBeInTheDocument();
     });
 
-    test('should filter by false status', () => {
+    test('should filter by disproved status', () => {
       render(<RumorDirectory rumors={[r1, r2, r3]} />);
-      fireEvent.click(screen.getByRole('button', { name: '1 false' }));
+      fireEvent.click(screen.getByRole('button', { name: '1 disproved' }));
       expect(screen.getByText('Treasure map')).toBeInTheDocument();
       expect(screen.queryByText('Dragon spotted')).not.toBeInTheDocument();
     });
@@ -459,26 +523,258 @@ describe('RumorDirectory', () => {
   // Delete / edit actions in the expanded row
   // -------------------------------------------------------------------------
   describe('row actions', () => {
-    test('navigates to the edit page when Edit is clicked', () => {
+    test('offers no way out to the edit form', () => {
+      // CHANGED DELIBERATELY in `15-7`. The round trip to `/rumors/edit/:id`
+      // to change "unconfirmed" to "confirmed" is the thing this PR deletes.
+      // The route survives until `15-8` redirects it; nothing here points at
+      // it any more.
       render(<RumorDirectory rumors={[r1]} />);
       fireEvent.click(screen.getByRole('button', { name: /Expand Dragon spotted/ }));
-      fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/rumors/edit/r1');
+
+      expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+      expect(mockNavigateToPage).not.toHaveBeenCalledWith('/rumors/edit/r1');
     });
 
-    test('calls deleteRumor when Delete is clicked', () => {
+    test('asks once before deleting, and deletes only when asked twice', async () => {
+      render(<RumorDirectory rumors={[r1]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Dragon spotted/ }));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      expect(mockDeleteRumor).not.toHaveBeenCalled();
+      expect(screen.getByText('Delete this rumour for everyone?')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Delete Dragon spotted' }));
+      await waitFor(() => expect(mockDeleteRumor).toHaveBeenCalledWith('r1'));
+    });
+
+    test('keeps the rumour when the question is answered the other way', () => {
       render(<RumorDirectory rumors={[r1]} />);
       fireEvent.click(screen.getByRole('button', { name: /Expand Dragon spotted/ }));
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-      expect(mockDeleteRumor).toHaveBeenCalledWith('r1');
+      fireEvent.click(screen.getByRole('button', { name: 'Keep it' }));
+
+      expect(mockDeleteRumor).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    });
+  });
+
+
+  // -------------------------------------------------------------------------
+  // The composer (`15-7` item 1)
+  // -------------------------------------------------------------------------
+  describe('the composer row', () => {
+    test('sits at the top of the list, always, with no dialog and no route', async () => {
+      render(<RumorDirectory rumors={[r1]} />);
+      const field = screen.getByLabelText('Heard something? Title it here');
+      fireEvent.change(field, { target: { value: 'Orcs massing in the High Pass' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add rumour' }));
+
+      await waitFor(() =>
+        expect(mockAddRumor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Orcs massing in the High Pass',
+            status: 'unconfirmed',
+          })
+        )
+      );
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
-    test('does not render Edit or Delete controls when signed out', () => {
-      setupMocks(null);
+    test('adds on Enter, because a rumour is written down mid-sentence', async () => {
       render(<RumorDirectory rumors={[r1]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Dragon spotted/ }));
-      expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+      const field = screen.getByLabelText('Heard something? Title it here');
+      fireEvent.change(field, { target: { value: 'A wizard is coming' } });
+      fireEvent.keyDown(field, { key: 'Enter' });
+
+      await waitFor(() => expect(mockAddRumor).toHaveBeenCalled());
+    });
+
+    test('refuses to add nothing', () => {
+      render(<RumorDirectory rumors={[r1]} />);
+      expect(screen.getByRole('button', { name: 'Add rumour' })).toBeDisabled();
+    });
+
+    test('keeps the typed title when the write is refused, and says why', async () => {
+      mockAddRumor.mockRejectedValueOnce(new Error('Permission denied'));
+      render(<RumorDirectory rumors={[r1]} />);
+      const field = screen.getByLabelText('Heard something? Title it here');
+      fireEvent.change(field, { target: { value: 'Orcs massing' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add rumour' }));
+
+      await waitFor(() =>
+        expect(screen.getByRole('alert')).toHaveTextContent('Permission denied')
+      );
+      expect(field).toHaveValue('Orcs massing');
+    });
+
+    test('stands down in selection mode, where the rows are checkboxes', () => {
+      render(<RumorDirectory rumors={[r1]} />);
+      fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
+      expect(
+        screen.queryByLabelText('Heard something? Title it here')
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Editing in place (`15-7` items 8 and 9) — the failure most likely to bite
+  // -------------------------------------------------------------------------
+  describe('editing a rumour in its row', () => {
+    const openRow = (title: string) =>
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Expand ${title}`) }));
+
+    test('writes the typed fields through the context, on Save', async () => {
+      render(<RumorDirectory rumors={[r1]} />);
+      openRow('Dragon spotted');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'A red one, over the Lonely Mountain.' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() =>
+        expect(mockUpdateRumor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 'r1',
+            content: 'A red one, over the Lonely Mountain.',
+          })
+        )
+      );
+    });
+
+    test('keeps typed text through a filter change and back again', () => {
+      // Item 8, and the gate. The list re-renders underneath the editor, and
+      // a row that stops matching unmounts with whatever was in it. The draft
+      // lives in the directory for exactly this.
+      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      openRow('Dragon spotted');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Half a sentence, mid-' },
+      });
+
+      // Filter the open row out of the list entirely...
+      fireEvent.click(screen.getByRole('button', { name: '1 unconfirmed' }));
+      expect(screen.queryByLabelText('What was heard')).not.toBeInTheDocument();
+
+      // ...and back.
+      fireEvent.click(screen.getByRole('button', { name: '1 unconfirmed' }));
+      expect(screen.getByLabelText('What was heard')).toHaveValue('Half a sentence, mid-');
+    });
+
+    test('keeps typed text when another row changes status underneath it', () => {
+      render(<RumorDirectory rumors={[r1, r2]} />);
+      openRow('Dragon spotted');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Still typing' },
+      });
+
+      // A search keystroke re-renders the whole list, the same way another
+      // player's write would.
+      fireEvent.change(searchInput(), { target: { value: 'Dragon' } });
+      expect(screen.getByLabelText('What was heard')).toHaveValue('Still typing');
+    });
+
+    test('keeps the typed text and says why when the save is refused', async () => {
+      mockUpdateRumor.mockRejectedValueOnce(new Error('Permission denied'));
+      render(<RumorDirectory rumors={[r1]} />);
+      openRow('Dragon spotted');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Hard-won sentence.' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() =>
+        expect(screen.getByRole('alert')).toHaveTextContent('Permission denied')
+      );
+      expect(screen.getByLabelText('What was heard')).toHaveValue('Hard-won sentence.');
+    });
+
+    test('discards the draft on Collapse, rather than saving it quietly', () => {
+      render(<RumorDirectory rumors={[r1]} />);
+      openRow('Dragon spotted');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Never mind.' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Collapse' }));
+
+      expect(mockUpdateRumor).not.toHaveBeenCalled();
+      openRow('Dragon spotted');
+      expect(screen.getByLabelText('What was heard')).toHaveValue(r1.content);
+    });
+
+    test('offers Save only once something has changed', () => {
+      render(<RumorDirectory rumors={[r1]} />);
+      openRow('Dragon spotted');
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+
+      fireEvent.change(screen.getByLabelText('Rumour'), {
+        target: { value: 'Dragon spotted twice' },
+      });
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    });
+
+    test('confirms a rumour in one click, without waiting for Save', async () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      const ladder = screen.getByRole('group', { name: /Status of Missing merchant/ });
+      fireEvent.click(within(ladder).getByRole('button', { name: 'Confirmed' }));
+
+      await waitFor(() =>
+        expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r2', 'confirmed')
+      );
+    });
+
+    test('says "Disproved" on the ladder, never "False"', () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      const ladder = screen.getByRole('group', { name: /Status of Missing merchant/ });
+      expect(within(ladder).getByRole('button', { name: 'Disproved' })).toBeInTheDocument();
+      expect(within(ladder).queryByRole('button', { name: 'False' })).not.toBeInTheDocument();
+    });
+
+    test('attaches what a rumour points at, in place, without typing', async () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      fireEvent.click(
+        screen.getByRole('button', { name: /Attach to what Missing merchant points at/ })
+      );
+      fireEvent.click(within(screen.getByRole('listbox')).getByText('Gandalf the Grey'));
+
+      await waitFor(() =>
+        expect(mockUpdateRumor).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'r2', relatedNPCs: ['npc-1'] })
+        )
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // A disproved rumour is knowledge, not a failure
+  // -------------------------------------------------------------------------
+  describe('what disproved looks like', () => {
+    test('reads "Disproved" and never "False" in the row', () => {
+      render(<RumorDirectory rumors={[r3]} />);
+      expect(screen.getByText('Disproved')).toBeInTheDocument();
+      expect(screen.queryByText('False')).not.toBeInTheDocument();
+    });
+
+    test('sits on the ladder\u2019s top rung with confirmed, and carries the strike instead', () => {
+      // Colour schema §3's worked example: both are fully known, and what
+      // separates them is the cue, not the hue. Until `15-7` the code put
+      // disproved on `valence-3` -- the red a failed quest wears -- while the
+      // comment above it claimed otherwise.
+      render(<RumorDirectory rumors={[r1, r3]} />);
+
+      const confirmed = screen.getByText('Confirmed');
+      const disproved = screen.getByText('Disproved');
+      const rung = (node: HTMLElement) =>
+        (node.closest('[class*="valence-"]') ?? node).className.match(/valence-\d/)?.[0];
+
+      expect(rung(disproved)).toBe(rung(confirmed));
+      expect(rung(disproved)).not.toBe('valence-3');
+      expect(
+        (disproved.closest('[class*="cue-negated"]') ?? disproved).className
+      ).toContain('cue-negated');
     });
   });
 

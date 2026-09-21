@@ -477,6 +477,16 @@ The open question is whether a bar segment is a different kind of surface from a
 label — one where adjacency itself carries meaning — and therefore owes a rule
 the rows do not. Related to T004.
 
+**PR 15.7 made the premise true.** Until then this entry described an intent the
+code did not implement: the row map and the bar both put disproved on
+`valence-3`, the red a failed quest wears, while the comment above the map said
+confirmed and disproved shared a rung. `15-7` moved both onto `valence-0` and
+kept the strike as the separator, which is what the schema, `R64` and this entry
+all already said — and which means the two adjacent same-hue bar segments this
+question is about are now genuinely on screen. **Verified in Chrome**: the
+disproved chip computes `valence-0 cue-negated`, with no red anywhere on a
+rumour.
+
 ### T009 — The hero band's empty fallback surface was never recorded
 **Type** decision · **Size** S · **Status** open · **Verified** 2026-09-16 · `Q4`
 
@@ -587,6 +597,30 @@ Measured against the four create forms, the premise holds for the quest only.
 - **Source**: todo.txt, 2026-09-16 ("NPCs Page seems to take longer to load");
   merged with `PERF-08` from the performance review, which is the same finding
   measured.
+
+### T044 — Every page still folds its refetch into the gate's `resolving`
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-21
+
+`usePageGate(page, { loading })` treats the caller's `loading` as "resolving",
+and every write in this app ends with a refresh that sets that flag again. So a
+save swaps the whole page for the gated skeleton, unmounts what was on it, and
+takes any component state with it.
+
+**Found in Chrome in 15.7, not in jsdom**: ticking a rumour's status closed the
+row being edited, one skeleton flash per write. It is invisible to the suites
+because they mock the data hooks, so `loading` never flips a second time.
+
+- **Fixed at four call sites** by 15.7 — the ones holding state across a write:
+  `RumorsPage` (`isLoading && rumors.length === 0`), and the quest, location and
+  NPC detail pages (`isLoading && !record`). All four are pinned by a test.
+- **Still true at the other eighteen** `usePageGate` call sites, including
+  `QuestsPage`, `NPCsPage`, `LocationsPage`, `NotesPage` and the story pages.
+  They lose no typed text today, so it shows as a flash rather than a defect.
+- **The real fix** is probably in the hook: `loading` should mean "nothing to
+  show yet", and the hook could take that directly rather than asking every
+  caller to remember the conjunction. That is a shared-infrastructure change
+  and wants its own pass.
+- **Source**: PR 15.7's browser pass
 
 ### T042 — A theme class passed as *data* has no manifest coverage
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-18
