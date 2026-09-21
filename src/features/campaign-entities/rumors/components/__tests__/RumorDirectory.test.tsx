@@ -590,9 +590,34 @@ describe('RumorDirectory', () => {
       await waitFor(() => expect(mockAddRumor).toHaveBeenCalled());
     });
 
-    test('refuses to add nothing', () => {
+    test('refuses to add nothing, and says why rather than looking broken', () => {
+      // A disabled button that says nothing is indistinguishable from one that
+      // is not wired up -- which is exactly how this one was first read.
       render(<RumorDirectory rumors={[r1]} />);
-      expect(screen.getByRole('button', { name: 'Add rumour' })).toBeDisabled();
+      const add = screen.getByRole('button', { name: 'Add rumour' });
+      expect(add).toBeDisabled();
+
+      // Said twice on purpose: a tooltip on the wrapper, because a disabled
+      // button receives no pointer events and never shows its own...
+      expect(add.parentElement).toHaveAttribute(
+        'title',
+        'Give it a title first — then this adds it.'
+      );
+      // ...and the same sentence bound to the button, for anyone not hovering.
+      const hint = document.getElementById(add.getAttribute('aria-describedby')!);
+      expect(hint).toHaveTextContent('Give it a title first — then this adds it.');
+    });
+
+    test('stops explaining itself once there is something to add', () => {
+      render(<RumorDirectory rumors={[r1]} />);
+      fireEvent.change(screen.getByLabelText('Heard something? Title it here'), {
+        target: { value: 'Orcs massing' },
+      });
+
+      const add = screen.getByRole('button', { name: 'Add rumour' });
+      expect(add).toBeEnabled();
+      expect(add.parentElement).not.toHaveAttribute('title');
+      expect(add).not.toHaveAttribute('aria-describedby');
     });
 
     test('keeps the typed title when the write is refused, and says why', async () => {

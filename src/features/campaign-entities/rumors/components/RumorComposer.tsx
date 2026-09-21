@@ -1,5 +1,5 @@
 // src/features/campaign-entities/rumors/components/RumorComposer.tsx
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { Plus } from 'lucide-react';
 import Button from 'core/components/Button';
 import Input from 'core/components/Input';
@@ -13,6 +13,22 @@ export interface RumorComposerProps {
   onAdd: (title: string) => Promise<string>;
   className?: string;
 }
+
+/**
+ * Why the disabled button explains itself.
+ *
+ * *Add rumour* is disabled until the field has something in it, which is
+ * correct and which read as broken: the maintainer's first encounter with this
+ * row was pressing the button, getting nothing, and concluding it did not
+ * work. A disabled control that says nothing is indistinguishable from one
+ * that is simply not wired up.
+ *
+ * Chrome does not show a `title` on a disabled button -- pointer events are
+ * suppressed on it -- so the tooltip belongs to the *wrapper*, and the same
+ * sentence is bound to the button through `aria-describedby` for anyone who
+ * cannot hover.
+ */
+const NEEDS_A_TITLE = 'Give it a title first — then this adds it.';
 
 /**
  * The composer row, permanently at the top of the list (item 1).
@@ -34,8 +50,10 @@ export const RumorComposer: React.FC<RumorComposerProps> = ({ onAdd, className }
   const [title, setTitle] = useState('');
   const [state, setState] = useState<'idle' | 'adding' | 'failed'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const hintId = useId();
 
   const trimmed = title.trim();
+  const empty = !trimmed;
 
   const submit = async () => {
     if (!trimmed || state === 'adding') return;
@@ -78,15 +96,26 @@ export const RumorComposer: React.FC<RumorComposerProps> = ({ onAdd, className }
             }}
           />
         </div>
-        <Button
-          size="sm"
-          className="shrink-0"
-          onClick={() => void submit()}
-          disabled={!trimmed || state === 'adding'}
-        >
-          {state === 'adding' ? 'Adding…' : 'Add rumour'}
-        </Button>
+        {/*
+          The title lives on the wrapper, not the button: a disabled button
+          receives no pointer events, so its own tooltip never appears.
+        */}
+        <span className="shrink-0" title={empty ? NEEDS_A_TITLE : undefined}>
+          <Button
+            size="sm"
+            aria-describedby={empty ? hintId : undefined}
+            onClick={() => void submit()}
+            disabled={empty || state === 'adding'}
+          >
+            {state === 'adding' ? 'Adding…' : 'Add rumour'}
+          </Button>
+        </span>
       </div>
+
+      {/* Hovering is not available to everyone; the same sentence, read out. */}
+      <span id={hintId} className="sr-only">
+        {NEEDS_A_TITLE}
+      </span>
 
       {error && (
         <Typography variant="body-sm" color="error" role="alert" className="mt-2">
