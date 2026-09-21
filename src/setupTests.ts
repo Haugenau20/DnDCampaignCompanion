@@ -8,7 +8,8 @@ process.env.NODE_ENV = 'test';
 
 // Polyfill crypto.randomUUID, which JSDOM does not implement.
 // Production code uses it to generate ids (rumor notes, quest conversion,
-// QuestFormSections). Without this, those code paths throw
+// quest objectives). `QuestFormSections` was the third caller until `15-8`
+// deleted it. Without this, those code paths throw
 // "crypto.randomUUID is not a function" and the test aborts before reaching
 // any assertion — so the behaviour under test was never actually exercised.
 // See bug #300. Uses a counter rather than randomness so ids are deterministic

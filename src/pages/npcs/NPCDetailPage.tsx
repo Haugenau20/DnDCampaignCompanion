@@ -269,7 +269,17 @@ const NPCDetailPage: React.FC = () => {
   // and the campaign restore, and without this the page would claim "no NPC
   // with that id" for the found-but-not-yet-loaded case.
   const gate = usePageGate('npcs', {
-    loading,
+    /*
+      `loading` means **"there is nothing to show yet"**, not "a fetch is in
+      flight". Every write in this app ends with a refresh, and that refresh
+      sets the data hook's `loading` flag again -- so passing it raw made the
+      gate re-enter `resolving` after *every* save, swap the whole page for the
+      skeleton, and unmount what was on screen. Measured in Chrome: one
+      skeleton flash per write, and an open row closing under the cursor.
+
+      Once the page has something to show, a refetch happens behind it.
+    */
+    loading: loading && !npc,
     error,
     onRetry: () => {
       void refreshNPCs();
@@ -288,6 +298,7 @@ const NPCDetailPage: React.FC = () => {
    */
   const [editing, setEditing] = useState<ReadonlySet<EditableField>>(new Set());
   const [editingTag, setEditingTag] = useState(false);
+  const [editingAffiliation, setEditingAffiliation] = useState(false);
   const [savedField, setSavedField] = useState<EditableField | 'note' | null>(
     null
   );
@@ -1208,7 +1219,9 @@ const NPCDetailPage: React.FC = () => {
 
                               // An affiliation is a name, not a record: there is
                               // nowhere to go, so it is not dressed up as
-                              // somewhere to click.
+                              // somewhere to click. It is the one relation the
+                              // tray cannot offer, which is why it carries its
+                              // own remove control (`15-8`).
                               return relation.href ? (
                                 <button
                                   key={relation.key}
@@ -1224,6 +1237,29 @@ const NPCDetailPage: React.FC = () => {
                                   className="flex items-center gap-2.5 py-2 first:pt-0 last:pb-0"
                                 >
                                   {body}
+                                  {gate.canAct && relation.kind === 'affiliations' && (
+                                    <button
+                                      type="button"
+                                      aria-label={`Remove the affiliation ${relation.name}`}
+                                      onClick={() =>
+                                        void save({
+                                          connections: {
+                                            ...(npc.connections ?? {
+                                              relatedNPCs: [],
+                                              affiliations: [],
+                                              relatedQuests: [],
+                                            }),
+                                            affiliations: (
+                                              npc.connections?.affiliations ?? []
+                                            ).filter((existing) => existing !== relation.name),
+                                          },
+                                        })
+                                      }
+                                      className="button-ghost rounded-full p-1 ml-auto shrink-0"
+                                    >
+                                      <X size={14} aria-hidden="true" />
+                                    </button>
+                                  )}
                                 </div>
                               );
                             })}
@@ -1237,6 +1273,47 @@ const NPCDetailPage: React.FC = () => {
                     Nothing linked yet
                   </Typography>
                 )}
+
+                {/*
+                  `15-8` found affiliations with nowhere to live: the tray
+                  offers records, and an affiliation is free text -- "The
+                  Fellowship", "Istari" -- so `NPCForm` was the only place it
+                  could be written. The tray above handles the four kinds that
+                  are records; this handles the one that is not.
+                */}
+                {gate.canAct &&
+                  (editingAffiliation ? (
+                    <InlineEditor
+                      label="Add an affiliation"
+                      helperText="Free text — a company, an order, a house."
+                      rows={1}
+                      submitLabel="Add affiliation"
+                      placeholder="The Fellowship"
+                      clearOnSave
+                      onSubmit={(value) =>
+                        save({
+                          connections: {
+                            ...(npc.connections ?? {
+                              relatedNPCs: [],
+                              affiliations: [],
+                              relatedQuests: [],
+                            }),
+                            affiliations: Array.from(
+                              new Set([...(npc.connections?.affiliations ?? []), value])
+                            ),
+                          },
+                        })
+                      }
+                      onSaved={() => setEditingAffiliation(false)}
+                      onCancel={() => setEditingAffiliation(false)}
+                    />
+                  ) : (
+                    <FieldPrompt onClick={() => setEditingAffiliation(true)}>
+                      {npc.connections?.affiliations?.length
+                        ? 'Add another affiliation'
+                        : 'What do they belong to?'}
+                    </FieldPrompt>
+                  ))}
               </SideCard>
 
               <SideCard title="Tags">

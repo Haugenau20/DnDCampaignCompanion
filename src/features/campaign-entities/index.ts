@@ -3,20 +3,23 @@ export { NPCProvider, useNPCs } from './npcs/context/NPCContext';
 export { useNPCData } from './npcs/hooks/useNPCData';
 // Components consumed by pages/npcs/* and other external consumers
 export { default as NPCDirectory } from './npcs/components/NPCDirectory';
-export { default as NPCEditForm } from './npcs/components/NPCEditForm';
-export { default as NPCForm } from './npcs/components/NPCForm';
 export { default as NPCLegend } from './npcs/components/NPCLegend';
 // NPC types
 export type { NPC, NPCStatus, NPCRelationship, NPCNote, NPCConnections, NPCContextState, NPCContextValue } from './npcs/types';
+
+/*
+  The create and edit forms are gone (`15-8`). Every field of every entity is
+  edited where it is read: `/quests/:id`, `/locations/:id`, `/npcs/:id` and a
+  rumour's own row. `RumorForm` is the one that stays -- `/rumors/create` is
+  where note conversion sends a rumour it extracted, with a title and a body
+  already written, which a two-field composer cannot take.
+*/
 
 // Quest context and hooks
 export { QuestProvider, useQuests } from './quests/context/QuestContext';
 export { useQuestData } from './quests/hooks/useQuestData';
 // Components consumed by pages/quests/* and other external consumers
 export { default as QuestDirectory } from './quests/components/QuestDirectory';
-export { default as QuestCreateForm } from './quests/components/QuestCreateForm';
-export { default as QuestEditForm } from './quests/components/QuestEditForm';
-export { BasicInfoSection, ObjectivesSection, LeadsSection, KeyLocationsSection, ComplicationsSection, RewardsSection, RelatedNPCsSection } from './quests/components/QuestFormSections';
 export { default as QuestObjectives } from './quests/components/QuestObjectives';
 export { default as DeleteQuestDialog } from './quests/components/DeleteQuestDialog';
 // How a quest says what it is, shared by the row and the page.
@@ -36,10 +39,7 @@ export type { Quest, QuestStatus, QuestObjective, QuestLocation, QuestContextSta
 export { LocationProvider, useLocations } from './locations/context/LocationContext';
 export { useLocationData } from './locations/hooks/useLocationData';
 // Components consumed by pages/locations/* and other external consumers
-export { default as LocationCombobox } from './locations/components/LocationCombobox';
-export { default as LocationCreateForm } from './locations/components/LocationCreateForm';
 export { default as LocationDirectory } from './locations/components/LocationDirectory';
-export { default as LocationEditForm } from './locations/components/LocationEditForm';
 export { default as WhereThisSits } from './locations/components/WhereThisSits';
 export { default as DeleteLocationDialog } from './locations/components/DeleteLocationDialog';
 // Location types

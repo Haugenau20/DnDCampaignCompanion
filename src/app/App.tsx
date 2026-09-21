@@ -33,10 +33,11 @@ import {
   ChapterCreatePage,
   ChapterEditPage
 } from 'pages/story';
-import { QuestsPage, QuestCreatePage, QuestEditPage, QuestDetailPage } from 'pages/quests';
-import { NPCsPage, NPCsCreatePage, NPCsEditPage, NPCDetailPage } from 'pages/npcs';
-import { LocationsPage, LocationCreatePage, LocationEditPage, LocationDetailPage } from 'pages/locations';
-import { RumorsPage, RumorCreatePage, RumorEditPage } from 'pages/rumors';
+import { QuestsPage, QuestCreatePage, QuestDetailPage } from 'pages/quests';
+import { NPCsPage, NPCsCreatePage, NPCDetailPage } from 'pages/npcs';
+import { LocationsPage, LocationCreatePage, LocationDetailPage } from 'pages/locations';
+import { RumorsPage, RumorCreatePage } from 'pages/rumors';
+import EditRouteRedirect from 'app/EditRouteRedirect';
 import { NotesPage, NotePage } from 'pages/notes';
 import PrivacyPolicyPage from 'pages/PrivacyPolicyPage';
 import ContactPage from 'pages/ContactPage';
@@ -78,7 +79,20 @@ const App: React.FC = () => {
                                   <Route path="/story/chapters/edit/:chapterId" element={<ChapterEditPage />} />
                                   <Route path="/quests" element={<QuestsPage />} />
                                   <Route path="/quests/create" element={<QuestCreatePage />} />
-                                  <Route path="/quests/edit/:questId" element={<QuestEditPage />} />
+                                  {/* Retired in `15-8`. The record is where
+                                      editing happens now; the URL still
+                                      resolves, because it is in histories and
+                                      in notes. */}
+                                  <Route
+                                    path="/quests/edit/:questId"
+                                    element={
+                                      <EditRouteRedirect
+                                        param="questId"
+                                        destination={(id) => `/quests/${id}`}
+                                        fallback="/quests"
+                                      />
+                                    }
+                                  />
                                   {/* After the two literal segments, so
                                       `/quests/create` and `/quests/edit/x` keep
                                       their own pages rather than being read as
@@ -86,11 +100,29 @@ const App: React.FC = () => {
                                   <Route path="/quests/:questId" element={<QuestDetailPage />} />
                                   <Route path="/npcs" element={<NPCsPage />} />
                                   <Route path="/npcs/create" element={<NPCsCreatePage />} />
-                                  <Route path="/npcs/edit/:npcId" element={<NPCsEditPage />} />
+                                  <Route
+                                    path="/npcs/edit/:npcId"
+                                    element={
+                                      <EditRouteRedirect
+                                        param="npcId"
+                                        destination={(id) => `/npcs/${id}`}
+                                        fallback="/npcs"
+                                      />
+                                    }
+                                  />
                                   <Route path="/npcs/:npcId" element={<NPCDetailPage />} />
                                   <Route path="/locations" element={<LocationsPage />} />
                                   <Route path="/locations/create" element={<LocationCreatePage />} />
-                                  <Route path="/locations/edit/:locationId" element={<LocationEditPage />} />
+                                  <Route
+                                    path="/locations/edit/:locationId"
+                                    element={
+                                      <EditRouteRedirect
+                                        param="locationId"
+                                        destination={(id) => `/locations/${id}`}
+                                        fallback="/locations"
+                                      />
+                                    }
+                                  />
                                   {/* After the two literal segments, so
                                       `/locations/create` and `/locations/edit/x`
                                       keep their own pages rather than being read
@@ -98,7 +130,19 @@ const App: React.FC = () => {
                                   <Route path="/locations/:locationId" element={<LocationDetailPage />} />
                                   <Route path="/rumors" element={<RumorsPage />} />
                                   <Route path="/rumors/create" element={<RumorCreatePage />} />
-                                  <Route path="/rumors/edit/:rumorId" element={<RumorEditPage />} />
+                                  {/* A rumour has no page by design (§2.1),
+                                      so its old edit URL goes to the row:
+                                      `?highlight=` opens it in place. */}
+                                  <Route
+                                    path="/rumors/edit/:rumorId"
+                                    element={
+                                      <EditRouteRedirect
+                                        param="rumorId"
+                                        destination={(id) => `/rumors?highlight=${id}`}
+                                        fallback="/rumors"
+                                      />
+                                    }
+                                  />
                                   <Route path="/notes" element={<NotesPage />} />
                                   <Route path="/notes/:noteId" element={<NotePage />} />
                                   <Route path="/privacy" element={<PrivacyPolicyPage />} />

@@ -113,7 +113,11 @@ export function StateLadder<V extends string>({
                   void run(() => onChange(option.value));
                 }}
                 className={clsx(
-                  "px-3 py-1 rounded-full text-sm min-h-[32px]",
+                  // 44px on a phone, tighter from `sm` up -- the rule
+                  // `ObjectiveCheckbox` already follows, and the one `15-7`
+                  // measured this ladder against at 320px (it was 32px, which
+                  // is under every touch-target floor).
+                  "px-3 py-1 rounded-full text-sm min-h-[44px] sm:min-h-[32px]",
                   "disabled:opacity-60 disabled:cursor-wait",
                   onBand ? "band-chip" : "chip-toggle",
                   isSelected && (onBand ? "band-chip-selected" : "chip-toggle-selected")

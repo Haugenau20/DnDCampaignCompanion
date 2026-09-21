@@ -134,7 +134,17 @@ const LocationDetailPage: React.FC = () => {
   // while auth and the campaign restore, and without this the page would claim
   // "no place with that id" for the found-but-not-yet-loaded case.
   const gate = usePageGate('locations', {
-    loading: isLoading,
+    /*
+      `loading` means **"there is nothing to show yet"**, not "a fetch is in
+      flight". Every write in this app ends with a refresh, and that refresh
+      sets the data hook's `loading` flag again -- so passing it raw made the
+      gate re-enter `resolving` after *every* save, swap the whole page for the
+      skeleton, and unmount what was on screen. Measured in Chrome: one
+      skeleton flash per write, and an open row closing under the cursor.
+
+      Once the page has something to show, a refetch happens behind it.
+    */
+    loading: isLoading && !location,
     error,
     onRetry: () => {
       void refreshLocations();

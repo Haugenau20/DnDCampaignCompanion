@@ -34,12 +34,39 @@ why something was deferred rather than forgotten.
 `CLAUDE.md`'s known-issues notes. Items that belong there are cross-referenced,
 not copied.
 
+## What phase 15 learned
+
+Recorded here because `15-0` retired the drift log and `15-8` asks for it. Three
+things, all of which cost something.
+
+**A green suite says nothing about the browser, and this phase proved it five
+times.** Raw ids in `15-2`, a disclosure that never hid in `15-3`, an accessible
+name polluted by a pending indicator, and then the two `15-7` found in ten
+minutes of the running app: every write flashed the page to a skeleton and
+unmounted what was on it (now T044), and the row's controls measured 32px
+against a 44px rule. All five were invisible to jsdom by construction — no CSS,
+no real auth lifecycle, no pointer. The pages built without a browser pass
+(`15-4`, `15-5`, `15-6`) shipped the skeleton defect three times because nobody
+could see it.
+
+**A comment claiming a gate exists is worse than no gate.**
+`location-presentation.ts` said `ladder-classes.test.ts` caught theme classes
+passed as data. That file did not exist; `15-6` wrote it, and its first run
+found a live instance the comment had been covering for. Claims about coverage
+are checkable — check them.
+
+**The tracker can describe an intention as if it were the code.** T008 said
+confirmed and disproved rumours "sit on the same ramp stop — correct", and the
+code had them two stops apart, with the disproved rumour in the red a failed
+quest wears. The comment above the map said the right thing too. Three
+documents agreed with each other and none of them agreed with the product.
+
 ---
 
 ## Bugs
 
 ### T001 — Note dates render as raw ISO strings in two directories
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-16 · `R16` `R17`
+**Type** bug · **Size** S · **Status** open (display half **done**) · **Verified** 2026-09-21 · `R16` `R17`
 
 **Display half closed by PR 15.3.** `formatNoteDate` is lifted to
 `shared/utils/dateFormatter` and used by `LocationDirectory`, `NPCDirectory`
@@ -101,7 +128,15 @@ An expanded row shows `2025-05-31T19:27:30.387Z` where it should read
 - **Source**: drift log
 
 ### T014 — Highlighting works four different ways, and not at all on `/story`
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-09-16
+**Type** bug · **Size** M · **Status** done, except `/story` (see T045) · **Verified** 2026-09-21
+
+**Closed by phase 15.** The four directories read `?highlight=` through one
+hook (`15-3`), and three of the four entities stopped needing it at all: a
+quest, a location and an NPC each have their own address now, so the links
+that used to highlight a row name the record instead. `?highlight=` is what it
+should always have been — the way to find a row *in a list* — and a rumour,
+which has no page by design, is the one entity that still relies on it.
+The `/story` half never had a reader; it is now **T045**.
 
 **Closed by PR 15.3**, except the `/story` half. All four directories now read
 `?highlight=` through one hook (`shared/hooks/useHighlightTarget`): matched by
@@ -214,7 +249,10 @@ batch selection: grow it, do not fork it.
 - **Source**: todo.txt, 2026-09-16
 
 ### T016 — Tick a quest objective without opening the edit form
-**Type** feature · **Size** S · **Status** done · **Verified** 2026-09-16
+**Type** feature · **Size** S · **Status** done · **Verified** 2026-09-21
+
+**And the edit form is gone** (`15-8`), so the title's "without opening" is now
+structural rather than a convenience: there is nothing to open.
 
 **Closed by PR 15.3** (`design-handoff/15-3-directory-rows`), and extended by
 **15.5**, which gave the same objectives a place to be *authored*: add, reword
@@ -477,6 +515,16 @@ The open question is whether a bar segment is a different kind of surface from a
 label — one where adjacency itself carries meaning — and therefore owes a rule
 the rows do not. Related to T004.
 
+**PR 15.7 made the premise true.** Until then this entry described an intent the
+code did not implement: the row map and the bar both put disproved on
+`valence-3`, the red a failed quest wears, while the comment above the map said
+confirmed and disproved shared a rung. `15-7` moved both onto `valence-0` and
+kept the strike as the separator, which is what the schema, `R64` and this entry
+all already said — and which means the two adjacent same-hue bar segments this
+question is about are now genuinely on screen. **Verified in Chrome**: the
+disproved chip computes `valence-0 cue-negated`, with no red anywhere on a
+rumour.
+
 ### T009 — The hero band's empty fallback surface was never recorded
 **Type** decision · **Size** S · **Status** open · **Verified** 2026-09-16 · `Q4`
 
@@ -587,6 +635,47 @@ Measured against the four create forms, the premise holds for the quest only.
 - **Source**: todo.txt, 2026-09-16 ("NPCs Page seems to take longer to load");
   merged with `PERF-08` from the performance review, which is the same finding
   measured.
+
+### T044 — Every page still folds its refetch into the gate's `resolving`
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-21
+
+`usePageGate(page, { loading })` treats the caller's `loading` as "resolving",
+and every write in this app ends with a refresh that sets that flag again. So a
+save swaps the whole page for the gated skeleton, unmounts what was on it, and
+takes any component state with it.
+
+**Found in Chrome in 15.7, not in jsdom**: ticking a rumour's status closed the
+row being edited, one skeleton flash per write. It is invisible to the suites
+because they mock the data hooks, so `loading` never flips a second time.
+
+- **Fixed at four call sites** by 15.7 — the ones holding state across a write:
+  `RumorsPage` (`isLoading && rumors.length === 0`), and the quest, location and
+  NPC detail pages (`isLoading && !record`). All four are pinned by a test.
+- **Still true at the other eighteen** `usePageGate` call sites, including
+  `QuestsPage`, `NPCsPage`, `LocationsPage`, `NotesPage` and the story pages.
+  They lose no typed text today, so it shows as a flash rather than a defect.
+- **The real fix** is probably in the hook: `loading` should mean "nothing to
+  show yet", and the hook could take that directly rather than asking every
+  caller to remember the conjunction. That is a shared-infrastructure change
+  and wants its own pass.
+- **Source**: PR 15.7's browser pass
+
+### T045 — `/story` still reads `?highlight=` not at all
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-21
+
+Split out of T014, which phase 15 otherwise closed. The command palette
+navigates to `/story?highlight=<id>` and **nothing under
+`src/features/storytelling/` or `src/pages/story*` reads the parameter**, so a
+story or chapter search hit navigates and highlights nothing.
+
+- **The pattern to copy exists now**: `shared/hooks/useHighlightTarget`, which
+  the four entity directories share — matched by id, target and ancestors
+  revealed, brought into view.
+- **Or it may not be the right answer at all**: a chapter has its own route
+  (`/story/chapters/:chapterId`), so the palette could send a chapter hit
+  there and drop the parameter, the way `15-5` and `15-6` did for quests and
+  NPCs. Decide which before implementing.
+- **Source**: T014's remainder, carried out of phase 15
 
 ### T042 — A theme class passed as *data* has no manifest coverage
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-18

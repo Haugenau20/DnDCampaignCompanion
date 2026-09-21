@@ -282,7 +282,7 @@ const RumorForm: React.FC<RumorFormProps> = ({
               >
                 <option value="unconfirmed">Unconfirmed</option>
                 <option value="confirmed">Confirmed</option>
-                <option value="false">False</option>
+                <option value="false">Disproved</option>
               </Select>
 
               <Select

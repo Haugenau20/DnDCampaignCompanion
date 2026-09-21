@@ -581,6 +581,43 @@ describe('places inside this quest', () => {
 });
 
 // ---------------------------------------------------------------------------
+// The field `15-8` would otherwise have stranded
+// ---------------------------------------------------------------------------
+describe('where the quest happens', () => {
+  it('attaches the quest to a place, which only the deleted form could do', () => {
+    // `QuestFormSections` carried the single-location tray that wrote
+    // `locationId`. Deleting the form in `15-8` left the field readable -- it
+    // is in the line under the title -- and unwritable.
+    mockQuests = [{ ...QUEST, locationId: '', location: '' }];
+    renderPage();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /Attach to where Reclaim Erebor happens/ })
+    );
+    fireEvent.click(within(screen.getByRole('listbox')).getByText('Erebor'));
+
+    return waitFor(() =>
+      expect(mockUpdateQuest).toHaveBeenCalledWith(
+        expect.objectContaining({ locationId: 'erebor', location: 'Erebor' })
+      )
+    );
+  });
+
+  it('replaces the place rather than collecting several', async () => {
+    renderPage();
+    const tray = screen.getByRole('button', { name: /Attach to where Reclaim Erebor happens/ });
+    expect(tray).toBeInTheDocument();
+    // One relation: the tray is single-valued, so the attached place is
+    // already marked rather than offered again.
+    fireEvent.click(tray);
+    const attached = within(screen.getByRole('listbox'))
+      .getByText('Erebor')
+      .closest('[role="option"]');
+    expect(attached).toHaveAttribute('aria-selected', 'true');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Editing in place (§7)
 // ---------------------------------------------------------------------------
 describe('editing in place', () => {

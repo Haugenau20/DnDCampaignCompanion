@@ -1,0 +1,443 @@
+// src/features/campaign-entities/rumors/components/RumorRowEditor.tsx
+import React, { useEffect, useRef, useState } from 'react';
+import Button from 'core/components/Button';
+import Input from 'core/components/Input';
+import Typography from 'core/components/Typography';
+import AttachTray from 'shared/components/attach-tray/AttachTray';
+import type { AttachKind, AttachSources } from 'shared/components/attach-tray/attachCandidates';
+import StateLadder from 'shared/components/row-controls/StateLadder';
+import { formatNoteDate } from 'shared/utils/dateFormatter';
+import { Rumor, RumorStatus, SourceType } from '../types';
+import {
+  RUMOR_STATUS_OPTIONS,
+  SOURCE_OPTIONS,
+  UNCHOSEN_SOURCE,
+  formatSourceType,
+} from '../utils/rumor-presentation';
+
+/**
+ * The typed half of a rumour: what a reader can change and then discard.
+ *
+ * Held by the **directory**, not by this component, keyed by rumour id. That
+ * is the whole point of the arrangement: filtering, sorting, or another
+ * player's status change re-renders the list underneath an open editor, and a
+ * draft living in the editor's own state dies with it. `15-7` item 8 names
+ * this as the failure most likely to bite, and it is the one thing here that
+ * could not be fixed after the fact by a careful reader.
+ */
+export interface RumorDraft {
+  title: string;
+  content: string;
+  sourceType: SourceType;
+  sourceName: string;
+  sourceNpcId?: string;
+}
+
+export const draftFromRumor = (rumor: Rumor): RumorDraft => ({
+  title: rumor.title,
+  content: rumor.content ?? '',
+  sourceType: rumor.sourceType ?? UNCHOSEN_SOURCE,
+  sourceName: rumor.sourceName ?? '',
+  sourceNpcId: rumor.sourceNpcId,
+});
+
+export interface RumorRowEditorProps {
+  rumor: Rumor;
+  /** The live draft for this rumour, or `undefined` before anything is typed. */
+  draft?: RumorDraft;
+  onDraftChange: (patch: Partial<RumorDraft>) => void;
+  /** Must reject on failure — nothing here claims success before it resolves. */
+  onSave: (draft: RumorDraft) => Promise<void>;
+  /** Discard the draft and close the row. */
+  onCollapse: () => void;
+  onDelete: () => Promise<void>;
+  onStatusChange: (status: RumorStatus) => Promise<unknown>;
+  /** Attach and detach write immediately, as every other tray in the app does. */
+  onAttach: (id: string, kind: AttachKind) => Promise<unknown>;
+  onDetach: (id: string) => Promise<unknown>;
+  sources: AttachSources;
+  /** Take the caret on mount — true for a rumour just created by the composer. */
+  autoFocus?: boolean;
+  /** Where to go from a converted rumour. */
+  onOpenQuest?: (questId: string) => void;
+}
+
+/** The uppercase micro-label each part of the row is introduced by. */
+const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Typography
+    variant="body-sm"
+    color="muted"
+    className="text-[11px] font-semibold uppercase tracking-wider"
+  >
+    {children}
+  </Typography>
+);
+
+/**
+ * One rumour, in full, inside its own row.
+ *
+ * **This is the entity that gets no page** (§2.1). A rumour is seven fields,
+ * one of which is a paragraph, and its two real operations -- combine, and
+ * convert to a quest -- already act on a selection in the list. Nothing in the
+ * campaign points at a rumour, so there is no link that needs an address. What
+ * it needed was to stop sending someone to `/rumors/edit/:id` to change
+ * "unconfirmed" to "confirmed".
+ *
+ * So §1.3's bound on an expanded row -- four facts, readable while scanning
+ * five of them -- **does not apply here**, and this is the one place in the
+ * phase where that is true: there is no page holding the remainder, so the row
+ * holds all of it.
+ *
+ * Two kinds of write live side by side, deliberately:
+ *
+ * - **The typed fields** (title, what was heard, who exactly) are a draft with
+ *   a Save, because they are one thought and half of it is not worth writing.
+ * - **The ladder and the trays** write immediately, because each is a single
+ *   act with its own result, and because "confirm this rumour" must be one
+ *   click from the list (the gate says so).
+ */
+export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
+  rumor,
+  draft,
+  onDraftChange,
+  onSave,
+  onCollapse,
+  onDelete,
+  onStatusChange,
+  onAttach,
+  onDetach,
+  sources,
+  autoFocus = false,
+  onOpenQuest,
+}) => {
+  const current = draft ?? draftFromRumor(rumor);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'failed' | 'saved'>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  // A rumour the composer just created opens with the caret in "what was
+  // heard": the title is already typed, and the next thing anyone wants to
+  // write is the rest of it.
+  useEffect(() => {
+    if (autoFocus) {
+      contentRef.current?.focus();
+    }
+  }, [autoFocus]);
+
+  /**
+   * Has anybody said where this came from?
+   *
+   * `other` is the create form's old default rather than an answer, so it
+   * counts as unchosen -- except on a record that already carries a name under
+   * it, where hiding the written text would be worse than showing it.
+   */
+  const sourceChosen = current.sourceType !== UNCHOSEN_SOURCE || Boolean(current.sourceName);
+
+  const dirty =
+    current.title !== rumor.title ||
+    current.content !== (rumor.content ?? '') ||
+    current.sourceType !== (rumor.sourceType ?? UNCHOSEN_SOURCE) ||
+    current.sourceName !== (rumor.sourceName ?? '') ||
+    (current.sourceNpcId ?? '') !== (rumor.sourceNpcId ?? '');
+
+  const handleSave = async () => {
+    if (!current.title.trim()) {
+      setError('A rumour needs a title.');
+      setSaveState('failed');
+      return;
+    }
+    setSaveState('saving');
+    setError(null);
+    try {
+      await onSave({ ...current, title: current.title.trim() });
+      setSaveState('saved');
+    } catch (err) {
+      // The typed value is untouched on purpose (§7).
+      setSaveState('failed');
+      setError(err instanceof Error ? err.message : 'Could not save. Your text is still here.');
+    }
+  };
+
+  const attachedIds = [
+    ...(rumor.relatedNPCs ?? []),
+    ...(rumor.relatedLocations ?? []),
+    ...(rumor.locationId ? [rumor.locationId] : []),
+  ];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-7 pt-4">
+      {/* ------------------------------ the record ----------------------------- */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <Input
+            label="Rumour"
+            value={current.title}
+            onChange={(event) => onDraftChange({ title: event.target.value })}
+            disabled={saveState === 'saving'}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Input
+            ref={contentRef as React.Ref<HTMLTextAreaElement>}
+            isTextArea
+            rows={3}
+            label="What was heard"
+            placeholder="Traders coming down from Rivendell say the goblin road is busy again after dark."
+            value={current.content}
+            onChange={(event) => onDraftChange({ content: event.target.value })}
+            disabled={saveState === 'saving'}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel>Heard from</FieldLabel>
+            {/*
+              Four buttons, not a select (item 4). A dropdown for four short
+              options hides three of them behind a click and says nothing the
+              buttons do not.
+            */}
+            <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Heard from">
+              {SOURCE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={current.sourceType === option.value}
+                  onClick={() =>
+                    onDraftChange({
+                      sourceType: option.value,
+                      // Changing the kind away from an NPC drops the id: it
+                      // named a record that no longer describes the source.
+                      ...(option.value === 'npc' ? {} : { sourceNpcId: undefined }),
+                    })
+                  }
+                  // 44px on a phone, as the ladder beside it is.
+                  className={`px-3 py-1 rounded-full text-sm min-h-[44px] sm:min-h-[32px] chip-toggle ${
+                    current.sourceType === option.value ? 'chip-toggle-selected' : ''
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+              {/*
+                Never offered, only shown: a record stored under the create
+                form's old `other` default keeps saying so until somebody
+                chooses, rather than being silently re-labelled.
+              */}
+              {current.sourceType === UNCHOSEN_SOURCE && current.sourceName && (
+                <span className="px-3 py-1 rounded-full text-sm chip-toggle chip-toggle-selected">
+                  {formatSourceType(UNCHOSEN_SOURCE)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/*
+            "Who exactly" appears only once a kind is chosen, and becomes an
+            NPC picker when the kind is *An NPC* (item 3). That conditional
+            already existed in `RumorForm` and is carried over rather than
+            reinvented.
+          */}
+          {sourceChosen && (
+            <div className="flex flex-col gap-1.5">
+              <FieldLabel>Who exactly</FieldLabel>
+              {current.sourceType === 'npc' ? (
+                <AttachTray
+                  kinds={['npc']}
+                  sources={sources}
+                  attachedIds={current.sourceNpcId ? [current.sourceNpcId] : []}
+                  single
+                  ariaLabel={`the source of ${rumor.title}`}
+                  onAttach={(id) => {
+                    const npc = (sources.npc ?? []).find((candidate: any) => candidate.id === id);
+                    onDraftChange({ sourceNpcId: id, sourceName: npc?.name ?? '' });
+                  }}
+                  onDetach={() => onDraftChange({ sourceNpcId: undefined, sourceName: '' })}
+                />
+              ) : (
+                <Input
+                  // Named by the heading above it rather than by a second
+                  // label repeating the same three words.
+                  aria-label="Who exactly"
+                  placeholder="Trader on the East Road"
+                  value={current.sourceName}
+                  onChange={(event) => onDraftChange({ sourceName: event.target.value })}
+                  disabled={saveState === 'saving'}
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/*
+          Status is the knowledge ladder, not a verdict, and it writes on the
+          click rather than waiting for Save: confirming a rumour mid-session
+          is the one thing this list exists for.
+        */}
+        <StateLadder
+          label="Is it true?"
+          options={RUMOR_STATUS_OPTIONS}
+          value={rumor.status}
+          ariaLabel={`Status of ${rumor.title}`}
+          onChange={onStatusChange}
+        />
+
+        <div className="border-t divider pt-3 flex items-center gap-3 flex-wrap">
+          <Button
+            size="sm"
+            className="min-h-[44px] sm:min-h-[32px]"
+            onClick={() => void handleSave()}
+            disabled={saveState === 'saving' || !dirty}
+          >
+            {saveState === 'saving' ? 'Saving…' : 'Save'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="min-h-[44px] sm:min-h-[32px]"
+            onClick={onCollapse}
+            disabled={saveState === 'saving'}
+          >
+            Collapse
+          </Button>
+
+          <span role="status" aria-live="polite" className="min-h-[1rem]">
+            {saveState === 'saved' && !dirty && (
+              <Typography variant="body-sm" color="secondary">
+                Saved
+              </Typography>
+            )}
+          </span>
+
+          <div className="ml-auto flex items-center gap-2">
+            {confirmingDelete ? (
+              <>
+                <Typography variant="body-sm" color="secondary">
+                  Delete this rumour for everyone?
+                </Typography>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="delete-button min-h-[44px] sm:min-h-[32px]"
+                  disabled={deleting}
+                  onClick={() => {
+                    setDeleting(true);
+                    setError(null);
+                    void onDelete()
+                      .catch((err: unknown) =>
+                        setError(
+                          err instanceof Error ? err.message : 'Could not delete this rumour.'
+                        )
+                      )
+                      .finally(() => {
+                        setDeleting(false);
+                        setConfirmingDelete(false);
+                      });
+                  }}
+                >
+                  {deleting ? 'Deleting…' : `Delete ${rumor.title}`}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="min-h-[44px] sm:min-h-[32px]"
+                  onClick={() => setConfirmingDelete(false)}
+                >
+                  Keep it
+                </Button>
+              </>
+            ) : (
+              /*
+                Asked once, in the row rather than in a dialog: a rumour is a
+                line of text with no children and nothing pointing at it, so
+                the blast radius is the line itself. Phase 14 §1 question 1 --
+                this is not a decision *about* the list, it is an act on one
+                entry of it.
+              */
+              <Button
+                variant="ghost"
+                size="sm"
+                className="delete-button min-h-[44px] sm:min-h-[32px]"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <Typography variant="body-sm" color="error" role="alert">
+            {error}
+          </Typography>
+        )}
+      </div>
+
+      {/* ------------------------------ points at ------------------------------ */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <FieldLabel>Points at</FieldLabel>
+          {/*
+            One tray over people and places, replacing a flat `<select>` of
+            every location in the campaign (item 7). It writes immediately, as
+            every other tray in the product does.
+          */}
+          <AttachTray
+            kinds={['npc', 'location']}
+            sources={sources}
+            attachedIds={attachedIds}
+            ariaLabel={`what ${rumor.title} points at`}
+            onAttach={(id, kind) => void onAttach(id, kind)}
+            onDetach={(id) => void onDetach(id)}
+          />
+        </div>
+
+        {rumor.notes?.length ? (
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel>Notes</FieldLabel>
+            <div className="flex flex-col gap-2">
+              {rumor.notes.map((note) => (
+                <div key={note.id} className="flex gap-3 px-3 py-2.5 rounded-md bg-secondary">
+                  {/* Formatted, from the one shared helper (item 10, T001). */}
+                  <Typography
+                    variant="body-sm"
+                    color="muted"
+                    className="text-xs whitespace-nowrap tabular-nums"
+                  >
+                    {formatNoteDate(note.dateAdded)}
+                  </Typography>
+                  <Typography variant="body-sm">{note.content}</Typography>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {rumor.convertedToQuestId && onOpenQuest && (
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel>Became a quest</FieldLabel>
+            <button
+              type="button"
+              onClick={() => onOpenQuest(rumor.convertedToQuestId!)}
+              className="flex items-center gap-2 text-left px-2.5 py-1.5 rounded-md selectable-item"
+            >
+              <Typography variant="body-sm">Open the quest</Typography>
+            </button>
+          </div>
+        )}
+
+        {rumor.createdByUsername && (
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel>Recorded by</FieldLabel>
+            <Typography variant="body-sm">{rumor.createdByUsername}</Typography>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default RumorRowEditor;
