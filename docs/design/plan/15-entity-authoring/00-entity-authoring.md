@@ -205,8 +205,14 @@ and the rows are uniform. That is the whole fix.
 
 ### 6.2 On the page — "Where this sits"
 
-Three levels at once — parent, self, what is inside — plus siblings at reduced
-emphasis. This is the module a row deliberately does not carry.
+Three levels at once — parent, self, what is inside. This is the module a row
+deliberately does not carry.
+
+~~plus siblings at reduced emphasis~~ — **removed after `15-8`, from the
+running app.** Sharing a parent is not a relationship in this data: two places
+sit side by side because nobody has filed them anywhere yet, so at the top
+level every unfiled place in the campaign was listed as "a sibling" under
+every other one. The word claimed a connection the record does not carry.
 
 - **Reparenting is *Move elsewhere*** → the attach tray filtered to locations,
   **excluding self and all descendants**. Today's form offers a combobox that

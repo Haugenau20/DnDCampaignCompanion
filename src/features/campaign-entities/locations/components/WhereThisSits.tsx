@@ -13,7 +13,6 @@ import {
   childrenOf,
   invalidParentIdsFor,
   parentIdOf,
-  siblingsOf,
 } from '../utils/location-tree';
 import { formatLocationStatus, formatLocationType } from '../utils/location-presentation';
 
@@ -41,9 +40,9 @@ export interface WhereThisSitsProps {
 /** One line in the module. The name opens; everything else is context. */
 const TreeLine: React.FC<{
   location?: Location;
-  /** 0 for the parent, 1 for self and siblings, 2 for what is inside. */
+  /** 0 for the parent, 1 for self, 2 for what is inside. */
   depth: number;
-  /** "the parent", "you are here", "a sibling" -- or a knowledge step. */
+  /** "the parent", "you are here" -- or a knowledge step. */
   note?: string;
   self?: boolean;
   onOpen?: () => void;
@@ -105,8 +104,15 @@ const TreeLine: React.FC<{
 );
 
 /**
- * "Where this sits" -- parent, self, what is inside, and siblings at reduced
- * emphasis.
+ * "Where this sits" -- parent, self, and what is inside.
+ *
+ * **Siblings were here and are deliberately gone.** §6.2 listed them at
+ * reduced emphasis, on the reasoning that a place is understood partly by
+ * what sits beside it. In a real campaign that reasoning does not hold: two
+ * places share a parent because nobody has filed them anywhere yet, not
+ * because they have anything to do with each other, so at the top level every
+ * unfiled place in the campaign was listed under every other one. "A sibling"
+ * was claiming a relationship the data does not carry.
  *
  * **Three levels at once, always exactly three, however deep the data goes.**
  * This is the module a row deliberately does not carry (§6.2) and the whole
@@ -145,10 +151,6 @@ export const WhereThisSits: React.FC<WhereThisSitsProps> = ({
   const parentId = parentIdOf(location);
   const parent = parentId ? index.byId.get(parentId) : undefined;
   const children = useMemo(() => childrenOf(index, location.id), [index, location.id]);
-  const siblings = useMemo(
-    () => siblingsOf(locations, location.id, index),
-    [locations, location.id, index]
-  );
 
   /**
    * Self, and everything inside it, at any depth.
@@ -208,16 +210,6 @@ export const WhereThisSits: React.FC<WhereThisSitsProps> = ({
             </FieldPrompt>
           </div>
         )}
-
-        {siblings.map((sibling) => (
-          <TreeLine
-            key={sibling.id}
-            location={sibling}
-            depth={parent ? 1 : 0}
-            note="a sibling"
-            onOpen={() => onOpen(sibling.id)}
-          />
-        ))}
       </div>
 
       {canAct && (

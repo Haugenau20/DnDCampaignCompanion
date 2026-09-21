@@ -59,7 +59,6 @@ export {
   invalidParentIdsFor,
   parentIdOf,
   pathLabelOf,
-  siblingsOf,
   wouldCreateCycle,
 } from './locations/utils/location-tree';
 export type { LocationIndex } from './locations/utils/location-tree';
