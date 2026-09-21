@@ -1390,6 +1390,56 @@ describe("NPCDetailPage", () => {
   });
 
   // -------------------------------------------------------------------------
+  // The field `15-8` would otherwise have stranded
+  // -------------------------------------------------------------------------
+  describe("affiliations", () => {
+    it("adds one, which the tray cannot because it is free text", () => {
+      // `NPCForm` was the only place an affiliation could be written, and
+      // `15-8` deleted it. The tray offers records; "The Fellowship" is not
+      // one.
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: /Add another affiliation/ }));
+      fireEvent.change(screen.getByLabelText("Add an affiliation"), {
+        target: { value: "The White Council" },
+      });
+      fireEvent.click(screen.getByText("Add affiliation"));
+
+      return waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({
+            connections: expect.objectContaining({
+              affiliations: ["The Fellowship", "Istari", "The White Council"],
+            }),
+          })
+        )
+      );
+    });
+
+    it("removes one from the rail", async () => {
+      renderPage();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Remove the affiliation Istari" })
+      );
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({
+            connections: expect.objectContaining({ affiliations: ["The Fellowship"] }),
+          })
+        )
+      );
+    });
+
+    it("asks for the first one when there are none", () => {
+      mockNpcId = "npc-3";
+      renderPage();
+      expect(
+        screen.getByRole("button", { name: /What do they belong to\?/ })
+      ).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Route ranking
   // -------------------------------------------------------------------------
   describe("route ranking", () => {

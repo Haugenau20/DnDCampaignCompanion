@@ -49,7 +49,18 @@ jest.mock("react-router-dom", () => {
   const Navigate = ({ to }: { to: string }) => (
     <div data-testid="navigate" data-to={to} />
   );
-  return { Routes, Route, Navigate };
+  // The four retired edit routes render `EditRouteRedirect`, which reads the
+  // record's id with `useParams`. It is declared here rather than left out
+  // because this suite renders the whole table at once, so every element in it
+  // is mounted -- including the four that only ever run on a stale URL.
+  const useParams = () => ({
+    questId: "a-quest",
+    npcId: "an-npc",
+    locationId: "a-location",
+    rumorId: "a-rumor",
+    chapterId: "a-chapter",
+  });
+  return { Routes, Route, Navigate, useParams };
 });
 
 // ---------------------------------------------------------------------------
@@ -171,28 +182,24 @@ jest.mock("../pages/story", () => ({
 jest.mock("../pages/quests", () => ({
   QuestsPage: () => <div data-testid="page-quests" />,
   QuestCreatePage: () => <div data-testid="page-quest-create" />,
-  QuestEditPage: () => <div data-testid="page-quest-edit" />,
   QuestDetailPage: () => <div data-testid="page-quest-detail" />,
 }));
 
 jest.mock("../pages/npcs", () => ({
   NPCsPage: () => <div data-testid="page-npcs" />,
   NPCsCreatePage: () => <div data-testid="page-npcs-create" />,
-  NPCsEditPage: () => <div data-testid="page-npcs-edit" />,
   NPCDetailPage: () => <div data-testid="page-npc-detail" />,
 }));
 
 jest.mock("../pages/locations", () => ({
   LocationsPage: () => <div data-testid="page-locations" />,
   LocationCreatePage: () => <div data-testid="page-location-create" />,
-  LocationEditPage: () => <div data-testid="page-location-edit" />,
   LocationDetailPage: () => <div data-testid="page-location-detail" />,
 }));
 
 jest.mock("../pages/rumors", () => ({
   RumorsPage: () => <div data-testid="page-rumors" />,
   RumorCreatePage: () => <div data-testid="page-rumor-create" />,
-  RumorEditPage: () => <div data-testid="page-rumor-edit" />,
 }));
 
 jest.mock("../pages/notes", () => ({
@@ -268,6 +275,7 @@ const EXPECTED_ROUTES = [
   "/story/chapters/edit/:chapterId",
   "/quests",
   "/quests/create",
+  // Retired in `15-8`, and still routed: each one redirects to the record.
   "/quests/edit/:questId",
   // `15-5`. Declared after the two literal segments, for the same reason
   // `/locations/:locationId` is below.

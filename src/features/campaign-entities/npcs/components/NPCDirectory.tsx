@@ -367,13 +367,12 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                             >
                               More info
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigateToPage(`/npcs/edit/${npc.id}`)}
-                            >
-                              Edit
-                            </Button>
+                            {/* Edit used to sit here and leave for
+                                `/npcs/edit/:id`. That route is a redirect back
+                                to this NPC's page since `15-8`, because the
+                                page edits every field in place -- so the
+                                control would have been a longer way to press
+                                *More info*. */}
                             <Button
                               variant="ghost"
                               size="sm"

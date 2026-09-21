@@ -500,6 +500,44 @@ const QuestDetailPage: React.FC = () => {
                 )}
               </EntityPageSection>
 
+              {/* ---------------------------- where it happens ----------------------- */}
+              <EntityPageSection
+                title="Where it happens"
+                empty={
+                  !canAct ? (
+                    <Typography variant="body-sm" color="muted" className="italic">
+                      No place recorded
+                    </Typography>
+                  ) : undefined
+                }
+              >
+                {/*
+                  `15-8` found this had nowhere to live. A quest's `locationId`
+                  was edited by `QuestFormSections`' own single-location tray,
+                  and when that form was deleted the field became readable --
+                  it is in the line under the title -- and unwritable. One
+                  relation, so attaching replaces rather than adds.
+                */}
+                {locationName && (
+                  <Typography variant="body-sm">{locationName}</Typography>
+                )}
+                {canAct && (
+                  <AttachTray
+                    kinds={['location']}
+                    sources={{ npc: npcs, location: locations }}
+                    attachedIds={quest.locationId ? [quest.locationId] : []}
+                    single
+                    showAttachedChips={false}
+                    ariaLabel={`where ${quest.title} happens`}
+                    onAttach={(id) => {
+                      const place = locations.find((candidate) => candidate.id === id);
+                      void save({ locationId: id, location: place?.name ?? '' });
+                    }}
+                    onDetach={() => void save({ locationId: '', location: '' })}
+                  />
+                )}
+              </EntityPageSection>
+
               {/* -------------------------- what points here ------------------------ */}
               <EntityPageSection
                 title="What points here"
