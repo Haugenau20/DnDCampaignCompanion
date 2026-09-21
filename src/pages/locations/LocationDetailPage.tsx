@@ -135,14 +135,12 @@ const LocationDetailPage: React.FC = () => {
   // "no place with that id" for the found-but-not-yet-loaded case.
   const gate = usePageGate('locations', {
     /*
-      `loading` means **"there is nothing to show yet"**, not "a fetch is in
-      flight". Every write in this app ends with a refresh, and that refresh
-      sets the data hook's `loading` flag again -- so passing it raw made the
-      gate re-enter `resolving` after *every* save, swap the whole page for the
-      skeleton, and unmount what was on screen. Measured in Chrome: one
-      skeleton flash per write, and an open row closing under the cursor.
-
-      Once the page has something to show, a refetch happens behind it.
+      The data hook now draws the line between "nothing to show yet" and "a
+      fetch is in flight" for every consumer at once -- the rule, and the
+      measurement behind it, are on `useQuestData`. What this adds is the
+      narrower question a detail page asks: not "is the list loaded" but "is
+      *this* record loaded", so the page never claims "no such record" for
+      one that is simply still on its way.
     */
     loading: isLoading && !location,
     error,

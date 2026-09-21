@@ -214,4 +214,65 @@ describe('useQuestData', () => {
       expect(result.current.error).toBe('Firestore error');
     });
   });
+  // -------------------------------------------------------------------------
+  // `loading` means "there is nothing to show yet"
+  // -------------------------------------------------------------------------
+  describe('loading means "nothing to show yet", not "a fetch is in flight"', () => {
+    // CHANGED DELIBERATELY. This hook used to hand out `useFirebaseData`'s raw
+    // in-flight flag, which is raised by the refresh every write in this app
+    // ends with as well as by the first read. Consumers pass it to
+    // `usePageGate`, so a gate re-entered `resolving` after every save and
+    // `GatedContent` unmounted what was on screen. Measured in Chrome on
+    // `/quests`: ticking an objective in an open row wrote correctly (1 of 3
+    // became 2 of 3) and closed the row under the cursor, because the
+    // directory that held the "which rows are open" state had been destroyed
+    // and rebuilt. The two cases below are the whole distinction.
+
+    test('a refetch behind quests already on screen is not loading', async () => {
+      const quests = [makeQuest('quest-1', 'Defeat Saruman')];
+      setupFirebaseDataMock({ data: quests });
+      // The mounting fetch resolves to the same list, so nothing races it
+      // back to empty behind the assertions.
+      mockGetData.mockResolvedValue(quests);
+      const { result, rerender } = renderHook(() => useQuestData());
+
+      await waitFor(() => expect(result.current.quests).toHaveLength(1));
+
+      // The write's refresh: in flight, with the list still on screen.
+      setupFirebaseDataMock({ data: quests, loading: true });
+      rerender();
+
+      expect(result.current.loading).toBe(false);
+      expect(result.current.quests).toHaveLength(1);
+    });
+
+    test('a first read with nothing on screen is loading', () => {
+      setupFirebaseDataMock({ data: [], loading: true });
+      const { result } = renderHook(() => useQuestData());
+
+      expect(result.current.loading).toBe(true);
+    });
+
+    test('switching campaign empties the list rather than showing the last one', async () => {
+      // Otherwise the rule above would keep the previous campaign's quests on
+      // screen -- no longer behind a skeleton -- for the whole window between
+      // the switch and the new fetch resolving.
+      const quests = [makeQuest('quest-1', 'Defeat Saruman')];
+      setupFirebaseDataMock({ data: quests });
+      // The mounting fetch resolves to the same list, so nothing races it
+      // back to empty behind the assertions.
+      mockGetData.mockResolvedValue(quests);
+      const { result, rerender } = renderHook(() => useQuestData());
+
+      await waitFor(() => expect(result.current.quests).toHaveLength(1));
+
+      setupContextMocks('group-1', 'campaign-2');
+      setupFirebaseDataMock({ data: [], loading: true });
+      mockGetData.mockResolvedValue([]);
+      rerender();
+
+      expect(result.current.quests).toEqual([]);
+      expect(result.current.loading).toBe(true);
+    });
+  });
 });

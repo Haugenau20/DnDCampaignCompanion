@@ -48,6 +48,18 @@ export const useQuestData = () => {
     fetchQuests();
   }, [fetchQuests, activeGroupId, activeCampaignId]);
 
+  /*
+    Switching campaign must not leave the previous campaign's quests on
+    screen while the new ones load. `loading` above stops counting once there
+    is something to show, so the list is emptied the moment the context it
+    belongs to changes -- otherwise the window between the switch and the
+    fetch resolving would show one campaign's records under another
+    campaign's name.
+  */
+  useEffect(() => {
+    setQuests([]);
+  }, [activeGroupId, activeCampaignId]);
+
   // Update quests when Firebase data changes
   useEffect(() => {
     if (data.length > 0) {
@@ -67,9 +79,27 @@ export const useQuestData = () => {
 
   return {
     quests,
-    // Folds in `isResolving` (bug #1413) -- see useNPCData's identical fold
-    // for why this can't just be `useGroups().loading`.
-    loading: Boolean(loading) || isResolving,
+    /*
+      `loading` means **"there is nothing to show yet"**, never "a fetch is in
+      flight". `useFirebaseData` cannot tell the two apart -- it raises the
+      same flag for the first read and for the refresh that every write in
+      this app ends with -- and a consumer that passes this straight to a
+      gate therefore swaps its content for a skeleton on every save.
+      Measured in Chrome on `/quests`: ticking an objective in an open row
+      unmounted the directory and closed the row under the cursor, while the
+      write itself succeeded.
+
+      So the in-flight flag only counts while there is nothing on screen. A
+      refetch behind content someone is already reading is invisible, which
+      is what it should always have been.
+
+      Folds in `isResolving` (bug #1413) -- see `useCampaignContextStatus`
+      for why this can't just be `useGroups().loading`. That half is
+      unconditional: while auth and the campaign are still restoring, the list
+      is empty for a reason the reader has no way to distinguish from "none
+      recorded".
+    */
+    loading: (Boolean(loading) && quests.length === 0) || isResolving,
     error,
     getQuestById,
     refreshQuests: fetchQuests,

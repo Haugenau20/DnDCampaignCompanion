@@ -49,6 +49,16 @@ no real auth lifecycle, no pointer. The pages built without a browser pass
 (`15-4`, `15-5`, `15-6`) shipped the skeleton defect three times because nobody
 could see it.
 
+**And a browser pass that only visits its own PR is not enough either.** The
+two defects the user reported the day `15-8` opened were both of this kind:
+the skeleton unmount was patched at the four call sites `15-7` happened to
+touch and left live on the three index pages, and `15-4`'s location tree
+became unopenable only once `15-4` itself gave every row something to open
+into. Each PR verified what it changed; neither verified what its change now
+implied elsewhere. A third defect — the NPC list showing the old stance after
+a write (T046) — was sitting in the same three pages and had never been
+reported at all.
+
 **A comment claiming a gate exists is worse than no gate.**
 `location-presentation.ts` said `ladder-classes.test.ts` caught theme classes
 passed as data. That file did not exist; `15-6` wrote it, and its first run
@@ -637,7 +647,7 @@ Measured against the four create forms, the premise holds for the quest only.
   measured.
 
 ### T044 — Every page still folds its refetch into the gate's `resolving`
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-21
+**Type** bug · **Size** S · **Status** done for the four entity domains · **Verified** 2026-09-21
 
 `usePageGate(page, { loading })` treats the caller's `loading` as "resolving",
 and every write in this app ends with a refresh that sets that flag again. So a
@@ -648,17 +658,24 @@ takes any component state with it.
 row being edited, one skeleton flash per write. It is invisible to the suites
 because they mock the data hooks, so `loading` never flips a second time.
 
-- **Fixed at four call sites** by 15.7 — the ones holding state across a write:
-  `RumorsPage` (`isLoading && rumors.length === 0`), and the quest, location and
-  NPC detail pages (`isLoading && !record`). All four are pinned by a test.
-- **Still true at the other eighteen** `usePageGate` call sites, including
-  `QuestsPage`, `NPCsPage`, `LocationsPage`, `NotesPage` and the story pages.
-  They lose no typed text today, so it shows as a flash rather than a defect.
-- **The real fix** is probably in the hook: `loading` should mean "nothing to
-  show yet", and the hook could take that directly rather than asking every
-  caller to remember the conjunction. That is a shared-infrastructure change
-  and wants its own pass.
-- **Source**: PR 15.7's browser pass
+- **Patched at four call sites** by 15.7 — `RumorsPage` and the three detail
+  pages — which left the three *index* pages still doing it. The user found
+  the consequence within a day: on `/quests`, ticking an objective in an open
+  row wrote correctly and closed the row.
+- **Fixed in the hook**, as the line below always suspected it should be.
+  `useQuestData`, `useNPCData`, `useLocationData` and `useRumorData` now
+  report `loading` as **"there is nothing to show yet"** — the in-flight flag
+  only counts while the list is empty — so the refresh at the end of a write
+  happens behind content someone is reading. Pinned by three cases in each of
+  the four hook suites, and the page-level patches are gone.
+  - A list that is emptied when the group or campaign changes is part of the
+    same fix, not a separate one: without it, "keep showing what we have"
+    would keep showing the *previous campaign's* records under the new
+    campaign's name for the length of the fetch.
+- **Still true for `NotesPage` and the story pages**, which load through their
+  own hooks. Same one-line shape; nothing there holds state across a write
+  today, so it shows as a flash.
+- **Source**: PR 15.7's browser pass; closed by the phase-15 fix pass
 
 ### T045 — `/story` still reads `?highlight=` not at all
 **Type** bug · **Size** S · **Status** open · **Verified** 2026-09-21
@@ -676,6 +693,26 @@ story or chapter search hit navigates and highlights nothing.
   there and drop the parameter, the way `15-5` and `15-6` did for quests and
   NPCs. Decide which before implementing.
 - **Source**: T014's remainder, carried out of phase 15
+
+### T046 — `NPCsPage` renders from a second loader, not from the provider
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-21
+
+`NPCsPage` calls `useNPCData()` itself instead of reading `useNPCs()`, so the
+page and the `NPCProvider` hold two independently fetched copies of the same
+collection. A write through the context refreshes the provider's copy; the
+page renders the other one. The stance ladder in `NPCDirectory` therefore
+wrote correctly and showed the old word until a reload.
+
+- **Patched, not fixed.** The ladder now calls `onNPCUpdate` — a prop that was
+  declared, destructured and never called by anything — and the page refreshes
+  its own copy. Every other write path in that directory has the same exposure.
+- **The fix** is T023's, one directory over: drop the second loader and read
+  the provider, which also means one Firestore read per page load instead of
+  two. `NPCContextValue` needs `refreshNPCs` on it first — the other three
+  contexts already expose their refresh.
+- **`NPCDetailPage` has the same double loader** but is not affected: it calls
+  its own `refreshNPCs()` after each write, explicitly, at five call sites.
+- **Source**: found in Chrome while verifying T044's fix
 
 ### T042 — A theme class passed as *data* has no manifest coverage
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-18

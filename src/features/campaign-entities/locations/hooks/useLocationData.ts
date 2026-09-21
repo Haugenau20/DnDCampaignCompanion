@@ -48,6 +48,16 @@ export const useLocationData = () => {
     fetchLocations();
   }, [fetchLocations, activeGroupId, activeCampaignId]);
 
+  /*
+    Switching campaign must not leave the previous campaign's locations on
+    screen while the new ones load -- `loading` above stops counting once
+    there is something to show, so the list is emptied the moment the
+    context it belongs to changes.
+  */
+  useEffect(() => {
+    setLocations([]);
+  }, [activeGroupId, activeCampaignId]);
+
   // Update locations when Firebase data changes
   useEffect(() => {
     if (data.length > 0) {
@@ -60,9 +70,18 @@ export const useLocationData = () => {
 
   return {
     locations,
-    // Folds in `isResolving` (bug #1413) -- see useNPCData's identical fold
-    // for why this can't just be `useGroups().loading`.
-    loading: Boolean(loading) || isResolving,
+    /*
+      `loading` means **"there is nothing to show yet"**, never "a fetch is in
+      flight" -- see `useQuestData` for the measurement behind that. The
+      in-flight flag only counts while there is nothing on screen, so the
+      refresh every write ends with happens behind content someone is
+      already reading instead of unmounting it.
+
+      Folds in `isResolving` (bug #1413) unconditionally, since while auth
+      and the campaign are still restoring, the list is empty for a
+      reason no reader can distinguish from "none recorded".
+    */
+    loading: (Boolean(loading) && locations.length === 0) || isResolving,
     error,
     refreshLocations: fetchLocations,
     hasRequiredContext,

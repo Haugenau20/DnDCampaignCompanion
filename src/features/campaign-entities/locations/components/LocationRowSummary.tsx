@@ -1,5 +1,6 @@
 // src/features/campaign-entities/locations/components/LocationRowSummary.tsx
 import React from 'react';
+import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import EntitySigil from 'core/components/EntitySigil';
 import StateLadder from 'shared/components/row-controls/StateLadder';
@@ -15,6 +16,8 @@ export interface LocationRowSummaryProps {
   onChangeStatus: (status: LocationStatus) => Promise<unknown>;
   onOpenNPC: (npcId: string) => void;
   onOpenQuest: (questId: string) => void;
+  /** Opens `/locations/:locationId`. The only way out of the row (D41). */
+  onOpenLocation: () => void;
 }
 
 /** The uppercase micro-label each part of the summary is introduced by. */
@@ -67,10 +70,11 @@ const Chips: React.FC<{
  * useless for the thing it is for. **Nesting is the defect; content in the row
  * is not.**
  *
- * So this is description, features on one line, who is here, quests here, and
- * the knowledge step as three buttons -- roughly 160px, uniform, at every
- * depth. The notes, the tags, the full tree and the record history live on the
- * page (§3).
+ * So this is description, features on one line, who is here, quests here, the
+ * knowledge step as three buttons, and the way to the page -- roughly 160px,
+ * uniform, at every depth. The notes, the tags, the full tree and the record
+ * history live on the page (§3), which *More info* is now the only route to:
+ * the row's name opens the row, as it does in every other directory here.
  */
 export const LocationRowSummary: React.FC<LocationRowSummaryProps> = ({
   location,
@@ -79,6 +83,7 @@ export const LocationRowSummary: React.FC<LocationRowSummaryProps> = ({
   onChangeStatus,
   onOpenNPC,
   onOpenQuest,
+  onOpenLocation,
 }) => (
   <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 pt-2">
     <div className="flex flex-col gap-3">
@@ -132,6 +137,17 @@ export const LocationRowSummary: React.FC<LocationRowSummaryProps> = ({
         <FieldLabel>Quests here</FieldLabel>
         <Chips items={quests} onOpen={onOpenQuest} empty="No quests here" />
       </div>
+
+      {/*
+        The way to the place's own page, where the notes, the tags, the full
+        tree and the record history live (§3). It sits in the expansion and
+        never in the collapsed row, which is the same rule a quest row and an
+        NPC row already follow (D41): a row that is already open has said it
+        wants more.
+      */}
+      <Button variant="outline" size="sm" onClick={onOpenLocation} className="self-start">
+        More info
+      </Button>
     </div>
   </div>
 );

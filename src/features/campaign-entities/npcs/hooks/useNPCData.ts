@@ -50,6 +50,16 @@ export const useNPCData = () => {
     fetchNPCs();
   }, [fetchNPCs, activeGroupId, activeCampaignId]);
 
+  /*
+    Switching campaign must not leave the previous campaign's npcs on
+    screen while the new ones load -- `loading` above stops counting once
+    there is something to show, so the list is emptied the moment the
+    context it belongs to changes.
+  */
+  useEffect(() => {
+    setNpcs([]);
+  }, [activeGroupId, activeCampaignId]);
+
   // Update NPCs when Firebase data changes
   useEffect(() => {
     if (data.length > 0) {
@@ -64,13 +74,18 @@ export const useNPCData = () => {
 
   return {
     npcs,
-    // Folds in `isResolving` (bug #1413): while auth/group/campaign restoration
-    // is still in flight, `activeGroupId`/`activeCampaignId` being null does not
-    // mean "nothing selected", so callers must keep showing their loading state
-    // rather than fall through to a "no context" error. See
-    // `useCampaignContextStatus`'s doc comment for why this can't just be
-    // `useGroups().loading`.
-    loading: Boolean(loading) || isResolving,
+    /*
+      `loading` means **"there is nothing to show yet"**, never "a fetch is in
+      flight" -- see `useQuestData` for the measurement behind that. The
+      in-flight flag only counts while there is nothing on screen, so the
+      refresh every write ends with happens behind content someone is
+      already reading instead of unmounting it.
+
+      Folds in `isResolving` (bug #1413) unconditionally, since while auth
+      and the campaign are still restoring, the list is empty for a
+      reason no reader can distinguish from "none recorded".
+    */
+    loading: (Boolean(loading) && npcs.length === 0) || isResolving,
     error,
     refreshNPCs: fetchNPCs,
     hasRequiredContext,

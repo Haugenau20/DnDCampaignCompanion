@@ -275,7 +275,7 @@ describe('LocationDetailPage — the band', () => {
 });
 
 describe('LocationDetailPage — "Where this sits" (§6.2)', () => {
-  it('shows parent, self, what is inside, and siblings at reduced emphasis', () => {
+  it('shows parent, self and what is inside — and no siblings', () => {
     renderPage();
     const module = within(hierarchy());
 
@@ -283,7 +283,15 @@ describe('LocationDetailPage — "Where this sits" (§6.2)', () => {
     expect(module.getByText('you are here')).toBeInTheDocument();
     expect(module.getByText("King's square")).toBeInTheDocument();
     expect(module.getByText('Seven gates')).toBeInTheDocument();
-    expect(module.getByText('a sibling')).toBeInTheDocument();
+
+    // CHANGED DELIBERATELY. §6.2 listed siblings at reduced emphasis, and the
+    // assertion that they appeared was here. Reported from the running app:
+    // the relationship is not real. Two places share a parent because nobody
+    // has filed them anywhere, not because they have anything to do with each
+    // other, so at the top level every unfiled place in the campaign was
+    // listed as "a sibling" under every other one.
+    expect(module.queryByText('a sibling')).not.toBeInTheDocument();
+    expect(module.queryByText('Doriath')).not.toBeInTheDocument();
   });
 
   it('shows three levels at depth 4 as at depth 1 — never more', () => {

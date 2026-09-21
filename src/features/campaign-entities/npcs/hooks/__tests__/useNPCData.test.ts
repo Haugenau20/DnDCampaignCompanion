@@ -279,4 +279,54 @@ describe('useNPCData', () => {
       expect(result.current.missingContext).toBe('group');
     });
   });
+  // -------------------------------------------------------------------------
+  // `loading` means "there is nothing to show yet"
+  // -------------------------------------------------------------------------
+  describe('loading means "nothing to show yet", not "a fetch is in flight"', () => {
+    // CHANGED DELIBERATELY, for the reason recorded in full on
+    // `useQuestData.test.ts`: this hook used to hand out `useFirebaseData`'s
+    // raw in-flight flag, which the refresh at the end of every write raises
+    // as well as the first read. Consumers pass it to `usePageGate`, so the
+    // gate re-entered `resolving` after every save and unmounted what was on
+    // screen. Implemented in four hooks, so pinned in four suites.
+
+    test('a refetch behind records already on screen is not loading', async () => {
+      const records = [makeNPC('npc-1', 'Aragorn')];
+      setupFirebaseDataMock({ data: records });
+      mockGetData.mockResolvedValue(records);
+      const { result, rerender } = renderHook(() => useNPCData());
+
+      await waitFor(() => expect(result.current.npcs).toHaveLength(1));
+
+      setupFirebaseDataMock({ data: records, loading: true });
+      rerender();
+
+      expect(result.current.loading).toBe(false);
+      expect(result.current.npcs).toHaveLength(1);
+    });
+
+    test('a first read with nothing on screen is loading', () => {
+      setupFirebaseDataMock({ data: [], loading: true });
+      const { result } = renderHook(() => useNPCData());
+
+      expect(result.current.loading).toBe(true);
+    });
+
+    test('switching campaign empties the list rather than showing the last one', async () => {
+      const records = [makeNPC('npc-1', 'Aragorn')];
+      setupFirebaseDataMock({ data: records });
+      mockGetData.mockResolvedValue(records);
+      const { result, rerender } = renderHook(() => useNPCData());
+
+      await waitFor(() => expect(result.current.npcs).toHaveLength(1));
+
+      setupContextMocks('group-1', 'campaign-2');
+      setupFirebaseDataMock({ data: [], loading: true });
+      mockGetData.mockResolvedValue([]);
+      rerender();
+
+      expect(result.current.npcs).toEqual([]);
+      expect(result.current.loading).toBe(true);
+    });
+  });
 });

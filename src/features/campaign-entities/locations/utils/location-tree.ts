@@ -182,20 +182,6 @@ export function descendantIdsDeepestFirst(
   return walk(id, 0);
 }
 
-/** The locations sharing `id`'s parent, `id` itself excluded. */
-export function siblingsOf(
-  locations: readonly Location[],
-  id: string,
-  index: LocationIndex = buildLocationIndex(locations)
-): Location[] {
-  const self = index.byId.get(id);
-  if (!self) return [];
-
-  const parent = parentIdOf(self);
-  const family = parent ? childrenOf(index, parent) : index.roots;
-  return family.filter((location) => location.id !== id);
-}
-
 /**
  * The parents `id` may never be given: itself, and everything inside it.
  *

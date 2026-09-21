@@ -8,7 +8,6 @@ import {
   insideCountOf,
   invalidParentIdsFor,
   pathLabelOf,
-  siblingsOf,
   wouldCreateCycle,
 } from '../location-tree';
 import { Location } from '../../types';
@@ -127,15 +126,14 @@ describe('descendantIdsDeepestFirst', () => {
   });
 });
 
-describe('siblingsOf', () => {
-  it('names the others under the same parent, never the location itself', () => {
-    expect(siblingsOf(TREE, 'gondolin').map((l) => l.id)).toEqual(['doriath']);
-  });
-
-  it("treats the top level as a family, so a root has siblings too", () => {
-    expect(siblingsOf(TREE, 'beleriand').map((l) => l.id)).toEqual(['angband']);
-  });
-});
+// `siblingsOf` and its two cases are DELIBERATELY GONE. It had exactly one
+// caller -- "Where this sits", which listed siblings at reduced emphasis per
+// §6.2 -- and the module's second case above is the reason that display was
+// wrong in a real campaign: it treated the top level as a family, so every
+// unfiled place was listed as "a sibling" of every other unfiled place. Two
+// places share a parent because nobody has filed them yet, which is not a
+// relationship worth naming. With the display gone the helper had no callers
+// and is removed rather than kept warm behind a passing test.
 
 describe('the cycle guard (PERF-11 / T033, and 15-4 item 5)', () => {
   /**

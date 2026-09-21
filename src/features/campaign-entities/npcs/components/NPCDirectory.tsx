@@ -310,9 +310,23 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                             options={STANCE_OPTIONS}
                             value={npc.relationship}
                             ariaLabel={`Stance of ${npc.name}`}
-                            onChange={(relationship) =>
-                              updateNPCRelationship(npc.id, relationship)
-                            }
+                            onChange={async (relationship) => {
+                              await updateNPCRelationship(npc.id, relationship);
+                              /*
+                                And then tell the page, or the change does not
+                                appear until a reload. `updateNPCRelationship`
+                                refreshes the **provider's** copy of the
+                                collection; `NPCsPage` mounts a loader of its
+                                own and renders from that one, so the two
+                                disagree the moment either is written to.
+                                `onNPCUpdate` exists for exactly this and had
+                                never been called by anything -- a declared,
+                                destructured, dead prop, which is why the
+                                stance someone picked stayed on the old word.
+                                Found while verifying the gate fix in Chrome.
+                              */
+                              onNPCUpdate?.({ ...npc, relationship });
+                            }}
                           />
 
                           <RosterField label="Notes" emptyText="No notes yet">

@@ -22,16 +22,12 @@ const RumorsPage: React.FC = () => {
 
   const gate = usePageGate("rumors", {
     /*
-      `loading` means **"there is nothing to show yet"**, not "a fetch is in
-      flight". Every write in this app ends with a refresh, and that refresh
-      sets the data hook's `loading` flag again -- so passing it raw made the
-      gate re-enter `resolving` after *every* save, swap the whole page for the
-      skeleton, and unmount what was on screen. Measured in Chrome: one
-      skeleton flash per write, and an open row closing under the cursor.
-
-      Once the page has something to show, a refetch happens behind it.
+      `isLoading` already means "there is nothing to show yet" rather than "a
+      fetch is in flight": `useRumorData` draws that line now, for every
+      consumer at once, so this page no longer has to draw it again. The rule
+      and the measurement behind it are on `useQuestData`.
     */
-    loading: isLoading && rumors.length === 0,
+    loading: isLoading,
     error,
   });
 

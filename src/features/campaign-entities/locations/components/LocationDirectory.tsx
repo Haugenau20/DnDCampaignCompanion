@@ -66,7 +66,9 @@ const TYPE_FILTERS: RosterFilterOption[] = [
  * inside cards read as two objects arguing about which one is the record.
  *
  * **What it becomes** (§6.1): every place is one line until asked — mark, name,
- * type in words, knowledge step, what is inside, a way in. Expanding adds the
+ * type in words, knowledge step and what is inside. Asking is clicking the
+ * row, at every depth and whether or not anything is inside it; the way to the
+ * place's own page is *More info*, in the expansion (D41). Expanding adds the
  * bounded summary from §3 and then lists what is inside as more one-line rows,
  * so a child expanded inside an expanded parent still reads as one object with
  * parts. The row is *not* emptied: §1.3 records the first draft that moved
@@ -237,6 +239,7 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
         onOpenQuest={(questId) =>
           navigateToPage(`/quests/${questId}`)
         }
+        onOpenLocation={() => navigateToPage(`/locations/${location.id}`)}
       />
     ),
     [getNPCById, getQuestById, updateLocationStatus, navigateToPage, createPath]
@@ -274,10 +277,8 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
           key={location.id}
           location={location}
           depth={depth}
-          hasChildren={children.length > 0}
           expanded={expanded}
           onToggle={() => toggleExpansion(location.id)}
-          onOpen={() => navigateToPage(`/locations/${location.id}`)}
           highlighted={highlightedLocationId === location.id}
           path={path}
           insideCount={insideCountOf(index, location.id)}
