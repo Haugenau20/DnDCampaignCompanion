@@ -148,10 +148,8 @@ function makeRumor(overrides: Partial<Rumor> = {}): Rumor {
  *
  * **Unconfirmed on purpose since `15-9`.** It used to be `confirmed`, which
  * stopped being a neutral choice the moment the list started grouping by
- * status: Confirmed and Disproved are settled knowledge and open collapsed,
- * so a confirmed fixture put every generic row behind a disclosure that the
- * test had not asked about. Unconfirmed is also what a rumour actually is
- * when it is written down.
+ * status. Unconfirmed is also what a rumour actually is when it is written
+ * down, which is what a generic fixture should be.
  */
 const r1 = makeRumor({ id: 'r1', title: 'Dragon spotted', status: 'unconfirmed', sourceType: 'npc', sourceName: 'Aldric', location: 'Silverkeep' });
 const r2 = makeRumor({ id: 'r2', title: 'Missing merchant', status: 'unconfirmed', sourceType: 'tavern', sourceName: 'The Flagon', location: 'Ironhold' });
@@ -160,13 +158,13 @@ const r3 = makeRumor({ id: 'r3', title: 'Treasure map', status: 'false', sourceT
 const rc = makeRumor({ id: 'rc', title: 'Dragon spotted', status: 'confirmed', sourceType: 'npc', sourceName: 'Aldric', location: 'Silverkeep' });
 
 /**
- * Open a settled group.
+ * Open the Disproved group.
  *
- * Confirmed and Disproved start collapsed (`15-9`), so a test about a row in
- * one of them says so out loud rather than relying on it being on screen.
+ * It is the only one that starts folded (`15-9`), so a test about a disproved
+ * row says so out loud rather than relying on it being on screen.
  */
-const revealGroup = (title: 'Confirmed' | 'Disproved') =>
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${title}`) }));
+const revealDisproved = () =>
+  fireEvent.click(screen.getByRole('button', { name: /^Disproved/ }));
 
 /** The roster's search box. */
 const searchInput = () => screen.getByPlaceholderText(/search rumors/i);
@@ -272,25 +270,38 @@ describe('RumorDirectory', () => {
     });
 
     /**
-     * Settled knowledge stays reachable and stays counted; it stops taking the
-     * top of the list, exactly as `15-3` did for a quest that is finished.
+     * **Only disproved starts folded.** Confirmed was folded too at first, by
+     * analogy with a finished quest, and the analogy does not hold: a
+     * confirmed rumour is the thing the party acts on, so folding it hid the
+     * best-earned half of the list. Disproved is still knowledge, still
+     * counted, and one click away -- but nobody is going back to it.
      */
-    test('confirmed and disproved open collapsed; unconfirmed does not', () => {
+    test('only disproved opens collapsed', () => {
       render(<RumorDirectory rumors={[rc, r2, r3]} />);
 
-      expect(screen.getByRole('button', { name: /^Confirmed/ })).toHaveAttribute('aria-expanded', 'false');
-      expect(screen.getByRole('button', { name: /^Disproved/ })).toHaveAttribute('aria-expanded', 'false');
-      // The open group is a plain heading, with no disclosure at all.
-      expect(screen.queryByRole('button', { name: /^Unconfirmed/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Disproved/ })).toHaveAttribute(
+        'aria-expanded',
+        'false'
+      );
 
-      revealGroup('Confirmed');
-      expect(screen.getByRole('button', { name: /^Confirmed/ })).toHaveAttribute('aria-expanded', 'true');
+      // The other two are plain headings, with no disclosure at all.
+      expect(screen.queryByRole('button', { name: /^Unconfirmed/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Confirmed/ })).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Expand Dragon spotted/ })
+      ).toBeInTheDocument();
+
+      revealDisproved();
+      expect(screen.getByRole('button', { name: /^Disproved/ })).toHaveAttribute(
+        'aria-expanded',
+        'true'
+      );
     });
 
     test('shows each row as one dense row carrying status and source', () => {
       render(<RumorDirectory rumors={[rc]} />);
-      revealGroup('Confirmed');
-      // Scoped to the row, since "Confirmed" also labels a status-bar segment.
+      // Scoped to the row, since "Confirmed" also labels a status-bar segment
+      // and a group heading.
       const row = within(screen.getByRole('button', { name: /Expand Dragon spotted/ }));
       expect(row.getByText('Dragon spotted')).toBeInTheDocument();
       expect(row.getByText('Confirmed')).toBeInTheDocument();
@@ -740,7 +751,6 @@ describe('RumorDirectory', () => {
       // a row that stops matching unmounts with whatever was in it. The draft
       // lives in the directory for exactly this.
       render(<RumorDirectory rumors={[rc, r2, r3]} />);
-      revealGroup('Confirmed');
       openRow('Dragon spotted');
       fireEvent.change(screen.getByLabelText('What was heard'), {
         target: { value: 'Half a sentence, mid-' },
@@ -752,7 +762,6 @@ describe('RumorDirectory', () => {
 
       // ...and back.
       fireEvent.click(screen.getByRole('button', { name: '1 unconfirmed' }));
-      revealGroup('Confirmed');
       expect(screen.getByLabelText('What was heard')).toHaveValue('Half a sentence, mid-');
     });
 
@@ -849,7 +858,7 @@ describe('RumorDirectory', () => {
   describe('what disproved looks like', () => {
     test('reads "Disproved" and never "False" in the row', () => {
       render(<RumorDirectory rumors={[r3]} />);
-      revealGroup('Disproved');
+      revealDisproved();
       // Scoped to the row: "Disproved" is also the group heading now.
       const row = within(screen.getByRole('button', { name: /Expand Treasure map/ }));
       expect(row.getByText('Disproved')).toBeInTheDocument();
@@ -862,8 +871,7 @@ describe('RumorDirectory', () => {
       // disproved on `valence-3` -- the red a failed quest wears -- while the
       // comment above it claimed otherwise.
       render(<RumorDirectory rumors={[rc, r3]} />);
-      revealGroup('Confirmed');
-      revealGroup('Disproved');
+      revealDisproved();
 
       // Scoped to the rows: both words are also group headings now.
       const confirmed = within(
@@ -1009,7 +1017,6 @@ describe('RumorDirectory', () => {
 
     test('states status as a word and nothing else', () => {
       render(<RumorDirectory rumors={[rc]} />);
-      revealGroup('Confirmed');
       const row = screen.getByRole('button', { name: /Expand Dragon spotted/ });
       expect(within(row).getByText('Confirmed')).toBeInTheDocument();
       expect(row.querySelectorAll('.bg-status-completed')).toHaveLength(0);

@@ -66,8 +66,16 @@ const STATUS_GROUPS: { key: RumorStatus; title: string }[] = [
   { key: 'false', title: 'Disproved' },
 ];
 
-/** Settled knowledge, kept out of the way. See `RosterGroup.collapsible`. */
-const RESOLVED: RumorStatus[] = ['confirmed', 'false'];
+/**
+ * The one group that starts folded. See `RosterGroup.collapsible`.
+ *
+ * Confirmed was here too, by analogy with a finished quest, and the analogy
+ * does not hold: a confirmed rumour is the thing the party *acts on*, and
+ * folding it away hid the best-earned half of the list. Disproved is the only
+ * one that is genuinely done with -- it is still knowledge, still counted and
+ * one click away, but nobody is going back to it.
+ */
+const COLLAPSED_BY_DEFAULT: RumorStatus[] = ['false'];
 
 const SOURCE_FILTERS: RosterFilterOption[] = [
   { value: 'all', label: 'All' },
@@ -402,12 +410,8 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
             key={group.key}
             title={group.title}
             count={group.rumors.length}
-            // Confirmed and disproved are both settled knowledge -- the party
-            // went and found out. They stay reachable and stay counted; they
-            // stop taking the top of the list, exactly as `15-3` did for a
-            // quest that is finished.
-            collapsible={RESOLVED.includes(group.key)}
-            defaultCollapsed={RESOLVED.includes(group.key)}
+            collapsible={COLLAPSED_BY_DEFAULT.includes(group.key)}
+            defaultCollapsed={COLLAPSED_BY_DEFAULT.includes(group.key)}
           >
             {group.rumors.map((rumor, index) => {
               const isExpanded = expandedRumorId === rumor.id;
