@@ -303,8 +303,28 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     
     // Prepare initial data for the create form based on entity type
     let initialData: any = {};
-    let description = `Created from note: ${note.title || note.id}`; // Declare once
-    
+    const provenance = `Created from note: ${note.title || note.id}`;
+    let description = provenance; // Declare once
+
+    /**
+     * The note's own sentence about this entity, kept rather than dropped.
+     *
+     * `context` is the line the extractor read the entity out of, and it used
+     * to survive only when the model returned no `description` -- the moment
+     * it wrote one, the sentence the fact actually came from was discarded,
+     * along with the note it came from. That is the opposite of the useful
+     * case: a described entity is exactly the one worth being able to trace.
+     *
+     * Both are kept now, with the model's description first because it is the
+     * summary, and the quoted sentence under it because it is the evidence.
+     */
+    const withContext = (modelDescription?: string): string => {
+      const body = modelDescription?.trim() || provenance;
+      const context = extraData.context?.trim();
+      if (!context || body.includes(context)) return body;
+      return `${body}\n\nContext: ${context}`;
+    };
+
     switch (type) {
       case "npc":
         initialData = {
@@ -315,22 +335,20 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
           occupation: extraData.occupation || undefined,
           location: extraData.location || undefined,
           relationship: extraData.relationship || undefined,
-          description: extraData.description || 
-            (extraData.context ? `${description}\n\nContext: ${extraData.context}` : description),
+          description: withContext(extraData.description),
         };
         break;
-        
+
       case "location":
         initialData = {
           // Use proper name field, fall back to text if not available
           name: extraData.name || entity.text,
           type: extraData.locationType || undefined,
-          description: extraData.description || 
-            (extraData.context ? `${description}\n\nContext: ${extraData.context}` : description),
+          description: withContext(extraData.description),
           parentId: extraData.parentLocation || undefined,
         };
         break;
-        
+
       case "quest":
         // Get raw objectives from entity data 
         const objectives = extraData.objectives || [];

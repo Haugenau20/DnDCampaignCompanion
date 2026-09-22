@@ -521,6 +521,111 @@ describe('NoteContext Behavioral Tests', () => {
       }
     };
 
+    /**
+     * Boilerplate for the cases below: create a note, put one entity on it,
+     * convert it, and hand back the `initialData` the create route was given.
+     */
+    const convertAndCapture = async (
+      entity: ExtractedEntity,
+      type: EntityType
+    ): Promise<Record<string, unknown>> => {
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => expect(capturedContext.isLoading).toBe(false));
+
+      await act(async () => {
+        await capturedContext.createNote('Session 12', 'Test content');
+      });
+      await act(async () => {
+        await capturedContext.updateNote('note-1', { extractedEntities: [entity] });
+      });
+      await act(async () => {
+        await capturedContext.convertEntity('note-1', 'entity-1', type);
+      });
+
+      const call = mockNavigate.mock.calls[mockNavigate.mock.calls.length - 1];
+      return call[1].state.initialData as Record<string, unknown>;
+    };
+
+    describe('the note sentence the entity was read out of', () => {
+      /*
+        `context` used to survive only when the model returned no
+        `description`. The moment it wrote one -- which is the common case, and
+        the case where provenance matters most -- the sentence the fact came
+        from was dropped, and so was the note it came from. `context` is not a
+        key of `initialData`, so the quick-add carry never saw it either.
+      */
+      test('is kept even when the model also wrote a description', async () => {
+        const initialData = await convertAndCapture({
+          ...mockEntity,
+          extraData: {
+            name: 'Galadriel',
+            description: 'Lady of Lothlorien.',
+            context: 'Galadriel gave each of us a parting gift.',
+          },
+        }, 'npc' as EntityType);
+
+        expect(initialData.description).toContain('Lady of Lothlorien.');
+        expect(initialData.description)
+          .toContain('Galadriel gave each of us a parting gift.');
+      });
+
+      test('leads with the description and puts the sentence under it', async () => {
+        const initialData = await convertAndCapture({
+          ...mockEntity,
+          extraData: {
+            name: 'Galadriel',
+            description: 'Lady of Lothlorien.',
+            context: 'Galadriel gave each of us a parting gift.',
+          },
+        }, 'npc' as EntityType);
+
+        const text = initialData.description as string;
+        expect(text.indexOf('Lady of Lothlorien.'))
+          .toBeLessThan(text.indexOf('Galadriel gave each of us'));
+      });
+
+      test('falls back to the note provenance when the model wrote no description', async () => {
+        const initialData = await convertAndCapture({
+          ...mockEntity,
+          extraData: { name: 'Galadriel', context: 'She gave us gifts.' },
+        }, 'npc' as EntityType);
+
+        expect(initialData.description).toContain('Created from note: Session 12');
+        expect(initialData.description).toContain('She gave us gifts.');
+      });
+
+      test('is not repeated when the description already contains it', async () => {
+        const sentence = 'Galadriel gave each of us a parting gift.';
+        const initialData = await convertAndCapture({
+          ...mockEntity,
+          extraData: { name: 'Galadriel', description: sentence, context: sentence },
+        }, 'npc' as EntityType);
+
+        const text = initialData.description as string;
+        expect(text.split(sentence)).toHaveLength(2); // i.e. it appears once
+      });
+
+      test('is kept for a converted location too', async () => {
+        const initialData = await convertAndCapture({
+          ...mockEntity,
+          type: 'location' as EntityType,
+          extraData: {
+            name: 'Lothlorien',
+            description: 'A golden wood.',
+            context: 'We rested in Lothlorien for a month.',
+          },
+        }, 'location' as EntityType);
+
+        expect(initialData.description).toContain('A golden wood.');
+        expect(initialData.description).toContain('We rested in Lothlorien for a month.');
+      });
+    });
+
     test('should navigate to NPC creation with entity data', async () => {
       let capturedContext: any;
       render(
