@@ -7,6 +7,7 @@ import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useFirestore } from 'features/user-management';
 import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
 import { generateUniqueEntityId } from 'core/utils/entity-id';
+import { rumorParagraph } from '../utils/rumor-title';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 
@@ -195,7 +196,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Create the combined rumor content if not provided
     const combinedContent = newRumorData.content || 
       rumorsToMerge.map(rumor => 
-        `${rumor.title} (from ${rumor.sourceName}): ${rumor.content}`
+        rumorParagraph(rumor, { attributed: true })
       ).join('\n\n');
   
     // Gather all related NPCs and locations

@@ -28,6 +28,7 @@ import AttachTray from 'shared/components/attach-tray/AttachTray';
 import type { AttachKind } from 'shared/components/attach-tray/attachCandidates';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { Pencil, X } from 'lucide-react';
+import { rumorTitleText } from 'features/campaign-entities';
 
 /** Sentence-cases one of the short enum values the type stores lowercase. */
 /**
@@ -426,7 +427,7 @@ const NPCDetailPage: React.FC = () => {
         out.push({
           key: `rumor-${rumor.id}`,
           id: rumor.id,
-          name: rumor.title,
+          name: rumorTitleText(rumor),
           kind: 'rumors',
           detail: capitalise(rumor.status),
           href: `/rumors?highlight=${rumor.id}`,

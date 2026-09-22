@@ -81,5 +81,12 @@ export { default as RumorDirectory } from './rumors/components/RumorDirectory';
 export { default as RumorBatchActions } from './rumors/components/RumorBatchActions';
 export { default as CombineRumorsDialog } from './rumors/components/CombineRumorsDialog';
 export { default as ConvertToQuestDialog } from './rumors/components/ConvertToQuestDialog';
+/*
+  How a rumour is named, for the surfaces outside this domain that list one.
+  A rumour's title is optional now -- the composer records what was heard and
+  the name is derived from it -- so every consumer that prints `rumor.title`
+  directly would print a blank for anything created since.
+*/
+export { rumorDisplayTitle, rumorTitleText, UNTITLED_RUMOR } from './rumors/utils/rumor-title';
 // Rumor types
 export type { Rumor, RumorStatus, SourceType, RumorNote, RumorContextState, RumorContextValue } from './rumors/types';

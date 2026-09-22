@@ -59,6 +59,11 @@ jest.mock("features/storytelling", () => ({
 }));
 
 jest.mock("features/campaign-entities", () => ({
+  // The real helper, not a stub: these surfaces must name a rumour the
+  // same way its own list does, now that a title is optional (`15-9`).
+  rumorTitleText: jest.requireActual(
+    "features/campaign-entities/rumors/utils/rumor-title"
+  ).rumorTitleText,
   useNPCs: () => ({
     npcs: mockNpcs,
     isLoading: mockIsLoading,

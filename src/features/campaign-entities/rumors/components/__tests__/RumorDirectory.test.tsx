@@ -63,9 +63,10 @@ jest.mock('../../../npcs/context/NPCContext', () => ({
   })),
 }));
 
-// `locations` feeds the group-heading resolution added for #1412. These tests
-// set `rumor.location` to display names and supply no location records, which
-// resolveLocationName passes through verbatim.
+// `locations` feeds the attach tray. It no longer feeds a group heading:
+// `15-9` replaced location grouping with grouping by status, because a rumour
+// can point at several places and being filed under exactly one of them gave
+// confident false negatives.
 jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(() => ({
     locations: [{ id: 'high-pass', name: 'The High Pass', type: 'landmark', status: 'known' }],
@@ -141,9 +142,31 @@ function makeRumor(overrides: Partial<Rumor> = {}): Rumor {
   };
 }
 
-const r1 = makeRumor({ id: 'r1', title: 'Dragon spotted', status: 'confirmed', sourceType: 'npc', sourceName: 'Aldric', location: 'Silverkeep' });
+/**
+ * The generic rumour these tests reach for when the subject is the row rather
+ * than its status.
+ *
+ * **Unconfirmed on purpose since `15-9`.** It used to be `confirmed`, which
+ * stopped being a neutral choice the moment the list started grouping by
+ * status: Confirmed and Disproved are settled knowledge and open collapsed,
+ * so a confirmed fixture put every generic row behind a disclosure that the
+ * test had not asked about. Unconfirmed is also what a rumour actually is
+ * when it is written down.
+ */
+const r1 = makeRumor({ id: 'r1', title: 'Dragon spotted', status: 'unconfirmed', sourceType: 'npc', sourceName: 'Aldric', location: 'Silverkeep' });
 const r2 = makeRumor({ id: 'r2', title: 'Missing merchant', status: 'unconfirmed', sourceType: 'tavern', sourceName: 'The Flagon', location: 'Ironhold' });
 const r3 = makeRumor({ id: 'r3', title: 'Treasure map', status: 'false', sourceType: 'notice', sourceName: 'Town board', location: 'Silverkeep' });
+/** For the tests that are actually about a confirmed rumour. */
+const rc = makeRumor({ id: 'rc', title: 'Dragon spotted', status: 'confirmed', sourceType: 'npc', sourceName: 'Aldric', location: 'Silverkeep' });
+
+/**
+ * Open a settled group.
+ *
+ * Confirmed and Disproved start collapsed (`15-9`), so a test about a row in
+ * one of them says so out loud rather than relying on it being on screen.
+ */
+const revealGroup = (title: 'Confirmed' | 'Disproved') =>
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${title}`) }));
 
 /** The roster's search box. */
 const searchInput = () => screen.getByPlaceholderText(/search rumors/i);
@@ -191,7 +214,7 @@ describe('RumorDirectory', () => {
         screen.queryByRole('button', { name: /add the first rumour/i })
       ).not.toBeInTheDocument();
       expect(
-        screen.getByLabelText('Heard something? Title it here')
+        screen.getByLabelText('Heard something? Write it down here')
       ).toBeInTheDocument();
     });
   });
@@ -213,26 +236,60 @@ describe('RumorDirectory', () => {
       expect(screen.getByText('Treasure map')).toBeInTheDocument();
     });
 
-    test('should group rumors by location', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
-      expect(screen.getByRole('heading', { name: 'Silverkeep' })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: 'Ironhold' })).toBeInTheDocument();
+    /**
+     * CHANGED DELIBERATELY in `15-9`. This list grouped by location, and the
+     * data could not support it: a rumour carries `locationId` (where it was
+     * heard) *and* `relatedLocations` (what it is about), so one touching
+     * three places was filed under exactly one of them and a reader scanning
+     * a place got confident false negatives. Status has exactly three members
+     * and nothing lands anywhere it does not belong.
+     */
+    test('groups by status, in a fixed order, and never by location', () => {
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
+
+      expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Confirmed' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Disproved' })).toBeInTheDocument();
+
+      // The place names the fixtures carry are not headings any more.
+      expect(screen.queryByRole('heading', { name: 'Silverkeep' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Ironhold' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Location unknown')).not.toBeInTheDocument();
     });
 
-    test('should group rumors with no location under "Location unknown"', () => {
+    test('a rumour with no location is grouped like any other', () => {
       const unlocated = makeRumor({ id: 'r-nowhere', title: 'Odd noises', location: undefined });
       render(<RumorDirectory rumors={[unlocated]} />);
-      expect(screen.getByText('Location unknown')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
+      expect(screen.getByText('Odd noises')).toBeInTheDocument();
     });
 
-    test('renders the group name as a heading, not a control', () => {
-      render(<RumorDirectory rumors={[r1]} />);
-      expect(screen.getByRole('heading', { name: 'Silverkeep' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Silverkeep' })).not.toBeInTheDocument();
+    test('skips a status nothing is in', () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Confirmed' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Disproved' })).not.toBeInTheDocument();
+    });
+
+    /**
+     * Settled knowledge stays reachable and stays counted; it stops taking the
+     * top of the list, exactly as `15-3` did for a quest that is finished.
+     */
+    test('confirmed and disproved open collapsed; unconfirmed does not', () => {
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
+
+      expect(screen.getByRole('button', { name: /^Confirmed/ })).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByRole('button', { name: /^Disproved/ })).toHaveAttribute('aria-expanded', 'false');
+      // The open group is a plain heading, with no disclosure at all.
+      expect(screen.queryByRole('button', { name: /^Unconfirmed/ })).not.toBeInTheDocument();
+
+      revealGroup('Confirmed');
+      expect(screen.getByRole('button', { name: /^Confirmed/ })).toHaveAttribute('aria-expanded', 'true');
     });
 
     test('shows each row as one dense row carrying status and source', () => {
-      render(<RumorDirectory rumors={[r1]} />);
+      render(<RumorDirectory rumors={[rc]} />);
+      revealGroup('Confirmed');
       // Scoped to the row, since "Confirmed" also labels a status-bar segment.
       const row = within(screen.getByRole('button', { name: /Expand Dragon spotted/ }));
       expect(row.getByText('Dragon spotted')).toBeInTheDocument();
@@ -283,7 +340,7 @@ describe('RumorDirectory', () => {
         screen.getByRole('button', { name: /Collapse Dragon spotted/ })
       ).toHaveAttribute('aria-expanded', 'true');
       expect(screen.getByLabelText('What was heard')).toBeInTheDocument();
-      expect(screen.getByLabelText('Rumour')).toBeInTheDocument();
+      expect(screen.getByLabelText('Call it')).toBeInTheDocument();
       expect(screen.getByRole('group', { name: 'Heard from' })).toBeInTheDocument();
       expect(screen.getByRole('group', { name: /Status of Dragon spotted/ })).toBeInTheDocument();
       expect(screen.getByText('Recorded by')).toBeInTheDocument();
@@ -319,7 +376,10 @@ describe('RumorDirectory', () => {
         id: 'bare',
         title: 'Bare rumor',
         content: '',
-        sourceType: 'other',
+        // CHANGED DELIBERATELY in `15-9`: this was `'other'`, which now means
+        // "heard from none of the other four" -- a real answer somebody
+        // chose. "Nobody has said" is the field being absent.
+        sourceType: undefined,
         sourceName: '',
         notes: [],
         relatedNPCs: [],
@@ -419,13 +479,13 @@ describe('RumorDirectory', () => {
   // -------------------------------------------------------------------------
   describe('status bar', () => {
     test('shows the total rumors gathered', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       expect(screen.getByText('3')).toBeInTheDocument();
       expect(screen.getByText('rumors gathered')).toBeInTheDocument();
     });
 
     test('breaks the total down by status, each labelled with a word', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       expect(screen.getByRole('button', { name: '1 confirmed' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '1 unconfirmed' })).toBeInTheDocument();
       // "Disproved", never "false" -- even in the bar (`15-7` item 6). It
@@ -440,28 +500,28 @@ describe('RumorDirectory', () => {
     });
 
     test('should filter by confirmed status', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       fireEvent.click(screen.getByRole('button', { name: '1 confirmed' }));
       expect(screen.getByText('Dragon spotted')).toBeInTheDocument();
       expect(screen.queryByText('Missing merchant')).not.toBeInTheDocument();
     });
 
     test('should filter by unconfirmed status', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       fireEvent.click(screen.getByRole('button', { name: '1 unconfirmed' }));
       expect(screen.getByText('Missing merchant')).toBeInTheDocument();
       expect(screen.queryByText('Dragon spotted')).not.toBeInTheDocument();
     });
 
     test('should filter by disproved status', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       fireEvent.click(screen.getByRole('button', { name: '1 disproved' }));
       expect(screen.getByText('Treasure map')).toBeInTheDocument();
       expect(screen.queryByText('Dragon spotted')).not.toBeInTheDocument();
     });
 
     test('clicking the active band clears the filter', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       const confirmedBand = () => screen.getByRole('button', { name: '1 confirmed' });
 
       fireEvent.click(confirmedBand());
@@ -565,25 +625,33 @@ describe('RumorDirectory', () => {
   describe('the composer row', () => {
     test('sits at the top of the list, always, with no dialog and no route', async () => {
       render(<RumorDirectory rumors={[r1]} />);
-      const field = screen.getByLabelText('Heard something? Title it here');
+      const field = screen.getByLabelText('Heard something? Write it down here');
       fireEvent.change(field, { target: { value: 'Orcs massing in the High Pass' } });
       fireEvent.click(screen.getByRole('button', { name: 'Add rumour' }));
 
+      // CHANGED DELIBERATELY in `15-9`. What the composer captures is the
+      // **content** -- a title long enough to say something never fitted the
+      // row that had to render it, so the field that was always going to hold
+      // a sentence now holds one, and the name is derived until somebody
+      // shortens it on purpose. `sourceType` is absent rather than `'other'`:
+      // nobody has been asked yet.
       await waitFor(() =>
         expect(mockAddRumor).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: 'Orcs massing in the High Pass',
+            title: '',
+            content: 'Orcs massing in the High Pass',
             status: 'unconfirmed',
           })
         )
       );
+      expect(mockAddRumor.mock.calls[0][0]).not.toHaveProperty('sourceType');
       expect(mockNavigateToPage).not.toHaveBeenCalled();
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     test('adds on Enter, because a rumour is written down mid-sentence', async () => {
       render(<RumorDirectory rumors={[r1]} />);
-      const field = screen.getByLabelText('Heard something? Title it here');
+      const field = screen.getByLabelText('Heard something? Write it down here');
       fireEvent.change(field, { target: { value: 'A wizard is coming' } });
       fireEvent.keyDown(field, { key: 'Enter' });
 
@@ -601,16 +669,16 @@ describe('RumorDirectory', () => {
       // button receives no pointer events and never shows its own...
       expect(add.parentElement).toHaveAttribute(
         'title',
-        'Give it a title first — then this adds it.'
+        'Write it down first — then this adds it.'
       );
       // ...and the same sentence bound to the button, for anyone not hovering.
       const hint = document.getElementById(add.getAttribute('aria-describedby')!);
-      expect(hint).toHaveTextContent('Give it a title first — then this adds it.');
+      expect(hint).toHaveTextContent('Write it down first — then this adds it.');
     });
 
     test('stops explaining itself once there is something to add', () => {
       render(<RumorDirectory rumors={[r1]} />);
-      fireEvent.change(screen.getByLabelText('Heard something? Title it here'), {
+      fireEvent.change(screen.getByLabelText('Heard something? Write it down here'), {
         target: { value: 'Orcs massing' },
       });
 
@@ -623,7 +691,7 @@ describe('RumorDirectory', () => {
     test('keeps the typed title when the write is refused, and says why', async () => {
       mockAddRumor.mockRejectedValueOnce(new Error('Permission denied'));
       render(<RumorDirectory rumors={[r1]} />);
-      const field = screen.getByLabelText('Heard something? Title it here');
+      const field = screen.getByLabelText('Heard something? Write it down here');
       fireEvent.change(field, { target: { value: 'Orcs massing' } });
       fireEvent.click(screen.getByRole('button', { name: 'Add rumour' }));
 
@@ -637,7 +705,7 @@ describe('RumorDirectory', () => {
       render(<RumorDirectory rumors={[r1]} />);
       fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
       expect(
-        screen.queryByLabelText('Heard something? Title it here')
+        screen.queryByLabelText('Heard something? Write it down here')
       ).not.toBeInTheDocument();
     });
   });
@@ -671,7 +739,8 @@ describe('RumorDirectory', () => {
       // Item 8, and the gate. The list re-renders underneath the editor, and
       // a row that stops matching unmounts with whatever was in it. The draft
       // lives in the directory for exactly this.
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
+      revealGroup('Confirmed');
       openRow('Dragon spotted');
       fireEvent.change(screen.getByLabelText('What was heard'), {
         target: { value: 'Half a sentence, mid-' },
@@ -683,6 +752,7 @@ describe('RumorDirectory', () => {
 
       // ...and back.
       fireEvent.click(screen.getByRole('button', { name: '1 unconfirmed' }));
+      revealGroup('Confirmed');
       expect(screen.getByLabelText('What was heard')).toHaveValue('Half a sentence, mid-');
     });
 
@@ -732,7 +802,7 @@ describe('RumorDirectory', () => {
       openRow('Dragon spotted');
       expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
 
-      fireEvent.change(screen.getByLabelText('Rumour'), {
+      fireEvent.change(screen.getByLabelText('Call it'), {
         target: { value: 'Dragon spotted twice' },
       });
       expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
@@ -779,7 +849,10 @@ describe('RumorDirectory', () => {
   describe('what disproved looks like', () => {
     test('reads "Disproved" and never "False" in the row', () => {
       render(<RumorDirectory rumors={[r3]} />);
-      expect(screen.getByText('Disproved')).toBeInTheDocument();
+      revealGroup('Disproved');
+      // Scoped to the row: "Disproved" is also the group heading now.
+      const row = within(screen.getByRole('button', { name: /Expand Treasure map/ }));
+      expect(row.getByText('Disproved')).toBeInTheDocument();
       expect(screen.queryByText('False')).not.toBeInTheDocument();
     });
 
@@ -788,10 +861,17 @@ describe('RumorDirectory', () => {
       // separates them is the cue, not the hue. Until `15-7` the code put
       // disproved on `valence-3` -- the red a failed quest wears -- while the
       // comment above it claimed otherwise.
-      render(<RumorDirectory rumors={[r1, r3]} />);
+      render(<RumorDirectory rumors={[rc, r3]} />);
+      revealGroup('Confirmed');
+      revealGroup('Disproved');
 
-      const confirmed = screen.getByText('Confirmed');
-      const disproved = screen.getByText('Disproved');
+      // Scoped to the rows: both words are also group headings now.
+      const confirmed = within(
+        screen.getByRole('button', { name: /Expand Dragon spotted/ })
+      ).getByText('Confirmed');
+      const disproved = within(
+        screen.getByRole('button', { name: /Expand Treasure map/ })
+      ).getByText('Disproved');
       const rung = (node: HTMLElement) =>
         (node.closest('[class*="valence-"]') ?? node).className.match(/valence-\d/)?.[0];
 
@@ -928,7 +1008,8 @@ describe('RumorDirectory', () => {
     });
 
     test('states status as a word and nothing else', () => {
-      render(<RumorDirectory rumors={[r1]} />);
+      render(<RumorDirectory rumors={[rc]} />);
+      revealGroup('Confirmed');
       const row = screen.getByRole('button', { name: /Expand Dragon spotted/ });
       expect(within(row).getByText('Confirmed')).toBeInTheDocument();
       expect(row.querySelectorAll('.bg-status-completed')).toHaveLength(0);
@@ -951,6 +1032,204 @@ describe('RumorDirectory', () => {
     });
   });
 
+
+  // -------------------------------------------------------------------------
+  // What a rumour is called (`15-9`)
+  // -------------------------------------------------------------------------
+  describe('naming an untitled rumour', () => {
+    const openRow = (name: string) =>
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Expand ${name}`) }));
+
+    test('names the row from what was heard when no title was typed', () => {
+      const heard = makeRumor({
+        id: 'heard',
+        title: '',
+        content: 'Traders say the goblin road is busy.',
+      });
+      render(<RumorDirectory rumors={[heard]} />);
+
+      expect(
+        screen.getByText('Traders say the goblin road is busy.')
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Untitled rumour')).not.toBeInTheDocument();
+    });
+
+    test('caps a long first line so the row can actually render it', () => {
+      // The complaint this whole change answers: a title worth typing is a
+      // sentence, and a sentence never fitted the row that had to show it.
+      const long = makeRumor({
+        id: 'long',
+        title: '',
+        content:
+          'Traders coming down from Rivendell say the goblin road is busy again after dark',
+      });
+      render(<RumorDirectory rumors={[long]} />);
+
+      expect(
+        screen.getByText('Traders coming down from Rivendell say the goblin')
+      ).toBeInTheDocument();
+    });
+
+    test('an explicit title still wins over the content', () => {
+      const named = makeRumor({
+        id: 'named',
+        title: 'The goblin road',
+        content: 'Traders say it is busy again after dark.',
+      });
+      render(<RumorDirectory rumors={[named]} />);
+
+      expect(screen.getByText('The goblin road')).toBeInTheDocument();
+      expect(
+        screen.queryByText('Traders say it is busy again after dark.')
+      ).not.toBeInTheDocument();
+    });
+
+    test('a rumour with neither reads as untitled, and muted rather than named', () => {
+      const empty = makeRumor({ id: 'empty', title: '', content: '' });
+      render(<RumorDirectory rumors={[empty]} />);
+
+      const label = screen.getByText('Untitled rumour');
+      expect(label).toBeInTheDocument();
+      // Muted, so it reads as unfinished rather than as a record somebody
+      // decided to call "Untitled rumour".
+      expect(label.className).toMatch(/muted|typography-secondary/);
+    });
+
+    test('the title field previews what the row will show if left blank', () => {
+      const heard = makeRumor({
+        id: 'heard2',
+        title: '',
+        content: 'Traders say the goblin road is busy.',
+      });
+      render(<RumorDirectory rumors={[heard]} />);
+      openRow('Traders say the goblin road is busy.');
+
+      expect(screen.getByLabelText('Call it')).toHaveAttribute(
+        'placeholder',
+        'Traders say the goblin road is busy.'
+      );
+    });
+
+    test('saves without a title, but not with nothing at all', async () => {
+      // CHANGED DELIBERATELY in `15-9`: this used to read "A rumour needs a
+      // title." A title is optional now -- the list names an untitled rumour
+      // from its content -- so the only unsaveable state left is one that
+      // says nothing at all, which no row could be rendered from.
+      const written = makeRumor({ id: 'w', title: 'Old news', content: 'Somebody said so' });
+      render(<RumorDirectory rumors={[written]} />);
+      openRow('Old news');
+
+      fireEvent.change(screen.getByLabelText('Call it'), { target: { value: '' } });
+      fireEvent.change(screen.getByLabelText('What was heard'), { target: { value: '' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() =>
+        expect(screen.getByRole('alert')).toHaveTextContent(
+          'A rumour needs something written down.'
+        )
+      );
+      expect(mockUpdateRumor).not.toHaveBeenCalled();
+
+      // Content but no title is a perfectly good rumour.
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Somebody said something' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() =>
+        expect(mockUpdateRumor).toHaveBeenCalledWith(
+          expect.objectContaining({ title: '', content: 'Somebody said something' })
+        )
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Where a rumour came from (`15-9`)
+  // -------------------------------------------------------------------------
+  describe('an unchosen source', () => {
+    const unsourced = () =>
+      makeRumor({ id: 'nosrc', title: 'Odd noises', sourceType: undefined, sourceName: '' });
+
+    const heardFrom = () => within(screen.getByRole('group', { name: 'Heard from' }));
+
+    test('reads as a dash on the row, not as "Other"', () => {
+      // The bug this answers: the row printed "Other" for a rumour whose
+      // source had never been discussed, while the editor below showed nothing
+      // selected. The two said different things about one record.
+      render(<RumorDirectory rumors={[unsourced()]} />);
+      const row = within(screen.getByRole('button', { name: /Expand Odd noises/ }));
+
+      expect(row.queryByText('Other')).not.toBeInTheDocument();
+      expect(row.getAllByText('—').length).toBeGreaterThan(0);
+    });
+
+    test('offers "Something else" as a real choice, pressed like any other', () => {
+      render(<RumorDirectory rumors={[unsourced()]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Odd noises/ }));
+
+      expect(heardFrom().getByRole('button', { name: 'Something else' })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
+
+      fireEvent.click(heardFrom().getByRole('button', { name: 'Something else' }));
+      expect(heardFrom().getByRole('button', { name: 'Something else' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      // And it asks who, exactly, like any other chosen kind.
+      expect(screen.getByLabelText('Who exactly')).toBeInTheDocument();
+    });
+
+    test('pressing the chosen kind again clears it', () => {
+      // Every one of the five is a real answer now, so there has to be a way
+      // back to "nobody has said" after a mis-tap.
+      render(<RumorDirectory rumors={[unsourced()]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Odd noises/ }));
+
+      fireEvent.click(heardFrom().getByRole('button', { name: 'A tavern' }));
+      expect(heardFrom().getByRole('button', { name: 'A tavern' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+
+      fireEvent.click(heardFrom().getByRole('button', { name: 'A tavern' }));
+      expect(heardFrom().getByRole('button', { name: 'A tavern' })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
+    });
+
+    test('writes null rather than undefined, which Firestore refuses', async () => {
+      const sourced = makeRumor({
+        id: 'srcd',
+        title: 'Odd noises',
+        sourceType: 'tavern',
+        sourceName: '',
+      });
+      render(<RumorDirectory rumors={[sourced]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Odd noises/ }));
+
+      // Un-press the chosen kind, then save the cleared value.
+      fireEvent.click(heardFrom().getByRole('button', { name: 'A tavern' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() =>
+        expect(mockUpdateRumor).toHaveBeenCalledWith(
+          expect.objectContaining({ sourceType: null })
+        )
+      );
+    });
+
+    test('a record that already says "other" keeps saying so', () => {
+      // No migration: rumours written under the retired create form all carry
+      // `'other'` and cannot be told apart from a deliberate choice. They read
+      // exactly as they did before.
+      const legacy = makeRumor({ id: 'legacy', title: 'Old news', sourceType: 'other' });
+      render(<RumorDirectory rumors={[legacy]} />);
+      const row = within(screen.getByRole('button', { name: /Expand Old news/ }));
+      expect(row.getByText('Other')).toBeInTheDocument();
+    });
+  });
 });
 
 

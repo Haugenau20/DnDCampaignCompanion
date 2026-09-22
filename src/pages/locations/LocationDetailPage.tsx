@@ -33,6 +33,7 @@ import { useNavigation } from 'shared/context/NavigationContext';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
 import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
 import { InlineEditor } from 'shared/components/inline-edit';
+import { rumorTitleText } from 'features/campaign-entities';
 
 /** The eight kinds a place can be, as the select offers them. */
 const TYPE_OPTIONS: LocationType[] = [
@@ -202,7 +203,7 @@ const LocationDetailPage: React.FC = () => {
         out.push({
           key: `rumor-${rumor.id}`,
           id: rumor.id,
-          name: rumor.title,
+          name: rumorTitleText(rumor),
           // "Disproved", never "False" (§10): it describes what the party did.
           detail: `rumour, ${rumor.status === 'false' ? 'disproved' : rumor.status}`,
           href: `/rumors?highlight=${rumor.id}`,

@@ -1,21 +1,17 @@
 // src/features/collaboration/notes/utils/note-title.ts
 
 import { Note } from "../types";
+import { deriveTitle } from "shared/utils/derived-title";
 
 /**
- * Maximum length of a title derived from a note's content.
+ * Re-exported, not redefined.
  *
- * Sized to roughly one line of the editor's 30px display face, NOT to prose.
- * This was 80 initially, which is a comfortable prose measure but far wider
- * than that heading renders: a first line of ordinary length was clipped
- * mid-word ("...at the Stonehill Inn in P") with nothing to signal it.
- *
- * The cap is not the whole answer -- an explicit title the user types is not
- * capped at all -- so the editor and index rows also truncate with an ellipsis
- * in CSS. That ellipsis is presentational; it never enters the stored value,
- * because a stored "..." would be indistinguishable from one the user typed.
+ * The algorithm moved to `shared/utils/derived-title` when the rumour row
+ * needed the same one. These two names stay exported from here because the
+ * collaboration barrel publishes them and note-facing callers read better
+ * against a note-shaped module; the single implementation lives in `shared/`.
  */
-export const MAX_DERIVED_TITLE_LENGTH = 52;
+export { deriveTitle, MAX_DERIVED_TITLE_LENGTH } from "shared/utils/derived-title";
 
 /**
  * The literal title every note got on creation before this redesign
@@ -29,37 +25,6 @@ export const MAX_DERIVED_TITLE_LENGTH = 52;
  * treated as "no title was ever set".
  */
 export const LEGACY_DEFAULT_TITLE = "New Note";
-
-/**
- * The title a note takes from its own content: its first non-empty line,
- * trimmed and capped at {@link MAX_DERIVED_TITLE_LENGTH} characters.
- *
- * The cap lands on a word boundary and adds **no ellipsis** — this value is
- * stored on the note, and a stored ellipsis would be indistinguishable from
- * one the user typed. Visual truncation is the index's job (`line-clamp-2`).
- *
- * @param content Raw note body
- * @returns The derived title, or "" when the content has no non-empty line
- */
-export function deriveTitle(content: string): string {
-  const firstLine = (content ?? "")
-    .split("\n")
-    .map(line => line.trim())
-    .find(line => line.length > 0);
-
-  if (!firstLine) return "";
-  if (firstLine.length <= MAX_DERIVED_TITLE_LENGTH) return firstLine;
-
-  // One character past the cap, so a space sitting exactly on the boundary
-  // still counts as a boundary rather than forcing a cut one word earlier.
-  const window = firstLine.slice(0, MAX_DERIVED_TITLE_LENGTH + 1);
-  const lastSpace = window.lastIndexOf(" ");
-
-  // A single token longer than the cap has no boundary to cut on.
-  if (lastSpace <= 0) return firstLine.slice(0, MAX_DERIVED_TITLE_LENGTH);
-
-  return window.slice(0, lastSpace).trimEnd();
-}
 
 /**
  * The title to display for a note.

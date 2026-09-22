@@ -61,30 +61,34 @@ export const RUMOR_STATUS_FILL: Record<RumorStatus, string> = {
 };
 
 /**
- * Where a rumour came from, as four buttons rather than a dropdown (item 4).
+ * Where a rumour came from, as five buttons rather than a dropdown (item 4).
  *
- * Four short options do not need a select. The wording is the question's:
+ * Five short options do not need a select. The wording is the question's:
  * "heard from **an NPC**", not "source type: npc".
+ *
+ * **`other` is one of them now.** It used to be excluded on the grounds that
+ * it was the create form's default for "nobody said" rather than an answer --
+ * true of the stored data, but it left a reader who genuinely heard something
+ * from none of the other four with nothing to press, while the collapsed row
+ * cheerfully printed "Other" at them anyway. The absence of an answer is now
+ * `sourceType` being absent; `other` means what it says.
  */
 export const SOURCE_OPTIONS: Array<{ value: SourceType; label: string }> = [
   { value: 'npc', label: 'An NPC' },
   { value: 'traveler', label: 'A traveller' },
   { value: 'tavern', label: 'A tavern' },
   { value: 'notice', label: 'A notice' },
+  { value: 'other', label: 'Something else' },
 ];
 
-/**
- * `other` is not offered, and is not a fifth kind: it is what the record holds
- * when nobody has said where the rumour came from.
- *
- * The create form defaulted every rumour to it, so it is all over the stored
- * data. The row treats it as "not chosen yet" -- which is why *Who exactly*
- * stays hidden until one of the four above is picked -- while still showing
- * the name on a legacy record that has one, because hiding written text would
- * be worse than showing it under an unchosen heading.
- */
-export const UNCHOSEN_SOURCE: SourceType = 'other';
+/** What the row prints where a source kind would go, when there is none. */
+export const NO_SOURCE = '—';
 
-/** Human-readable source kind, for the row's collapsed line and the filters. */
-export const formatSourceType = (type: SourceType): string =>
-  type === 'npc' ? 'NPC' : type.charAt(0).toUpperCase() + type.slice(1);
+/**
+ * Human-readable source kind, for the row's collapsed line and the filters.
+ *
+ * An absent kind is an em dash, not "Other": nobody has said where this came
+ * from, and saying "Other" would be answering on their behalf.
+ */
+export const formatSourceType = (type?: SourceType | null): string =>
+  !type ? NO_SOURCE : type === 'npc' ? 'NPC' : type.charAt(0).toUpperCase() + type.slice(1);

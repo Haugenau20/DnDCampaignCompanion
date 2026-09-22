@@ -287,7 +287,7 @@ const RumorForm: React.FC<RumorFormProps> = ({
 
               <Select
                 label="Source Type *"
-                value={formData.sourceType}
+                value={formData.sourceType ?? ''}
                 onChange={(e) => handleSourceTypeChange(e.target.value as SourceType)}
                 required
                 disabled={isSubmitting}

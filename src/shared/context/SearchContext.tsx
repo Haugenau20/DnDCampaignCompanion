@@ -13,6 +13,7 @@ import { Rumor } from 'features/campaign-entities';
 import { useRumorData } from 'features/campaign-entities';
 import { useNotes } from 'features/collaboration';
 import type { Note } from 'features/collaboration';
+import { rumorTitleText } from 'features/campaign-entities';
 
 interface SearchContextData {
   query: string;
@@ -94,9 +95,9 @@ const createRumorSearchDocuments = (rumors: Rumor[]): SearchDocument[] => {
   return rumors.map(rumor => ({
     id: rumor.id,
     type: 'rumors' as SearchResultType,
-    content: `${rumor.title} ${rumor.content} ${rumor.sourceName} ${rumor.notes.map(n => n.content).join(' ')}`,
+    content: `${rumorTitleText(rumor)} ${rumor.content} ${rumor.sourceName} ${rumor.notes.map(n => n.content).join(' ')}`,
     metadata: {
-      title: rumor.title,
+      title: rumorTitleText(rumor),
       status: rumor.status,
       source: rumor.sourceName
     }
