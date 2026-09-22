@@ -188,22 +188,45 @@ every loss below happens in `convertEntity` or in the schema it reads.
 - **Touches**: `NoteContext.convertEntity`, `entityMapper`, the function's JSON
   schema, the model and call shape in `entityExtraction.ts`, and whichever
   resolution step the name→id cases get.
-- **Catch**: the two name-in-an-id-field cases cannot be fixed inside
-  `convertEntity` — resolving "The Shire" to a location id needs the loaded
-  collection and a decision about what to do when the name matches nothing or
-  matches twice. Decide that before touching the mapping; the rest of the list
-  is field plumbing and can go first.
+- **Decided 2026-09-22 — resolve by exact name, otherwise leave the id empty.**
+  A single exact match against the loaded collection wins. **No match, or more
+  than one, writes an empty id** and keeps the name in the prose field it came
+  from, so the product never writes a dangling reference on purpose. A location
+  that does not resolve lands under "Unplaced", which is honest and is T049's
+  job to explain rather than this one's to hide. Explicitly **not** chosen:
+  creating a stub location for an unmatched name, which would let one
+  misspelling become a permanent duplicate place.
+  - This is the third name→id case too, which the list above missed: a
+    converted NPC gets `location: extraData.location` and a converted quest gets
+    `location: extraData.locationName`, both prose, both with `locationId` left
+    empty. `NPCDetailPage.tsx:525` states the contract — "`NPC.location`
+    describes; `locationId` is what resolves" — so these are not corrupt the way
+    `parentId` is, merely unlinked. One resolver serves all four sites.
+- **Catch**: the resolution step cannot live inside `convertEntity`, which has no
+  access to the loaded collections. The rest of the list is field plumbing and
+  can go first.
 - **The model is `gpt-3.5-turbo`, and it should not be.** Defaulted twice —
   `firebase/functions/src/entityExtraction.ts:370` and
-  `EntityExtractionService.ts:77`. It is the oldest and, at $0.50/$1.50 per 1M
-  tokens, **not** the cheapest option available; several newer models are better
-  at schema-constrained extraction *and* cost less on both axes. Folded in here
-  rather than filed separately because the loss this entry describes is partly a
-  model-quality problem and the fix touches the same call.
-  - **`temperature: 0` (`:581`) rules out the `gpt-5`/o-series** without a code
-    change: reasoning models on chat completions reject a non-default
-    temperature. Any swap into that family means giving up determinism, which
-    for an extractor is a real cost, not a formality.
+  `EntityExtractionService.ts:77`. Folded in here rather than filed separately
+  because the loss this entry describes is partly a model-quality problem and
+  the fix touches the same call.
+  - **Decided 2026-09-22: `gpt-4.1-mini`**, at the maintainer's direction.
+  - **Its headline output rate is dearer and its real cost is not.** $1.60/1M
+    output against `gpt-3.5-turbo`'s $1.50 reads like a 7% rise, but this call
+    is overwhelmingly **input** — a ~1,500-token function schema and a system
+    prompt on every request, against a note capped at 10,000 characters — and
+    input drops from $0.50 to $0.40. A representative call works out cheaper
+    before caching and materially cheaper after it: the schema is a fixed
+    prefix well over OpenAI's 1,024-token minimum, so it caches at $0.10, and
+    `gpt-3.5-turbo` has no cached rate at all. **Do not re-litigate this from
+    the output column alone.**
+  - **`temperature: 0` (`:581`) ruled out the `gpt-5`/o-series**: reasoning
+    models on chat completions reject a non-default temperature, so a swap into
+    that family would have meant giving up determinism — a real cost for an
+    extractor, not a formality. `gpt-4.1-mini` is not a reasoning model, so the
+    call shape survives and the model swap stays independent of the `tools`
+    migration below. Keep them as separate commits: if extraction quality moves,
+    that is the only way to know which change moved it.
   - **The call still uses the deprecated `functions` / `function_call` pair**
     (`:578-580`), so it cannot ask for `strict: true`. Moving to
     `tools` / `tool_choice` with strict structured outputs is the thing that
