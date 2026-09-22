@@ -186,12 +186,47 @@ every loss below happens in `convertEntity` or in the schema it reads.
     restores the `details` format. Note #023 closed this function's *empty
     body*, not its field names.
 - **Touches**: `NoteContext.convertEntity`, `entityMapper`, the function's JSON
-  schema, and whichever resolution step the name→id cases get.
+  schema, the model and call shape in `entityExtraction.ts`, and whichever
+  resolution step the name→id cases get.
 - **Catch**: the two name-in-an-id-field cases cannot be fixed inside
   `convertEntity` — resolving "The Shire" to a location id needs the loaded
   collection and a decision about what to do when the name matches nothing or
   matches twice. Decide that before touching the mapping; the rest of the list
   is field plumbing and can go first.
+- **The model is `gpt-3.5-turbo`, and it should not be.** Defaulted twice —
+  `firebase/functions/src/entityExtraction.ts:370` and
+  `EntityExtractionService.ts:77`. It is the oldest and, at $0.50/$1.50 per 1M
+  tokens, **not** the cheapest option available; several newer models are better
+  at schema-constrained extraction *and* cost less on both axes. Folded in here
+  rather than filed separately because the loss this entry describes is partly a
+  model-quality problem and the fix touches the same call.
+  - **`temperature: 0` (`:581`) rules out the `gpt-5`/o-series** without a code
+    change: reasoning models on chat completions reject a non-default
+    temperature. Any swap into that family means giving up determinism, which
+    for an extractor is a real cost, not a formality.
+  - **The call still uses the deprecated `functions` / `function_call` pair**
+    (`:578-580`), so it cannot ask for `strict: true`. Moving to
+    `tools` / `tool_choice` with strict structured outputs is the thing that
+    stops the schema and its consumer drifting apart — which is what half the
+    losses above *are*. Strict mode does not accept `oneOf`; the four entity
+    variants at `:436` would become `anyOf`.
+- **The model name is client-supplied and the function trusts it.**
+  `EntityExtractionService.extractEntities` sends `model` from the browser
+  (`:77`, `:88-91`) and `entityExtraction.ts:370` passes it to OpenAI unchecked.
+  A modified client can name any model on the price list against the project's
+  key, bounded only by 10 extractions a day. **Pin the model server-side and
+  drop the parameter** — do not leave two defaults in two files to disagree,
+  which is how `QuestContextValue` came to be declared twice.
+- **Two tests assert the defective behaviour** and must be replaced
+  deliberately, not edited into agreement:
+  `NoteContext.behavioral.test.tsx:637-645` expects `objectives` as bare strings
+  and uses `relatedNPCIds: ['npc-1','npc-2']`, whose id-shaped values hide the
+  fact that the model has no ids to give; `:592-604` does the same for the
+  location branch.
+- **Nothing here is covered by `npm test`.** `firebase/functions` has no jest and
+  no test files (`CLAUDE.md`), so the schema and the call shape must be verified
+  against the emulator, with a control that reproduces the old behaviour
+  alongside the new.
 - **Source**: todo.txt, 2026-09-22 ("Have a good look into the entity extractor
   and how it converts to NPC, Location, Quest, Rumor")
 
