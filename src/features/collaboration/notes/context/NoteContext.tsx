@@ -56,7 +56,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       setError(null);
       
       if (!user?.uid || !activeGroupId) {
-        console.log('NoteContext: No user or active group, clearing notes');
         setNotes([]);
         setAllNoteIds([]);
         return [];
@@ -79,13 +78,10 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
           // Include notes that match the active campaign ID
           return note.campaignId === activeCampaignId;
         });
-        
-        console.log(`NoteContext: Filtered ${fetchedData.length} total notes to ${filteredNotes.length} notes for campaign ${activeCampaignId}`);
       } else {
         // If no active campaign, show no notes
         // This prevents showing all notes when no campaign is selected
         filteredNotes = [];
-        console.log('NoteContext: No active campaign, showing no notes');
       }
       
       // Sort notes by updatedAt timestamp descending (most recent first)
@@ -176,8 +172,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     // refetch, so without this the second would be allocated the same number.
     setAllNoteIds(prevIds => prevIds.includes(noteId) ? prevIds : [...prevIds, noteId]);
 
-    console.log(`NoteContext: Created local note ${noteId} for campaign ${activeCampaignId}`);
-    
     return noteId;
   }, [user, activeGroupId, activeCampaignId, generateSequentialNoteId, activeGroupUserProfile]);
 
@@ -208,12 +202,10 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       delete noteToSave.isUnsaved; // Remove before saving
 
       await documentService.createDocument(notesCollection, noteToSave, noteId);
-      console.log(`NoteContext: Saved new note ${noteId} to Firebase`);
     } else {
       // Update existing document (don't send isUnsaved field). Attribution
       // is now stamped by DocumentService itself, not hand-rolled here.
       await documentService.updateDocumentWithAttribution(notesCollection, noteId, updatedFields);
-      console.log(`NoteContext: Updated note ${noteId} in Firebase`);
     }
     
     // Update local state (remove isUnsaved flag)
@@ -466,9 +458,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     // Delete document at the correct path
     const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
     await documentService.deleteDocument(notesCollection, noteId);
-    
-    console.log(`NoteContext: Deleted note ${noteId}`);
-    
+
     // Refresh notes list
     await fetchNotes();
   }, [user?.uid, activeGroupId, documentService, fetchNotes]);

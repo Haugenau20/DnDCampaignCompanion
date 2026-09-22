@@ -67,13 +67,10 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!user) return;
     
     try {
-      console.log(`FirebaseContext: Loading user profile for ${user.uid}`);
       const profile = await firebaseServices.user.getUserProfile(user.uid);
-      console.log(`FirebaseContext: User profile loaded:`, profile);
       setUserProfile(profile);
-      
+
       if (profile?.activeGroupId) {
-        console.log(`FirebaseContext: Setting active group to ${profile.activeGroupId}`);
         await setActiveGroupContext(profile.activeGroupId, user);
       } else {
         console.warn(`FirebaseContext: No active group ID found in user profile`);
@@ -86,8 +83,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Set active group and load related data
   const setActiveGroupContext = async (groupId: string, currentUser: User | null = null) => {
-    console.log(`Setting active group context: ${groupId}`);
-    
     try {
       // Set the group context in Firebase service
       firebaseServices.auth.setActiveGroup(groupId);
@@ -101,12 +96,9 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return;
       }
       
-      console.log(`Loading group profile for user ${authUser.uid} in group ${groupId}`);
-      
       // Load user's profile in this group
       const groupProfile = await firebaseServices.user.getGroupUserProfile(groupId, authUser.uid);
-      console.log(`Group profile loaded for group ${groupId}:`, groupProfile);
-      
+
       if (groupProfile) {
         setActiveGroupUserProfile(groupProfile);
         
@@ -114,7 +106,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCampaignsLoading(true);
         try {
           const groupCampaigns = await firebaseServices.campaign.getCampaigns(groupId);
-          console.log(`Loaded ${groupCampaigns.length} campaigns for group ${groupId}`);
           setCampaigns(groupCampaigns);
           
           if (groupCampaigns.length > 0) {
@@ -138,7 +129,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
             
             // Set the active campaign
-            console.log(`Setting active campaign to ${campaignIdToSet}`);
             firebaseServices.auth.setActiveCampaign(campaignIdToSet);
             setActiveCampaignId(campaignIdToSet);
           }
@@ -161,11 +151,9 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!user) return [];
     
     try {
-      console.log(`FirebaseContext: Refreshing groups for user ${user.uid}`);
       const userGroups = await firebaseServices.group.getGroups();
-      console.log(`FirebaseContext: Found ${userGroups.length} groups for user ${user.uid}:`, userGroups);
       setGroups(userGroups);
-      
+
       // If user has exactly one group and no active group is set, auto-select it
       if (userGroups.length === 1 && !activeGroupId) {
         await setActiveGroupContext(userGroups[0].id, user);
@@ -189,7 +177,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Auto-select first campaign if available and none is selected
       if (groupCampaigns.length > 0 && !activeCampaignId) {
         const campaignToActivate = groupCampaigns[0].id;
-        console.log(`Setting active campaign to ${campaignToActivate}`);
         firebaseServices.auth.setActiveCampaign(campaignToActivate);
         setActiveCampaignId(campaignToActivate);
       }
@@ -256,15 +243,13 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Load user profile with retry logic
   const loadUserProfile = async (userId: string) => {
-    console.log(`Loading user profile for ${userId}`);
     let retryCount = 0;
     const maxRetries = 3;
-    
+
     while (retryCount < maxRetries) {
       try {
         const profile = await firebaseServices.user.getUserProfile(userId);
-        console.log(`User profile loaded:`, profile);
-        
+
         if (profile) {
           setUserProfile(profile);
           return profile;
@@ -287,17 +272,13 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Load groups with proper active group selection
   const loadGroups = async (userId: string, profile: UserProfile, currentUser: User) => {
-    console.log(`Loading groups for user ${userId} with profile:`, profile);
-    
     try {
       const userGroups = await firebaseServices.group.getGroups();
-      console.log(`Loaded ${userGroups.length} groups for user ${userId}:`, userGroups);
       setGroups(userGroups);
-      
+
       if (userGroups.length > 0) {
         // Set active group from the provided profile or default to first group
         const targetGroupId = profile.activeGroupId || userGroups[0].id;
-        console.log(`Setting active group to ${targetGroupId}`);
         await setActiveGroupContext(targetGroupId, currentUser);
       } else {
         console.warn(`No groups found for user ${userId}`);
@@ -316,7 +297,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     const unsubscribe = onAuthStateChanged(auth, 
       async (firebaseUser) => {
-        console.log(`Auth state changed: user ${firebaseUser ? 'detected' : 'not detected'}`);
         setUser(firebaseUser);
         
         if (firebaseUser) {
