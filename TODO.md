@@ -126,7 +126,27 @@ An expanded row shows `2025-05-31T19:27:30.387Z` where it should read
 - **Source**: drift log
 
 ### T003 — Auth context logs user profile data to the console on every render
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-16 · `R39`
+**Type** bug · **Size** S · **Status** **done** · **Verified** 2026-09-22 · `R39`
+
+**Closed 2026-09-22** by the entity-loader-consolidation PR. 30 calls deleted —
+the 23 named below plus 7 in `NoteContext.tsx` (T029's logging overlap, taken in
+the same pass). A tree-walking test in
+`user-management/__tests__/no-console-logging.test.ts` now states the rule once
+so they cannot grow back.
+
+- **The audit undercounted, and only the browser caught it.** With all 30 gone,
+  the console still printed group ids, campaign ids and names, and Cloud
+  Function result payloads on every load — `CampaignService` (5) and
+  `GroupService` (1). Same class; missed because this entry scoped itself to
+  `user-management` by name and no gate looks at console output. Those six are
+  now deleted too and covered by the same test. **If you scope a cleanup by
+  directory, verify by the symptom, not by the directory.**
+- **Deliberately kept**: the other nine `console.log` calls under
+  `core/services`. `firebaseConfig.ts`'s seven sit behind an explicit
+  `NODE_ENV === "development"` guard *and* are pinned by a suite asserting they
+  fire; `BaseFirebaseService` and `AuthService` each emit one environment
+  diagnostic carrying no user data. The guard test documents this so nobody
+  "fixes" a correct guard.
 
 - **Where**: 23 `console.log` calls under `src/features/user-management/`, the
   bulk in `auth/context/FirebaseContext.tsx`.
@@ -757,7 +777,48 @@ Measured against the four create forms, the premise holds for the quest only.
 ## Tech debt and platform
 
 ### T023 — Every entity collection has several independent loaders
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-16 · `PERF-08`
+**Type** debt · **Size** M · **Status** **done** · **Verified** 2026-09-22 · `PERF-08`
+
+**Closed 2026-09-22.** Every entity collection is now fetched **once** per
+provider, by the hook that owns it, pinned by
+`shared/hooks/__tests__/provider-fetch-counts.test.tsx` — which counts real
+`getCollection` calls rather than mocking the hook that makes them, because the
+existing `*Context.behavioral` suites mock `useFirebaseData` wholesale and can
+see no fetch at all.
+
+**This entry undercounted by five, and the reason is worth keeping.** It says
+each context mounts "**two** instances against the same collection" and counts
+instances. But `useFirebaseData` fetches on mount internally *and* each
+`use*Data` read hook calls `getData()` from an effect of its own — **two
+fetches from one instance**. The real figure was 3 per provider, 16 across the
+tree, not 11. It surfaced only because the new test asserted the *intended*
+count and disagreed with reality; had it been written to assert what it
+measured, the third loader would have been recorded as correct and this entry
+closed on a false number.
+
+- **How it was fixed**: `useFirebaseData` gained `autoFetch?: boolean`
+  (default `true`). All ten production call sites pass `false` — the five
+  write-only instances, and the five `use*Data` read hooks, which keep their own
+  context-aware fetch (gated on group and campaign, sorted, cleared on change)
+  because the generic mount fetch had none of that context.
+- **The non-obvious half**: `autoFetch: false` also stops the
+  `AUTH_STATE_CHANGED_EVENT` listener registering, and its `setData([])` was the
+  only thing clearing `data` on sign-out. Each read hook's effect checked
+  `data.length > 0` *before* the signed-out branch, so the naive fix would have
+  re-rendered a signed-out screen with **the previous user's records**. All five
+  hooks now check context first and return early; each suite pins it with a
+  populated `data` array against a signed-out user.
+- **`story-progress` was the exception that wasn't.** It reads its own `data`,
+  so it looked untouchable — but what populates it is an explicit
+  `refreshProgress()` effect gated on `hasRequiredContext`, and the mount fetch
+  there was already documented as firing before the campaign resolved and
+  returning nothing. It takes `autoFetch: false` too. Verified in Chrome:
+  reading position survives a full reload.
+- **`NPCsEditPage.tsx`, named below, does not exist** and has not for some time.
+- **Also closed here**: `SearchContext` stops building its own chapter, NPC,
+  location and rumour loaders and reads the providers (it already did so for
+  quests). Its index now rebuilds when a provider's copy changes, so search
+  results no longer go stale after an edit.
 
 - **Where**: `src/shared/hooks/useFirebaseData.ts:42-44` fetches the whole
   collection in a `useEffect` on mount, and again on every auth state change
@@ -847,7 +908,32 @@ story or chapter search hit navigates and highlights nothing.
 - **Source**: T014's remainder, carried out of phase 15
 
 ### T046 — `NPCsPage` renders from a second loader, not from the provider
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-21
+**Type** bug · **Size** S · **Status** **done** · **Verified** 2026-09-22
+
+**Closed 2026-09-22, as T023 rather than as itself** — which was the right call.
+The S-sized version was the patch that already shipped; the fix is T023's, one
+directory over. `NPCsPage` and `NPCDetailPage` now read `useNPCs()`, and
+`grep -rn "useNPCData" src/pages/npcs/` returns nothing.
+
+- **`NPCDetailPage` held three sources, not two.** It already had a `useNPCs()`
+  call sitting beside its `useNPCData()` one — reading from one copy while
+  writing through another, *and* mounting a third loader. Merged into a single
+  destructure. The audit missed it by counting call sites of one shape without
+  looking for the other shapes beside them; the same mistake produced T023's
+  undercount.
+- **This entry's claim that "the other three contexts already expose their
+  refresh" was wrong, and the reason matters.** Only `LocationContextValue`
+  did. Quests *appeared* to because `QuestContextValue` was declared twice — an
+  accurate local one in `QuestContext.tsx` and a **stale duplicate exported by
+  the public barrel**, missing nine members including `refreshQuests`. Reading
+  a feature's barrel is the correct way to learn its contract, and this one
+  lied. Consolidated, with the provider's `value` object now annotated with the
+  exported type so the two cannot drift again.
+- **Verified in Chrome**, both halves: changing a stance on the index updates
+  in place, and a status change made on the detail page is reflected on the
+  index without a reload — which matters more than it sounds, because the index
+  no longer refetches on mount and now depends entirely on the provider staying
+  fresh.
 
 `NPCsPage` calls `useNPCData()` itself instead of reading `useNPCs()`, so the
 page and the `NPCProvider` hold two independently fetched copies of the same

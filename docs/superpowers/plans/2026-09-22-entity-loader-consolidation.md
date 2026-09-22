@@ -335,6 +335,19 @@ Claude-Session: https://claude.ai/code/session_01M6GZgk57MnmDCzpRZFXH9N"
 `story-progress` instance, destructures `data: progressData`. It keeps
 fetching. Changing it breaks reading progress.
 
+> **SCOPE EXPANDED DURING EXECUTION — read
+> `.superpowers/sdd/2026-09-22-entity-loader-consolidation/task-2-addendum.md`
+> before working this task.**
+>
+> The count below is wrong. Each collection is fetched **three** times per
+> provider, not two: `useFirebaseData` fetches on mount internally *and* the
+> `use*Data` read hook calls `getData()` from its own effect. This task now
+> also opts the five read instances out, and — because `autoFetch: false` drops
+> the `AUTH_STATE_CHANGED_EVENT` listener whose `setData([])` was the only
+> thing clearing `data` on sign-out — inverts the context guard in all five
+> read hooks so stale records cannot outrank "you are signed out". Five new
+> tests pin that. The addendum has the full reasoning and the exact code.
+
 - [ ] **Step 1: Write the failing test**
 
 Create `src/shared/hooks/__tests__/provider-fetch-counts.test.tsx`.
@@ -1025,12 +1038,13 @@ export interface QuestContextValue extends QuestContextState {
   /**
    * Re-read the quest collection.
    *
-   * Resolves to the refreshed list, or `[]` when there is no group or
-   * campaign selected — `useQuestData().refreshQuests` is `fetchQuests`,
-   * which returns `data || []`. Declaring this `Promise<void>` would be
-   * wrong.
+   * CORRECTED DURING EXECUTION: this is `Promise<void>`, not `Promise<Quest[]>`.
+   * `QuestContext.tsx:32-35` wraps `useQuestData().fetchQuests` in an explicit
+   * `async (): Promise<void>` callback. The plan asserted `Promise<Quest[]>`
+   * on the strength of the NPC case, which has no such wrapper — derive the
+   * type from the live file, not from a sibling.
    */
-  refreshQuests: () => Promise<Quest[]>;
+  refreshQuests: () => Promise<void>;
   /** Whether a group and a campaign are both selected. */
   hasRequiredContext: boolean;
 }
@@ -1297,9 +1311,15 @@ Expected, reconciling exactly against the Task 0 baseline of 258 suites /
 | Baseline | 258 | 5124 |
 | Task 1 — `autoFetch` cases (existing suite) | — | +6 |
 | Task 2 — `provider-fetch-counts` (new suite) | +1 | +5 |
+| Task 2 addendum — sign-out guard, one per read hook | — | +5 |
 | Task 4 — NPCsPage data-ownership cases (existing suite) | — | +2 |
 | Task 6 — `no-console-logging` (new suite) | +1 | +1 |
-| **Expected** | **260** | **5138** |
+| **Expected** | **260** | **5143** |
+
+The Task 2 addendum row is scope added during execution — see
+`task-2-addendum.md` in the SDD workspace and the spec's "The loader this audit
+missed". If an implementer added more than one case per hook, reconcile upward
+rather than treating the surplus as a discrepancy.
 
 with `0 failed, 2 skipped`, and `npm run build` succeeding.
 

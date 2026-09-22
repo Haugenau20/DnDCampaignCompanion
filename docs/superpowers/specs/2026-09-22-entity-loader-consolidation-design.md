@@ -20,11 +20,13 @@ removes profile data from the production console a release earlier.
 
 ## The inventory
 
-Eleven redundant fetches, measured 2026-09-22:
+Eleven redundant fetches, measured 2026-09-22 — **corrected to sixteen during
+execution; see below.**
 
 | Count | Where | Cause |
 |---|---|---|
 | 5 | write instances in `NPCContext`, `QuestContext`, `LocationContext`, `RumorContext`, `StoryContext` | second `useFirebaseData` per context, mounted for writes, fetches anyway |
+| **5** | **the five `use*Data` read hooks** | **found during Task 2 — see "The loader this audit missed"** |
 | 1 | `pages/npcs/NPCsPage.tsx` | calls `useNPCData()` instead of `useNPCs()` — **this is T046** |
 | 1 | `pages/npcs/NPCDetailPage.tsx` | same double loader; not user-visible, because it calls `refreshNPCs()` explicitly at five sites |
 | 4 | `shared/context/SearchContext.tsx` | builds its own chapter, NPC, location and rumour hooks |
@@ -37,6 +39,50 @@ Eleven redundant fetches, measured 2026-09-22:
   `LocationContextValue` declares one. `QuestContext` puts `refreshQuests` in its
   value object but `QuestContextValue` does not declare it; `RumorContextValue`
   and `NPCContextValue` expose nothing. It is 1 of 4, not 3 of 4.
+
+### The loader this audit missed
+
+**Added 2026-09-22, during Task 2.** The count above was wrong, and the way it
+was wrong is worth recording.
+
+Each entity collection is read **three** times per provider, not two:
+`useFirebaseData` fetches on mount from its own internal effect, **and** the
+`use*Data` read hook calls `getData()` from an effect of its own, **and** the
+write instance fetches a third time. The audit counted `useFirebaseData`
+*instances* and assumed one fetch each. Two of the three fetches come from a
+single instance.
+
+The implementer hit this as a failing assertion — the test predicted 2 before
+the fix and found 3 — and stopped rather than adjust the number. Had the test
+been written to assert the count it observed, the finding would have been
+recorded as correct behaviour and T023 closed on a false measurement.
+
+**The `use*Data` fetch is the one to keep.** It gates on `activeGroupId` and
+`activeCampaignId` before fetching, sorts the result, and clears the list when
+either changes. `useFirebaseData`'s internal mount fetch knows none of that and
+fires regardless, so it is both the duplicate *and* the less correct of the two.
+
+#### The bug the obvious fix would have introduced
+
+`autoFetch: false` also stops the `AUTH_STATE_CHANGED_EVENT` listener
+registering, and that listener called `setData([])` on sign-out. That was the
+only thing clearing `data`. Each read hook then runs:
+
+```ts
+if (data.length > 0)            setNpcs(sorted);   // stale data wins
+else if (!user || !activeGroupId || !activeCampaignId) setNpcs([]);  // unreachable
+```
+
+On sign-out `activeGroupId` and `activeCampaignId` go `null`
+(`FirebaseContext.tsx:347-348`) and the effect refires — but `data` still holds
+the previous user's records, so the first branch wins and the signed-out screen
+repopulates with them. **This bug does not exist today; the fix would have
+created it.**
+
+So every read hook now checks the context first and returns early, and each
+hook's suite pins it: populated `data` plus a signed-out user must yield an
+empty list. The guard inversion is not incidental tidying — it is the condition
+under which dropping the listener is safe at all.
 
 ### The fact that makes this cheap
 
