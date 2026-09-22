@@ -153,8 +153,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
         // the default `us-central1` region and reaches nothing.
         const removeUserFn = httpsCallable(this.functions, 'removeUserFromGroup');
 
-        const result = await removeUserFn({ groupId, userId });
-        console.log('User removal result:', result.data);
+        await removeUserFn({ groupId, userId });
       } catch (err) {
         console.error('Error removing user from group:', err);
         throw err;

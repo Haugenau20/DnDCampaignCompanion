@@ -2,15 +2,15 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { SearchResult, SearchResultType, SearchDocument } from 'core/types/search';
 import { SearchService } from 'core/services/search/SearchService';
-import { useChapterData } from 'features/storytelling';
+import { useStory } from 'features/storytelling';
 import type { Chapter } from 'features/storytelling';
-import { useNPCData } from 'features/campaign-entities';
-import { useLocationData } from 'features/campaign-entities';
+import { useNPCs } from 'features/campaign-entities';
+import { useLocations } from 'features/campaign-entities';
 import { useQuests, Quest } from 'features/campaign-entities';
 import { NPC } from 'features/campaign-entities';
 import type { Location } from 'features/campaign-entities';
 import { Rumor } from 'features/campaign-entities';
-import { useRumorData } from 'features/campaign-entities';
+import { useRumors } from 'features/campaign-entities';
 import { useNotes } from 'features/collaboration';
 import type { Note } from 'features/collaboration';
 import { rumorTitleText } from 'features/campaign-entities';
@@ -130,12 +130,15 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // state the palette must render as a skeleton rather than as "no results".
   const [isIndexReady, setIsIndexReady] = useState(false);
 
-  // Get data from all our collections
-  const { chapters } = useChapterData();
-  const { npcs } = useNPCData();
-  const { locations } = useLocationData();
+  // Every collection comes from the provider that owns it. SearchProvider is
+  // mounted inside all six (App.tsx), so building private loaders here only
+  // produced a second fetch of each collection -- and an index that went stale
+  // after a write, because the providers' copies were not the ones indexed.
+  const { chapters } = useStory();
+  const { npcs } = useNPCs();
+  const { locations } = useLocations();
   const { quests } = useQuests();
-  const { rumors } = useRumorData();
+  const { rumors } = useRumors();
   const { notes } = useNotes();
 
   // Initialize SearchService with options

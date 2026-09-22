@@ -142,7 +142,6 @@ describe('QuestContext Behavioral Testing', () => {
       expect(questContext.quests).toEqual([]);
       expect(questContext.error).toBeNull();
       expect(questContext.isLoading).toBe(false);
-      expect(questContext.loading).toBe(false);
     });
 
     test('should provide all required Quest operations', async () => {
@@ -184,7 +183,6 @@ describe('QuestContext Behavioral Testing', () => {
 
       // BEHAVIOR: Loading state should be reflected correctly
       expect(questContext.isLoading).toBe(true);
-      expect(questContext.loading).toBe(true);
     });
   });
 

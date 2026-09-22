@@ -17,12 +17,10 @@ export function useCampaigns() {
   // Find the active campaign object based on ID
   const activeCampaign = useMemo(() => {
     if (!activeCampaignId || !campaigns.length) {
-      console.log(`useCampaigns: No active campaign found. Campaigns: ${campaigns.length}, ActiveCampaignId: ${activeCampaignId}`);
       return null;
     }
-    
+
     const found = campaigns.find(c => c.id === activeCampaignId);
-    console.log(`useCampaigns: Active campaign ${found ? 'found' : 'not found'} for ID ${activeCampaignId}`);
     return found || null;
   }, [campaigns, activeCampaignId]);
 

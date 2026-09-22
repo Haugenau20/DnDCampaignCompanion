@@ -6,7 +6,6 @@ import Button from 'core/components/Button';
 import EntitySigil from 'core/components/EntitySigil';
 import ImageSlot from 'core/components/ImageSlot';
 import {
-  useNPCData,
   useNPCs,
   useQuests,
   useRumors,
@@ -257,8 +256,10 @@ const NPCNotFound: React.FC<{ onBack: () => void }> = ({ onBack }) => (
 const NPCDetailPage: React.FC = () => {
   const { npcId } = useParams<{ npcId: string }>();
   const { navigateToPage } = useNavigation();
-  const { npcs, loading, error, refreshNPCs } = useNPCData();
-  const { updateNPC, updateNPCNote, deleteNPC } = useNPCs();
+  // Reads the provider this page writes through, rather than a second loader
+  // of its own. Two independently fetched copies meant a write updated one
+  // and the page rendered the other (T046).
+  const { npcs, isLoading, error, refreshNPCs, updateNPC, updateNPCNote, deleteNPC } = useNPCs();
   const { getQuestById, quests } = useQuests();
   const { rumors, updateRumor } = useRumors();
   const { locations } = useLocations();
@@ -278,7 +279,7 @@ const NPCDetailPage: React.FC = () => {
       *this* record loaded", so the page never claims "no such record" for
       one that is simply still on its way.
     */
-    loading: loading && !npc,
+    loading: isLoading && !npc,
     error,
     onRetry: () => {
       void refreshNPCs();

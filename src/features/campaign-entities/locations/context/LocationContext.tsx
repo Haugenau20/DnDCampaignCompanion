@@ -20,11 +20,14 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { userProfile, activeGroupUserProfile } = useUser();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
-  // This second `useFirebaseData` instance is the one whose writes (addData/updateData/
-  // deleteData) can actually fail; its `error` is renamed on destructure (`writeError`)
-  // because the read instance above already binds the name `error`. Previously this
-  // instance's error was never read anywhere, so write failures were invisible (bug #1401).
-  const { updateData, deleteData, addData, error: writeError } = useFirebaseData<Location>({ collection: 'locations' });
+  // `autoFetch: false` because nothing renders off this instance's `data`:
+  // the list comes from `useLocationData()` above. Its `error` is bound as
+  // `writeError` so write failures are not conflated with read failures
+  // (bug #1401).
+  const { updateData, deleteData, addData, error: writeError } = useFirebaseData<Location>({
+    collection: 'locations',
+    autoFetch: false
+  });
 
   // Update locations when initialLocations changes
   useEffect(() => {

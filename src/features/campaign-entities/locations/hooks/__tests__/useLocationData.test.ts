@@ -189,6 +189,31 @@ describe('useLocationData', () => {
 
       expect(result.current.locations).toEqual([]);
     });
+
+    // `useFirebaseData` is now `autoFetch: false` here, so its
+    // AUTH_STATE_CHANGED_EVENT listener -- the thing that used to clear
+    // `data` on sign-out -- no longer runs. `data` can therefore still hold
+    // the previous user's records at the moment sign-out is observed. The
+    // effect's guard order is what has to catch that: "signed out" must be
+    // checked before "data is present", or the previous user's locations
+    // would render on a signed-out screen.
+    test('clears the list on sign-out, even though the fetched data is still held', async () => {
+      const locations = [makeLocation('1', 'Tavern'), makeLocation('2', 'Castle')];
+      setupFirebaseDataMock({ data: locations, loading: false, error: null });
+      mockGetData.mockResolvedValue(locations);
+
+      const { result, rerender } = renderHook(() => useLocationData());
+      await waitFor(() => expect(result.current.locations).toHaveLength(2));
+
+      // Sign out: FirebaseContext nulls both activeGroupId and
+      // activeCampaignId, but `data` -- no longer cleared by the dropped
+      // listener -- still resolves to the same populated array.
+      setupContextMocks(null, null, null);
+      setupFirebaseDataMock({ data: locations, loading: false, error: null });
+      rerender();
+
+      expect(result.current.locations).toEqual([]);
+    });
   });
 
   describe('passthrough from useFirebaseData', () => {

@@ -22,19 +22,16 @@ export function useGroups() {
   // Derive activeGroup directly from groups and activeGroupId
   const activeGroup = useMemo(() => {
     if (!groups.length || !activeGroupId) {
-      console.log(`useGroups: No active group found. Groups: ${groups.length}, ActiveGroupId: ${activeGroupId}`);
       return null;
     }
-    
+
     const found = groups.find(g => g.id === activeGroupId);
-    console.log(`useGroups: Active group ${found ? 'found' : 'not found'} for ID ${activeGroupId}`);
     return found || null;
   }, [groups, activeGroupId]);
 
   // Memoized isAdmin status
   const isAdmin = useMemo(() => {
     if (!activeGroupUserProfile) return false;
-    console.log("useGroups: activeGroupUserProfile.role =", activeGroupUserProfile.role);
     // Check if the role is admin (case-insensitive to avoid potential issues)
     return activeGroupUserProfile.role?.toLowerCase() === 'admin';
   }, [activeGroupUserProfile]);
@@ -45,7 +42,6 @@ export function useGroups() {
     // 1. We have groups loaded (even if empty array)
     // 2. We have an active group profile
     if (user && (Array.isArray(groups) || activeGroupUserProfile)) {
-      console.log("useGroups: Setting fully loaded to true");
       setFullyLoaded(true);
     }
   }, [user, groups, activeGroupUserProfile]);

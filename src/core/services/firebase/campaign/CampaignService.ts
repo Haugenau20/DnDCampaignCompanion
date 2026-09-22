@@ -107,11 +107,8 @@ import {
      * @returns Array of campaign objects with IDs
      */
     public async getCampaigns(groupId: string): Promise<Campaign[]> {
-      console.log(`CampaignService: Getting campaigns for group ${groupId}`);
-      
       const userId = this.getCurrentUser()?.uid;
       if (!userId) {
-        console.log('CampaignService: No authenticated user, returning empty campaigns array');
         return [];
       }
       
@@ -132,9 +129,6 @@ import {
           groupId,
           ...doc.data()
         } as Campaign));
-        
-        console.log(`CampaignService: Found ${campaigns.length} campaigns for group ${groupId}:`, 
-          campaigns.map(c => `${c.id}: ${c.name}`).join(', '));
         
         return campaigns;
       } catch (error) {
@@ -210,8 +204,6 @@ import {
           modifiedBy: userId,
           dateModified: new Date()
         });
-        
-        console.log(`CampaignService: Updated campaign ${campaignId} in group ${groupId}`);
       } catch (error) {
         console.error(`CampaignService: Error updating campaign ${campaignId}:`, error);
         throw error;
@@ -243,8 +235,7 @@ import {
         const functions = getFunctions();
         const deleteCampaignFn = httpsCallable(functions, 'deleteCampaign');
 
-        const result = await deleteCampaignFn({ groupId, campaignId });
-        console.log('Campaign deletion result:', result.data);
+        await deleteCampaignFn({ groupId, campaignId });
       } catch (err) {
         console.error('Error deleting campaign:', err);
         throw err;

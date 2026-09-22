@@ -85,4 +85,15 @@ export interface NPCContextValue extends NPCContextState {
   addNPC: (npc: DomainData<NPC>) => Promise<string>;
   updateNPC: (npc: NPC) => Promise<void>;
   deleteNPC: (npcId: string) => Promise<void>;
+  /**
+   * Re-read the NPC collection.
+   *
+   * Exposed so a page can render this provider's copy and still drive a
+   * refresh, rather than mounting a second loader of its own to get one.
+   * Resolves to the refreshed list, or `[]` when there is no group or
+   * campaign selected.
+   */
+  refreshNPCs: () => Promise<NPC[]>;
+  /** Whether a group and a campaign are both selected. */
+  hasRequiredContext: boolean;
 }

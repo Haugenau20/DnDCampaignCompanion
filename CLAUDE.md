@@ -315,9 +315,11 @@ the tree.
 - **Use test failures to improve code quality before major refactoring**
 
 ### Current State
-- **Testing Infrastructure**: Jest + React Testing Library, **4,717 tests across 235 suites**
+- **Testing Infrastructure**: Jest + React Testing Library, **5,144 tests across 260 suites**
 - **Coverage**: **91.96% statements / 92.42% lines / 85.77% functions / 84.05% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-31 on `design-handoff/dashboard-1a`)
-- **Baseline**: **0 failed / 2 skipped / 4715 passed / 4717 total across 235 suites.** The 2 skips are #901's, closed as testability-only. **Any red is a regression.**
+- **Baseline**: **0 failed / 2 skipped / 5142 passed / 5144 total across 260 suites.** Measured 2026-09-22 on `fix/entity-loader-consolidation`; `main` at 74b5e49 measured **258 suites / 5124 tests** at the same moment, so this branch adds 2 suites and 20 tests. The 2 skips are #901's, closed as testability-only. **Any red is a regression.**
+  - The figure this replaced — `4715 passed / 4717 total across 235 suites` — had gone stale by **25 suites and 427 tests**, having been taken on a branch that later merged. That is the largest drift this line has carried, and it is exactly what the rule below exists to catch. If you are about to trust this number without running it, run it.
+  - A full run also prints `A worker process has failed to exit gracefully`. That is pre-existing on a clean tree and the run still exits 0 — do not chase it, and do not mistake it for a failure.
   - The previously recorded baseline of 7 failures — the ID-collision markers #002/#004/#009/#012 in the four `*Context.bugs` suites — is **obsolete**: that cluster was fixed 2026-07-28 and those four suites now pass 29/29. If you find advice anywhere telling you to tolerate reds, check `docs/testing/bug-tracking/README.md` before believing it.
   - Measured 2026-09-03 on `redesign/privacy-policy`. **`main` measured 231 suites / 4688 tests at the
     same moment** — this branch adds 4 suites and 29 tests. The figure this replaced (230 / 4675) was

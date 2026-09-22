@@ -1,7 +1,7 @@
 // src/pages/npcs/NPCsPage.tsx
 import React from "react";
 import Button from "core/components/Button";
-import { NPCDirectory, useNPCData } from "features/campaign-entities";
+import { NPCDirectory, useNPCs } from "features/campaign-entities";
 import { usePageGate, GatedContent } from "shared/components/gated";
 import PageShell from "shared/components/page-shell/PageShell";
 import { useNavigation } from "shared/context/NavigationContext";
@@ -15,22 +15,25 @@ import { Plus } from "lucide-react";
  * state is, and the words come from `gated-page-copy`. The retry handler is
  * wired through so the shared error panel's "Try again" button re-fetches
  * this page's own data instead of only the generic gate.
+ *
+ * It reads `useNPCs()` rather than `useNPCData()`: the page and the provider
+ * used to hold two independently fetched copies of the same collection, so a
+ * write through the context refreshed one while the page rendered the other.
  */
 const NPCsPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
-  const { npcs, loading, error, refreshNPCs } = useNPCData();
+  // Reads the provider this page writes through, rather than a second loader
+  // of its own. Two independently fetched copies meant a write updated one and
+  // the page rendered the other (T046).
+  const { npcs, isLoading, error, refreshNPCs } = useNPCs();
 
   const gate = usePageGate("npcs", {
-    loading,
+    loading: isLoading,
     error,
     onRetry: () => {
       void refreshNPCs();
     },
   });
-
-  const handleNPCChanged = async () => {
-    await refreshNPCs();
-  };
 
   return (
     <PageShell
@@ -50,8 +53,8 @@ const NPCsPage: React.FC = () => {
       <GatedContent gate={gate}>
         <NPCDirectory
           npcs={npcs}
-          onNPCUpdate={handleNPCChanged}
-          onNPCDelete={handleNPCChanged}
+          onNPCUpdate={refreshNPCs}
+          onNPCDelete={refreshNPCs}
         />
       </GatedContent>
     </PageShell>
