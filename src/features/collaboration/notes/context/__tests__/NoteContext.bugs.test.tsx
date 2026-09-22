@@ -18,6 +18,16 @@ jest.mock('@/features/user-management', () => ({
   useUser: () => mockUseUser()
 }));
 
+/**
+ * `15-9`: converting a rumour out of a note writes the rumour here, because a
+ * rumour has no create page to hand that job to. That makes `RumorProvider` a
+ * requirement of `NoteProvider` -- satisfied in `app/App.tsx`, and mocked here.
+ */
+const mockAddRumor = jest.fn().mockResolvedValue('rumor-1');
+jest.mock('features/campaign-entities', () => ({
+  useRumors: () => ({ addRumor: mockAddRumor }),
+}));
+
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate
 }));
@@ -484,15 +494,15 @@ describe('NoteContext Bug Tests', () => {
       await act(async () => {
         await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
 
-        // BUG DISCOVERY: How does invalid sourceType get handled?
-        expect(mockNavigate).toHaveBeenCalledWith('/rumors/create', {
-          state: expect.objectContaining({
-            initialData: expect.objectContaining({
-              sourceType: 'other', // Should default to 'other'
-              sourceName: 'invalid-source-type' // Original value should be preserved in sourceName
-            })
-          })
-        });
+        // CHANGED DELIBERATELY in `15-9`. An unrecognised source used to be
+        // coerced to 'other'. Since `15-9`'other' means "heard from none of
+        // the other four" -- a real answer somebody chose -- so the extractor
+        // guessing it would be answering on the reader's behalf. The kind is
+        // left unset; the raw value is still preserved in sourceName, which
+        // is the part that was always right.
+        const written = mockAddRumor.mock.calls[0][0];
+        expect(written).not.toHaveProperty('sourceType');
+        expect(written.sourceName).toBe('invalid-source-type');
 
         // EXPECTED: Invalid source types should be handled gracefully
       });

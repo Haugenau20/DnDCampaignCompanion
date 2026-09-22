@@ -291,6 +291,10 @@ const EXPECTED_ROUTES = [
   // still reaches its own page rather than being read as a location id.
   "/locations/:locationId",
   "/rumors",
+  // Both retired, both still routed. `15-8` sent the edit URL to the row;
+  // `15-9` did the same to the create URL, which had been a form for an
+  // entity that has no page. The addresses survive so anything still
+  // pointing at them lands somewhere true.
   "/rumors/create",
   "/rumors/edit/:rumorId",
   "/notes",

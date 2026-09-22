@@ -18,6 +18,16 @@ jest.mock('@/features/user-management', () => ({
   useUser: () => mockUseUser()
 }));
 
+/**
+ * `15-9`: converting a rumour out of a note writes the rumour here, because a
+ * rumour has no create page to hand that job to. That makes `RumorProvider` a
+ * requirement of `NoteProvider` -- satisfied in `app/App.tsx`, and mocked here.
+ */
+const mockAddRumor = jest.fn().mockResolvedValue('rumor-1');
+jest.mock('features/campaign-entities', () => ({
+  useRumors: () => ({ addRumor: mockAddRumor }),
+}));
+
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate
 }));
@@ -640,7 +650,7 @@ describe('NoteContext Behavioral Tests', () => {
       });
     });
 
-    test('should navigate to rumor creation with entity data', async () => {
+    test('writes the rumour itself, and opens its row', async () => {
       const rumorEntity: ExtractedEntity = {
         ...mockEntity,
         type: 'rumor',
@@ -674,17 +684,24 @@ describe('NoteContext Behavioral Tests', () => {
         await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
       });
 
-      expect(mockNavigate).toHaveBeenCalledWith('/rumors/create', {
-        state: {
-          initialData: expect.objectContaining({
-            title: 'Strange Lights in the Forest',
-            content: 'Travelers report seeing strange lights',
-            sourceType: 'traveler'
-          }),
-          noteId: 'note-1',
-          entityId: 'entity-1'
-        }
-      });
+      // CHANGED DELIBERATELY in `15-9`. This navigated to `/rumors/create`
+      // with the fields in router state, and a form there wrote the record.
+      // A rumour has no page, and the fields were already complete before
+      // that page opened -- so it was a review step for something nobody had
+      // to review. The rumour is written here and its row opens in the list.
+      expect(mockAddRumor).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Strange Lights in the Forest',
+          content: 'Travelers report seeing strange lights',
+          sourceType: 'traveler',
+          status: 'unconfirmed'
+        })
+      );
+      expect(mockNavigate).toHaveBeenCalledWith('/rumors?highlight=rumor-1');
+      expect(mockNavigate).not.toHaveBeenCalledWith(
+        '/rumors/create',
+        expect.anything()
+      );
     });
 
     test('should throw error when converting entity from nonexistent note', async () => {

@@ -3,6 +3,7 @@ import React, { createContext, useContext, useCallback, useState, useEffect } fr
 import { Note, NoteContextValue, ExtractedEntity, EntityType } from "../types";
 import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns, useUser } from "features/user-management";
+import { useRumors } from "features/campaign-entities";
 import { useCampaignContextStatus } from "shared/hooks/useCampaignContextStatus";
 import { buildCreationAttribution } from "core/attribution";
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +31,12 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
+  /**
+   * Writing a rumour is part of converting one out of a note, because a
+   * rumour has no create page to hand that job to. `RumorProvider` therefore
+   * has to sit above `NoteProvider`, which it already does in `app/App.tsx`.
+   */
+  const { addRumor } = useRumors();
   const { userProfile, activeGroupUserProfile } = useUser();
   // Single shared source of truth for "still resolving vs. genuinely no
   // selection" (bug #1413) -- see the hook's doc comment. Folded into
@@ -250,8 +257,43 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [getNoteById, saveNote]);
   
   /**
-   * Convert an extracted entity to a campaign element
-   * Now navigates to the create page instead of directly creating
+   * Mark an entity as converted in the note
+   * This is called after the user successfully creates the campaign element
+   */
+  const markEntityAsConverted = useCallback(async (
+    noteId: string,
+    entityId: string,
+    createdId: string
+  ): Promise<void> => {
+    const note = getNoteById(noteId);
+    if (!note) throw new Error("Note not found");
+    
+    const updatedEntities = note.extractedEntities.map(e =>
+      e.id === entityId ? { ...e, isConverted: true, convertedToId: createdId } : e
+    );
+    
+    await updateNote(noteId, {
+      extractedEntities: updatedEntities,
+    });
+  }, [getNoteById, updateNote]);
+  
+  /**
+   * Convert an extracted entity to a campaign element.
+   *
+   * Three of the four navigate to a create page with the extracted fields in
+   * router state, and the form there writes the record.
+   *
+   * **The rumour does not, because a rumour has no page**
+   * (`00-entity-authoring` §2.1). `/rumors/create` existed only to receive
+   * this navigation -- the campaign-entities barrel said so in as many words
+   * -- and what it offered was a form for reviewing five fields that were
+   * already complete before it opened. The rumour is written here instead,
+   * and the list opens its row, which is the same surface every other rumour
+   * is edited in. That is what retired `RumorForm` and the page around it.
+   *
+   * It is also the only branch that returns a real id rather than `""`; the
+   * other three cannot, because nothing is created until their form is
+   * submitted.
    */
   const convertEntity = useCallback(async (
     noteId: string,
@@ -319,25 +361,34 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
         };
         break;
         
-      case "rumor":
-        // Map sourceType to valid values
+      case "rumor": {
+        // Map sourceType to valid values. Anything unrecognised is left unset
+        // rather than coerced to 'other' -- since `15-9` that means "heard
+        // from none of the other four", a real answer, and the extractor
+        // guessing it would be answering on the reader's behalf.
         const validSourceTypes = ['npc', 'tavern', 'notice', 'traveler', 'other'];
-        let sourceType = 'other';
-        let sourceName = extraData.sourceType || '';
-        
-        if (extraData.sourceType && validSourceTypes.includes(extraData.sourceType)) {
-          sourceType = extraData.sourceType;
-        }
-        
-        initialData = {
-          // Use proper title field, fall back to text if not available
+        const sourceType =
+          extraData.sourceType && validSourceTypes.includes(extraData.sourceType)
+            ? extraData.sourceType
+            : undefined;
+
+        const rumorId = await addRumor({
           title: extraData.title || entity.text,
-          content: extraData.content || undefined,
+          content: extraData.content || '',
           status: extraData.status || 'unconfirmed',
-          sourceType: sourceType,
-          sourceName: sourceName,
-        };
-        break;
+          ...(sourceType ? { sourceType } : {}),
+          sourceName: extraData.sourceType || '',
+          relatedNPCs: [],
+          relatedLocations: [],
+          notes: [],
+        });
+
+        // Done here rather than by a form on arrival, which is what the
+        // create page used to be for.
+        await markEntityAsConverted(noteId, entityId, rumorId);
+        navigate(`/rumors?highlight=${rumorId}`);
+        return rumorId;
+      }
     }
 
     // Navigate to the appropriate create page with the initial data
@@ -369,41 +420,12 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
           } 
         });
         break;
-      case "rumor":
-        navigate('/rumors/create', { 
-          state: { 
-            initialData,
-            noteId, 
-            entityId 
-          } 
-        });
-        break;
     }
     
-    // Return empty string since we're not creating immediately
+    // Return empty string since we're not creating immediately. The rumour
+    // branch returned above, with a real id.
     return "";
-  }, [getNoteById, navigate]);
-  
-  /**
-   * Mark an entity as converted in the note
-   * This is called after the user successfully creates the campaign element
-   */
-  const markEntityAsConverted = useCallback(async (
-    noteId: string,
-    entityId: string,
-    createdId: string
-  ): Promise<void> => {
-    const note = getNoteById(noteId);
-    if (!note) throw new Error("Note not found");
-    
-    const updatedEntities = note.extractedEntities.map(e =>
-      e.id === entityId ? { ...e, isConverted: true, convertedToId: createdId } : e
-    );
-    
-    await updateNote(noteId, {
-      extractedEntities: updatedEntities,
-    });
-  }, [getNoteById, updateNote]);
+  }, [getNoteById, navigate, addRumor, markEntityAsConverted]);
   
   /**
    * Archive a note
