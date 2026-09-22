@@ -197,6 +197,60 @@ Four directories read it, each differently, and one route ignores it.
 - **Source**: todo.txt, 2026-09-16 ("Implement/review proper highlighting logic
   to pages")
 
+### T050 — Note conversion drops or misfiles most of what the extractor found
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-09-22
+
+The extraction function returns a rich object per entity; `convertEntity` then
+hands a create route a much poorer one, and two of the fields it does pass are
+written into the wrong kind of slot. The carry mechanism underneath is sound —
+`splitInitialData`/`buildDocument` do preserve every key handed to them — so
+every loss below happens in `convertEntity` or in the schema it reads.
+
+- **Where**: `src/features/collaboration/notes/context/NoteContext.tsx:298-447`
+  (`convertEntity`), against the JSON schema at
+  `firebase/functions/src/entityExtraction.ts:436-560` and the carry path at
+  `src/shared/components/quick-add/quickAddSpecs.ts:95-220`.
+- **What is actually wrong**, each read in the tree:
+  - **A converted location gets a *name* in `parentId`.** `NoteContext.tsx:335`
+    assigns `parentId: extraData.parentLocation`, and the schema's
+    `parentLocation` is prose ("The Shire"), not an id. It rides through
+    `splitInitialData` (`quickAddSpecs.ts:293`) and `QuickAddForm.tsx:109`
+    untouched into the document. That is a dangling `parentId` written by the
+    product on purpose — the same shape as #303/#1416, and it lands the new
+    place under **"Unplaced"** (T049).
+  - **A converted quest gets *names* in `relatedNPCIds`.** The schema asks the
+    model for `relatedNPCIds` (`entityExtraction.ts:511`) but the model has no
+    ids; `QuestContext.tsx:271` stores them verbatim and `QuestRowSummary.tsx:105`
+    resolves them against NPC records, so they resolve to nothing. Same class as
+    #1421.
+  - **A converted quest's objectives are the wrong type.** `Quest.objectives` is
+    `QuestObjective[]` (`quests/types.ts:7`); the schema returns `string[]` and
+    `NoteContext.tsx:342` passes them "raw", with no normalisation anywhere down
+    to `addQuest`.
+  - **An NPC's extracted stance is thrown away.** `convertEntity` carries
+    `relationship`, then `quickAddSpecs.ts:110` strips it via `withoutOwned` and
+    `:127` hardcodes `relationship: "unknown"`.
+  - **`context` — the sentence from the note — is dropped** for NPCs and
+    locations whenever the model also returned a `description`
+    (`NoteContext.tsx:325`, `:333`): it is only ever a fallback, and is not a key
+    of `initialData`, so carry never sees it.
+  - **`entityMapper.extractDetailsByType` describes a second, stale shape.** Its
+    quest branch reads `NPCsInvolved` (`entityMapper.ts:71`), which the function
+    does not return; the live response is flat, so
+    `mapOpenAIEntityToExtractedEntity` takes the `else` branch at `:28` and this
+    switch never runs on real data. Not a loss today — a trap for whoever
+    restores the `details` format. Note #023 closed this function's *empty
+    body*, not its field names.
+- **Touches**: `NoteContext.convertEntity`, `entityMapper`, the function's JSON
+  schema, and whichever resolution step the name→id cases get.
+- **Catch**: the two name-in-an-id-field cases cannot be fixed inside
+  `convertEntity` — resolving "The Shire" to a location id needs the loaded
+  collection and a decision about what to do when the name matches nothing or
+  matches twice. Decide that before touching the mapping; the rest of the list
+  is field plumbing and can go first.
+- **Source**: todo.txt, 2026-09-22 ("Have a good look into the entity extractor
+  and how it converts to NPC, Location, Quest, Rumor")
+
 ---
 
 ## Features and enhancements
@@ -432,6 +486,104 @@ default artwork.
   original note is a separate lever (an allow-list, or a cap on new accounts) and
   should be decided alongside it.
 - **Source**: todo.txt, 2026-09-16
+
+### T047 — The account chip wears a generic person icon, not a sigil
+**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-22
+
+Everywhere else a person appears — a member row, an NPC, a search hit's
+subject — the app draws an `EntitySigil`: a coloured tile carrying the name's
+initial. The header's own account chip draws a grey circle with lucide's `User`
+glyph, so the one identity that is always on screen is the one that looks like
+nobody in particular.
+
+- **Where**: `src/shared/components/user-menu/UserMenuTrigger.tsx:53-55` renders
+  `<User size={16} />` inside a `bg-secondary` circle. The precedent to copy is
+  `src/features/user-management/admin/components/MembersCard.tsx:195`, which
+  already gives a *user* a sigil: `<EntitySigil entityId={id || name} name={name} />`.
+- **Touches**: `UserMenuTrigger.tsx`, its test, and — if the same mark should
+  follow the account around — `PostingAsList`, `CharacterRow`, and the
+  hand-rolled third variant at
+  `src/shared/components/contact/SenderIdentity.tsx:77-80`, which builds its own
+  initial circle with `.charAt(0).toUpperCase()` rather than using the component.
+- **Catch**: the chip deliberately names the **active character**, not the
+  account (`UserMenuTrigger.tsx:36-38`), so there are two candidate hue seeds and
+  they behave differently. `sigilIndexFor` hashes the id it is given
+  (`core/utils/entity-sigil.ts:49`), so seeding on the character id makes the
+  mark change colour when you switch posting-as, while seeding on the uid makes
+  the letter (character name) and the hue (account) describe different things.
+  Pick one and use it in all the places listed above, or they will disagree.
+- **Source**: todo.txt, 2026-09-22 ("The little icon next to the logged in user
+  should be swapped out for the color pallette with starting letter")
+
+### T048 — Five surfaces still mark an entity by its *type*, not by itself
+**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-22
+
+The same complaint as T047, one level out: a location is a `MapPin` in some
+lists and an `EntitySigil` in others, so the same place does not look like
+itself as you move between screens. The locations feature itself is **already
+converted** — the four sites there all use sigils — so the remaining work is in
+the cross-domain surfaces that render a mixed list.
+
+- **Where**, all verified by opening the file:
+  - `src/shared/components/command-palette/CommandPalette.tsx:31-34` — a
+    `RESULT_ICONS` map giving every search hit its type's glyph.
+  - `src/pages/layouts/common/utils/contentTypeUtils.tsx:11-25` —
+    `getContentIcon`, used for the chapter card at
+    `dashboard/sections/ActivityFeed.tsx:112` (that feed already uses a sigil for
+    entities at `:148`).
+  - `src/features/collaboration/notes/components/NoteReferences.tsx:195-199`
+  - `src/features/collaboration/notes/components/CampaignLinksPanel.tsx:55-59`
+  - `src/features/collaboration/entity-extraction/components/EntityCard.tsx:37-41`
+- **Touches**: those five files and their tests; nothing in
+  `features/campaign-entities/locations/`, which is already done
+  (`LocationRowSummary.tsx:49`, `LocationTreeRow.tsx:121`,
+  `WhereThisSits.tsx:63`, `LocationDetailPage.tsx:376`).
+- **Catch**: the type glyph is not pure decoration in two of these. A search
+  result list and the extractor's review list are **heterogeneous** — the glyph
+  is the only thing saying "this hit is a quest, that one is an NPC" — and a
+  sigil deliberately carries no type information. Either keep a type label
+  beside the sigil in those two, or accept that the kind is only readable from
+  the section heading. `EntityCard` also has no entity id yet (the extracted
+  entity's id is a synthesised `npc-<timestamp>-<random>`,
+  `entityMapper.ts:13`), so its hue would be random per extraction run rather
+  than stable.
+- **Source**: todo.txt, 2026-09-22 ("In locations (and potentially other places),
+  then lucide icon should be swapped out with the color pallette with letter")
+
+### T049 — "Unplaced" is a diagnosis the reader is not given
+**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-22
+
+The locations directory groups places whose `parentId` names nothing under a
+muted heading reading **"Unplaced"**, with no further text. That is precise to
+whoever wrote it and opaque to everybody else: the row looks normal, the place
+plainly *has* a parent recorded, and nothing on screen says the reference is
+broken or what to do about it. The sibling group one block up gets an
+explanatory line when searching; this one gets none.
+
+- **Where**: `src/features/campaign-entities/locations/components/LocationDirectory.tsx:396-400`.
+  The condition behind it is `buildLocationIndex`'s `orphans`
+  (`locations/utils/location-tree.ts:66-69`): a `parentId` that is not `''`/
+  `undefined` and is not in the loaded set. The group was added by #1416, which
+  made these rows visible at all — before it they rendered nowhere.
+- **Touches**: the `RosterGroup` call and its copy; possibly a per-row hint
+  ("its parent, `hobbiton`, is not in this campaign") and a route to fixing it,
+  since `Move elsewhere` already exists.
+- **Catch**: the honest text depends on which cause you are naming, and there
+  are three. A renamed parent (#303), a deleted parent, and — still live —
+  **note conversion writing a location's *name* into `parentId`** (T050,
+  `NoteContext.tsx:335`). Until T050 lands, a user can produce an unplaced
+  location just by converting one from a note.
+- **The dev-data half of this report is already closed.** The seed generator now
+  creates `hobbiton`, in the same Hobbit array as `bag-end`
+  (`src/utils/__dev__/generators/contentGenerators/locationGenerator.ts:194`,
+  added by `e668807` on 2026-07-31); checking all four campaigns' arrays found
+  **no dangling `parentId` anywhere** in current seed data. So Bag End showing as
+  unplaced means the emulator dataset in hand predates that commit —
+  `.\scripts\manage-dev-data.ps1 -Action generate` should clear it. *Unverified*:
+  this was read from the generator, not observed in a running emulator.
+- **Source**: todo.txt, 2026-09-22 ("Right now in the dev data one location is
+  'Unplaced'. No idea what this means or how it is even possible? (The Hobbit -
+  Bag End)")
 
 ---
 
