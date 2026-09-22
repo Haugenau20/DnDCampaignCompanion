@@ -189,13 +189,49 @@ in jsdom:
 
 ## Commits
 
-Three, in dependency order:
+Six, in dependency order. See the plan for the full task breakdown.
 
-1. `perf(data): write instances stop fetching the collection they write to` —
-   the `autoFetch` flag and the five opt-outs.
-2. `fix(npcs): the NPCs page reads the provider it writes through` — the
-   `NPCContextValue` additions, both NPC pages, SearchContext.
-3. `chore(logging): stop printing user profiles to the console` — T003.
+1. `feat(data): useFirebaseData can skip the fetch it never reads` — the flag.
+2. `perf(data): write instances stop fetching the collection they write to` —
+   the five opt-outs and the fetch-count pin.
+3. `feat(npcs): NPCContextValue exposes refreshNPCs and hasRequiredContext`.
+4. `fix(npcs): the NPCs page reads the provider it writes through` — both NPC
+   pages, SearchContext, and the `NPCDirectory` comment that documents the bug.
+5. `refactor(quests): one QuestContextValue, and it is the exported one`.
+6. `chore(logging): stop printing user profiles to the console` — T003.
+
+Plus a closing `docs:` commit for `TODO.md` and the CLAUDE.md baseline.
+
+## Folded in during planning
+
+Four things found while reading the code that the spec's original scope would
+have deferred, now in scope:
+
+- **`QuestContextValue` is declared twice.** The accurate one is local and
+  unexported in `QuestContext.tsx:14`; the one the public barrel exports
+  (`quests/types.ts:65`) is a stale duplicate missing nine members, including
+  `refreshQuests` and `hasRequiredContext`. Nothing imports it today, so it is
+  a trap rather than a live bug — but the barrel is a feature's contract, and
+  **this is why the backlog recorded quests as already exposing a refresh**.
+  Consolidated, with the value object annotated so the two cannot drift again.
+  The `loading` alias goes too: `QuestsPage` was its only caller.
+- **`NPCDirectory` carries a comment describing the defect in the present
+  tense** — *"`NPCsPage` mounts a loader of its own and renders from that one"*
+  — which this PR makes false. Corrected rather than left to mislead.
+- **`useFirebaseData.ts:1`** names a path that has not existed since the
+  restructure.
+- **The `addData` JSDoc** is the load-bearing explanation this design rests on
+  and goes stale the moment the flag exists. Rewritten to describe the
+  contract rather than the accident.
+
+## Baseline
+
+Measured on this branch at 74b5e49, 2026-09-22:
+`258 suites / 5124 tests, 0 failed, 2 skipped`.
+
+CLAUDE.md records `235 suites / 4717 tests`, stale by 23 suites and 407 tests —
+the exact drift its own "measure it, don't carry one forward" rule exists to
+catch. Corrected as part of this PR.
 
 ## Out of scope
 
