@@ -66,9 +66,27 @@ export interface QuestContextValue extends QuestContextState {
   getQuestById: (id: string) => Quest | undefined;
   getQuestsByStatus: (status: QuestStatus) => Quest[];
   getQuestsByLocation: (location: Location) => Quest[];
+  getQuestsByNPC: (npcId: string) => Quest[];
   updateQuestStatus: (questId: string, status: QuestStatus) => Promise<void>;
   updateQuestObjective: (questId: string, objectiveId: string, completed: boolean) => Promise<void>;
+  addQuestObjective: (questId: string, description: string) => Promise<void>;
+  editQuestObjective: (questId: string, objectiveId: string, description: string) => Promise<void>;
+  moveQuestObjective: (questId: string, objectiveId: string, direction: 'up' | 'down') => Promise<void>;
   addQuest: (quest: DomainData<Quest>) => Promise<string>;
   updateQuest: (quest: Quest) => Promise<void>;
   deleteQuest: (questId: string) => Promise<void>;
+  markQuestCompleted: (questId: string, dateCompleted?: string) => Promise<void>;
+  markQuestFailed: (questId: string) => Promise<void>;
+  /**
+   * Re-read the quest collection.
+   *
+   * Resolves once the refresh completes. Unlike `useQuestData().refreshQuests`
+   * (which is `fetchQuests` and resolves to the refreshed array), the provider
+   * wraps it in a callback that awaits the fetch and returns nothing, so this
+   * is `Promise<void>` rather than `Promise<Quest[]>` -- verified against the
+   * `const value` object the provider actually returns.
+   */
+  refreshQuests: () => Promise<void>;
+  /** Whether a group and a campaign are both selected. */
+  hasRequiredContext: boolean;
 }

@@ -1,6 +1,6 @@
 // src/features/campaign-entities/quests/context/QuestContext.tsx
 import React, { createContext, useContext, useCallback, useRef } from 'react';
-import { Quest, QuestStatus } from '../types';
+import { Quest, QuestStatus, QuestContextValue } from '../types';
 import { DomainData } from 'core/types/common';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
@@ -9,30 +9,6 @@ import { generateUniqueEntityId } from 'core/utils/entity-id';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { moveObjective } from '../utils/quest-presentation';
 import { Location } from '../../locations/types';
-
-// Context interface
-interface QuestContextValue {
-  quests: Quest[];
-  isLoading: boolean;
-  loading: boolean; // Add loading as an alias for isLoading for backward compatibility
-  error: string | null;
-  getQuestById: (id: string) => Quest | undefined;
-  getQuestsByStatus: (status: QuestStatus) => Quest[];
-  getQuestsByLocation: (location: Location) => Quest[];
-  getQuestsByNPC: (npcId: string) => Quest[];
-  updateQuestStatus: (questId: string, status: QuestStatus) => Promise<void>;
-  updateQuestObjective: (questId: string, objectiveId: string, completed: boolean) => Promise<void>;
-  addQuestObjective: (questId: string, description: string) => Promise<void>;
-  editQuestObjective: (questId: string, objectiveId: string, description: string) => Promise<void>;
-  moveQuestObjective: (questId: string, objectiveId: string, direction: 'up' | 'down') => Promise<void>;
-  addQuest: (quest: DomainData<Quest>) => Promise<string>;
-  updateQuest: (quest: Quest) => Promise<void>;
-  deleteQuest: (questId: string) => Promise<void>;
-  markQuestCompleted: (questId: string, dateCompleted?: string) => Promise<void>;
-  markQuestFailed: (questId: string) => Promise<void>;
-  refreshQuests: () => Promise<void>;
-  hasRequiredContext: boolean;
-}
 
 // Create the context but DON'T export it (to match NPCContext pattern)
 const QuestContext = createContext<QuestContextValue | undefined>(undefined);
@@ -373,10 +349,9 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await refreshQuests();
   }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, refreshQuests]);
 
-  const value = {
+  const value: QuestContextValue = {
     quests,
-    isLoading: loading, // Keep isLoading for newer components
-    loading, // Add loading as an alias for backward compatibility
+    isLoading: loading,
     // Trailing `|| null` normalizes the type. The real `useFirebaseData` declares
     // `useState<string | null>(null)`, so `writeError` is never `undefined` in
     // production -- but suites that mock the hook return an object with no `error`
