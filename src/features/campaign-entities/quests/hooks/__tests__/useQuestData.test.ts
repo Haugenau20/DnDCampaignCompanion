@@ -179,6 +179,67 @@ describe('useQuestData', () => {
     });
   });
 
+  /*
+    Documents written before T050 hold `objectives` as bare strings, and one is
+    enough to crash `QuestDirectory`'s search on `obj.description.toLowerCase()`.
+    Quests reach state by TWO routes, and the first fix normalised only one --
+    which left the defect fully live, because the effect below is what the
+    directory renders from on a warm load. It was found in Chrome against a
+    seeded pre-fix document, never here, so each route now gets its own case
+    with the other route deliberately returning nothing.
+  */
+  describe('legacy documents with string objectives', () => {
+    const legacy = {
+      ...makeQuest('legacy-1', 'Written before the fix'),
+      objectives: ['Find the old road', 'Cross the marshes'],
+    } as unknown as Quest;
+
+    test('are coerced when they arrive through the explicit fetch', async () => {
+      mockGetData.mockResolvedValue([legacy]);
+      setupFirebaseDataMock({ data: [], loading: false, error: null });
+
+      const { result } = renderHook(() => useQuestData());
+      await waitFor(() => expect(result.current.quests).toHaveLength(1));
+
+      expect(result.current.quests[0].objectives).toEqual([
+        { id: 'objective-0', description: 'Find the old road', completed: false },
+        { id: 'objective-1', description: 'Cross the marshes', completed: false },
+      ]);
+    });
+
+    test('are coerced when they arrive through the data effect', async () => {
+      // `getData` never settles, so `fetchQuests` cannot write to state and
+      // only the effect can populate the list. This is the route the first
+      // fix missed. (Returning `[]` instead would race: the effect fills the
+      // list, then the resolved empty fetch clears it again.)
+      mockGetData.mockReturnValue(new Promise(() => {}));
+      setupFirebaseDataMock({ data: [legacy], loading: false, error: null });
+
+      const { result } = renderHook(() => useQuestData());
+      await waitFor(() => expect(result.current.quests).toHaveLength(1));
+
+      expect(result.current.quests[0].objectives).toEqual([
+        { id: 'objective-0', description: 'Find the old road', completed: false },
+        { id: 'objective-1', description: 'Cross the marshes', completed: false },
+      ]);
+    });
+
+    test('survive the expression that crashed the directory', async () => {
+      mockGetData.mockReturnValue(new Promise(() => {}));
+      setupFirebaseDataMock({ data: [legacy], loading: false, error: null });
+
+      const { result } = renderHook(() => useQuestData());
+      await waitFor(() => expect(result.current.quests).toHaveLength(1));
+
+      // QuestDirectory.tsx:199, verbatim.
+      expect(() =>
+        result.current.quests.some((q) =>
+          q.objectives.some((o) => o.description.toLowerCase().includes('marshes'))
+        )
+      ).not.toThrow();
+    });
+  });
+
   describe('data synchronization', () => {
     test('should update quests when Firebase data is non-empty', async () => {
       const quests = [makeQuest('1', 'Quest A'), makeQuest('2', 'Quest B')];
