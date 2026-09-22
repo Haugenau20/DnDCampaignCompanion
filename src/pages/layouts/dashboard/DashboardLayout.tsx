@@ -56,14 +56,24 @@ const DashboardLayout: React.FC<LayoutProps> = ({
 
       {/* Content first: activity takes the wide column, ~1.6:1 against the aside */}
       <div className="w-full mt-8 lg:grid lg:grid-cols-[1.6fr_1fr] lg:gap-9 lg:items-start">
-        <div>
+        {/*
+          `min-w-0` is load-bearing on both tracks. A grid item defaults to
+          `min-width: auto`, so its min-content width -- here a single
+          unbroken activity or quest title, held on one line by the `truncate`
+          those rows already carry -- becomes the column's floor. One long
+          rumor title was therefore widening its track, the grid, and the page
+          with it, pushing the stats strip and the hero band past the viewport.
+          The rows' own `truncate` never got the chance to fire, because the
+          column had already grown to fit them.
+        */}
+        <div className="min-w-0">
           <ActivityFeed
             activities={activities}
             loading={loading}
           />
         </div>
 
-        <div className="mt-8 lg:mt-0 flex flex-col gap-7">
+        <div className="min-w-0 mt-8 lg:mt-0 flex flex-col gap-7">
           <OpenQuests quests={quests} loading={loading} />
           {!loading && <RumorPrompt rumorCount={rumors.length} />}
           {!loading && <PartyCrest chapterCount={chapters.length} />}
