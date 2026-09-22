@@ -671,4 +671,83 @@ describe('useFirebaseData', () => {
       expect(typeof result.current.deleteData).toBe('function');
     });
   });
+
+  // -------------------------------------------------------------------------
+  // autoFetch: false — the write-only instance
+  // -------------------------------------------------------------------------
+  describe("autoFetch: false", () => {
+    test("does not fetch the collection on mount", async () => {
+      renderHook(() =>
+        useFirebaseData<TestItem>({ collection: "items", autoFetch: false })
+      );
+
+      await waitFor(() => {
+        expect(mockGetCollection).not.toHaveBeenCalled();
+      });
+    });
+
+    test("does not fetch when the auth state changes", async () => {
+      renderHook(() =>
+        useFirebaseData<TestItem>({ collection: "items", autoFetch: false })
+      );
+
+      act(() => {
+        dispatchAuthEvent(true);
+      });
+      act(() => {
+        dispatchAuthEvent(false);
+      });
+
+      await waitFor(() => {
+        expect(mockGetCollection).not.toHaveBeenCalled();
+      });
+    });
+
+    test("reports loading as false, because nothing is in flight", () => {
+      const { result } = renderHook(() =>
+        useFirebaseData<TestItem>({ collection: "items", autoFetch: false })
+      );
+
+      expect(result.current.loading).toBe(false);
+    });
+
+    test("still writes, and still surfaces a write error", async () => {
+      mockCreateDocument.mockRejectedValueOnce(new Error("permission denied"));
+
+      const { result } = renderHook(() =>
+        useFirebaseData<TestItem>({ collection: "items", autoFetch: false })
+      );
+
+      await act(async () => {
+        await expect(
+          result.current.addData({ name: "Gundren" } as any, "gundren")
+        ).rejects.toThrow("permission denied");
+      });
+
+      expect(mockCreateDocument).toHaveBeenCalled();
+      expect(result.current.error).toBe("permission denied");
+    });
+
+    test("getData still fetches when called explicitly", async () => {
+      mockGetCollection.mockResolvedValue([{ id: "a", name: "A" }]);
+
+      const { result } = renderHook(() =>
+        useFirebaseData<TestItem>({ collection: "items", autoFetch: false })
+      );
+
+      await act(async () => {
+        await result.current.getData();
+      });
+
+      expect(mockGetCollection).toHaveBeenCalledTimes(1);
+    });
+
+    test("omitting autoFetch leaves the fetching behaviour unchanged", async () => {
+      renderHook(() => useFirebaseData<TestItem>({ collection: "items" }));
+
+      await waitFor(() => {
+        expect(mockGetCollection).toHaveBeenCalledWith("items");
+      });
+    });
+  });
 });

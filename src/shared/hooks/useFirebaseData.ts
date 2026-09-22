@@ -1,4 +1,4 @@
-// src/hooks/useFirebaseData.ts
+// src/shared/hooks/useFirebaseData.ts
 import { useState, useCallback, useEffect } from 'react';
 import { useFirestore } from 'features/user-management';
 import { AUTH_STATE_CHANGED_EVENT } from 'features/user-management';
@@ -7,13 +7,32 @@ import { DomainData } from 'core/types/common';
 interface UseFirebaseDataOptions<T> {
   collection: string;
   idField?: keyof T;
+  /**
+   * Whether this instance owns a copy of the collection.
+   *
+   * Defaults to `true`: the hook fetches on mount and refetches on every auth
+   * state change. Pass `false` for a **write-only** instance — one mounted
+   * purely for `addData`/`updateData`/`deleteData`, whose `data` array nothing
+   * renders. Such an instance fetching the collection is pure waste: a second
+   * set of transforms, promises, loading states and React updates against data
+   * no one reads. See the note on `addData` below.
+   *
+   * This is per-call-site rather than a change of default because at least one
+   * second instance is NOT write-only: `StoryContext`'s `story-progress`
+   * instance genuinely reads `data`.
+   */
+  autoFetch?: boolean;
 }
 
 export function useFirebaseData<T extends Record<string, any>>(
   options: UseFirebaseDataOptions<T>
 ) {
+  const { autoFetch = true } = options;
   const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+  // A write-only instance has nothing in flight on mount, so it must not claim
+  // to be loading -- that flag would otherwise stay `true` for this instance's
+  // entire life and lie to any future consumer.
+  const [loading, setLoading] = useState(autoFetch);
   const [error, setError] = useState<string | null>(null);
   const {
     getCollection,
@@ -39,13 +58,20 @@ export function useFirebaseData<T extends Record<string, any>>(
     }
   }, [options.collection, getCollection]);
 
-  // Add useEffect to fetch data on mount
+  // Fetch data on mount -- unless this instance is write-only.
   useEffect(() => {
+    if (!autoFetch) {
+      return;
+    }
     getData();
-  }, [getData]);
+  }, [getData, autoFetch]);
 
-  // Add listener for auth state changes to refresh data
+  // Refresh data on auth state changes -- unless this instance is write-only.
   useEffect(() => {
+    if (!autoFetch) {
+      return;
+    }
+
     const handleAuthStateChanged = (event: Event) => {
       const customEvent = event as CustomEvent<{authenticated: boolean}>;
       
@@ -63,7 +89,7 @@ export function useFirebaseData<T extends Record<string, any>>(
     return () => {
       window.removeEventListener(AUTH_STATE_CHANGED_EVENT, handleAuthStateChanged);
     };
-  }, [getData]);
+  }, [getData, autoFetch]);
 
   /**
    * Add a new document to the collection.
@@ -78,15 +104,16 @@ export function useFirebaseData<T extends Record<string, any>>(
    *
    * The optimistic `setData` append below is genuinely incomplete: it lacks the
    * server-stamped attribution (`createdBy`, `dateAdded`, etc.) until the next
-   * fetch replaces it. That is safe here specifically because nothing renders
-   * off this hook's own `data` array at any of its current call sites — each of
-   * the four entity contexts (NPC/Quest/Rumor/Location) gets the list it
-   * actually renders from a *separate* `useFirebaseData<T>` instance owned by
-   * its own `use*Data()` hook (or, for Location, from its own hand-rolled
-   * `locations` state), and never destructures `data` from the instance it
-   * calls `addData` on. This `data` array is written here but not read by any
-   * current consumer, so the cast below never surfaces incomplete attribution
-   * in a render.
+   * fetch replaces it. That is safe because nothing renders off a write-only
+   * instance's `data` array -- each of the five contexts (NPC/Quest/Rumor/
+   * Location/Story) gets the list it actually renders from a *separate*
+   * `useFirebaseData<T>` instance owned by its own read hook, and never
+   * destructures `data` from the instance it calls `addData` on.
+   *
+   * That was once an accident worth documenting. It is now the contract:
+   * those instances pass `autoFetch: false`, so their `data` array holds only
+   * optimistic appends, never a fetched collection, and reading it would be a
+   * mistake the option name warns against.
    */
   const addData = useCallback(async (newData: DomainData<T> & { id?: string }, documentId?: string) => {
     setLoading(true);
