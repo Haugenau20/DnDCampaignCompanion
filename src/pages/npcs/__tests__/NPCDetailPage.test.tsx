@@ -137,8 +137,10 @@ jest.mock("features/campaign-entities", () => ({
   rumorTitleText: jest.requireActual(
     "features/campaign-entities/rumors/utils/rumor-title"
   ).rumorTitleText,
-  useNPCData: () => ({ ...mockNPCDataReturn, refreshNPCs: mockRefreshNPCs }),
   useNPCs: () => ({
+    ...mockNPCDataReturn,
+    isLoading: mockNPCDataReturn.loading,
+    refreshNPCs: mockRefreshNPCs,
     updateNPC: mockUpdateNPC,
     updateNPCNote: mockUpdateNPCNote,
     deleteNPC: mockDeleteNPC,

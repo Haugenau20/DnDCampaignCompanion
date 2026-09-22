@@ -13,7 +13,8 @@ import { SearchProvider, useSearch } from "../../SearchContext";
  *
  * STRATEGY:
  * - Use real SearchProvider wrapping a renderHook consumer
- * - Mock useChapterData, useNPCData, useLocationData, useQuests, useRumorData, useNotes
+ * - Mock useStory, useNPCs, useLocations, useQuests, useRumors, useNotes --
+ *   the provider each collection's data now comes from, not a private loader
  * - Mock SearchService (injected via module-level mock) to control search results
  * - Assert on observable state: query, results, isSearching
  */
@@ -29,7 +30,7 @@ const mockUseRumorData = jest.fn();
 const mockUseNotes = jest.fn();
 
 jest.mock("features/storytelling", () => ({
-  useChapterData: () => mockUseChapterData(),
+  useStory: () => mockUseChapterData(),
 }));
 
 jest.mock("features/campaign-entities", () => ({
@@ -38,10 +39,10 @@ jest.mock("features/campaign-entities", () => ({
   rumorTitleText: jest.requireActual(
     "features/campaign-entities/rumors/utils/rumor-title"
   ).rumorTitleText,
-  useNPCData: () => mockUseNPCData(),
+  useNPCs: () => mockUseNPCData(),
   useQuests: () => mockUseQuests(),
-  useLocationData: () => mockUseLocationData(),
-  useRumorData: () => mockUseRumorData(),
+  useLocations: () => mockUseLocationData(),
+  useRumors: () => mockUseRumorData(),
 }));
 
 jest.mock("features/collaboration", () => ({

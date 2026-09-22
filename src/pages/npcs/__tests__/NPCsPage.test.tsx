@@ -52,23 +52,28 @@ jest.mock("core/services/firebase", () => ({
 
 interface NPCDataMock {
   npcs: any[];
-  loading: boolean;
+  isLoading: boolean;
   error: string | null;
   refreshNPCs: jest.Mock;
+  hasRequiredContext: boolean;
 }
 
 let mockNPCData: NPCDataMock = {
   npcs: [],
-  loading: false,
+  isLoading: false,
   error: null,
   refreshNPCs: jest.fn(),
+  hasRequiredContext: true,
 };
 
 jest.mock("features/campaign-entities", () => ({
-  useNPCData: () => mockNPCData,
+  useNPCs: () => mockNPCData,
   NPCDirectory: (props: any) => (
     <div data-testid="npc-directory">
       <span data-testid="npc-directory-count">{props.npcs?.length}</span>
+      <button data-testid="npc-directory-update" onClick={() => props.onNPCUpdate?.()}>
+        update
+      </button>
     </div>
   ),
 }));
@@ -110,9 +115,10 @@ describe("NPCsPage", () => {
         { id: "npc-3", name: "Boromir", status: "deceased" },
         { id: "npc-4", name: "Frodo", status: "missing" },
       ],
-      loading: false,
+      isLoading: false,
       error: null,
       refreshNPCs: jest.fn(),
+      hasRequiredContext: true,
     };
   });
 
@@ -246,6 +252,36 @@ describe("NPCsPage", () => {
       renderPage();
       fireEvent.click(screen.getByText("Add NPC"));
       expect(mockNavigateToPage).toHaveBeenCalledWith("/npcs/create");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Data ownership (T046)
+  // -------------------------------------------------------------------------
+  describe("data ownership", () => {
+    test("renders the provider's NPCs, not a second copy of its own", () => {
+      mockNPCData = {
+        ...mockNPCData,
+        npcs: [{ id: "gundren", name: "Gundren" }, { id: "sildar", name: "Sildar" }],
+      };
+
+      renderPage();
+
+      // If the page held its own loader, this would render that loader's
+      // array -- which a write through the context never updates.
+      expect(screen.getByTestId("npc-directory-count")).toHaveTextContent("2");
+    });
+
+    test("a directory write refreshes the provider's copy", () => {
+      const refreshNPCs = jest.fn();
+      mockNPCData = { ...mockNPCData, npcs: [], refreshNPCs };
+
+      renderPage();
+      screen.getByTestId("npc-directory-update").click();
+
+      // The page must hand the directory the PROVIDER's refresh. Handing it a
+      // private one is what made the stance ladder show a stale word.
+      expect(refreshNPCs).toHaveBeenCalled();
     });
   });
 });

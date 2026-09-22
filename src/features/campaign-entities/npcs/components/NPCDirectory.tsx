@@ -313,17 +313,14 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                             onChange={async (relationship) => {
                               await updateNPCRelationship(npc.id, relationship);
                               /*
-                                And then tell the page, or the change does not
-                                appear until a reload. `updateNPCRelationship`
-                                refreshes the **provider's** copy of the
-                                collection; `NPCsPage` mounts a loader of its
-                                own and renders from that one, so the two
-                                disagree the moment either is written to.
-                                `onNPCUpdate` exists for exactly this and had
-                                never been called by anything -- a declared,
-                                destructured, dead prop, which is why the
-                                stance someone picked stayed on the old word.
-                                Found while verifying the gate fix in Chrome.
+                                And then tell the page. `updateNPCRelationship`
+                                refreshes the provider's copy of the collection,
+                                and `NPCsPage` now renders that copy, so this
+                                call is belt-and-braces rather than the thing
+                                carrying the fix -- which is what it used to be.
+                                It was once a declared, destructured, never-called
+                                prop, and the stance someone picked stayed on the
+                                old word because of it (T046).
                               */
                               onNPCUpdate?.({ ...npc, relationship });
                             }}
