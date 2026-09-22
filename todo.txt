@@ -7,8 +7,4 @@ Run `/todo` to drain this file: each entry is checked against the code, located,
 sized and filed into TODO.md, then removed from here. `/todo <idea>` files a
 single item directly without going through this file.
 
-Last drained: 2026-09-16
-
-The little icon next to the logged in user should be swapped out for the color pallette with starting letter, like in other places in the app 
-
-In locations (and potentially other places), then lucide icon should be swapped out with the color pallette with letter, for consistency across the app. 
+Last drained: 2026-09-22
