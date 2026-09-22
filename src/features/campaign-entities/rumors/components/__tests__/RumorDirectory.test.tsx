@@ -1237,6 +1237,62 @@ describe('RumorDirectory', () => {
       expect(row.getByText('Other')).toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // A status the enum does not have (`15-9`)
+  // -------------------------------------------------------------------------
+  describe('a rumour whose status is not one of the three', () => {
+    /**
+     * Found in the emulator, written by note conversion: the extraction
+     * function's JSON schema offers `"unknown"` as a rumour status
+     * (`firebase/functions/src/entityExtraction.ts`), and `RumorStatus` has
+     * no such member. `RumorForm`'s `<select>` used to sanitise it by
+     * accident -- it only ever offered the three real ones -- so retiring the
+     * form is what let the value reach storage.
+     *
+     * Grouping by status then made the row *disappear*: it matched none of
+     * the three groups and was dropped, silently, from the list and from the
+     * counts. Location grouping never did this, because every rumour has some
+     * location or none. A list may show a record oddly; it may never fail to
+     * show it at all.
+     */
+    const odd = () =>
+      makeRumor({
+        id: 'odd',
+        title: 'Harry Potter at Jedi Academy',
+        status: 'unknown' as RumorStatus,
+      });
+
+    test('is still in the list', () => {
+      render(<RumorDirectory rumors={[odd()]} />);
+      expect(screen.getByText('Harry Potter at Jedi Academy')).toBeInTheDocument();
+    });
+
+    test('is counted in a band, so the three still sum to the total', () => {
+      render(<RumorDirectory rumors={[odd(), r2]} />);
+      // Unconfirmed is what an unrecognised status *means*: nobody knows yet.
+      expect(screen.getByRole('button', { name: '2 unconfirmed' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '0 confirmed' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '0 disproved' })).toBeInTheDocument();
+      expect(screen.getByText('rumors gathered')).toBeInTheDocument();
+    });
+
+    test('reads as unconfirmed rather than as its stored value', () => {
+      render(<RumorDirectory rumors={[odd()]} />);
+      const row = within(
+        screen.getByRole('button', { name: /Expand Harry Potter at Jedi Academy/ })
+      );
+      expect(row.getByText('Unconfirmed')).toBeInTheDocument();
+      expect(row.queryByText(/unknown/i)).not.toBeInTheDocument();
+    });
+
+    test('is reachable by the unconfirmed filter', () => {
+      render(<RumorDirectory rumors={[odd(), r3]} />);
+      fireEvent.click(screen.getByRole('button', { name: '1 unconfirmed' }));
+      expect(screen.getByText('Harry Potter at Jedi Academy')).toBeInTheDocument();
+      expect(screen.queryByText('Treasure map')).not.toBeInTheDocument();
+    });
+  });
 });
 
 

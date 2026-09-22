@@ -18,6 +18,7 @@ import {
   RUMOR_STATUS_TONE,
   formatRumorStatus,
   formatSourceType,
+  normalizeRumorStatus,
 } from '../utils/rumor-presentation';
 import { rumorDisplayTitle, rumorTitleText, UNTITLED_RUMOR } from '../utils/rumor-title';
 import {
@@ -158,8 +159,11 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   // Confirmed / unconfirmed / false are the entire status enum, so the three
   // segments sum to the total and the bar needs no separate "other" bucket.
   const statusSegments: RosterSegment[] = useMemo(() => {
+    // Normalised, so the three bands still sum to the total even when a
+    // record stores a status the enum does not have. See
+    // `normalizeRumorStatus` for how one gets in.
     const count = (status: RumorStatus) =>
-      initialRumors.filter(rumor => rumor.status === status).length;
+      initialRumors.filter(rumor => normalizeRumorStatus(rumor.status) === status).length;
     return [
       // Confirmed and false share a rung: both are fully known, and a
       // disproven rumour is a resolved one rather than a defeat. They are told
@@ -176,7 +180,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   // part of this filter set — see the grouping rationale below.
   const filteredRumors = useMemo(() => {
     return initialRumors.filter(rumor => {
-      if (statusFilter !== 'all' && rumor.status !== statusFilter) {
+      if (statusFilter !== 'all' && normalizeRumorStatus(rumor.status) !== statusFilter) {
         return false;
       }
 
@@ -204,7 +208,10 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
     () =>
       STATUS_GROUPS.map(group => ({
         ...group,
-        rumors: filteredRumors.filter(rumor => rumor.status === group.key),
+        // Normalised, so no row can match none of the three and vanish.
+        rumors: filteredRumors.filter(
+          rumor => normalizeRumorStatus(rumor.status) === group.key
+        ),
       })).filter(group => group.rumors.length > 0),
     [filteredRumors]
   );
@@ -493,8 +500,8 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                     reason -- the rumour has not left the ladder.
                   */}
                   <RosterStatus
-                    tone={RUMOR_STATUS_TONE[rumor.status]}
-                    negated={rumor.status === 'false'}
+                    tone={RUMOR_STATUS_TONE[normalizeRumorStatus(rumor.status)]}
+                    negated={normalizeRumorStatus(rumor.status) === 'false'}
                   >
                     {formatRumorStatus(rumor.status)}
                   </RosterStatus>

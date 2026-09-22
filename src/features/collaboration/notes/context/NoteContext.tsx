@@ -372,12 +372,33 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
             ? extraData.sourceType
             : undefined;
 
+        // Whitelisted, exactly as the source kind above is. The extraction
+        // function's JSON schema offers a fourth status, "unknown", that
+        // `RumorStatus` does not have -- and a rumour nobody has verified is
+        // precisely what "unconfirmed" already names. This was taken on trust
+        // until a converted note wrote `status: "unknown"` into Firestore,
+        // where the rumours list could not group it and silently dropped the
+        // row. `RumorForm`'s `<select>` had been sanitising it by accident.
+        const validStatuses = ['confirmed', 'unconfirmed', 'false'];
+        const status = validStatuses.includes(extraData.status)
+          ? extraData.status
+          : 'unconfirmed';
+
         const rumorId = await addRumor({
           title: extraData.title || entity.text,
           content: extraData.content || '',
-          status: extraData.status || 'unconfirmed',
+          status,
           ...(sourceType ? { sourceType } : {}),
-          sourceName: extraData.sourceType || '',
+          /*
+            The extractor's own `sourceName` ("Gaffer Gamgee"), which this
+            ignored: it wrote `sourceType` into the name, so a converted
+            rumour's source read "npc" under a source kind of NPC -- the same
+            fact twice, once in the wrong field. The raw `sourceType` is still
+            the fallback, but only when it was not a recognised kind, which is
+            the case that fallback was actually for: an unrecognised value is
+            usually the source's *name* in the wrong field.
+          */
+          sourceName: extraData.sourceName || (sourceType ? '' : extraData.sourceType || ''),
           relatedNPCs: [],
           relatedLocations: [],
           notes: [],

@@ -13,15 +13,40 @@ import { RumorStatus, SourceType } from '../types';
  */
 
 /**
+ * The status to *read* a rumour by, whatever it happens to store.
+ *
+ * `RumorStatus` has three members and the stored data does not respect that.
+ * The extraction function's JSON schema offers a fourth, `"unknown"`
+ * (`firebase/functions/src/entityExtraction.ts`), and a converted note
+ * carried it straight into Firestore. `RumorForm`'s `<select>` used to
+ * sanitise such a value by accident -- it only ever offered the three real
+ * ones -- so retiring the form is what let it through.
+ *
+ * **Unconfirmed is the honest fallback**, not a placeholder: a rumour whose
+ * truth nobody has established is exactly what "unconfirmed" names, which is
+ * also why `"unknown"` should never have been a separate answer.
+ *
+ * Everything that reads a status goes through here, because the failure this
+ * prevents is silent. Grouping by status drops a row that matches no group,
+ * `RUMOR_STATUS_TONE[status]` returns `undefined` for an unrecognised one,
+ * and the summary bar's three bands stop summing to the total -- none of
+ * which looks like an error to anybody. A list may show a record oddly; it
+ * may never fail to show it at all.
+ */
+export const normalizeRumorStatus = (status?: RumorStatus | string | null): RumorStatus =>
+  status === 'confirmed' || status === 'false' ? status : 'unconfirmed';
+
+/**
  * **"Disproved", never "False"** (§10, item 6).
  *
  * `false` is the stored value. What a reader sees describes what the party
  * did: they went and found out it was not true, which is a *result*, not a
  * data value and not a failure.
  */
-export const formatRumorStatus = (status: RumorStatus): string => {
-  if (status === 'false') return 'Disproved';
-  return status.charAt(0).toUpperCase() + status.slice(1);
+export const formatRumorStatus = (status?: RumorStatus | string | null): string => {
+  const known = normalizeRumorStatus(status);
+  if (known === 'false') return 'Disproved';
+  return known.charAt(0).toUpperCase() + known.slice(1);
 };
 
 /**
