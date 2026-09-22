@@ -7,6 +7,7 @@ import Typography from '../../../../core/components/Typography';
 import Input from '../../../../core/components/Input';
 import Button from '../../../../core/components/Button';
 import { X, MessageSquare, PlusCircle, AlertCircle } from 'lucide-react';
+import { rumorParagraph, rumorTitleText } from '../utils/rumor-title';
 
 interface ConvertToQuestDialogProps {
   open: boolean;
@@ -47,18 +48,18 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
       
       if (selectedRumors.length === 1) {
         // If only one rumor, use its title and content directly
-        setTitle(selectedRumors[0].title);
+        setTitle(rumorTitleText(selectedRumors[0]));
         setDescription(selectedRumors[0].content);
         
         // Make sure to capture the location
         setLocation(selectedRumors[0].location || '');
       } else {
         // If multiple rumors, create a combined title
-        setTitle(`Quest: ${selectedRumors[0].title}`);
+        setTitle(`Quest: ${rumorTitleText(selectedRumors[0])}`);
         
         // Combine content from all rumors for the description
         const combinedContent = selectedRumors.map(rumor => 
-          `${rumor.title}: ${rumor.content}`
+          rumorParagraph(rumor)
         ).join('\n\n');
         
         setDescription(combinedContent);
@@ -70,7 +71,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
       // Create background from rumors
       setBackground(`This quest was derived from rumors about:\n` + 
         selectedRumors.map(rumor => 
-          `- ${rumor.title} (from ${rumor.sourceName})`
+          `- ${rumorTitleText(rumor)} (from ${rumor.sourceName})`
         ).join('\n'));
       
       // Create initial objectives based on rumor count
@@ -78,7 +79,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
         setObjectives(
           selectedRumors.map(rumor => ({
             id: crypto.randomUUID(),
-            description: `Investigate the rumor about "${rumor.title}"`,
+            description: `Investigate the rumor about "${rumorTitleText(rumor)}"`,
             completed: false
           }))
         );
@@ -188,7 +189,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
                   className="p-2 rounded-lg selectable-item"
                 >
                   <Typography variant="body-sm" className="font-medium">
-                    {rumor.title}
+                    {rumorTitleText(rumor)}
                   </Typography>
                   <Typography variant="body-sm" color="secondary">
                     Source: {rumor.sourceName}

@@ -13,15 +13,40 @@ import { RumorStatus, SourceType } from '../types';
  */
 
 /**
+ * The status to *read* a rumour by, whatever it happens to store.
+ *
+ * `RumorStatus` has three members and the stored data does not respect that.
+ * The extraction function's JSON schema offers a fourth, `"unknown"`
+ * (`firebase/functions/src/entityExtraction.ts`), and a converted note
+ * carried it straight into Firestore. `RumorForm`'s `<select>` used to
+ * sanitise such a value by accident -- it only ever offered the three real
+ * ones -- so retiring the form is what let it through.
+ *
+ * **Unconfirmed is the honest fallback**, not a placeholder: a rumour whose
+ * truth nobody has established is exactly what "unconfirmed" names, which is
+ * also why `"unknown"` should never have been a separate answer.
+ *
+ * Everything that reads a status goes through here, because the failure this
+ * prevents is silent. Grouping by status drops a row that matches no group,
+ * `RUMOR_STATUS_TONE[status]` returns `undefined` for an unrecognised one,
+ * and the summary bar's three bands stop summing to the total -- none of
+ * which looks like an error to anybody. A list may show a record oddly; it
+ * may never fail to show it at all.
+ */
+export const normalizeRumorStatus = (status?: RumorStatus | string | null): RumorStatus =>
+  status === 'confirmed' || status === 'false' ? status : 'unconfirmed';
+
+/**
  * **"Disproved", never "False"** (§10, item 6).
  *
  * `false` is the stored value. What a reader sees describes what the party
  * did: they went and found out it was not true, which is a *result*, not a
  * data value and not a failure.
  */
-export const formatRumorStatus = (status: RumorStatus): string => {
-  if (status === 'false') return 'Disproved';
-  return status.charAt(0).toUpperCase() + status.slice(1);
+export const formatRumorStatus = (status?: RumorStatus | string | null): string => {
+  const known = normalizeRumorStatus(status);
+  if (known === 'false') return 'Disproved';
+  return known.charAt(0).toUpperCase() + known.slice(1);
 };
 
 /**
@@ -61,30 +86,34 @@ export const RUMOR_STATUS_FILL: Record<RumorStatus, string> = {
 };
 
 /**
- * Where a rumour came from, as four buttons rather than a dropdown (item 4).
+ * Where a rumour came from, as five buttons rather than a dropdown (item 4).
  *
- * Four short options do not need a select. The wording is the question's:
+ * Five short options do not need a select. The wording is the question's:
  * "heard from **an NPC**", not "source type: npc".
+ *
+ * **`other` is one of them now.** It used to be excluded on the grounds that
+ * it was the create form's default for "nobody said" rather than an answer --
+ * true of the stored data, but it left a reader who genuinely heard something
+ * from none of the other four with nothing to press, while the collapsed row
+ * cheerfully printed "Other" at them anyway. The absence of an answer is now
+ * `sourceType` being absent; `other` means what it says.
  */
 export const SOURCE_OPTIONS: Array<{ value: SourceType; label: string }> = [
   { value: 'npc', label: 'An NPC' },
   { value: 'traveler', label: 'A traveller' },
   { value: 'tavern', label: 'A tavern' },
   { value: 'notice', label: 'A notice' },
+  { value: 'other', label: 'Something else' },
 ];
 
-/**
- * `other` is not offered, and is not a fifth kind: it is what the record holds
- * when nobody has said where the rumour came from.
- *
- * The create form defaulted every rumour to it, so it is all over the stored
- * data. The row treats it as "not chosen yet" -- which is why *Who exactly*
- * stays hidden until one of the four above is picked -- while still showing
- * the name on a legacy record that has one, because hiding written text would
- * be worse than showing it under an unchosen heading.
- */
-export const UNCHOSEN_SOURCE: SourceType = 'other';
+/** What the row prints where a source kind would go, when there is none. */
+export const NO_SOURCE = '—';
 
-/** Human-readable source kind, for the row's collapsed line and the filters. */
-export const formatSourceType = (type: SourceType): string =>
-  type === 'npc' ? 'NPC' : type.charAt(0).toUpperCase() + type.slice(1);
+/**
+ * Human-readable source kind, for the row's collapsed line and the filters.
+ *
+ * An absent kind is an em dash, not "Other": nobody has said where this came
+ * from, and saying "Other" would be answering on their behalf.
+ */
+export const formatSourceType = (type?: SourceType | null): string =>
+  !type ? NO_SOURCE : type === 'npc' ? 'NPC' : type.charAt(0).toUpperCase() + type.slice(1);

@@ -16,6 +16,7 @@ import SignedOutHome from 'pages/home/SignedOutHome';
 import DashboardLayout from 'pages/layouts/dashboard/DashboardLayout';
 import useLayoutData from 'pages/layouts/common/hooks/useLayoutData';
 import CampaignBanner from 'pages/layouts/dashboard/sections/CampaignBanner';
+import { rumorTitleText } from 'features/campaign-entities';
 
 // Combined activity type from all content types
 export interface Activity {
@@ -149,7 +150,7 @@ useEffect(() => {
         allActivities.push({
           id: rumor.id,
           type: 'rumor',
-          title: rumor.title,
+          title: rumorTitleText(rumor),
           description: rumor.content.substring(0, 100) + '...',
           actor: determineActor(rumor),
           timestamp: new Date(rumor.dateModified || rumor.dateAdded),

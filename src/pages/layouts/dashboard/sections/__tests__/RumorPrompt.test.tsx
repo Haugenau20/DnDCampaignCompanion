@@ -68,9 +68,12 @@ describe("RumorPrompt", () => {
   });
 
   it("offers a way to act on the prompt", async () => {
+    // CHANGED DELIBERATELY in `15-9`: this pointed at `/rumors/create`, which
+    // no longer exists. The composer sits at the top of the list itself, so
+    // the prompt sends you to the list and the control is already there.
     render(<RumorPrompt rumorCount={0} />);
     await userEvent.click(screen.getByRole("button", { name: "Add a rumor" }));
-    expect(mockNavigateToPage).toHaveBeenCalledWith("/rumors/create");
+    expect(mockNavigateToPage).toHaveBeenCalledWith("/rumors");
   });
 
   it("is marked as a prompt rather than content", () => {

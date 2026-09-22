@@ -50,6 +50,8 @@ jest.mock('shared/hooks/useNavigation', () => ({
 jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(() => ({ user: { uid: 'user-1' } })),
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
+  // `15-10`: drafts are kept per campaign, so the list needs to know which.
+  useCampaigns: jest.fn(() => ({ activeCampaignId: 'campaign-1' })),
 }));
 
 jest.mock('../../context/RumorContext', () => ({
@@ -63,9 +65,10 @@ jest.mock('../../../npcs/context/NPCContext', () => ({
   })),
 }));
 
-// `locations` feeds the group-heading resolution added for #1412. These tests
-// set `rumor.location` to display names and supply no location records, which
-// resolveLocationName passes through verbatim.
+// `locations` feeds the attach tray. It no longer feeds a group heading:
+// `15-9` replaced location grouping with grouping by status, because a rumour
+// can point at several places and being filed under exactly one of them gave
+// confident false negatives.
 jest.mock('../../../locations/context/LocationContext', () => ({
   useLocations: jest.fn(() => ({
     locations: [{ id: 'high-pass', name: 'The High Pass', type: 'landmark', status: 'known' }],
@@ -141,9 +144,29 @@ function makeRumor(overrides: Partial<Rumor> = {}): Rumor {
   };
 }
 
-const r1 = makeRumor({ id: 'r1', title: 'Dragon spotted', status: 'confirmed', sourceType: 'npc', sourceName: 'Aldric', location: 'Silverkeep' });
+/**
+ * The generic rumour these tests reach for when the subject is the row rather
+ * than its status.
+ *
+ * **Unconfirmed on purpose since `15-9`.** It used to be `confirmed`, which
+ * stopped being a neutral choice the moment the list started grouping by
+ * status. Unconfirmed is also what a rumour actually is when it is written
+ * down, which is what a generic fixture should be.
+ */
+const r1 = makeRumor({ id: 'r1', title: 'Dragon spotted', status: 'unconfirmed', sourceType: 'npc', sourceName: 'Aldric', location: 'Silverkeep' });
 const r2 = makeRumor({ id: 'r2', title: 'Missing merchant', status: 'unconfirmed', sourceType: 'tavern', sourceName: 'The Flagon', location: 'Ironhold' });
 const r3 = makeRumor({ id: 'r3', title: 'Treasure map', status: 'false', sourceType: 'notice', sourceName: 'Town board', location: 'Silverkeep' });
+/** For the tests that are actually about a confirmed rumour. */
+const rc = makeRumor({ id: 'rc', title: 'Dragon spotted', status: 'confirmed', sourceType: 'npc', sourceName: 'Aldric', location: 'Silverkeep' });
+
+/**
+ * Open the Disproved group.
+ *
+ * It is the only one that starts folded (`15-9`), so a test about a disproved
+ * row says so out loud rather than relying on it being on screen.
+ */
+const revealDisproved = () =>
+  fireEvent.click(screen.getByRole('button', { name: /^Disproved/ }));
 
 /** The roster's search box. */
 const searchInput = () => screen.getByPlaceholderText(/search rumors/i);
@@ -191,7 +214,7 @@ describe('RumorDirectory', () => {
         screen.queryByRole('button', { name: /add the first rumour/i })
       ).not.toBeInTheDocument();
       expect(
-        screen.getByLabelText('Heard something? Title it here')
+        screen.getByLabelText('Heard something? Write it down here')
       ).toBeInTheDocument();
     });
   });
@@ -213,27 +236,74 @@ describe('RumorDirectory', () => {
       expect(screen.getByText('Treasure map')).toBeInTheDocument();
     });
 
-    test('should group rumors by location', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
-      expect(screen.getByRole('heading', { name: 'Silverkeep' })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: 'Ironhold' })).toBeInTheDocument();
+    /**
+     * CHANGED DELIBERATELY in `15-9`. This list grouped by location, and the
+     * data could not support it: a rumour carries `locationId` (where it was
+     * heard) *and* `relatedLocations` (what it is about), so one touching
+     * three places was filed under exactly one of them and a reader scanning
+     * a place got confident false negatives. Status has exactly three members
+     * and nothing lands anywhere it does not belong.
+     */
+    test('groups by status, in a fixed order, and never by location', () => {
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
+
+      expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Confirmed' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Disproved' })).toBeInTheDocument();
+
+      // The place names the fixtures carry are not headings any more.
+      expect(screen.queryByRole('heading', { name: 'Silverkeep' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Ironhold' })).not.toBeInTheDocument();
+      expect(screen.queryByText('Location unknown')).not.toBeInTheDocument();
     });
 
-    test('should group rumors with no location under "Location unknown"', () => {
+    test('a rumour with no location is grouped like any other', () => {
       const unlocated = makeRumor({ id: 'r-nowhere', title: 'Odd noises', location: undefined });
       render(<RumorDirectory rumors={[unlocated]} />);
-      expect(screen.getByText('Location unknown')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
+      expect(screen.getByText('Odd noises')).toBeInTheDocument();
     });
 
-    test('renders the group name as a heading, not a control', () => {
-      render(<RumorDirectory rumors={[r1]} />);
-      expect(screen.getByRole('heading', { name: 'Silverkeep' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Silverkeep' })).not.toBeInTheDocument();
+    test('skips a status nothing is in', () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Confirmed' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Disproved' })).not.toBeInTheDocument();
+    });
+
+    /**
+     * **Only disproved starts folded.** Confirmed was folded too at first, by
+     * analogy with a finished quest, and the analogy does not hold: a
+     * confirmed rumour is the thing the party acts on, so folding it hid the
+     * best-earned half of the list. Disproved is still knowledge, still
+     * counted, and one click away -- but nobody is going back to it.
+     */
+    test('only disproved opens collapsed', () => {
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
+
+      expect(screen.getByRole('button', { name: /^Disproved/ })).toHaveAttribute(
+        'aria-expanded',
+        'false'
+      );
+
+      // The other two are plain headings, with no disclosure at all.
+      expect(screen.queryByRole('button', { name: /^Unconfirmed/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Confirmed/ })).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Expand Dragon spotted/ })
+      ).toBeInTheDocument();
+
+      revealDisproved();
+      expect(screen.getByRole('button', { name: /^Disproved/ })).toHaveAttribute(
+        'aria-expanded',
+        'true'
+      );
     });
 
     test('shows each row as one dense row carrying status and source', () => {
-      render(<RumorDirectory rumors={[r1]} />);
-      // Scoped to the row, since "Confirmed" also labels a status-bar segment.
+      render(<RumorDirectory rumors={[rc]} />);
+      // Scoped to the row, since "Confirmed" also labels a status-bar segment
+      // and a group heading.
       const row = within(screen.getByRole('button', { name: /Expand Dragon spotted/ }));
       expect(row.getByText('Dragon spotted')).toBeInTheDocument();
       expect(row.getByText('Confirmed')).toBeInTheDocument();
@@ -283,7 +353,7 @@ describe('RumorDirectory', () => {
         screen.getByRole('button', { name: /Collapse Dragon spotted/ })
       ).toHaveAttribute('aria-expanded', 'true');
       expect(screen.getByLabelText('What was heard')).toBeInTheDocument();
-      expect(screen.getByLabelText('Rumour')).toBeInTheDocument();
+      expect(screen.getByLabelText('Call it')).toBeInTheDocument();
       expect(screen.getByRole('group', { name: 'Heard from' })).toBeInTheDocument();
       expect(screen.getByRole('group', { name: /Status of Dragon spotted/ })).toBeInTheDocument();
       expect(screen.getByText('Recorded by')).toBeInTheDocument();
@@ -319,7 +389,10 @@ describe('RumorDirectory', () => {
         id: 'bare',
         title: 'Bare rumor',
         content: '',
-        sourceType: 'other',
+        // CHANGED DELIBERATELY in `15-9`: this was `'other'`, which now means
+        // "heard from none of the other four" -- a real answer somebody
+        // chose. "Nobody has said" is the field being absent.
+        sourceType: undefined,
         sourceName: '',
         notes: [],
         relatedNPCs: [],
@@ -419,13 +492,13 @@ describe('RumorDirectory', () => {
   // -------------------------------------------------------------------------
   describe('status bar', () => {
     test('shows the total rumors gathered', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       expect(screen.getByText('3')).toBeInTheDocument();
       expect(screen.getByText('rumors gathered')).toBeInTheDocument();
     });
 
     test('breaks the total down by status, each labelled with a word', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       expect(screen.getByRole('button', { name: '1 confirmed' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '1 unconfirmed' })).toBeInTheDocument();
       // "Disproved", never "false" -- even in the bar (`15-7` item 6). It
@@ -440,28 +513,28 @@ describe('RumorDirectory', () => {
     });
 
     test('should filter by confirmed status', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       fireEvent.click(screen.getByRole('button', { name: '1 confirmed' }));
       expect(screen.getByText('Dragon spotted')).toBeInTheDocument();
       expect(screen.queryByText('Missing merchant')).not.toBeInTheDocument();
     });
 
     test('should filter by unconfirmed status', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       fireEvent.click(screen.getByRole('button', { name: '1 unconfirmed' }));
       expect(screen.getByText('Missing merchant')).toBeInTheDocument();
       expect(screen.queryByText('Dragon spotted')).not.toBeInTheDocument();
     });
 
     test('should filter by disproved status', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       fireEvent.click(screen.getByRole('button', { name: '1 disproved' }));
       expect(screen.getByText('Treasure map')).toBeInTheDocument();
       expect(screen.queryByText('Dragon spotted')).not.toBeInTheDocument();
     });
 
     test('clicking the active band clears the filter', () => {
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       const confirmedBand = () => screen.getByRole('button', { name: '1 confirmed' });
 
       fireEvent.click(confirmedBand());
@@ -565,25 +638,33 @@ describe('RumorDirectory', () => {
   describe('the composer row', () => {
     test('sits at the top of the list, always, with no dialog and no route', async () => {
       render(<RumorDirectory rumors={[r1]} />);
-      const field = screen.getByLabelText('Heard something? Title it here');
+      const field = screen.getByLabelText('Heard something? Write it down here');
       fireEvent.change(field, { target: { value: 'Orcs massing in the High Pass' } });
       fireEvent.click(screen.getByRole('button', { name: 'Add rumour' }));
 
+      // CHANGED DELIBERATELY in `15-9`. What the composer captures is the
+      // **content** -- a title long enough to say something never fitted the
+      // row that had to render it, so the field that was always going to hold
+      // a sentence now holds one, and the name is derived until somebody
+      // shortens it on purpose. `sourceType` is absent rather than `'other'`:
+      // nobody has been asked yet.
       await waitFor(() =>
         expect(mockAddRumor).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: 'Orcs massing in the High Pass',
+            title: '',
+            content: 'Orcs massing in the High Pass',
             status: 'unconfirmed',
           })
         )
       );
+      expect(mockAddRumor.mock.calls[0][0]).not.toHaveProperty('sourceType');
       expect(mockNavigateToPage).not.toHaveBeenCalled();
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     test('adds on Enter, because a rumour is written down mid-sentence', async () => {
       render(<RumorDirectory rumors={[r1]} />);
-      const field = screen.getByLabelText('Heard something? Title it here');
+      const field = screen.getByLabelText('Heard something? Write it down here');
       fireEvent.change(field, { target: { value: 'A wizard is coming' } });
       fireEvent.keyDown(field, { key: 'Enter' });
 
@@ -601,16 +682,16 @@ describe('RumorDirectory', () => {
       // button receives no pointer events and never shows its own...
       expect(add.parentElement).toHaveAttribute(
         'title',
-        'Give it a title first — then this adds it.'
+        'Write it down first — then this adds it.'
       );
       // ...and the same sentence bound to the button, for anyone not hovering.
       const hint = document.getElementById(add.getAttribute('aria-describedby')!);
-      expect(hint).toHaveTextContent('Give it a title first — then this adds it.');
+      expect(hint).toHaveTextContent('Write it down first — then this adds it.');
     });
 
     test('stops explaining itself once there is something to add', () => {
       render(<RumorDirectory rumors={[r1]} />);
-      fireEvent.change(screen.getByLabelText('Heard something? Title it here'), {
+      fireEvent.change(screen.getByLabelText('Heard something? Write it down here'), {
         target: { value: 'Orcs massing' },
       });
 
@@ -623,7 +704,7 @@ describe('RumorDirectory', () => {
     test('keeps the typed title when the write is refused, and says why', async () => {
       mockAddRumor.mockRejectedValueOnce(new Error('Permission denied'));
       render(<RumorDirectory rumors={[r1]} />);
-      const field = screen.getByLabelText('Heard something? Title it here');
+      const field = screen.getByLabelText('Heard something? Write it down here');
       fireEvent.change(field, { target: { value: 'Orcs massing' } });
       fireEvent.click(screen.getByRole('button', { name: 'Add rumour' }));
 
@@ -637,7 +718,7 @@ describe('RumorDirectory', () => {
       render(<RumorDirectory rumors={[r1]} />);
       fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
       expect(
-        screen.queryByLabelText('Heard something? Title it here')
+        screen.queryByLabelText('Heard something? Write it down here')
       ).not.toBeInTheDocument();
     });
   });
@@ -671,7 +752,7 @@ describe('RumorDirectory', () => {
       // Item 8, and the gate. The list re-renders underneath the editor, and
       // a row that stops matching unmounts with whatever was in it. The draft
       // lives in the directory for exactly this.
-      render(<RumorDirectory rumors={[r1, r2, r3]} />);
+      render(<RumorDirectory rumors={[rc, r2, r3]} />);
       openRow('Dragon spotted');
       fireEvent.change(screen.getByLabelText('What was heard'), {
         target: { value: 'Half a sentence, mid-' },
@@ -732,7 +813,7 @@ describe('RumorDirectory', () => {
       openRow('Dragon spotted');
       expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
 
-      fireEvent.change(screen.getByLabelText('Rumour'), {
+      fireEvent.change(screen.getByLabelText('Call it'), {
         target: { value: 'Dragon spotted twice' },
       });
       expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
@@ -779,7 +860,10 @@ describe('RumorDirectory', () => {
   describe('what disproved looks like', () => {
     test('reads "Disproved" and never "False" in the row', () => {
       render(<RumorDirectory rumors={[r3]} />);
-      expect(screen.getByText('Disproved')).toBeInTheDocument();
+      revealDisproved();
+      // Scoped to the row: "Disproved" is also the group heading now.
+      const row = within(screen.getByRole('button', { name: /Expand Treasure map/ }));
+      expect(row.getByText('Disproved')).toBeInTheDocument();
       expect(screen.queryByText('False')).not.toBeInTheDocument();
     });
 
@@ -788,10 +872,16 @@ describe('RumorDirectory', () => {
       // separates them is the cue, not the hue. Until `15-7` the code put
       // disproved on `valence-3` -- the red a failed quest wears -- while the
       // comment above it claimed otherwise.
-      render(<RumorDirectory rumors={[r1, r3]} />);
+      render(<RumorDirectory rumors={[rc, r3]} />);
+      revealDisproved();
 
-      const confirmed = screen.getByText('Confirmed');
-      const disproved = screen.getByText('Disproved');
+      // Scoped to the rows: both words are also group headings now.
+      const confirmed = within(
+        screen.getByRole('button', { name: /Expand Dragon spotted/ })
+      ).getByText('Confirmed');
+      const disproved = within(
+        screen.getByRole('button', { name: /Expand Treasure map/ })
+      ).getByText('Disproved');
       const rung = (node: HTMLElement) =>
         (node.closest('[class*="valence-"]') ?? node).className.match(/valence-\d/)?.[0];
 
@@ -928,7 +1018,7 @@ describe('RumorDirectory', () => {
     });
 
     test('states status as a word and nothing else', () => {
-      render(<RumorDirectory rumors={[r1]} />);
+      render(<RumorDirectory rumors={[rc]} />);
       const row = screen.getByRole('button', { name: /Expand Dragon spotted/ });
       expect(within(row).getByText('Confirmed')).toBeInTheDocument();
       expect(row.querySelectorAll('.bg-status-completed')).toHaveLength(0);
@@ -951,6 +1041,554 @@ describe('RumorDirectory', () => {
     });
   });
 
+
+  // -------------------------------------------------------------------------
+  // What a rumour is called (`15-9`)
+  // -------------------------------------------------------------------------
+  describe('naming an untitled rumour', () => {
+    const openRow = (name: string) =>
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Expand ${name}`) }));
+
+    test('names the row from what was heard when no title was typed', () => {
+      const heard = makeRumor({
+        id: 'heard',
+        title: '',
+        content: 'Traders say the goblin road is busy.',
+      });
+      render(<RumorDirectory rumors={[heard]} />);
+
+      expect(
+        screen.getByText('Traders say the goblin road is busy.')
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Untitled rumour')).not.toBeInTheDocument();
+    });
+
+    test('caps a long first line so the row can actually render it', () => {
+      // The complaint this whole change answers: a title worth typing is a
+      // sentence, and a sentence never fitted the row that had to show it.
+      const long = makeRumor({
+        id: 'long',
+        title: '',
+        content:
+          'Traders coming down from Rivendell say the goblin road is busy again after dark',
+      });
+      render(<RumorDirectory rumors={[long]} />);
+
+      expect(
+        screen.getByText('Traders coming down from Rivendell say the goblin')
+      ).toBeInTheDocument();
+    });
+
+    test('an explicit title still wins over the content', () => {
+      const named = makeRumor({
+        id: 'named',
+        title: 'The goblin road',
+        content: 'Traders say it is busy again after dark.',
+      });
+      render(<RumorDirectory rumors={[named]} />);
+
+      expect(screen.getByText('The goblin road')).toBeInTheDocument();
+      expect(
+        screen.queryByText('Traders say it is busy again after dark.')
+      ).not.toBeInTheDocument();
+    });
+
+    test('a rumour with neither reads as untitled, and muted rather than named', () => {
+      const empty = makeRumor({ id: 'empty', title: '', content: '' });
+      render(<RumorDirectory rumors={[empty]} />);
+
+      const label = screen.getByText('Untitled rumour');
+      expect(label).toBeInTheDocument();
+      // Muted, so it reads as unfinished rather than as a record somebody
+      // decided to call "Untitled rumour".
+      expect(label.className).toMatch(/muted|typography-secondary/);
+    });
+
+    test('the title field previews what the row will show if left blank', () => {
+      const heard = makeRumor({
+        id: 'heard2',
+        title: '',
+        content: 'Traders say the goblin road is busy.',
+      });
+      render(<RumorDirectory rumors={[heard]} />);
+      openRow('Traders say the goblin road is busy.');
+
+      expect(screen.getByLabelText('Call it')).toHaveAttribute(
+        'placeholder',
+        'Traders say the goblin road is busy.'
+      );
+    });
+
+    test('saves without a title, but not with nothing at all', async () => {
+      // CHANGED DELIBERATELY in `15-9`: this used to read "A rumour needs a
+      // title." A title is optional now -- the list names an untitled rumour
+      // from its content -- so the only unsaveable state left is one that
+      // says nothing at all, which no row could be rendered from.
+      const written = makeRumor({ id: 'w', title: 'Old news', content: 'Somebody said so' });
+      render(<RumorDirectory rumors={[written]} />);
+      openRow('Old news');
+
+      fireEvent.change(screen.getByLabelText('Call it'), { target: { value: '' } });
+      fireEvent.change(screen.getByLabelText('What was heard'), { target: { value: '' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() =>
+        expect(screen.getByRole('alert')).toHaveTextContent(
+          'A rumour needs something written down.'
+        )
+      );
+      expect(mockUpdateRumor).not.toHaveBeenCalled();
+
+      // Content but no title is a perfectly good rumour.
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Somebody said something' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() =>
+        expect(mockUpdateRumor).toHaveBeenCalledWith(
+          expect.objectContaining({ title: '', content: 'Somebody said something' })
+        )
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Where a rumour came from (`15-9`)
+  // -------------------------------------------------------------------------
+  describe('an unchosen source', () => {
+    const unsourced = () =>
+      makeRumor({ id: 'nosrc', title: 'Odd noises', sourceType: undefined, sourceName: '' });
+
+    const heardFrom = () => within(screen.getByRole('group', { name: 'Heard from' }));
+
+    test('reads as a dash on the row, not as "Other"', () => {
+      // The bug this answers: the row printed "Other" for a rumour whose
+      // source had never been discussed, while the editor below showed nothing
+      // selected. The two said different things about one record.
+      render(<RumorDirectory rumors={[unsourced()]} />);
+      const row = within(screen.getByRole('button', { name: /Expand Odd noises/ }));
+
+      expect(row.queryByText('Other')).not.toBeInTheDocument();
+      expect(row.getAllByText('—').length).toBeGreaterThan(0);
+    });
+
+    test('offers "Something else" as a real choice, pressed like any other', () => {
+      render(<RumorDirectory rumors={[unsourced()]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Odd noises/ }));
+
+      expect(heardFrom().getByRole('button', { name: 'Something else' })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
+
+      fireEvent.click(heardFrom().getByRole('button', { name: 'Something else' }));
+      expect(heardFrom().getByRole('button', { name: 'Something else' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      // And it asks who, exactly, like any other chosen kind.
+      expect(screen.getByLabelText('Who exactly')).toBeInTheDocument();
+    });
+
+    test('pressing the chosen kind again clears it', () => {
+      // Every one of the five is a real answer now, so there has to be a way
+      // back to "nobody has said" after a mis-tap.
+      render(<RumorDirectory rumors={[unsourced()]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Odd noises/ }));
+
+      fireEvent.click(heardFrom().getByRole('button', { name: 'A tavern' }));
+      expect(heardFrom().getByRole('button', { name: 'A tavern' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+
+      fireEvent.click(heardFrom().getByRole('button', { name: 'A tavern' }));
+      expect(heardFrom().getByRole('button', { name: 'A tavern' })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
+    });
+
+    test('writes null rather than undefined, which Firestore refuses', async () => {
+      const sourced = makeRumor({
+        id: 'srcd',
+        title: 'Odd noises',
+        sourceType: 'tavern',
+        sourceName: '',
+      });
+      render(<RumorDirectory rumors={[sourced]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Odd noises/ }));
+
+      // Un-press the chosen kind, then save the cleared value.
+      fireEvent.click(heardFrom().getByRole('button', { name: 'A tavern' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() =>
+        expect(mockUpdateRumor).toHaveBeenCalledWith(
+          expect.objectContaining({ sourceType: null })
+        )
+      );
+    });
+
+    test('a record that already says "other" keeps saying so', () => {
+      // No migration: rumours written under the retired create form all carry
+      // `'other'` and cannot be told apart from a deliberate choice. They read
+      // exactly as they did before.
+      const legacy = makeRumor({ id: 'legacy', title: 'Old news', sourceType: 'other' });
+      render(<RumorDirectory rumors={[legacy]} />);
+      const row = within(screen.getByRole('button', { name: /Expand Old news/ }));
+      expect(row.getByText('Other')).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // A status the enum does not have (`15-9`)
+  // -------------------------------------------------------------------------
+  describe('a rumour whose status is not one of the three', () => {
+    /**
+     * Found in the emulator, written by note conversion: the extraction
+     * function's JSON schema offers `"unknown"` as a rumour status
+     * (`firebase/functions/src/entityExtraction.ts`), and `RumorStatus` has
+     * no such member. `RumorForm`'s `<select>` used to sanitise it by
+     * accident -- it only ever offered the three real ones -- so retiring the
+     * form is what let the value reach storage.
+     *
+     * Grouping by status then made the row *disappear*: it matched none of
+     * the three groups and was dropped, silently, from the list and from the
+     * counts. Location grouping never did this, because every rumour has some
+     * location or none. A list may show a record oddly; it may never fail to
+     * show it at all.
+     */
+    const odd = () =>
+      makeRumor({
+        id: 'odd',
+        title: 'Harry Potter at Jedi Academy',
+        status: 'unknown' as RumorStatus,
+      });
+
+    test('is still in the list', () => {
+      render(<RumorDirectory rumors={[odd()]} />);
+      expect(screen.getByText('Harry Potter at Jedi Academy')).toBeInTheDocument();
+    });
+
+    test('is counted in a band, so the three still sum to the total', () => {
+      render(<RumorDirectory rumors={[odd(), r2]} />);
+      // Unconfirmed is what an unrecognised status *means*: nobody knows yet.
+      expect(screen.getByRole('button', { name: '2 unconfirmed' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '0 confirmed' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '0 disproved' })).toBeInTheDocument();
+      expect(screen.getByText('rumors gathered')).toBeInTheDocument();
+    });
+
+    test('reads as unconfirmed rather than as its stored value', () => {
+      render(<RumorDirectory rumors={[odd()]} />);
+      const row = within(
+        screen.getByRole('button', { name: /Expand Harry Potter at Jedi Academy/ })
+      );
+      expect(row.getByText('Unconfirmed')).toBeInTheDocument();
+      expect(row.queryByText(/unknown/i)).not.toBeInTheDocument();
+    });
+
+    test('is reachable by the unconfirmed filter', () => {
+      render(<RumorDirectory rumors={[odd(), r3]} />);
+      fireEvent.click(screen.getByRole('button', { name: '1 unconfirmed' }));
+      expect(screen.getByText('Harry Potter at Jedi Academy')).toBeInTheDocument();
+      expect(screen.queryByText('Treasure map')).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // An open row holds its place (`15-10`)
+  // -------------------------------------------------------------------------
+  describe('resolving a rumour from its own row', () => {
+    const openRow = (name: string) =>
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Expand ${name}`) }));
+
+    const resolveAs = (name: string, label: string) =>
+      fireEvent.click(
+        within(screen.getByRole('group', { name: `Status of ${name}` })).getByRole('button', {
+          name: label,
+        })
+      );
+
+    /**
+     * **The regression this fixes was introduced by grouping.** The ladder
+     * writes on the click -- `15-7` made that a gate, because confirming a
+     * rumour mid-session must be one click -- and that was harmless while the
+     * list grouped by location, since a status change moved nothing. Grouping
+     * by status made the thing you most often change from this list also the
+     * thing that re-sorts it, so the row you were reading and editing was
+     * thrown to another part of the page the instant you resolved it.
+     *
+     * Sorting by status rather than grouping would have moved it just as
+     * surely, which is why this is fixed by pinning the open row rather than
+     * by reconsidering the grouping.
+     */
+    test('stays where it is when its status changes', async () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+
+      resolveAs('Missing merchant', 'Confirmed');
+      await waitFor(() =>
+        expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r2', 'confirmed')
+      );
+
+      // Still open, still under the heading it was opened from.
+      expect(
+        screen.getByRole('button', { name: /Collapse Missing merchant/ })
+      ).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Confirmed' })).not.toBeInTheDocument();
+    });
+
+    test('the write still happens on the click, not on Save', async () => {
+      // The one-click gate from `15-7`: only the row's *position* waits.
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      resolveAs('Missing merchant', 'Confirmed');
+
+      await waitFor(() =>
+        expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r2', 'confirmed')
+      );
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeDisabled();
+    });
+
+    /**
+     * The write lands, the context refreshes, and the list re-renders with a
+     * record whose status has really changed -- which is the moment the row
+     * would have jumped. It holds, and says why.
+     */
+    test('says where it is going rather than quietly sitting in the wrong group', () => {
+      const before = makeRumor({ id: 'moving', title: 'On the move', status: 'unconfirmed' });
+      const { rerender } = render(<RumorDirectory rumors={[before]} />);
+      openRow('On the move');
+      expect(screen.queryByText(/Moves to/)).not.toBeInTheDocument();
+
+      const after = { ...before, status: 'confirmed' as RumorStatus };
+      rerender(<RumorDirectory rumors={[after]} />);
+
+      expect(screen.getByText('Moves to Confirmed when you close this.')).toBeInTheDocument();
+      // Still where it was opened, and still open.
+      expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Collapse On the move/ })
+      ).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    test('settles into its real group once the row closes', () => {
+      const before = makeRumor({ id: 'moving', title: 'On the move', status: 'unconfirmed' });
+      const { rerender } = render(<RumorDirectory rumors={[before]} />);
+      openRow('On the move');
+
+      const after = { ...before, status: 'confirmed' as RumorStatus };
+      rerender(<RumorDirectory rumors={[after]} />);
+      expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Collapse On the move/ }));
+
+      expect(screen.getByRole('heading', { name: 'Confirmed' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Unconfirmed' })).not.toBeInTheDocument();
+      expect(screen.queryByText(/Moves to/)).not.toBeInTheDocument();
+    });
+
+    /**
+     * The heading counts what is under it, by decision: a heading describes
+     * the list it introduces. The summary bar above follows the *data*, and
+     * its ticking over is the confirmation that the write landed.
+     */
+    test('the heading counts the rows beneath it; the bar counts the data', () => {
+      const before = makeRumor({ id: 'moving', title: 'On the move', status: 'unconfirmed' });
+      const { rerender } = render(<RumorDirectory rumors={[before, r3]} />);
+      openRow('On the move');
+
+      const after = { ...before, status: 'confirmed' as RumorStatus };
+      rerender(<RumorDirectory rumors={[after, r3]} />);
+
+      const heading = screen.getByRole('heading', { name: 'Unconfirmed' });
+      expect(heading.parentElement).toHaveTextContent('1');
+      expect(screen.getByRole('button', { name: '1 confirmed' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '0 unconfirmed' })).toBeInTheDocument();
+    });
+
+    /**
+     * A filtered list must not do by the back door what pinning prevents:
+     * filtering to Unconfirmed while an open row has just been confirmed has
+     * to keep showing it, or the row vanishes exactly as before.
+     */
+    test('a status filter keeps an open row that no longer matches', async () => {
+      render(<RumorDirectory rumors={[r2, r3]} />);
+      fireEvent.click(screen.getByRole('button', { name: '1 unconfirmed' }));
+      openRow('Missing merchant');
+      resolveAs('Missing merchant', 'Confirmed');
+
+      await waitFor(() =>
+        expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r2', 'confirmed')
+      );
+      expect(screen.getByText('Missing merchant')).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Typed text outlives the page (`15-10`)
+  // -------------------------------------------------------------------------
+  describe('unsaved text', () => {
+    const STORAGE_KEY = 'dnd:rumor-drafts:campaign-1';
+
+    beforeEach(() => {
+      window.sessionStorage.clear();
+    });
+
+    const openRow = (name: string) =>
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Expand ${name}`) }));
+
+    test('survives leaving the list and coming back', () => {
+      // `15-7` item 8 put drafts in the directory so they survive a filter or
+      // another player's write. They still died on a *route* change, because
+      // the directory unmounts with them.
+      const { unmount } = render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Half a sentence, mid-' },
+      });
+
+      unmount();
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+
+      expect(screen.getByLabelText('What was heard')).toHaveValue('Half a sentence, mid-');
+    });
+
+    test('is kept locally and never written to the database', () => {
+      // A rumour is shared with the whole campaign, so a draft that reached
+      // Firestore would broadcast half-written text to everyone at the table.
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Still typing' },
+      });
+
+      expect(mockUpdateRumor).not.toHaveBeenCalled();
+      expect(window.sessionStorage.getItem(STORAGE_KEY)).toContain('Still typing');
+    });
+
+    test('marks the row, so a kept draft cannot pass for saved work', () => {
+      const { unmount } = render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Half a sentence' },
+      });
+
+      unmount();
+      render(<RumorDirectory rumors={[r2]} />);
+
+      const row = within(screen.getByRole('button', { name: /Expand Missing merchant/ }));
+      expect(row.getByText('Unsaved')).toBeInTheDocument();
+    });
+
+    test('does not mark a row merely because it was opened', () => {
+      // Opening a row seeds a draft identical to the record. Marking that
+      // would cry wolf on every row anybody looked at.
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      expect(screen.queryByText('Unsaved')).not.toBeInTheDocument();
+    });
+
+    test('stops marking the row once the text is saved', async () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Saved text' },
+      });
+      expect(screen.getByText('Unsaved')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(mockUpdateRumor).toHaveBeenCalled());
+      expect(screen.queryByText('Unsaved')).not.toBeInTheDocument();
+      expect(window.sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    test('Collapse still discards, as it always did', () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Never mind' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Collapse' }));
+
+      expect(screen.queryByText('Unsaved')).not.toBeInTheDocument();
+      expect(window.sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    test('arms the browser guard only while something is unsaved', () => {
+      const add = jest.spyOn(window, 'addEventListener');
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      expect(add).not.toHaveBeenCalledWith('beforeunload', expect.any(Function));
+
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Unsaved text' },
+      });
+      expect(add).toHaveBeenCalledWith('beforeunload', expect.any(Function));
+      add.mockRestore();
+    });
+
+    /**
+     * **Under `StrictMode`, as the real app runs.**
+     *
+     * This is the test that would have caught the first attempt, and the
+     * plain `render` above did not. `index.tsx` wraps the app in
+     * `React.StrictMode`, which mounts, runs every effect, then runs them all
+     * a second time. Hydrating in an effect and persisting in its partner
+     * meant the restore was immediately overwritten by the still-empty state,
+     * and the second pass then re-read the key it had just emptied -- so the
+     * draft survived the whole round trip in storage and was destroyed on
+     * arrival, in the browser only.
+     */
+    test('survives the round trip under StrictMode, as the app runs it', () => {
+      const { unmount } = render(
+        <React.StrictMode>
+          <RumorDirectory rumors={[r2]} />
+        </React.StrictMode>
+      );
+      openRow('Missing merchant');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Survives the double mount' },
+      });
+      unmount();
+
+      render(
+        <React.StrictMode>
+          <RumorDirectory rumors={[r2]} />
+        </React.StrictMode>
+      );
+
+      expect(screen.getByText('Unsaved')).toBeInTheDocument();
+      openRow('Missing merchant');
+      expect(screen.getByLabelText('What was heard')).toHaveValue(
+        'Survives the double mount'
+      );
+    });
+
+    test('survives storage being unavailable', () => {
+      // Private windows and blocked site data both throw on access. Losing a
+      // draft is what happened before this existed; breaking the list is not.
+      const getItem = jest
+        .spyOn(Storage.prototype, 'getItem')
+        .mockImplementation(() => {
+          throw new Error('SecurityError');
+        });
+      const setItem = jest
+        .spyOn(Storage.prototype, 'setItem')
+        .mockImplementation(() => {
+          throw new Error('SecurityError');
+        });
+
+      expect(() => render(<RumorDirectory rumors={[r2]} />)).not.toThrow();
+      expect(screen.getByText('Missing merchant')).toBeInTheDocument();
+
+      getItem.mockRestore();
+      setItem.mockRestore();
+    });
+  });
 });
 
 

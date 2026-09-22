@@ -36,7 +36,7 @@ import {
 import { QuestsPage, QuestCreatePage, QuestDetailPage } from 'pages/quests';
 import { NPCsPage, NPCsCreatePage, NPCDetailPage } from 'pages/npcs';
 import { LocationsPage, LocationCreatePage, LocationDetailPage } from 'pages/locations';
-import { RumorsPage, RumorCreatePage } from 'pages/rumors';
+import { RumorsPage } from 'pages/rumors';
 import EditRouteRedirect from 'app/EditRouteRedirect';
 import { NotesPage, NotePage } from 'pages/notes';
 import PrivacyPolicyPage from 'pages/PrivacyPolicyPage';
@@ -129,7 +129,15 @@ const App: React.FC = () => {
                                       as a location id. */}
                                   <Route path="/locations/:locationId" element={<LocationDetailPage />} />
                                   <Route path="/rumors" element={<RumorsPage />} />
-                                  <Route path="/rumors/create" element={<RumorCreatePage />} />
+                                  {/* `15-9` retired the create form. A rumour
+                                      has no page, so there was nothing for
+                                      `/rumors/create` to be: note conversion
+                                      now writes the record and opens its row,
+                                      and the composer sits at the top of the
+                                      list. The address survives as a redirect
+                                      so anything already pointing here lands
+                                      somewhere true. */}
+                                  <Route path="/rumors/create" element={<Navigate to="/rumors" replace />} />
                                   {/* A rumour has no page by design (§2.1),
                                       so its old edit URL goes to the row:
                                       `?highlight=` opens it in place. */}

@@ -11,9 +11,11 @@ import { Rumor, RumorStatus, SourceType } from '../types';
 import {
   RUMOR_STATUS_OPTIONS,
   SOURCE_OPTIONS,
-  UNCHOSEN_SOURCE,
-  formatSourceType,
+  formatRumorStatus,
+  normalizeRumorStatus,
 } from '../utils/rumor-presentation';
+import { rumorTitleText, UNTITLED_RUMOR } from '../utils/rumor-title';
+import { deriveTitle } from 'shared/utils/derived-title';
 
 /**
  * The typed half of a rumour: what a reader can change and then discard.
@@ -28,15 +30,36 @@ import {
 export interface RumorDraft {
   title: string;
   content: string;
-  sourceType: SourceType;
+  /** Absent until somebody says where it came from. See `Rumor.sourceType`. */
+  sourceType?: SourceType | null;
   sourceName: string;
   sourceNpcId?: string;
 }
 
+/**
+ * Has this draft actually changed anything?
+ *
+ * Lives beside `RumorDraft` rather than inside the editor because **two
+ * places need the same answer**: the editor, to decide whether Save is
+ * offered, and the directory, to mark a row as carrying unsaved text and to
+ * arm the leave-the-page guard. Two copies of this comparison drifting apart
+ * is exactly how an "unsaved" marker starts lying.
+ */
+export const isDraftDirty = (rumor: Rumor, draft?: RumorDraft): boolean => {
+  if (!draft) return false;
+  return (
+    draft.title !== (rumor.title ?? '') ||
+    draft.content !== (rumor.content ?? '') ||
+    (draft.sourceType ?? null) !== (rumor.sourceType ?? null) ||
+    draft.sourceName !== (rumor.sourceName ?? '') ||
+    (draft.sourceNpcId ?? '') !== (rumor.sourceNpcId ?? '')
+  );
+};
+
 export const draftFromRumor = (rumor: Rumor): RumorDraft => ({
-  title: rumor.title,
+  title: rumor.title ?? '',
   content: rumor.content ?? '',
-  sourceType: rumor.sourceType ?? UNCHOSEN_SOURCE,
+  sourceType: rumor.sourceType,
   sourceName: rumor.sourceName ?? '',
   sourceNpcId: rumor.sourceNpcId,
 });
@@ -60,6 +83,13 @@ export interface RumorRowEditorProps {
   autoFocus?: boolean;
   /** Where to go from a converted rumour. */
   onOpenQuest?: (questId: string) => void;
+  /**
+   * The group this row will move to once it closes, when that is not the group
+   * it is currently sitting in. See `RumorDirectory`'s `pinnedGroup`: the row
+   * holds its place while open so a status change cannot throw it across the
+   * page mid-edit, and this is how it says so rather than quietly lying.
+   */
+  movesTo?: RumorStatus | null;
 }
 
 /** The uppercase micro-label each part of the row is introduced by. */
@@ -109,42 +139,56 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
   sources,
   autoFocus = false,
   onOpenQuest,
+  movesTo = null,
 }) => {
   const current = draft ?? draftFromRumor(rumor);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'failed' | 'saved'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const contentRef = useRef<HTMLTextAreaElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
 
-  // A rumour the composer just created opens with the caret in "what was
-  // heard": the title is already typed, and the next thing anyone wants to
-  // write is the rest of it.
+  // A rumour the composer just created opens with the caret in the *title*.
+  // This was the content field, back when the composer took a title and left
+  // the body empty; both ends have swapped. What was heard is already
+  // recorded, so the only thing still missing is a short name for it — and
+  // that can be left blank, which is why this is a caret and not a
+  // requirement.
   useEffect(() => {
     if (autoFocus) {
-      contentRef.current?.focus();
+      titleRef.current?.focus();
     }
   }, [autoFocus]);
 
   /**
    * Has anybody said where this came from?
    *
-   * `other` is the create form's old default rather than an answer, so it
-   * counts as unchosen -- except on a record that already carries a name under
-   * it, where hiding the written text would be worse than showing it.
+   * `sourceType` is now genuinely absent until someone picks one -- including
+   * *Other*, which is a real answer meaning "none of the other four" rather
+   * than the create form's old default for "nobody said". A legacy record
+   * carrying a name but no kind still counts as chosen, because hiding written
+   * text would be worse than showing it under an unchosen heading.
    */
-  const sourceChosen = current.sourceType !== UNCHOSEN_SOURCE || Boolean(current.sourceName);
+  const sourceChosen = Boolean(current.sourceType) || Boolean(current.sourceName);
 
-  const dirty =
-    current.title !== rumor.title ||
-    current.content !== (rumor.content ?? '') ||
-    current.sourceType !== (rumor.sourceType ?? UNCHOSEN_SOURCE) ||
-    current.sourceName !== (rumor.sourceName ?? '') ||
-    (current.sourceNpcId ?? '') !== (rumor.sourceNpcId ?? '');
+  /**
+   * What the row will call this rumour if the title is left empty — shown as
+   * the field's placeholder so the consequence of leaving it blank is visible
+   * while you are deciding whether to.
+   */
+  const derivedTitle = deriveTitle(current.content) || UNTITLED_RUMOR;
+
+  /** What this rumour is called in the labels screen readers announce. */
+  const name = rumorTitleText(rumor);
+
+  const dirty = isDraftDirty(rumor, current);
 
   const handleSave = async () => {
-    if (!current.title.trim()) {
-      setError('A rumour needs a title.');
+    // A title is no longer required -- the list names an untitled rumour from
+    // its content. What cannot be saved is a rumour that says nothing at all,
+    // which is the only state from which no row could be rendered.
+    if (!current.title.trim() && !current.content.trim()) {
+      setError('A rumour needs something written down.');
       setSaveState('failed');
       return;
     }
@@ -170,24 +214,32 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
     <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-7 pt-4">
       {/* ------------------------------ the record ----------------------------- */}
       <div className="flex flex-col gap-4">
+        {/*
+          What was heard comes first now, because it is what the composer
+          wrote and what the record actually is. The title below it is the
+          shorter name you give it afterwards, if you ever do.
+        */}
         <div className="flex flex-col gap-1.5">
           <Input
-            label="Rumour"
-            value={current.title}
-            onChange={(event) => onDraftChange({ title: event.target.value })}
-            disabled={saveState === 'saving'}
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Input
-            ref={contentRef as React.Ref<HTMLTextAreaElement>}
             isTextArea
             rows={3}
             label="What was heard"
             placeholder="Traders coming down from Rivendell say the goblin road is busy again after dark."
             value={current.content}
             onChange={(event) => onDraftChange({ content: event.target.value })}
+            disabled={saveState === 'saving'}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Input
+            ref={titleRef as React.Ref<HTMLInputElement>}
+            label="Call it"
+            // Not a suggestion to type -- a preview of what the list will
+            // show if this is left empty, which is a perfectly good outcome.
+            placeholder={derivedTitle}
+            value={current.title}
+            onChange={(event) => onDraftChange({ title: event.target.value })}
             disabled={saveState === 'saving'}
           />
         </div>
@@ -206,14 +258,22 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
                   key={option.value}
                   type="button"
                   aria-pressed={current.sourceType === option.value}
-                  onClick={() =>
+                  onClick={() => {
+                    // Pressing the chosen kind again clears it. Every one of
+                    // the five is now a real answer, so "nobody has said yet"
+                    // needs a way back -- otherwise the first accidental tap
+                    // is permanent.
+                    // `null`, not `undefined`: this value reaches Firestore on
+                    // Save, and an undefined there throws. See `Rumor.sourceType`.
+                    const next =
+                      current.sourceType === option.value ? null : option.value;
                     onDraftChange({
-                      sourceType: option.value,
+                      sourceType: next,
                       // Changing the kind away from an NPC drops the id: it
                       // named a record that no longer describes the source.
-                      ...(option.value === 'npc' ? {} : { sourceNpcId: undefined }),
-                    })
-                  }
+                      ...(next === 'npc' ? {} : { sourceNpcId: undefined }),
+                    });
+                  }}
                   // 44px on a phone, as the ladder beside it is.
                   className={`px-3 py-1 rounded-full text-sm min-h-[44px] sm:min-h-[32px] chip-toggle ${
                     current.sourceType === option.value ? 'chip-toggle-selected' : ''
@@ -222,16 +282,6 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
                   {option.label}
                 </button>
               ))}
-              {/*
-                Never offered, only shown: a record stored under the create
-                form's old `other` default keeps saying so until somebody
-                chooses, rather than being silently re-labelled.
-              */}
-              {current.sourceType === UNCHOSEN_SOURCE && current.sourceName && (
-                <span className="px-3 py-1 rounded-full text-sm chip-toggle chip-toggle-selected">
-                  {formatSourceType(UNCHOSEN_SOURCE)}
-                </span>
-              )}
             </div>
           </div>
 
@@ -250,7 +300,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
                   sources={sources}
                   attachedIds={current.sourceNpcId ? [current.sourceNpcId] : []}
                   single
-                  ariaLabel={`the source of ${rumor.title}`}
+                  ariaLabel={`the source of ${name}`}
                   onAttach={(id) => {
                     const npc = (sources.npc ?? []).find((candidate: any) => candidate.id === id);
                     onDraftChange({ sourceNpcId: id, sourceName: npc?.name ?? '' });
@@ -277,13 +327,26 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
           click rather than waiting for Save: confirming a rumour mid-session
           is the one thing this list exists for.
         */}
-        <StateLadder
-          label="Is it true?"
-          options={RUMOR_STATUS_OPTIONS}
-          value={rumor.status}
-          ariaLabel={`Status of ${rumor.title}`}
-          onChange={onStatusChange}
-        />
+        <div className="flex flex-col gap-1.5">
+          <StateLadder
+            label="Is it true?"
+            options={RUMOR_STATUS_OPTIONS}
+            value={normalizeRumorStatus(rumor.status)}
+            ariaLabel={`Status of ${name}`}
+            onChange={onStatusChange}
+          />
+          {/*
+            Said out loud, because the row is deliberately in the wrong group
+            for as long as it is open. Without this the list would be showing
+            a rumour marked Confirmed under an Unconfirmed heading and saying
+            nothing about it.
+          */}
+          {movesTo && (
+            <Typography variant="body-sm" color="muted" className="text-xs">
+              {`Moves to ${formatRumorStatus(movesTo)} when you close this.`}
+            </Typography>
+          )}
+        </div>
 
         <div className="border-t divider pt-3 flex items-center gap-3 flex-wrap">
           <Button
@@ -338,7 +401,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
                       });
                   }}
                 >
-                  {deleting ? 'Deleting…' : `Delete ${rumor.title}`}
+                  {deleting ? 'Deleting…' : `Delete ${name}`}
                 </Button>
                 <Button
                   variant="ghost"
@@ -389,7 +452,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
             kinds={['npc', 'location']}
             sources={sources}
             attachedIds={attachedIds}
-            ariaLabel={`what ${rumor.title} points at`}
+            ariaLabel={`what ${name} points at`}
             onAttach={(id, kind) => void onAttach(id, kind)}
             onDetach={(id) => void onDetach(id)}
           />

@@ -132,7 +132,13 @@ jest.mock('features/campaign-entities', () => {
   const actualDisplay = jest.requireActual(
     'features/campaign-entities/locations/utils/location-display'
   );
+  // The real helper, not a stub: this page must name a rumour the same way
+  // its own list does, now that a title is optional (`15-9`).
+  const actualRumorTitle = jest.requireActual(
+    'features/campaign-entities/rumors/utils/rumor-title'
+  );
   return {
+    rumorTitleText: actualRumorTitle.rumorTitleText,
     useLocations: () => ({
       locations: mockLocations,
       isLoading: false,

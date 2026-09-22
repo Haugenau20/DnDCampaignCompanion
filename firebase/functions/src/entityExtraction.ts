@@ -535,9 +535,16 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                           confidence: { type: "number", minimum: 0, maximum: 1 },
                           title: { type: "string" },
                           content: { type: "string" },
+                          // No "unknown": `RumorStatus` in the app has three
+                          // members, and a rumour nobody has verified is what
+                          // "unconfirmed" already names. Offering a fourth
+                          // produced documents the rumours list could not
+                          // group, which dropped the row silently. The client
+                          // whitelists this too (NoteContext), for notes
+                          // already extracted under the old schema.
                           status: {
                           type: "string",
-                          enum: ["confirmed", "unconfirmed", "false", "unknown"]
+                          enum: ["confirmed", "unconfirmed", "false"]
                           },
                           sourceType: {
                           type: "string",

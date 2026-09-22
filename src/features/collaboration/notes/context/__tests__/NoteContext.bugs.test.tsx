@@ -18,6 +18,16 @@ jest.mock('@/features/user-management', () => ({
   useUser: () => mockUseUser()
 }));
 
+/**
+ * `15-9`: converting a rumour out of a note writes the rumour here, because a
+ * rumour has no create page to hand that job to. That makes `RumorProvider` a
+ * requirement of `NoteProvider` -- satisfied in `app/App.tsx`, and mocked here.
+ */
+const mockAddRumor = jest.fn().mockResolvedValue('rumor-1');
+jest.mock('features/campaign-entities', () => ({
+  useRumors: () => ({ addRumor: mockAddRumor }),
+}));
+
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate
 }));
@@ -445,6 +455,190 @@ describe('NoteContext Bug Tests', () => {
       });
     });
 
+    /**
+     * The extraction function's JSON schema offers a fourth rumour status,
+     * `"unknown"` (`firebase/functions/src/entityExtraction.ts`), which
+     * `RumorStatus` does not have. It reached Firestore through a converted
+     * note, and the rumours list -- which groups by status -- then matched it
+     * to none of its three groups and dropped the row entirely: no entry, no
+     * count, no error. `RumorForm`'s `<select>` had been sanitising the value
+     * by accident until `15-9` retired the form.
+     */
+    test('normalises a status the domain does not have', async () => {
+      getActiveCharacterName.mockReturnValue('Test Character');
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await capturedContext.createNote('Test Note', 'Test content');
+      });
+
+      const rumorEntity: ExtractedEntity = {
+        id: 'entity-1',
+        text: 'Harry Potter at Jedi Academy',
+        type: 'rumor' as EntityType,
+        confidence: 0.9,
+        isConverted: false,
+        createdAt: '2025-06-15T00:00:00.000Z',
+        extraData: {
+          // Schema-allowed by the extractor, absent from `RumorStatus`.
+          status: 'unknown'
+        }
+      };
+
+      await act(async () => {
+        await capturedContext.updateNote('note-1', {
+          extractedEntities: [rumorEntity]
+        });
+      });
+
+      await act(async () => {
+        await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
+      });
+
+      // Unconfirmed is what an unverified rumour *is*, so nothing is lost by
+      // saying so -- and the row stays visible.
+      expect(mockAddRumor).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'unconfirmed' })
+      );
+    });
+
+    test('keeps a status the domain does have', async () => {
+      getActiveCharacterName.mockReturnValue('Test Character');
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await capturedContext.createNote('Test Note', 'Test content');
+      });
+
+      await act(async () => {
+        await capturedContext.updateNote('note-1', {
+          extractedEntities: [{
+            id: 'entity-1',
+            text: 'A confirmed thing',
+            type: 'rumor' as EntityType,
+            confidence: 0.9,
+            isConverted: false,
+            createdAt: '2025-06-15T00:00:00.000Z',
+            extraData: { status: 'confirmed' }
+          } as ExtractedEntity]
+        });
+      });
+
+      await act(async () => {
+        await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
+      });
+
+      expect(mockAddRumor).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'confirmed' })
+      );
+    });
+
+    /**
+     * The conversion wrote `sourceType` into `sourceName`, ignoring the
+     * extractor's own `sourceName` field entirely -- so a rumour heard from
+     * Gaffer Gamgee arrived with its source kind reading NPC and its source
+     * name reading "npc": the same fact twice, once in the wrong field.
+     */
+    test('uses the extracted source name, not the source kind', async () => {
+      getActiveCharacterName.mockReturnValue('Test Character');
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await capturedContext.createNote('Test Note', 'Test content');
+      });
+
+      await act(async () => {
+        await capturedContext.updateNote('note-1', {
+          extractedEntities: [{
+            id: 'entity-1',
+            text: 'Strange visitors',
+            type: 'rumor' as EntityType,
+            confidence: 0.9,
+            isConverted: false,
+            createdAt: '2025-06-15T00:00:00.000Z',
+            extraData: { sourceType: 'npc', sourceName: 'Gaffer Gamgee' }
+          } as ExtractedEntity]
+        });
+      });
+
+      await act(async () => {
+        await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
+      });
+
+      expect(mockAddRumor).toHaveBeenCalledWith(
+        expect.objectContaining({ sourceType: 'npc', sourceName: 'Gaffer Gamgee' })
+      );
+    });
+
+    test('leaves the source name empty when the extractor gave none', async () => {
+      getActiveCharacterName.mockReturnValue('Test Character');
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await capturedContext.createNote('Test Note', 'Test content');
+      });
+
+      await act(async () => {
+        await capturedContext.updateNote('note-1', {
+          extractedEntities: [{
+            id: 'entity-1',
+            text: 'Strange visitors',
+            type: 'rumor' as EntityType,
+            confidence: 0.9,
+            isConverted: false,
+            createdAt: '2025-06-15T00:00:00.000Z',
+            extraData: { sourceType: 'tavern' }
+          } as ExtractedEntity]
+        });
+      });
+
+      await act(async () => {
+        await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
+      });
+
+      // Blank, not "tavern": the kind is already recorded next door, and the
+      // row shows this string as the line under the rumour's name.
+      expect(mockAddRumor).toHaveBeenCalledWith(
+        expect.objectContaining({ sourceType: 'tavern', sourceName: '' })
+      );
+    });
+
     test('should handle rumor conversion with invalid source type', async () => {
       getUserName.mockReturnValue('Test User');
       getActiveCharacterName.mockReturnValue('Test Character');
@@ -484,15 +678,15 @@ describe('NoteContext Bug Tests', () => {
       await act(async () => {
         await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
 
-        // BUG DISCOVERY: How does invalid sourceType get handled?
-        expect(mockNavigate).toHaveBeenCalledWith('/rumors/create', {
-          state: expect.objectContaining({
-            initialData: expect.objectContaining({
-              sourceType: 'other', // Should default to 'other'
-              sourceName: 'invalid-source-type' // Original value should be preserved in sourceName
-            })
-          })
-        });
+        // CHANGED DELIBERATELY in `15-9`. An unrecognised source used to be
+        // coerced to 'other'. Since `15-9`'other' means "heard from none of
+        // the other four" -- a real answer somebody chose -- so the extractor
+        // guessing it would be answering on the reader's behalf. The kind is
+        // left unset; the raw value is still preserved in sourceName, which
+        // is the part that was always right.
+        const written = mockAddRumor.mock.calls[0][0];
+        expect(written).not.toHaveProperty('sourceType');
+        expect(written.sourceName).toBe('invalid-source-type');
 
         // EXPECTED: Invalid source types should be handled gracefully
       });

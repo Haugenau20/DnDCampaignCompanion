@@ -7,6 +7,7 @@ import Button from '../../../../core/components/Button';
 import Input from '../../../../core/components/Input';
 import Select from '../../../../core/components/Select';
 import { X, Layers, AlertCircle } from 'lucide-react';
+import { rumorParagraph, rumorTitleText } from '../utils/rumor-title';
 
 interface CombineRumorsDialogProps {
   open: boolean;
@@ -59,7 +60,7 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
         .filter(Boolean) as Rumor[];
       
       const combinedContent = rumorsToMerge.map(rumor => 
-        `${rumor.title} (from ${rumor.sourceName}): ${rumor.content}`
+        rumorParagraph(rumor, { attributed: true })
       ).join('\n\n');
       
       setContent(combinedContent);
@@ -133,7 +134,7 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
                 >
                   <div className="flex-1">
                     <Typography variant="body-sm" className="font-medium">
-                      {rumor.title}
+                      {rumorTitleText(rumor)}
                     </Typography>
                     <Typography variant="body-sm" color="secondary">
                       Source: {rumor.sourceName}

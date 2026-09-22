@@ -8,11 +8,16 @@ export { default as NPCLegend } from './npcs/components/NPCLegend';
 export type { NPC, NPCStatus, NPCRelationship, NPCNote, NPCConnections, NPCContextState, NPCContextValue } from './npcs/types';
 
 /*
-  The create and edit forms are gone (`15-8`). Every field of every entity is
-  edited where it is read: `/quests/:id`, `/locations/:id`, `/npcs/:id` and a
-  rumour's own row. `RumorForm` is the one that stays -- `/rumors/create` is
-  where note conversion sends a rumour it extracted, with a title and a body
-  already written, which a two-field composer cannot take.
+  The create and edit forms are gone. `15-8` took the first three; `15-9` took
+  the last one. Every field of every entity is edited where it is read:
+  `/quests/:id`, `/locations/:id`, `/npcs/:id` and a rumour's own row.
+
+  `RumorForm` was kept back then because `/rumors/create` was where note
+  conversion sent a rumour it had extracted, with a title and a body already
+  written. That turned out to be an argument for not needing a form at all:
+  the fields were complete before the page opened, so the page was a review
+  step for something nobody had to review. `NoteContext` writes the rumour and
+  opens its row, which is where every other rumour is edited anyway.
 */
 
 // Quest context and hooks
@@ -75,11 +80,18 @@ export {
 // Rumor context and hooks
 export { RumorProvider, useRumors } from './rumors/context/RumorContext';
 export { useRumorData } from './rumors/hooks/useRumorData';
+export { useCreateRumor } from './rumors/hooks/useCreateRumor';
 // Components consumed by pages/rumors/* and other external consumers
-export { default as RumorForm } from './rumors/components/RumorForm';
 export { default as RumorDirectory } from './rumors/components/RumorDirectory';
 export { default as RumorBatchActions } from './rumors/components/RumorBatchActions';
 export { default as CombineRumorsDialog } from './rumors/components/CombineRumorsDialog';
 export { default as ConvertToQuestDialog } from './rumors/components/ConvertToQuestDialog';
+/*
+  How a rumour is named, for the surfaces outside this domain that list one.
+  A rumour's title is optional now -- the composer records what was heard and
+  the name is derived from it -- so every consumer that prints `rumor.title`
+  directly would print a blank for anything created since.
+*/
+export { rumorDisplayTitle, rumorTitleText, UNTITLED_RUMOR } from './rumors/utils/rumor-title';
 // Rumor types
 export type { Rumor, RumorStatus, SourceType, RumorNote, RumorContextState, RumorContextValue } from './rumors/types';

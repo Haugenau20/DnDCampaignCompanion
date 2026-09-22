@@ -19,7 +19,29 @@ export interface Rumor extends BaseContent {
   title: string;
   content: string;
   status: RumorStatus;
-  sourceType: SourceType;
+  /**
+   * Where the rumour came from, or **absent because nobody has said**.
+   *
+   * Optional on purpose. The retired create form defaulted every rumour to
+   * `'other'`, which made the row print "Other" for a record whose source had
+   * never been discussed -- and left the editor showing no chip selected, so
+   * the two contradicted each other. `'other'` is now a real answer meaning
+   * "none of the other four", chosen deliberately; "nobody said" is this field
+   * being missing, and the row prints an em dash for it.
+   *
+   * Records written before this change all carry `'other'` and cannot be told
+   * apart from a deliberate choice, so they keep reading "Other" -- exactly
+   * what they did before. There is no migration; the app reads the data it has.
+   *
+   * **`null`, not `undefined`, once a reader has cleared one.** This project
+   * builds Firestore with a bare `getFirestore()` and no
+   * `ignoreUndefinedProperties`, so an update carrying `undefined` throws
+   * rather than clearing the field -- which is why `sourceNpcId` next door is
+   * written as `''`. A rumour created without a source simply omits the key;
+   * one whose source is un-picked stores `null`. Every reader tests
+   * falsiness, so the three absences behave identically.
+   */
+  sourceType?: SourceType | null;
   sourceName: string;
   sourceNpcId?: string; // Optional reference to NPC if source is an NPC
   /**

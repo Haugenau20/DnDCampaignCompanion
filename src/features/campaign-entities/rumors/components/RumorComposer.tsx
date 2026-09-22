@@ -8,9 +8,9 @@ import Typography from 'core/components/Typography';
 export interface RumorComposerProps {
   /**
    * Create the rumour and resolve with its id. Must reject on failure — the
-   * composer keeps the typed title and says why (§7).
+   * composer keeps the typed text and says why (§7).
    */
-  onAdd: (title: string) => Promise<string>;
+  onAdd: (content: string) => Promise<string>;
   className?: string;
 }
 
@@ -28,7 +28,7 @@ export interface RumorComposerProps {
  * sentence is bound to the button through `aria-describedby` for anyone who
  * cannot hover.
  */
-const NEEDS_A_TITLE = 'Give it a title first — then this adds it.';
+const NEEDS_SOMETHING = 'Write it down first — then this adds it.';
 
 /**
  * The composer row, permanently at the top of the list (item 1).
@@ -38,21 +38,30 @@ const NEEDS_A_TITLE = 'Give it a title first — then this adds it.';
  * now it took a route change to `/rumors/create`, a seven-field form and a
  * navigation back to the list to record one sentence overheard in a tavern.
  *
- * Title it, press Add, and the new rumour's row opens underneath with "what
- * was heard" focused. **No dialog and no navigation** — there is no page to
- * land on, which is the whole design of this entity (§2.1).
+ * **The field is what was heard, not a title.** It took the title until the
+ * maintainer pointed out the obvious: a title worth typing is a sentence, and
+ * a sentence never fits the row that has to render it — so the one thing you
+ * wrote while someone was still talking was the one thing you could not read
+ * back. What you type is now the rumour's *content*, and the list names the
+ * row from its first line until you give it a shorter title on purpose.
+ *
+ * Write it, press Add, and the new rumour's row opens underneath with the
+ * title field focused — the sentence is already recorded, so the only thing
+ * left is to name it, and that can wait. **No dialog and no navigation** —
+ * there is no page to land on, which is the whole design of this entity
+ * (§2.1).
  *
  * Deliberately not `15-1`'s quick add: that opens a dialog and then sends you
- * to the record's own page, and a rumour has neither. The two-field shape is
+ * to the record's own page, and a rumour has neither. The one-field shape is
  * the same idea in the place this entity actually lives.
  */
 export const RumorComposer: React.FC<RumorComposerProps> = ({ onAdd, className }) => {
-  const [title, setTitle] = useState('');
+  const [text, setText] = useState('');
   const [state, setState] = useState<'idle' | 'adding' | 'failed'>('idle');
   const [error, setError] = useState<string | null>(null);
   const hintId = useId();
 
-  const trimmed = title.trim();
+  const trimmed = text.trim();
   const empty = !trimmed;
 
   const submit = async () => {
@@ -61,12 +70,12 @@ export const RumorComposer: React.FC<RumorComposerProps> = ({ onAdd, className }
     setError(null);
     try {
       await onAdd(trimmed);
-      // Only now: the row below is the confirmation, and it carries the title
+      // Only now: the row below is the confirmation, and it carries the text
       // that was typed here.
-      setTitle('');
+      setText('');
       setState('idle');
     } catch (err) {
-      // The typed title stays. Somebody heard something and said it out loud;
+      // The typed text stays. Somebody heard something and said it out loud;
       // losing it to a failed write is the one unforgivable version of this.
       setState('failed');
       setError(err instanceof Error ? err.message : 'Could not add the rumour. Your text is still here.');
@@ -82,11 +91,11 @@ export const RumorComposer: React.FC<RumorComposerProps> = ({ onAdd, className }
             // The placeholder is the prompt, so a visible label above it would
             // say the same words twice in a one-line composer. The accessible
             // name carries them for anyone who cannot see the placeholder.
-            aria-label="Heard something? Title it here"
-            placeholder="Heard something? Title it here…"
-            value={title}
+            aria-label="Heard something? Write it down here"
+            placeholder="Heard something? Write it down here…"
+            value={text}
             disabled={state === 'adding'}
-            onChange={(event) => setTitle(event.target.value)}
+            onChange={(event) => setText(event.target.value)}
             onKeyDown={(event) => {
               // One line, so Enter means "add it" rather than a newline.
               if (event.key === 'Enter') {
@@ -100,7 +109,7 @@ export const RumorComposer: React.FC<RumorComposerProps> = ({ onAdd, className }
           The title lives on the wrapper, not the button: a disabled button
           receives no pointer events, so its own tooltip never appears.
         */}
-        <span className="shrink-0" title={empty ? NEEDS_A_TITLE : undefined}>
+        <span className="shrink-0" title={empty ? NEEDS_SOMETHING : undefined}>
           <Button
             size="sm"
             aria-describedby={empty ? hintId : undefined}
@@ -114,7 +123,7 @@ export const RumorComposer: React.FC<RumorComposerProps> = ({ onAdd, className }
 
       {/* Hovering is not available to everyone; the same sentence, read out. */}
       <span id={hintId} className="sr-only">
-        {NEEDS_A_TITLE}
+        {NEEDS_SOMETHING}
       </span>
 
       {error && (
