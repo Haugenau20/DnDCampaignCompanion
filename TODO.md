@@ -21,7 +21,12 @@ items that would have been picked up and rediscovered. Anything below that says
 
 **Status** · `open` ready to pick up · `needs investigation` checkable, but
 checking it is the first task · `needs scoping` nobody has decided what the
-thing is yet · `blocked` · `in progress` · `done` · `dropped`
+thing is yet · `blocked` · `in progress`
+
+**Finished work is deleted, not marked done.** This file tracks what is left;
+the PR that closed something is the record that it happened. When only part of
+an entry lands, rewrite the entry to describe the remainder — do not leave the
+closed half in place with a note attached.
 
 **Size** · `S` a sitting · `M` a session or two · `L` needs its own plan first.
 
@@ -56,8 +61,9 @@ touch and left live on the three index pages, and `15-4`'s location tree
 became unopenable only once `15-4` itself gave every row something to open
 into. Each PR verified what it changed; neither verified what its change now
 implied elsewhere. A third defect — the NPC list showing the old stance after
-a write (T046) — was sitting in the same three pages and had never been
-reported at all.
+a write — was sitting in the same three pages and had never been reported at
+all. It turned out to be a second loader, and closing it took a rewrite one
+directory over rather than the small patch it was filed as.
 
 **A comment claiming a gate exists is worse than no gate.**
 `location-presentation.ts` said `ladder-classes.test.ts` caught theme classes
@@ -75,39 +81,21 @@ documents agreed with each other and none of them agreed with the product.
 
 ## Bugs
 
-### T001 — Note dates render as raw ISO strings in two directories
-**Type** bug · **Size** S · **Status** open (display half **done**) · **Verified** 2026-09-21 · `R16` `R17`
+### T001 — `NPCNote.date` has no agreed stored shape
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-21 · `R16` `R17`
 
-**Display half closed by PR 15.3.** `formatNoteDate` is lifted to
-`shared/utils/dateFormatter` and used by `LocationDirectory`, `NPCDirectory`
-and `NPCDetailPage`, which previously kept its own copy. No ISO timestamp
-renders anywhere; a value that cannot be parsed is shown as written rather
-than replaced with a guess.
+The display half is closed — `formatNoteDate` and `formatAttributionDate` both
+render through `formatCalendarDate` in `shared/utils/dateFormatter`, so no ISO
+timestamp reaches a screen and the two cannot drift apart again. **The stored
+shape is the real job and is untouched.**
 
-**PR 15.6 finished the display half properly.** `15.3` lifted the helper but
-kept its output at `YYYY-MM-DD` -- the shape the value is *stored* in -- so the
-NPC page printed `2025-05-31` for a note three cards above a record line reading
-`31/05/2025`: one screen, two formats, for the same kind of fact. `formatNoteDate`
-and `formatAttributionDate` now both render through `formatCalendarDate`, so they
-cannot drift apart again.
-
-**The stored-shape half stays open**, and is the real job: `NPCNote.date` still
-has no agreed shape, and this changed four consumers rather than one writer.
-
-An expanded row shows `2025-05-31T19:27:30.387Z` where it should read
-`31/05/2025`.
-
-- **Where**: `src/features/campaign-entities/locations/components/LocationDirectory.tsx:392`
-  and `src/features/campaign-entities/npcs/components/NPCDirectory.tsx:294` both
-  print `{note.date}` directly.
-- **Touches**: those two call sites; `formatNoteDate` at
-  `src/pages/npcs/NPCDetailPage.tsx:70` is a working implementation to lift
-  somewhere shared — the NPC *detail* page already formats the same value, so
-  the page and the row currently disagree about it.
-- **Catch**: the real bug is upstream. `NPCNote.date` has no agreed shape — the
-  create form writes `YYYY-MM-DD`, the sample-data generator writes a full ISO
-  timestamp, and each consumer prints whatever it was handed. Formatting the two
-  call sites is the small fix; agreeing the stored shape is the actual one.
+- **Where**: the create form writes `YYYY-MM-DD`; the sample-data generator
+  writes a full ISO timestamp. `NPCNote.date` accepts both.
+- **Touches**: the writer, the type, and whatever migration the existing records
+  need — *not* the consumers, which are already uniform.
+- **Catch**: the display fix changed four consumers rather than one writer, which
+  is why this is still open. Agreeing the shape means deciding what happens to
+  records already stored in the other one.
 - **Source**: drift log
 
 ### T002 — `AccountCard` clips its own content at 320px
@@ -125,97 +113,33 @@ An expanded row shows `2025-05-31T19:27:30.387Z` where it should read
   in `CLAUDE.md`, not here). Don't attribute one to the other.
 - **Source**: drift log
 
-### T003 — Auth context logs user profile data to the console on every render
-**Type** bug · **Size** S · **Status** **done** · **Verified** 2026-09-22 · `R39`
+### T014 — Three emitters still highlight a row for a record that has its own page
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-22
 
-**Closed 2026-09-22** by the entity-loader-consolidation PR. 30 calls deleted —
-the 23 named below plus 7 in `NoteContext.tsx` (T029's logging overlap, taken in
-the same pass). A tree-walking test in
-`user-management/__tests__/no-console-logging.test.ts` now states the rule once
-so they cannot grow back.
+Phase 15 closed the reader half: all four directories read `?highlight=` through
+one hook (`shared/hooks/useHighlightTarget`) — matched by **id**, ancestors
+revealed, brought into view, with a visited set and a depth cap. `?highlight=`
+is now what it should always have been: the way to find a row *in a list*.
 
-- **The audit undercounted, and only the browser caught it.** With all 30 gone,
-  the console still printed group ids, campaign ids and names, and Cloud
-  Function result payloads on every load — `CampaignService` (5) and
-  `GroupService` (1). Same class; missed because this entry scoped itself to
-  `user-management` by name and no gate looks at console output. Those six are
-  now deleted too and covered by the same test. **If you scope a cleanup by
-  directory, verify by the symptom, not by the directory.**
-- **Deliberately kept**: the other nine `console.log` calls under
-  `core/services`. `firebaseConfig.ts`'s seven sit behind an explicit
-  `NODE_ENV === "development"` guard *and* are pinned by a suite asserting they
-  fire; `BaseFirebaseService` and `AuthService` each emit one environment
-  diagnostic carrying no user data. The guard test documents this so nobody
-  "fixes" a correct guard.
+**What is left is the emitter side.** `/npcs/:npcId` and `/locations/:locationId`
+both exist (`app/App.tsx:113`, `:130`), but three emitters still send a *directory*
+URL with `?highlight=` for those two types, so following a link lands on a list
+with a row lit up instead of on the record.
 
-- **Where**: 23 `console.log` calls under `src/features/user-management/`, the
-  bulk in `auth/context/FirebaseContext.tsx`.
-- **Touches**: those call sites.
-- **Catch**: they print user IDs, loaded profile objects, group profiles and
-  campaign counts — on every auth state change, in production. Noise at best;
-  profile data in a browser console at worst. Was logged as something to pick up
-  "wherever admin lands", which never happened.
-- **Source**: drift log
-
-### T014 — Highlighting works four different ways, and not at all on `/story`
-**Type** bug · **Size** M · **Status** done, except `/story` (see T045) · **Verified** 2026-09-21
-
-**Closed by phase 15.** The four directories read `?highlight=` through one
-hook (`15-3`), and three of the four entities stopped needing it at all: a
-quest, a location and an NPC each have their own address now, so the links
-that used to highlight a row name the record instead. `?highlight=` is what it
-should always have been — the way to find a row *in a list* — and a rumour,
-which has no page by design, is the one entity that still relies on it.
-The `/story` half never had a reader; it is now **T045**.
-
-**Closed by PR 15.3**, except the `/story` half. All four directories now read
-`?highlight=` through one hook (`shared/hooks/useHighlightTarget`): matched by
-**id**, target and ancestors revealed, brought into view, and the parameter is
-not cleared on unrelated state changes.
-
-- **Behavioural change**: name-matching is dropped. `NPCDirectory` and
-  `LocationDirectory` matched the name as well as the id, so a renamed record
-  stopped answering its own links. The three emitters that sent a *name*
-  (`QuestDirectory`, `NPCDirectory`, `RumorDirectory` location links) now
-  resolve it to an id first.
-- **Still open**: `/story` reads `?highlight=` not at all, and `15-3` left it
-  that way deliberately. That is what keeps this entry open.
-- **Shrinking, as pages arrive.** `15-4` and `15-5` gave locations and quests
-  their own addresses, so the links that used to carry `?highlight=` to those
-  two directories now name the record itself. `?highlight=` is becoming what it
-  should always have been — the way to find a row *in a list* — rather than the
-  product's substitute for a URL. Two emitters still send it where a page now
-  exists: the command palette's `npc` and `location` cases, and the note panels'
-  `npc`, `location` and `rumor` cases. `15-6` owns the NPC half; the rest wants
-  one sweep once every entity has a page.
-
-Navigating to an entity from search or from a cross-link passes `?highlight=`.
-Four directories read it, each differently, and one route ignores it.
-
-- **Where**: the emitter is
-  `src/shared/components/command-palette/CommandPalette.tsx:83`, which navigates
-  to `/story?highlight=<id>` — **nothing under `src/features/storytelling/` or
-  `src/pages/story*` reads `highlight` at all**, so a story or chapter search hit
-  navigates and highlights nothing.
-- **Touches**: the four consumers, which do not agree on behaviour:
-  - `npcs/components/NPCDirectory.tsx:104` and
-    `locations/components/LocationDirectory.tsx:128` — match by id **or name**,
-    auto-expand ancestors, then scroll to the element.
-  - `rumors/components/RumorDirectory.tsx:93` — id only, scrolls, no name match.
-  - `quests/components/QuestDirectory.tsx:127` — sets the `highlighted` prop and
-    **nothing else**: no scroll, no auto-expand. On a long quest list the
-    highlighted row may be off-screen.
-- **Catch**: this wants one shared hook rather than four fixes, and the id-or-name
-  matching is a real behavioural difference, not an oversight — links are emitted
-  with names in some places (`{ highlight: locationName }`) and ids in others.
-  Decide which the contract is before unifying. The performance review's
-  `PERF-11` adds a hazard to the same code, unverified against current `main`:
-  `LocationDirectory`'s parent walk uses repeated `locations.find` with **no
-  visited set**, so highlighting a node inside a parent cycle never terminates.
-  Any shared hook should carry a visited set and a depth guard. Confirm it first —
-  see T033.
-- **Source**: todo.txt, 2026-09-16 ("Implement/review proper highlighting logic
-  to pages")
+- **Where**, all verified by opening the file:
+  - `shared/components/command-palette/CommandPalette.tsx:91` (`npc`) and `:94`
+    (`location`) — the `quest` case one line above already navigates to
+    `/quests/${result.id}` and is the shape to copy.
+  - `features/collaboration/notes/components/NoteReferences.tsx:159-167` — a
+    `paths` map sending `npc`, `location` and `rumor` to directories.
+  - `features/collaboration/notes/components/CampaignLinksPanel.tsx:337-345` —
+    the same map again.
+- **Touches**: those three files and their tests. Both note panels carry a comment
+  saying the NPC and location routing is "a later PR's"; that PR is this one.
+- **Catch**: **a rumour is not part of this.** It has no page by design, so
+  `?highlight=` stays its correct destination — do not sweep it along with the
+  other two. `/story` is a separate question and is **T045**.
+- **Source**: T014's remainder, carried out of phase 15
 
 ### T050 — Note conversion drops or misfiles most of what the extractor found
 **Type** bug · **Size** M · **Status** open · **Verified** 2026-09-22
@@ -312,62 +236,6 @@ A group registration token is valid forever until somebody uses or deletes it.
   documents need backfilling.
 - **Source**: todo.txt, 2026-09-16
 
-### T015 — Completed and failed quests should collapse by default
-**Type** feature · **Size** M · **Status** done · **Verified** 2026-09-16
-
-**Closed by PR 15.3.** `RosterGroup` grew an opt-in `collapsible` /
-`defaultCollapsed` pair -- the whole heading is the control, so the target is
-not a glyph -- and `QuestDirectory` collapses Completed and Failed by default.
-They stay counted and stay reachable. T017 wants the same primitive grown for
-batch selection: grow it, do not fork it.
-
-- **Where**: `src/features/campaign-entities/quests/components/QuestDirectory.tsx:290`
-  renders every non-empty status group unconditionally.
-- **Touches**: `RosterGroup` in `src/core/components/Roster.tsx:354` and the quest
-  directory.
-- **Catch**: `RosterGroup` has **no collapse affordance** — its props are
-  `title`, `count`, `onOpen`, `openLabel`, `muted`, `nested`. So this is a change
-  to a shared core primitive used by the NPC and location directories too, not a
-  quest-local tweak. Decide whether collapsibility is opt-in per group (a prop)
-  or a behaviour every roster gets. See T017: both want `RosterGroup` to grow.
-- **Source**: todo.txt, 2026-09-16
-
-### T016 — Tick a quest objective without opening the edit form
-**Type** feature · **Size** S · **Status** done · **Verified** 2026-09-21
-
-**And the edit form is gone** (`15-8`), so the title's "without opening" is now
-structural rather than a convenience: there is nothing to open.
-
-**Closed by PR 15.3** (`design-handoff/15-3-directory-rows`), and extended by
-**15.5**, which gave the same objectives a place to be *authored*: add, reword
-and reorder on `/quests/:questId`, through the same §7 contract. 15.5 also took
-one behaviour away — ticking the last objective no longer completes the quest by
-itself; the page offers completion instead.
-
-`QuestDirectory`'s
-objectives are real checkboxes wired to `updateQuestObjective`, which had been
-on the context and covered by an eight-case suite with no production caller.
-They obey §7's save contract: pending state on the row, never an optimistic
-tick, and a visible revert with the reason when the write is refused. The
-`aria-hidden` decorative box is gone, so each objective is now reachable and
-operable by keyboard and named by its own text.
-
-Marking one objective done means opening the edit form and saving the whole
-quest.
-
-- **Where**: `src/features/campaign-entities/quests/components/QuestDirectory.tsx:329-345`
-  renders each objective as an `aria-hidden` `div` box plus a `Typography` line.
-  Read-only by construction.
-- **Touches**: that block, plus its test file.
-- **Catch**: almost none — **the mutation already exists and is fully tested**.
-  `updateQuestObjective(questId, objectiveId, completed)` lives at
-  `quests/context/QuestContext.tsx:132`, is on the context interface (`types.ts:61`),
-  and has a dedicated suite (`QuestContext.objectives.test.tsx`, 8 cases). **No
-  production component calls it.** The work is swapping the decorative box for a
-  real checkbox and wiring it up — including giving it an accessible name, since
-  the current box is deliberately hidden from screen readers.
-- **Source**: todo.txt, 2026-09-16
-
 ### T017 — Batch actions for stories, quests, NPCs and locations
 **Type** feature · **Size** L · **Status** open · **Verified** 2026-09-16
 
@@ -384,8 +252,9 @@ Select several rows, then delete or change status in one go.
 - **Catch**: the rumor implementation is rumor-shaped — its actions include
   combine and convert-to-quest, which have no analogue elsewhere. Pull out the
   selection mechanics (mode toggle, `Set` of ids, the action bar shell) and leave
-  the actions per-entity, rather than generalising the whole component. Related to
-  T015: both want `RosterGroup`/`RosterItem` to grow a capability.
+  the actions per-entity, rather than generalising the whole component. `RosterGroup`
+  already grew an opt-in `collapsible` / `defaultCollapsed` pair for the quest
+  directory — **grow that primitive again, do not fork it**.
 - **Do not copy the rumor pattern as it stands.** The performance review found it
   is the **worst write amplification in the app** (`PERF-06`): `RumorBatchActions`
   updates and deletes sequentially, and every selected rumor costs an
@@ -671,19 +540,6 @@ editable.** The NPC page now edits eleven fields in place; its notes are the one
 thing on it that still cannot be changed after it is written. That asymmetry is
 the open question, not an oversight.
 
-### T007 — Does `AdminPanel` get a real route? — **answered: yes**
-**Type** decision · **Size** S · **Status** done · **Verified** 2026-09-16 · `R39`
-
-`AdminPanel` was a dialog with no route. Phase 10 deliberately deferred the
-question rather than making a feature change inside a composition phase; left
-behind with it was the 3-second loading timeout that `10-1` said to keep and log.
-
-**Decided by `docs/design/plan/00-surface-routing.md`**: a dialog is one decision
-taken about the thing behind it, and admin is not that. `/admin/people`,
-`/admin/campaigns` and `/admin/group` exist as of Phase 14, and the 3-second
-timeout moved onto the route verbatim, comment and all. Kept here, closed, so
-the question is not asked a third time — and because T025 was waiting on it.
-
 ### T008 — A legend swatch cannot distinguish "confirmed" from "false"
 **Type** decision · **Size** S · **Status** open · **Verified** 2026-09-16 · `Q20`
 
@@ -776,124 +632,40 @@ Measured against the four create forms, the premise holds for the quest only.
 
 ## Tech debt and platform
 
-### T023 — Every entity collection has several independent loaders
-**Type** debt · **Size** M · **Status** **done** · **Verified** 2026-09-22 · `PERF-08`
-
-**Closed 2026-09-22.** Every entity collection is now fetched **once** per
-provider, by the hook that owns it, pinned by
-`shared/hooks/__tests__/provider-fetch-counts.test.tsx` — which counts real
-`getCollection` calls rather than mocking the hook that makes them, because the
-existing `*Context.behavioral` suites mock `useFirebaseData` wholesale and can
-see no fetch at all.
-
-**This entry undercounted by five, and the reason is worth keeping.** It says
-each context mounts "**two** instances against the same collection" and counts
-instances. But `useFirebaseData` fetches on mount internally *and* each
-`use*Data` read hook calls `getData()` from an effect of its own — **two
-fetches from one instance**. The real figure was 3 per provider, 16 across the
-tree, not 11. It surfaced only because the new test asserted the *intended*
-count and disagreed with reality; had it been written to assert what it
-measured, the third loader would have been recorded as correct and this entry
-closed on a false number.
-
-- **How it was fixed**: `useFirebaseData` gained `autoFetch?: boolean`
-  (default `true`). All ten production call sites pass `false` — the five
-  write-only instances, and the five `use*Data` read hooks, which keep their own
-  context-aware fetch (gated on group and campaign, sorted, cleared on change)
-  because the generic mount fetch had none of that context.
-- **The non-obvious half**: `autoFetch: false` also stops the
-  `AUTH_STATE_CHANGED_EVENT` listener registering, and its `setData([])` was the
-  only thing clearing `data` on sign-out. Each read hook's effect checked
-  `data.length > 0` *before* the signed-out branch, so the naive fix would have
-  re-rendered a signed-out screen with **the previous user's records**. All five
-  hooks now check context first and return early; each suite pins it with a
-  populated `data` array against a signed-out user.
-- **`story-progress` was the exception that wasn't.** It reads its own `data`,
-  so it looked untouchable — but what populates it is an explicit
-  `refreshProgress()` effect gated on `hasRequiredContext`, and the mount fetch
-  there was already documented as firing before the campaign resolved and
-  returning nothing. It takes `autoFetch: false` too. Verified in Chrome:
-  reading position survives a full reload.
-- **`NPCsEditPage.tsx`, named below, does not exist** and has not for some time.
-- **Also closed here**: `SearchContext` stops building its own chapter, NPC,
-  location and rumour loaders and reads the providers (it already did so for
-  quests). Its index now rebuilds when a provider's copy changes, so search
-  results no longer go stale after an edit.
-
-- **Where**: `src/shared/hooks/useFirebaseData.ts:42-44` fetches the whole
-  collection in a `useEffect` on mount, and again on every auth state change
-  (`:48-64`). Each entity context mounts **two** instances against the same
-  collection — one via its read hook, one for writes:
-  - `npcs/context/NPCContext.tsx:16` + `:25`
-  - `quests/context/QuestContext.tsx:38` + `:43`
-  - `locations/context/LocationContext.tsx:16` + `:26`
-  - `rumors/context/RumorContext.tsx:14` + `:19`
-  - `storytelling/chapters/context/StoryContext.tsx` does the same split.
-  The performance review found more owners beyond the contexts:
-  `shared/context/SearchContext.tsx` builds fresh chapter, NPC, location and
-  rumor hooks rather than consuming the providers; `pages/npcs/NPCsPage.tsx` and
-  `NPCsEditPage.tsx` load NPCs independently of `NPCProvider`; and
-  `LocationDirectory.tsx:112` mounted another `locations` loader under a comment
-  claiming "real-time updates" — `getDocs` is not a subscription.
-  **That last one is gone as of PR 15.4**, which was the owner this entry
-  singled out as producing two real Firestore targets rather than one coalesced
-  one. The directory consumes the `locations` prop `LocationsPage` already reads
-  from the provider. Everything else on this list is untouched, and the two
-  instances per context remain.
-- **Touches**: `useFirebaseData` (give the write instance a way to skip the
-  fetch), or the contexts (have the write path reuse the read instance's data),
-  plus the page- and search-level loaders above.
-- **Catch**: the second instance exists for a reason — its `error` is bound as
-  `writeError` because read and write failures were being conflated (bug #1401).
-  Keep that separation; only the duplicate *fetch* should go. **The Firestore SDK
-  coalesces most simultaneous identical startup queries**, so the review's
-  runtime trace saw one server target per collection — the waste is in duplicated
-  transforms, promises, loading state and React updates, not usually in reads.
-  The `LocationDirectory` loader fires late enough to miss coalescing and did
-  produce two real location targets in both runs. **The NPC-specific half of the
-  original report is unmeasured**: this pattern is identical across all four
-  entities, so if the NPCs page really is slower than the others, that is a
-  second cause still to be found. T032's `PERF-03` is the likelier explanation —
-  entity pages couple their loading UI to the global restoration chain.
-- **Source**: todo.txt, 2026-09-16 ("NPCs Page seems to take longer to load");
-  merged with `PERF-08` from the performance review, which is the same finding
-  measured.
-
-### T044 — Every page still folds its refetch into the gate's `resolving`
-**Type** bug · **Size** S · **Status** done for the four entity domains · **Verified** 2026-09-21
+### T044 — `NotesPage` and the story pages still fold a refetch into the gate
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-22
 
 `usePageGate(page, { loading })` treats the caller's `loading` as "resolving",
-and every write in this app ends with a refresh that sets that flag again. So a
-save swaps the whole page for the gated skeleton, unmounts what was on it, and
-takes any component state with it.
+and a write that ends in a refresh sets that flag again — so the save swaps the
+whole page for the gated skeleton, unmounts what was on it, and takes any
+component state with it.
 
-**Found in Chrome in 15.7, not in jsdom**: ticking a rumour's status closed the
-row being edited, one skeleton flash per write. It is invisible to the suites
-because they mock the data hooks, so `loading` never flips a second time.
+**Closed for the four entity domains.** `useQuestData`, `useNPCData`,
+`useLocationData` and `useRumorData` now report `loading` as *"there is nothing
+to show yet"* — the in-flight flag only counts while the list is empty — so a
+refresh happens behind content someone is reading. Pinned by three cases in each
+of the four hook suites.
 
-- **Patched at four call sites** by 15.7 — `RumorsPage` and the three detail
-  pages — which left the three *index* pages still doing it. The user found
-  the consequence within a day: on `/quests`, ticking an objective in an open
-  row wrote correctly and closed the row.
-- **Fixed in the hook**, as the line below always suspected it should be.
-  `useQuestData`, `useNPCData`, `useLocationData` and `useRumorData` now
-  report `loading` as **"there is nothing to show yet"** — the in-flight flag
-  only counts while the list is empty — so the refresh at the end of a write
-  happens behind content someone is reading. Pinned by three cases in each of
-  the four hook suites, and the page-level patches are gone.
-  - A list that is emptied when the group or campaign changes is part of the
-    same fix, not a separate one: without it, "keep showing what we have"
-    would keep showing the *previous campaign's* records under the new
-    campaign's name for the length of the fetch.
-- **Still true for `NotesPage` and the story pages**, which load through their
-  own hooks. Same one-line shape; nothing there holds state across a write
-  today, so it shows as a flash.
-- **Source**: PR 15.7's browser pass; closed by the phase-15 fix pass
+- **Where it is still true**: `pages/notes/NotesPage.tsx:30`,
+  `pages/notes/NotePage.tsx:37` and the story pages
+  (`ChaptersPage`, `ChapterCreatePage:19`, `ChapterEditPage:35`), which load
+  through their own hooks rather than the four fixed ones.
+- **Touches**: those hooks, the same one-line shape as the fix above.
+- **Catch**: emptying the list when the group or campaign changes is **part of
+  this fix, not a separate one**. Without it, "keep showing what we have" keeps
+  showing the *previous campaign's* records under the new campaign's name for
+  the length of the fetch.
+- **It shows only as a flash today**, because nothing on those pages holds state
+  across a write — which is exactly how it survived three PRs on the entity
+  pages. **Invisible to jsdom by construction**: the suites mock the data hooks,
+  so `loading` never flips a second time. Verify in Chrome.
+- **Source**: PR 15.7's browser pass
 
 ### T045 — `/story` still reads `?highlight=` not at all
 **Type** bug · **Size** S · **Status** open · **Verified** 2026-09-21
 
-Split out of T014, which phase 15 otherwise closed. The command palette
+Split out of the `?highlight=` unification, which phase 15 otherwise closed.
+The command palette
 navigates to `/story?highlight=<id>` and **nothing under
 `src/features/storytelling/` or `src/pages/story*` reads the parameter**, so a
 story or chapter search hit navigates and highlights nothing.
@@ -905,52 +677,7 @@ story or chapter search hit navigates and highlights nothing.
   (`/story/chapters/:chapterId`), so the palette could send a chapter hit
   there and drop the parameter, the way `15-5` and `15-6` did for quests and
   NPCs. Decide which before implementing.
-- **Source**: T014's remainder, carried out of phase 15
-
-### T046 — `NPCsPage` renders from a second loader, not from the provider
-**Type** bug · **Size** S · **Status** **done** · **Verified** 2026-09-22
-
-**Closed 2026-09-22, as T023 rather than as itself** — which was the right call.
-The S-sized version was the patch that already shipped; the fix is T023's, one
-directory over. `NPCsPage` and `NPCDetailPage` now read `useNPCs()`, and
-`grep -rn "useNPCData" src/pages/npcs/` returns nothing.
-
-- **`NPCDetailPage` held three sources, not two.** It already had a `useNPCs()`
-  call sitting beside its `useNPCData()` one — reading from one copy while
-  writing through another, *and* mounting a third loader. Merged into a single
-  destructure. The audit missed it by counting call sites of one shape without
-  looking for the other shapes beside them; the same mistake produced T023's
-  undercount.
-- **This entry's claim that "the other three contexts already expose their
-  refresh" was wrong, and the reason matters.** Only `LocationContextValue`
-  did. Quests *appeared* to because `QuestContextValue` was declared twice — an
-  accurate local one in `QuestContext.tsx` and a **stale duplicate exported by
-  the public barrel**, missing nine members including `refreshQuests`. Reading
-  a feature's barrel is the correct way to learn its contract, and this one
-  lied. Consolidated, with the provider's `value` object now annotated with the
-  exported type so the two cannot drift again.
-- **Verified in Chrome**, both halves: changing a stance on the index updates
-  in place, and a status change made on the detail page is reflected on the
-  index without a reload — which matters more than it sounds, because the index
-  no longer refetches on mount and now depends entirely on the provider staying
-  fresh.
-
-`NPCsPage` calls `useNPCData()` itself instead of reading `useNPCs()`, so the
-page and the `NPCProvider` hold two independently fetched copies of the same
-collection. A write through the context refreshes the provider's copy; the
-page renders the other one. The stance ladder in `NPCDirectory` therefore
-wrote correctly and showed the old word until a reload.
-
-- **Patched, not fixed.** The ladder now calls `onNPCUpdate` — a prop that was
-  declared, destructured and never called by anything — and the page refreshes
-  its own copy. Every other write path in that directory has the same exposure.
-- **The fix** is T023's, one directory over: drop the second loader and read
-  the provider, which also means one Firestore read per page load instead of
-  two. `NPCContextValue` needs `refreshNPCs` on it first — the other three
-  contexts already expose their refresh.
-- **`NPCDetailPage` has the same double loader** but is not affected: it calls
-  its own `refreshNPCs()` after each write, explicitly, at five call sites.
-- **Source**: found in Chrome while verifying T044's fix
+- **Source**: phase 15's `?highlight=` remainder
 
 ### T042 — A theme class passed as *data* has no manifest coverage
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-18
@@ -1068,14 +795,13 @@ before planning the rebuild.
 - **Touches**: `src/features/user-management/admin/components/` (`AdminPanel`,
   `GroupManagementView`, `CampaignManagementView`, `UserManagementView`,
   `TokenManagementView`) and `GroupService`.
-- **Catch**: **T007 is now answered** — the panel became a route, and Phase 14
-  rebuilt it as `/admin/{people,campaigns,group}`. Re-measure this item's six
+- **Catch**: **the panel is already a route** — `/admin/{people,campaigns,group}`,
+  decided in `docs/design/plan/00-surface-routing.md` and built in Phase 14,
+  with `10-1`'s 3-second loading timeout carried across verbatim. Re-measure this item's six
   claims against that work before planning anything: the components named above
   under *Touches* (`AdminPanel`, `UserManagementView`, `TokenManagementView`) do
   not survive the phase, and the "groups cannot be edited or deleted" claims are
-  now tracked in their own right as T036 and T037. T003's console logging lives
-  in the same feature and was originally deferred to "wherever admin lands";
-  pick it up in the same pass.
+  now tracked in their own right as T036 and T037.
 - **Source**: todo.txt, 2026-09-16
 
 ### T026 — Mobile layout on the story pages
@@ -1234,7 +960,7 @@ review says so itself. Six findings were re-checked on 2026-09-16 at `ebc0a28`:
 | `PERF-07` context switch refreshes then reloads | High | **Fixed.** The only `window.location.reload()` left in `src/` is `ErrorBoundary.tsx:62`. |
 | `PERF-10` all routes + full Lodash in one bundle | Medium | **Half fixed.** Zero `lodash` imports remain in `src/`. Route splitting is still open — see T030. |
 | `PERF-04` notes loaded twice, unbounded | High | **Still true** — see T029. |
-| `PERF-08` duplicate collection owners | Medium | **Still true** — tracked as T023, which is the same finding. |
+| `PERF-08` duplicate collection owners | Medium | **Fixed** 2026-09-22 — one fetch per collection, pinned by `shared/hooks/__tests__/provider-fetch-counts.test.tsx`. |
 | `PERF-15` duplicate `NavigationProvider` | Low | **Still true** — folded into T024, same file. |
 
 The **other nine are unverified against current `main`** — `PERF-02`, `03`,
@@ -1255,8 +981,7 @@ straight down it.
 - **Catch**: cost grows with a user's notes across **all historical campaigns**,
   not with the active one, and both runtime runs saw two identical notes targets
   on Home, Privacy, NPCs, Locations and Notes alike. Fixing the dependency list
-  without also constraining the query only halves it. `:76` also logs note counts
-  to the console on every load — same class as T003, worth removing in the pass.
+  without also constraining the query only halves it.
 - **Source**: performance review
 
 ### T030 — One eager bundle ships every route
@@ -1420,39 +1145,3 @@ does not exist is precisely the failure `D2` was written to avoid.
 The only existing artifact is branch `codex/theme-contract-poc-20260902`, cut
 before Phase 6: two flat tokens, medieval alive, `status-*` classes. All three
 are now wrong. It is a record that the idea was tried, not a starting point.
-
----
-
-## Closed
-
-Kept so nobody re-opens them from an older note's wording.
-
-### T027 — Active quests already sort to the top
-**Type** feature · **Status** done · **Verified** 2026-09-16
-
-Reported as "make active quests be on the top of the list?". Already true, and
-deliberately so: `QuestDirectory.tsx:48-52` declares a fixed `STATUS_GROUPS`
-order — Active, Completed, Failed — and the header comment at `:40-47` explains
-why quests group by status rather than by location. Empty groups are dropped at
-`:242`, so Active is always first when it has anything in it.
-
-### T028 — Form/Context Responsibility Pattern Standardization
-**Type** debt · **Status** dropped · **Verified** 2026-09-16
-
-Dropped at the maintainer's direction. The note's only content was a pointer to
-`docs/backlog/FormContextStandard`, and `docs/backlog/` no longer exists (see
-`CLAUDE.md`), so nothing was left to act on. Re-file it with a symptom if the
-underlying problem resurfaces.
-
-### Closed earlier, during the drift-log harvest
-
-| Item | Was | Now |
-|---|---|---|
-| `R22` | dark-theme select unreadable | closed by `D103` (`scheme` token) |
-| `R32` | chapter rail active row invisible in light (~1.04:1) | rail uses `nav-item-active`; `.sunken-border` added |
-| `R40` | `navigation-item` fails contrast outside the chrome | closed by `D107` |
-| `R44` | A5's fourth rule worded wrong | amended in `05-archetypes.md` |
-| `R45` | every `Card` carries a drop shadow, against §5/§14 | no `shadow` in `Card.tsx` |
-| `R52` | light `--field-placeholder` at 3.72:1, under AA | regenerated; now gated as ink at 4.5:1 and green |
-| `R57` | dark's accent reduction reverted and deferred | closed by `D110` — roles decided before hues |
-| `R69`, `R70`, `R73` | dead classes and orphaned scales | closed by `D121` and `D122` |
