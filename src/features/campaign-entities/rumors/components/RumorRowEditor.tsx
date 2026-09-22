@@ -8,7 +8,12 @@ import type { AttachKind, AttachSources } from 'shared/components/attach-tray/at
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
 import { Rumor, RumorStatus, SourceType } from '../types';
-import { RUMOR_STATUS_OPTIONS, SOURCE_OPTIONS } from '../utils/rumor-presentation';
+import {
+  RUMOR_STATUS_OPTIONS,
+  SOURCE_OPTIONS,
+  formatRumorStatus,
+  normalizeRumorStatus,
+} from '../utils/rumor-presentation';
 import { rumorTitleText, UNTITLED_RUMOR } from '../utils/rumor-title';
 import { deriveTitle } from 'shared/utils/derived-title';
 
@@ -30,6 +35,26 @@ export interface RumorDraft {
   sourceName: string;
   sourceNpcId?: string;
 }
+
+/**
+ * Has this draft actually changed anything?
+ *
+ * Lives beside `RumorDraft` rather than inside the editor because **two
+ * places need the same answer**: the editor, to decide whether Save is
+ * offered, and the directory, to mark a row as carrying unsaved text and to
+ * arm the leave-the-page guard. Two copies of this comparison drifting apart
+ * is exactly how an "unsaved" marker starts lying.
+ */
+export const isDraftDirty = (rumor: Rumor, draft?: RumorDraft): boolean => {
+  if (!draft) return false;
+  return (
+    draft.title !== (rumor.title ?? '') ||
+    draft.content !== (rumor.content ?? '') ||
+    (draft.sourceType ?? null) !== (rumor.sourceType ?? null) ||
+    draft.sourceName !== (rumor.sourceName ?? '') ||
+    (draft.sourceNpcId ?? '') !== (rumor.sourceNpcId ?? '')
+  );
+};
 
 export const draftFromRumor = (rumor: Rumor): RumorDraft => ({
   title: rumor.title ?? '',
@@ -58,6 +83,13 @@ export interface RumorRowEditorProps {
   autoFocus?: boolean;
   /** Where to go from a converted rumour. */
   onOpenQuest?: (questId: string) => void;
+  /**
+   * The group this row will move to once it closes, when that is not the group
+   * it is currently sitting in. See `RumorDirectory`'s `pinnedGroup`: the row
+   * holds its place while open so a status change cannot throw it across the
+   * page mid-edit, and this is how it says so rather than quietly lying.
+   */
+  movesTo?: RumorStatus | null;
 }
 
 /** The uppercase micro-label each part of the row is introduced by. */
@@ -107,6 +139,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
   sources,
   autoFocus = false,
   onOpenQuest,
+  movesTo = null,
 }) => {
   const current = draft ?? draftFromRumor(rumor);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'failed' | 'saved'>('idle');
@@ -148,12 +181,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
   /** What this rumour is called in the labels screen readers announce. */
   const name = rumorTitleText(rumor);
 
-  const dirty =
-    current.title !== (rumor.title ?? '') ||
-    current.content !== (rumor.content ?? '') ||
-    (current.sourceType ?? null) !== (rumor.sourceType ?? null) ||
-    current.sourceName !== (rumor.sourceName ?? '') ||
-    (current.sourceNpcId ?? '') !== (rumor.sourceNpcId ?? '');
+  const dirty = isDraftDirty(rumor, current);
 
   const handleSave = async () => {
     // A title is no longer required -- the list names an untitled rumour from
@@ -299,13 +327,26 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
           click rather than waiting for Save: confirming a rumour mid-session
           is the one thing this list exists for.
         */}
-        <StateLadder
-          label="Is it true?"
-          options={RUMOR_STATUS_OPTIONS}
-          value={rumor.status}
-          ariaLabel={`Status of ${name}`}
-          onChange={onStatusChange}
-        />
+        <div className="flex flex-col gap-1.5">
+          <StateLadder
+            label="Is it true?"
+            options={RUMOR_STATUS_OPTIONS}
+            value={normalizeRumorStatus(rumor.status)}
+            ariaLabel={`Status of ${name}`}
+            onChange={onStatusChange}
+          />
+          {/*
+            Said out loud, because the row is deliberately in the wrong group
+            for as long as it is open. Without this the list would be showing
+            a rumour marked Confirmed under an Unconfirmed heading and saying
+            nothing about it.
+          */}
+          {movesTo && (
+            <Typography variant="body-sm" color="muted" className="text-xs">
+              {`Moves to ${formatRumorStatus(movesTo)} when you close this.`}
+            </Typography>
+          )}
+        </div>
 
         <div className="border-t divider pt-3 flex items-center gap-3 flex-wrap">
           <Button

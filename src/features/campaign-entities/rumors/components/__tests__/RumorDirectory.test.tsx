@@ -50,6 +50,8 @@ jest.mock('shared/hooks/useNavigation', () => ({
 jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(() => ({ user: { uid: 'user-1' } })),
   useFirebase: jest.fn(() => ({ activeGroupId: 'group-1' })),
+  // `15-10`: drafts are kept per campaign, so the list needs to know which.
+  useCampaigns: jest.fn(() => ({ activeCampaignId: 'campaign-1' })),
 }));
 
 jest.mock('../../context/RumorContext', () => ({
@@ -1291,6 +1293,300 @@ describe('RumorDirectory', () => {
       fireEvent.click(screen.getByRole('button', { name: '1 unconfirmed' }));
       expect(screen.getByText('Harry Potter at Jedi Academy')).toBeInTheDocument();
       expect(screen.queryByText('Treasure map')).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // An open row holds its place (`15-10`)
+  // -------------------------------------------------------------------------
+  describe('resolving a rumour from its own row', () => {
+    const openRow = (name: string) =>
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Expand ${name}`) }));
+
+    const resolveAs = (name: string, label: string) =>
+      fireEvent.click(
+        within(screen.getByRole('group', { name: `Status of ${name}` })).getByRole('button', {
+          name: label,
+        })
+      );
+
+    /**
+     * **The regression this fixes was introduced by grouping.** The ladder
+     * writes on the click -- `15-7` made that a gate, because confirming a
+     * rumour mid-session must be one click -- and that was harmless while the
+     * list grouped by location, since a status change moved nothing. Grouping
+     * by status made the thing you most often change from this list also the
+     * thing that re-sorts it, so the row you were reading and editing was
+     * thrown to another part of the page the instant you resolved it.
+     *
+     * Sorting by status rather than grouping would have moved it just as
+     * surely, which is why this is fixed by pinning the open row rather than
+     * by reconsidering the grouping.
+     */
+    test('stays where it is when its status changes', async () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+
+      resolveAs('Missing merchant', 'Confirmed');
+      await waitFor(() =>
+        expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r2', 'confirmed')
+      );
+
+      // Still open, still under the heading it was opened from.
+      expect(
+        screen.getByRole('button', { name: /Collapse Missing merchant/ })
+      ).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Confirmed' })).not.toBeInTheDocument();
+    });
+
+    test('the write still happens on the click, not on Save', async () => {
+      // The one-click gate from `15-7`: only the row's *position* waits.
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      resolveAs('Missing merchant', 'Confirmed');
+
+      await waitFor(() =>
+        expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r2', 'confirmed')
+      );
+      expect(screen.queryByRole('button', { name: 'Save' })).toBeDisabled();
+    });
+
+    /**
+     * The write lands, the context refreshes, and the list re-renders with a
+     * record whose status has really changed -- which is the moment the row
+     * would have jumped. It holds, and says why.
+     */
+    test('says where it is going rather than quietly sitting in the wrong group', () => {
+      const before = makeRumor({ id: 'moving', title: 'On the move', status: 'unconfirmed' });
+      const { rerender } = render(<RumorDirectory rumors={[before]} />);
+      openRow('On the move');
+      expect(screen.queryByText(/Moves to/)).not.toBeInTheDocument();
+
+      const after = { ...before, status: 'confirmed' as RumorStatus };
+      rerender(<RumorDirectory rumors={[after]} />);
+
+      expect(screen.getByText('Moves to Confirmed when you close this.')).toBeInTheDocument();
+      // Still where it was opened, and still open.
+      expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Collapse On the move/ })
+      ).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    test('settles into its real group once the row closes', () => {
+      const before = makeRumor({ id: 'moving', title: 'On the move', status: 'unconfirmed' });
+      const { rerender } = render(<RumorDirectory rumors={[before]} />);
+      openRow('On the move');
+
+      const after = { ...before, status: 'confirmed' as RumorStatus };
+      rerender(<RumorDirectory rumors={[after]} />);
+      expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Collapse On the move/ }));
+
+      expect(screen.getByRole('heading', { name: 'Confirmed' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Unconfirmed' })).not.toBeInTheDocument();
+      expect(screen.queryByText(/Moves to/)).not.toBeInTheDocument();
+    });
+
+    /**
+     * The heading counts what is under it, by decision: a heading describes
+     * the list it introduces. The summary bar above follows the *data*, and
+     * its ticking over is the confirmation that the write landed.
+     */
+    test('the heading counts the rows beneath it; the bar counts the data', () => {
+      const before = makeRumor({ id: 'moving', title: 'On the move', status: 'unconfirmed' });
+      const { rerender } = render(<RumorDirectory rumors={[before, r3]} />);
+      openRow('On the move');
+
+      const after = { ...before, status: 'confirmed' as RumorStatus };
+      rerender(<RumorDirectory rumors={[after, r3]} />);
+
+      const heading = screen.getByRole('heading', { name: 'Unconfirmed' });
+      expect(heading.parentElement).toHaveTextContent('1');
+      expect(screen.getByRole('button', { name: '1 confirmed' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '0 unconfirmed' })).toBeInTheDocument();
+    });
+
+    /**
+     * A filtered list must not do by the back door what pinning prevents:
+     * filtering to Unconfirmed while an open row has just been confirmed has
+     * to keep showing it, or the row vanishes exactly as before.
+     */
+    test('a status filter keeps an open row that no longer matches', async () => {
+      render(<RumorDirectory rumors={[r2, r3]} />);
+      fireEvent.click(screen.getByRole('button', { name: '1 unconfirmed' }));
+      openRow('Missing merchant');
+      resolveAs('Missing merchant', 'Confirmed');
+
+      await waitFor(() =>
+        expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r2', 'confirmed')
+      );
+      expect(screen.getByText('Missing merchant')).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Typed text outlives the page (`15-10`)
+  // -------------------------------------------------------------------------
+  describe('unsaved text', () => {
+    const STORAGE_KEY = 'dnd:rumor-drafts:campaign-1';
+
+    beforeEach(() => {
+      window.sessionStorage.clear();
+    });
+
+    const openRow = (name: string) =>
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(`Expand ${name}`) }));
+
+    test('survives leaving the list and coming back', () => {
+      // `15-7` item 8 put drafts in the directory so they survive a filter or
+      // another player's write. They still died on a *route* change, because
+      // the directory unmounts with them.
+      const { unmount } = render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Half a sentence, mid-' },
+      });
+
+      unmount();
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+
+      expect(screen.getByLabelText('What was heard')).toHaveValue('Half a sentence, mid-');
+    });
+
+    test('is kept locally and never written to the database', () => {
+      // A rumour is shared with the whole campaign, so a draft that reached
+      // Firestore would broadcast half-written text to everyone at the table.
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Still typing' },
+      });
+
+      expect(mockUpdateRumor).not.toHaveBeenCalled();
+      expect(window.sessionStorage.getItem(STORAGE_KEY)).toContain('Still typing');
+    });
+
+    test('marks the row, so a kept draft cannot pass for saved work', () => {
+      const { unmount } = render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Half a sentence' },
+      });
+
+      unmount();
+      render(<RumorDirectory rumors={[r2]} />);
+
+      const row = within(screen.getByRole('button', { name: /Expand Missing merchant/ }));
+      expect(row.getByText('Unsaved')).toBeInTheDocument();
+    });
+
+    test('does not mark a row merely because it was opened', () => {
+      // Opening a row seeds a draft identical to the record. Marking that
+      // would cry wolf on every row anybody looked at.
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      expect(screen.queryByText('Unsaved')).not.toBeInTheDocument();
+    });
+
+    test('stops marking the row once the text is saved', async () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Saved text' },
+      });
+      expect(screen.getByText('Unsaved')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(mockUpdateRumor).toHaveBeenCalled());
+      expect(screen.queryByText('Unsaved')).not.toBeInTheDocument();
+      expect(window.sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    test('Collapse still discards, as it always did', () => {
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Never mind' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Collapse' }));
+
+      expect(screen.queryByText('Unsaved')).not.toBeInTheDocument();
+      expect(window.sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    test('arms the browser guard only while something is unsaved', () => {
+      const add = jest.spyOn(window, 'addEventListener');
+      render(<RumorDirectory rumors={[r2]} />);
+      openRow('Missing merchant');
+      expect(add).not.toHaveBeenCalledWith('beforeunload', expect.any(Function));
+
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Unsaved text' },
+      });
+      expect(add).toHaveBeenCalledWith('beforeunload', expect.any(Function));
+      add.mockRestore();
+    });
+
+    /**
+     * **Under `StrictMode`, as the real app runs.**
+     *
+     * This is the test that would have caught the first attempt, and the
+     * plain `render` above did not. `index.tsx` wraps the app in
+     * `React.StrictMode`, which mounts, runs every effect, then runs them all
+     * a second time. Hydrating in an effect and persisting in its partner
+     * meant the restore was immediately overwritten by the still-empty state,
+     * and the second pass then re-read the key it had just emptied -- so the
+     * draft survived the whole round trip in storage and was destroyed on
+     * arrival, in the browser only.
+     */
+    test('survives the round trip under StrictMode, as the app runs it', () => {
+      const { unmount } = render(
+        <React.StrictMode>
+          <RumorDirectory rumors={[r2]} />
+        </React.StrictMode>
+      );
+      openRow('Missing merchant');
+      fireEvent.change(screen.getByLabelText('What was heard'), {
+        target: { value: 'Survives the double mount' },
+      });
+      unmount();
+
+      render(
+        <React.StrictMode>
+          <RumorDirectory rumors={[r2]} />
+        </React.StrictMode>
+      );
+
+      expect(screen.getByText('Unsaved')).toBeInTheDocument();
+      openRow('Missing merchant');
+      expect(screen.getByLabelText('What was heard')).toHaveValue(
+        'Survives the double mount'
+      );
+    });
+
+    test('survives storage being unavailable', () => {
+      // Private windows and blocked site data both throw on access. Losing a
+      // draft is what happened before this existed; breaking the list is not.
+      const getItem = jest
+        .spyOn(Storage.prototype, 'getItem')
+        .mockImplementation(() => {
+          throw new Error('SecurityError');
+        });
+      const setItem = jest
+        .spyOn(Storage.prototype, 'setItem')
+        .mockImplementation(() => {
+          throw new Error('SecurityError');
+        });
+
+      expect(() => render(<RumorDirectory rumors={[r2]} />)).not.toThrow();
+      expect(screen.getByText('Missing merchant')).toBeInTheDocument();
+
+      getItem.mockRestore();
+      setItem.mockRestore();
     });
   });
 });
