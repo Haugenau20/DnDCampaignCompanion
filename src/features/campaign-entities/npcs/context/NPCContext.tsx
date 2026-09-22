@@ -22,8 +22,13 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // the name `error` -- this second instance is the one whose writes
   // (addData/updateData/deleteData) can actually fail, and its error was
   // previously dropped entirely (bug #1401).
+  //
+  // `autoFetch: false` because nothing renders off this instance's `data`:
+  // the list comes from `useNPCData()` above. It used to fetch the whole
+  // collection anyway, so every mount read `npcs` twice.
   const { updateData, deleteData, addData, error: writeError } = useFirebaseData<NPC>({
-    collection: 'npcs'
+    collection: 'npcs',
+    autoFetch: false
   });
 
   // Get NPC by ID

@@ -17,8 +17,12 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // deleteData) can actually fail; its `error` is renamed on destructure (`writeError`)
   // because the read instance above already binds the name `error`. Previously this
   // instance's error was never read anywhere, so write failures were invisible (bug #1401).
+  //
+  // `autoFetch: false` because nothing renders off its `data`: the list comes
+  // from `useRumorData()` above.
   const { addData, updateData, deleteData, error: writeError } = useFirebaseData<Rumor>({
-    collection: 'rumors'
+    collection: 'rumors',
+    autoFetch: false
   });
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();

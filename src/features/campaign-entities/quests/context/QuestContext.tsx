@@ -40,12 +40,13 @@ const QuestContext = createContext<QuestContextValue | undefined>(undefined);
 export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use the useQuestData hook to handle data fetching
   const { quests, loading, error, getQuestById, refreshQuests: fetchQuests, hasRequiredContext } = useQuestData();
-  // This second `useFirebaseData` instance is the one whose writes (addData/updateData/
-  // deleteData) can actually fail; its `error` is renamed on destructure (`writeError`)
-  // because the read instance above already binds the name `error`. Previously this
-  // instance's error was never read anywhere, so write failures were invisible (bug #1401).
+  // `autoFetch: false` because nothing renders off this instance's `data`:
+  // the list comes from `useQuestData()` above. Its `error` is bound as
+  // `writeError` so write failures are not conflated with read failures
+  // (bug #1401).
   const { addData, updateData, deleteData, error: writeError } = useFirebaseData<Quest>({
-    collection: 'quests'
+    collection: 'quests',
+    autoFetch: false
   });
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();

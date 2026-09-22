@@ -11,7 +11,14 @@ import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus'
  */
 export const useQuestData = () => {
   const [quests, setQuests] = useState<Quest[]>([]);
-  const { getData, loading, error, data } = useFirebaseData<Quest>({ collection: 'quests' });
+  // `autoFetch: false` because this hook drives its own fetching below, and
+  // does it with context the generic hook lacks -- gated on group and campaign,
+  // and cleared when either changes. The generic mount fetch fired regardless
+  // and was simply a second read of the same collection.
+  const { getData, loading, error, data } = useFirebaseData<Quest>({
+    collection: 'quests',
+    autoFetch: false
+  });
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
@@ -60,13 +67,21 @@ export const useQuestData = () => {
     setQuests([]);
   }, [activeGroupId, activeCampaignId]);
 
-  // Update quests when Firebase data changes
+  // Update quests when Firebase data changes.
+  //
+  // Signed out, or no group/campaign selected, is checked FIRST and returns:
+  // `data` may still hold the previous user's or previous campaign's records,
+  // since the generic hook no longer clears it on sign-out (autoFetch: false
+  // above also drops its AUTH_STATE_CHANGED_EVENT listener), and stale
+  // records must never outrank "you are signed out".
   useEffect(() => {
+    if (!user || !activeGroupId || !activeCampaignId) {
+      setQuests([]);
+      return;
+    }
+
     if (data.length > 0) {
       setQuests(data);
-    } else if (!user || !activeGroupId || !activeCampaignId) {
-      // Clear quests when signed out or no group/campaign selected
-      setQuests([]);
     }
   }, [data, user, activeGroupId, activeCampaignId]);
 

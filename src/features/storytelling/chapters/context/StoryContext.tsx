@@ -86,18 +86,34 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     hasRequiredContext
   } = useChapterData();
   
-  const { 
-    updateData, 
+  // `autoFetch: false` because nothing renders off this instance's `data`:
+  // chapters come from `useChapterData()` above.
+  const {
+    updateData,
     deleteData
-  } = useFirebaseData<Chapter>({ collection: 'chapters' });
+  } = useFirebaseData<Chapter>({ collection: 'chapters', autoFetch: false });
   
   // Create a separate instance for story progress. Only the read side is used:
   // writes go through `persistProgress` below, because this hook's `updateData`
   // cannot create the document it needs to write to.
+  //
+  // `autoFetch: false` for the same reason as the five `use*Data` hooks: the
+  // explicit `refreshProgress()` effect below is the context-aware fetch --
+  // gated on `hasRequiredContext` and re-run on campaign change -- and the
+  // doc comment on that effect already explains why the generic mount fetch
+  // this disables is not just redundant but actively wrong here (it used to
+  // fire before the campaign context was ready, log "No active group
+  // selected", and return nothing). Its AUTH_STATE_CHANGED_EVENT listener is
+  // also safe to drop: on sign-out `hasRequiredContext` goes false, so the
+  // explicit effect below simply skips fetching rather than needing a
+  // separate clear, and on the next sign-in `activeCampaignId` changing
+  // re-triggers it -- there is no "stale data wins" branch here the way
+  // there was in the five hooks, since the effect populating `storedProgress`
+  // below only ever fills it in from a match, never clears it from absence.
   const {
     data: progressData = [],
     getData: refreshProgress
-  } = useFirebaseData<StoryProgress>({ collection: 'story-progress' });
+  } = useFirebaseData<StoryProgress>({ collection: 'story-progress', autoFetch: false });
 
   const { user } = useAuth();
   const { activeGroupUserProfile } = useUser();

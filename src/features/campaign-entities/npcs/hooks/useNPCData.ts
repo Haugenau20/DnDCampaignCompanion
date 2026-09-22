@@ -11,7 +11,14 @@ import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus'
  */
 export const useNPCData = () => {
   const [npcs, setNpcs] = useState<NPC[]>([]);
-  const { getData, loading, error, data } = useFirebaseData<NPC>({ collection: 'npcs' });
+  // `autoFetch: false` because this hook drives its own fetching below, and
+  // does it with context the generic hook lacks -- gated on group and campaign,
+  // sorted, and cleared when either changes. The generic mount fetch fired
+  // regardless and was simply a second read of the same collection.
+  const { getData, loading, error, data } = useFirebaseData<NPC>({
+    collection: 'npcs',
+    autoFetch: false
+  });
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
@@ -60,15 +67,23 @@ export const useNPCData = () => {
     setNpcs([]);
   }, [activeGroupId, activeCampaignId]);
 
-  // Update NPCs when Firebase data changes
+  // Update NPCs when Firebase data changes.
+  //
+  // Signed out, or no group/campaign selected, is checked FIRST and returns:
+  // `data` may still hold the previous user's or previous campaign's records,
+  // since the generic hook no longer clears it on sign-out (autoFetch: false
+  // above also drops its AUTH_STATE_CHANGED_EVENT listener), and stale
+  // records must never outrank "you are signed out".
   useEffect(() => {
+    if (!user || !activeGroupId || !activeCampaignId) {
+      setNpcs([]);
+      return;
+    }
+
     if (data.length > 0) {
       // Sort NPCs alphabetically by name
       const sortedNPCs = [...data].sort((a, b) => a.name.localeCompare(b.name));
       setNpcs(sortedNPCs);
-    } else if (!user || !activeGroupId || !activeCampaignId) {
-      // Clear NPCs when signed out or no group/campaign selected
-      setNpcs([]);
     }
   }, [data, user, activeGroupId, activeCampaignId]);
 

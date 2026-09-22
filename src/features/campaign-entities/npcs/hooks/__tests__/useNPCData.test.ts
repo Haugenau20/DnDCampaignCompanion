@@ -207,6 +207,31 @@ describe('useNPCData', () => {
 
       expect(result.current.npcs).toEqual([]);
     });
+
+    // `useFirebaseData` is now `autoFetch: false` here, so its
+    // AUTH_STATE_CHANGED_EVENT listener -- the thing that used to clear
+    // `data` on sign-out -- no longer runs. `data` can therefore still hold
+    // the previous user's records at the moment sign-out is observed. The
+    // effect's guard order is what has to catch that: "signed out" must be
+    // checked before "data is present", or the previous user's npcs would
+    // render on a signed-out screen.
+    test('clears the list on sign-out, even though the fetched data is still held', async () => {
+      const npcs = [makeNPC('1', 'Aelindra'), makeNPC('2', 'Mira')];
+      setupFirebaseDataMock({ data: npcs, loading: false, error: null });
+      mockGetData.mockResolvedValue(npcs);
+
+      const { result, rerender } = renderHook(() => useNPCData());
+      await waitFor(() => expect(result.current.npcs).toHaveLength(2));
+
+      // Sign out: FirebaseContext nulls both activeGroupId and
+      // activeCampaignId, but `data` -- no longer cleared by the dropped
+      // listener -- still resolves to the same populated array.
+      setupContextMocks(null, null, null);
+      setupFirebaseDataMock({ data: npcs, loading: false, error: null });
+      rerender();
+
+      expect(result.current.npcs).toEqual([]);
+    });
   });
 
   // -------------------------------------------------------------------------
