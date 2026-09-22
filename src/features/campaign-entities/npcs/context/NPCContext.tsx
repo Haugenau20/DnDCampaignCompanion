@@ -209,7 +209,9 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateNPCRelationship,
     addNPC,
     updateNPC,
-    deleteNPC
+    deleteNPC,
+    refreshNPCs,
+    hasRequiredContext
   };
 
   return (
