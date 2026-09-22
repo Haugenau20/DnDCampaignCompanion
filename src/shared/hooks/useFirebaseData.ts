@@ -17,9 +17,24 @@ interface UseFirebaseDataOptions<T> {
    * set of transforms, promises, loading states and React updates against data
    * no one reads. See the note on `addData` below.
    *
-   * This is per-call-site rather than a change of default because at least one
-   * second instance is NOT write-only: `StoryContext`'s `story-progress`
-   * instance genuinely reads `data`.
+   * It is also passed by every `use*Data` READ hook, for a different reason:
+   * those hooks fetch from an effect of their own, gated on the active group
+   * and campaign, sorted, and cleared when either changes. This hook's mount
+   * fetch knows none of that and fired anyway, so each collection was read
+   * twice from one instance before a write instance was even counted.
+   *
+   * **Every production call site now passes `false`**, so the `true` default
+   * survives only for a future caller that wants the simple behaviour. Do not
+   * read that as "the default is dead and can be inverted": inverting it would
+   * make every new call site silently non-fetching, which is the failure that
+   * is hard to notice. The safe default is the one that fetches.
+   *
+   * A consequence worth knowing: `false` also means the
+   * `AUTH_STATE_CHANGED_EVENT` listener is never registered, so `data` is NOT
+   * emptied on sign-out. Any consumer reading `data` must therefore check
+   * "signed out / no campaign" BEFORE it checks whether `data` is populated,
+   * or it will render the previous user's records. The five read hooks do
+   * exactly that, and each of their suites pins it.
    */
   autoFetch?: boolean;
 }
