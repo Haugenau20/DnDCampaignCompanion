@@ -26,6 +26,15 @@ jest.mock("features/campaign-entities", () => ({
   useNPCs: () => ({ addNPC: mockAddNPC }),
   useQuests: () => ({ addQuest: mockAddQuest }),
   useLocations: () => ({ createLocation: mockCreateLocation }),
+  /*
+    The real implementation, not a stub. `quickAddSpecs` calls this while
+    building a quest document, so a mock returning something else would make
+    this suite agree with itself rather than with the product -- and an absent
+    one made every quest write throw, silently, into `submit`'s catch.
+  */
+  normaliseObjectives: jest.requireActual(
+    "features/campaign-entities/quests/utils/quest-objectives"
+  ).normaliseObjectives,
 }));
 
 jest.mock("features/collaboration", () => ({

@@ -6,6 +6,7 @@ import {
   validateQuickAdd,
   type QuickAddEntity,
 } from "../quickAddSpecs";
+import type { QuestObjective } from "features/campaign-entities";
 
 describe("quickAddSpecs", () => {
   describe("the shape of the set", () => {
@@ -137,6 +138,27 @@ describe("quickAddSpecs", () => {
         expect(doc.race).toBe("Dwarf");
         expect(doc.occupation).toBe("King");
         expect(doc.title).toBe("Oakenshield");
+      });
+
+      it("turns the extractor's string objectives into QuestObjective[]", () => {
+        // The schema at `entityExtraction.ts` returns `objectives: string[]`;
+        // `Quest.objectives` is `QuestObjective[]`. These used to be written
+        // to Firestore as bare strings, which crashed `QuestDirectory`'s
+        // search on `obj.description.toLowerCase()`.
+        const doc = QUICK_ADD_SPECS.quest.buildDocument(
+          { name: "Reclaim Erebor", line: "Take the mountain" },
+          { objectives: ["Search the cave", "Defeat the guardian"] }
+        ) as { objectives: QuestObjective[] };
+
+        expect(doc.objectives).toEqual([
+          { id: expect.any(String), description: "Search the cave", completed: false },
+          { id: expect.any(String), description: "Defeat the guardian", completed: false },
+        ]);
+        // The exact expression at QuestDirectory.tsx:199, which a bare string
+        // array took down.
+        expect(() =>
+          doc.objectives.some((o) => o.description.toLowerCase().includes("cave"))
+        ).not.toThrow();
       });
 
       it("keeps extracted quest objectives and relations", () => {

@@ -37,6 +37,9 @@ export {
   questMetaLine,
 } from './quests/utils/quest-presentation';
 export type { ObjectiveProgress } from './quests/utils/quest-presentation';
+// Coerces whatever reaches a quest document into `QuestObjective[]`; the
+// extractor sends `string[]`, and bare strings used to reach Firestore.
+export { normaliseObjectives } from './quests/utils/quest-objectives';
 // Quest types
 export type { Quest, QuestStatus, QuestObjective, QuestLocation, QuestContextState, QuestContextValue } from './quests/types';
 

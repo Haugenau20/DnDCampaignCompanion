@@ -1,6 +1,7 @@
 // src/features/campaign-entities/quests/hooks/useQuestData.ts
 import { useState, useEffect, useCallback } from 'react';
 import { Quest } from '../types';
+import { normaliseObjectives } from '../utils/quest-objectives';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
@@ -40,9 +41,22 @@ export const useQuestData = () => {
         return [];
       }
       
+      /*
+        Normalised on the way in, not just on the way out. `buildDocument`
+        stops new bare-string objectives being written, but documents already
+        in Firestore carry them -- every quest converted from a note before
+        T050 -- and one of those is enough to crash `QuestDirectory`'s search
+        on `obj.description.toLowerCase()`. Reading them through the same
+        coercion makes the existing data safe without waiting for an edit, and
+        the next write through `writeObjectives` persists the repair.
+      */
       const data = await getData();
-      setQuests(data || []);
-      return data || [];
+      const quests = (data || []).map((quest) => ({
+        ...quest,
+        objectives: normaliseObjectives(quest.objectives),
+      }));
+      setQuests(quests);
+      return quests;
     } catch (err) {
       console.error('Error fetching quests:', err);
       setQuests([]);

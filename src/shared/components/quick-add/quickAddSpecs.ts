@@ -1,6 +1,7 @@
 // src/shared/components/quick-add/quickAddSpecs.ts
 import type { NPC } from "features/campaign-entities";
 import type { Location, Quest } from "features/campaign-entities";
+import { normaliseObjectives } from "features/campaign-entities";
 import type { DomainData } from "core/types/common";
 
 /**
@@ -158,7 +159,6 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
       const carried = withoutOwned(carry, ["title", "description", "status"]);
       const doc: DomainData<Quest> = {
         background: "",
-        objectives: [],
         leads: [],
         keyLocations: [],
         relatedNPCIds: [],
@@ -171,6 +171,17 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
         title: values.name.trim(),
         description: values.line.trim(),
         status: "active",
+        /*
+          After the spread, deliberately. `objectives` is not an owned key --
+          the carry is allowed to bring some -- but `Quest.objectives` is
+          `QuestObjective[]` and the extractor's schema says `string[]`, so
+          what the spread lands here is whatever the caller had. Bare strings
+          used to reach Firestore and then crash `QuestDirectory`'s search on
+          `obj.description.toLowerCase()`. This is the last point the type can
+          still be made to hold. It is also the default: `normaliseObjectives`
+          returns [] for the undefined the other three call sites pass.
+        */
+        objectives: normaliseObjectives(carried.objectives),
       };
       return doc;
     },
