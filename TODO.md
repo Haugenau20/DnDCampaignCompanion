@@ -141,117 +141,29 @@ with a row lit up instead of on the record.
   other two. `/story` is a separate question and is **T045**.
 - **Source**: T014's remainder, carried out of phase 15
 
-### T050 — Note conversion drops or misfiles most of what the extractor found
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-09-22
+### T050 — Extraction quality under `gpt-4.1-mini` is unmeasured
+**Type** bug · **Size** S · **Status** needs investigation · **Verified** 2026-09-22
 
-The extraction function returns a rich object per entity; `convertEntity` then
-hands a create route a much poorer one, and two of the fields it does pass are
-written into the wrong kind of slot. The carry mechanism underneath is sound —
-`splitInitialData`/`buildDocument` do preserve every key handed to them — so
-every loss below happens in `convertEntity` or in the schema it reads.
+Everything this entry described is fixed and verified in Chrome. What is left
+is the one thing no gate in this repo can reach: **whether the new model
+extracts as well as or better than the old one, against a real note.**
 
-- **Where**: `src/features/collaboration/notes/context/NoteContext.tsx:298-447`
-  (`convertEntity`), against the JSON schema at
-  `firebase/functions/src/entityExtraction.ts:436-560` and the carry path at
-  `src/shared/components/quick-add/quickAddSpecs.ts:95-220`.
-- **What is actually wrong**, each read in the tree:
-  - **A converted location gets a *name* in `parentId`.** `NoteContext.tsx:335`
-    assigns `parentId: extraData.parentLocation`, and the schema's
-    `parentLocation` is prose ("The Shire"), not an id. It rides through
-    `splitInitialData` (`quickAddSpecs.ts:293`) and `QuickAddForm.tsx:109`
-    untouched into the document. That is a dangling `parentId` written by the
-    product on purpose — the same shape as #303/#1416, and it lands the new
-    place under **"Unplaced"** (T049).
-  - **A converted quest gets *names* in `relatedNPCIds`.** The schema asks the
-    model for `relatedNPCIds` (`entityExtraction.ts:511`) but the model has no
-    ids; `QuestContext.tsx:271` stores them verbatim and `QuestRowSummary.tsx:105`
-    resolves them against NPC records, so they resolve to nothing. Same class as
-    #1421.
-  - **A converted quest's objectives are the wrong type.** `Quest.objectives` is
-    `QuestObjective[]` (`quests/types.ts:7`); the schema returns `string[]` and
-    `NoteContext.tsx:342` passes them "raw", with no normalisation anywhere down
-    to `addQuest`.
-  - **An NPC's extracted stance is thrown away.** `convertEntity` carries
-    `relationship`, then `quickAddSpecs.ts:110` strips it via `withoutOwned` and
-    `:127` hardcodes `relationship: "unknown"`.
-  - **`context` — the sentence from the note — is dropped** for NPCs and
-    locations whenever the model also returned a `description`
-    (`NoteContext.tsx:325`, `:333`): it is only ever a fallback, and is not a key
-    of `initialData`, so carry never sees it.
-  - **`entityMapper.extractDetailsByType` describes a second, stale shape.** Its
-    quest branch reads `NPCsInvolved` (`entityMapper.ts:71`), which the function
-    does not return; the live response is flat, so
-    `mapOpenAIEntityToExtractedEntity` takes the `else` branch at `:28` and this
-    switch never runs on real data. Not a loss today — a trap for whoever
-    restores the `details` format. Note #023 closed this function's *empty
-    body*, not its field names.
-- **Touches**: `NoteContext.convertEntity`, `entityMapper`, the function's JSON
-  schema, the model and call shape in `entityExtraction.ts`, and whichever
-  resolution step the name→id cases get.
-- **Decided 2026-09-22 — resolve by exact name, otherwise leave the id empty.**
-  A single exact match against the loaded collection wins. **No match, or more
-  than one, writes an empty id** and keeps the name in the prose field it came
-  from, so the product never writes a dangling reference on purpose. A location
-  that does not resolve lands under "Unplaced", which is honest and is T049's
-  job to explain rather than this one's to hide. Explicitly **not** chosen:
-  creating a stub location for an unmatched name, which would let one
-  misspelling become a permanent duplicate place.
-  - This is the third name→id case too, which the list above missed: a
-    converted NPC gets `location: extraData.location` and a converted quest gets
-    `location: extraData.locationName`, both prose, both with `locationId` left
-    empty. `NPCDetailPage.tsx:525` states the contract — "`NPC.location`
-    describes; `locationId` is what resolves" — so these are not corrupt the way
-    `parentId` is, merely unlinked. One resolver serves all four sites.
-- **Catch**: the resolution step cannot live inside `convertEntity`, which has no
-  access to the loaded collections. The rest of the list is field plumbing and
-  can go first.
-- **The model is `gpt-3.5-turbo`, and it should not be.** Defaulted twice —
-  `firebase/functions/src/entityExtraction.ts:370` and
-  `EntityExtractionService.ts:77`. Folded in here rather than filed separately
-  because the loss this entry describes is partly a model-quality problem and
-  the fix touches the same call.
-  - **Decided 2026-09-22: `gpt-4.1-mini`**, at the maintainer's direction.
-  - **Its headline output rate is dearer and its real cost is not.** $1.60/1M
-    output against `gpt-3.5-turbo`'s $1.50 reads like a 7% rise, but this call
-    is overwhelmingly **input** — a ~1,500-token function schema and a system
-    prompt on every request, against a note capped at 10,000 characters — and
-    input drops from $0.50 to $0.40. A representative call works out cheaper
-    before caching and materially cheaper after it: the schema is a fixed
-    prefix well over OpenAI's 1,024-token minimum, so it caches at $0.10, and
-    `gpt-3.5-turbo` has no cached rate at all. **Do not re-litigate this from
-    the output column alone.**
-  - **`temperature: 0` (`:581`) ruled out the `gpt-5`/o-series**: reasoning
-    models on chat completions reject a non-default temperature, so a swap into
-    that family would have meant giving up determinism — a real cost for an
-    extractor, not a formality. `gpt-4.1-mini` is not a reasoning model, so the
-    call shape survives and the model swap stays independent of the `tools`
-    migration below. Keep them as separate commits: if extraction quality moves,
-    that is the only way to know which change moved it.
-  - **The call still uses the deprecated `functions` / `function_call` pair**
-    (`:578-580`), so it cannot ask for `strict: true`. Moving to
-    `tools` / `tool_choice` with strict structured outputs is the thing that
-    stops the schema and its consumer drifting apart — which is what half the
-    losses above *are*. Strict mode does not accept `oneOf`; the four entity
-    variants at `:436` would become `anyOf`.
-- **The model name is client-supplied and the function trusts it.**
-  `EntityExtractionService.extractEntities` sends `model` from the browser
-  (`:77`, `:88-91`) and `entityExtraction.ts:370` passes it to OpenAI unchecked.
-  A modified client can name any model on the price list against the project's
-  key, bounded only by 10 extractions a day. **Pin the model server-side and
-  drop the parameter** — do not leave two defaults in two files to disagree,
-  which is how `QuestContextValue` came to be declared twice.
-- **Two tests assert the defective behaviour** and must be replaced
-  deliberately, not edited into agreement:
-  `NoteContext.behavioral.test.tsx:637-645` expects `objectives` as bare strings
-  and uses `relatedNPCIds: ['npc-1','npc-2']`, whose id-shaped values hide the
-  fact that the model has no ids to give; `:592-604` does the same for the
-  location branch.
-- **Nothing here is covered by `npm test`.** `firebase/functions` has no jest and
-  no test files (`CLAUDE.md`), so the schema and the call shape must be verified
-  against the emulator, with a control that reproduces the old behaviour
-  alongside the new.
-- **Source**: todo.txt, 2026-09-22 ("Have a good look into the entity extractor
-  and how it converts to NPC, Location, Quest, Rumor")
+- **Where**: `firebase/functions/src/entityExtraction.ts` — `EXTRACTION_MODEL`
+  is `gpt-4.1-mini`, called through `tools` / `tool_choice` with
+  `strict: true`.
+- **Why it is still open**: the emulator has no `OPENAI_API_KEY` — the function
+  reads it from Firebase Secret Manager and there is no
+  `firebase/functions/.secret.local` — so the whole verification pass was done
+  by seeding the extractor's *output* into Firestore. That proves every line
+  this repo owns and **nothing about the model**.
+- **What to check**, in one or two real extractions: that the strict schema is
+  accepted at all (a rejected `anyOf` or a missing `required` entry fails the
+  call outright, not quietly), that `relatedNPCNames` comes back as names, and
+  that entity counts on a real session note are not worse than before.
+- **Catch**: `temperature: 0` keeps this reproducible, so a single note is a
+  fair comparison. Watch the **cached** input rate in the usage dashboard once
+  a few calls share the prefix — the cost case for this model rests on it.
+- **Source**: what remains of T050 after the 2026-09-22 fix pass
 
 ---
 
