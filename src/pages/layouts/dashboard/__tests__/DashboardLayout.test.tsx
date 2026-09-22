@@ -264,6 +264,19 @@ describe("DashboardLayout", () => {
       expect(children.findIndex(c => c.contains(feed))).toBe(0);
       expect(children.findIndex(c => c.contains(quests))).toBe(1);
     });
+
+    it("lets both grid tracks shrink below their content width", () => {
+      const { container } = render(<DashboardLayout {...makeProps()} />);
+      // Without `min-w-0` a grid item floors at its min-content width, so one
+      // long, unbreakable activity or quest title widens the column, the grid
+      // and then the page -- and the rows' own `truncate` never fires.
+      const grid = container.querySelector(".lg\\:grid");
+      const children = Array.from(grid?.children ?? []);
+      expect(children).toHaveLength(2);
+      children.forEach(child => {
+        expect(child.className).toContain("min-w-0");
+      });
+    });
   });
 
   // -------------------------------------------------------------------------
