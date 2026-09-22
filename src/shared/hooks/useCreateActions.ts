@@ -5,6 +5,7 @@ import { BookOpen, FileText, MapPin, MessageSquare, Scroll, User } from "lucide-
 import { useNavigation } from "../context/NavigationContext";
 import { useQuickAdd } from "../context/QuickAddContext";
 import { useCreateNote } from "features/collaboration";
+import { useCreateRumor } from "features/campaign-entities";
 
 /**
  * One entry in the single list of "create a new X" commands.
@@ -37,6 +38,7 @@ export interface CreateAction {
 export function useCreateActions(): CreateAction[] {
   const { navigateToPage } = useNavigation();
   const { createAndOpen } = useCreateNote();
+  const { createAndOpen: createAndOpenRumor } = useCreateRumor();
   const { openQuickAdd } = useQuickAdd();
 
   return useMemo(
@@ -49,13 +51,14 @@ export function useCreateActions(): CreateAction[] {
       // destination -- but the menu no longer sends you to one.
       { id: "npc", entityLabel: "NPC", icon: User, sectionPath: "/npcs", shortcut: "P", run: () => openQuickAdd("npc") },
       { id: "location", entityLabel: "Location", icon: MapPin, sectionPath: "/locations", shortcut: "L", run: () => openQuickAdd("location") },
-      // The rumour keeps its form: `15-1` item 9 leaves its composer row to
-      // `15-7`, because `RumorForm` requires a third field a two-field
-      // surface cannot supply without relaxing validation.
-      { id: "rumor", entityLabel: "Rumor", icon: MessageSquare, sectionPath: "/rumors", shortcut: "R", run: () => navigateToPage("/rumors/create") },
+      // The rumour has no page and no dialog, so it has no destination to be
+      // sent to: it is written on arrival and its row opens in the list.
+      // `15-1` deferred this because `RumorForm` demanded a third field a
+      // two-field surface could not supply; `15-9` retired the form.
+      { id: "rumor", entityLabel: "Rumor", icon: MessageSquare, sectionPath: "/rumors", shortcut: "R", run: () => createAndOpenRumor() },
       { id: "quest", entityLabel: "Quest", icon: Scroll, sectionPath: "/quests", shortcut: "Q", run: () => openQuickAdd("quest") },
     ],
-    [navigateToPage, createAndOpen, openQuickAdd]
+    [navigateToPage, createAndOpen, createAndOpenRumor, openQuickAdd]
   );
 }
 

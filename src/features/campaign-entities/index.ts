@@ -75,6 +75,7 @@ export {
 // Rumor context and hooks
 export { RumorProvider, useRumors } from './rumors/context/RumorContext';
 export { useRumorData } from './rumors/hooks/useRumorData';
+export { useCreateRumor } from './rumors/hooks/useCreateRumor';
 // Components consumed by pages/rumors/* and other external consumers
 export { default as RumorForm } from './rumors/components/RumorForm';
 export { default as RumorDirectory } from './rumors/components/RumorDirectory';

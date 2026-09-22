@@ -130,7 +130,20 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
     highlight: highlightId,
     idOf: (rumor: Rumor) => rumor.id,
     domIdPrefix: 'rumor',
-    onReveal: ([rumorId]) => setExpandedRumorId(rumorId),
+    onReveal: ([rumorId]) => {
+      setExpandedRumorId(rumorId);
+      // A rumour arriving here with nothing written in it was just created by
+      // the global create menu, which has no surface of its own -- so this is
+      // where it gets its caret, exactly as the composer's row does.
+      //
+      // Only an empty one. A pasted link to a rumour somebody wrote last week
+      // opens the row and leaves the caret alone; stealing focus into a field
+      // the reader did not ask to edit is how a link becomes an accident.
+      const target = initialRumors.find((rumor) => rumor.id === rumorId);
+      if (target && !(target.title ?? '').trim() && !(target.content ?? '').trim()) {
+        setJustAddedId(rumorId);
+      }
+    },
   });
 
   // Status counts drive the one bar that replaced the "All Status" dropdown.

@@ -38,7 +38,9 @@ const RumorPrompt: React.FC<RumorPromptProps> = ({ rumorCount }) => {
         variant="primary"
         size="sm"
         className="mt-1"
-        onClick={() => navigateToPage('/rumors/create')}
+        // The list, not a create page: the composer sits at the top of it,
+        // and `15-9` retired the form this used to open.
+        onClick={() => navigateToPage('/rumors')}
       >
         Add a rumor
       </Button>

@@ -4,6 +4,7 @@ import { useCreateActions } from "../useCreateActions";
 
 const mockNavigateToPage = jest.fn();
 const mockCreateAndOpen = jest.fn();
+const mockCreateAndOpenRumor = jest.fn();
 
 jest.mock("../../context/NavigationContext", () => ({
   useNavigation: jest.fn(),
@@ -11,12 +12,16 @@ jest.mock("../../context/NavigationContext", () => ({
 jest.mock("features/collaboration", () => ({
   useCreateNote: jest.fn(),
 }));
+jest.mock("features/campaign-entities", () => ({
+  useCreateRumor: jest.fn(),
+}));
 jest.mock("../../context/QuickAddContext", () => ({
   useQuickAdd: jest.fn(),
 }));
 
 const { useNavigation } = require("../../context/NavigationContext");
 const { useCreateNote } = require("features/collaboration");
+const { useCreateRumor } = require("features/campaign-entities");
 const { useQuickAdd } = require("../../context/QuickAddContext");
 
 const mockOpenQuickAdd = jest.fn();
@@ -25,6 +30,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   useNavigation.mockReturnValue({ navigateToPage: mockNavigateToPage, createPath: jest.fn() });
   useCreateNote.mockReturnValue({ createAndOpen: mockCreateAndOpen });
+  useCreateRumor.mockReturnValue({ createAndOpen: mockCreateAndOpenRumor });
   useQuickAdd.mockReturnValue({
     openQuickAdd: mockOpenQuickAdd,
     closeQuickAdd: jest.fn(),
@@ -56,23 +62,29 @@ describe("useCreateActions", () => {
     });
   });
 
-  it("navigates to the create route for the two actions that still have one", () => {
-    // Since `15-1` only the chapter and the rumour navigate. The chapter has
-    // no quick-add surface at all -- Phase 15 is about the four campaign
-    // entities -- and the rumour keeps its form until `15-7` builds its
-    // composer row, because `RumorForm` requires a third field.
+  it("navigates to the create route for the one action that still has one", () => {
+    // CHANGED DELIBERATELY in `15-9`: the rumour used to navigate here too.
+    // It has no page and no dialog, so it is written on arrival instead --
+    // see the next test. The chapter is the last one left with a route,
+    // because it has no quick-add surface at all; Phase 15 was about the four
+    // campaign entities.
     const { result } = renderHook(() => useCreateActions());
-    const routes: Record<string, string> = {
-      rumor: "/rumors/create",
-      chapter: "/story/chapters/create",
-    };
-    Object.entries(routes).forEach(([id, path]) => {
-      act(() => {
-        result.current.find((a) => a.id === id)!.run();
-      });
-      expect(mockNavigateToPage).toHaveBeenCalledWith(path);
+    act(() => {
+      result.current.find((a) => a.id === "chapter")!.run();
     });
+    expect(mockNavigateToPage).toHaveBeenCalledWith("/story/chapters/create");
+    expect(mockNavigateToPage).toHaveBeenCalledTimes(1);
     expect(mockCreateAndOpen).not.toHaveBeenCalled();
+  });
+
+  it("creates and opens a rumour rather than navigating, for the rumour action", () => {
+    const { result } = renderHook(() => useCreateActions());
+    act(() => {
+      result.current.find((a) => a.id === "rumor")!.run();
+    });
+    expect(mockCreateAndOpenRumor).toHaveBeenCalledTimes(1);
+    expect(mockNavigateToPage).not.toHaveBeenCalled();
+    expect(mockOpenQuickAdd).not.toHaveBeenCalled();
   });
 
   it("opens quick add in place for the NPC, the location and the quest", () => {
