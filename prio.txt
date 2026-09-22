@@ -1,0 +1,41 @@
+Do first: T046 → T023 (the loader cluster)
+
+  NPCsPage holds a second, independently fetched copy of the NPC collection, so a write through the
+  context updates the provider's copy while the page keeps rendering the other one. That's the
+  stale-stance bug you already saw. It's currently patched, not fixed — the ladder was wired to an
+  onNPCUpdate prop that had been declared and never called — and T046 says plainly that every other
+  write path in that directory has the same exposure.
+
+  The real fix is T023's: drop the second loader, read the provider, add refreshNPCs to
+  NPCContextValue (the other three contexts already expose theirs). That single change:
+
+  - closes a defect class rather than one symptom — the next write path you add can't reintroduce it
+  - halves the Firestore reads on that page
+  - gives you the pattern to apply to SearchContext, which builds its own chapter/NPC/location/rumour
+    hooks instead of consuming the providers
+
+  T046 is sized S, T023 M. Doing T046 as T023 is the right call — the S version is the patch you
+  already have.
+
+  Bundle in while you're there: T003
+
+  23 console.log calls under user-management, printing user ids and loaded profile objects on every
+  auth state change, in production. Pure deletion, no design decision, and NoteContext.tsx:76 has one
+  of the same kind that T029 flags — take it in the same pass. This is the cheapest real win in the
+  file.
+
+  Cheap insurance: T031
+
+  A two-space search query measured 22,538 ms of main-thread lag. It's fixed, but by two independent
+  guards, neither pinned by a test — either one reads as redundant to someone looking at the other.
+  One test file, and note the entry's warning: assert termination, because a test checking only the
+  return value would hang rather than fail.
+
+  Then: T050
+
+  The extractor is the feature that most distinguishes this app from a wiki, and right now conversion
+  writes references that cannot resolve — a location name into parentId, NPC names into relatedNPCIds,
+  objectives as strings against an object field. It also manufactures T049's "Unplaced" rows on
+  purpose. It's M rather than S only because the name→id resolution needs a decision (no match / two
+  matches) before anything else can be mapped; the other four findings are plumbing and could ship
+  first.

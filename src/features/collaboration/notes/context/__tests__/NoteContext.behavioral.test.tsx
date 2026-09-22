@@ -521,6 +521,111 @@ describe('NoteContext Behavioral Tests', () => {
       }
     };
 
+    /**
+     * Boilerplate for the cases below: create a note, put one entity on it,
+     * convert it, and hand back the `initialData` the create route was given.
+     */
+    const convertAndCapture = async (
+      entity: ExtractedEntity,
+      type: EntityType
+    ): Promise<Record<string, unknown>> => {
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => expect(capturedContext.isLoading).toBe(false));
+
+      await act(async () => {
+        await capturedContext.createNote('Session 12', 'Test content');
+      });
+      await act(async () => {
+        await capturedContext.updateNote('note-1', { extractedEntities: [entity] });
+      });
+      await act(async () => {
+        await capturedContext.convertEntity('note-1', 'entity-1', type);
+      });
+
+      const call = mockNavigate.mock.calls[mockNavigate.mock.calls.length - 1];
+      return call[1].state.initialData as Record<string, unknown>;
+    };
+
+    describe('the note sentence the entity was read out of', () => {
+      /*
+        `context` used to survive only when the model returned no
+        `description`. The moment it wrote one -- which is the common case, and
+        the case where provenance matters most -- the sentence the fact came
+        from was dropped, and so was the note it came from. `context` is not a
+        key of `initialData`, so the quick-add carry never saw it either.
+      */
+      test('is kept even when the model also wrote a description', async () => {
+        const initialData = await convertAndCapture({
+          ...mockEntity,
+          extraData: {
+            name: 'Galadriel',
+            description: 'Lady of Lothlorien.',
+            context: 'Galadriel gave each of us a parting gift.',
+          },
+        }, 'npc' as EntityType);
+
+        expect(initialData.description).toContain('Lady of Lothlorien.');
+        expect(initialData.description)
+          .toContain('Galadriel gave each of us a parting gift.');
+      });
+
+      test('leads with the description and puts the sentence under it', async () => {
+        const initialData = await convertAndCapture({
+          ...mockEntity,
+          extraData: {
+            name: 'Galadriel',
+            description: 'Lady of Lothlorien.',
+            context: 'Galadriel gave each of us a parting gift.',
+          },
+        }, 'npc' as EntityType);
+
+        const text = initialData.description as string;
+        expect(text.indexOf('Lady of Lothlorien.'))
+          .toBeLessThan(text.indexOf('Galadriel gave each of us'));
+      });
+
+      test('falls back to the note provenance when the model wrote no description', async () => {
+        const initialData = await convertAndCapture({
+          ...mockEntity,
+          extraData: { name: 'Galadriel', context: 'She gave us gifts.' },
+        }, 'npc' as EntityType);
+
+        expect(initialData.description).toContain('Created from note: Session 12');
+        expect(initialData.description).toContain('She gave us gifts.');
+      });
+
+      test('is not repeated when the description already contains it', async () => {
+        const sentence = 'Galadriel gave each of us a parting gift.';
+        const initialData = await convertAndCapture({
+          ...mockEntity,
+          extraData: { name: 'Galadriel', description: sentence, context: sentence },
+        }, 'npc' as EntityType);
+
+        const text = initialData.description as string;
+        expect(text.split(sentence)).toHaveLength(2); // i.e. it appears once
+      });
+
+      test('is kept for a converted location too', async () => {
+        const initialData = await convertAndCapture({
+          ...mockEntity,
+          type: 'location' as EntityType,
+          extraData: {
+            name: 'Lothlorien',
+            description: 'A golden wood.',
+            context: 'We rested in Lothlorien for a month.',
+          },
+        }, 'location' as EntityType);
+
+        expect(initialData.description).toContain('A golden wood.');
+        expect(initialData.description).toContain('We rested in Lothlorien for a month.');
+      });
+    });
+
     test('should navigate to NPC creation with entity data', async () => {
       let capturedContext: any;
       render(
@@ -604,50 +709,74 @@ describe('NoteContext Behavioral Tests', () => {
       });
     });
 
-    test('should navigate to quest creation with entity data', async () => {
-      const questEntity: ExtractedEntity = {
+    /*
+      This replaces a case that asserted the two defects it was watching.
+
+      It expected `objectives: ['Search the cave', 'Defeat the guardian']` --
+      bare strings, where `Quest.objectives` is `QuestObjective[]` -- and
+      `relatedNPCIds: ['npc-1', 'npc-2']`, whose id-shaped values disguised the
+      fact that the model has no ids and was answering with names. Written
+      against what the code did rather than what a quest needs, it made both
+      defects look like the contract.
+
+      What `convertEntity` owes a quest is now: the extractor's fields under
+      the names the schema actually uses, unresolved, for the write boundary to
+      turn into a document. `objectives` stays `string[]` here on purpose --
+      `normaliseObjectives` converts it in `buildDocument`, which is the last
+      point the type can be made to hold for every path, not just this one.
+    */
+    test('hands a quest the extractor fields, under the names the schema uses', async () => {
+      const initialData = await convertAndCapture({
         ...mockEntity,
-        type: 'quest',
+        type: 'quest' as EntityType,
         extraData: {
           title: 'Find the Lost Treasure',
           objectives: ['Search the cave', 'Defeat the guardian'],
-          relatedNPCIds: ['npc-1', 'npc-2']
-        }
-      };
+          relatedNPCNames: ['Bilbo', 'Thorin'],
+          locationName: 'The Lonely Mountain',
+        },
+      }, 'quest' as EntityType);
 
-      let capturedContext: any;
-      render(
-        <NoteProvider>
-          <TestComponent onRender={(ctx) => capturedContext = ctx} />
-        </NoteProvider>
-      );
-      await waitFor(() => {
-        expect(capturedContext.isLoading).toBe(false);
+      expect(initialData).toMatchObject({
+        title: 'Find the Lost Treasure',
+        objectives: ['Search the cave', 'Defeat the guardian'],
+        relatedNPCNames: ['Bilbo', 'Thorin'],
+        location: 'The Lonely Mountain',
       });
+    });
 
-      await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
-      });
-      await act(async () => {
-        await capturedContext.updateNote('note-1', {
-          extractedEntities: [questEntity]
-        });
-      });
-      await act(async () => {
-        await capturedContext.convertEntity('note-1', 'entity-1', 'quest');
-      });
+    test('does not put the quest people in an id-shaped field', async () => {
+      // The whole defect in one assertion: names stored under
+      // `relatedNPCIds` resolved to nothing on every consumer that read them.
+      const initialData = await convertAndCapture({
+        ...mockEntity,
+        type: 'quest' as EntityType,
+        extraData: { title: 'A quest', relatedNPCNames: ['Bilbo'] },
+      }, 'quest' as EntityType);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/quests/create', {
-        state: {
-          initialData: expect.objectContaining({
-            title: 'Find the Lost Treasure',
-            objectives: ['Search the cave', 'Defeat the guardian'],
-            relatedNPCIds: ['npc-1', 'npc-2']
-          }),
-          noteId: 'note-1',
-          entityId: 'entity-1'
-        }
-      });
+      expect(initialData).not.toHaveProperty('relatedNPCIds');
+    });
+
+    test('stops pasting the people and the place into the description', async () => {
+      /*
+        The old branch appended "Related NPCs: ..." and "Location: ..." to the
+        description. That was a workaround for the ids never resolving -- the
+        names went into the prose so the reader could at least see them. Now
+        that the relation itself works, keeping it would print every person
+        twice, once as a link and once as text.
+      */
+      const initialData = await convertAndCapture({
+        ...mockEntity,
+        type: 'quest' as EntityType,
+        extraData: {
+          title: 'A quest',
+          relatedNPCNames: ['Bilbo'],
+          locationName: 'Erebor',
+        },
+      }, 'quest' as EntityType);
+
+      expect(initialData.description).not.toContain('Related NPCs');
+      expect(initialData.description).not.toContain('Location: Erebor');
     });
 
     test('writes the rumour itself, and opens its row', async () => {

@@ -15,18 +15,20 @@ export const useOpenAIExtractor = () => {
   /**
    * Extract entities from text content
    * @param content The text to analyze
-   * @param model Optional model configuration
    * @returns Promise resolving to extracted entities
+   *
+   * The model is pinned in the Cloud Function and is not a caller's choice --
+   * this hook used to forward one, which is how the browser came to decide
+   * what the project's OpenAI key was billed for.
    */
   const extractEntities = useCallback(async (
-    content: string,
-    model?: string
+    content: string
   ): Promise<ExtractedEntity[]> => {
     setIsExtracting(true);
     setError(null);
     
     try {
-      const entities = await entityService.extractEntities(content, model);
+      const entities = await entityService.extractEntities(content);
       return entities;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to extract entities';

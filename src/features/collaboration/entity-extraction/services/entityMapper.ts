@@ -37,7 +37,20 @@ export const mapOpenAIEntityToExtractedEntity = (
 };
 
 /**
- * Extract specific details from OpenAI response based on entity type
+ * Extract specific details from OpenAI response based on entity type.
+ *
+ * **Unreachable against the live function, and kept deliberately.** The Cloud
+ * Function returns each entity flat, so `mapOpenAIEntityToExtractedEntity`
+ * takes its `else` branch and this never runs on real data. It exists for the
+ * nested `details` envelope, which the response format may return to.
+ *
+ * That is exactly why its field names matter. Its quest branch read
+ * `NPCsInvolved`, a name the schema has never used -- so the one path that
+ * would have restored the `details` format would also have silently dropped a
+ * quest's people, and nothing would have failed to say so. Note #023 closed
+ * this function's *empty body*; it did not check what the body named. A dead
+ * branch that describes a shape nothing produces is worse than no branch:
+ * it reads as a specification.
  */
 export const extractDetailsByType = (
   details: ExtractedEntityDetails,
@@ -68,7 +81,7 @@ export const extractDetailsByType = (
         title: (details as any).title,
         description: (details as any).description,
         objectives: (details as any).objectives || [],
-        NPCsInvolved: (details as any).NPCsInvolved || [],
+        relatedNPCNames: (details as any).relatedNPCNames || [],
         locationName: (details as any).locationName,
         context: (details as any).context,
       };

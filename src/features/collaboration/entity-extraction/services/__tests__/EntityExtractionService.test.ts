@@ -354,7 +354,16 @@ describe('EntityExtractionService', () => {
       await expect(svc.extractEntities('Content')).rejects.toThrow('network failure');
     });
 
-    test('should use default model gpt-3.5-turbo when none provided', async () => {
+    /*
+      These two replace a pair that pinned the opposite contract -- that the
+      service defaults to `gpt-3.5-turbo` and forwards any model it is handed.
+      That was an accurate description of the code and a description of the
+      defect: the callable passed the value to OpenAI unchecked, so a modified
+      client could bill this project's key for any model on the price list.
+      The model is now pinned in the function, so what needs pinning here is
+      that the request carries nothing else.
+    */
+    test('sends only the content -- the model is pinned in the function', async () => {
       const mockFn = jest.fn().mockResolvedValueOnce({
         data: { success: true, entities: [makeOpenAIEntity()] },
       });
@@ -362,18 +371,28 @@ describe('EntityExtractionService', () => {
 
       const svc = EntityExtractionService.getInstance();
       await svc.extractEntities('Content');
-      expect(mockFn).toHaveBeenCalledWith({ content: 'Content', model: 'gpt-3.5-turbo' });
+
+      // Exact, not `objectContaining`: an extra key is the whole failure mode.
+      expect(mockFn).toHaveBeenCalledWith({ content: 'Content' });
+      expect(Object.keys(mockFn.mock.calls[0][0])).toEqual(['content']);
     });
 
-    test('should use the provided model when specified', async () => {
+    test('a caller passing a model cannot get it into the request', async () => {
       const mockFn = jest.fn().mockResolvedValueOnce({
         data: { success: true, entities: [makeOpenAIEntity()] },
       });
       mockHttpsCallable.mockReturnValueOnce(mockFn);
 
       const svc = EntityExtractionService.getInstance();
-      await svc.extractEntities('Content', 'gpt-4');
-      expect(mockFn).toHaveBeenCalledWith({ content: 'Content', model: 'gpt-4' });
+      // The signature no longer accepts one; this is the JS caller TypeScript
+      // cannot stop, and the reason the parameter was deleted rather than
+      // defaulted. `gpt-5.2-pro` is the expensive end of the price list.
+      await (svc.extractEntities as unknown as (
+        c: string, m?: string
+      ) => Promise<unknown>)('Content', 'gpt-5.2-pro');
+
+      expect(mockFn).toHaveBeenCalledWith({ content: 'Content' });
+      expect(JSON.stringify(mockFn.mock.calls[0][0])).not.toContain('gpt-5.2-pro');
     });
   });
 

@@ -1,9 +1,33 @@
 // src/features/campaign-entities/quests/hooks/useQuestData.ts
 import { useState, useEffect, useCallback } from 'react';
 import { Quest } from '../types';
+import { normaliseObjectives } from '../utils/quest-objectives';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
+
+/**
+ * Make a batch of stored quests safe to render.
+ *
+ * `buildDocument` stops new bare-string objectives being written, but every
+ * quest converted from a note before T050 already holds them, and one is
+ * enough to crash `QuestDirectory`'s search on `obj.description.toLowerCase()`.
+ * Coercing on read makes existing data safe without waiting for an edit; the
+ * next write through `writeObjectives` persists the repair.
+ *
+ * **Both paths, deliberately.** Quests reach state two ways -- the explicit
+ * `fetchQuests` below, and the effect that mirrors `useFirebaseData`'s `data`
+ * -- and normalising only the first left the defect fully live, because the
+ * effect is what the directory renders from on a warm load. That is the same
+ * two-paths mistake the entity-loader consolidation was about, and it was
+ * invisible to the suites: they mock `useFirebaseData`, so the effect never
+ * runs. Found in Chrome, on a seeded pre-fix document.
+ */
+const readable = (quests: Quest[] | null | undefined): Quest[] =>
+  (quests || []).map((quest) => ({
+    ...quest,
+    objectives: normaliseObjectives(quest.objectives),
+  }));
 
 /**
  * Hook for managing Quest data fetching and state with proper group/campaign context
@@ -41,8 +65,9 @@ export const useQuestData = () => {
       }
       
       const data = await getData();
-      setQuests(data || []);
-      return data || [];
+      const quests = readable(data);
+      setQuests(quests);
+      return quests;
     } catch (err) {
       console.error('Error fetching quests:', err);
       setQuests([]);
@@ -81,7 +106,11 @@ export const useQuestData = () => {
     }
 
     if (data.length > 0) {
-      setQuests(data);
+      // `readable` here too. This is the second way quests reach state and it
+      // is the one the directory actually renders from on a warm load -- the
+      // browser found that out, because jsdom mocks `useFirebaseData` and
+      // never exercises this effect at all.
+      setQuests(readable(data));
     }
   }, [data, user, activeGroupId, activeCampaignId]);
 

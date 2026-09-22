@@ -6,6 +6,7 @@ import {
   validateQuickAdd,
   type QuickAddEntity,
 } from "../quickAddSpecs";
+import type { QuestObjective } from "features/campaign-entities";
 
 describe("quickAddSpecs", () => {
   describe("the shape of the set", () => {
@@ -137,6 +138,61 @@ describe("quickAddSpecs", () => {
         expect(doc.race).toBe("Dwarf");
         expect(doc.occupation).toBe("King");
         expect(doc.title).toBe("Oakenshield");
+      });
+
+      it("keeps a stance the extractor read out of the session", () => {
+        // §4's "unknown" is the default for a blank form, where nobody has
+        // judged the NPC yet. A converted note is not that case: the model
+        // read the stance out of a session the party played and showed it on
+        // the review card, and this used to overwrite it with "unknown".
+        const doc = QUICK_ADD_SPECS.npc.buildDocument(
+          { name: "Bill Ferny", line: "A shifty man of Bree" },
+          { relationship: "hostile" }
+        ) as Record<string, unknown>;
+
+        expect(doc.relationship).toBe("hostile");
+      });
+
+      it("still defaults a stance to unknown when none was carried", () => {
+        const doc = QUICK_ADD_SPECS.npc.buildDocument({
+          name: "Barliman",
+          line: "Keeps the Prancing Pony",
+        }) as Record<string, unknown>;
+
+        expect(doc.relationship).toBe("unknown");
+      });
+
+      it("refuses a stance the NPC union does not have", () => {
+        // The gate exists because the extraction schema once offered a rumour
+        // `status` the app's union lacked; it was taken on trust and the
+        // rumours list silently dropped the row it produced.
+        const doc = QUICK_ADD_SPECS.npc.buildDocument(
+          { name: "Someone", line: "A line" },
+          { relationship: "suspicious" }
+        ) as Record<string, unknown>;
+
+        expect(doc.relationship).toBe("unknown");
+      });
+
+      it("turns the extractor's string objectives into QuestObjective[]", () => {
+        // The schema at `entityExtraction.ts` returns `objectives: string[]`;
+        // `Quest.objectives` is `QuestObjective[]`. These used to be written
+        // to Firestore as bare strings, which crashed `QuestDirectory`'s
+        // search on `obj.description.toLowerCase()`.
+        const doc = QUICK_ADD_SPECS.quest.buildDocument(
+          { name: "Reclaim Erebor", line: "Take the mountain" },
+          { objectives: ["Search the cave", "Defeat the guardian"] }
+        ) as { objectives: QuestObjective[] };
+
+        expect(doc.objectives).toEqual([
+          { id: expect.any(String), description: "Search the cave", completed: false },
+          { id: expect.any(String), description: "Defeat the guardian", completed: false },
+        ]);
+        // The exact expression at QuestDirectory.tsx:199, which a bare string
+        // array took down.
+        expect(() =>
+          doc.objectives.some((o) => o.description.toLowerCase().includes("cave"))
+        ).not.toThrow();
       });
 
       it("keeps extracted quest objectives and relations", () => {

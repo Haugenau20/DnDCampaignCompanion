@@ -1,6 +1,7 @@
 // src/shared/components/quick-add/quickAddSpecs.ts
 import type { NPC } from "features/campaign-entities";
 import type { Location, Quest } from "features/campaign-entities";
+import { normaliseObjectives } from "features/campaign-entities";
 import type { DomainData } from "core/types/common";
 
 /**
@@ -82,6 +83,31 @@ export interface QuickAddSpec {
 }
 
 /** Strip the keys a carried payload may never decide. */
+/**
+ * The four stances an NPC record may hold, as a gate rather than a cast.
+ *
+ * A carried value comes from the extractor by way of the note conversion, and
+ * `RumorForm`'s history is the argument for checking it: the extraction schema
+ * once offered a `status` the app's own union did not have, the value was
+ * taken on trust, and the rumours list could not group the document it
+ * produced -- so the row vanished with nothing said. An unrecognised stance
+ * falls back to §4's default instead of being written through.
+ */
+const NPC_RELATIONSHIPS: readonly NPC["relationship"][] = [
+  "friendly",
+  "neutral",
+  "hostile",
+  "unknown",
+];
+
+const carriedRelationship = (carried: QuickAddCarry): NPC["relationship"] => {
+  const value = carried.relationship;
+  return typeof value === "string" &&
+    (NPC_RELATIONSHIPS as readonly string[]).includes(value)
+    ? (value as NPC["relationship"])
+    : "unknown";
+};
+
 const withoutOwned = (carry: QuickAddCarry | undefined, owned: string[]): QuickAddCarry => {
   if (!carry) return {};
   const rest: QuickAddCarry = {};
@@ -107,7 +133,17 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
       line: "Say who they are, in a line.",
     },
     buildDocument: (values, carry) => {
-      const carried = withoutOwned(carry, ["name", "description", "status", "relationship"]);
+      /*
+        `relationship` is no longer stripped. §4's rule -- a new NPC's stance is
+        "unknown", because it is a judgement the creator has not made yet --
+        holds for the blank form, and this spec is also the write path for an
+        NPC converted from a note. There the stance is not an unmade judgement:
+        the extractor read "the innkeeper was hostile" out of a session the
+        party actually played, showed it on the review card, and this threw it
+        away and wrote "unknown" over it. A carried stance is honoured; §4's
+        default applies when there is none.
+      */
+      const carried = withoutOwned(carry, ["name", "description", "status"]);
       const doc: DomainData<NPC> = {
         title: "",
         race: "",
@@ -126,7 +162,9 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
         // made yet -- "unknown" is the honest value and is one click to change
         // from the row once `15-3` lands.
         status: "alive",
-        relationship: "unknown",
+        // Written explicitly rather than left to the spread, so an unrecognised
+        // carried value cannot reach the document.
+        relationship: carriedRelationship(carried),
         connections: {
           relatedNPCs: [],
           affiliations: [],
@@ -158,7 +196,6 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
       const carried = withoutOwned(carry, ["title", "description", "status"]);
       const doc: DomainData<Quest> = {
         background: "",
-        objectives: [],
         leads: [],
         keyLocations: [],
         relatedNPCIds: [],
@@ -171,6 +208,17 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
         title: values.name.trim(),
         description: values.line.trim(),
         status: "active",
+        /*
+          After the spread, deliberately. `objectives` is not an owned key --
+          the carry is allowed to bring some -- but `Quest.objectives` is
+          `QuestObjective[]` and the extractor's schema says `string[]`, so
+          what the spread lands here is whatever the caller had. Bare strings
+          used to reach Firestore and then crash `QuestDirectory`'s search on
+          `obj.description.toLowerCase()`. This is the last point the type can
+          still be made to hold. It is also the default: `normaliseObjectives`
+          returns [] for the undefined the other three call sites pass.
+        */
+        objectives: normaliseObjectives(carried.objectives),
       };
       return doc;
     },
