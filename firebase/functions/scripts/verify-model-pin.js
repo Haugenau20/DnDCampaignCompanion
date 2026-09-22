@@ -1,5 +1,6 @@
 /*
- * Verify that the extraction model is pinned server-side.  (T050)
+ * Verify the extraction call: the model is pinned server-side, and the request
+ * uses Structured Outputs rather than the deprecated `functions` array. (T050)
  *
  *   cd firebase/functions && npm run build && node scripts/verify-model-pin.js
  *
@@ -26,6 +27,7 @@ const FN_DIR = path.resolve(__dirname, "..");
 const BUILT = path.join(FN_DIR, "lib/entityExtraction.js");
 
 let recordedModel = null;
+let recordedArgs = null;
 
 class FakeOpenAI {
   constructor() {
@@ -33,13 +35,21 @@ class FakeOpenAI {
       completions: {
         create: async (args) => {
           recordedModel = args.model;
+          recordedArgs = args;
           return {
             choices: [{
               message: {
-                function_call: {
-                  name: "extract_entities",
-                  arguments: JSON.stringify({ entities: [] }),
-                },
+                // Structured Outputs answer here, not `function_call`. A stub
+                // still returning the deprecated shape would make the reader
+                // below look fine while the real API broke it.
+                tool_calls: [{
+                  id: "call_1",
+                  type: "function",
+                  function: {
+                    name: "extract_entities",
+                    arguments: JSON.stringify({ entities: [] }),
+                  },
+                }],
               },
             }],
           };
@@ -111,11 +121,46 @@ async function runCase(label, sourcePath) {
   const control = await runCase("CONTROL", controlPath);
   fs.unlinkSync(controlPath);
 
+  // ---- call shape, on the FIXED build ----
+  await runCase("SHAPE  ", BUILT);
+  const a = recordedArgs || {};
+  const tool = (a.tools || [])[0] || {};
+  const fn = tool.function || {};
+  const params = fn.parameters || {};
+  const variants = ((params.properties || {}).entities || {}).items || {};
+  const shape = {
+    "uses tools, not the deprecated `functions`":
+      Array.isArray(a.tools) && a.functions === undefined,
+    "names the one tool via tool_choice":
+      a.tool_choice && a.tool_choice.function &&
+      a.tool_choice.function.name === "extract_entities" &&
+      a.function_call === undefined,
+    "asks for strict: true": fn.strict === true,
+    "uses anyOf, which strict requires (oneOf is rejected)":
+      Array.isArray(variants.anyOf) && variants.oneOf === undefined,
+    "keeps temperature: 0": a.temperature === 0,
+  };
+  // strict also demands every property be listed in `required`
+  const notRequired = [];
+  (variants.anyOf || []).forEach((v, i) => {
+    const props = Object.keys(v.properties || {});
+    const req = v.required || [];
+    props.forEach((k) => { if (!req.includes(k)) notRequired.push(`variant ${i}: ${k}`); });
+  });
+  shape["every property is required (strict's rule)"] = notRequired.length === 0;
+
+  console.log("");
+  Object.keys(shape).forEach((k) => {
+    console.log(`  ${shape[k] ? "PASS" : "FAIL"}  ${k}`);
+  });
+  if (notRequired.length) console.log("        missing from required: " + notRequired.join(", "));
+  const okShape = Object.keys(shape).every((k) => shape[k]);
+
   console.log("");
   const okFixed = fixed === "gpt-4.1-mini";
   const okControl = control === "gpt-5.2-pro";
   console.log(`  FIXED   pinned to gpt-4.1-mini ................ ${okFixed ? "PASS" : "FAIL"}`);
   console.log(`  CONTROL took the injected model (proves the`);
   console.log(`          script would have caught a regression) ${okControl ? "PASS" : "FAIL"}`);
-  process.exit(okFixed && okControl ? 0 : 1);
+  process.exit(okFixed && okControl && okShape ? 0 : 1);
 })().catch((e) => { console.error("ERROR:", e && e.message); process.exit(3); });

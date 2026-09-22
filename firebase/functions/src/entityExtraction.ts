@@ -450,10 +450,33 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
 `;
 
       // Copy your functions array from openaiFunctions.ts here
-      const openAIFunctions = [
-      {
+      /*
+        Structured Outputs, not the legacy `functions` array.
+
+        This was a `functions` / `function_call` pair, deprecated since 2023 in
+        favour of `tools` / `tool_choice`, and with it the schema below was only
+        ever a *hint*: the model was free to return a shape that did not match,
+        and several of T050's losses are exactly that -- a field arriving in a
+        form the consumer did not expect. `strict: true` makes the schema a
+        guarantee instead, which is worth more here than anywhere else in the
+        product, because what comes back is written into campaign records.
+
+        Three things strict mode requires, each of which changed something:
+          - `anyOf`, never `oneOf`. The four entity variants used `oneOf`,
+            which strict mode rejects outright.
+          - every property listed in `required`. Optionality is expressed as a
+            nullable type instead, so the model must *say* it found no race
+            rather than quietly omitting the key. Consumers already treat null
+            and absent alike (`extraData.race || undefined`), so this is a
+            schema change with no behaviour change downstream.
+          - `enum: ["npc"]` rather than `const: "npc"` for the discriminators.
+      */
+      const extractionTool = {
+          type: "function" as const,
+          function: {
           name: "extract_entities",
           description: "Extract D&D entities from a session note",
+          strict: true,
           parameters: {
           type: "object",
           additionalProperties: false,
@@ -461,23 +484,23 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
               entities: {
               type: "array",
               items: {
-                  oneOf: [
+                  anyOf: [
                   {
                       // NPC schema
                       type: "object",
                       additionalProperties: false,
                       properties: {
-                          type: { const: "npc" },
+                          type: { enum: ["npc"] },
                           text: { type: "string" },
-                          confidence: { type: "number", minimum: 0, maximum: 1 },
+                          confidence: { type: "number" },
                           name: { type: "string" },
                           title: { type: ["string", "null"] },
                           race: { type: ["string", "null"] },
                           occupation: { type: ["string", "null"] },
                           location: { type: ["string", "null"] },
                           relationship: {
-                          type: "string",
-                          enum: ["friendly", "neutral", "hostile", "unknown"]
+                          type: ["string", "null"],
+                          enum: ["friendly", "neutral", "hostile", "unknown", null]
                           },
                           description: { type: ["string", "null"] },
                           context: { type: "string" }
@@ -487,6 +510,12 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                           "text",
                           "confidence",
                           "name",
+                          "title",
+                          "race",
+                          "occupation",
+                          "location",
+                          "relationship",
+                          "description",
                           "context"
                       ]
                       },
@@ -495,9 +524,9 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                       type: "object",
                       additionalProperties: false,
                       properties: {
-                          type: { const: "location" },
+                          type: { enum: ["location"] },
                           text: { type: "string" },
-                          confidence: { type: "number", minimum: 0, maximum: 1 },
+                          confidence: { type: "number" },
                           name: { type: "string" },
                           locationType: {
                           type: "string",
@@ -513,6 +542,13 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                           ]
                           },
                           description: { type: ["string", "null"] },
+                          /*
+                            Prose -- "The Shire" -- never an id, whatever the
+                            name suggests. `convertEntity` assigns it straight
+                            to `parentId` today, which writes a dangling
+                            reference and files the place under "Unplaced".
+                            Still true as of this commit; T050 resolves it.
+                          */
                           parentLocation: { type: ["string", "null"] },
                           context: { type: "string" }
                       },
@@ -522,6 +558,8 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                           "confidence",
                           "name",
                           "locationType",
+                          "description",
+                          "parentLocation",
                           "context"
                       ]
                       },
@@ -530,15 +568,23 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                       type: "object",
                       additionalProperties: false,
                       properties: {
-                          type: { const: "quest" },
+                          type: { enum: ["quest"] },
                           text: { type: "string" },
-                          confidence: { type: "number", minimum: 0, maximum: 1 },
+                          confidence: { type: "number" },
                           title: { type: "string" },
                           description: { type: ["string", "null"] },
                           objectives: {
                           type: "array",
                           items: { type: "string" }
                           },
+                          /*
+                            Misnamed: the model has never seen the NPC
+                            directory and has no ids to give, so what comes
+                            back under this key is names. Renaming it is T050's
+                            next commit, together with its only reader --
+                            renaming it here alone would break quest conversion
+                            outright rather than leave it merely ineffective.
+                          */
                           relatedNPCIds: {
                           type: "array",
                           items: { type: "string" }
@@ -550,8 +596,10 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                           "text",
                           "confidence",
                           "title",
+                          "description",
                           "objectives",
-                          "relatedNPCIds"
+                          "relatedNPCIds",
+                          "locationName"
                       ]
                       },
                       {
@@ -559,9 +607,9 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                       type: "object",
                       additionalProperties: false,
                       properties: {
-                          type: { const: "rumor" },
+                          type: { enum: ["rumor"] },
                           text: { type: "string" },
-                          confidence: { type: "number", minimum: 0, maximum: 1 },
+                          confidence: { type: "number" },
                           title: { type: "string" },
                           content: { type: "string" },
                           // No "unknown": `RumorStatus` in the app has three
@@ -572,12 +620,15 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                           // whitelists this too (NoteContext), for notes
                           // already extracted under the old schema.
                           status: {
-                          type: "string",
-                          enum: ["confirmed", "unconfirmed", "false"]
+                          type: ["string", "null"],
+                          enum: ["confirmed", "unconfirmed", "false", null]
                           },
+                          // Null is a real answer, not a gap: "heard from none
+                          // of the other four" (`15-9`). The client leaves it
+                          // unset rather than coercing it to "other".
                           sourceType: {
-                          type: "string",
-                          enum: ["npc", "tavern", "notice", "traveler", "other"]
+                          type: ["string", "null"],
+                          enum: ["npc", "tavern", "notice", "traveler", "other", null]
                           },
                           sourceName: { type: ["string", "null"] }
                       },
@@ -586,7 +637,10 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                           "text",
                           "confidence",
                           "title",
-                          "content"
+                          "content",
+                          "status",
+                          "sourceType",
+                          "sourceName"
                       ]
                       }
                   ]
@@ -595,8 +649,8 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
           },
           required: ["entities"]
           }
-      }
-      ];
+          }
+      };
 
       // Make OpenAI API call (this is where the cost occurs)
       const response = await openai.chat.completions.create({
@@ -605,8 +659,11 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
           { role: "system", content: systemPrompt },
           { role: "user", content: content }
         ],
-        functions: openAIFunctions,
-        function_call: { name: "extract_entities" },
+        tools: [extractionTool],
+        // Not "auto" and not "required": this call has exactly one tool and
+        // exactly one acceptable answer, so name it. The old `function_call`
+        // did the same thing under the deprecated spelling.
+        tool_choice: { type: "function", function: { name: "extract_entities" } },
         temperature: 0
       });
 
@@ -615,19 +672,32 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
         throw new Error("No response from OpenAI");
       }
 
+      /*
+        `tool_calls`, not `function_call`. A refusal is checked first and
+        separately: with Structured Outputs the model can decline in a typed
+        `refusal` field rather than by returning a malformed argument object,
+        and reading that as "no tool call" would report a deliberate refusal as
+        a transport failure.
+      */
       const msg = choice.message;
-      if (msg.function_call?.name !== "extract_entities") {
+      if (msg.refusal) {
+        throw new Error(`Model refused the extraction: ${msg.refusal}`);
+      }
+
+      const toolCall = msg.tool_calls?.[0];
+      if (!toolCall || toolCall.type !== "function" ||
+          toolCall.function.name !== "extract_entities") {
         throw new Error("Unexpected function call");
       }
 
-      const rawArgs = msg.function_call.arguments;
+      const rawArgs = toolCall.function.arguments;
       if (!rawArgs) {
         throw new Error("No arguments in function call");
       }
 
       // Parse and return the entities with usage info
       const parsedResponse = JSON.parse(rawArgs);
-      
+
       return {
         success: true,
         entities: parsedResponse.entities,
