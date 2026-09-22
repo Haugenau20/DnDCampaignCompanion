@@ -22,9 +22,22 @@ interface ExtractEntitiesRequest {
  * belongs to the deployment, so it is pinned here and the request field is
  * gone rather than merely ignored.
  *
- * Which model it should be is a separate question, taken in the next commit.
+ * **Why `gpt-4.1-mini`** (T050), replacing `gpt-3.5-turbo`. Its headline output
+ * rate is $1.60/1M against $1.50, which reads like a rise and is not one: this
+ * call is dominated by *input* -- the ~1,500-token function schema below plus
+ * the system prompt, on every request, against a note capped at 10,000
+ * characters -- and input drops from $0.50 to $0.40. The schema is a fixed
+ * prefix comfortably over OpenAI's 1,024-token caching minimum, so it bills at
+ * the $0.10 cached rate; `gpt-3.5-turbo` had no cached rate at all. A
+ * representative call is cheaper before caching and materially cheaper after.
+ * **Do not re-open this from the output column alone.**
+ *
+ * It is deliberately **not** a `gpt-5`-family or o-series model. Those reject a
+ * non-default `temperature` on chat completions, so adopting one would mean
+ * dropping the `temperature: 0` below -- and determinism is worth keeping in an
+ * extractor whose output is written straight into campaign records.
  */
-const EXTRACTION_MODEL = "gpt-3.5-turbo";
+const EXTRACTION_MODEL = "gpt-4.1-mini";
 
 // Usage tracking types
 interface PeriodUsage {
