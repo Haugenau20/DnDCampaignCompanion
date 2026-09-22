@@ -8,8 +8,23 @@ import {rethrowHttpsError} from "./shared/httpsErrors";
 // Types matching your existing OpenAI types
 interface ExtractEntitiesRequest {
   content: string;
-  model?: string;
 }
+
+/**
+ * The model this function calls, and the only one it will call.
+ *
+ * This used to be `request.data.model`, defaulting to `gpt-3.5-turbo` -- a
+ * value chosen in the browser and passed to OpenAI unchecked. A modified
+ * client could name any model on the price list against this project's key,
+ * bounded only by the ten-a-day counter below, so the ceiling on a compromised
+ * account was roughly an order of magnitude above what the limits implied.
+ * The model is not a caller's decision: it is a cost and quality decision that
+ * belongs to the deployment, so it is pinned here and the request field is
+ * gone rather than merely ignored.
+ *
+ * Which model it should be is a separate question, taken in the next commit.
+ */
+const EXTRACTION_MODEL = "gpt-3.5-turbo";
 
 // Usage tracking types
 interface PeriodUsage {
@@ -367,7 +382,8 @@ export const extractEntities = functions.onCall(
       }
 
       const userId = request.auth.uid;
-      const { content, model = "gpt-3.5-turbo" } = request.data;
+      // The model is `EXTRACTION_MODEL`, never anything the caller sent.
+      const { content } = request.data;
 
       // Validate input BEFORE checking usage
       if (!content || typeof content !== "string") {
@@ -571,7 +587,7 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
 
       // Make OpenAI API call (this is where the cost occurs)
       const response = await openai.chat.completions.create({
-        model: model,
+        model: EXTRACTION_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: content }

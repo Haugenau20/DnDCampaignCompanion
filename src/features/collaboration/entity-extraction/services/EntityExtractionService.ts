@@ -71,10 +71,15 @@ class EntityExtractionService extends BaseFirebaseService {
   /**
    * Extract entities from content using Firebase Functions
    * Firebase SDK automatically handles emulator vs production routing
+   *
+   * There is deliberately no `model` parameter. It used to take one,
+   * defaulting to `gpt-3.5-turbo`, and send it to the callable -- which passed
+   * it to OpenAI unchecked, so the browser chose what the project's key was
+   * billed for. The model is pinned in the function (`EXTRACTION_MODEL`), and
+   * a second default here would only be a second place for it to drift.
    */
   public async extractEntities(
-    content: string,
-    model: string = 'gpt-3.5-turbo'
+    content: string
   ): Promise<ExtractedEntity[]> {
     try {
       const user = this.getCurrentUser();
@@ -85,10 +90,7 @@ class EntityExtractionService extends BaseFirebaseService {
       // Use Firebase SDK httpsCallable - automatically handles CORS and routing
       const extractEntitiesFunction = httpsCallable(this.functions, 'extractEntities');
       
-      const result = await extractEntitiesFunction({
-        content,
-        model
-      });
+      const result = await extractEntitiesFunction({ content });
 
       const extractionResult = result.data as ExtractEntitiesResponse;
 

@@ -96,19 +96,28 @@ describe('useOpenAIExtractor', () => {
         await result.current.extractEntities('Test content');
       });
 
-      expect(mockExtractEntities).toHaveBeenCalledWith('Test content', undefined);
+      expect(mockExtractEntities).toHaveBeenCalledWith('Test content');
     });
 
-    test('should pass optional model parameter to service', async () => {
+    /*
+      Replaces 'should pass optional model parameter to service', which pinned
+      the forwarding this change removes. The model is chosen in the Cloud
+      Function; a hook that can carry one is a hook that can be made to carry
+      an expensive one.
+    */
+    test('forwards the content alone, with no model argument', async () => {
       mockExtractEntities.mockResolvedValue([]);
 
       const { result } = renderHook(() => useOpenAIExtractor());
 
       await act(async () => {
-        await result.current.extractEntities('Test content', 'gpt-4');
+        await (result.current.extractEntities as unknown as (
+          c: string, m?: string
+        ) => Promise<unknown>)('Test content', 'gpt-5.2-pro');
       });
 
-      expect(mockExtractEntities).toHaveBeenCalledWith('Test content', 'gpt-4');
+      expect(mockExtractEntities).toHaveBeenCalledWith('Test content');
+      expect(mockExtractEntities.mock.calls[0]).toHaveLength(1);
     });
 
     test('should set isExtracting to true during extraction', async () => {
