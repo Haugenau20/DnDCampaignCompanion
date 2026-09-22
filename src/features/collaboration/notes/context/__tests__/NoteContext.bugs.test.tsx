@@ -878,7 +878,7 @@ describe('NoteContext Bug Tests', () => {
               // and was the last remaining NoteContext failure; it was speculative
               // (its own comment read "BUG POTENTIAL") rather than a specification,
               // and demanded the less defensible of the two behaviours.
-              relatedNPCIds: []
+              relatedNPCNames: []
             })
           })
         });

@@ -32,7 +32,8 @@ export interface ExtractedNPCDetails {
     title: string;
     description?: string;
     objectives?: string[];
-    NPCsInvolved?: string[];
+    /** Names, not ids -- the model has never seen the NPC directory. */
+    relatedNPCNames?: string[];
     locationName?: string;
     context: string;
   }

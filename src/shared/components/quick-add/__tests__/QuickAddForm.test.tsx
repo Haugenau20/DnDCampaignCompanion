@@ -22,10 +22,22 @@ const mockAddQuest = jest.fn();
 const mockCreateLocation = jest.fn();
 const mockMarkEntityAsConverted = jest.fn();
 
+/*
+  The collections, not just the writers. `useQuickAddCreate` reads both to turn
+  the extractor's names into ids before the write, so a mock that returned only
+  the write functions would leave that step with nothing to resolve against --
+  and this suite would pass while proving nothing about it.
+*/
+const mockNPCs = [{ id: "npc-frodo", name: "Frodo" }];
+const mockLocations = [
+  { id: "hobbiton", name: "Hobbiton" },
+  { id: "loc-bree", name: "Bree" },
+];
+
 jest.mock("features/campaign-entities", () => ({
-  useNPCs: () => ({ addNPC: mockAddNPC }),
+  useNPCs: () => ({ addNPC: mockAddNPC, npcs: mockNPCs }),
   useQuests: () => ({ addQuest: mockAddQuest }),
-  useLocations: () => ({ createLocation: mockCreateLocation }),
+  useLocations: () => ({ createLocation: mockCreateLocation, locations: mockLocations }),
   /*
     The real implementation, not a stub. `quickAddSpecs` calls this while
     building a quest document, so a mock returning something else would make

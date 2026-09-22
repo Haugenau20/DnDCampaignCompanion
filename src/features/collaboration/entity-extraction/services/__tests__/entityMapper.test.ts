@@ -11,6 +11,10 @@ import { OpenAIEntityResponse } from 'core/services/openai/types';
  *
  * The source file's extractDetailsByType has an empty body (bug #023).
  * We test the EXPECTED behaviour per the JSDoc/specification.
+ *
+ * Note #023 closed that empty body and did not check what the body named. Its
+ * quest branch read `NPCsInvolved`, which the extraction schema has never
+ * returned -- see the case below.
  */
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -182,7 +186,7 @@ describe('entityMapper', () => {
       title: 'Destroy the One Ring',
       description: 'A dangerous quest',
       objectives: ['Reach Mordor', 'Destroy the ring'],
-      NPCsInvolved: ['Frodo', 'Sam'],
+      relatedNPCNames: ['Frodo', 'Sam'],
       locationName: 'Mount Doom',
       context: 'The final quest',
     };
@@ -237,11 +241,22 @@ describe('entityMapper', () => {
       expect(result.objectives).toEqual([]);
     });
 
-    test('should include default empty NPCsInvolved array for quest when NPCsInvolved is missing', () => {
+    test('should include default empty relatedNPCNames array for quest when it is missing', () => {
       const detailsNoNPCs = { ...questDetails };
-      delete (detailsNoNPCs as any).NPCsInvolved;
+      delete (detailsNoNPCs as any).relatedNPCNames;
       const result = extractDetailsByType(detailsNoNPCs as any, 'quest');
-      expect(result.NPCsInvolved).toEqual([]);
+      expect(result.relatedNPCNames).toEqual([]);
+    });
+
+    test('routes the quest people under the name the schema actually uses', () => {
+      // This branch is unreachable against the live function -- it returns
+      // entities flat -- so the only thing standing between `NPCsInvolved` and
+      // a silent data loss, on the day the `details` envelope comes back, is
+      // this assertion.
+      const result = extractDetailsByType(questDetails as any, 'quest');
+
+      expect(result.relatedNPCNames).toEqual(['Frodo', 'Sam']);
+      expect(result.NPCsInvolved).toBeUndefined();
     });
 
     test('should return the details object unchanged for an unknown type', () => {

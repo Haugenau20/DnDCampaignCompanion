@@ -349,27 +349,34 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
         };
         break;
 
-      case "quest":
-        // Get raw objectives from entity data 
-        const objectives = extraData.objectives || [];
-        
-        // Enhance description with NPC IDs if available
-        if (extraData.relatedNPCIds?.length > 0) {
-          description += `\n\nRelated NPCs: ${extraData.relatedNPCIds.join(', ')}`;
-        }
-        if (extraData.locationName) {
-          description += `\n\nLocation: ${extraData.locationName}`;
-        }
-        
+      case "quest": {
+        /*
+          `relatedNPCNames`, which is what the schema now asks for and what the
+          model was always answering. They are carried as *names* and become
+          ids at the write boundary, where the NPC collection is loaded
+          (`resolveCarriedNames`). This used to read `relatedNPCIds` and store
+          the names under that key, so every one of them resolved to nothing on
+          the quest card and rendered as "Someone no longer in the directory".
+
+          They are no longer pasted into the description either. That was a
+          workaround for the ids not resolving -- the names went into the prose
+          so the reader could at least see them -- and now that the relation
+          itself works, keeping it would print every person twice.
+        */
+        const relatedNPCNames: string[] = extraData.relatedNPCNames || [];
+
         initialData = {
           // Use proper title field, fall back to text if not available
           title: extraData.title || entity.text,
-          description: description,
-          objectives: objectives, // Pass raw objectives
-          relatedNPCIds: extraData.relatedNPCIds || [],
+          description: withContext(extraData.description),
+          // `string[]` from the schema; `normaliseObjectives` at the write
+          // boundary turns it into the `QuestObjective[]` a quest stores.
+          objectives: extraData.objectives || [],
+          relatedNPCNames,
           location: extraData.locationName || undefined,
         };
         break;
+      }
         
       case "rumor": {
         // Map sourceType to valid values. Anything unrecognised is left unset

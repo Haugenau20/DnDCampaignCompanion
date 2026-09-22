@@ -446,6 +446,10 @@ The function schema strictly defines the allowed 'type' field as one of:
 **Never** use any other value (e.g. "character", "person", etc.).  
 Every named person or character is ALWAYS type "npc".
 
+For a quest, "relatedNPCNames" is the *names* of the people involved, exactly
+as the note writes them. You have never seen this campaign's records and have
+no identifiers for anyone; do not invent any.
+
 Do not output any text yourself—*only* invoke the function with correct JSON.
 `;
 
@@ -578,14 +582,17 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                           items: { type: "string" }
                           },
                           /*
-                            Misnamed: the model has never seen the NPC
-                            directory and has no ids to give, so what comes
-                            back under this key is names. Renaming it is T050's
-                            next commit, together with its only reader --
-                            renaming it here alone would break quest conversion
-                            outright rather than leave it merely ineffective.
+                            Names, and named as such. This asked for
+                            `relatedNPCIds` for as long as nobody noticed the
+                            model has never seen the NPC directory and has no
+                            ids to give -- so it answered with names under an
+                            id-shaped key, `QuestContext` stored them verbatim,
+                            and every one of them resolved to nothing on the
+                            quest card. Resolving names to ids is this side's
+                            job (`resolveCarriedNames`); the model's job is to
+                            say who it read about.
                           */
-                          relatedNPCIds: {
+                          relatedNPCNames: {
                           type: "array",
                           items: { type: "string" }
                           },
@@ -598,7 +605,7 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                           "title",
                           "description",
                           "objectives",
-                          "relatedNPCIds",
+                          "relatedNPCNames",
                           "locationName"
                       ]
                       },
