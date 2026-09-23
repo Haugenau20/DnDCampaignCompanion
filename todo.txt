@@ -8,3 +8,7 @@ sized and filed into TODO.md, then removed from here. `/todo <idea>` files a
 single item directly without going through this file.
 
 Last drained: 2026-09-22
+
+We need to look at dependencies in this project, and how they go together. I think right now we have to build with legacy peer deps or something like that. that can't be good long term? 
+
+Look at linting errors during building. 
