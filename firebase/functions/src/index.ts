@@ -7,4 +7,8 @@ export { extractEntities, getUsageStatus } from "./entityExtraction";
 export { sendContactEmail } from "./contact";
 export { deleteUser, removeUserFromGroup } from "./userManagement";
 export { deleteCampaign } from "./campaignManagement";
-export { createGroup } from "./groupManagement";
+export {
+  createGroup,
+  redeemInvitation,
+  setMemberRole,
+} from "./groupManagement";

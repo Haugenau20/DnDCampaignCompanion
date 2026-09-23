@@ -3,6 +3,7 @@ import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {deleteGroupUserDocument} from "../shared/deleteUserSubtree";
+import {LAST_ADMIN_MESSAGE, wouldStrandGroup} from "../shared/groupAdmins";
 
 export const removeUserFromGroup = functions.onCall(
   {
@@ -23,6 +24,17 @@ export const removeUserFromGroup = functions.onCall(
       const callerUid = request.auth.uid;
       const isSelfRemoval = callerUid === userId;
       
+      // The last admin may not leave while anyone else is still in the group
+      // (T035): nobody could invite, manage a campaign or reach /admin again.
+      // Leaving an otherwise empty group is allowed -- there is nobody to hand
+      // it to, and refusing would trap them in it.
+      if (isSelfRemoval && await wouldStrandGroup(groupId, callerUid, true)) {
+        throw new functions.HttpsError(
+          "failed-precondition",
+          LAST_ADMIN_MESSAGE
+        );
+      }
+
       // Allow self-removal or admin removal
       if (!isSelfRemoval) {
         // Verify caller is an admin of the group

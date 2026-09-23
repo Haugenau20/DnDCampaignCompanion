@@ -270,6 +270,22 @@ describe('GroupService', () => {
     // cover the callable-based contract; see docs/testing/bug-tracking/
     // 1409-member-can-escalate-to-group-admin.md.
 
+    test("uses the service's regioned Functions instance, not a fresh getFunctions()", async () => {
+      // A bare getFunctions() resolves us-central1, where nothing is
+      // deployed -- which is how group creation could fail in production
+      // while every other callable worked.
+      const svc = GroupService.getInstance();
+      mockGetFunctions.mockClear();
+      mockHttpsCallable.mockReturnValueOnce(
+        jest.fn().mockResolvedValueOnce({ data: { success: true, groupId: 'new-group-id' } })
+      );
+
+      await svc.createGroup('My Group');
+
+      expect(mockGetFunctions).not.toHaveBeenCalled();
+      expect(mockHttpsCallable).toHaveBeenCalledWith(REGIONED_FUNCTIONS_INSTANCE, 'createGroup');
+    });
+
     test('should call the createGroup Cloud Function with name and description', async () => {
       const mockCallable = jest.fn().mockResolvedValueOnce({
         data: { success: true, groupId: 'new-group-id' },
@@ -497,65 +513,38 @@ describe('GroupService', () => {
     });
   });
 
-  // ─── joinGroup ──────────────────────────────────────────────────────────────
+  // ─── setMemberRole ──────────────────────────────────────────────────────────
 
-  describe('joinGroup', () => {
-    test('should throw when user is already a member of the group', async () => {
-      mockGetDoc.mockResolvedValueOnce(
-        makeDocSnapshot(true, { groups: ['g1'] }) // user already in g1
-      );
-      mockIsUsernameAvailableInGroup.mockResolvedValueOnce(true);
-
+  // The role change and its last-admin guard live in the `setMemberRole` Cloud
+  // Function (T034/T035), pinned by firebase/functions/test/setMemberRole.test.ts.
+  // What belongs here is that the client sends it there, and nowhere else.
+  describe('setMemberRole', () => {
+    test("calls setMemberRole on the service's regioned Functions instance", async () => {
       const svc = GroupService.getInstance();
-      await expect(svc.joinGroup('g1', 'NewUser')).rejects.toThrow(
-        'You are already a member of this group'
-      );
+      mockGetFunctions.mockClear();
+      const mockCallable = jest.fn().mockResolvedValueOnce({ data: { success: true } });
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      await svc.setMemberRole('g1', 'uid-frodo', 'admin');
+
+      expect(mockGetFunctions).not.toHaveBeenCalled();
+      expect(mockHttpsCallable).toHaveBeenCalledWith(REGIONED_FUNCTIONS_INSTANCE, 'setMemberRole');
+      expect(mockCallable).toHaveBeenCalledWith({ groupId: 'g1', userId: 'uid-frodo', role: 'admin' });
     });
 
-    test('should throw when username is not available', async () => {
-      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { groups: ['g2'] }));
-      mockIsUsernameAvailableInGroup.mockResolvedValueOnce(false); // taken
-
+    test('never writes the role itself', async () => {
+      mockHttpsCallable.mockReturnValueOnce(jest.fn().mockResolvedValueOnce({ data: { success: true } }));
       const svc = GroupService.getInstance();
-      await expect(svc.joinGroup('g1', 'TakenName')).rejects.toThrow(
-        'Username is already taken in this group'
+      await svc.setMemberRole('g1', 'uid-frodo', 'member');
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
+    });
+
+    test("surfaces the function's refusal", async () => {
+      mockHttpsCallable.mockReturnValueOnce(
+        jest.fn().mockRejectedValueOnce(new Error("You are this group's only admin."))
       );
-    });
-
-    test('should run a transaction when joining succeeds', async () => {
-      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { groups: ['g2'] }));
-      mockIsUsernameAvailableInGroup.mockResolvedValueOnce(true);
-      mockRunTransaction.mockImplementationOnce(async (_db: any, cb: (tx: any) => any) => {
-        const tx = {
-          set: jest.fn(),
-          update: jest.fn(),
-          get: jest.fn().mockResolvedValue(
-            makeDocSnapshot(true, { groups: ['g2'] })
-          ),
-        };
-        await cb(tx);
-      });
-
       const svc = GroupService.getInstance();
-      await svc.joinGroup('g1', 'NewUser');
-      expect(mockRunTransaction).toHaveBeenCalledTimes(1);
-    });
-
-    test('should set the active group after joining', async () => {
-      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { groups: [] }));
-      mockIsUsernameAvailableInGroup.mockResolvedValueOnce(true);
-      mockRunTransaction.mockImplementationOnce(async (_db: any, cb: (tx: any) => any) => {
-        const tx = {
-          set: jest.fn(),
-          update: jest.fn(),
-          get: jest.fn().mockResolvedValue(makeDocSnapshot(true, { groups: [] })),
-        };
-        await cb(tx);
-      });
-
-      const svc = GroupService.getInstance();
-      await svc.joinGroup('group-joined', 'NewUser');
-      expect(svc.getActiveGroupId()).toBe('group-joined');
+      await expect(svc.setMemberRole('g1', 'uid-gandalf', 'member')).rejects.toThrow('only admin');
     });
   });
 });

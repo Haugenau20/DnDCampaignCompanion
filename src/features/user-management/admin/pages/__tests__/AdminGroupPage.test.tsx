@@ -195,13 +195,50 @@ describe("AdminGroupPage", () => {
     });
 
     test("leaving goes through a confirmation", async () => {
-      setup();
+      setup({
+        members: [...MEMBERS, { id: "u3", username: "Aragorn", role: "admin" }],
+      });
       await settle();
       expect(screen.queryByTestId("leave-group-dialog")).not.toBeInTheDocument();
       await userEvent.click(
         screen.getByRole("button", { name: "Leave The Fellowship" })
       );
       expect(screen.getByTestId("leave-group-dialog")).toBeInTheDocument();
+    });
+
+    // T035: the server refuses the last admin's leaving while anyone else is
+    // in the group. The page says so before the click, and points at the way
+    // out, rather than offering a button that fails.
+    test("the only admin is sent to People to promote someone first", async () => {
+      setup();
+      await settle();
+      const danger = screen.getByRole("region", { name: "Leaving" });
+      expect(
+        within(danger).getByRole("button", { name: "Leave The Fellowship" })
+      ).toBeDisabled();
+      expect(
+        within(danger).getByRole("link", { name: "make another member an admin" })
+      ).toHaveAttribute("href", "/admin/people");
+    });
+
+    test("the only admin may still leave a group nobody else is in", async () => {
+      setup({ members: [MEMBERS[0]] });
+      await settle();
+      const danger = screen.getByRole("region", { name: "Leaving" });
+      expect(
+        within(danger).getByRole("button", { name: "Leave The Fellowship" })
+      ).toBeEnabled();
+      expect(within(danger).queryByRole("link")).not.toBeInTheDocument();
+    });
+
+    test("an admin with another admin beside them may leave", async () => {
+      setup({
+        members: [...MEMBERS, { id: "u3", username: "Aragorn", role: "admin" }],
+      });
+      await settle();
+      expect(
+        screen.getByRole("button", { name: "Leave The Fellowship" })
+      ).toBeEnabled();
     });
 
     // Deleting a group has no server implementation at all -- no service

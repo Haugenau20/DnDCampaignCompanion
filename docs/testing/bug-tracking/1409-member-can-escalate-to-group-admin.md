@@ -5,8 +5,11 @@
 member write **any** field of their own profile, including `role`.
 
 ## Status
-🟡 PARTIALLY FIXED in `firestore.rules.prod` (2026-07-29) — the one-write path is closed; a two-step
-delete-and-recreate path remains and needs a code change. ⚠️ **Awaiting console deploy.**
+✅ FIXED and **deployed** — confirmed 2026-09-23, when the console ruleset was read back and matched
+`firestore.rules.prod` rule for rule. (Originally 🟡 PARTIALLY FIXED 2026-07-29: the one-write path
+closed first, and the two-step delete-and-recreate path closed with the `createGroup` Cloud Function.)
+Since 2026-09-23 a client may not create its own group profile at all, and a group admin may not
+write `role` either: roles change only through the `setMemberRole` Cloud Function. See #1425.
 
 ## Category
 VALIDATION

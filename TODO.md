@@ -3,6 +3,57 @@
 The project backlog. Everything outstanding lives here, in one shape, verified
 against the tree rather than remembered.
 
+## Priority overview
+
+Triaged 2026-09-23 from each entry's summary alone. Nothing was re-checked
+against the tree for this, so a priority is a judgement, not a measurement.
+**Update this table whenever an entry is filed, closed or re-sized.**
+
+**Priority** · `critical` a security or data-loss hole, do next · `high`
+users are locked out of something or losing function · `medium` real user
+friction, or a prerequisite for something that is · `low` worth doing, no one
+is hurt while it waits · `nit` bookkeeping or polish
+
+| Priority | ID | Item | Size | Status | Why this priority |
+|---|---|---|---|---|---|
+| high | T012 | No password change or reset | M | open | A user who forgets their password has no way back in |
+| high | T002 | `AccountCard` clips at 320px | S | open | "Join another" is unreachable on narrow phones; cheap fix |
+| medium | T044 | Notes/story pages flash to skeleton on write | S | open | Visible defect on every save; same fix already proven on the entity pages |
+| medium | T051 | Unbounded titles can widen a page | S | open | Already broke the live dashboard once; the audit is small |
+| medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
+| medium | T019 | Extraction reads PCs as NPCs | M | open | Degrades the AI feature on every run; roster data already exists |
+| medium | T029 | Notes fetched twice, unbounded | M | open | Read cost grows with every past campaign, on every route |
+| medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
+| medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
+| medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
+| medium | T053 | Dev-only "sign in as" for browser checks | S | open | Unblocks browser verification of anything that needs a different user, which every recent phase needed |
+| medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
+| low | T001 | `NPCNote.date` stored shape | S | open | Display already uniform; the remainder is data hygiene |
+| low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
+| low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
+| low | T049 | "Unplaced" is unexplained | S | open | Confusing copy; the dev-data half is already closed |
+| low | T024 | Remove `?route=` hack + duplicate provider | S | open | Dead weight in production; tidy-up |
+| low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
+| low | T043 | Orphaned `importantNPCs` names | S | open | Nothing was destroyed; a judgement call about one campaign |
+| low | T042 | Theme class as data has no gate | S | open | Latent pattern; bitten once, now partly gated |
+| low | T037 | A group cannot be deleted | L | open | Leave exists; deletion is rare and large |
+| low | T017 | Batch actions for other entities | L | open | Convenience; must follow T032's write-amplification fix |
+| low | T018 | Sub-chapters | L | open | New feature; #017 ordering question comes first |
+| low | T021 | Firebase Storage for images | L | open | New capability; prerequisite for T020 |
+| low | T020 | Screenshot on bug reports | M | open | Blocked in practice on T021 |
+| low | T022 | Sign in with Google | L | needs scoping | Nice to have; needs a design for "signed in, in no group" first |
+| low | T040 | No accent pair for the band | S | open | Interim `.band-chip` works; schema-owner decision |
+| low | T048 | Five surfaces mark type, not entity | S | open | Visual consistency |
+| low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
+| nit | T047 | Account chip uses a generic icon | S | open | Cosmetic |
+| nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
+| nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
+| nit | T009 | Hero band fallback never recorded | S | open | Answered by practice; write it down |
+| nit | T010 | Two `D36`s in `colour-schema.md` | S | open | Ambiguous citations |
+| nit | T011 | Stale phase counts in `colour-schema.json` | S | open | Needs the maintainer's semantics |
+
+The dormant `theme-contract` questions at the bottom are unranked on purpose.
+
 ## How items get here
 
 `todo.txt` is the **inbox** — type a sentence into it whenever an idea lands, no
@@ -112,45 +163,6 @@ shape is the real job and is untouched.**
   Separately, the header itself overflows below ~380px on every route (recorded
   in `CLAUDE.md`, not here). Don't attribute one to the other.
 - **Source**: drift log
-
-### T052 — Group membership is self-asserted; an invitation token gates nothing server-side
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-09-23 (read from the rules, not measured)
-
-Any signed-in user who knows a group's id can make themselves a member of it,
-with full read and write on its campaigns, without ever holding a token. The
-registration token — expiry included, since T013 — is enforced only by the
-client that chooses to check it.
-
-- **Where**, all in `firebase/firestore.rules.prod`:
-  - `:117` `isGroupMember(groupId)` is true when the caller's **own**
-    `users/{uid}` document lists `groupId` in `groups`.
-  - `:144` / `:147` a user may create their own `users/{uid}` with any
-    content, and update it freely except `isAdmin`. So adding any group id to
-    your own `groups` array is permitted, and it is exactly what
-    `isGroupMember` trusts.
-  - `:191` likewise lets anyone create `groups/{g}/users/{self}` as `member`,
-    and `:232` their own username reservation — the rest of a "join", no token
-    consulted.
-  - `:250-252` the "mark token used" update does not require the token to be
-    unused, and nothing in any rule reads `used` or `expiresAt`.
-- **How a group id leaks**: every invite link carries it (`?groupId=`), and it
-  stays in the link after the token is spent; `/admin/group` shows it as a
-  value to copy.
-- **Touches**: redemption has to move server-side — a callable that checks the
-  token (unused, unexpired) and writes membership with the Admin SDK, on the
-  `createGroup` precedent — and then `:144` / `:147` have to stop letting a
-  user write their own `groups`, which `GroupService.joinGroup` (`:249`) and
-  `InvitationService.signUpWithToken` both currently do client-side. Then a
-  console deploy, which no CI gate performs.
-- **Catch**: this is a rules change of the #1409 / #1410 kind, and the same
-  caveats apply — production rules live in the console, and the emulator's
-  ruleset is `allow read, write: if true`, so it cannot reproduce this.
-  **Unverified**: read from the rules file only. Measure it the way #1409 was —
-  load `firestore.rules.prod` into the emulator and try the write — before
-  sizing the fix; and confirm the deployed rules match the repo copy (T034 asks
-  the same question). Not yet in `docs/testing/bug-tracking/README.md`.
-- **Source**: found 2026-09-23 while implementing T013's expiry, which checks
-  a field no rule reads
 
 ---
 
@@ -302,14 +314,15 @@ default artwork.
   `signInWithPopup` anywhere in the tree.
 - **Touches**: `AuthService`, `InvitationService`, the registration form, and the
   Firebase console's provider config.
-- **Catch, and why this needs scoping first**: account creation is currently
-  gated *by construction*. `signUpWithToken` (`InvitationService.ts:204`) creates
-  the Firebase user and consumes the invitation token inside one
-  `runTransaction`, so an unauthorised person cannot get an account at all. An
-  OAuth provider inverts that — the Google user exists *before* any token is
-  checked, so the gate has to move to a post-sign-in step, and the app grows a
-  new state it has never had: an authenticated user with no group. **Decide what
-  that state looks like before writing code.** The beta-cost concern in the
+- **Catch, and why this needs scoping first**: account creation was never
+  gated — Firebase Auth lets anyone create an email/password account with the
+  public API key. What is gated is *membership*: since 2026-09-23 only the
+  `redeemInvitation` Cloud Function grants it, after checking the token (#1425).
+  So a Google account changes less on the server than it looks — it is one more
+  way to hold an Auth account with no group, which is already harmless. What it
+  adds is a state the UI has never had to render: signed in, in no group, with
+  a token still to redeem. **Decide what that state looks like before writing
+  code.** The beta-cost concern in the
   original note is a separate lever (an allow-list, or a cap on new accounts) and
   should be decided alongside it.
 - **Source**: todo.txt, 2026-09-16
@@ -558,6 +571,37 @@ Measured against the four create forms, the premise holds for the quest only.
 
 ## Tech debt and platform
 
+### T053 — A browser check cannot switch users
+**Type** tech debt · **Size** S · **Status** open · **Verified** 2026-09-23
+
+An agent driving Chrome cannot type a password or create an account, so every
+browser check runs as whoever the maintainer left signed in. PR #114 could
+verify promote, demote and the last-admin guard, but not joining a group
+through an invite link, and it could not see the app as a plain member.
+
+- **Where**: next to the existing dev-only helpers. `src/index.tsx:15-24`
+  dynamically imports `utils/__dev__/sessionTester` only when
+  `NODE_ENV === 'development'`; a `utils/__dev__/devAuth.ts` would load the
+  same way and additionally require `useEmulators`
+  (`core/services/firebase/config/firebaseConfig.ts:21`).
+- **The mechanism**: the Auth **emulator** accepts *unsigned* custom tokens
+  (`alg: "none"`). So `window.__devAuth.signInAs('DungeonMaster')` can look the
+  uid up by username in the emulator, mint an unsigned token and call
+  `signInWithCustomToken` -- no password anywhere, nothing stored. Add
+  `signOut()` and `whoami()`. Production Auth rejects unsigned tokens, so it
+  cannot work against the live project even if it leaked into a bundle.
+- **Touches**: the new helper, `src/index.tsx`, the sample-data generator
+  (`utils/__dev__/generators/userGenerator.ts`) for two more users -- one in
+  **no group**, to test joining as an existing account, and a second admin in
+  group 1 for role and last-admin flows -- and a line in `CLAUDE.md`.
+- **Catch**: the sign-up form stays out of reach -- creating an account
+  through it is off-limits to an agent even on the emulator -- so that path
+  keeps its emulator tests plus a manual check. And `utils/__dev__/` is
+  operator tooling: use relative imports there (see the resolver table in
+  `CLAUDE.md`). Verify it is a no-op without the emulators, and that
+  `npm run build` does not bundle it into a reachable path.
+- **Source**: PR #114, 2026-09-23
+
 ### T051 — Nothing stops the next unbounded title from widening a page
 **Type** tech debt · **Size** S · **Status** open · **Verified** 2026-09-22
 
@@ -727,8 +771,8 @@ before planning the rebuild.
 
 | Claim | Finding, 2026-09-16 |
 |---|---|
-| Groups cannot be created — Firestore transactions require all reads before all writes | **Probably fixed.** `GroupService.createGroup` (`src/core/services/firebase/group/GroupService.ts:51`) no longer runs a client transaction; it delegates to a `createGroup` Cloud Function. Needs a live run to confirm. |
-| Campaigns cannot be deleted | **Fixed.** `CampaignManagementView.tsx:32,154` has `deleteCampaign` wired to a confirm dialog. |
+| Groups cannot be created — Firestore transactions require all reads before all writes | **Likely fixed 2026-09-23, for a different reason than filed.** The transaction moved to a `createGroup` Cloud Function long ago, but the client called it through a bare `getFunctions()`, i.e. `us-central1`, where nothing is deployed. Now on the service's `europe-west1` instance, pinned by a test. Still wants one live run in production. |
+| Campaigns cannot be deleted | **Likely fixed 2026-09-23.** The confirm dialog was wired, but `CampaignService.deleteCampaign` had the same bare-`getFunctions()` region defect as group creation. Fixed the same way; wants one live run in production. |
 | Neither campaigns nor groups can be edited | **Fixed.** `CampaignManagementView.tsx:33,64-74` has an edit dialog; groups gained `GroupService.updateGroup` and an Edit control on `/admin/group` (T036, 2026-09-23). |
 | Groups view shows only the current group | **Holds.** `GroupManagementView.tsx:33` does `groups.find(g => g.id === activeGroupId)` and renders that one, though `useGroups()` supplies the full list. |
 | Groups cannot be edited or deleted | **Half fixed.** Editing landed as T036 (2026-09-23). Deletion still has no service method or Cloud Function — T037. |
@@ -771,63 +815,6 @@ reproducible from the tree alone — it needs rendering.
 - **Source**: todo.txt, 2026-09-16
 
 ---
-
-### T034 — Promoting or demoting a member: the rules allow it, nothing calls it
-**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-09-16
-
-Blocks a role control on `/admin/people`, which is why that view renders the
-role as text and offers no way to change it.
-
-**Corrected after reading the rules rather than the bug report.** An earlier
-draft of this entry claimed a Cloud Function was required. It is not.
-`firebase/firestore.rules.prod:202` already carries, on a member's group
-profile:
-
-```
-// Group admins and global admin can update user profiles, role included
-allow update: if isGroupAdmin(groupId) || isGlobalAdmin();
-```
-
-So an admin changing another member's role **is** server-authorised today. What
-is missing is entirely client-side: there is no `setMemberRole` on
-`GroupService`, no hook exposing one, and no control anywhere in the UI.
-
-Two things to settle before building it:
-
-1. **Is the deployed ruleset the one in this repo?**
-   `docs/testing/bug-tracking/1409-member-can-escalate-to-group-admin.md` is
-   still marked *partially fixed, ⚠️ awaiting console deploy*, while
-   `firestore.rules.prod:191` now reads
-   `allow create: if isSignedIn() && request.auth.uid == userId && request.resource.data.role == "member"`
-   and its own comment says that closes #1409 **completely**. The repo copy and
-   the bug's status disagree. Rules live in the Firebase console, so only the
-   maintainer can confirm which is live — and shipping a privilege control while
-   that is unknown is the wrong order.
-2. **Demotion needs the same guard as leaving** — see T035. An admin demoting
-   the last admin is the same limbo by another route.
-
-When both are settled this is a small job: one service method, one hook
-function, one control on the member row.
-
-- **Source**: Phase 14.2, while deciding what `/admin/people` may render
-
-### T035 — The last admin can strip a group of its administration
-**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-09-16
-
-Nothing stops the only admin leaving a group. Afterwards nobody can invite a
-member, manage a campaign, or reach `/admin` at all — the group is not deleted,
-it is simply unadministrable, and there is no recovery path inside the product.
-
-The correct behaviour needs promotion to exist first: "choose who takes over,
-then leave."
-
-- **Blocked by**: T034.
-- **Meanwhile**: `/admin/group` **states the consequence** beside the Leave
-  control when you are the only admin, and does not block the action. Blocking
-  was rejected twice over — with no promotion there would be no way out at all,
-  and the profile page's own Leave control is a second door onto the same call,
-  so a guard on one door is not a guard.
-- **Source**: todo.txt, 2026-09-16; scoped during Phase 14.3
 
 ### T037 — A group cannot be deleted
 **Type** debt · **Size** L · **Status** open · **Verified** 2026-09-16

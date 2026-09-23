@@ -1,6 +1,8 @@
 // src/features/user-management/admin/pages/AdminPeoplePage.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import Typography from 'core/components/Typography';
+import Button from 'core/components/Button';
+import Dialog from 'core/components/Dialog';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import { useGroups } from '../../groups/hooks/useGroups';
 import { useInvitations } from '../../groups/hooks/useInvitations';
@@ -26,7 +28,7 @@ import { memberId, type GroupMember, type RegistrationToken } from '../types';
  * duplication this page exists to remove.
  */
 const AdminPeoplePage: React.FC = () => {
-  const { user, activeGroup, activeGroupId, deleteUser } = useGroups();
+  const { user, activeGroup, activeGroupId, deleteUser, setMemberRole } = useGroups();
   const {
     generateRegistrationToken,
     getRegistrationTokens,
@@ -49,6 +51,8 @@ const AdminPeoplePage: React.FC = () => {
   }>({ open: false, link: '' });
 
   const [pendingRemoval, setPendingRemoval] = useState<GroupMember | null>(null);
+  const [pendingPromotion, setPendingPromotion] = useState<GroupMember | null>(null);
+  const [changingRole, setChangingRole] = useState(false);
   const [pendingRevoke, setPendingRevoke] = useState<RegistrationToken | null>(
     null
   );
@@ -172,6 +176,38 @@ const AdminPeoplePage: React.FC = () => {
     }
   };
 
+  const applyRole = async (member: GroupMember, role: 'admin' | 'member') => {
+    const id = memberId(member);
+    if (!id) return;
+    setError(null);
+    setChangingRole(true);
+    try {
+      await setMemberRole(id, role);
+      setPendingPromotion(null);
+      await reloadMembers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to change the role');
+      setPendingPromotion(null);
+    } finally {
+      setChangingRole(false);
+    }
+  };
+
+  /**
+   * Promotion asks first; demotion does not.
+   *
+   * Making someone an admin hands them everything this page does -- including
+   * making you a member -- and nothing on screen would undo it if they chose
+   * to. Making an admin a member is reversible by you, here, at once.
+   */
+  const handleChangeRole = (member: GroupMember, role: 'admin' | 'member') => {
+    if (role === 'admin') {
+      setPendingPromotion(member);
+    } else {
+      applyRole(member, role);
+    }
+  };
+
   const groupName = activeGroup?.name ?? 'this group';
   const shownError = error ?? membersError;
 
@@ -196,6 +232,7 @@ const AdminPeoplePage: React.FC = () => {
         inviting={inviting}
         onInvite={handleInvite}
         onRemove={setPendingRemoval}
+        onChangeRole={handleChangeRole}
       />
 
       <PendingInvitationsCard
@@ -228,6 +265,37 @@ const AdminPeoplePage: React.FC = () => {
         itemName={pendingRemoval?.username ?? ''}
         message={`Remove ${pendingRemoval?.username ?? 'this member'} from ${groupName}? They lose access to the group and everything recorded in it; what they have already written stays. This cannot be undone.`}
       />
+
+      <Dialog
+        open={!!pendingPromotion}
+        onClose={() => setPendingPromotion(null)}
+        title={`Make ${pendingPromotion?.username ?? 'this member'} an admin?`}
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-4">
+          <Typography color="secondary">
+            They will be able to invite and remove members, manage campaigns
+            and change anyone&apos;s role in {groupName} — including yours.
+          </Typography>
+          <div className="flex justify-end gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => setPendingPromotion(null)}
+              disabled={changingRole}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => pendingPromotion && applyRole(pendingPromotion, 'admin')}
+              isLoading={changingRole}
+              className="min-h-[2.75rem]"
+            >
+              Make admin
+            </Button>
+          </div>
+        </div>
+      </Dialog>
 
       <DeleteConfirmationDialog
         isOpen={!!pendingRevoke}

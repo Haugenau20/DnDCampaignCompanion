@@ -159,13 +159,28 @@ Two environment gotchas that both fail silently:
 - HTML report: `npm run test:html`
 - Single file, fast: `npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="<pattern>"`
 
-#### `firebase/functions` is not covered by any of that
+#### `firebase/functions` has its own suite, and root `npm test` does not run it
 
-No jest, no test script, no test files — root `npm test` never touches the Cloud Functions. Verify a
-change there against the emulator, or with a throwaway Node script requiring the `firebase-admin` in
-`firebase/functions/node_modules` with `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`. Write a **control**
-into such a script — reproduce the old broken behaviour alongside the fix — or it only proves the new
-code runs, not that it changed anything.
+`cd firebase/functions && npm test` runs jest against the **running emulators** (Firestore + Auth;
+start them with `start-dev.ps1` first — a `globalSetup` fails fast and says so if they are down).
+Every suite works under its own `demo-` project id, so it never touches the dev data. It is not in
+CI, which has no emulator. Two kinds of suite live there, in `firebase/functions/test/`:
+
+- **Callables** — invoked directly with `fn.run({data, auth})`, against real emulator Firestore.
+  Covers `redeemInvitation`, `setMemberRole` and the last-admin guard in `removeUserFromGroup` /
+  `deleteUser`. The older callables (`createGroup`, `deleteCampaign`, `extractEntities`, …) have none
+  yet; `test/emulator.ts` is the harness to copy.
+- **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` into the emulator and
+  acts as real users. `RULES_FILE=<path>` runs the same checks against another revision: **that is
+  the control** — run it against the previous revision (`git show HEAD:firebase/firestore.rules.prod`)
+  and the tests for whatever you closed must fail there.
+
+The control rule still applies to anything new: a suite that is green on the first run proves the
+code runs, not that it changed anything. Break the thing on purpose once and watch the right tests
+fail.
+
+**The deployed rules live in the console.** On 2026-09-23 the console copy was read back and matched
+`firestore.rules.prod` rule for rule; treat that as a fact about that date, not a standing one.
 
 `npm run lint` there reports ~1,983 pre-existing problems, nearly all `linebreak-style` (Windows
 `core.autocrlf` writes CRLF; `eslint-config-google` demands LF) plus `no-trailing-spaces`. It is
@@ -317,7 +332,8 @@ the tree.
 ### Current State
 - **Testing Infrastructure**: Jest + React Testing Library, **5,144 tests across 260 suites**
 - **Coverage**: **91.96% statements / 92.42% lines / 85.77% functions / 84.05% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-31 on `design-handoff/dashboard-1a`)
-- **Baseline**: **0 failed / 2 skipped / 5142 passed / 5144 total across 260 suites.** Measured 2026-09-22 on `fix/entity-loader-consolidation`; `main` at 74b5e49 measured **258 suites / 5124 tests** at the same moment, so this branch adds 2 suites and 20 tests. The 2 skips are #901's, closed as testability-only. **Any red is a regression.**
+- **Baseline**: **0 failed / 2 skipped / 5271 passed / 5273 total across 264 suites.** Measured 2026-09-23 on `fix/group-membership-authority` (branched from `main` at 45eeeca; `main` itself was not re-measured). The 2 skips are #901's, closed as testability-only. **Any red is a regression.** Running the suite while `npm run build` competes for CPU produced one timeout in `QuickAddForm.test.tsx` that passes alone — run the two sequentially.
+  - The figure this replaced was **0 failed / 2 skipped / 5142 passed / 5144 total across 260 suites**, measured 2026-09-22 on `fix/entity-loader-consolidation`.
   - The figure this replaced — `4715 passed / 4717 total across 235 suites` — had gone stale by **25 suites and 427 tests**, having been taken on a branch that later merged. That is the largest drift this line has carried, and it is exactly what the rule below exists to catch. If you are about to trust this number without running it, run it.
   - A full run also prints `A worker process has failed to exit gracefully`. That is pre-existing on a clean tree and the run still exits 0 — do not chase it, and do not mistake it for a failure.
   - The previously recorded baseline of 7 failures — the ID-collision markers #002/#004/#009/#012 in the four `*Context.bugs` suites — is **obsolete**: that cluster was fixed 2026-07-28 and those four suites now pass 29/29. If you find advice anywhere telling you to tolerate reds, check `docs/testing/bug-tracking/README.md` before believing it.

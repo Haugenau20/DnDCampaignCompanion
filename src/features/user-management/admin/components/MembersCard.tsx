@@ -19,22 +19,30 @@ export interface MembersCardProps {
   inviting: boolean;
   onInvite: () => void;
   onRemove: (member: GroupMember) => void;
+  /** Make a member an admin, or an admin a member (T034). */
+  onChangeRole: (member: GroupMember, role: 'admin' | 'member') => void;
 }
 
 /**
  * Shared column template, so the header and the rows cannot drift apart.
  *
- * The action column is a fixed width rather than `auto`, and that is the whole
- * reason this constant exists. Every row is its own grid -- a `<li>` sizes its
- * tracks from its own content, not from its siblings -- so an `auto` final
- * column collapsed to nothing on the rows with no Remove button (your own, and
- * any other admin's) and `minmax(0,1fr)` absorbed the slack. The result was
- * that Role and Joined sat visibly further right on exactly those rows.
+ * From `sm` the action column is a fixed width rather than `auto`, and that is
+ * the whole reason this constant exists. Every row is its own grid -- a `<li>`
+ * sizes its tracks from its own content, not from its siblings -- so an `auto`
+ * final column collapsed to nothing on the rows with no actions (your own) and
+ * `minmax(0,1fr)` absorbed the slack. The result was that Role and Joined sat
+ * visibly further right on exactly those rows. It is wide enough for the widest
+ * row: a member, offered both "Make admin" and "Remove".
+ *
+ * On a phone there is no action column at all. The actions take their own line
+ * under the metadata instead, because a column wide enough for them left the
+ * name about 30px at 320px -- measured, with the join date running under the
+ * buttons.
  */
 const ROW_GRID =
   'grid items-center gap-x-3 gap-y-1 ' +
-  'grid-cols-[auto_minmax(0,1fr)_6rem] ' +
-  'sm:grid-cols-[auto_minmax(0,1fr)_7rem_10rem_6rem]';
+  'grid-cols-[auto_minmax(0,1fr)] ' +
+  'sm:grid-cols-[auto_minmax(0,1fr)_7rem_10rem_13rem]';
 
 /**
  * Everyone who accepted an invitation.
@@ -56,6 +64,7 @@ const MembersCard: React.FC<MembersCardProps> = ({
   inviting,
   onInvite,
   onRemove,
+  onChangeRole,
 }) => {
   const [query, setQuery] = useState('');
 
@@ -242,23 +251,38 @@ const MembersCard: React.FC<MembersCardProps> = ({
                   </Typography>
                 </div>
 
-                <div className="col-start-3 row-start-1 row-span-2 sm:row-span-1 sm:col-start-5 justify-self-end">
-                  {/* Only what the server already authorises. Removing another
-                      admin is not offered, and neither is promoting anyone:
-                      role changes are not enforced server-side yet (#1409), so
-                      a control for them would be a button that either fails or,
-                      worse, succeeds. */}
-                  {!isYou && !isAdmin && (
+                {/* Only what the server authorises. Your own row offers
+                    nothing: stepping down or leaving is on /admin/group, where
+                    the last-admin rule is explained. Another admin cannot be
+                    removed, only made a member first -- the
+                    `removeUserFromGroup` function refuses otherwise. Role
+                    changes go through `setMemberRole`, which will not leave the
+                    group without an admin (T034, T035).
+
+                    `-ml-3` on a phone cancels the ghost button's own padding,
+                    so its label lines up under the name. */}
+                {!isYou && (
+                  <div className="col-start-2 row-start-3 sm:row-start-1 sm:col-start-5 sm:justify-self-end flex items-center -ml-3 sm:ml-0">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onRemove(member)}
-                      className="min-h-[2.75rem]"
+                      onClick={() => onChangeRole(member, isAdmin ? 'member' : 'admin')}
+                      className="min-h-[2.75rem] whitespace-nowrap"
                     >
-                      Remove
+                      {isAdmin ? 'Make member' : 'Make admin'}
                     </Button>
-                  )}
-                </div>
+                    {!isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onRemove(member)}
+                        className="min-h-[2.75rem]"
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                )}
               </li>
             );
           })}
