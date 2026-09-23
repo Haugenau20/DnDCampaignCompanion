@@ -11,6 +11,7 @@ import {
   isPopupDismissed
 } from 'core/services/firebase/auth/signInErrors';
 import { signInLinkUrl } from '../utils/email-link';
+import DevEmailLinkShortcut from './DevEmailLinkShortcut';
 
 interface SignInFormProps {
   /** Called once a Google sign-in has completed on this page. */
@@ -113,6 +114,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess, next }) => {
           </button>
           .
         </Typography>
+        <DevEmailLinkShortcut email={sentTo} />
       </div>
     );
   }

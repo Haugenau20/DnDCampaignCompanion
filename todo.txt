@@ -12,3 +12,7 @@ Last drained: 2026-09-22
 We need to look at dependencies in this project, and how they go together. I think right now we have to build with legacy peer deps or something like that. that can't be good long term? 
 
 Look at linting errors during building. 
+
+Set up more CI gates on PR (linting, etc.)
+
+When adding NPC, Location, and Quest from e.g. Notes or the stie itself, the fields to fill in are very small. especially pops out when doing it from notes, since the field is autofilled with stuff, but almost impossible to read any of it, due to the small window. 

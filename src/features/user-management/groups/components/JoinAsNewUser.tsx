@@ -11,6 +11,7 @@ import {
 } from 'core/services/firebase/auth/signInErrors';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { signInLinkUrl } from '../../auth/utils/email-link';
+import DevEmailLinkShortcut from '../../auth/components/DevEmailLinkShortcut';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import { useInvitations } from '../hooks/useInvitations';
 
@@ -172,6 +173,7 @@ const JoinAsNewUser: React.FC<JoinAsNewUserProps> = ({ token, groupId, onJoined,
           </button>
           .
         </Typography>
+        <DevEmailLinkShortcut email={sentTo} />
       </div>
     );
   }

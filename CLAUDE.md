@@ -147,7 +147,10 @@ Two environment gotchas that both fail silently:
   viewport, so this is a real test rather than a simulation.
 - **Signing in as another user in a browser check.** There are no passwords (T022): sign-in is a
   magic link or Google, and the Auth emulator never sends mail — it keeps every link in an outbox.
-  So any seeded user is reachable without a password: request a link from `/signin` (or mint one
+  So any seeded user is reachable without a password. In the dev server the "Check your inbox"
+  screen carries a dev-only **Open the emulator's link** button that does all of this for you
+  (`DevEmailLinkShortcut`; renders only in a development build against the emulators). By hand:
+  request a link from `/signin` (or mint one
   with `POST http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=fake-api-key`
   and `{"requestType":"EMAIL_SIGNIN","email":…,"continueUrl":"http://localhost:3000/auth/link…","canHandleCodeInApp":true}`),
   read it from `GET http://127.0.0.1:9099/emulator/v1/projects/dnd-campaign-companion/oobCodes`,
@@ -356,7 +359,7 @@ the tree.
 ### Current State
 - **Testing Infrastructure**: Jest + React Testing Library, **5,144 tests across 260 suites**
 - **Coverage**: **91.96% statements / 92.42% lines / 85.77% functions / 84.05% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-31 on `design-handoff/dashboard-1a`)
-- **Baseline**: **0 failed / 2 skipped / 5305 passed / 5307 total across 265 suites.** Measured 2026-09-23 on `feat/alternative-sign-in` (branched from `main` at 4fb444e; `main` itself was not re-measured). `firebase/functions`: **71 passed across 5 suites**, against the emulators.
+- **Baseline**: **0 failed / 2 skipped / 5310 passed / 5312 total across 266 suites.** Measured 2026-09-23 on `feat/alternative-sign-in` (branched from `main` at 4fb444e; `main` itself was not re-measured). `firebase/functions`: **71 passed across 5 suites**, against the emulators.
   - The figure this replaced was **0 failed / 2 skipped / 5271 passed / 5273 total across 264 suites**, measured 2026-09-23 on `fix/group-membership-authority`. The 2 skips are #901's, closed as testability-only. **Any red is a regression.** Running the suite while `npm run build` competes for CPU produced one timeout in `QuickAddForm.test.tsx` that passes alone — run the two sequentially.
   - The figure this replaced was **0 failed / 2 skipped / 5142 passed / 5144 total across 260 suites**, measured 2026-09-22 on `fix/entity-loader-consolidation`.
   - The figure this replaced — `4715 passed / 4717 total across 235 suites` — had gone stale by **25 suites and 427 tests**, having been taken on a branch that later merged. That is the largest drift this line has carried, and it is exactly what the rule below exists to catch. If you are about to trust this number without running it, run it.
