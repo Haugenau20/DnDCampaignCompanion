@@ -12,6 +12,7 @@
 const mockGetDoc = jest.fn();
 const mockGetDocs = jest.fn();
 const mockRunTransaction = jest.fn();
+const mockUpdateDoc = jest.fn();
 const mockHttpsCallable = jest.fn();
 
 // Distinguishes BaseFirebaseService's regioned getFunctions(app, 'europe-west1')
@@ -28,8 +29,10 @@ const mockDoc = jest.fn((_db_or_ref: any, ...segs: string[]) => ({
 }));
 
 const mockIsUsernameAvailableInGroup = jest.fn();
+const mockIsUserAdmin = jest.fn();
 const mockUserServiceInstance = {
   isUsernameAvailableInGroup: mockIsUsernameAvailableInGroup,
+  isUserAdmin: mockIsUserAdmin,
   getGroupUserProfile: jest.fn(),
 };
 
@@ -41,6 +44,7 @@ jest.mock('firebase/firestore', () => ({
   getDoc: function() { return (mockGetDoc as Function).apply(null, arguments); },
   getDocs: function() { return (mockGetDocs as Function).apply(null, arguments); },
   runTransaction: function() { return (mockRunTransaction as Function).apply(null, arguments); },
+  updateDoc: function() { return (mockUpdateDoc as Function).apply(null, arguments); },
   query: jest.fn(),
   where: jest.fn(),
 }));
@@ -125,6 +129,7 @@ describe('GroupService', () => {
       getDoc: function() { return (mockGetDoc as Function).apply(null, arguments); },
       getDocs: function() { return (mockGetDocs as Function).apply(null, arguments); },
       runTransaction: function() { return (mockRunTransaction as Function).apply(null, arguments); },
+      updateDoc: function() { return (mockUpdateDoc as Function).apply(null, arguments); },
       query: jest.fn(),
       where: jest.fn(),
     }));
@@ -147,7 +152,7 @@ describe('GroupService', () => {
     }));
 
     [mockGetDoc, mockGetDocs, mockRunTransaction, mockIsUsernameAvailableInGroup,
-     mockHttpsCallable].forEach(m => m.mockReset());
+     mockHttpsCallable, mockUpdateDoc, mockIsUserAdmin].forEach(m => m.mockReset());
     mockGetFunctions.mockClear();
     (mockUserServiceInstance.getGroupUserProfile as jest.Mock).mockReset();
 
@@ -400,6 +405,53 @@ describe('GroupService', () => {
       const users = await svc.getGroupUsers('g1');
       expect(users).toHaveLength(1);
       expect(users[0].username).toBe('Admin');
+    });
+  });
+
+  // ─── updateGroup (T036) ──────────────────────────────────────────────────────
+
+  describe('updateGroup', () => {
+    test('writes the trimmed name and description to the group document', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(true);
+      mockUpdateDoc.mockResolvedValueOnce(undefined);
+      const svc = GroupService.getInstance();
+      await svc.updateGroup('g1', { name: '  The Company  ', description: ' Nine walkers ' });
+      expect(mockIsUserAdmin).toHaveBeenCalledWith('g1', AUTH_UID);
+      expect(mockUpdateDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'groups/g1' }),
+        { name: 'The Company', description: 'Nine walkers' }
+      );
+    });
+
+    test('writes only name and description, never createdBy or createdAt', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(true);
+      mockUpdateDoc.mockResolvedValueOnce(undefined);
+      const svc = GroupService.getInstance();
+      await svc.updateGroup('g1', { name: 'X', createdBy: 'intruder' } as any);
+      expect(Object.keys(mockUpdateDoc.mock.calls[0][1]).sort()).toEqual(['description', 'name']);
+    });
+
+    test('clears the description when none is given', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(true);
+      mockUpdateDoc.mockResolvedValueOnce(undefined);
+      const svc = GroupService.getInstance();
+      await svc.updateGroup('g1', { name: 'The Company' });
+      expect(mockUpdateDoc.mock.calls[0][1]).toEqual({ name: 'The Company', description: '' });
+    });
+
+    test('refuses a blank name without writing', async () => {
+      const svc = GroupService.getInstance();
+      await expect(svc.updateGroup('g1', { name: '   ' })).rejects.toThrow('A group needs a name');
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
+    });
+
+    test('refuses a non-admin without writing', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(false);
+      const svc = GroupService.getInstance();
+      await expect(svc.updateGroup('g1', { name: 'X' })).rejects.toThrow(
+        'Only group admins can edit the group'
+      );
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
     });
   });
 

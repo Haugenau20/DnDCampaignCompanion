@@ -5,7 +5,7 @@ import Button from 'core/components/Button';
 import Input from 'core/components/Input';
 import Dialog from 'core/components/Dialog';
 import { formatDisplayDate } from 'shared/utils/dateFormatter';
-import { Check, Copy, Plus } from 'lucide-react';
+import { Check, Copy, Pencil, Plus } from 'lucide-react';
 import { useGroups } from '../../groups/hooks/useGroups';
 import { useAdminOutlet } from './admin-outlet';
 import { memberId } from '../types';
@@ -21,7 +21,7 @@ import LeaveGroupDialog from '../../profiles/components/LeaveGroupDialog';
  * rests on.
  */
 const AdminGroupPage: React.FC = () => {
-  const { groups, activeGroupId, activeGroup, createGroup } = useGroups();
+  const { groups, activeGroupId, activeGroup, createGroup, updateGroup } = useGroups();
   const { members } = useAdminOutlet();
 
   const [copied, setCopied] = useState(false);
@@ -31,6 +31,11 @@ const AdminGroupPage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const group = groups.find((candidate) => candidate.id === activeGroupId) ?? activeGroup;
 
@@ -66,6 +71,32 @@ const AdminGroupPage: React.FC = () => {
       );
     } finally {
       setCreating(false);
+    }
+  };
+
+  /** Opens the edit dialog on the group as it stands now, not a stale draft. */
+  const openEdit = () => {
+    if (!group) return;
+    setEditName(group.name);
+    setEditDescription(group.description ?? '');
+    setEditError(null);
+    setEditOpen(true);
+  };
+
+  const handleEdit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editName.trim() || saving) return;
+    setSaving(true);
+    setEditError(null);
+    try {
+      await updateGroup(editName.trim(), editDescription.trim());
+      setEditOpen(false);
+    } catch (err) {
+      setEditError(
+        err instanceof Error ? err.message : 'Failed to save the group'
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -108,26 +139,37 @@ const AdminGroupPage: React.FC = () => {
     <div className="max-w-3xl mx-auto px-4 pb-10 space-y-4">
       <section className="card rounded-lg" aria-labelledby="group-heading">
         <div className="px-4 sm:px-6 py-5 space-y-4">
-          <div>
-            <Typography
-              variant="h2"
-              id="group-heading"
-              className="font-heading text-2xl break-words"
-            >
-              {group.name}
-            </Typography>
-            {group.description && (
-              <Typography color="secondary" className="mt-1">
-                {group.description}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <Typography
+                variant="h2"
+                id="group-heading"
+                className="font-heading text-2xl break-words"
+              >
+                {group.name}
               </Typography>
-            )}
+              {group.description && (
+                <Typography color="secondary" className="mt-1">
+                  {group.description}
+                </Typography>
+              )}
+            </div>
+            {/* The name and description are the only two things about a group
+                anyone may change -- who made it, and when, are history. The
+                control this page once removed had no `onClick` at all; this
+                one is backed by `GroupService.updateGroup` (T036). */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={openEdit}
+              startIcon={<Pencil size={16} />}
+              className="min-h-[2.75rem] flex-shrink-0"
+            >
+              Edit
+            </Button>
           </div>
 
-          {/* Facts about the group, in sans, as metadata rather than fields.
-              There is no Edit control: nothing in the service or the Cloud
-              Functions can rename a group, and a button that cannot do its job
-              is worse than its absence -- the one this replaces had no
-              `onClick` at all. */}
+          {/* Facts about the group, in sans, as metadata rather than fields. */}
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t card-divider">
             <div>
               <Typography variant="caption" color="muted" className="uppercase tracking-wide">
@@ -234,6 +276,65 @@ const AdminGroupPage: React.FC = () => {
       </section>
 
       <LeaveGroupDialog open={leaveOpen} onClose={() => setLeaveOpen(false)} />
+
+      <Dialog
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title={`Edit ${group.name}`}
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleEdit} className="space-y-4">
+          <Typography color="secondary" variant="body-sm">
+            Everyone in the group sees the new name straight away.
+          </Typography>
+
+          <Input
+            label="Name"
+            value={editName}
+            onChange={(event) => setEditName(event.target.value)}
+            required
+            disabled={saving}
+          />
+
+          <Input
+            label="Description (optional)"
+            value={editDescription}
+            onChange={(event) => setEditDescription(event.target.value)}
+            disabled={saving}
+            isTextArea={true}
+            rows={3}
+          />
+
+          {editError && (
+            <div
+              role="alert"
+              className="rounded-md border px-3 py-2 feedback-banner feedback-banner-error"
+            >
+              <Typography variant="body-sm">{editError}</Typography>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setEditOpen(false)}
+              disabled={saving}
+              className="min-h-[2.75rem]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!editName.trim() || saving}
+              isLoading={saving}
+              className="min-h-[2.75rem]"
+            >
+              Save
+            </Button>
+          </div>
+        </form>
+      </Dialog>
 
       <Dialog
         open={createOpen}

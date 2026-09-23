@@ -5,6 +5,7 @@ import {
     getDoc, 
     getDocs, 
     runTransaction, 
+    updateDoc,
     query, 
     where 
   } from 'firebase/firestore';
@@ -134,6 +135,48 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
       });
     }
   
+    /**
+     * Rename a group, or change its description (admin only).
+     *
+     * A plain client write, not a Cloud Function: the production rules already
+     * let a group admin update the group document
+     * (`firestore.rules.prod`, `allow update: if isGroupAdmin(groupId) ||
+     * isGlobalAdmin()`). Those rules do not restrict *which* fields change, so
+     * restricting the payload to `name` and `description` is this method's own
+     * discipline -- an edit here can never touch `createdBy` or `createdAt`.
+     *
+     * The admin check is the same courtesy every admin method on these services
+     * makes; the rules are the real gate.
+     *
+     * @param groupId ID of the group
+     * @param updates The new name, which may not be blank, and description,
+     *   which may be empty to clear it
+     */
+    public async updateGroup(
+      groupId: string,
+      updates: { name: string; description?: string }
+    ): Promise<void> {
+      const userId = this.getCurrentUser()?.uid;
+      if (!userId) {
+        throw new Error('Not authenticated');
+      }
+
+      const name = updates.name.trim();
+      if (!name) {
+        throw new Error('A group needs a name');
+      }
+
+      const isAdmin = await this.userService.isUserAdmin(groupId, userId);
+      if (!isAdmin) {
+        throw new Error('Only group admins can edit the group');
+      }
+
+      await updateDoc(doc(this.db, 'groups', groupId), {
+        name,
+        description: (updates.description ?? '').trim()
+      });
+    }
+
     /**
      * Remove a user from a specific group (admin only)
      * @param groupId ID of the group
