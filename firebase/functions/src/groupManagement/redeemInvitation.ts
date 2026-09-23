@@ -1,6 +1,11 @@
 // functions/src/groupManagement/redeemInvitation.ts
 import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+// The modular import, not `admin.firestore.FieldValue`: inside the functions
+// emulator the namespaced `admin.firestore` is a wrapped stand-in without
+// `FieldValue`, so an existing account joining a second group failed there
+// with "Cannot read properties of undefined (reading 'arrayUnion')".
+import {FieldValue} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {registrationTokenProblem} from "../shared/registrationToken";
 
@@ -129,7 +134,7 @@ export const redeemInvitation = functions.onCall(
 
         if (userDoc.exists) {
           transaction.update(userRef, {
-            groups: admin.firestore.FieldValue.arrayUnion(groupId),
+            groups: FieldValue.arrayUnion(groupId),
             activeGroupId: groupId,
           });
         } else {

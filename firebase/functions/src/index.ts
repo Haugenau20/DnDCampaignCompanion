@@ -12,3 +12,4 @@ export {
   redeemInvitation,
   setMemberRole,
 } from "./groupManagement";
+export { gateAccountCreation, reserveSignUp } from "./signUp";
