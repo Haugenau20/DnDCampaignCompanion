@@ -179,6 +179,30 @@ export function useGroups() {
     }
   }, [activeGroupId, setError]);
 
+  /**
+   * Make a member of the active group an admin, or an admin a member (T034).
+   *
+   * The server refuses a change that would leave the group with no admin
+   * (T035), and its message says so; callers show it as it comes.
+   */
+  const setMemberRole = useCallback(async (
+    userId: string,
+    role: 'admin' | 'member'
+  ): Promise<void> => {
+    try {
+      setError(null);
+
+      if (!activeGroupId) {
+        throw new Error('No active group selected');
+      }
+
+      await firebaseServices.group.setMemberRole(activeGroupId, userId, role);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to change the role');
+      throw err;
+    }
+  }, [activeGroupId, setError]);
+
   // Create an improved loading state that sets to false once we have all required data
   const loading = !fullyLoaded;
 
@@ -197,6 +221,7 @@ export function useGroups() {
     getAllUsers,
     removeUser,
     deleteUser,
+    setMemberRole,
     isAdmin,
     loading
   };

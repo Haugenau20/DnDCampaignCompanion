@@ -91,6 +91,50 @@
 //    frontend. Deploy functions, then the frontend, then these rules.
 //
 // ---------------------------------------------------------------------------
+// REVISION 2026-09-23 -- READ BEFORE DEPLOYING
+// ---------------------------------------------------------------------------
+// The console was re-read on 2026-09-23 before this revision and matched the
+// previous revision of this file rule for rule, so the 2026-07-29 revision
+// above IS live. Every change below is pinned by
+// `functions/test/rules/firestore-rules-prod.test.ts`, which loads this file
+// into the emulator. Each ALLOWED below was measured against the previous
+// revision first.
+//
+// Membership and administration are now written only by Cloud Functions.
+// Every hole closed here had the same shape: the rules trusted a field that
+// the caller could write about themselves.
+//
+// 1. SECURITY FIX (T052) -- anyone could join any group without an invitation.
+//    `isGroupMember` trusts `users/{uid}.groups`, and a user could write that
+//    array freely. Measured: a stranger listed a group's id in their own
+//    profile and could then read and write its campaigns. Group ids leak
+//    through every invitation link. Clients may no longer write `groups` at
+//    all; joining goes through the `redeemInvitation` Cloud Function, which is
+//    also the first place a token's `used` and `expiresAt` are enforced.
+//
+// 2. SECURITY FIX -- any new account could make itself a GLOBAL admin.
+//    `users/{userId}` create checked only the uid, so a fresh account could
+//    write `isAdmin: true` into its own profile and then pass `isGlobalAdmin`.
+//    Measured: allowed. Clients may no longer create that document at all;
+//    `redeemInvitation` and `createGroup` create it with the Admin SDK.
+//
+// 3. Clients may no longer create their own group profile, reserve a username
+//    in a group they are not in, or mark a token used. All three were the
+//    client half of the old join; the function does them now.
+//
+// 4. Roles change only through the `setMemberRole` Cloud Function (T034),
+//    which refuses to leave a group without an admin (T035). A rule cannot
+//    count admins, so the group-admin update below may no longer touch `role`.
+//
+// 5. BUG FIX -- a member could not rename themselves. `changeGroupUsername`
+//    deletes the old reservation, and only a global admin could delete one.
+//    Measured: denied for a plain member. An owner may now delete their own.
+//
+// ⚠️ DEPLOY ORDER MATTERS, as in 2026-07-29: functions first, then the
+// frontend, then these rules. Rules first would break joining for anyone on
+// the frontend currently deployed, which still writes membership itself.
+//
+// ---------------------------------------------------------------------------
 // KEEPING IT HONEST
 // When you change the production rules in the console, update this file in the
 // same PR as whatever motivated the change. If you are relying on these rules
@@ -140,12 +184,16 @@ service cloud.firestore {
       allow read: if isSignedIn() && request.auth.uid != userId &&
                    !("email" in resource.data);
 
-      // Users can create their own profile during registration
-      allow create: if isSignedIn() && request.auth.uid == userId;
+      // No client create. This used to be `request.auth.uid == userId` and
+      // nothing more, so a fresh account could create its profile with
+      // `isAdmin: true` (2026-09-23, change 2). The profile is created by the
+      // `redeemInvitation` and `createGroup` Cloud Functions.
 
-      // Users can update their own profile but not the isAdmin field
+      // Users can update their own profile, but neither `isAdmin` nor
+      // `groups`. `groups` is what `isGroupMember` reads, so writing it was
+      // joining any group without an invitation (T052).
       allow update: if isSignedIn() && request.auth.uid == userId &&
-                     !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin']);
+                     !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'groups']);
 
       // Only global admin can assign admin privileges, but cannot modify emails
       allow update: if isGlobalAdmin() &&
@@ -174,22 +222,11 @@ service cloud.firestore {
         // Group members can see other group members' profiles
         allow read: if isGroupMember(groupId) || isGlobalAdmin();
 
-        // Users can create their own group profile, but ONLY as a member.
-        //
-        // This is the line that closes #1409 completely. It used to permit any
-        // role, which meant a member could delete their own profile ("leave
-        // group") and create it again with role: "admin" -- a two-step
-        // privilege escalation that the field-level update guard below could
-        // not reach.
-        //
-        // It is only possible because group creation now runs server-side, in
-        // the `createGroup` Cloud Function: the Admin SDK bypasses rules, so the
-        // group creator still gets role: "admin" without any client ever being
-        // permitted to write that value. The two remaining client-side profile
-        // creations -- GroupService.joinGroup and InvitationService's acceptance
-        // path -- both write role: "member" and are unaffected.
-        allow create: if isSignedIn() && request.auth.uid == userId &&
-                       request.resource.data.role == "member";
+        // No client create. Every group profile is written by a Cloud
+        // Function: `createGroup` for the creator (as admin), and
+        // `redeemInvitation` for everyone who joins (as member). The previous
+        // revision allowed a self-create as "member" for the client-side join,
+        // which no longer exists (2026-09-23, change 3).
 
         // Users can update their own group profile, but MUST NOT be able to
         // change their own role -- that was a one-write privilege escalation to
@@ -198,8 +235,11 @@ service cloud.firestore {
         allow update: if isSignedIn() && request.auth.uid == userId &&
                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
 
-        // Group admins and global admin can update user profiles, role included
-        allow update: if isGroupAdmin(groupId) || isGlobalAdmin();
+        // Group admins and global admin can update user profiles, except the
+        // role: that goes through the `setMemberRole` Cloud Function, which
+        // refuses to leave a group with no admin (T034, T035).
+        allow update: if (isGroupAdmin(groupId) || isGlobalAdmin()) &&
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
 
         // Regular users can delete their own profiles (leave group)
         allow delete: if isSignedIn() && request.auth.uid == userId && !isGroupAdmin(groupId);
@@ -228,13 +268,21 @@ service cloud.firestore {
         // Allow username availability check for all (needed for registration)
         allow get: if true;
 
-        // Allow signed-in users to create their own username
-        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        // A member may reserve a name for themselves in their own group -- a
+        // rename. Joining reserves the first one server-side, so a non-member
+        // no longer needs to, and could previously squat names in any group.
+        allow create: if isGroupMember(groupId) &&
+                       request.resource.data.userId == request.auth.uid;
 
         // Group members and global admin can list all usernames
         allow list: if isGroupMember(groupId) || isGlobalAdmin();
 
-        // Only global admin can update/delete usernames
+        // A member may release their own reservation -- the other half of a
+        // rename. Before 2026-09-23 only the global admin could, so every
+        // rename by anyone else was denied (change 5).
+        allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+        // Only global admin can update, or delete someone else's, username
         allow update, delete: if isGlobalAdmin();
       }
 
@@ -246,10 +294,9 @@ service cloud.firestore {
         // Only group admins or global admin can list or create tokens
         allow list, create: if isGroupAdmin(groupId) || isGlobalAdmin();
 
-        // Allow a signed-in user to mark their own token as used
-        allow update: if isSignedIn() &&
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used', 'usedAt', 'usedBy']) &&
-                      request.resource.data.usedBy == request.auth.uid;
+        // No client may mark a token used any more: `redeemInvitation` spends
+        // it in the same transaction that grants membership. The rule this
+        // replaces never required the token to be unused or unexpired.
 
         // Group admins and global admin can also update tokens
         allow update: if isGroupAdmin(groupId) || isGlobalAdmin();

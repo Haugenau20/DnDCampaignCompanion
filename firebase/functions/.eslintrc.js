@@ -30,4 +30,16 @@ module.exports = {
     "import/no-unresolved": 0,
     "indent": ["error", 2],
   },
+  overrides: [
+    {
+      // Test tables read better on one line each, and a test's name is its
+      // documentation.
+      files: ["test/**/*.ts"],
+      rules: {
+        "max-len": "off",
+        "valid-jsdoc": "off",
+        "require-jsdoc": "off",
+      },
+    },
+  ],
 };

@@ -8,7 +8,7 @@ import {
     updateDoc,
     getCountFromServer
   } from 'firebase/firestore';
-  import { getFunctions, httpsCallable } from 'firebase/functions';
+  import { httpsCallable } from 'firebase/functions';
   import BaseFirebaseService from '../core/BaseFirebaseService';
   import ServiceRegistry from '../core/ServiceRegistry';
   import type UserService from '../user/UserService';
@@ -231,9 +231,11 @@ import {
       }
 
       try {
-        // Call the Cloud Function instead of attempting to modify data directly
-        const functions = getFunctions();
-        const deleteCampaignFn = httpsCallable(functions, 'deleteCampaign');
+        // Call the Cloud Function instead of attempting to modify data directly.
+        // `this.functions`, not a bare getFunctions(): that resolves the
+        // default `us-central1` region, where nothing in this project is
+        // deployed, and bypasses the emulator in development.
+        const deleteCampaignFn = httpsCallable(this.functions, 'deleteCampaign');
 
         await deleteCampaignFn({ groupId, campaignId });
       } catch (err) {

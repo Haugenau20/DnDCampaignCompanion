@@ -4,16 +4,13 @@ import {
     doc, 
     getDoc, 
     getDocs, 
-    runTransaction, 
-    updateDoc,
-    query, 
-    where 
+    updateDoc
   } from 'firebase/firestore';
 import BaseFirebaseService from '../core/BaseFirebaseService';
 import ServiceRegistry from '../core/ServiceRegistry';
 import type UserService from '../user/UserService';
 import { Group } from '../../../types/user';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { httpsCallable } from 'firebase/functions';
 
   /**
    * GroupService manages group operations
@@ -56,9 +53,11 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
       }
 
       try {
-        // Call the Cloud Function instead of attempting to modify data directly
-        const functions = getFunctions();
-        const createGroupFn = httpsCallable(functions, 'createGroup');
+        // Call the Cloud Function instead of attempting to modify data directly.
+        // `this.functions`, not a bare getFunctions(): that resolves the
+        // default `us-central1` region, where nothing in this project is
+        // deployed, and bypasses the emulator in development.
+        const createGroupFn = httpsCallable(this.functions, 'createGroup');
 
         const result = await createGroupFn({ name, description });
         const { groupId } = result.data as { success: boolean; groupId: string };
@@ -204,76 +203,28 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
     }
   
     /**
-     * Join an existing account to a new group using an invitation token
-     * @param groupId ID of the group to join
-     * @param username Username to use in the new group
+     * Make a member an admin, or an admin a member (admin only, T034).
+     *
+     * Runs in the `setMemberRole` Cloud Function. The rules refuse any client
+     * write to `role`, because the one check that matters here -- that the
+     * change does not leave the group with no admin at all (T035) -- needs
+     * every member's role, and a rule cannot count.
+     *
+     * @param groupId ID of the group
+     * @param userId The member whose role changes
+     * @param role The role they should have
      */
-    public async joinGroup(groupId: string, username: string): Promise<void> {
-      const user = this.getCurrentUser();
-      if (!user) {
-        throw new Error('You must be signed in to join a group');
+    public async setMemberRole(
+      groupId: string,
+      userId: string,
+      role: 'admin' | 'member'
+    ): Promise<void> {
+      if (!this.getCurrentUser()) {
+        throw new Error('Not authenticated');
       }
-      
-      // Check if user is already a member of this group
-      const userDoc = await getDoc(doc(this.db, 'users', user.uid));
-      if (!userDoc.exists()) {
-        throw new Error('User profile not found');
-      }
-      
-      const userData = userDoc.data();
-      if (userData.groups && userData.groups.includes(groupId)) {
-        throw new Error('You are already a member of this group');
-      }
-      
-      // Validate the username is available in this group
-      const isUsernameAvailable = await this.userService.isUsernameAvailableInGroup(groupId, username);
-      if (!isUsernameAvailable) {
-        throw new Error('Username is already taken in this group');
-      }
-      
-      // Use a transaction to update all necessary documents
-      await runTransaction(this.db, async (transaction) => {
-        const now = new Date();
-        
-        // Update global user profile to add the new group
-        const globalUserDocRef = doc(this.db, 'users', user.uid);
-        const userSnapshot = await transaction.get(globalUserDocRef);
-        if (!userSnapshot.exists()) {
-          throw new Error('User profile not found');
-        }
-        
-        const userData = userSnapshot.data();
-        const updatedGroups = [...(userData.groups || []), groupId];
-        
-        transaction.update(globalUserDocRef, {
-          groups: updatedGroups,
-          activeGroupId: groupId, // Set as the active group
-        });
-        
-        // Create group-specific user profile
-        const groupUserDocRef = doc(this.db, 'groups', groupId, 'users', user.uid);
-        transaction.set(groupUserDocRef, {
-          userId: user.uid,
-          username: username,
-          role: 'member',
-          joinedAt: now,
-          preferences: {
-            theme: 'default'
-          }
-        });
-        
-        // Create username reservation in group
-        const usernameLower = username.toLowerCase();
-        const usernameDocRef = doc(this.db, 'groups', groupId, 'usernames', usernameLower);
-        transaction.set(usernameDocRef, {
-          userId: user.uid,
-          originalUsername: username,
-          createdAt: now
-        });
-      });
-      
-      // Set the active group context
-      this.setActiveGroup(groupId);
+
+      const setMemberRoleFn = httpsCallable(this.functions, 'setMemberRole');
+      await setMemberRoleFn({ groupId, userId, role });
     }
   }
   

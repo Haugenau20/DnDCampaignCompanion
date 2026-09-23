@@ -4,22 +4,17 @@ import {
     doc, 
     getDoc, 
     getDocs, 
-    query, 
-    where, 
-    limit, 
     setDoc, 
     updateDoc, 
-    deleteDoc, 
-    collectionGroup,
-    runTransaction
+    deleteDoc
   } from 'firebase/firestore';
   import { 
     createUserWithEmailAndPassword 
   } from 'firebase/auth';
+  import { httpsCallable } from 'firebase/functions';
   import BaseFirebaseService from '../core/BaseFirebaseService';
   import ServiceRegistry from '../core/ServiceRegistry';
   import type UserService from '../user/UserService';
-  import GroupService from './GroupService';
   import {
     REGISTRATION_TOKEN_LIFETIME_MS,
     isRegistrationTokenRedeemable
@@ -31,13 +26,10 @@ import {
   class InvitationService extends BaseFirebaseService {
     private static instance: InvitationService;
     private userService: UserService;
-    private groupService: GroupService;
   
     private constructor() {
       super();
-      const registry = ServiceRegistry.getInstance();
-      this.userService = registry.get('userService');
-      this.groupService = registry.get('groupService');
+      this.userService = ServiceRegistry.getInstance().get('userService');
     }
   
     /**
@@ -219,6 +211,25 @@ import {
     }
 
     /**
+     * Spend an invitation token on the signed-in user's membership.
+     *
+     * Runs in the `redeemInvitation` Cloud Function (T052), never as client
+     * writes: membership is `users/{uid}.groups`, which the Firestore rules
+     * trust, so a client allowed to write it could join any group whose id it
+     * knew, token or not. The function checks the token -- exists, unused,
+     * unexpired -- and writes the membership, the group profile, the username
+     * reservation and the spent token in one transaction.
+     *
+     * Uses `this.functions`, the instance bound to `europe-west1` and to the
+     * emulator in development, not a bare `getFunctions()`.
+     */
+    private async redeemInvitation(groupId: string, token: string, username: string): Promise<void> {
+      const redeem = httpsCallable(this.functions, 'redeemInvitation');
+      await redeem({ groupId, token, username });
+      this.setActiveGroup(groupId);
+    }
+
+    /**
      * Join an existing account to a new group using an invitation token
      * @param token Registration token for the group
      * @param username Username to use in the new group
@@ -229,22 +240,16 @@ import {
         throw new Error('You must be signed in to join a group');
       }
       
-      // Validate the token and get the group ID
+      // Checked here as well as on the server so a spent link fails with a
+      // clear message before anything is sent. The server's check is the one
+      // that counts.
       const { isValid, groupId } = await this.validateRegistrationToken(token);
       
       if (!isValid || !groupId) {
         throw new Error('Invalid or expired invitation token');
       }
       
-      // Join the group
-      await this.groupService.joinGroup(groupId, username);
-      
-      // Mark token as used
-      await updateDoc(doc(this.db, 'groups', groupId, 'registrationTokens', token), {
-        used: true,
-        usedAt: new Date(),
-        usedBy: user.uid
-      });
+      await this.redeemInvitation(groupId, token, username);
     }
   
     /**
@@ -289,69 +294,22 @@ import {
         throw new Error('Username is already taken in this group');
       }
 
+      // The Auth account has to exist before the function can be called as
+      // it. Everything else -- including the global profile, which a client
+      // may no longer create -- is written by `redeemInvitation`.
+      const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
+      const user = userCredential.user;
+
       try {
-        // Create Firebase Auth user first (outside the transaction)
-        const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
-        const user = userCredential.user;
-        
-        // Use a transaction for Firestore operations
-        await runTransaction(this.db, async (transaction) => {
-          const now = new Date();
-          
-          // Create global user profile
-          const globalUserDocRef = doc(this.db, 'users', user.uid);
-          transaction.set(globalUserDocRef, {
-            id: user.uid,
-            email: email,
-            groups: [targetGroupId],
-            activeGroupId: targetGroupId,
-            lastLogin: now,
-            createdAt: now
-          });
-          
-          // Create group-specific user profile
-          const groupUserDocRef = doc(this.db, 'groups', targetGroupId, 'users', user.uid);
-          transaction.set(groupUserDocRef, {
-            userId: user.uid,
-            username: username,
-            role: 'member',
-            joinedAt: now,
-            preferences: {
-              theme: 'light'
-            }
-          });
-          
-          // Create username reservation in group
-          const usernameLower = username.toLowerCase();
-          const usernameDocRef = doc(this.db, 'groups', targetGroupId, 'usernames', usernameLower);
-          transaction.set(usernameDocRef, {
-            userId: user.uid,
-            originalUsername: username,
-            createdAt: now
-          });
-          
-          // Mark token as used
-          const tokenDocRef = doc(this.db, 'groups', targetGroupId, 'registrationTokens', token);
-          transaction.update(tokenDocRef, {
-            used: true,
-            usedAt: now,
-            usedBy: user.uid
-          });
-        });
-        
-        // Set the active group context
-        this.setActiveGroup(targetGroupId);
-        
+        await this.redeemInvitation(targetGroupId, token, username);
         return user;
       } catch (error) {
-        // If transaction fails, try to delete the auth user to avoid orphaned accounts
+        // An account that joined nothing can never sign in to anything, so it
+        // is removed rather than left orphaned.
         try {
-          const currentUser = this.auth.currentUser;
-          if (currentUser) {
-            await currentUser.delete();
-          }
+          await user.delete();
         } catch (deleteError) {
-          console.error("Error cleaning up auth user after failed transaction:", deleteError);
+          console.error("Error cleaning up auth user after failed sign-up:", deleteError);
         }
         
         throw error;

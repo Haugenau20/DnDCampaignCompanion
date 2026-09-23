@@ -38,6 +38,7 @@ const TOKENS: RegistrationToken[] = [
 ];
 
 const deleteUser = jest.fn().mockResolvedValue(undefined);
+const setMemberRole = jest.fn().mockResolvedValue(undefined);
 const generateRegistrationToken = jest.fn().mockResolvedValue("fresh-token");
 const deleteRegistrationToken = jest.fn().mockResolvedValue(undefined);
 const updateRegistrationTokenNotes = jest.fn().mockResolvedValue(undefined);
@@ -50,6 +51,7 @@ function setup({ members = MEMBERS, tokens = TOKENS, membersLoading = false } = 
     activeGroup: { id: "g1", name: "The Fellowship" },
     activeGroupId: "g1",
     deleteUser,
+    setMemberRole,
   });
   useInvitations.mockReturnValue({
     generateRegistrationToken,
@@ -149,15 +151,63 @@ describe("AdminPeoplePage", () => {
       expect(within(membersList()).getByText("You")).toBeInTheDocument();
     });
 
-    // #1409: role escalation is only partially fixed server-side, and the
-    // clean fix is a code change. A promote control would be a button that
-    // either fails or, worse, succeeds.
-    test("offers no way to change anyone's role", async () => {
-      setup();
-      await settle();
-      const region = screen.getByRole("region", { name: "Members" });
-      expect(within(region).queryByRole("button", { name: /promote|make admin|change role/i }))
-        .not.toBeInTheDocument();
+    // T034. Roles change through the `setMemberRole` Cloud Function, which
+    // refuses to leave the group without an admin (T035); the rules refuse a
+    // client write to `role` outright.
+    describe("roles", () => {
+      const rowOf = (name: string) =>
+        within(membersList())
+          .getAllByRole("listitem")
+          .find((row) => row.textContent?.includes(name))!;
+
+      test("offers your own row no role control", async () => {
+        setup();
+        await settle();
+        expect(within(rowOf("Legolas")).queryByRole("button", { name: /make/i }))
+          .not.toBeInTheDocument();
+      });
+
+      test("promotes a member only after a confirmation that says what it grants", async () => {
+        setup();
+        await settle();
+        await userEvent.click(within(rowOf("Aragorn")).getByRole("button", { name: "Make admin" }));
+        const dialog = await screen.findByRole("dialog");
+        expect(dialog).toHaveTextContent(/Make Aragorn an admin\?/);
+        expect(dialog).toHaveTextContent(/including yours/);
+        expect(setMemberRole).not.toHaveBeenCalled();
+
+        await userEvent.click(within(dialog).getByRole("button", { name: "Make admin" }));
+        await settle();
+        expect(setMemberRole).toHaveBeenCalledWith("u3", "admin");
+      });
+
+      test("cancelling a promotion changes nothing", async () => {
+        setup();
+        await settle();
+        await userEvent.click(within(rowOf("Aragorn")).getByRole("button", { name: "Make admin" }));
+        const dialog = await screen.findByRole("dialog");
+        await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+        expect(setMemberRole).not.toHaveBeenCalled();
+      });
+
+      test("makes another admin a member at once, and offers no removal until then", async () => {
+        setup();
+        await settle();
+        const row = rowOf("DungeonMaster");
+        expect(within(row).queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+        await userEvent.click(within(row).getByRole("button", { name: "Make member" }));
+        await settle();
+        expect(setMemberRole).toHaveBeenCalledWith("u2", "member");
+      });
+
+      test("shows the server's refusal", async () => {
+        setMemberRole.mockRejectedValueOnce(new Error("You are this group's only admin."));
+        setup();
+        await settle();
+        await userEvent.click(within(rowOf("DungeonMaster")).getByRole("button", { name: "Make member" }));
+        await settle();
+        expect(await screen.findByRole("alert")).toHaveTextContent("only admin");
+      });
     });
 
     test("states the role in words, with no badge or status colour", async () => {

@@ -3,8 +3,10 @@
 /**
  * Tests for InvitationService
  *
- * All Firebase SDK calls are mocked.  UserService and GroupService
- * are also mocked because InvitationService depends on both.
+ * All Firebase SDK calls are mocked, and so is UserService, which
+ * InvitationService depends on. Joining a group is a Cloud Function call
+ * (`redeemInvitation`, T052), so these tests pin what is sent to it; what it
+ * does with that is pinned by `firebase/functions/test/redeemInvitation.test.ts`.
  */
 
 // ─── Shared mock fns ─────────────────────────────────────────────────────────
@@ -14,7 +16,7 @@ const mockSetDoc = jest.fn();
 const mockUpdateDoc = jest.fn();
 const mockDeleteDoc = jest.fn();
 const mockGetDocs = jest.fn();
-const mockRunTransaction = jest.fn();
+const mockCallable = jest.fn();
 const mockCreateUserWithEmailAndPassword = jest.fn();
 const mockCollection = jest.fn((_db: any, ...segs: string[]) => ({ path: segs.join('/') }));
 const mockDoc = jest.fn((_db_or_ref: any, ...segs: string[]) => ({
@@ -31,12 +33,6 @@ const mockUserServiceInstance = {
   getGroupUserProfile: jest.fn(),
 };
 
-// GroupService mock
-const mockJoinGroup = jest.fn();
-const mockGroupServiceInstance = {
-  joinGroup: mockJoinGroup,
-};
-
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
   connectFirestoreEmulator: jest.fn(),
@@ -47,11 +43,6 @@ jest.mock('firebase/firestore', () => ({
   setDoc: function() { return (mockSetDoc as Function).apply(null, arguments); },
   updateDoc: function() { return (mockUpdateDoc as Function).apply(null, arguments); },
   deleteDoc: function() { return (mockDeleteDoc as Function).apply(null, arguments); },
-  runTransaction: function() { return (mockRunTransaction as Function).apply(null, arguments); },
-  query: jest.fn(),
-  where: jest.fn(),
-  limit: jest.fn(),
-  collectionGroup: jest.fn(),
 }));
 
 jest.mock('firebase/auth', () => ({
@@ -65,6 +56,7 @@ jest.mock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
 jest.mock('firebase/functions', () => ({
   getFunctions: jest.fn(() => ({})),
   connectFunctionsEmulator: jest.fn(),
+  httpsCallable: (_functions: unknown, name: string) => (data: unknown) => mockCallable(name, data),
 }));
 
 jest.mock('@/core/services/firebase/config/firebaseConfig', () => ({
@@ -77,7 +69,6 @@ jest.mock('@/core/services/firebase/config/firebaseConfig', () => ({
 jest.mock('@/core/services/firebase/core/ServiceRegistry', () => {
   const registry = new Map<string, any>([
     ['userService', mockUserServiceInstance],
-    ['groupService', mockGroupServiceInstance],
   ]);
   return {
     __esModule: true,
@@ -97,10 +88,6 @@ jest.mock('@/core/services/firebase/core/ServiceRegistry', () => {
 jest.mock('@/core/services/firebase/user/UserService', () => ({
   __esModule: true,
   default: { getInstance: jest.fn(() => mockUserServiceInstance) },
-}));
-jest.mock('../GroupService', () => ({
-  __esModule: true,
-  default: { getInstance: jest.fn(() => mockGroupServiceInstance) },
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -124,7 +111,6 @@ describe('InvitationService', () => {
 
     const registry = new Map<string, any>([
       ['userService', mockUserServiceInstance],
-      ['groupService', mockGroupServiceInstance],
     ]);
     jest.doMock('@/core/services/firebase/core/ServiceRegistry', () => ({
       __esModule: true,
@@ -149,8 +135,6 @@ describe('InvitationService', () => {
       setDoc: function() { return (mockSetDoc as Function).apply(null, arguments); },
       updateDoc: function() { return (mockUpdateDoc as Function).apply(null, arguments); },
       deleteDoc: function() { return (mockDeleteDoc as Function).apply(null, arguments); },
-      runTransaction: function() { return (mockRunTransaction as Function).apply(null, arguments); },
-      query: jest.fn(), where: jest.fn(), limit: jest.fn(), collectionGroup: jest.fn(),
     }));
     jest.doMock('firebase/auth', () => ({
       getAuth: jest.fn(() => ({ currentUser: { uid: ADMIN_UID, email: 'admin@test.com' } })),
@@ -162,6 +146,7 @@ describe('InvitationService', () => {
     jest.doMock('firebase/functions', () => ({
       getFunctions: jest.fn(() => ({})),
       connectFunctionsEmulator: jest.fn(),
+      httpsCallable: (_functions: unknown, name: string) => (data: unknown) => mockCallable(name, data),
     }));
     jest.doMock('@/core/services/firebase/config/firebaseConfig', () => ({
       firebaseConfig: { apiKey: 'test', projectId: 'test' },
@@ -171,8 +156,8 @@ describe('InvitationService', () => {
     }));
 
     [mockGetDoc, mockSetDoc, mockUpdateDoc, mockDeleteDoc, mockGetDocs,
-     mockRunTransaction, mockCreateUserWithEmailAndPassword,
-     mockIsUserAdmin, mockIsUsernameAvailableInGroup, mockJoinGroup
+     mockCallable, mockCreateUserWithEmailAndPassword,
+     mockIsUserAdmin, mockIsUsernameAvailableInGroup
     ].forEach(m => m.mockReset());
 
     InvitationService = require('../InvitationService').default;
@@ -241,7 +226,6 @@ describe('InvitationService', () => {
         setDoc: function() { return (mockSetDoc as Function).apply(null, arguments); },
         updateDoc: function() { return (mockUpdateDoc as Function).apply(null, arguments); },
         deleteDoc: function() { return (mockDeleteDoc as Function).apply(null, arguments); },
-        runTransaction: function() { return (mockRunTransaction as Function).apply(null, arguments); },
         query: jest.fn(), where: jest.fn(), limit: jest.fn(), collectionGroup: jest.fn(),
       }));
       jest.doMock('firebase/app', () => ({ initializeApp: jest.fn(() => ({})) }));
@@ -257,7 +241,6 @@ describe('InvitationService', () => {
       }));
       const reg = new Map<string, any>([
         ['userService', mockUserServiceInstance],
-        ['groupService', mockGroupServiceInstance],
       ]);
       jest.doMock('@/core/services/firebase/core/ServiceRegistry', () => ({
         __esModule: true,
@@ -505,22 +488,39 @@ describe('InvitationService', () => {
       );
     });
 
-    test('should call groupService.joinGroup and mark token used on success', async () => {
+    test('should redeem the token through the Cloud Function, writing nothing itself (T052)', async () => {
       Object.defineProperty(window, 'location', {
         writable: true,
         value: { search: '?groupId=g1' },
       });
       // validateRegistrationToken → valid
       mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { used: false }));
-      mockJoinGroup.mockResolvedValueOnce(undefined);
-      mockUpdateDoc.mockResolvedValueOnce(undefined);
+      mockCallable.mockResolvedValueOnce({ data: { success: true, groupId: 'g1' } });
 
       const svc = InvitationService.getInstance();
       await svc.joinGroupWithToken('valid-token', 'NewUser');
-      expect(mockJoinGroup).toHaveBeenCalledWith('g1', 'NewUser');
-      expect(mockUpdateDoc).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ used: true, usedBy: ADMIN_UID })
+      expect(mockCallable).toHaveBeenCalledWith('redeemInvitation', {
+        groupId: 'g1',
+        token: 'valid-token',
+        username: 'NewUser',
+      });
+      // Membership and the spent token are the function's to write; a client
+      // write to either is exactly what the rules now refuse.
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
+      expect(mockSetDoc).not.toHaveBeenCalled();
+    });
+
+    test("should surface the function's refusal", async () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { search: '?groupId=g1' },
+      });
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { used: false }));
+      mockCallable.mockRejectedValueOnce(new Error('This invitation has already been used. Ask for a new link.'));
+
+      const svc = InvitationService.getInstance();
+      await expect(svc.joinGroupWithToken('valid-token', 'NewUser')).rejects.toThrow(
+        'This invitation has already been used'
       );
     });
   });
@@ -538,8 +538,7 @@ describe('InvitationService', () => {
       await expect(svc.joinGroupWithToken('expired-token', 'User')).rejects.toThrow(
         'Invalid or expired invitation token'
       );
-      expect(mockJoinGroup).not.toHaveBeenCalled();
-      expect(mockUpdateDoc).not.toHaveBeenCalled();
+      expect(mockCallable).not.toHaveBeenCalled();
     });
   });
 
@@ -572,7 +571,7 @@ describe('InvitationService', () => {
       ).rejects.toThrow('Username is already taken in this group');
     });
 
-    test('should create Firebase Auth user and run transaction on success', async () => {
+    test('should create the Auth user, then redeem the token as that user', async () => {
       Object.defineProperty(window, 'location', {
         writable: true,
         value: { search: '?groupId=g1' },
@@ -582,15 +581,23 @@ describe('InvitationService', () => {
       mockIsUsernameAvailableInGroup.mockResolvedValueOnce(true);
       const fakeUser = { uid: 'new-uid', delete: jest.fn() };
       mockCreateUserWithEmailAndPassword.mockResolvedValueOnce({ user: fakeUser });
-      mockRunTransaction.mockResolvedValueOnce(undefined);
+      mockCallable.mockResolvedValueOnce({ data: { success: true, groupId: 'g1' } });
 
       const svc = InvitationService.getInstance();
       const user = await svc.signUpWithToken('valid-token', 'a@b.com', 'pass', 'NewUser');
       expect(user).toBe(fakeUser);
-      expect(mockRunTransaction).toHaveBeenCalledTimes(1);
+      expect(mockCallable).toHaveBeenCalledWith('redeemInvitation', {
+        groupId: 'g1',
+        token: 'valid-token',
+        username: 'NewUser',
+      });
+      // The global profile is created by the function; a client may no
+      // longer create it (it could otherwise carry `isAdmin: true`).
+      expect(mockSetDoc).not.toHaveBeenCalled();
+      expect(fakeUser.delete).not.toHaveBeenCalled();
     });
 
-    test('should attempt to delete auth user when transaction fails', async () => {
+    test('should delete the new Auth user when redemption fails', async () => {
       Object.defineProperty(window, 'location', {
         writable: true,
         value: { search: '?groupId=g1' },
@@ -599,16 +606,13 @@ describe('InvitationService', () => {
       mockIsUsernameAvailableInGroup.mockResolvedValueOnce(true);
       const fakeUser = { uid: 'new-uid', delete: jest.fn().mockResolvedValueOnce(undefined) };
       mockCreateUserWithEmailAndPassword.mockResolvedValueOnce({ user: fakeUser });
-      mockRunTransaction.mockRejectedValueOnce(new Error('transaction failed'));
-
-      // Provide currentUser in auth for cleanup
-      const { getAuth } = require('firebase/auth');
-      getAuth.mockReturnValueOnce({ currentUser: fakeUser });
+      mockCallable.mockRejectedValueOnce(new Error('redemption failed'));
 
       const svc = InvitationService.getInstance();
       await expect(
         svc.signUpWithToken('valid-token', 'a@b.com', 'pass', 'NewUser')
-      ).rejects.toThrow('transaction failed');
+      ).rejects.toThrow('redemption failed');
+      expect(fakeUser.delete).toHaveBeenCalledTimes(1);
     });
 
     test('should refuse an expired token on the provided-groupId path, before creating any account', async () => {
@@ -643,11 +647,15 @@ describe('InvitationService', () => {
       mockIsUsernameAvailableInGroup.mockResolvedValueOnce(true);
       const fakeUser = { uid: 'uid-222', delete: jest.fn() };
       mockCreateUserWithEmailAndPassword.mockResolvedValueOnce({ user: fakeUser });
-      mockRunTransaction.mockResolvedValueOnce(undefined);
+      mockCallable.mockResolvedValueOnce({ data: { success: true, groupId: 'provided-group' } });
 
       const svc = InvitationService.getInstance();
       const user = await svc.signUpWithToken('token-xyz', 'a@b.com', 'pass', 'User', 'provided-group');
       expect(user).toBe(fakeUser);
+      expect(mockCallable).toHaveBeenCalledWith('redeemInvitation', expect.objectContaining({
+        groupId: 'provided-group',
+        token: 'token-xyz',
+      }));
     });
   });
 });

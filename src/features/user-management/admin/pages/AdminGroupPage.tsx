@@ -1,5 +1,6 @@
 // src/features/user-management/admin/pages/AdminGroupPage.tsx
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
 import Input from 'core/components/Input';
@@ -119,21 +120,21 @@ const AdminGroupPage: React.FC = () => {
   const createdByLabel = creator?.username ?? 'someone no longer in the group';
 
   /**
-   * Whether leaving would strip the group of its last admin.
+   * Whether leaving would strip the group of its last admin (T035).
    *
-   * Stated rather than enforced, deliberately. Enforcement means "promote
-   * someone first", and promoting is not possible until a `setMemberRole`
-   * Cloud Function exists (TODO 2A.1) -- so blocking here would leave the
-   * only admin with no way out at all. It would also be theatre: the profile
-   * page's own Leave control is a second door onto the same action, and a
-   * guard on one door is not a guard.
+   * The `removeUserFromGroup` Cloud Function refuses it, so this is not the
+   * guard -- the profile page's Leave control is a second door onto the same
+   * call, and the server answers both. What this page adds is the way out:
+   * promote someone on People, then leave. Offering a button the server will
+   * refuse, and explaining why only afterwards, would be the wrong order.
    *
-   * So the consequence is named where the decision is taken.
+   * Nobody else in the group is the exception: there is nobody to hand it to,
+   * and the function lets the last person out.
    */
   const adminCount = members.filter(
     (member) => member.role?.toLowerCase() === 'admin'
   ).length;
-  const isLastAdmin = adminCount === 1;
+  const mustPromoteFirst = adminCount === 1 && members.length > 1;
 
   return (
     <div className="max-w-3xl mx-auto px-4 pb-10 space-y-4">
@@ -254,20 +255,22 @@ const AdminGroupPage: React.FC = () => {
             you have written stays for the others.
           </Typography>
 
-          {isLastAdmin && (
-            <div
-              role="alert"
-              className="rounded-md border px-3 py-2 mb-4 feedback-banner feedback-banner-warning"
-            >
+          {mustPromoteFirst && (
+            <div className="rounded-md border px-3 py-2 mb-4 feedback-banner feedback-banner-warning">
               <Typography variant="body-sm">
-                You are the only admin. If you leave, nobody will be able to
-                invite members, manage campaigns or administer {group.name}.
+                You are the only admin. Before you leave,{' '}
+                <Link to="/admin/people" className="underline">
+                  make another member an admin
+                </Link>{' '}
+                so someone can still invite members and manage campaigns in{' '}
+                {group.name}.
               </Typography>
             </div>
           )}
           <Button
             variant="ghost"
             onClick={() => setLeaveOpen(true)}
+            disabled={mustPromoteFirst}
             className="delete-button min-h-[2.75rem]"
           >
             Leave {group.name}
