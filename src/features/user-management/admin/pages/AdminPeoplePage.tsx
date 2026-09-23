@@ -8,6 +8,7 @@ import MembersCard from '../components/MembersCard';
 import PendingInvitationsCard from '../components/PendingInvitationsCard';
 import InviteLinkDialog from '../components/InviteLinkDialog';
 import { buildInviteLink } from '../utils/invite-link';
+import { REGISTRATION_TOKEN_LIFETIME_MS } from 'core/utils/registration-token';
 import { useAdminOutlet } from './admin-outlet';
 import { memberId, type GroupMember, type RegistrationToken } from '../types';
 
@@ -44,6 +45,7 @@ const AdminPeoplePage: React.FC = () => {
     open: boolean;
     link: string;
     note?: string;
+    expiresAt?: RegistrationToken['expiresAt'];
   }>({ open: false, link: '' });
 
   const [pendingRemoval, setPendingRemoval] = useState<GroupMember | null>(null);
@@ -87,6 +89,9 @@ const AdminPeoplePage: React.FC = () => {
       setInviteDialog({
         open: true,
         link: buildInviteLink(window.location.origin, token, activeGroupId),
+        // The service stamps the same lifetime from its own clock a moment
+        // earlier; the sentence names a day, so the difference cannot show.
+        expiresAt: new Date(Date.now() + REGISTRATION_TOKEN_LIFETIME_MS),
       });
       await loadInvitations();
     } catch (err) {
@@ -107,6 +112,7 @@ const AdminPeoplePage: React.FC = () => {
         activeGroupId
       ),
       note: invitation.notes,
+      expiresAt: invitation.expiresAt,
     });
   };
 
@@ -205,6 +211,7 @@ const AdminPeoplePage: React.FC = () => {
         link={inviteDialog.link}
         groupName={groupName}
         note={inviteDialog.note}
+        expiresAt={inviteDialog.expiresAt}
       />
 
       {/* Both destructive confirms go through the shared dialog rather than a

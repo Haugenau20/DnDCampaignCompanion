@@ -392,6 +392,32 @@ describe("AdminPeoplePage", () => {
       );
       expect(within(dialog).getByRole("button", { name: "Done" })).toBeInTheDocument();
     });
+
+    // T013: a new link lapses after 14 days, so "it expires when used" would
+    // be only half the truth.
+    test("the dialog for a new invitation names the day it stops working", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getAllByRole("button", { name: "Invite someone" })[0]
+      );
+      await settle();
+
+      const inFourteenDays = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog).toHaveTextContent(/once, until /);
+      expect(dialog).toHaveTextContent(String(inFourteenDays.getFullYear()));
+      expect(dialog).not.toHaveTextContent(/expires when used/);
+    });
+
+    test("copying a pre-expiry invitation's link still says it lapses only when used", async () => {
+      setup({ tokens: [{ token: "t", used: false, createdAt: new Date("2025-05-31") }] });
+      await settle();
+      await userEvent.click(screen.getByRole("button", { name: "Copy link" }));
+
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog).toHaveTextContent(/It expires when used/);
+    });
   });
 
   describe("revoking an invitation", () => {
