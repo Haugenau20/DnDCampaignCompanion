@@ -145,12 +145,17 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
 
   // Handle location click
   const handleLocationClick = (location: string) => {
-    // `?highlight=` matches by id (T014), so the link has to carry one. The
-    // stored value may already be an id, or the free text a player wrote.
+    // The stored value may already be an id, or the free text a player wrote.
+    // A location that resolves to a record opens its own page (T014); free
+    // text that names no record has no page, so it falls back to the directory.
     const match = locations.find(
       (loc) => loc.id === location || loc.name.toLowerCase() === location.toLowerCase()
     );
-    navigateToPage(createPath('/locations', {}, { highlight: match?.id ?? location }));
+    if (match) {
+      navigateToPage(`/locations/${match.id}`);
+      return;
+    }
+    navigateToPage(createPath('/locations', {}, { highlight: location }));
   };
 
   /**

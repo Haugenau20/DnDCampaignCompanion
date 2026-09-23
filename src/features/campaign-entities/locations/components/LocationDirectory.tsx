@@ -97,7 +97,7 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
   // subscription, and the extra target fired late enough to miss Firestore's
   // startup coalescing, so it was two real reads rather than a free one. The
   // provider owns the collection; `LocationsPage` already passes it in.
-  const { navigateToPage, createPath, getCurrentQueryParams } = useNavigation();
+  const { navigateToPage, getCurrentQueryParams } = useNavigation();
   const { highlight: highlightId } = getCurrentQueryParams();
 
   const index = useMemo(() => buildLocationIndex(locations), [locations]);
@@ -235,14 +235,14 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
             detail: quest.status.charAt(0).toUpperCase() + quest.status.slice(1),
           }))}
         onChangeStatus={(status) => updateLocationStatus(location.id, status)}
-        onOpenNPC={(npcId) => navigateToPage(createPath('/npcs', {}, { highlight: npcId }))}
+        onOpenNPC={(npcId) => navigateToPage(`/npcs/${npcId}`)}
         onOpenQuest={(questId) =>
           navigateToPage(`/quests/${questId}`)
         }
         onOpenLocation={() => navigateToPage(`/locations/${location.id}`)}
       />
     ),
-    [getNPCById, getQuestById, updateLocationStatus, navigateToPage, createPath]
+    [getNPCById, getQuestById, updateLocationStatus, navigateToPage]
   );
 
   /**

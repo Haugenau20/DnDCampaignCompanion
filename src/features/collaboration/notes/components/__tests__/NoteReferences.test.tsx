@@ -1,7 +1,7 @@
 // src/features/collaboration/notes/components/__tests__/NoteReferences.test.tsx
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import NoteReferences from '../NoteReferences';
 import { Note } from '../../types';
 
@@ -82,6 +82,24 @@ describe('NoteReferences', () => {
     await waitFor(() => {
       expect(screen.getByText('Gundren Rockseeker')).toBeInTheDocument();
     });
+  });
+
+  // T014: a record with its own page opens it; a rumour, which has none,
+  // is highlighted in its directory instead.
+  test.each([
+    ['an NPC', { npcs: [{ id: 'npc-1', name: 'Gundren Rockseeker' }] }, 'Gundren Rockseeker', '/npcs/npc-1'],
+    ['a location', { locations: [{ id: 'loc-1', name: 'Phandalin' }] }, 'Phandalin', '/locations/loc-1'],
+    ['a quest', { quests: [{ id: 'q-1', title: 'Rescue Gundren' }] }, 'Rescue Gundren', '/quests/q-1'],
+    ['a rumour', { rumors: [{ id: 'r-1', title: 'Dragon on the hill' }] }, 'Dragon on the hill', '/rumors?highlight=r-1'],
+  ])('clicking %s navigates to the right place', async (_label, entities, title, expected) => {
+    setupMocks({ content: `Today: ${title}.`, ...entities });
+
+    render(<NoteReferences noteId="note-1" />);
+
+    const row = await screen.findByText(title);
+    fireEvent.click(row);
+
+    expect(mockNavigateToPage).toHaveBeenCalledWith(expected);
   });
 
   test('should NOT fetch collections from DocumentService', async () => {

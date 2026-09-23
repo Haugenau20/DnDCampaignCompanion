@@ -289,6 +289,37 @@ describe("CommandPalette keyboard", () => {
     expect(active).toBe("cmdk-create-npc");
   });
 
+  // T014 / T045: every record with its own page opens that page. A rumour has
+  // none by design, so it alone lands on its directory row via `?highlight=`.
+  it.each([
+    ["an NPC", { id: "droop", type: "npc", title: "Droop" }, "/npcs/droop"],
+    ["a location", { id: "phandalin", type: "location", title: "Phandalin" }, "/locations/phandalin"],
+    ["a quest", { id: "q-1", type: "quest", title: "Rescue Gundren" }, "/quests/q-1"],
+    ["a chapter", { id: "ch12", type: "story", title: "Cragmaw Hideout" }, "/story/chapters/ch12"],
+    ["a note", { id: "n-1", type: "note", title: "Session 4" }, "/notes/n-1"],
+  ] as const)("opens %s on its own page", async (_label, hit, expected) => {
+    useSearch.mockReturnValue(searchState({
+      query: "zz", results: [{ ...hit, content: "", matches: [], matchCount: 0 }],
+    }));
+    open();
+    await userEvent.click(screen.getByText(hit.title));
+    expect(mockNavigateToPage).toHaveBeenCalledWith(expected);
+  });
+
+  it("highlights a rumour in its directory, since it has no page", async () => {
+    useSearch.mockReturnValue(searchState({
+      query: "zz", results: [{ id: "r-1", type: "rumors", title: "A dragon on the hill", content: "", matches: [], matchCount: 0 }],
+    }));
+    useNavigation.mockReturnValue({
+      navigateToPage: mockNavigateToPage,
+      createPath: (p: string, _params: unknown, query: Record<string, string>) =>
+        `${p}?${new URLSearchParams(query).toString()}`,
+    });
+    open();
+    await userEvent.click(screen.getByText("A dragon on the hill"));
+    expect(mockNavigateToPage).toHaveBeenCalledWith("/rumors?highlight=r-1");
+  });
+
   it("opens the selected result on Enter", async () => {
     open();
     await userEvent.keyboard("{Enter}");

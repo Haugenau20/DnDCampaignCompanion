@@ -268,6 +268,21 @@ describe('NPCDirectory', () => {
       expect(mockNavigateToPage).toHaveBeenCalled();
     });
 
+    test('opens a location that resolves to a record on its own page (T014)', () => {
+      mockLocations = [{ id: 'loc-silverkeep', name: 'Silverkeep' }];
+      render(<NPCDirectory npcs={[aldric]} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Open location' }));
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/locations/loc-silverkeep');
+    });
+
+    test('falls back to the directory for free text that names no location record', () => {
+      mockLocations = [];
+      render(<NPCDirectory npcs={[aldric]} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Open location' }));
+      expect(mockNavigateToPage).not.toHaveBeenCalledWith(expect.stringMatching(/^\/locations\//));
+      expect(mockCreatePath).toHaveBeenCalledWith('/locations', {}, { highlight: 'Silverkeep' });
+    });
+
     test('does not offer a location link for the unknown-location group', () => {
       const unlocated = makeNPC({ id: 'npc-u', name: 'Wanderer', location: undefined });
       render(<NPCDirectory npcs={[unlocated]} />);

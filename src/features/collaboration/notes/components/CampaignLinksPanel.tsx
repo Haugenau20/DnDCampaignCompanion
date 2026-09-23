@@ -11,6 +11,7 @@ import { useEntityExtractor } from "../../entity-extraction/hooks/useEntityExtra
 import { useNavigation } from "shared/hooks/useNavigation";
 import { useNPCs, useLocations, useQuests, useRumors } from "features/campaign-entities";
 import { Loader2, Search, AlertCircle, ExternalLink, Users, MapPin, Scroll, MessageSquare } from 'lucide-react';
+import { entityPath } from "../utils/entity-path";
 
 export interface CampaignLinksPanelProps {
   /** ID of the note this panel is for */
@@ -322,28 +323,11 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
   };
 
   /**
-   * Navigate to the entity detail page
+   * Navigate to the entity's own page, or to its directory row for a rumour
+   * -- see `entityPath`.
    */
   const navigateToEntity = (reference: { type: EntityType; id: string }) => {
-    // A quest has its own address since `15-5`, so a note that mentions one
-    // opens the quest rather than its row in the directory. The other three
-    // still highlight: `/npcs/:id` and `/locations/:id` exist but are `15-6`'s
-    // and a later PR's to route here, and a rumour has no page at all yet.
-    if (reference.type === "quest") {
-      navigateToPage(`/quests/${reference.id}`);
-      return;
-    }
-
-    const paths: Record<string, string> = {
-      npc: "/npcs",
-      location: "/locations",
-      rumor: "/rumors",
-    };
-
-    const path = paths[reference.type];
-    if (path) {
-      navigateToPage(`${path}?highlight=${reference.id}`);
-    }
+    navigateToPage(entityPath(reference.type, reference.id));
   };
 
   const isProcessing = isExtracting || hookIsExtracting || isSavingBeforeExtraction;
