@@ -1,4 +1,4 @@
-﻿// src/context/firebase/hooks/__tests__/useInvitations.test.tsx
+// src/context/firebase/hooks/__tests__/useInvitations.test.tsx
 
 import { renderHook, act } from "@testing-library/react";
 import { useInvitations } from "../useInvitations";
@@ -21,7 +21,7 @@ import { useInvitations } from "../useInvitations";
 // ---------------------------------------------------------------------------
 const mockGenerateGroupRegistrationToken = jest.fn();
 const mockValidateRegistrationToken = jest.fn();
-const mockSignUpWithToken = jest.fn();
+const mockReserveSignUp = jest.fn();
 const mockJoinGroupWithToken = jest.fn();
 const mockGetGroupRegistrationTokens = jest.fn();
 const mockDeleteGroupRegistrationToken = jest.fn();
@@ -34,7 +34,7 @@ jest.mock("@/core/services/firebase", () => ({
         mockGenerateGroupRegistrationToken(...args),
       validateRegistrationToken: (...args: any[]) =>
         mockValidateRegistrationToken(...args),
-      signUpWithToken: (...args: any[]) => mockSignUpWithToken(...args),
+      reserveSignUp: (...args: any[]) => mockReserveSignUp(...args),
       joinGroupWithToken: (...args: any[]) => mockJoinGroupWithToken(...args),
       getGroupRegistrationTokens: (...args: any[]) =>
         mockGetGroupRegistrationTokens(...args),
@@ -103,7 +103,7 @@ describe("useInvitations Behavioral Testing", () => {
 
       expect(typeof result.current.generateRegistrationToken).toBe("function");
       expect(typeof result.current.validateToken).toBe("function");
-      expect(typeof result.current.signUpWithToken).toBe("function");
+      expect(typeof result.current.reserveSignUp).toBe("function");
       expect(typeof result.current.joinGroupWithToken).toBe("function");
       expect(typeof result.current.getRegistrationTokens).toBe("function");
       expect(typeof result.current.deleteRegistrationToken).toBe("function");
@@ -302,43 +302,50 @@ describe("useInvitations Behavioral Testing", () => {
   });
 
   // -------------------------------------------------------------------------
-  describe("signUpWithToken Behavior", () => {
-    test("should call invitation.signUpWithToken with correct args", async () => {
-      mockSignUpWithToken.mockResolvedValue(undefined);
+  // Replaces the suite for the removed password sign-up (T022). An account is
+  // now created by signing in, and only for an address an invitation
+  // reserved first -- which is this call.
+  describe("reserveSignUp Behavior", () => {
+    test("should call invitation.reserveSignUp with correct args", async () => {
+      mockReserveSignUp.mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useInvitations());
 
       await act(async () => {
-        await result.current.signUpWithToken("tok", "user@test.com", "pw", "alice");
+        await result.current.reserveSignUp("tok", "user@test.com");
       });
 
-      expect(mockSignUpWithToken).toHaveBeenCalledWith("tok", "user@test.com", "pw", "alice");
+      expect(mockReserveSignUp).toHaveBeenCalledWith("tok", "user@test.com");
     });
 
-    test("should call refreshGroups after successful sign-up", async () => {
-      mockSignUpWithToken.mockResolvedValue(undefined);
+    test("should not refresh groups -- nobody has joined anything yet", async () => {
+      mockReserveSignUp.mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useInvitations());
 
       await act(async () => {
-        await result.current.signUpWithToken("tok", "u@t.com", "pw", "alice");
+        await result.current.reserveSignUp("tok", "u@t.com");
       });
 
-      expect(mockRefreshGroups).toHaveBeenCalledTimes(1);
+      expect(mockRefreshGroups).not.toHaveBeenCalled();
     });
 
     test("should call setError and re-throw on failure", async () => {
-      mockSignUpWithToken.mockRejectedValue(new Error("Sign up failed"));
+      mockReserveSignUp.mockRejectedValue(new Error("This invitation has expired."));
 
       const { result } = renderHook(() => useInvitations());
 
+      let caught: unknown;
       await act(async () => {
         try {
-          await result.current.signUpWithToken("tok", "u@t.com", "pw", "alice");
-        } catch (_) {}
+          await result.current.reserveSignUp("tok", "u@t.com");
+        } catch (err) {
+          caught = err;
+        }
       });
 
-      expect(mockSetError).toHaveBeenCalledWith("Sign up failed");
+      expect(mockSetError).toHaveBeenCalledWith("This invitation has expired.");
+      expect(caught).toBeInstanceOf(Error);
     });
   });
 
@@ -492,13 +499,13 @@ describe("useInvitations Behavioral Testing", () => {
       expect(result.current.validateToken).toBe(firstRef);
     });
 
-    test("signUpWithToken reference should be stable across re-renders", () => {
+    test("reserveSignUp reference should be stable across re-renders", () => {
       const { result, rerender } = renderHook(() => useInvitations());
 
-      const firstRef = result.current.signUpWithToken;
+      const firstRef = result.current.reserveSignUp;
       rerender();
 
-      expect(result.current.signUpWithToken).toBe(firstRef);
+      expect(result.current.reserveSignUp).toBe(firstRef);
     });
   });
 });

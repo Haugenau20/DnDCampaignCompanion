@@ -1,4 +1,4 @@
-﻿// src/context/firebase/__tests__/FirebaseContext.behavioral.test.tsx
+// src/context/firebase/__tests__/FirebaseContext.behavioral.test.tsx
 
 import React from "react";
 import { renderHook, act, waitFor } from "@testing-library/react";
@@ -52,6 +52,7 @@ const mockGetGroupUserProfile = jest.fn();
 const mockUpdateUserProfile = jest.fn();
 const mockUpdateGroupUserProfile = jest.fn();
 const mockGetCurrentUserId = jest.fn();
+const mockGetUser = jest.fn();
 
 const mockGetGroups = jest.fn();
 const mockGetCampaigns = jest.fn();
@@ -64,6 +65,7 @@ jest.mock("@/core/services/firebase", () => ({
       setActiveGroup: (...args: any[]) => mockSetActiveGroup(...args),
       setActiveCampaign: (...args: any[]) => mockSetActiveCampaign(...args),
       getCurrentUserId: () => mockGetCurrentUserId(),
+      getUser: () => mockGetUser(),
     },
     user: {
       getUserProfile: (...args: any[]) => mockGetUserProfile(...args),
@@ -162,6 +164,7 @@ describe("FirebaseContext Behavioral Testing", () => {
     mockGetGroups.mockResolvedValue([]);
     mockGetCampaigns.mockResolvedValue([]);
     mockGetCurrentUserId.mockReturnValue("user-1");
+    mockGetUser.mockReturnValue(null);
     mockUpdateUserProfile.mockResolvedValue(undefined);
     mockUpdateGroupUserProfile.mockResolvedValue(undefined);
   });
@@ -1219,6 +1222,79 @@ describe("FirebaseContext Behavioral Testing", () => {
   });
 
   // -------------------------------------------------------------------------
+  // A brand-new account signs in before `redeemInvitation` has written its
+  // profile, so the auth listener finds none and does not run again. This is
+  // what loads everything once the join has happened.
+  describe("reloadUserContext", () => {
+    test("does nothing when nobody is signed in", async () => {
+      const { result } = renderHook(() => useFirebaseContext(), { wrapper });
+      await act(async () => {
+        await result.current.reloadUserContext();
+      });
+      expect(mockGetUserProfile).not.toHaveBeenCalled();
+    });
+
+    test("does nothing while the profile still does not exist", async () => {
+      mockGetUser.mockReturnValue(makeUser("u-new"));
+      const { result } = renderHook(() => useFirebaseContext(), { wrapper });
+      await act(async () => {
+        await result.current.reloadUserContext();
+      });
+      expect(mockGetUserProfile).toHaveBeenCalledWith("u-new");
+      expect(result.current.userProfile).toBeNull();
+      expect(mockGetGroups).not.toHaveBeenCalled();
+    });
+
+    // The hook's own `user` may still be null in the closure that called it;
+    // the signed-in user is read from the auth service instead.
+    test("loads the profile, groups and active group for the signed-in user", async () => {
+      const newUser = makeUser("u-new");
+      mockGetUser.mockReturnValue(newUser);
+      mockGetUserProfile.mockResolvedValue(
+        makeUserProfile({ id: "u-new", groups: ["group-9"], activeGroupId: "group-9" })
+      );
+      mockGetGroups.mockResolvedValue([makeGroup("group-9")]);
+      mockGetGroupUserProfile.mockResolvedValue(makeGroupUserProfile({ userId: "u-new" }));
+
+      const { result } = renderHook(() => useFirebaseContext(), { wrapper });
+      await act(async () => {
+        await result.current.reloadUserContext();
+      });
+
+      expect(result.current.userProfile?.id).toBe("u-new");
+      expect(result.current.groups.map((g) => g.id)).toEqual(["group-9"]);
+      expect(result.current.activeGroupId).toBe("group-9");
+      expect(mockGetGroupUserProfile).toHaveBeenCalledWith("group-9", "u-new");
+    });
+
+    // The listener's earlier failure to find a profile set an error; a
+    // successful reload must not leave it standing.
+    test("clears a stale error once it succeeds", async () => {
+      mockGetUser.mockReturnValue(makeUser("u-new"));
+      mockGetUserProfile.mockResolvedValue(makeUserProfile({ id: "u-new" }));
+      const { result } = renderHook(() => useFirebaseContext(), { wrapper });
+
+      act(() => result.current.setError("Failed to load user profile after multiple attempts"));
+      await act(async () => {
+        await result.current.reloadUserContext();
+      });
+
+      expect(result.current.error).toBeNull();
+    });
+
+    test("surfaces a failure as an error rather than throwing", async () => {
+      mockGetUser.mockReturnValue(makeUser("u-new"));
+      mockGetUserProfile.mockRejectedValue(new Error("offline"));
+      const { result } = renderHook(() => useFirebaseContext(), { wrapper });
+
+      await act(async () => {
+        await result.current.reloadUserContext();
+      });
+
+      expect(result.current.error).toBe("offline");
+    });
+  });
+
   describe("Cleanup — unsubscribe on unmount", () => {
     test("should call the unsubscribe function returned by onAuthStateChanged when the provider unmounts", () => {
       const { unmount } = renderHook(() => useFirebaseContext(), { wrapper });

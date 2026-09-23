@@ -164,6 +164,12 @@ const PrivacyPolicyPage: React.FC = () => {
               {REMEMBER_ME_TEXT} if you asked to be remembered.
             </Typography>
             <Typography>
+              If you sign in with Google, Google shares your account's email
+              address, name and profile picture with Firebase Authentication,
+              which keeps them on your account record. The app itself uses only
+              the email address.
+            </Typography>
+            <Typography>
               Everything you write in a campaign — chapters, quests, NPCs,
               locations, rumors and your own notes — along with who wrote it and
               when. That is the app; there is no version of it that does not
@@ -216,8 +222,9 @@ const PrivacyPolicyPage: React.FC = () => {
 
           <Section id="device-storage" title="On your device">
             <Typography>
-              Your session preferences — whether you asked to be remembered, and
-              which group you were last looking at — are kept on your own
+              Your session preferences — whether you asked to be remembered,
+              which group you were last looking at, and the address you asked
+              for a sign-in link at, until you open it — are kept on your own
               device, in your browser, not on our servers. There are no
               tracking cookies, because there is nothing tracking you: no
               analytics, no advertising, and no third-party scripts watching
@@ -227,8 +234,10 @@ const PrivacyPolicyPage: React.FC = () => {
 
           <Section id="security" title="Security">
             <Typography>
-              Sign-in runs through Firebase Authentication, so we never see or
-              store your password. Access to campaign data is decided by
+              There are no passwords. You sign in with a one-time link sent to
+              your email, or with your Google account, through Firebase
+              Authentication, and accounts can only be created from an
+              invitation. Access to campaign data is decided by
               rules on the database itself rather than by the app asking
               politely, and everything is encrypted in transit and at rest by
               Google. Sessions time out on their own after{" "}
@@ -237,7 +246,7 @@ const PrivacyPolicyPage: React.FC = () => {
             <Typography>
               No service on the internet can promise perfect security, and we
               won't. What we can say is which measures are actually in place —
-              the four above — rather than describing an audit programme that
+              the ones above — rather than describing an audit programme that
               does not exist.
             </Typography>
           </Section>

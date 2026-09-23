@@ -32,8 +32,19 @@ jest.mock(
 // the page chooses, and when.
 jest.mock("@/features/user-management/groups/components/JoinAsNewUser", () => ({
   __esModule: true,
-  default: ({ token }: { token: string }) => (
-    <div data-testid="new-user-step">{token}</div>
+  default: ({
+    token,
+    groupId,
+    onBusyChange,
+  }: {
+    token: string;
+    groupId: string;
+    onBusyChange?: (busy: boolean) => void;
+  }) => (
+    <div data-testid="new-user-step">
+      {`${token}|${groupId}`}
+      <button onClick={() => onBusyChange?.(true)}>start google</button>
+    </div>
   ),
 }));
 jest.mock("@/features/user-management/groups/components/JoinAsExistingUser", () => ({
@@ -192,6 +203,33 @@ describe("JoinPage", () => {
       await settle();
       expect(screen.getByTestId("existing-user-step")).toHaveTextContent("Legolas");
       expect(screen.queryByTestId("new-user-step")).not.toBeInTheDocument();
+    });
+
+    test("hands the create-account step the invitation's group", async () => {
+      setup({ path: "/join?groupId=g-7&token=tok-1", user: null });
+      await settle();
+      expect(screen.getByTestId("new-user-step")).toHaveTextContent("tok-1|g-7");
+    });
+
+    // A Google sign-in makes `user` non-null halfway through the step's own
+    // work. Swapping to the signed-in step then would unmount the step before
+    // it has joined anybody to anything.
+    test("keeps the create-account step while it is signing somebody in", async () => {
+      const view = setup({ user: null });
+      await settle();
+      await userEvent.click(screen.getByRole("button", { name: "start google" }));
+
+      useAuth.mockReturnValue({ user: { uid: "u-new" }, loading: true });
+      view.rerender(
+        <MemoryRouter initialEntries={["/join?token=tok-1"]}>
+          <Routes>
+            <Route path="/join" element={<JoinPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      expect(screen.getByTestId("new-user-step")).toBeInTheDocument();
+      expect(screen.queryByTestId("existing-user-step")).not.toBeInTheDocument();
     });
 
     // #1423's shape: `user` is null both when signed out and while auth is

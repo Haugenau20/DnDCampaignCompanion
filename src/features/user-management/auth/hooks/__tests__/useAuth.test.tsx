@@ -1,4 +1,4 @@
-﻿// src/context/firebase/hooks/__tests__/useAuth.test.tsx
+// src/context/firebase/hooks/__tests__/useAuth.test.tsx
 
 import { renderHook, act } from "@testing-library/react";
 import { useAuth } from "../useAuth";
@@ -9,7 +9,13 @@ import { useAuth } from "../useAuth";
  * Tests the useAuth hook by mocking useFirebaseContext (since FirebaseContext
  * is not exported) and firebaseServices. Validates:
  * - Returned API shape
- * - Success paths (signIn, signOut, renewSession, etc.)
+ * - Success paths (sendSignInLink, completeSignInLink, signInWithGoogle,
+ *   signOut, renewSession, etc.)
+ *
+ * The `signIn(email, password)` suite was replaced: password sign-in was
+ * removed on purpose (T022). Each passwordless entrance is held to the same
+ * contract that suite asserted -- error cleared first, surfaced via setError
+ * and re-thrown on failure.
  * - Error paths: errors are surfaced via setError AND re-thrown
  * - State transitions: sessionExpired flag
  * - Memoization: callbacks stable across re-renders when deps unchanged
@@ -18,7 +24,11 @@ import { useAuth } from "../useAuth";
 // ---------------------------------------------------------------------------
 // Mock firebaseServices
 // ---------------------------------------------------------------------------
-const mockSignIn = jest.fn();
+const mockSendSignInLink = jest.fn();
+const mockCompleteSignInLink = jest.fn();
+const mockSignInWithGoogle = jest.fn();
+const mockLinkGoogle = jest.fn();
+const mockGetSignInMethods = jest.fn();
 const mockSignOut = jest.fn();
 const mockUpdateLastActivity = jest.fn();
 const mockRenewSession = jest.fn();
@@ -28,7 +38,11 @@ jest.mock("@/core/services/firebase", () => ({
   __esModule: true,
   default: {
     auth: {
-      signIn: (...args: any[]) => mockSignIn(...args),
+      sendSignInLink: (...args: any[]) => mockSendSignInLink(...args),
+      completeSignInLink: (...args: any[]) => mockCompleteSignInLink(...args),
+      signInWithGoogle: (...args: any[]) => mockSignInWithGoogle(...args),
+      linkGoogle: (...args: any[]) => mockLinkGoogle(...args),
+      getSignInMethods: (...args: any[]) => mockGetSignInMethods(...args),
       signOut: (...args: any[]) => mockSignOut(...args),
       updateLastActivity: (...args: any[]) => mockUpdateLastActivity(...args),
       renewSession: (...args: any[]) => mockRenewSession(...args),
@@ -86,7 +100,10 @@ describe("useAuth Behavioral Testing", () => {
     test("should expose all required API members", () => {
       const { result } = renderHook(() => useAuth());
 
-      expect(typeof result.current.signIn).toBe("function");
+      expect(typeof result.current.sendSignInLink).toBe("function");
+      expect(typeof result.current.completeSignInLink).toBe("function");
+      expect(typeof result.current.signInWithGoogle).toBe("function");
+      expect(typeof result.current.linkGoogle).toBe("function");
       expect(typeof result.current.signOut).toBe("function");
       expect(typeof result.current.refreshSession).toBe("function");
       expect(typeof result.current.renewSession).toBe("function");
@@ -144,97 +161,122 @@ describe("useAuth Behavioral Testing", () => {
   });
 
   // -------------------------------------------------------------------------
-  describe("signIn Behavior", () => {
-    test("should call firebaseServices.auth.signIn with correct args", async () => {
-      const fakeUser = { uid: "u1" } as any;
-      mockSignIn.mockResolvedValue(fakeUser);
-
+  describe.each([
+    {
+      name: "sendSignInLink",
+      mock: mockSendSignInLink,
+      call: (auth: any) => auth.sendSignInLink("user@test.com", "http://app/auth/link", true),
+      args: ["user@test.com", "http://app/auth/link", true],
+      fallback: "Could not send the sign-in link",
+      returnsResult: false,
+    },
+    {
+      name: "completeSignInLink",
+      mock: mockCompleteSignInLink,
+      call: (auth: any) => auth.completeSignInLink("user@test.com", "http://app/auth/link?oobCode=x", true),
+      args: ["user@test.com", "http://app/auth/link?oobCode=x", true],
+      fallback: "An error occurred during sign in",
+      returnsResult: true,
+    },
+    {
+      name: "signInWithGoogle",
+      mock: mockSignInWithGoogle,
+      call: (auth: any) => auth.signInWithGoogle(true, "user@gmail.com"),
+      args: [true, "user@gmail.com"],
+      fallback: "An error occurred during sign in",
+      returnsResult: true,
+    },
+  ])("$name Behavior", ({ mock, call, args, fallback, returnsResult }) => {
+    test("should delegate to the auth service with the same arguments", async () => {
+      mock.mockResolvedValue({ user: { uid: "u1" }, isNewUser: false });
       const { result } = renderHook(() => useAuth());
 
       await act(async () => {
-        await result.current.signIn("user@test.com", "password", true);
+        await call(result.current);
       });
 
-      expect(mockSignIn).toHaveBeenCalledWith("user@test.com", "password", true);
+      expect(mock).toHaveBeenCalledWith(...args);
     });
 
-    test("should use default rememberMe=false when not provided", async () => {
-      mockSignIn.mockResolvedValue({ uid: "u1" });
-
+    test("should clear error before calling the service", async () => {
+      mock.mockResolvedValue({ user: { uid: "u1" }, isNewUser: false });
       const { result } = renderHook(() => useAuth());
 
       await act(async () => {
-        await result.current.signIn("user@test.com", "password");
-      });
-
-      expect(mockSignIn).toHaveBeenCalledWith("user@test.com", "password", false);
-    });
-
-    test("should clear error before calling signIn", async () => {
-      mockSignIn.mockResolvedValue({ uid: "u1" });
-
-      const { result } = renderHook(() => useAuth());
-
-      await act(async () => {
-        await result.current.signIn("user@test.com", "password");
+        await call(result.current);
       });
 
       expect(mockSetError).toHaveBeenCalledWith(null);
     });
 
-    test("should return the user returned by firebaseServices.auth.signIn", async () => {
-      const fakeUser = { uid: "u99" } as any;
-      mockSignIn.mockResolvedValue(fakeUser);
-
+    test("should return the service's result, or nothing when it has none", async () => {
+      const outcome = { user: { uid: "u99" }, isNewUser: true };
+      mock.mockResolvedValue(outcome);
       const { result } = renderHook(() => useAuth());
 
-      let returnedUser: any;
+      let returned: any;
       await act(async () => {
-        returnedUser = await result.current.signIn("a@b.com", "pw");
+        returned = await call(result.current);
       });
 
-      expect(returnedUser).toBe(fakeUser);
+      expect(returned).toBe(returnsResult ? outcome : undefined);
     });
 
-    test("should call setError with message on signIn failure (Error instance)", async () => {
-      mockSignIn.mockRejectedValue(new Error("Invalid credentials"));
-
-      const { result } = renderHook(() => useAuth());
-
-      await act(async () => {
-        try {
-          await result.current.signIn("bad@user.com", "wrong");
-        } catch (_) {}
-      });
-
-      expect(mockSetError).toHaveBeenCalledWith("Invalid credentials");
-    });
-
-    test("should use generic message when non-Error thrown during signIn", async () => {
-      mockSignIn.mockRejectedValue("non-error string");
-
+    test("should call setError with the message on failure (Error instance)", async () => {
+      mock.mockRejectedValue(new Error("INVITE_REQUIRED"));
       const { result } = renderHook(() => useAuth());
 
       await act(async () => {
         try {
-          await result.current.signIn("a@b.com", "pw");
+          await call(result.current);
         } catch (_) {}
       });
 
-      expect(mockSetError).toHaveBeenCalledWith("An error occurred during sign in");
+      expect(mockSetError).toHaveBeenCalledWith("INVITE_REQUIRED");
     });
 
-    test("should re-throw on signIn failure", async () => {
-      const error = new Error("sign in failed");
-      mockSignIn.mockRejectedValue(error);
+    test("should use a generic message when a non-Error is thrown", async () => {
+      mock.mockRejectedValue("non-error string");
+      const { result } = renderHook(() => useAuth());
 
+      await act(async () => {
+        try {
+          await call(result.current);
+        } catch (_) {}
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith(fallback);
+    });
+
+    test("should re-throw on failure", async () => {
+      mock.mockRejectedValue(new Error("sign in failed"));
       const { result } = renderHook(() => useAuth());
 
       await expect(
         act(async () => {
-          await result.current.signIn("a@b.com", "pw");
+          await call(result.current);
         })
       ).rejects.toThrow("sign in failed");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe("Account methods", () => {
+    test("linkGoogle delegates to the auth service", async () => {
+      mockLinkGoogle.mockResolvedValue({ uid: "u1" });
+      const { result } = renderHook(() => useAuth());
+
+      await act(async () => {
+        await result.current.linkGoogle();
+      });
+
+      expect(mockLinkGoogle).toHaveBeenCalled();
+    });
+
+    test("getSignInMethods reports what the auth service reports", () => {
+      mockGetSignInMethods.mockReturnValue(["email", "google"]);
+      const { result } = renderHook(() => useAuth());
+      expect(result.current.getSignInMethods()).toEqual(["email", "google"]);
     });
   });
 
@@ -409,13 +451,13 @@ describe("useAuth Behavioral Testing", () => {
 
   // -------------------------------------------------------------------------
   describe("Memoization Behavior", () => {
-    test("signIn reference should be stable across re-renders when setError is stable", () => {
+    test("signInWithGoogle reference should be stable across re-renders when setError is stable", () => {
       const { result, rerender } = renderHook(() => useAuth());
 
-      const firstRef = result.current.signIn;
+      const firstRef = result.current.signInWithGoogle;
       rerender();
 
-      expect(result.current.signIn).toBe(firstRef);
+      expect(result.current.signInWithGoogle).toBe(firstRef);
     });
 
     test("signOut reference should be stable across re-renders", () => {

@@ -1,4 +1,4 @@
-﻿// src/core/services/firebase/auth/__tests__/AuthService.test.ts
+// src/core/services/firebase/auth/__tests__/AuthService.test.ts
 
 /**
  * Tests for AuthService
@@ -12,23 +12,42 @@
 const mockCurrentUser: any = { uid: 'user-123', email: 'test@example.com' };
 const mockAuth: any = { currentUser: null };
 
-const mockSignInWithEmailAndPassword = jest.fn();
+const mockSendSignInLinkToEmail = jest.fn();
+const mockIsSignInWithEmailLink = jest.fn();
+const mockSignInWithEmailLink = jest.fn();
+const mockSignInWithPopup = jest.fn();
+const mockLinkWithPopup = jest.fn();
+const mockGetAdditionalUserInfo = jest.fn();
+const mockDeleteUser = jest.fn();
+const mockSetCustomParameters = jest.fn();
+
+/** The `firebase/auth` surface AuthService uses, for both mock registrations. */
+const mockFirebaseAuthModule = () => ({
+  getAuth: jest.fn(() => mockAuth),
+  connectAuthEmulator: jest.fn(),
+  sendSignInLinkToEmail: (a: any, b: any, c: any) => mockSendSignInLinkToEmail(a, b, c),
+  isSignInWithEmailLink: (a: any, b: any) => mockIsSignInWithEmailLink(a, b),
+  signInWithEmailLink: (a: any, b: any, c: any) => mockSignInWithEmailLink(a, b, c),
+  signInWithPopup: (a: any, b: any) => mockSignInWithPopup(a, b),
+  linkWithPopup: (a: any, b: any) => mockLinkWithPopup(a, b),
+  getAdditionalUserInfo: (a: any) => mockGetAdditionalUserInfo(a),
+  deleteUser: (a: any) => mockDeleteUser(a),
+  GoogleAuthProvider: jest.fn().mockImplementation(() => ({
+    providerId: 'google.com',
+    setCustomParameters: (p: any) => mockSetCustomParameters(p),
+  })),
+  signOut: (a: any) => mockSignOut(a),
+  setPersistence: (a: any, b: any) => mockSetPersistence(a, b),
+  browserLocalPersistence: 'LOCAL',
+  browserSessionPersistence: 'SESSION',
+});
 const mockSignOut = jest.fn();
 const mockSetPersistence = jest.fn();
 const mockGetDoc = jest.fn();
 const mockUpdateDoc = jest.fn();
 const mockDoc = jest.fn((_db: any, ...segs: string[]) => ({ path: segs.join('/') }));
 
-jest.mock('firebase/auth', () => ({
-  getAuth: jest.fn(() => mockAuth),
-  connectAuthEmulator: jest.fn(),
-  signInWithEmailAndPassword: (a: any, b: any, c: any) => mockSignInWithEmailAndPassword(a, b, c),
-  createUserWithEmailAndPassword: jest.fn(),
-  signOut: (a: any) => mockSignOut(a),
-  setPersistence: (a: any, b: any) => mockSetPersistence(a, b),
-  browserLocalPersistence: 'LOCAL',
-  browserSessionPersistence: 'SESSION',
-}));
+jest.mock('firebase/auth', () => mockFirebaseAuthModule());
 
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
@@ -104,16 +123,7 @@ describe('AuthService', () => {
     jest.resetModules();
 
     // Re-apply mocks after resetModules
-    jest.doMock('firebase/auth', () => ({
-      getAuth: jest.fn(() => mockAuth),
-      connectAuthEmulator: jest.fn(),
-      signInWithEmailAndPassword: (a: any, b: any, c: any) => mockSignInWithEmailAndPassword(a, b, c),
-      createUserWithEmailAndPassword: jest.fn(),
-      signOut: (a: any) => mockSignOut(a),
-      setPersistence: (a: any, b: any) => mockSetPersistence(a, b),
-      browserLocalPersistence: 'LOCAL',
-      browserSessionPersistence: 'SESSION',
-    }));
+    jest.doMock('firebase/auth', () => mockFirebaseAuthModule());
     jest.doMock('firebase/firestore', () => ({
       getFirestore: jest.fn(() => ({})),
       connectFirestoreEmulator: jest.fn(),
@@ -156,7 +166,11 @@ describe('AuthService', () => {
       },
     }));
 
-    mockSignInWithEmailAndPassword.mockReset();
+    [
+      mockSendSignInLinkToEmail, mockIsSignInWithEmailLink, mockSignInWithEmailLink,
+      mockSignInWithPopup, mockLinkWithPopup, mockGetAdditionalUserInfo,
+      mockDeleteUser, mockSetCustomParameters,
+    ].forEach((mock) => mock.mockReset());
     mockSignOut.mockReset();
     mockSetPersistence.mockReset();
     mockGetDoc.mockReset();
@@ -359,60 +373,200 @@ describe('AuthService', () => {
     });
   });
 
-  // ─── signIn ─────────────────────────────────────────────────────────────────
+  // ─── Passwordless sign-in ───────────────────────────────────────────────────
+  //
+  // Replaces the `signIn(email, password)` suite. Password sign-in was removed
+  // on purpose (T022): accounts sign in by magic link or Google, and are
+  // created only from an invitation. The session and profile bookkeeping that
+  // suite asserted is unchanged and is asserted again below, through the new
+  // entrances.
 
-  describe('signIn', () => {
-    test('should throw when Firebase sign-in fails', async () => {
-      mockSetPersistence.mockResolvedValueOnce(undefined);
-      mockSignInWithEmailAndPassword.mockRejectedValueOnce(new Error('invalid password'));
+  describe('sendSignInLink', () => {
+    test('sends a link that the app itself handles, to the given URL', async () => {
+      mockSendSignInLinkToEmail.mockResolvedValueOnce(undefined);
       const svc = AuthService.getInstance();
-      await expect(svc.signIn('a@b.com', 'wrong')).rejects.toThrow('invalid password');
+      await svc.sendSignInLink('a@b.com', 'http://app/auth/link?next=%2Fnpcs');
+      expect(mockSendSignInLinkToEmail).toHaveBeenCalledWith(mockAuth, 'a@b.com', {
+        url: 'http://app/auth/link?next=%2Fnpcs',
+        handleCodeInApp: true,
+      });
     });
 
-    test('should return the user on successful sign-in', async () => {
-      const fakeUser = { uid: 'uid-signed-in' };
-      mockSetPersistence.mockResolvedValueOnce(undefined);
-      mockSignInWithEmailAndPassword.mockResolvedValueOnce({ user: fakeUser });
-      // updateDoc for lastLogin
-      mockUpdateDoc.mockResolvedValueOnce(undefined);
-      // getDoc for user profile (no activeGroupId)
-      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { email: 'a@b.com', groups: [] }));
-
+    test('remembers the address and the session choice in this browser', async () => {
+      mockSendSignInLinkToEmail.mockResolvedValueOnce(undefined);
       const svc = AuthService.getInstance();
-      const user = await svc.signIn('a@b.com', 'password');
-      expect(user).toBe(fakeUser);
+      await svc.sendSignInLink('a@b.com', 'http://app/auth/link', true);
+      expect(svc.getPendingEmailSignIn()).toEqual({ email: 'a@b.com', rememberMe: true });
     });
 
-    test('should store sessionInfo in localStorage on successful sign-in', async () => {
-      const fakeUser = { uid: 'uid-signed-in' };
-      mockSetPersistence.mockResolvedValueOnce(undefined);
-      mockSignInWithEmailAndPassword.mockResolvedValueOnce({ user: fakeUser });
-      mockUpdateDoc.mockResolvedValueOnce(undefined);
-      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { email: 'a@b.com', groups: [] }));
+    test('remembers nothing when sending fails', async () => {
+      mockSendSignInLinkToEmail.mockRejectedValueOnce(new Error('quota'));
+      const svc = AuthService.getInstance();
+      await expect(svc.sendSignInLink('a@b.com', 'http://app/auth/link')).rejects.toThrow('quota');
+      expect(svc.getPendingEmailSignIn()).toBeNull();
+    });
+  });
+
+  describe('getPendingEmailSignIn', () => {
+    test('is null when nothing was sent', () => {
+      expect(AuthService.getInstance().getPendingEmailSignIn()).toBeNull();
+    });
+
+    test('is null, not a throw, when the stored value is unreadable', () => {
+      localStorage.setItem('pendingEmailSignIn', '{not json');
+      expect(AuthService.getInstance().getPendingEmailSignIn()).toBeNull();
+    });
+  });
+
+  describe('isSignInLink', () => {
+    test('asks Firebase about the given URL', () => {
+      mockIsSignInWithEmailLink.mockReturnValueOnce(true);
+      expect(AuthService.getInstance().isSignInLink('http://app/auth/link?oobCode=x')).toBe(true);
+      expect(mockIsSignInWithEmailLink).toHaveBeenCalledWith(mockAuth, 'http://app/auth/link?oobCode=x');
+    });
+  });
+
+  describe('completeSignInLink', () => {
+    test('signs in with the link and forgets the pending address', async () => {
+      const fakeUser = { uid: 'uid-link' };
+      localStorage.setItem('pendingEmailSignIn', JSON.stringify({ email: 'a@b.com', rememberMe: false }));
+      mockSignInWithEmailLink.mockResolvedValueOnce({ user: fakeUser });
+      mockGetAdditionalUserInfo.mockReturnValueOnce({ isNewUser: false });
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { groups: [] }));
 
       const svc = AuthService.getInstance();
-      await svc.signIn('a@b.com', 'pass');
+      const result = await svc.completeSignInLink('a@b.com', 'http://app/auth/link?oobCode=x');
+
+      expect(mockSignInWithEmailLink).toHaveBeenCalledWith(mockAuth, 'a@b.com', 'http://app/auth/link?oobCode=x');
+      expect(result).toEqual({ user: fakeUser, isNewUser: false });
+      expect(svc.getPendingEmailSignIn()).toBeNull();
+    });
+
+    test('sets persistence from rememberMe before signing in', async () => {
+      mockSignInWithEmailLink.mockResolvedValueOnce({ user: { uid: 'u' } });
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(false));
+      const svc = AuthService.getInstance();
+
+      await svc.completeSignInLink('a@b.com', 'link', true);
+
+      expect(mockSetPersistence).toHaveBeenCalledWith(mockAuth, 'LOCAL');
+      expect(mockSetPersistence.mock.invocationCallOrder[0])
+        .toBeLessThan(mockSignInWithEmailLink.mock.invocationCallOrder[0]);
+    });
+
+    test('keeps the pending address when the link is refused', async () => {
+      localStorage.setItem('pendingEmailSignIn', JSON.stringify({ email: 'a@b.com', rememberMe: false }));
+      mockSignInWithEmailLink.mockRejectedValueOnce(new Error('INVITE_REQUIRED'));
+      const svc = AuthService.getInstance();
+      await expect(svc.completeSignInLink('a@b.com', 'link')).rejects.toThrow('INVITE_REQUIRED');
+      expect(svc.getPendingEmailSignIn()).toEqual({ email: 'a@b.com', rememberMe: false });
+    });
+  });
+
+  describe('signInWithGoogle', () => {
+    test('opens the Google popup and reports whether the account is new', async () => {
+      const fakeUser = { uid: 'uid-g' };
+      mockSignInWithPopup.mockResolvedValueOnce({ user: fakeUser });
+      mockGetAdditionalUserInfo.mockReturnValueOnce({ isNewUser: true });
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(false));
+
+      const result = await AuthService.getInstance().signInWithGoogle();
+
+      expect(mockSignInWithPopup).toHaveBeenCalledWith(mockAuth, expect.objectContaining({ providerId: 'google.com' }));
+      expect(result).toEqual({ user: fakeUser, isNewUser: true });
+    });
+
+    test('always shows the account picker, pre-selecting a hinted address', async () => {
+      mockSignInWithPopup.mockResolvedValueOnce({ user: { uid: 'u' } });
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(false));
+      await AuthService.getInstance().signInWithGoogle(false, 'frodo@gmail.com');
+      expect(mockSetCustomParameters).toHaveBeenCalledWith({ prompt: 'select_account', login_hint: 'frodo@gmail.com' });
+    });
+
+    test('propagates a refusal', async () => {
+      mockSignInWithPopup.mockRejectedValueOnce(new Error('popup closed'));
+      await expect(AuthService.getInstance().signInWithGoogle()).rejects.toThrow('popup closed');
+    });
+  });
+
+  describe('after any sign-in', () => {
+    const signInExisting = async (profile: Record<string, any> | null, rememberMe = false) => {
+      mockSignInWithPopup.mockResolvedValueOnce({ user: { uid: 'uid-1' } });
+      mockGetAdditionalUserInfo.mockReturnValueOnce({ isNewUser: profile === null });
+      mockGetDoc.mockResolvedValueOnce(profile ? makeDocSnapshot(true, profile) : makeDocSnapshot(false));
+      const svc = AuthService.getInstance();
+      await svc.signInWithGoogle(rememberMe);
+      return svc;
+    };
+
+    test('stores sessionInfo with the chosen duration', async () => {
+      await signInExisting({ groups: [] }, true);
       const stored = JSON.parse(localStorage.getItem('sessionInfo')!);
-      expect(stored).toHaveProperty('createdAt');
-      expect(stored).toHaveProperty('expiresAt');
-      expect(stored.rememberMe).toBe(false);
+      expect(stored.rememberMe).toBe(true);
+      expect(stored.expiresAt - stored.createdAt).toBe(REMEMBER_ME_DURATION);
     });
 
-    test('should set active group and campaign when userData has activeGroupId', async () => {
-      const fakeUser = { uid: 'uid-grp' };
-      mockSetPersistence.mockResolvedValueOnce(undefined);
-      mockSignInWithEmailAndPassword.mockResolvedValueOnce({ user: fakeUser });
-      mockUpdateDoc.mockResolvedValueOnce(undefined);
-      // user profile with activeGroupId
-      mockGetDoc.mockResolvedValueOnce(
-        makeDocSnapshot(true, { email: 'a@b.com', activeGroupId: 'group-1' })
+    test('records the last login on an existing profile', async () => {
+      await signInExisting({ groups: [] });
+      expect(mockUpdateDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'users/uid-1' }),
+        { lastLogin: expect.any(Date) }
       );
-      // getGroupUserProfile call → no activeCampaignId
-      mockGetGroupUserProfile.mockResolvedValueOnce({ activeCampaignId: null });
+    });
 
-      const svc = AuthService.getInstance();
-      await svc.signIn('a@b.com', 'pass');
+    test('sets the active group and campaign from the profile', async () => {
+      mockGetGroupUserProfile.mockResolvedValueOnce({ activeCampaignId: 'camp-1' });
+      const svc = await signInExisting({ activeGroupId: 'group-1' });
       expect(svc.getActiveGroupId()).toBe('group-1');
+      expect(svc.getActiveCampaignId()).toBe('camp-1');
+    });
+
+    test('writes nothing for a brand-new account, which has no profile yet', async () => {
+      await signInExisting(null);
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('linkGoogle', () => {
+    test('links Google to the signed-in user', async () => {
+      const current = { uid: 'uid-1', email: 'a@b.com' };
+      mockAuth.currentUser = current;
+      mockLinkWithPopup.mockResolvedValueOnce({ user: current });
+      await AuthService.getInstance().linkGoogle();
+      expect(mockLinkWithPopup).toHaveBeenCalledWith(current, expect.objectContaining({ providerId: 'google.com' }));
+    });
+
+    test('refuses when nobody is signed in', async () => {
+      await expect(AuthService.getInstance().linkGoogle()).rejects.toThrow('No authenticated user');
+    });
+  });
+
+  describe('getSignInMethods', () => {
+    test('is empty when nobody is signed in', () => {
+      expect(AuthService.getInstance().getSignInMethods()).toEqual([]);
+    });
+
+    test('names the password provider as the email, and orders it first', () => {
+      mockAuth.currentUser = {
+        uid: 'u',
+        providerData: [{ providerId: 'google.com' }, { providerId: 'password' }],
+      };
+      expect(AuthService.getInstance().getSignInMethods()).toEqual(['email', 'google']);
+    });
+  });
+
+  describe('deleteFreshAccount', () => {
+    test('deletes the signed-in user', async () => {
+      const current = { uid: 'uid-1' };
+      mockAuth.currentUser = current;
+      mockDeleteUser.mockResolvedValueOnce(undefined);
+      await AuthService.getInstance().deleteFreshAccount();
+      expect(mockDeleteUser).toHaveBeenCalledWith(current);
+    });
+
+    test('does nothing when nobody is signed in', async () => {
+      await AuthService.getInstance().deleteFreshAccount();
+      expect(mockDeleteUser).not.toHaveBeenCalled();
     });
   });
 });

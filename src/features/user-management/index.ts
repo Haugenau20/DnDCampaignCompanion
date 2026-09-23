@@ -50,6 +50,7 @@ export { default as AdminPeoplePage } from './admin/pages/AdminPeoplePage';
 export { default as AdminCampaignsPage } from './admin/pages/AdminCampaignsPage';
 export { default as AdminGroupPage } from './admin/pages/AdminGroupPage';
 export { default as SignInPage } from './auth/pages/SignInPage';
+export { default as EmailLinkPage } from './auth/pages/EmailLinkPage';
 export { default as JoinPage } from './groups/pages/JoinPage';
 
 // The validated `next` destination, shared by every guard that redirects to

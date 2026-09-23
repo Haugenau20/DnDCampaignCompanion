@@ -1,6 +1,7 @@
 // src/features/user-management/profiles/components/__tests__/AccountCard.test.tsx
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import AccountCard from "../AccountCard";
 
@@ -20,8 +21,18 @@ const { useAuth, useGroups } = require("@/features/user-management");
 import { unnamedControlsIn } from "@/test-utils/accessible-names";
 import { formAccentsIn } from "@/test-utils/accent-budget";
 
-function setupMocks(overrides: { groups?: Array<{ id: string; name: string }> } = {}) {
-  useAuth.mockReturnValue({ user: { uid: "user-1", email: "test@test.com" } });
+const mockLinkGoogle = jest.fn();
+const mockGetSignInMethods = jest.fn();
+
+function setupMocks(
+  overrides: { groups?: Array<{ id: string; name: string }>; methods?: string[] } = {}
+) {
+  mockGetSignInMethods.mockReturnValue(overrides.methods ?? ["email"]);
+  useAuth.mockReturnValue({
+    user: { uid: "user-1", email: "test@test.com" },
+    getSignInMethods: mockGetSignInMethods,
+    linkGoogle: mockLinkGoogle,
+  });
   useGroups.mockReturnValue({
     groups: overrides.groups ?? [{ id: "group-1", name: "Test Campaign" }],
   });
@@ -64,6 +75,60 @@ describe("AccountCard", () => {
       "/join"
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  // T022: sign-in is by magic link or Google, and Google is attached here --
+  // the deliberate way two ways into one person become one account.
+  describe("sign-in methods", () => {
+    test("names the ways into the account", () => {
+      setupMocks({ methods: ["email", "google"] });
+      render(<AccountCard />, { wrapper: MemoryRouter });
+      expect(screen.getByTestId("sign-in-methods")).toHaveTextContent("Email link · Google");
+    });
+
+    test("offers to connect Google when it is not connected", () => {
+      render(<AccountCard />, { wrapper: MemoryRouter });
+      expect(screen.getByRole("button", { name: /connect google/i })).toBeInTheDocument();
+    });
+
+    test("does not offer it once Google is connected", () => {
+      setupMocks({ methods: ["email", "google"] });
+      render(<AccountCard />, { wrapper: MemoryRouter });
+      expect(screen.queryByRole("button", { name: /connect google/i })).not.toBeInTheDocument();
+    });
+
+    test("connecting Google updates the list", async () => {
+      mockLinkGoogle.mockImplementationOnce(async () => {
+        mockGetSignInMethods.mockReturnValue(["email", "google"]);
+      });
+      render(<AccountCard />, { wrapper: MemoryRouter });
+      await userEvent.click(screen.getByRole("button", { name: /connect google/i }));
+      await waitFor(() =>
+        expect(screen.getByTestId("sign-in-methods")).toHaveTextContent("Email link · Google")
+      );
+      expect(screen.queryByRole("button", { name: /connect google/i })).not.toBeInTheDocument();
+    });
+
+    test("explains a Google account that already belongs to someone else", async () => {
+      mockLinkGoogle.mockRejectedValueOnce(
+        Object.assign(new Error("in use"), { code: "auth/credential-already-in-use" })
+      );
+      render(<AccountCard />, { wrapper: MemoryRouter });
+      await userEvent.click(screen.getByRole("button", { name: /connect google/i }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(/already used by a different account/i);
+    });
+
+    test("stays quiet when the popup is simply closed", async () => {
+      mockLinkGoogle.mockRejectedValueOnce(
+        Object.assign(new Error("closed"), { code: "auth/popup-closed-by-user" })
+      );
+      render(<AccountCard />, { wrapper: MemoryRouter });
+      await userEvent.click(screen.getByRole("button", { name: /connect google/i }));
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: /connect google/i })).toBeEnabled()
+      );
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
   });
 });
 

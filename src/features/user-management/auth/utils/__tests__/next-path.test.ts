@@ -60,6 +60,8 @@ describe("safeNextPath", () => {
       ["/signin?next=/admin/people"],
       ["/join"],
       ["/join?token=abc"],
+      ["/auth/link"],
+      ["/auth/link?next=%2Fnpcs"],
     ])("rejects %s", (input) => {
       expect(safeNextPath(input)).toBeNull();
     });
