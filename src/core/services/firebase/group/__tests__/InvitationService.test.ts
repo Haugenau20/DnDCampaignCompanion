@@ -17,7 +17,6 @@ const mockUpdateDoc = jest.fn();
 const mockDeleteDoc = jest.fn();
 const mockGetDocs = jest.fn();
 const mockCallable = jest.fn();
-const mockCreateUserWithEmailAndPassword = jest.fn();
 const mockCollection = jest.fn((_db: any, ...segs: string[]) => ({ path: segs.join('/') }));
 const mockDoc = jest.fn((_db_or_ref: any, ...segs: string[]) => ({
   path: segs.join('/'),
@@ -48,7 +47,6 @@ jest.mock('firebase/firestore', () => ({
 jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(() => ({ currentUser: { uid: 'admin-user', email: 'admin@test.com' } })),
   connectAuthEmulator: jest.fn(),
-  createUserWithEmailAndPassword: function() { return (mockCreateUserWithEmailAndPassword as Function).apply(null, arguments); },
 }));
 
 jest.mock('firebase/app', () => ({ initializeApp: jest.fn(() => ({})) }));
@@ -139,7 +137,6 @@ describe('InvitationService', () => {
     jest.doMock('firebase/auth', () => ({
       getAuth: jest.fn(() => ({ currentUser: { uid: ADMIN_UID, email: 'admin@test.com' } })),
       connectAuthEmulator: jest.fn(),
-      createUserWithEmailAndPassword: function() { return (mockCreateUserWithEmailAndPassword as Function).apply(null, arguments); },
     }));
     jest.doMock('firebase/app', () => ({ initializeApp: jest.fn(() => ({})) }));
     jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
@@ -156,7 +153,7 @@ describe('InvitationService', () => {
     }));
 
     [mockGetDoc, mockSetDoc, mockUpdateDoc, mockDeleteDoc, mockGetDocs,
-     mockCallable, mockCreateUserWithEmailAndPassword,
+     mockCallable,
      mockIsUserAdmin, mockIsUsernameAvailableInGroup
     ].forEach(m => m.mockReset());
 
@@ -214,7 +211,6 @@ describe('InvitationService', () => {
       jest.doMock('firebase/auth', () => ({
         getAuth: jest.fn(() => ({ currentUser: null })),
         connectAuthEmulator: jest.fn(),
-        createUserWithEmailAndPassword: function() { return (mockCreateUserWithEmailAndPassword as Function).apply(null, arguments); },
       }));
       jest.doMock('firebase/firestore', () => ({
         getFirestore: jest.fn(() => ({})),
@@ -544,118 +540,52 @@ describe('InvitationService', () => {
 
   // ─── signUpWithToken ───────────────────────────────────────────────────────
 
-  describe('signUpWithToken', () => {
-    test('should throw when token is invalid (no groupId from URL)', async () => {
+  // Replaces the `signUpWithToken` suite. Creating an account with a password
+  // from the client was removed on purpose (T022): accounts are now created by
+  // a magic link or Google, and only for an address an invitation reserved.
+  describe('reserveSignUp', () => {
+    test('should refuse an invalid token without calling the function', async () => {
       Object.defineProperty(window, 'location', {
         writable: true,
         value: { search: '' },
       });
       const svc = InvitationService.getInstance();
-      await expect(
-        svc.signUpWithToken('bad-token', 'a@b.com', 'pass', 'User')
-      ).rejects.toThrow('Invalid or expired invitation token');
+      await expect(svc.reserveSignUp('bad-token', 'a@b.com')).rejects.toThrow(
+        'Invalid or expired invitation token'
+      );
+      expect(mockCallable).not.toHaveBeenCalled();
     });
 
-    test('should throw when username is already taken', async () => {
+    test('should reserve the address through the Cloud Function, writing nothing itself', async () => {
       Object.defineProperty(window, 'location', {
         writable: true,
         value: { search: '?groupId=g1' },
       });
-      // validateRegistrationToken → valid
       mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { used: false }));
-      // isUsernameAvailableInGroup → not available
-      mockIsUsernameAvailableInGroup.mockResolvedValueOnce(false);
-      const svc = InvitationService.getInstance();
-      await expect(
-        svc.signUpWithToken('valid-token', 'a@b.com', 'pass', 'TakenUser')
-      ).rejects.toThrow('Username is already taken in this group');
-    });
-
-    test('should create the Auth user, then redeem the token as that user', async () => {
-      Object.defineProperty(window, 'location', {
-        writable: true,
-        value: { search: '?groupId=g1' },
-      });
-      // validateRegistrationToken → valid
-      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { used: false }));
-      mockIsUsernameAvailableInGroup.mockResolvedValueOnce(true);
-      const fakeUser = { uid: 'new-uid', delete: jest.fn() };
-      mockCreateUserWithEmailAndPassword.mockResolvedValueOnce({ user: fakeUser });
-      mockCallable.mockResolvedValueOnce({ data: { success: true, groupId: 'g1' } });
+      mockCallable.mockResolvedValueOnce({ data: { success: true } });
 
       const svc = InvitationService.getInstance();
-      const user = await svc.signUpWithToken('valid-token', 'a@b.com', 'pass', 'NewUser');
-      expect(user).toBe(fakeUser);
-      expect(mockCallable).toHaveBeenCalledWith('redeemInvitation', {
+      await svc.reserveSignUp('valid-token', 'frodo@shire.dev');
+
+      expect(mockCallable).toHaveBeenCalledWith('reserveSignUp', {
         groupId: 'g1',
         token: 'valid-token',
-        username: 'NewUser',
+        email: 'frodo@shire.dev',
       });
-      // The global profile is created by the function; a client may no
-      // longer create it (it could otherwise carry `isAdmin: true`).
       expect(mockSetDoc).not.toHaveBeenCalled();
-      expect(fakeUser.delete).not.toHaveBeenCalled();
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
     });
 
-    test('should delete the new Auth user when redemption fails', async () => {
+    test("should surface the function's refusal", async () => {
       Object.defineProperty(window, 'location', {
         writable: true,
         value: { search: '?groupId=g1' },
       });
       mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { used: false }));
-      mockIsUsernameAvailableInGroup.mockResolvedValueOnce(true);
-      const fakeUser = { uid: 'new-uid', delete: jest.fn().mockResolvedValueOnce(undefined) };
-      mockCreateUserWithEmailAndPassword.mockResolvedValueOnce({ user: fakeUser });
-      mockCallable.mockRejectedValueOnce(new Error('redemption failed'));
+      mockCallable.mockRejectedValueOnce(new Error('ACCOUNTS_FULL: This site is not taking new accounts right now.'));
 
       const svc = InvitationService.getInstance();
-      await expect(
-        svc.signUpWithToken('valid-token', 'a@b.com', 'pass', 'NewUser')
-      ).rejects.toThrow('redemption failed');
-      expect(fakeUser.delete).toHaveBeenCalledTimes(1);
-    });
-
-    test('should refuse an expired token on the provided-groupId path, before creating any account', async () => {
-      mockGetDoc.mockResolvedValueOnce(
-        makeDocSnapshot(true, { used: false, expiresAt: new Date(Date.now() - 1000) })
-      );
-      const svc = InvitationService.getInstance();
-      await expect(
-        svc.signUpWithToken('expired-token', 'a@b.com', 'pass', 'User', 'provided-group')
-      ).rejects.toThrow('Invalid or expired invitation token');
-      expect(mockCreateUserWithEmailAndPassword).not.toHaveBeenCalled();
-    });
-
-    test('should refuse an expired token on the URL path, before creating any account', async () => {
-      Object.defineProperty(window, 'location', {
-        writable: true,
-        value: { search: '?groupId=g1' },
-      });
-      mockGetDoc.mockResolvedValueOnce(
-        makeDocSnapshot(true, { used: false, expiresAt: new Date(Date.now() - 1000) })
-      );
-      const svc = InvitationService.getInstance();
-      await expect(
-        svc.signUpWithToken('expired-token', 'a@b.com', 'pass', 'User')
-      ).rejects.toThrow('Invalid or expired invitation token');
-      expect(mockCreateUserWithEmailAndPassword).not.toHaveBeenCalled();
-    });
-
-    test('should use provided groupId and verify token directly', async () => {
-      // groupId provided explicitly — verifies token directly without URL
-      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { used: false })); // direct doc check
-      mockIsUsernameAvailableInGroup.mockResolvedValueOnce(true);
-      const fakeUser = { uid: 'uid-222', delete: jest.fn() };
-      mockCreateUserWithEmailAndPassword.mockResolvedValueOnce({ user: fakeUser });
-      mockCallable.mockResolvedValueOnce({ data: { success: true, groupId: 'provided-group' } });
-
-      const svc = InvitationService.getInstance();
-      const user = await svc.signUpWithToken('token-xyz', 'a@b.com', 'pass', 'User', 'provided-group');
-      expect(user).toBe(fakeUser);
-      expect(mockCallable).toHaveBeenCalledWith('redeemInvitation', expect.objectContaining({
-        groupId: 'provided-group',
-        token: 'token-xyz',
-      }));
+      await expect(svc.reserveSignUp('valid-token', 'frodo@shire.dev')).rejects.toThrow('ACCOUNTS_FULL');
     });
   });
 });

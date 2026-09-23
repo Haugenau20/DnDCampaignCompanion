@@ -29,6 +29,7 @@ interface FirebaseContextType {
   refreshGroups: () => Promise<Group[]>;
   refreshCampaigns: () => Promise<Campaign[]>;
   refreshUserProfile: () => Promise<void>;
+  reloadUserContext: () => Promise<void>;
   switchGroup: (groupId: string) => Promise<void>;
   switchCampaign: (campaignId: string) => Promise<void>;
 }
@@ -291,6 +292,33 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  /**
+   * Load the signed-in user's profile and groups again, from scratch.
+   *
+   * For the moment just after a brand-new account joins its first group. The
+   * auth listener below ran when the account was created, before
+   * `redeemInvitation` had written a profile, so it found none -- and it is
+   * not going to run again, because nobody signs in twice. Every other
+   * refresher here reads `user` from a closure that, in the handler that just
+   * signed in, still holds `null`; this reads the signed-in user from the auth
+   * service instead.
+   */
+  const reloadUserContext = async (): Promise<void> => {
+    const currentUser = firebaseServices.auth.getUser();
+    if (!currentUser) return;
+
+    try {
+      const profile = await firebaseServices.user.getUserProfile(currentUser.uid);
+      if (!profile) return;
+      setError(null);
+      setUserProfile(profile);
+      await loadGroups(currentUser.uid, profile, currentUser);
+    } catch (err) {
+      console.error('Error reloading user context:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load user data');
+    }
+  };
+
   // Listen to authentication state
   useEffect(() => {
     const auth = firebaseServices.auth.getAuth();
@@ -378,6 +406,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     refreshGroups,
     refreshCampaigns,
     refreshUserProfile,
+    reloadUserContext,
     switchGroup,
     switchCampaign
   };

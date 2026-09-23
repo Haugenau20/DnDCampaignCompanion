@@ -81,7 +81,7 @@ const SignInPage: React.FC = () => {
           <Typography variant="h2" className="font-heading text-2xl mb-6">
             Sign in
           </Typography>
-          <SignInForm onSuccess={handleSuccess} />
+          <SignInForm onSuccess={handleSuccess} next={destination} />
         </div>
       </main>
     </div>

@@ -145,6 +145,19 @@ Two environment gotchas that both fail silently:
 - Responsive checks: a maximized Chrome window silently ignores resize below its minimum width.
   Render the app in a 320px-wide iframe instead — media queries evaluate against the iframe's own
   viewport, so this is a real test rather than a simulation.
+- **Signing in as another user in a browser check.** There are no passwords (T022): sign-in is a
+  magic link or Google, and the Auth emulator never sends mail — it keeps every link in an outbox.
+  So any seeded user is reachable without a password. In the dev server the "Check your inbox"
+  screen carries a dev-only **Open the emulator's link** button that does all of this for you
+  (`DevEmailLinkShortcut`; renders only in a development build against the emulators). By hand:
+  request a link from `/signin` (or mint one
+  with `POST http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=fake-api-key`
+  and `{"requestType":"EMAIL_SIGNIN","email":…,"continueUrl":"http://localhost:3000/auth/link…","canHandleCodeInApp":true}`),
+  read it from `GET http://127.0.0.1:9099/emulator/v1/projects/dnd-campaign-companion/oobCodes`,
+  and navigate to its `oobLink`. Set `localStorage.pendingEmailSignIn` to
+  `{"email":…,"rememberMe":false}` first if the link was not requested from that browser, or the
+  landing page will ask for the address. The Google popup opens in its own window, which the
+  browser agent cannot drive — Google flows are the maintainer's to check.
 - **Known, pre-existing: the header overflows horizontally below ~380px on every route.** The logo
   and the account block both sit at `min-width: auto` and neither yields, so a 320px viewport needs
   ~348px for a 276px row. Confirmed identical on `/`, `/contact` and `/privacy` — if a page you are
@@ -167,13 +180,27 @@ Every suite works under its own `demo-` project id, so it never touches the dev 
 CI, which has no emulator. Two kinds of suite live there, in `firebase/functions/test/`:
 
 - **Callables** — invoked directly with `fn.run({data, auth})`, against real emulator Firestore.
-  Covers `redeemInvitation`, `setMemberRole` and the last-admin guard in `removeUserFromGroup` /
-  `deleteUser`. The older callables (`createGroup`, `deleteCampaign`, `extractEntities`, …) have none
+  Covers `redeemInvitation`, `setMemberRole`, the sign-up gate (`reserveSignUp` and the
+  `gateAccountCreation` blocking function, whose handler is exported as `admitAccount`) and the
+  last-admin guard in `removeUserFromGroup` / `deleteUser`. The older callables (`createGroup`, `deleteCampaign`, `extractEntities`, …) have none
   yet; `test/emulator.ts` is the harness to copy.
 - **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` into the emulator and
   acts as real users. `RULES_FILE=<path>` runs the same checks against another revision: **that is
   the control** — run it against the previous revision (`git show HEAD:firebase/firestore.rules.prod`)
   and the tests for whatever you closed must fail there.
+
+**`gateAccountCreation` is a blocking function, and the emulator registers it only at startup.**
+The functions emulator hot-reloads a rebuilt `lib/`, so a new *callable* is live at once — but a new
+or renamed `beforeUserCreated` trigger is not wired into the Auth emulator until the emulators
+restart, and until then every account creation succeeds silently. Either restart, or register it
+by hand:
+`PATCH http://127.0.0.1:9099/emulator/v1/projects/dnd-campaign-companion/config` with
+`{"blockingFunctions":{"triggers":{"beforeCreate":{"functionUri":"http://127.0.0.1:5001/dnd-campaign-companion/europe-west1/gateAccountCreation"}}}}`.
+Check it with a raw `accounts:signUp` for an uninvited address: it must come back
+`BLOCKING_FUNCTION_ERROR_RESPONSE … INVITE_REQUIRED`. The sample-data generator's `@example.com`
+users are exempt inside the emulator only (`FUNCTIONS_EMULATOR`), and only for **password**
+sign-ups, so seeding keeps working while a Google or magic-link sign-up with an `example.com`
+address still meets the real gate.
 
 The control rule still applies to anything new: a suite that is green on the first run proves the
 code runs, not that it changed anything. Break the thing on purpose once and watch the right tests
@@ -332,7 +359,8 @@ the tree.
 ### Current State
 - **Testing Infrastructure**: Jest + React Testing Library, **5,144 tests across 260 suites**
 - **Coverage**: **91.96% statements / 92.42% lines / 85.77% functions / 84.05% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-31 on `design-handoff/dashboard-1a`)
-- **Baseline**: **0 failed / 2 skipped / 5271 passed / 5273 total across 264 suites.** Measured 2026-09-23 on `fix/group-membership-authority` (branched from `main` at 45eeeca; `main` itself was not re-measured). The 2 skips are #901's, closed as testability-only. **Any red is a regression.** Running the suite while `npm run build` competes for CPU produced one timeout in `QuickAddForm.test.tsx` that passes alone — run the two sequentially.
+- **Baseline**: **0 failed / 2 skipped / 5310 passed / 5312 total across 266 suites.** Measured 2026-09-23 on `feat/alternative-sign-in` (branched from `main` at 4fb444e; `main` itself was not re-measured). `firebase/functions`: **71 passed across 5 suites**, against the emulators.
+  - The figure this replaced was **0 failed / 2 skipped / 5271 passed / 5273 total across 264 suites**, measured 2026-09-23 on `fix/group-membership-authority`. The 2 skips are #901's, closed as testability-only. **Any red is a regression.** Running the suite while `npm run build` competes for CPU produced one timeout in `QuickAddForm.test.tsx` that passes alone — run the two sequentially.
   - The figure this replaced was **0 failed / 2 skipped / 5142 passed / 5144 total across 260 suites**, measured 2026-09-22 on `fix/entity-loader-consolidation`.
   - The figure this replaced — `4715 passed / 4717 total across 235 suites` — had gone stale by **25 suites and 427 tests**, having been taken on a branch that later merged. That is the largest drift this line has carried, and it is exactly what the rule below exists to catch. If you are about to trust this number without running it, run it.
   - A full run also prints `A worker process has failed to exit gracefully`. That is pre-existing on a clean tree and the run still exits 0 — do not chase it, and do not mistake it for a failure.

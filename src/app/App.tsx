@@ -15,6 +15,7 @@ import {
   AdminCampaignsPage,
   AdminGroupPage,
   SignInPage,
+  EmailLinkPage,
   JoinPage
 } from 'features/user-management';
 import { QuestProvider } from 'features/campaign-entities';
@@ -172,6 +173,7 @@ const App: React.FC = () => {
                                     <Route path="/admin/group" element={<AdminGroupPage />} />
                                   </Route>
                                   <Route path="/signin" element={<SignInPage />} />
+                                  <Route path="/auth/link" element={<EmailLinkPage />} />
                                   <Route path="/join" element={<JoinPage />} />
                                 </Routes>
                               </Layout>

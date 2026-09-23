@@ -41,6 +41,10 @@ const JoinPage: React.FC = () => {
   const completeJoin = useJoinGroupCompletion();
 
   const linkToken = searchParams.get('token');
+  const groupId = searchParams.get('groupId') ?? '';
+  // True while the new-account form is mid-way through a Google sign-in; see
+  // `JoinAsNewUserProps.onBusyChange`.
+  const [signingUp, setSigningUp] = useState(false);
   const [token, setToken] = useState(linkToken ?? '');
   const [state, setState] = useState<TokenState>(linkToken ? 'checking' : 'absent');
 
@@ -145,12 +149,12 @@ const JoinPage: React.FC = () => {
               </Typography>
             </div>
 
-            {authLoading ? (
+            {authLoading && !signingUp ? (
               <div role="status" aria-busy="true">
                 <span className="sr-only">Loading</span>
                 <div className="h-24 rounded animate-pulse bg-secondary" aria-hidden="true" />
               </div>
-            ) : user ? (
+            ) : user && !signingUp ? (
               /* Already signed in: told so, and offered the join. Showing a
                  registration form to somebody who already has an account is
                  what the dialog did. */
@@ -160,7 +164,12 @@ const JoinPage: React.FC = () => {
                 onJoined={handleJoined}
               />
             ) : (
-              <JoinAsNewUser token={token} onJoined={handleJoined} />
+              <JoinAsNewUser
+                token={token}
+                groupId={groupId}
+                onJoined={handleJoined}
+                onBusyChange={setSigningUp}
+              />
             )}
           </div>
         )}

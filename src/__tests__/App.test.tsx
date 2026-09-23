@@ -1,4 +1,4 @@
-﻿// src/__tests__/App.test.tsx
+// src/__tests__/App.test.tsx
 // Behavioral tests for App.tsx — verifies provider composition and route table.
 // All real providers and page components are stubbed so this test focuses solely
 // on the wiring in App.tsx itself.
@@ -250,6 +250,11 @@ jest.mock("@/features/user-management/auth/pages/SignInPage", () => ({
   default: () => <div data-testid="page-signin" />,
 }));
 
+jest.mock("@/features/user-management/auth/pages/EmailLinkPage", () => ({
+  __esModule: true,
+  default: () => <div data-testid="page-email-link" />,
+}));
+
 jest.mock("@/features/user-management/groups/pages/JoinPage", () => ({
   __esModule: true,
   default: () => <div data-testid="page-join" />,
@@ -309,6 +314,7 @@ const EXPECTED_ROUTES = [
   "/admin/campaigns",
   "/admin/group",
   "/signin",
+  "/auth/link",
   "/join",
 ];
 

@@ -48,26 +48,19 @@ export function useInvitations() {
     }
   }, [setError]);
 
-  // Sign up with token
-  const signUpWithToken = useCallback(async (
-    token: string, 
-    email: string, 
-    password: string, 
-    username: string
+  // Reserve an account for `email` against the invitation, before signing in
+  const reserveSignUp = useCallback(async (
+    token: string,
+    email: string
   ): Promise<void> => {
     try {
       setError(null);
-      
-      // Create the user and join the group
-      await firebaseServices.invitation.signUpWithToken(token, email, password, username);
-      
-      // Refresh groups
-      await refreshGroups();
+      await firebaseServices.invitation.reserveSignUp(token, email);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred during sign up');
+      setError(err instanceof Error ? err.message : 'Could not prepare your sign-up');
       throw err;
     }
-  }, [setError, refreshGroups]);
+  }, [setError]);
 
   // Join group with token
   const joinGroupWithToken = useCallback(async (
@@ -146,7 +139,7 @@ export function useInvitations() {
   return {
     generateRegistrationToken,
     validateToken,
-    signUpWithToken,
+    reserveSignUp,
     joinGroupWithToken,
     getRegistrationTokens,
     deleteRegistrationToken,

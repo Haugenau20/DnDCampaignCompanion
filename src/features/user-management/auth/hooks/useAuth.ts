@@ -1,25 +1,103 @@
 // src/context/firebase/hooks/useAuth.ts
 import { useState, useCallback } from 'react';
-import { User } from 'firebase/auth';
 import { useFirebaseContext } from '../context/FirebaseContext';
 import firebaseServices from 'core/services/firebase';
+import type {
+  PendingEmailSignIn,
+  SignInMethod,
+  SignInResult
+} from 'core/services/firebase/auth/AuthService';
 
 export function useAuth() {
-  const { user, loading, error, setError, refreshUserProfile } = useFirebaseContext();
+  const { user, loading, error, setError, reloadUserContext } = useFirebaseContext();
   const [sessionExpired, setSessionExpired] = useState(false);
 
-  // Sign in with email and password
-  const signIn = useCallback(async (email: string, password: string, rememberMe: boolean = false): Promise<User> => {
+  /**
+   * Email a passwordless sign-in link.
+   * @param email Where to send it
+   * @param continueUrl The absolute `/auth/link` URL the link opens
+   * @param rememberMe Whether the session should outlive the browser
+   */
+  const sendSignInLink = useCallback(async (
+    email: string,
+    continueUrl: string,
+    rememberMe: boolean = false
+  ): Promise<void> => {
     try {
       setError(null);
-      const user = await firebaseServices.auth.signIn(email, password, rememberMe);
+      await firebaseServices.auth.sendSignInLink(email, continueUrl, rememberMe);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send the sign-in link');
+      throw err;
+    }
+  }, [setError]);
+
+  /**
+   * Finish a sign-in from a magic link.
+   * @param email The address the link was sent to
+   * @param url The link as opened
+   * @param rememberMe Whether the session should outlive the browser
+   */
+  const completeSignInLink = useCallback(async (
+    email: string,
+    url: string,
+    rememberMe: boolean = false
+  ): Promise<SignInResult> => {
+    try {
+      setError(null);
+      const result = await firebaseServices.auth.completeSignInLink(email, url, rememberMe);
       setSessionExpired(false);
-      return user;
+      return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during sign in');
       throw err;
     }
   }, [setError]);
+
+  /**
+   * Sign in with a Google account.
+   * @param rememberMe Whether the session should outlive the browser
+   * @param loginHint The Google address to pre-select
+   */
+  const signInWithGoogle = useCallback(async (
+    rememberMe: boolean = false,
+    loginHint?: string
+  ): Promise<SignInResult> => {
+    try {
+      setError(null);
+      const result = await firebaseServices.auth.signInWithGoogle(rememberMe, loginHint);
+      setSessionExpired(false);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred during sign in');
+      throw err;
+    }
+  }, [setError]);
+
+  /** Attach Google to the signed-in account. */
+  const linkGoogle = useCallback(async (): Promise<void> => {
+    await firebaseServices.auth.linkGoogle();
+  }, []);
+
+  /** The ways the signed-in account can sign in. */
+  const getSignInMethods = useCallback((): SignInMethod[] => {
+    return firebaseServices.auth.getSignInMethods();
+  }, []);
+
+  /** The sign-in link this browser is waiting on, if any. */
+  const getPendingEmailSignIn = useCallback((): PendingEmailSignIn | null => {
+    return firebaseServices.auth.getPendingEmailSignIn();
+  }, []);
+
+  /** Whether `url` is a sign-in link. */
+  const isSignInLink = useCallback((url: string): boolean => {
+    return firebaseServices.auth.isSignInLink(url);
+  }, []);
+
+  /** Remove an account created moments ago whose invitation then failed. */
+  const deleteFreshAccount = useCallback(async (): Promise<void> => {
+    await firebaseServices.auth.deleteFreshAccount();
+  }, []);
 
   // Sign out
   const signOut = useCallback(async (): Promise<void> => {
@@ -59,7 +137,15 @@ export function useAuth() {
     user,
     loading,
     error,
-    signIn,
+    sendSignInLink,
+    completeSignInLink,
+    signInWithGoogle,
+    linkGoogle,
+    getSignInMethods,
+    getPendingEmailSignIn,
+    isSignInLink,
+    deleteFreshAccount,
+    reloadUserContext,
     signOut,
     refreshSession,
     sessionExpired,

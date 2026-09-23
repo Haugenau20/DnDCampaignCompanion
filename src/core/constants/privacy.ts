@@ -21,13 +21,12 @@
  * BUMP THIS BY HAND whenever the wording changes, and add a PRIVACY_CHANGELOG
  * line saying what changed. Never derive it from Date.now().
  */
-export const PRIVACY_LAST_UPDATED = "2026-09-03";
+export const PRIVACY_LAST_UPDATED = "2026-09-23";
 
 /** What changed in the revision named by PRIVACY_LAST_UPDATED, newest first. */
 export const PRIVACY_CHANGELOG: readonly string[] = [
-  "Added a section on entity extraction: what leaves the app when you scan a note, who receives it, and for how long they keep it.",
-  "Replaced the request-by-email deletion text with the self-service Delete account button, and said what survives it.",
-  "Named the data controller, the hosting region, the legal basis for each purpose, and your right to complain to Datatilsynet.",
+  "Passwords are gone: you sign in with a one-time link sent to your email, or with your Google account, and accounts can only be created from an invitation.",
+  "Said what Google shares with us when you sign in with it, and that the address you asked for a sign-in link at is kept on your device until you open the link.",
 ];
 
 /**

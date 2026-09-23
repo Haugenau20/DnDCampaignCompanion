@@ -16,8 +16,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T012 | No password change or reset | M | open | A user who forgets their password has no way back in |
-| high | T002 | `AccountCard` clips at 320px | S | open | "Join another" is unreachable on narrow phones; cheap fix |
 | medium | T044 | Notes/story pages flash to skeleton on write | S | open | Visible defect on every save; same fix already proven on the entity pages |
 | medium | T051 | Unbounded titles can widen a page | S | open | Already broke the live dashboard once; the audit is small |
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
@@ -26,7 +24,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
-| medium | T053 | Dev-only "sign in as" for browser checks | S | open | Unblocks browser verification of anything that needs a different user, which every recent phase needed |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
 | low | T001 | `NPCNote.date` stored shape | S | open | Display already uniform; the remainder is data hygiene |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
@@ -41,7 +38,9 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T018 | Sub-chapters | L | open | New feature; #017 ordering question comes first |
 | low | T021 | Firebase Storage for images | L | open | New capability; prerequisite for T020 |
 | low | T020 | Screenshot on bug reports | M | open | Blocked in practice on T021 |
-| low | T022 | Sign in with Google | L | needs scoping | Nice to have; needs a design for "signed in, in no group" first |
+| low | T053 | A seeded user in no group | S | open | Switching users is solved by the emulator's link outbox; only the no-group state is left |
+| low | T054 | Sign in with Discord | L | needs scoping | Where tabletop players already are; Firebase has no built-in provider |
+| low | T055 | Opt-in second factor | M | needs scoping | Nobody asked yet; prefer an authenticator app over SMS, which bills per text |
 | low | T040 | No accent pair for the band | S | open | Interim `.band-chip` works; schema-owner decision |
 | low | T048 | Five surfaces mark type, not entity | S | open | Visual consistency |
 | low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
@@ -149,42 +148,9 @@ shape is the real job and is untouched.**
   records already stored in the other one.
 - **Source**: drift log
 
-### T002 — `AccountCard` clips its own content at 320px
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-16 · `R41`
-
-- **Where**: `src/features/user-management/profiles/components/AccountCard.tsx:43`
-  — rows are `grid grid-cols-[170px_1fr_auto]` with no responsive variant.
-- **Touches**: that grid only. The profile page's container is unchanged around
-  it; this is pre-existing.
-- **Catch**: at a 320px viewport the card is 247px wide and the grid is 426px,
-  and `Card`'s `overflow-hidden` clips the difference. The email is cut off, and
-  "used to sign in" and **"Join another" sit off the card entirely** — the second
-  is an action, so this is unreachable functionality, not just an ugly row.
-  Separately, the header itself overflows below ~380px on every route (recorded
-  in `CLAUDE.md`, not here). Don't attribute one to the other.
-- **Source**: drift log
-
 ---
 
 ## Features and enhancements
-
-### T012 — A user cannot change their own password
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-09-16
-
-There is no password-change path anywhere, and no password reset either — a
-project-wide search for `updatePassword`, `changePassword`, `reauthenticate` and
-`sendPasswordResetEmail` returns **zero** hits.
-
-- **Where**: `src/core/services/firebase/auth/AuthService.ts` exposes
-  `signIn` (:152), `signOut` (:207), `renewSession` (:66) and the session helpers
-  — nothing else. The UI would sit with the other account fields in
-  `src/features/user-management/profiles/components/AccountCard.tsx`.
-- **Touches**: `AuthService`, the profiles feature, the user-management barrel.
-- **Catch**: Firebase requires a recent sign-in for `updatePassword`, so this
-  needs a reauthentication prompt on the stale-session path, not just a form.
-  Worth deciding at the same time whether a forgotten-password reset ships with
-  it — right now a user who forgets their password has no route back in at all.
-- **Source**: todo.txt, 2026-09-16
 
 ### T017 — Batch actions for stories, quests, NPCs and locations
 **Type** feature · **Size** L · **Status** open · **Verified** 2026-09-16
@@ -303,30 +269,6 @@ default artwork.
   draft in `storage.rules` assumes `groups/{groupId}/members/{uid}`.
 - **Source**: todo.txt, 2026-09-16
 
-### T022 — Sign in with Google (or another provider)
-**Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-16
-
-- **Where**: authentication is email/password only —
-  `src/core/services/firebase/auth/AuthService.ts:163`
-  (`signInWithEmailAndPassword`) and
-  `src/core/services/firebase/group/InvitationService.ts:239`
-  (`createUserWithEmailAndPassword`). No `GoogleAuthProvider` or
-  `signInWithPopup` anywhere in the tree.
-- **Touches**: `AuthService`, `InvitationService`, the registration form, and the
-  Firebase console's provider config.
-- **Catch, and why this needs scoping first**: account creation was never
-  gated — Firebase Auth lets anyone create an email/password account with the
-  public API key. What is gated is *membership*: since 2026-09-23 only the
-  `redeemInvitation` Cloud Function grants it, after checking the token (#1425).
-  So a Google account changes less on the server than it looks — it is one more
-  way to hold an Auth account with no group, which is already harmless. What it
-  adds is a state the UI has never had to render: signed in, in no group, with
-  a token still to redeem. **Decide what that state looks like before writing
-  code.** The beta-cost concern in the
-  original note is a separate lever (an allow-list, or a cap on new accounts) and
-  should be decided alongside it.
-- **Source**: todo.txt, 2026-09-16
-
 ### T047 — The account chip wears a generic person icon, not a sigil
 **Type** feature · **Size** S · **Status** open · **Verified** 2026-09-22
 
@@ -426,6 +368,35 @@ explanatory line when searching; this one gets none.
 - **Source**: todo.txt, 2026-09-22 ("Right now in the dev data one location is
   'Unplaced'. No idea what this means or how it is even possible? (The Hobbit -
   Bag End)")
+
+### T054 — Sign in with Discord
+**Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-23
+
+Discord is where tabletop groups already talk, and the tools they use (D&D
+Beyond, Roll20, Foundry) sign in with it.
+
+- **Where**: next to Google in `core/services/firebase/auth/AuthService.ts`.
+- **Catch**: Firebase has no Discord provider, and Discord's OAuth2 is not
+  OpenID Connect, so Identity Platform's generic OIDC provider does not fit
+  either. It needs a Cloud Function that runs the OAuth code exchange and mints
+  a Firebase custom token. And it must pass the invite gate: a custom-token
+  sign-in that creates an account goes through `gateAccountCreation`, which
+  admits by **email**, so the function has to request Discord's `email` scope
+  and set it on the account before the gate can match a reservation.
+- **Source**: T022 planning, 2026-09-23
+
+### T055 — Opt-in second factor
+**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-09-23
+
+Let a user who wants it add a second step to sign-in.
+
+- **Where**: Identity Platform (already enabled) supports TOTP authenticator
+  apps and SMS. Enrolment would sit on the profile's `AccountCard`.
+- **Catch**: **prefer TOTP.** SMS is billed per message sent, and a public SMS
+  step invites SMS-pumping fraud unless the allowed regions are restricted.
+  Check first that Firebase MFA applies to email-link sign-in at all -- it was
+  not confirmed during T022.
+- **Source**: maintainer, 2026-09-23
 
 ---
 
@@ -571,36 +542,24 @@ Measured against the four create forms, the premise holds for the quest only.
 
 ## Tech debt and platform
 
-### T053 — A browser check cannot switch users
+### T053 — No seeded user is in no group
 **Type** tech debt · **Size** S · **Status** open · **Verified** 2026-09-23
 
-An agent driving Chrome cannot type a password or create an account, so every
-browser check runs as whoever the maintainer left signed in. PR #114 could
-verify promote, demote and the last-admin guard, but not joining a group
-through an invite link, and it could not see the app as a plain member.
+Most of this item was closed by T022 without a helper. Sign-in is by magic link
+now, and the Auth emulator never sends mail: it keeps every link in an outbox
+an agent can read, so a browser check can sign in as any seeded user with no
+password anywhere. The recipe is in `CLAUDE.md` under "Signing in as another
+user in a browser check".
 
-- **Where**: next to the existing dev-only helpers. `src/index.tsx:15-24`
-  dynamically imports `utils/__dev__/sessionTester` only when
-  `NODE_ENV === 'development'`; a `utils/__dev__/devAuth.ts` would load the
-  same way and additionally require `useEmulators`
-  (`core/services/firebase/config/firebaseConfig.ts:21`).
-- **The mechanism**: the Auth **emulator** accepts *unsigned* custom tokens
-  (`alg: "none"`). So `window.__devAuth.signInAs('DungeonMaster')` can look the
-  uid up by username in the emulator, mint an unsigned token and call
-  `signInWithCustomToken` -- no password anywhere, nothing stored. Add
-  `signOut()` and `whoami()`. Production Auth rejects unsigned tokens, so it
-  cannot work against the live project even if it leaked into a bundle.
-- **Touches**: the new helper, `src/index.tsx`, the sample-data generator
-  (`utils/__dev__/generators/userGenerator.ts`) for two more users -- one in
-  **no group**, to test joining as an existing account, and a second admin in
-  group 1 for role and last-admin flows -- and a line in `CLAUDE.md`.
-- **Catch**: the sign-up form stays out of reach -- creating an account
-  through it is off-limits to an agent even on the emulator -- so that path
-  keeps its emulator tests plus a manual check. And `utils/__dev__/` is
-  operator tooling: use relative imports there (see the resolver table in
-  `CLAUDE.md`). Verify it is a no-op without the emulators, and that
-  `npm run build` does not bundle it into a reachable path.
-- **Source**: PR #114, 2026-09-23
+- **What is left**: the sample-data generator
+  (`utils/__dev__/generators/userGenerator.ts`) seeds nobody in **no group**,
+  which is the state a first-time invitee is in, and a second admin in group 1
+  for role and last-admin flows. Both are template entries.
+- **Catch**: creating a *new* account through the join form in a browser check
+  is still for the maintainer to do or explicitly allow, even on the emulator.
+  Joining as an existing account (a group 2 user joining group 1) needs neither
+  and was verified that way for T022.
+- **Source**: PR #114, 2026-09-23; narrowed by T022
 
 ### T051 — Nothing stops the next unbounded title from widening a page
 **Type** tech debt · **Size** S · **Status** open · **Verified** 2026-09-22
@@ -802,8 +761,9 @@ reproducible from the tree alone — it needs rendering.
 - **Known before you start**: the header overflows horizontally below ~380px on
   **every** route — logo and account block both sit at `min-width: auto` and
   neither yields. If something overflows at 320px, check whether the offending
-  element is inside `header`/`footer` before blaming the story pages. See also
-  T002 (`AccountCard`), a confirmed instance of the same class of defect.
+  element is inside `header`/`footer` before blaming the story pages.
+  `AccountCard` was a confirmed instance of the same class of defect: fixed
+  2026-09-23 by stacking its rows below `sm`.
 - **One candidate found**: `src/pages/story/ChaptersPage.tsx:174` — a filter
   input at `input flex-1 min-w-[200px]` sharing a row with sibling controls. It
   cannot shrink below 200px, so a narrow row either wraps or pushes. Unconfirmed

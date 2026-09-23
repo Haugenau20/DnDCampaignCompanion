@@ -8,9 +8,6 @@ import {
     updateDoc, 
     deleteDoc
   } from 'firebase/firestore';
-  import { 
-    createUserWithEmailAndPassword 
-  } from 'firebase/auth';
   import { httpsCallable } from 'firebase/functions';
   import BaseFirebaseService from '../core/BaseFirebaseService';
   import ServiceRegistry from '../core/ServiceRegistry';
@@ -253,68 +250,27 @@ import {
     }
   
     /**
-     * Sign up with an invite token and user-provided email
+     * Let `email` create an account from this invitation.
+     *
+     * Accounts are invite-only: the `gateAccountCreation` blocking function
+     * refuses to create one for an address nobody reserved. This is the
+     * reservation -- the `reserveSignUp` function checks the invitation and
+     * records the address -- and it has to happen before the magic link is
+     * sent or the Google popup opens. It spends nothing; `redeemInvitation`
+     * does that once the account exists.
+     *
      * @param token Registration token for the group
-     * @param email User's email address
-     * @param password User's password
-     * @param username Username to use in the group
-     * @param groupId Optional groupId (if already known from URL)
-     * @returns The created user
+     * @param email The address the new account will have
      */
-    public async signUpWithToken(
-      token: string, 
-      email: string, 
-      password: string, 
-      username: string,
-      groupId?: string
-    ): Promise<any> {
-      // First, validate the token and get the group ID if not provided
-      let targetGroupId = groupId;
-      if (!targetGroupId) {
-        const { isValid, groupId: validatedGroupId } = await this.validateRegistrationToken(token);
-        
-        if (!isValid || !validatedGroupId) {
-          throw new Error('Invalid or expired invitation token');
-        }
-        
-        targetGroupId = validatedGroupId;
-      } else {
-        // If groupId was provided, still verify the token is valid
-        const docRef = doc(this.db, 'groups', targetGroupId, 'registrationTokens', token);
-        const docSnap = await getDoc(docRef);
-        
-        if (!docSnap.exists() || !isRegistrationTokenRedeemable(docSnap.data())) {
-          throw new Error('Invalid or expired invitation token');
-        }
+    public async reserveSignUp(token: string, email: string): Promise<void> {
+      const { isValid, groupId } = await this.validateRegistrationToken(token);
+      if (!isValid || !groupId) {
+        throw new Error('Invalid or expired invitation token');
       }
 
-      // Validate the username is available in this group
-      const isUsernameAvailable = await this.userService.isUsernameAvailableInGroup(targetGroupId, username);
-      if (!isUsernameAvailable) {
-        throw new Error('Username is already taken in this group');
-      }
-
-      // The Auth account has to exist before the function can be called as
-      // it. Everything else -- including the global profile, which a client
-      // may no longer create -- is written by `redeemInvitation`.
-      const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
-      const user = userCredential.user;
-
-      try {
-        await this.redeemInvitation(targetGroupId, token, username);
-        return user;
-      } catch (error) {
-        // An account that joined nothing can never sign in to anything, so it
-        // is removed rather than left orphaned.
-        try {
-          await user.delete();
-        } catch (deleteError) {
-          console.error("Error cleaning up auth user after failed sign-up:", deleteError);
-        }
-        
-        throw error;
-      }
+      const reserve = httpsCallable(this.functions, 'reserveSignUp');
+      await reserve({ groupId, token, email });
     }
   }
-  
+
   export default InvitationService;
