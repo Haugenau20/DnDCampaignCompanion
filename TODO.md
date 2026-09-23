@@ -113,57 +113,44 @@ shape is the real job and is untouched.**
   in `CLAUDE.md`, not here). Don't attribute one to the other.
 - **Source**: drift log
 
-### T014 — Three emitters still highlight a row for a record that has its own page
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-22
+### T052 — Group membership is self-asserted; an invitation token gates nothing server-side
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-09-23 (read from the rules, not measured)
 
-Phase 15 closed the reader half: all four directories read `?highlight=` through
-one hook (`shared/hooks/useHighlightTarget`) — matched by **id**, ancestors
-revealed, brought into view, with a visited set and a depth cap. `?highlight=`
-is now what it should always have been: the way to find a row *in a list*.
+Any signed-in user who knows a group's id can make themselves a member of it,
+with full read and write on its campaigns, without ever holding a token. The
+registration token — expiry included, since T013 — is enforced only by the
+client that chooses to check it.
 
-**What is left is the emitter side.** `/npcs/:npcId` and `/locations/:locationId`
-both exist (`app/App.tsx:113`, `:130`), but three emitters still send a *directory*
-URL with `?highlight=` for those two types, so following a link lands on a list
-with a row lit up instead of on the record.
-
-- **Where**, all verified by opening the file:
-  - `shared/components/command-palette/CommandPalette.tsx:91` (`npc`) and `:94`
-    (`location`) — the `quest` case one line above already navigates to
-    `/quests/${result.id}` and is the shape to copy.
-  - `features/collaboration/notes/components/NoteReferences.tsx:159-167` — a
-    `paths` map sending `npc`, `location` and `rumor` to directories.
-  - `features/collaboration/notes/components/CampaignLinksPanel.tsx:337-345` —
-    the same map again.
-- **Touches**: those three files and their tests. Both note panels carry a comment
-  saying the NPC and location routing is "a later PR's"; that PR is this one.
-- **Catch**: **a rumour is not part of this.** It has no page by design, so
-  `?highlight=` stays its correct destination — do not sweep it along with the
-  other two. `/story` is a separate question and is **T045**.
-- **Source**: T014's remainder, carried out of phase 15
-
-### T050 — Extraction quality under `gpt-4.1-mini` is unmeasured
-**Type** bug · **Size** S · **Status** needs investigation · **Verified** 2026-09-22
-
-Everything this entry described is fixed and verified in Chrome. What is left
-is the one thing no gate in this repo can reach: **whether the new model
-extracts as well as or better than the old one, against a real note.**
-
-- **Where**: `firebase/functions/src/entityExtraction.ts` — `EXTRACTION_MODEL`
-  is `gpt-4.1-mini`, called through `tools` / `tool_choice` with
-  `strict: true`.
-- **Why it is still open**: the emulator has no `OPENAI_API_KEY` — the function
-  reads it from Firebase Secret Manager and there is no
-  `firebase/functions/.secret.local` — so the whole verification pass was done
-  by seeding the extractor's *output* into Firestore. That proves every line
-  this repo owns and **nothing about the model**.
-- **What to check**, in one or two real extractions: that the strict schema is
-  accepted at all (a rejected `anyOf` or a missing `required` entry fails the
-  call outright, not quietly), that `relatedNPCNames` comes back as names, and
-  that entity counts on a real session note are not worse than before.
-- **Catch**: `temperature: 0` keeps this reproducible, so a single note is a
-  fair comparison. Watch the **cached** input rate in the usage dashboard once
-  a few calls share the prefix — the cost case for this model rests on it.
-- **Source**: what remains of T050 after the 2026-09-22 fix pass
+- **Where**, all in `firebase/firestore.rules.prod`:
+  - `:117` `isGroupMember(groupId)` is true when the caller's **own**
+    `users/{uid}` document lists `groupId` in `groups`.
+  - `:144` / `:147` a user may create their own `users/{uid}` with any
+    content, and update it freely except `isAdmin`. So adding any group id to
+    your own `groups` array is permitted, and it is exactly what
+    `isGroupMember` trusts.
+  - `:191` likewise lets anyone create `groups/{g}/users/{self}` as `member`,
+    and `:232` their own username reservation — the rest of a "join", no token
+    consulted.
+  - `:250-252` the "mark token used" update does not require the token to be
+    unused, and nothing in any rule reads `used` or `expiresAt`.
+- **How a group id leaks**: every invite link carries it (`?groupId=`), and it
+  stays in the link after the token is spent; `/admin/group` shows it as a
+  value to copy.
+- **Touches**: redemption has to move server-side — a callable that checks the
+  token (unused, unexpired) and writes membership with the Admin SDK, on the
+  `createGroup` precedent — and then `:144` / `:147` have to stop letting a
+  user write their own `groups`, which `GroupService.joinGroup` (`:249`) and
+  `InvitationService.signUpWithToken` both currently do client-side. Then a
+  console deploy, which no CI gate performs.
+- **Catch**: this is a rules change of the #1409 / #1410 kind, and the same
+  caveats apply — production rules live in the console, and the emulator's
+  ruleset is `allow read, write: if true`, so it cannot reproduce this.
+  **Unverified**: read from the rules file only. Measure it the way #1409 was —
+  load `firestore.rules.prod` into the emulator and try the write — before
+  sizing the fix; and confirm the deployed rules match the repo copy (T034 asks
+  the same question). Not yet in `docs/testing/bug-tracking/README.md`.
+- **Source**: found 2026-09-23 while implementing T013's expiry, which checks
+  a field no rule reads
 
 ---
 
@@ -185,25 +172,6 @@ project-wide search for `updatePassword`, `changePassword`, `reauthenticate` and
   needs a reauthentication prompt on the stale-session path, not just a form.
   Worth deciding at the same time whether a forgotten-password reset ships with
   it — right now a user who forgets their password has no route back in at all.
-- **Source**: todo.txt, 2026-09-16
-
-### T013 — Registration tokens never expire
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-16
-
-A group registration token is valid forever until somebody uses or deletes it.
-
-- **Where**: `src/core/services/firebase/group/InvitationService.ts:55`
-  (`generateGroupRegistrationToken`) writes `createdAt` and `used: false` and no
-  expiry field. Validation at `:103` checks only `used !== true`; the same check
-  is repeated in `signUpWithToken` at `:226`.
-- **Touches**: the generator, both validation paths, and
-  `features/user-management/admin/components/TokenManagementView.tsx`, which
-  lists tokens and would want to show the expiry.
-- **Catch**: three error messages already say *"Invalid or expired invitation
-  token"* (`:181`, `:217`, `:227`) for a condition that cannot currently happen —
-  the wording promises a feature that was never built. Existing tokens carry no
-  expiry field, so the check has to treat `undefined` as never-expiring or the
-  documents need backfilling.
 - **Source**: todo.txt, 2026-09-16
 
 ### T017 — Batch actions for stories, quests, NPCs and locations
@@ -384,14 +352,14 @@ converted** — the four sites there all use sigils — so the remaining work is
 the cross-domain surfaces that render a mixed list.
 
 - **Where**, all verified by opening the file:
-  - `src/shared/components/command-palette/CommandPalette.tsx:31-34` — a
-    `RESULT_ICONS` map giving every search hit its type's glyph.
+  - `src/shared/components/command-palette/CommandPalette.tsx:31-38` — a
+    `resultTypeIcons` map giving every search hit its type's glyph.
   - `src/pages/layouts/common/utils/contentTypeUtils.tsx:11-25` —
     `getContentIcon`, used for the chapter card at
     `dashboard/sections/ActivityFeed.tsx:112` (that feed already uses a sigil for
     entities at `:148`).
-  - `src/features/collaboration/notes/components/NoteReferences.tsx:195-199`
-  - `src/features/collaboration/notes/components/CampaignLinksPanel.tsx:55-59`
+  - `src/features/collaboration/notes/components/NoteReferences.tsx:177-186`
+  - `src/features/collaboration/notes/components/CampaignLinksPanel.tsx:55-62`
   - `src/features/collaboration/entity-extraction/components/EntityCard.tsx:37-41`
 - **Touches**: those five files and their tests; nothing in
   `features/campaign-entities/locations/`, which is already done
@@ -427,11 +395,13 @@ explanatory line when searching; this one gets none.
 - **Touches**: the `RosterGroup` call and its copy; possibly a per-row hint
   ("its parent, `hobbiton`, is not in this campaign") and a route to fixing it,
   since `Move elsewhere` already exists.
-- **Catch**: the honest text depends on which cause you are naming, and there
-  are three. A renamed parent (#303), a deleted parent, and — still live —
-  **note conversion writing a location's *name* into `parentId`** (T050,
-  `NoteContext.tsx:335`). Until T050 lands, a user can produce an unplaced
-  location just by converting one from a note.
+- **Catch**: the honest text depends on which cause you are naming. Two are
+  live: a renamed parent (#303) and a deleted parent. A third — note conversion
+  writing a location's *name* into `parentId` — was closed by `9cf2b8a`
+  (2026-09-22): `useQuickAddCreate` resolves the extractor's `parentLocation`
+  through `shared/utils/resolve-name-to-id`, and an unmatched or ambiguous name
+  now leaves `parentId` empty rather than dangling. Records converted *before*
+  that commit can still carry a name there.
 - **The dev-data half of this report is already closed.** The seed generator now
   creates `hobbiton`, in the same Hobbit array as `bag-end`
   (`src/utils/__dev__/generators/contentGenerators/locationGenerator.ts:194`,
@@ -447,21 +417,6 @@ explanatory line when searching; this one gets none.
 ---
 
 ## Decisions needed
-
-### T004 — `NPCLegend`: wire it up or retire it
-**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-16 · `Q15` `R15`
-
-`NPCLegend.tsx` is exported from the `campaign-entities` barrel, has its own test
-file, and is **rendered by nothing**. `core/config/buildConfig.ts:5` carries
-`showNPCLegend: false` with tests pinning it false — but no code reads the flag,
-so the legend cannot be switched on either. The flag records an intention that
-was never wired.
-
-Not a straightforward deletion: a legend is the one place the design language
-permits a hue to carry meaning alone, because the legend is itself the key. That
-makes it the natural home for the `npc-status-*` family rather than dead weight.
-Decide, then either wire it or delete the component, its test, its barrel export
-and the flag together. Related to T008 — both ask where a hue may stand alone.
 
 ### T005 — Does an entity keep real edit history?
 **Type** decision · **Size** M · **Status** open · **Verified** 2026-09-16 · `Q12`
@@ -521,7 +476,8 @@ adjacent segments of the same hue merge into one band, and a reader filtering by
 
 The open question is whether a bar segment is a different kind of surface from a
 label — one where adjacency itself carries meaning — and therefore owes a rule
-the rows do not. Related to T004.
+the rows do not. (T004 asked the neighbouring question of `NPCLegend`, and was
+answered by retiring it, so this bar is now the only legend-like surface left.)
 
 **PR 15.7 made the premise true.** Until then this entry described an intent the
 code did not implement: the row map and the bar both put disproved on
@@ -665,24 +621,6 @@ of the four hook suites.
   so `loading` never flips a second time. Verify in Chrome.
 - **Source**: PR 15.7's browser pass
 
-### T045 — `/story` still reads `?highlight=` not at all
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-21
-
-Split out of the `?highlight=` unification, which phase 15 otherwise closed.
-The command palette
-navigates to `/story?highlight=<id>` and **nothing under
-`src/features/storytelling/` or `src/pages/story*` reads the parameter**, so a
-story or chapter search hit navigates and highlights nothing.
-
-- **The pattern to copy exists now**: `shared/hooks/useHighlightTarget`, which
-  the four entity directories share — matched by id, target and ancestors
-  revealed, brought into view.
-- **Or it may not be the right answer at all**: a chapter has its own route
-  (`/story/chapters/:chapterId`), so the palette could send a chapter hit
-  there and drop the parameter, the way `15-5` and `15-6` did for quests and
-  NPCs. Decide which before implementing.
-- **Source**: phase 15's `?highlight=` remainder
-
 ### T042 — A theme class passed as *data* has no manifest coverage
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-18
 
@@ -791,9 +729,9 @@ before planning the rebuild.
 |---|---|
 | Groups cannot be created — Firestore transactions require all reads before all writes | **Probably fixed.** `GroupService.createGroup` (`src/core/services/firebase/group/GroupService.ts:51`) no longer runs a client transaction; it delegates to a `createGroup` Cloud Function. Needs a live run to confirm. |
 | Campaigns cannot be deleted | **Fixed.** `CampaignManagementView.tsx:32,154` has `deleteCampaign` wired to a confirm dialog. |
-| Neither campaigns nor groups can be edited | **Half fixed.** `CampaignManagementView.tsx:33,64-74` has an edit dialog. Groups still have none. |
+| Neither campaigns nor groups can be edited | **Fixed.** `CampaignManagementView.tsx:33,64-74` has an edit dialog; groups gained `GroupService.updateGroup` and an Edit control on `/admin/group` (T036, 2026-09-23). |
 | Groups view shows only the current group | **Holds.** `GroupManagementView.tsx:33` does `groups.find(g => g.id === activeGroupId)` and renders that one, though `useGroups()` supplies the full list. |
-| Groups cannot be edited or deleted | **Holds.** `GroupService` has exactly five public methods — `createGroup`, `getGroups`, `getGroupUsers`, `removeUserFromGroup`, `joinGroup`. No update, no delete. |
+| Groups cannot be edited or deleted | **Half fixed.** Editing landed as T036 (2026-09-23). Deletion still has no service method or Cloud Function — T037. |
 | Creation of groups and campaigns works? | **Untested.** Needs the emulator and a real run; nothing in the tree settles it. |
 
 - **Touches**: `src/features/user-management/admin/components/` (`AdminPanel`,
@@ -804,8 +742,8 @@ before planning the rebuild.
   with `10-1`'s 3-second loading timeout carried across verbatim. Re-measure this item's six
   claims against that work before planning anything: the components named above
   under *Touches* (`AdminPanel`, `UserManagementView`, `TokenManagementView`) do
-  not survive the phase, and the "groups cannot be edited or deleted" claims are
-  now tracked in their own right as T036 and T037.
+  not survive the phase. Of the "groups cannot be edited or deleted" claims,
+  editing is done (T036) and deletion is tracked as T037.
 - **Source**: todo.txt, 2026-09-16
 
 ### T026 — Mobile layout on the story pages
@@ -891,19 +829,6 @@ then leave."
   so a guard on one door is not a guard.
 - **Source**: todo.txt, 2026-09-16; scoped during Phase 14.3
 
-### T036 — A group cannot be renamed
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-16
-
-There is no `updateGroup` in `src/core/services/firebase/group/GroupService.ts`
-and no `updateGroup` Cloud Function — `firebase/functions/src/index.ts` exports
-`createGroup` and nothing else for groups. Confirms T025's "groups still have
-none" claim from the other direction.
-
-- **Note**: the view Phase 14.3 replaced shipped an **"Edit Group" button with
-  no `onClick` at all** — a dead control. It was removed rather than left in
-  place, so restoring the capability means writing the service method first.
-- **Source**: Phase 14.3, while building `/admin/group`
-
 ### T037 — A group cannot be deleted
 **Type** debt · **Size** L · **Status** open · **Verified** 2026-09-16
 
@@ -960,7 +885,7 @@ review says so itself. Six findings were re-checked on 2026-09-16 at `ebc0a28`:
 
 | Finding | Severity | Re-checked 2026-09-16 |
 |---|---|---|
-| `PERF-01` search never terminates on whitespace | Critical | **Fixed.** All three split sites are now `split(/\s+/).filter(Boolean)`, and `findWordMatches` (`SearchService.ts:291`) guards `if (!word) return []`. `SearchBar.tsx` is gone, replaced by `shared/components/command-palette/`. See T031 for the one piece that did not land. |
+| `PERF-01` search never terminates on whitespace | Critical | **Fixed.** All three split sites are now `split(/\s+/).filter(Boolean)`, and `findWordMatches` (`SearchService.ts:294`) guards `if (!word) return []`. `SearchBar.tsx` is gone, replaced by `shared/components/command-palette/`. The regression test that did not ship with the fix landed as T031 (2026-09-23), pinning each guard separately. |
 | `PERF-07` context switch refreshes then reloads | High | **Fixed.** The only `window.location.reload()` left in `src/` is `ErrorBoundary.tsx:62`. |
 | `PERF-10` all routes + full Lodash in one bundle | Medium | **Half fixed.** Zero `lodash` imports remain in `src/`. Route splitting is still open — see T030. |
 | `PERF-04` notes loaded twice, unbounded | High | **Still true** — see T029. |
@@ -1001,25 +926,6 @@ straight down it.
   campaign/collaboration features, and layout helpers importing back from
   `HomePage`) that make reliable splitting harder; expect to untangle those
   first. No delay was ever attributed to the cycles themselves.
-- **Source**: performance review
-
-### T031 — No regression test pins the search-termination fix
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-16 · `PERF-01`
-
-The Critical finding is fixed, but the guard that fixed it is unpinned.
-
-- **Where**: `src/core/services/search/__tests__/SearchService.test.ts` has no
-  case for a whitespace-only, leading-space, trailing-space or
-  repeated-internal-space query. Its one whitespace test (`:331`) is about
-  slicing a snippet from *content* with leading whitespace — a different thing.
-- **Touches**: that suite.
-- **Catch**: two separate things now prevent the hang — `filter(Boolean)` at the
-  three split sites and the `if (!word)` guard in `findWordMatches`. Either could
-  be removed as "redundant" by someone reading only the other. The review asked
-  for exactly this test and it did not ship with the fix. Assert termination, not
-  just results: a query of two spaces measured **22,538 ms** of main-thread lag
-  before the fix, so a test that merely checks the return value would have hung
-  rather than failed.
 - **Source**: performance review
 
 ### T032 — Performance remediation programme
