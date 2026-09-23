@@ -25,6 +25,7 @@ const MEMBERS: GroupMember[] = [
 ];
 
 const createGroup = jest.fn().mockResolvedValue("g2");
+const updateGroup = jest.fn().mockResolvedValue(undefined);
 
 function setup({ members = MEMBERS, createdBy = "u1" } = {}) {
   useGroups.mockReturnValue({
@@ -40,6 +41,7 @@ function setup({ members = MEMBERS, createdBy = "u1" } = {}) {
     activeGroupId: "group1",
     activeGroup: { id: "group1", name: "The Fellowship" },
     createGroup,
+    updateGroup,
   });
 
   const context: AdminOutletContext = {
@@ -126,15 +128,60 @@ describe("AdminGroupPage", () => {
     expect(screen.getByRole("button", { name: /copy/i })).toBeInTheDocument();
   });
 
-  // There is no `updateGroup` in the service and no Cloud Function for it, so
-  // a rename control would be a button that cannot do its job -- which is what
-  // the view this replaced had, with no `onClick` at all.
-  test("offers no group rename, because nothing server-side can do it", async () => {
-    setup();
-    await settle();
-    expect(
-      screen.queryByRole("button", { name: /edit group|rename/i })
-    ).not.toBeInTheDocument();
+  // T036: `GroupService.updateGroup` exists now, backed by a rule that already
+  // let a group admin update the group document. The test this replaced
+  // pinned the control's absence "because nothing server-side can do it".
+  describe("editing the group", () => {
+    async function openEdit() {
+      setup();
+      await settle();
+      await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+      return screen.findByRole("dialog");
+    }
+
+    test("opens on the group as it stands", async () => {
+      const dialog = await openEdit();
+      expect(within(dialog).getByLabelText(/^Name/)).toHaveValue("The Fellowship");
+      expect(within(dialog).getByLabelText(/^Description/)).toHaveValue(
+        "A group bound by a common quest"
+      );
+    });
+
+    test("saves a new name and description, trimmed, and closes", async () => {
+      const dialog = await openEdit();
+      const name = within(dialog).getByLabelText(/^Name/);
+      await userEvent.clear(name);
+      await userEvent.type(name, "  The Company  ");
+      const description = within(dialog).getByLabelText(/^Description/);
+      await userEvent.clear(description);
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await settle();
+      expect(updateGroup).toHaveBeenCalledWith("The Company", "");
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    test("will not save a blank name", async () => {
+      const dialog = await openEdit();
+      await userEvent.clear(within(dialog).getByLabelText(/^Name/));
+      expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
+    });
+
+    test("keeps the dialog open and says why when the save fails", async () => {
+      updateGroup.mockRejectedValueOnce(new Error("Only group admins can edit the group"));
+      const dialog = await openEdit();
+      await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await settle();
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+        "Only group admins can edit the group"
+      );
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    test("cancelling writes nothing", async () => {
+      const dialog = await openEdit();
+      await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      expect(updateGroup).not.toHaveBeenCalled();
+    });
   });
 
   describe("the way out", () => {

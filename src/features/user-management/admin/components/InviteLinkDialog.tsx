@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Dialog from 'core/components/Dialog';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
+import { formatDisplayDate } from 'shared/utils/dateFormatter';
 import { Check, Copy } from 'lucide-react';
 
 /** Props for {@link InviteLinkDialog}. */
@@ -17,6 +18,11 @@ export interface InviteLinkDialogProps {
   groupName: string;
   /** Who the invitation is for, when a note says. */
   note?: string;
+  /**
+   * When the link stops working. Absent for an invitation minted before
+   * T013, which lapses only when used.
+   */
+  expiresAt?: Date | string | number;
 }
 
 /**
@@ -37,6 +43,7 @@ const InviteLinkDialog: React.FC<InviteLinkDialogProps> = ({
   link,
   groupName,
   note,
+  expiresAt,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -73,7 +80,12 @@ const InviteLinkDialog: React.FC<InviteLinkDialogProps> = ({
     >
       <div className="space-y-4">
         <Typography color="secondary">
-          {`Anyone with this link can join ${groupName} once. It expires when used.`}
+          {expiresAt
+            ? `Anyone with this link can join ${groupName} once, until ${formatDisplayDate(
+                expiresAt,
+                { year: 'numeric', month: 'long', day: 'numeric' }
+              )}.`
+            : `Anyone with this link can join ${groupName} once. It expires when used.`}
         </Typography>
 
         <div className="flex items-center gap-2 rounded-md p-2 card-subtle card-border">

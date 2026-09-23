@@ -52,6 +52,11 @@ export interface RegistrationToken {
   notes?: string;
   used?: boolean;
   createdAt?: Date | string | number;
+  /**
+   * When the invitation stops working. Absent on every token minted before
+   * T013, which never expire -- see `core/utils/registration-token`.
+   */
+  expiresAt?: Date | string | number;
   usedAt?: Date | string | number;
   usedBy?: string;
 }

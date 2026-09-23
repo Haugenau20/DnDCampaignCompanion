@@ -62,6 +62,32 @@ export function useGroups() {
     }
   }, [setError, refreshGroups]);
 
+  /**
+   * Rename the active group, or change its description (admin only, T036).
+   *
+   * Refreshes the group list afterwards, since every surface that names the
+   * group -- the header's account menu, the campaign picker, the admin pages --
+   * reads it from there.
+   */
+  const updateGroup = useCallback(async (
+    name: string,
+    description?: string
+  ): Promise<void> => {
+    try {
+      setError(null);
+
+      if (!activeGroupId) {
+        throw new Error('No active group selected');
+      }
+
+      await firebaseServices.group.updateGroup(activeGroupId, { name, description });
+      await refreshGroups();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update the group');
+      throw err;
+    }
+  }, [activeGroupId, setError, refreshGroups]);
+
   // Switch active group (alias for setActiveGroup for backward compatibility)
   //
   // The write and the context update both live in FirebaseContext, because
@@ -163,6 +189,7 @@ export function useGroups() {
     activeGroup,
     activeGroupUserProfile,
     createGroup,
+    updateGroup,
     setActiveGroup,
     switchGroup,          
     joinGroupWithToken,   

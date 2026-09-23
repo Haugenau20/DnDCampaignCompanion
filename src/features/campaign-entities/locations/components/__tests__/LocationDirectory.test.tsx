@@ -354,7 +354,8 @@ describe('LocationDirectory', () => {
       );
       openTwisty('Silverkeep');
       fireEvent.click(screen.getByRole('button', { name: /Aldric/ }));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/npcs?highlight=npc-1');
+      // The NPC's own page (T014); a highlighted directory row until then.
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/npcs/npc-1');
     });
 
     test('navigates to a quest listed in the summary, whose status is a word', () => {

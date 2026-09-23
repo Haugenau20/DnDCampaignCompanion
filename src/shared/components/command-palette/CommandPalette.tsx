@@ -70,17 +70,18 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
   /**
    * Navigate to the appropriate page for a result's type.
    *
-   * `createPath`'s `params` argument is never substituted into the returned
-   * path (see `shared/context/NavigationContext.tsx`), so a note -- whose id
-   * belongs in the path itself, at the real route `/notes/:noteId` -- must
-   * call `navigateToPage` directly with the id interpolated. The other five
-   * types pass their id as a `highlight` query param instead.
+   * Every record with its own page opens that page, with the id interpolated
+   * directly -- `createPath`'s `params` argument is never substituted into the
+   * returned path (see `shared/context/NavigationContext.tsx`). A story hit is
+   * always a chapter (`createChapterSearchDocuments`), so it opens the chapter.
+   * A rumour has no page by design, so it alone passes its id as a
+   * `highlight` query param, to find its row in the directory.
    */
   const navigateToResult = useCallback(
     (result: SearchResult): void => {
       switch (result.type) {
         case "story":
-          navigateToPage(createPath("/story", {}, { highlight: result.id }));
+          navigateToPage(`/story/chapters/${result.id}`);
           break;
         case "quest":
           // The quest's own page, since `15-5`. The palette is the fastest way
@@ -88,10 +89,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
           navigateToPage(`/quests/${result.id}`);
           break;
         case "npc":
-          navigateToPage(createPath("/npcs", {}, { highlight: result.id }));
+          navigateToPage(`/npcs/${result.id}`);
           break;
         case "location":
-          navigateToPage(createPath("/locations", {}, { highlight: result.id }));
+          navigateToPage(`/locations/${result.id}`);
           break;
         case "rumors":
           navigateToPage(createPath("/rumors", {}, { highlight: result.id }));

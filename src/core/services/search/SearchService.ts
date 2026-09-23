@@ -50,7 +50,10 @@ export class SearchService {
    * Perform a search across all indexed documents
    */
   public search(query: string): SearchResult[] {
-    if (!query || query.length < (this.options.minQueryLength || 2)) {
+    // Measured trimmed, as `useSearch`'s "keep typing" hint already is: a
+    // whitespace-only query would otherwise pass the length check and then
+    // match every title, since every string includes "".
+    if (!query || query.trim().length < (this.options.minQueryLength || 2)) {
       return [];
     }
 

@@ -5,6 +5,7 @@ import Typography from 'core/components/Typography';
 import Input from 'core/components/Input';
 import Button from 'core/components/Button';
 import { formatDisplayDate } from 'shared/utils/dateFormatter';
+import { isRegistrationTokenExpired } from 'core/utils/registration-token';
 import type { RegistrationToken } from '../types';
 
 /** Props for {@link PendingInvitationsCard}. */
@@ -31,6 +32,25 @@ const ROW_GRID =
   'grid items-center gap-x-3 gap-y-1 ' +
   'grid-cols-[auto_minmax(0,1fr)] ' +
   'sm:grid-cols-[auto_minmax(0,1fr)_10rem_11rem]';
+
+/** Dates on this card: "31 May 2025". */
+const formatRowDate = (value: Date | string | number): string =>
+  formatDisplayDate(value, { year: 'numeric', month: 'short', day: 'numeric' });
+
+/**
+ * The one date a pending invitation's row states.
+ *
+ * When it stops working, if it ever does -- that is what an admin deciding
+ * whether to resend needs. A token minted before T013 has no expiry, so it
+ * keeps saying when it was made, as every row did before.
+ */
+function invitationDateLabel(invitation: RegistrationToken, expired: boolean): string {
+  if (invitation.expiresAt) {
+    const date = formatRowDate(invitation.expiresAt);
+    return expired ? `Expired ${date}` : `Expires ${date}`;
+  }
+  return invitation.createdAt ? `Created ${formatRowDate(invitation.createdAt)}` : '—';
+}
 
 /**
  * The note on one invitation: who it is for.
@@ -188,13 +208,7 @@ const PendingInvitationsCard: React.FC<PendingInvitationsCardProps> = ({
     ) : (
       <ul className="divide-y card-divider border-t card-divider">
         {invitations.map((invitation) => {
-          const created = invitation.createdAt
-            ? formatDisplayDate(invitation.createdAt, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              })
-            : null;
+          const expired = isRegistrationTokenExpired(invitation.expiresAt);
 
           return (
             <li
@@ -223,21 +237,25 @@ const PendingInvitationsCard: React.FC<PendingInvitationsCardProps> = ({
                   color="secondary"
                   className="whitespace-nowrap"
                 >
-                  {created ? `Created ${created}` : '—'}
+                  {invitationDateLabel(invitation, expired)}
                 </Typography>
               </div>
 
               {/* The token string itself appears nowhere. A truncated stub is
-                  not information; the link behind Copy is. */}
+                  not information; the link behind Copy is. An expired
+                  invitation offers no link at all: it would be refused on
+                  arrival, and Revoke is the one thing left worth doing. */}
               <div className="col-start-2 row-start-3 sm:row-start-1 sm:col-start-4 justify-self-end flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="min-h-[2.75rem]"
-                  onClick={() => onCopyLink(invitation)}
-                >
-                  Copy link
-                </Button>
+                {!expired && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="min-h-[2.75rem]"
+                    onClick={() => onCopyLink(invitation)}
+                  >
+                    Copy link
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"

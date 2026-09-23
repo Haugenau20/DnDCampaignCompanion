@@ -245,13 +245,37 @@ describe('CampaignLinksPanel', () => {
       expect(screen.getByText('Location')).toBeInTheDocument();
     });
 
-    test('should navigate to the entity when its row is clicked', () => {
+    // T014: an NPC and a location have their own pages, so a link to one
+    // opens the record rather than a directory with its row lit up.
+    test('should open an NPC on its own page when its row is clicked', () => {
       setupMocks({ references });
       render(<CampaignLinksPanel noteId="note-1" />);
 
       fireEvent.click(screen.getByText('Gundren Rockseeker'));
 
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/npcs?highlight=npc-1');
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/npcs/npc-1');
+    });
+
+    test('should open a location on its own page when its row is clicked', () => {
+      setupMocks({ references });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      fireEvent.click(screen.getByText('Phandalin'));
+
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/locations/loc-1');
+    });
+
+    test('should highlight a rumour in its directory, since it has no page', () => {
+      setupMocks({
+        references: [
+          { id: 'r-1', type: 'rumor', title: 'A dragon on the hill', matchingText: ['A dragon on the hill'] },
+        ],
+      });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      fireEvent.click(screen.getByText('A dragon on the hill'));
+
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/rumors?highlight=r-1');
     });
   });
 

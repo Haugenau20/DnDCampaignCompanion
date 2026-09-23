@@ -20,6 +20,7 @@ import { useGroups } from "../useGroups";
 // Mock firebaseServices
 // ---------------------------------------------------------------------------
 const mockCreateGroup = jest.fn();
+const mockUpdateGroup = jest.fn();
 const mockGetGroupUsers = jest.fn();
 const mockRemoveUserFromGroup = jest.fn();
 const mockUpdateUserProfile = jest.fn();
@@ -31,6 +32,7 @@ jest.mock("@/core/services/firebase", () => ({
   default: {
     group: {
       createGroup: (...args: any[]) => mockCreateGroup(...args),
+      updateGroup: (...args: any[]) => mockUpdateGroup(...args),
       getGroupUsers: (...args: any[]) => mockGetGroupUsers(...args),
       removeUserFromGroup: (...args: any[]) => mockRemoveUserFromGroup(...args),
     },
@@ -112,6 +114,7 @@ describe("useGroups Behavioral Testing", () => {
       expect(typeof result.current.activeGroup).toBe("object"); // null
       expect(typeof result.current.activeGroupUserProfile).toBe("object");
       expect(typeof result.current.createGroup).toBe("function");
+      expect(typeof result.current.updateGroup).toBe("function");
       expect(typeof result.current.setActiveGroup).toBe("function");
       expect(typeof result.current.switchGroup).toBe("function");
       expect(typeof result.current.joinGroupWithToken).toBe("function");
@@ -321,6 +324,56 @@ describe("useGroups Behavioral Testing", () => {
       });
 
       expect(mockSetError).toHaveBeenCalledWith("Creation failed");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  describe("updateGroup Behavior (T036)", () => {
+    test("should update the active group, then refresh the group list", async () => {
+      mockContextValue = makeContext({ activeGroupId: "g1" });
+      mockUpdateGroup.mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        await result.current.updateGroup("The Company", "Nine walkers");
+      });
+
+      expect(mockUpdateGroup).toHaveBeenCalledWith("g1", {
+        name: "The Company",
+        description: "Nine walkers",
+      });
+      expect(mockRefreshGroups).toHaveBeenCalledTimes(1);
+      expect(mockUpdateGroup.mock.invocationCallOrder[0]).toBeLessThan(
+        mockRefreshGroups.mock.invocationCallOrder[0]
+      );
+    });
+
+    test("should refuse without an active group, writing nothing", async () => {
+      mockContextValue = makeContext({ activeGroupId: null });
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        await expect(result.current.updateGroup("X")).rejects.toThrow("No active group selected");
+      });
+
+      expect(mockUpdateGroup).not.toHaveBeenCalled();
+      expect(mockSetError).toHaveBeenCalledWith("No active group selected");
+    });
+
+    test("should call setError and re-throw on failure, without refreshing", async () => {
+      mockContextValue = makeContext({ activeGroupId: "g1" });
+      mockUpdateGroup.mockRejectedValue(new Error("permission-denied"));
+
+      const { result } = renderHook(() => useGroups());
+
+      await act(async () => {
+        await expect(result.current.updateGroup("X")).rejects.toThrow("permission-denied");
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("permission-denied");
+      expect(mockRefreshGroups).not.toHaveBeenCalled();
     });
   });
 
