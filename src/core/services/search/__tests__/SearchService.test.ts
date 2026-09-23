@@ -414,4 +414,93 @@ describe('SearchService', () => {
       expect(results[0].type).toBe('npc');
     });
   });
+
+  // ─── whitespace in the query (PERF-01) ──────────────────────────────────────
+
+  describe('whitespace in the query', () => {
+    // PERF-01: a query of two spaces once hung the main thread for 22,538 ms.
+    // An empty word reached `findWordMatches`, where `indexOf('', n)` clamps to
+    // the content length and never returns -1. Two separate guards now prevent
+    // that — `filter(Boolean)` at the split sites and `if (!word)` inside
+    // `findWordMatches` — and each is pinned on its own below, so neither can be
+    // deleted as "redundant" by someone reading only the other.
+    //
+    // A regressed loop is synchronous, so jest's timeout could never interrupt
+    // it: the suite would hang instead of failing. Every test here therefore
+    // runs under an `indexOf` budget that turns a runaway loop into a throw.
+
+    const INDEX_OF_BUDGET = 10_000;
+
+    function withIndexOfBudget<T>(fn: () => T): T {
+      const original = String.prototype.indexOf;
+      let calls = 0;
+      const spy = jest
+        .spyOn(String.prototype, 'indexOf')
+        .mockImplementation(function (this: string, ...args: Parameters<string['indexOf']>) {
+          if (++calls > INDEX_OF_BUDGET) {
+            throw new Error(`indexOf called more than ${INDEX_OF_BUDGET} times — search did not terminate`);
+          }
+          return original.apply(this, args);
+        });
+      try {
+        return fn();
+      } finally {
+        spy.mockRestore();
+      }
+    }
+
+    function makeIndexedService(): SearchService {
+      const svc = makeService();
+      svc.initializeIndex({
+        npc: [makeDoc('n1', 'npc', 'Gandalf the Grey, a wandering wizard', 'Gandalf')],
+        location: [makeDoc('l1', 'location', 'The dark tower of Barad-dur', 'Barad-dur')],
+        quest: [makeDoc('q1', 'quest', 'Destroy the ring in the dark lord\'s fire', 'The Ring')],
+        story: [], rumors: [], note: [],
+      });
+      return svc;
+    }
+
+    test.each([
+      ['two spaces', '  '],
+      ['many spaces', '        '],
+      ['tabs and newlines', '\t\n \t'],
+    ])('a whitespace-only query (%s) terminates and finds nothing', (_label, query) => {
+      const svc = makeIndexedService();
+      expect(withIndexOfBudget(() => svc.search(query))).toEqual([]);
+    });
+
+    test.each([
+      ['leading space', ' gandalf', 'n1'],
+      ['trailing space', 'gandalf ', 'n1'],
+      ['repeated internal spaces', 'dark    lord', 'q1'],
+      ['leading, trailing and internal', '  dark   tower  ', 'l1'],
+    ])('a query with %s terminates and still finds its match', (_label, query, expectedId) => {
+      const svc = makeIndexedService();
+      const results = withIndexOfBudget(() => svc.search(query));
+      expect(results.map(r => r.id)).toContain(expectedId);
+    });
+
+    test('extractMatches never hands an empty word to findWordMatches', () => {
+      // Pins `filter(Boolean)` independently of the `if (!word)` guard. Called
+      // directly because `search()` now stops a whitespace-only query at its
+      // length check, and trimmed text split on /\s+/ yields an empty word
+      // only when the whole query was whitespace — so through `search()` this
+      // split site is unreachable, and a test there would pass without it.
+      const svc = makeService();
+      const spy = jest.spyOn(svc as any, 'findWordMatches');
+      const result = withIndexOfBudget(() => (svc as any).extractMatches('some content', '   '));
+      expect(result).toEqual({ snippet: null, count: 0 });
+      spy.mock.calls.forEach(([, word]) => expect(word).not.toBe(''));
+      spy.mockRestore();
+    });
+
+    test('findWordMatches returns no matches for an empty word', () => {
+      // Pins the `if (!word)` guard independently of `filter(Boolean)`.
+      const svc = makeService();
+      const matches = withIndexOfBudget(() =>
+        (svc as any).findWordMatches('some content to scan', '')
+      );
+      expect(matches).toEqual([]);
+    });
+  });
 });
