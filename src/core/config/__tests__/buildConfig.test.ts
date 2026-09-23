@@ -53,24 +53,12 @@ describe('buildConfig', () => {
       expect(buildConfig.features).toHaveProperty('enableSidebar');
     });
 
-    test('should have "showNPCLegend" property', () => {
-      expect(buildConfig.features).toHaveProperty('showNPCLegend');
-    });
-
     test('enableSidebar should be false by default', () => {
       expect(buildConfig.features.enableSidebar).toBe(false);
     });
 
-    test('showNPCLegend should be false by default', () => {
-      expect(buildConfig.features.showNPCLegend).toBe(false);
-    });
-
     test('enableSidebar should be a boolean', () => {
       expect(typeof buildConfig.features.enableSidebar).toBe('boolean');
-    });
-
-    test('showNPCLegend should be a boolean', () => {
-      expect(typeof buildConfig.features.showNPCLegend).toBe('boolean');
     });
   });
 
@@ -87,7 +75,7 @@ describe('buildConfig', () => {
     test('BuildConfig features shape matches runtime object', () => {
       const config: BuildConfig = buildConfig;
       expect(Object.keys(config.features)).toEqual(
-        expect.arrayContaining(['enableSidebar', 'showNPCLegend'])
+        expect.arrayContaining(['enableSidebar'])
       );
     });
   });
