@@ -211,6 +211,19 @@ describe('InvitationService', () => {
       expect(mockSetDoc).toHaveBeenCalledTimes(1);
     });
 
+    // T013: a token lapses 14 days after it is minted.
+    test('should write an expiry 14 days after creation', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(true);
+      mockSetDoc.mockResolvedValueOnce(undefined);
+      const svc = InvitationService.getInstance();
+      await svc.generateGroupRegistrationToken('g1');
+      const written = mockSetDoc.mock.calls[0][1];
+      expect(written.expiresAt).toBeInstanceOf(Date);
+      expect(written.expiresAt.getTime() - written.createdAt.getTime()).toBe(
+        14 * 24 * 60 * 60 * 1000
+      );
+    });
+
     test('should throw when user is not authenticated', async () => {
       jest.resetModules();
       jest.doMock('firebase/auth', () => ({
@@ -298,6 +311,42 @@ describe('InvitationService', () => {
       expect(result.isValid).toBe(false);
     });
 
+    test('should return isValid=false when token has expired', async () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { search: '?groupId=g1' },
+      });
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, { used: false, expiresAt: new Date(Date.now() - 1000) })
+      );
+      const svc = InvitationService.getInstance();
+      const result = await svc.validateRegistrationToken('expired-token');
+      expect(result.isValid).toBe(false);
+    });
+
+    test('should read a Timestamp-shaped expiry as Firestore returns it', async () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { search: '?groupId=g1' },
+      });
+      const expired = { toDate: () => new Date(Date.now() - 1000) };
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { used: false, expiresAt: expired }));
+      const svc = InvitationService.getInstance();
+      expect((await svc.validateRegistrationToken('expired-token')).isValid).toBe(false);
+    });
+
+    test('should return isValid=true for an unexpired token', async () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { search: '?groupId=g1' },
+      });
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, { used: false, expiresAt: new Date(Date.now() + 60_000) })
+      );
+      const svc = InvitationService.getInstance();
+      expect((await svc.validateRegistrationToken('live-token')).isValid).toBe(true);
+    });
+
     test('should return isValid=false when token document does not exist', async () => {
       Object.defineProperty(window, 'location', {
         writable: true,
@@ -343,6 +392,19 @@ describe('InvitationService', () => {
       const tokens = await svc.getGroupRegistrationTokens('g1');
       expect(tokens).toHaveLength(1);
       expect(tokens[0].token).toBe('t1');
+    });
+
+    test('should convert a stored expiry Timestamp to a Date', async () => {
+      const expiry = new Date('2026-10-07T12:00:00.000Z');
+      mockIsUserAdmin.mockResolvedValueOnce(true);
+      mockGetDocs.mockResolvedValueOnce(
+        makeQuerySnapshot([
+          { exists: () => true, data: () => ({ used: false, expiresAt: { toDate: () => expiry } }), id: 't1' },
+        ] as any)
+      );
+      const svc = InvitationService.getInstance();
+      const tokens = await svc.getGroupRegistrationTokens('g1');
+      expect(tokens[0].expiresAt).toBe(expiry);
     });
 
     // `validateRegistrationToken` looks a token up as a **document id**, so the
@@ -463,6 +525,24 @@ describe('InvitationService', () => {
     });
   });
 
+  describe('joinGroupWithToken — expiry (T013)', () => {
+    test('should refuse an expired token and join nothing', async () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { search: '?groupId=g1' },
+      });
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, { used: false, expiresAt: new Date(Date.now() - 1000) })
+      );
+      const svc = InvitationService.getInstance();
+      await expect(svc.joinGroupWithToken('expired-token', 'User')).rejects.toThrow(
+        'Invalid or expired invitation token'
+      );
+      expect(mockJoinGroup).not.toHaveBeenCalled();
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
+    });
+  });
+
   // ─── signUpWithToken ───────────────────────────────────────────────────────
 
   describe('signUpWithToken', () => {
@@ -529,6 +609,32 @@ describe('InvitationService', () => {
       await expect(
         svc.signUpWithToken('valid-token', 'a@b.com', 'pass', 'NewUser')
       ).rejects.toThrow('transaction failed');
+    });
+
+    test('should refuse an expired token on the provided-groupId path, before creating any account', async () => {
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, { used: false, expiresAt: new Date(Date.now() - 1000) })
+      );
+      const svc = InvitationService.getInstance();
+      await expect(
+        svc.signUpWithToken('expired-token', 'a@b.com', 'pass', 'User', 'provided-group')
+      ).rejects.toThrow('Invalid or expired invitation token');
+      expect(mockCreateUserWithEmailAndPassword).not.toHaveBeenCalled();
+    });
+
+    test('should refuse an expired token on the URL path, before creating any account', async () => {
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { search: '?groupId=g1' },
+      });
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, { used: false, expiresAt: new Date(Date.now() - 1000) })
+      );
+      const svc = InvitationService.getInstance();
+      await expect(
+        svc.signUpWithToken('expired-token', 'a@b.com', 'pass', 'User')
+      ).rejects.toThrow('Invalid or expired invitation token');
+      expect(mockCreateUserWithEmailAndPassword).not.toHaveBeenCalled();
     });
 
     test('should use provided groupId and verify token directly', async () => {

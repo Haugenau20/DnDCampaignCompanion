@@ -228,6 +228,38 @@ describe("AdminPeoplePage", () => {
       expect(screen.getByText("Not yet sent to anyone")).toBeInTheDocument();
     });
 
+    // T013: a row says when its invitation stops working.
+    test("states when an invitation expires", async () => {
+      const inAWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      setup({ tokens: [{ token: "t", used: false, createdAt: new Date(), expiresAt: inAWeek }] });
+      await settle();
+      const row = within(invitationsList()).getByRole("listitem");
+      expect(row).toHaveTextContent(/Expires /);
+      expect(within(row).getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+    });
+
+    test("an expired invitation says so and offers no link, only revoking", async () => {
+      setup({
+        tokens: [
+          { token: "t", used: false, createdAt: new Date("2025-05-01"), expiresAt: new Date("2025-05-15") },
+        ],
+      });
+      await settle();
+      const row = within(invitationsList()).getByRole("listitem");
+      expect(row).toHaveTextContent(/Expired /);
+      expect(within(row).queryByRole("button", { name: "Copy link" })).not.toBeInTheDocument();
+      expect(within(row).getByRole("button", { name: "Revoke" })).toBeInTheDocument();
+    });
+
+    test("an invitation from before expiry existed still says when it was made", async () => {
+      setup({ tokens: [{ token: "t", used: false, createdAt: new Date("2025-05-31") }] });
+      await settle();
+      const row = within(invitationsList()).getByRole("listitem");
+      expect(row).toHaveTextContent(/Created /);
+      expect(row).not.toHaveTextContent(/Expire/);
+      expect(within(row).getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+    });
+
     test("reads as new rather than broken when there are none", async () => {
       setup({ tokens: [] });
       await settle();

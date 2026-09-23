@@ -20,7 +20,11 @@ import {
   import ServiceRegistry from '../core/ServiceRegistry';
   import type UserService from '../user/UserService';
   import GroupService from './GroupService';
-  
+  import {
+    REGISTRATION_TOKEN_LIFETIME_MS,
+    isRegistrationTokenRedeemable
+  } from '../../../utils/registration-token';
+
   /**
    * InvitationService manages registration tokens and group invitations
    */
@@ -68,9 +72,11 @@ import {
       const token = this.generateSecureToken();
       
       // Store token in the group's registrationTokens collection
+      const createdAt = new Date();
       await setDoc(doc(this.db, 'groups', groupId, 'registrationTokens', token), {
         token,
-        createdAt: new Date(),
+        createdAt,
+        expiresAt: new Date(createdAt.getTime() + REGISTRATION_TOKEN_LIFETIME_MS),
         createdBy: userId,
         notes,
         used: false
@@ -99,8 +105,8 @@ import {
       const docRef = doc(this.db, 'groups', groupId, 'registrationTokens', token);
       const docSnap = await getDoc(docRef);
       
-      // Check if token exists and hasn't been used
-      if (docSnap.exists() && docSnap.data().used !== true) {
+      // Check the token exists, hasn't been used, and hasn't expired
+      if (docSnap.exists() && isRegistrationTokenRedeemable(docSnap.data())) {
         return { isValid: true, groupId };
       }
       
@@ -146,6 +152,7 @@ import {
           // arrival. The id is the identity; the stored field is a copy of it.
           token: doc.id,
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+          expiresAt: data.expiresAt?.toDate ? data.expiresAt.toDate() : data.expiresAt,
           usedAt: data.usedAt?.toDate ? data.usedAt.toDate() : data.usedAt
         };
       });
@@ -271,7 +278,7 @@ import {
         const docRef = doc(this.db, 'groups', targetGroupId, 'registrationTokens', token);
         const docSnap = await getDoc(docRef);
         
-        if (!docSnap.exists() || docSnap.data().used === true) {
+        if (!docSnap.exists() || !isRegistrationTokenRedeemable(docSnap.data())) {
           throw new Error('Invalid or expired invitation token');
         }
       }
