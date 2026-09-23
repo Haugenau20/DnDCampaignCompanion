@@ -26,6 +26,7 @@ is hurt while it waits · `nit` bookkeeping or polish
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
+| medium | T053 | Dev-only "sign in as" for browser checks | S | open | Unblocks browser verification of anything that needs a different user, which every recent phase needed |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
 | low | T001 | `NPCNote.date` stored shape | S | open | Display already uniform; the remainder is data hygiene |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
@@ -569,6 +570,37 @@ Measured against the four create forms, the premise holds for the quest only.
 ---
 
 ## Tech debt and platform
+
+### T053 — A browser check cannot switch users
+**Type** tech debt · **Size** S · **Status** open · **Verified** 2026-09-23
+
+An agent driving Chrome cannot type a password or create an account, so every
+browser check runs as whoever the maintainer left signed in. PR #114 could
+verify promote, demote and the last-admin guard, but not joining a group
+through an invite link, and it could not see the app as a plain member.
+
+- **Where**: next to the existing dev-only helpers. `src/index.tsx:15-24`
+  dynamically imports `utils/__dev__/sessionTester` only when
+  `NODE_ENV === 'development'`; a `utils/__dev__/devAuth.ts` would load the
+  same way and additionally require `useEmulators`
+  (`core/services/firebase/config/firebaseConfig.ts:21`).
+- **The mechanism**: the Auth **emulator** accepts *unsigned* custom tokens
+  (`alg: "none"`). So `window.__devAuth.signInAs('DungeonMaster')` can look the
+  uid up by username in the emulator, mint an unsigned token and call
+  `signInWithCustomToken` -- no password anywhere, nothing stored. Add
+  `signOut()` and `whoami()`. Production Auth rejects unsigned tokens, so it
+  cannot work against the live project even if it leaked into a bundle.
+- **Touches**: the new helper, `src/index.tsx`, the sample-data generator
+  (`utils/__dev__/generators/userGenerator.ts`) for two more users -- one in
+  **no group**, to test joining as an existing account, and a second admin in
+  group 1 for role and last-admin flows -- and a line in `CLAUDE.md`.
+- **Catch**: the sign-up form stays out of reach -- creating an account
+  through it is off-limits to an agent even on the emulator -- so that path
+  keeps its emulator tests plus a manual check. And `utils/__dev__/` is
+  operator tooling: use relative imports there (see the resolver table in
+  `CLAUDE.md`). Verify it is a no-op without the emulators, and that
+  `npm run build` does not bundle it into a reachable path.
+- **Source**: PR #114, 2026-09-23
 
 ### T051 — Nothing stops the next unbounded title from widening a page
 **Type** tech debt · **Size** S · **Status** open · **Verified** 2026-09-22
