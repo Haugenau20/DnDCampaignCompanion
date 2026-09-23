@@ -12,16 +12,27 @@ import {
 } from "./signUpGate";
 
 /**
- * The sample-data generator creates its users through the client SDK, which
- * this gate would refuse. Its users all live at `example.com`, a domain nobody
- * can receive mail at; the exemption only exists inside the emulator, where
- * `FUNCTIONS_EMULATOR` is set, and never in production.
+ * The sample-data generator creates its users through the client SDK with a
+ * password, which this gate would refuse. Its users all live at `example.com`,
+ * a domain nobody can receive mail at. The exemption exists only inside the
+ * emulator, where `FUNCTIONS_EMULATOR` is set, and never in production.
  *
- * @param {string} email The address about to get an account
+ * It is limited to password sign-ups -- the generator's only method, and one
+ * the app no longer offers -- so that trying a magic link or Google with an
+ * `example.com` address in the emulator still meets the real gate. It first
+ * admitted every `example.com` account, which let a Google sign-in as an
+ * uninvited `play57@example.com` straight through during manual testing.
+ *
+ * @param {AuthBlockingEvent} event The account about to be created
+ * @param {string} email Its address
  * @return {boolean} true for a dev seed account in the emulator
  */
-function isEmulatorSeedAccount(email: string): boolean {
+function isEmulatorSeedAccount(
+  event: AuthBlockingEvent,
+  email: string
+): boolean {
   return process.env.FUNCTIONS_EMULATOR === "true" &&
+    event.eventType?.endsWith(":password") === true &&
     email.toLowerCase().endsWith("@example.com");
 }
 
@@ -52,7 +63,7 @@ export async function admitAccount(event: AuthBlockingEvent): Promise<void> {
     );
   }
 
-  if (isEmulatorSeedAccount(email)) return;
+  if (isEmulatorSeedAccount(event, email)) return;
 
   const db = admin.firestore();
   const reservation = await findLiveReservation(db, email);

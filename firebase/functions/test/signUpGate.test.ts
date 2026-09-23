@@ -1,6 +1,6 @@
 // functions/test/signUpGate.test.ts
 import * as admin from "firebase-admin";
-import {HttpsError} from "firebase-functions/v2/identity";
+import {AuthBlockingEvent, HttpsError} from "firebase-functions/v2/identity";
 import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {reserveSignUp} from "../src/signUp/reserveSignUp";
 import {admitAccount} from "../src/signUp/gateAccountCreation";
@@ -16,8 +16,11 @@ const DAY = 24 * 60 * 60 * 1000;
 const reserve = (data: object) => call(reserveSignUp, data);
 
 /** What Auth hands the blocking function for an account about to exist. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const creating = (email?: string) => admitAccount({data: email ? {email} : {}} as any);
+const creating = (email?: string, signInMethod = "emailLink") =>
+  admitAccount({
+    data: email ? {email} : {},
+    eventType: `providers/cloud.auth/eventTypes/user.beforeCreate:${signInMethod}`,
+  } as unknown as AuthBlockingEvent);
 
 /** Asserts the gate refuses, with the given code and client-facing marker. */
 async function expectRefused(promise: Promise<unknown>, code: string, marker: string) {
@@ -182,13 +185,21 @@ describe("admitAccount (beforeUserCreated)", () => {
       delete process.env.FUNCTIONS_EMULATOR;
     });
 
-    it("admits an example.com account inside the emulator", async () => {
+    it("admits an example.com password sign-up inside the emulator", async () => {
       process.env.FUNCTIONS_EMULATOR = "true";
-      await expect(creating("dm@example.com")).resolves.toBeUndefined();
+      await expect(creating("dm@example.com", "password")).resolves.toBeUndefined();
     });
 
     it("does not exist outside it", async () => {
-      await expectRefused(creating("dm@example.com"), "permission-denied", "INVITE_REQUIRED");
+      await expectRefused(creating("dm@example.com", "password"), "permission-denied", "INVITE_REQUIRED");
+    });
+
+    // The generator signs up with a password; the app never does. A Google or
+    // magic-link sign-up with an example.com address is a manual test of the
+    // real gate and must meet it.
+    it.each(["google.com", "emailLink"])("does not cover a %s sign-up, even in the emulator", async (method) => {
+      process.env.FUNCTIONS_EMULATOR = "true";
+      await expectRefused(creating("play57@example.com", method), "permission-denied", "INVITE_REQUIRED");
     });
   });
 });

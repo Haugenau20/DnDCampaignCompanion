@@ -195,7 +195,9 @@ by hand:
 `{"blockingFunctions":{"triggers":{"beforeCreate":{"functionUri":"http://127.0.0.1:5001/dnd-campaign-companion/europe-west1/gateAccountCreation"}}}}`.
 Check it with a raw `accounts:signUp` for an uninvited address: it must come back
 `BLOCKING_FUNCTION_ERROR_RESPONSE … INVITE_REQUIRED`. The sample-data generator's `@example.com`
-users are exempt inside the emulator only (`FUNCTIONS_EMULATOR`), so seeding keeps working.
+users are exempt inside the emulator only (`FUNCTIONS_EMULATOR`), and only for **password**
+sign-ups, so seeding keeps working while a Google or magic-link sign-up with an `example.com`
+address still meets the real gate.
 
 The control rule still applies to anything new: a suite that is green on the first run proves the
 code runs, not that it changed anything. Break the thing on purpose once and watch the right tests
