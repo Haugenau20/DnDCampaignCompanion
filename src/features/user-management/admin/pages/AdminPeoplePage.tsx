@@ -90,7 +90,8 @@ const AdminPeoplePage: React.FC = () => {
         open: true,
         link: buildInviteLink(window.location.origin, token, activeGroupId),
         // The service stamps the same lifetime from its own clock a moment
-        // earlier; the sentence names a day, so the difference cannot show.
+        // earlier. The sentence names only a day, so the two can disagree
+        // only if that moment straddles midnight -- and then by one day.
         expiresAt: new Date(Date.now() + REGISTRATION_TOKEN_LIFETIME_MS),
       });
       await loadInvitations();
