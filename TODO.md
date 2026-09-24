@@ -41,6 +41,7 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T020 | Screenshot on bug reports | M | open | Blocked in practice on T021 |
 | low | T053 | A seeded user in no group | S | open | Switching users is solved by the emulator's link outbox; only the no-group state is left |
 | low | T054 | Sign in with Discord | L | needs scoping | Where tabletop players already are; Firebase has no built-in provider |
+| low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Nobody asked yet; prefer an authenticator app over SMS, which bills per text |
 | low | T040 | No accent pair for the band | S | open | Interim `.band-chip` works; schema-owner decision |
 | low | T048 | Five surfaces mark type, not entity | S | open | Visual consistency |
@@ -417,6 +418,45 @@ behind the generic line and could not be read on iOS Safari.
   returns `error.message`. An uncaught server fault therefore shows the bare
   word "internal". Decide whether those also get a ref instead.
 - **Source**: maintainer, 2026-09-24 (PR #117 follow-up)
+
+### T057 — Sign in with a code from the email, instead of approving from the phone
+**Type** feature · **Size** M · **Status** blocked · **Verified** 2026-09-24
+
+**On hold by the maintainer (2026-09-24): it needs a sending domain, which is
+not wanted yet.** Reverse today's cross-device flow: the email carries a
+6-digit code, and the reader types it on the device that wants to be signed
+in. The phone then only reads the email and never signs in or runs site code.
+The same email can keep the magic link for signing in on the device that opens it.
+
+- **Where**: today the laptop shows a 4-digit code (`SignInForm.tsx:159`) and
+  the phone approves it (`EmailLinkPage.tsx`, `core/services/firebase/auth/deviceApproval.ts`,
+  the `*DeviceSignIn` callables in `firebase/functions/src/deviceSignIn/`,
+  polled by `auth/hooks/useDeviceSignInWait.ts`). Most of that would go. Two
+  callables replace it: one to send a code (store only a hash, expiry, attempt
+  count; limit requests per address) and one to check it and return a custom token.
+- **Blocker**: Firebase's own sign-in email cannot carry a custom code, so the
+  function must send the mail itself. The plan is **Resend** (free tier 3,000/month,
+  100/day), which needs a domain you own. `dnd-campaign-companion.web.app`
+  cannot be verified. Setup: a sending subdomain with SPF/DKIM/DMARC, region
+  `eu-west-1`, **open and click tracking off** (click tracking rewrites the magic
+  link), a sending-only API key in Secret Manager as `RESEND_API_KEY`. The email
+  can carry the link too, built with the Admin SDK's `generateSignInWithEmailLink`.
+  `contact.ts:60` already sends through Gmail via nodemailer, but Gmail's
+  daily limits make it a poor fit for sign-in mail.
+- **Catch**: issue tokens only for accounts that already exist. The repo
+  disagrees about whether a custom-token sign-in that *creates* an account
+  passes `gateAccountCreation`: `claimDeviceSignIn.ts:35` says it goes around
+  it, T054 says it goes through. **Unverified.** Either way, never minting for
+  a missing uid is safe. Also: give the same answer whether or not the address
+  has an account, and require App Check on the send callable (it can mail any address).
+- **Cost**: estimated (not measured) at about 4 emails per active user per
+  month. Resend is free at today's size and about $20/month into the
+  thousands; Amazon SES is the cheapest at tens of thousands of users. Keep
+  the provider behind one send function so switching changes only that. Firebase
+  Auth costs the same in either design (free up to 50k monthly active users).
+- **Rollback**: the current approve-from-the-phone flow keeps working without
+  any of this, so it stays the fallback.
+- **Source**: maintainer, 2026-09-24
 
 ---
 

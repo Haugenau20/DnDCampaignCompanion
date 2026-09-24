@@ -5,6 +5,7 @@ import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulat
 import {startDeviceSignIn} from "../src/deviceSignIn/startDeviceSignIn";
 import {approveDeviceSignIn} from "../src/deviceSignIn/approveDeviceSignIn";
 import {claimDeviceSignIn} from "../src/deviceSignIn/claimDeviceSignIn";
+import {lookUpDeviceSignIn} from "../src/deviceSignIn/lookUpDeviceSignIn";
 import {
   DEVICE_SIGN_INS,
   MAX_CODE_ATTEMPTS,
@@ -26,6 +27,8 @@ const start = (email: string = EMAIL) =>
   call(startDeviceSignIn, {email}) as Promise<Started>;
 const approve = (data: object, uid?: string, email?: string) =>
   call(approveDeviceSignIn, data, uid, email);
+const lookUp = (data: object) =>
+  call(lookUpDeviceSignIn, data) as Promise<{email: string}>;
 const claim = (data: object) =>
   call(claimDeviceSignIn, data) as Promise<{status: string; token?: string}>;
 
@@ -166,6 +169,44 @@ describe("approveDeviceSignIn", () => {
     const {requestId, code} = await start();
     await approve({requestId, code}, uid, EMAIL);
     await expectHttpsError(approve({requestId, code}, uid, EMAIL), "failed-precondition");
+  });
+});
+
+describe("lookUpDeviceSignIn", () => {
+  // Anonymous: the approving device is signed in nowhere yet.
+  it("answers the address a pending request was opened for, normalised", async () => {
+    const {requestId} = await start("  Frodo@Shire.dev ");
+    await expect(lookUp({requestId})).resolves.toEqual({email: EMAIL});
+  });
+
+  it("gives away nothing else about the request", async () => {
+    const {requestId, code, secret} = await start();
+    const answer = JSON.stringify(await lookUp({requestId}));
+    expect(answer).not.toContain(code);
+    expect(answer).not.toContain(secret);
+  });
+
+  it("refuses a request that does not exist", async () => {
+    await expectHttpsError(lookUp({requestId: "nope"}), "failed-precondition");
+  });
+
+  it("refuses an expired request", async () => {
+    const {requestId} = await start();
+    await db.collection(DEVICE_SIGN_INS).doc(requestId).update({
+      expiresAt: Timestamp.fromMillis(Date.now() - 1000),
+    });
+    await expectHttpsError(lookUp({requestId}), "failed-precondition");
+  });
+
+  it("refuses a request that is no longer pending", async () => {
+    const uid = await account();
+    const {requestId, code} = await start();
+    await approve({requestId, code}, uid, EMAIL);
+    await expectHttpsError(lookUp({requestId}), "failed-precondition");
+  });
+
+  it("refuses a missing id", async () => {
+    await expectHttpsError(lookUp({}), "invalid-argument");
   });
 });
 

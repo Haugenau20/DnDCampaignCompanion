@@ -298,6 +298,17 @@ import {
     }
 
     /**
+     * The address another device's request was opened for, so approving it
+     * need not ask for it again. Only for approving: signing *this* device in
+     * must still ask, as Firebase's guard against someone else's link.
+     * @param requestId The request id the link carries
+     */
+    public async lookUpDeviceSignIn(requestId: string): Promise<string> {
+      const lookUp = httpsCallable<{ requestId: string }, { email: string }>(this.functions, 'lookUpDeviceSignIn');
+      return (await lookUp({ requestId })).data.email;
+    }
+
+    /**
      * Sign in with the token an approved request handed over. The account
      * exists already -- the approval came from it -- so nothing is created.
      * @param token From `claimDeviceSignIn`
