@@ -5,10 +5,10 @@ import { NavigationProvider, useNavigation } from 'shared/context/NavigationCont
 import { ThemeProvider } from './core/themes/ThemeContext';
 import App from 'app/App';
 import './styles/globals.css';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getApp } from 'firebase/app';
 import { getFirebaseServices } from 'core/services/firebase';
 import { useEmulators } from 'core/services/firebase/config/firebaseConfig';
+import { attachAppCheck } from 'core/services/firebase/config/appCheck';
 
 // Initialize AppCheck for enhanced security
 // In development, we'll use debug tokens
@@ -44,18 +44,6 @@ if (process.env.NODE_ENV === 'development') {
   // no protection. Production behaviour is unchanged.
   if (!useEmulators) {
     try {
-      // Make sure we have a valid site key
-      const siteKey = process.env.REACT_APP_RECAPTCHA_SITE_KEY;
-      if (!siteKey) {
-        console.error('Missing REACT_APP_RECAPTCHA_SITE_KEY environment variable');
-        throw new Error('Missing reCAPTCHA site key');
-      }
-
-      const appCheckConfig = {
-        provider: new ReCaptchaV3Provider(siteKey),
-        isTokenAutoRefreshEnabled: true
-      };
-
       // Initialize Firebase before reading the app back with getApp().
       //
       // This module does not import the Firebase barrel for its own sake, and it
@@ -67,7 +55,7 @@ if (process.env.NODE_ENV === 'development') {
       // because the catch below swallowed the resulting app/no-app error.
       getFirebaseServices();
 
-      initializeAppCheck(getApp(), appCheckConfig);
+      attachAppCheck(getApp());
       console.log('Firebase App Check initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Firebase App Check:', error);

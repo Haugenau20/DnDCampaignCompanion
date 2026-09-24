@@ -12,6 +12,8 @@ const mockSignInWithEmailLink = jest.fn();
 const mockSignOut = jest.fn((_auth: unknown) => Promise.resolve());
 const mockCallable = jest.fn();
 const mockHttpsCallable = jest.fn((_fns: unknown, _name: string) => mockCallable);
+const mockAttachAppCheck = jest.fn((_app: unknown) => undefined);
+let mockUseEmulators = false;
 
 jest.mock('firebase/app', () => ({
   initializeApp: (config: unknown, name?: string) => mockInitializeApp(config, name),
@@ -29,15 +31,19 @@ jest.mock('firebase/functions', () => ({
   connectFunctionsEmulator: jest.fn(),
   httpsCallable: (fns: unknown, name: string) => mockHttpsCallable(fns, name),
 }));
+jest.mock('../../config/appCheck', () => ({
+  attachAppCheck: (app: unknown) => mockAttachAppCheck(app),
+}));
 jest.mock('../../config/firebaseConfig', () => ({
   firebaseConfig: { apiKey: 'test', projectId: 'test' },
-  useEmulators: false,
+  get useEmulators() { return mockUseEmulators; },
   emulatorHost: 'localhost',
   emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001' },
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUseEmulators = false;
   mockSignInWithEmailLink.mockResolvedValue({ user: { uid: 'frodo' } });
   mockCallable.mockResolvedValue({ data: { success: true } });
 });
@@ -58,6 +64,25 @@ describe('openDeviceApproval', () => {
       'frodo@shire.dev',
       'http://app/auth/link?oobCode=x'
     );
+  });
+
+  // Production enforces App Check on Auth, and the default app's App Check
+  // does not cover a second app: without its own, every sign-in here was
+  // refused with auth/firebase-app-check-token-is-invalid.
+  test('attaches App Check to the throwaway app before signing in', async () => {
+    await openDeviceApproval('frodo@shire.dev', 'link');
+
+    expect(mockAttachAppCheck).toHaveBeenCalledWith(mockThrowawayApp);
+    expect(mockAttachAppCheck.mock.invocationCallOrder[0])
+      .toBeLessThan(mockInitializeAuth.mock.invocationCallOrder[0]);
+  });
+
+  test('skips App Check against the emulators (bug #1411)', async () => {
+    mockUseEmulators = true;
+    await openDeviceApproval('frodo@shire.dev', 'link');
+
+    expect(mockAttachAppCheck).not.toHaveBeenCalled();
+    expect(mockSignInWithEmailLink).toHaveBeenCalled();
   });
 
   test('approves through the throwaway app\'s own functions', async () => {
