@@ -13,8 +13,11 @@ import {
   resolveLocationName,
 } from 'features/campaign-entities';
 import type { NPC, NPCRelationship, NPCStatus } from 'features/campaign-entities';
-import { useUser } from 'features/user-management';
+import { useUser, useGroups, useCampaigns } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
+import ImageUploadControl from 'shared/components/ImageUploadControl';
+import { useImageAttachment } from 'shared/hooks/useImageAttachment';
+import { entityImagePrefix } from 'core/services/firebase/storage/ImageStorageService';
 import { formatNoteDate, toNoteDate } from 'shared/utils/dateFormatter';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
@@ -264,6 +267,8 @@ const NPCDetailPage: React.FC = () => {
   const { rumors, updateRumor } = useRumors();
   const { locations } = useLocations();
   const { activeGroupUserProfile } = useUser();
+  const { activeGroupId } = useGroups();
+  const { activeCampaignId } = useCampaigns();
 
   const npc = npcs.find((candidate) => candidate.id === npcId);
 
@@ -477,6 +482,15 @@ const NPCDetailPage: React.FC = () => {
     await refreshNPCs();
   };
 
+  const portrait = useImageAttachment({
+    prefix:
+      npc && activeGroupId && activeCampaignId
+        ? entityImagePrefix(activeGroupId, activeCampaignId, 'npcs', npc.id)
+        : null,
+    current: npc?.image,
+    save: (image) => save({ image }),
+  });
+
   /** Close one editor, credit the save in words, and take focus back. */
   const afterSave = (field: EditableField) => {
     closeField(field);
@@ -638,6 +652,15 @@ const NPCDetailPage: React.FC = () => {
                   className="h-40 sm:h-48"
                   label={`${npc.name} — no image added`}
                   caption="Optional. The page is finished without one."
+                  image={npc.image}
+                  alt={`Portrait of ${npc.name}`}
+                />
+                <ImageUploadControl
+                  className="px-6 pt-4"
+                  subject="portrait"
+                  hasImage={Boolean(npc.image)}
+                  onUpload={portrait.upload}
+                  onRemove={portrait.remove}
                 />
 
                 <div className="p-6 flex flex-col gap-5">

@@ -72,8 +72,8 @@ export interface NPC extends BaseContent {
   notes: NPCNote[];
   /** Free-text labels for grouping, the same shape `Location.tags` uses. */
   tags?: string[];
-  /** The NPC's portrait, if one was added. */
-  image?: StoredImage;
+  /** The NPC's portrait; null once removed (Firestore cannot store undefined). */
+  image?: StoredImage | null;
 }
 
 // Context types

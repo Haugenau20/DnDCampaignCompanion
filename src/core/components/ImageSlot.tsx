@@ -14,7 +14,7 @@ export interface ImageSlotProps {
   /** A quiet line inside the band, for slots large enough to carry one. */
   caption?: string;
   /** The image to show, when one has been added. */
-  image?: StoredImage;
+  image?: StoredImage | null;
   /** Alt text for `image`, e.g. "Portrait of Bilbo". */
   alt?: string;
   className?: string;

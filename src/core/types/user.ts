@@ -85,8 +85,8 @@ export interface Group {
   createdAt: Date | string;
   /** UID of the user who created the group */
   createdBy: string;
-  /** The party's crest; set by group admins only */
-  crest?: StoredImage;
+  /** The party's crest, set by group admins only; null once removed */
+  crest?: StoredImage | null;
 }
 
 /**

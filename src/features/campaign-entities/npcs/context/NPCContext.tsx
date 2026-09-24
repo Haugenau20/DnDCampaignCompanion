@@ -6,6 +6,7 @@ import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser } from 'features/user-management';
 import { generateUniqueEntityId } from 'core/utils/entity-id';
+import { discardImage } from 'shared/hooks/useImageAttachment';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { Location } from '../../locations/types';
 
@@ -181,9 +182,12 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('User must be authenticated to delete an NPC');
     }
 
+    const image = getNPCById(npcId)?.image;
     await deleteData(npcId);
+    // After the document: a failure can then only orphan the file.
+    if (image) discardImage(image.path);
     await refreshNPCs();
-  }, [hasRequiredContext, user, deleteData, refreshNPCs]);
+  }, [hasRequiredContext, user, getNPCById, deleteData, refreshNPCs]);
 
   const value: NPCContextValue = {
     npcs,

@@ -49,8 +49,8 @@ export interface Location extends BaseContent {
   tags?: string[];
   /** Last session visited */
   lastVisited?: string;
-  /** A picture of the place, if one was added */
-  image?: StoredImage;
+  /** A picture of the place; null once removed (Firestore cannot store undefined) */
+  image?: StoredImage | null;
 }
 
 /**

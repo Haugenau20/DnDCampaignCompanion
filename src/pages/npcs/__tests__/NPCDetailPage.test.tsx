@@ -71,6 +71,18 @@ jest.mock("shared/context/NavigationContext", () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 
+// The upload/save/delete ordering is useImageAttachment's own suite; here the
+// page is only asked what it hands the hook, and what its save writes.
+let mockImageOptions: any = null;
+const mockImageUpload = jest.fn();
+const mockImageRemove = jest.fn();
+jest.mock("shared/hooks/useImageAttachment", () => ({
+  useImageAttachment: (options: any) => {
+    mockImageOptions = options;
+    return { upload: mockImageUpload, remove: mockImageRemove };
+  },
+}));
+
 /** A fully-populated NPC: every one of the six once-invisible fields is set. */
 const fullNPC = {
   id: "npc-1",
@@ -1443,6 +1455,72 @@ describe("NPCDetailPage", () => {
       expect(
         screen.getByRole("button", { name: /What do they belong to\?/ })
       ).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The portrait (T021)
+  // -------------------------------------------------------------------------
+  describe("the portrait", () => {
+    const { firebaseConfig } = jest.requireActual(
+      "core/services/firebase/config/firebaseConfig"
+    );
+    const portrait = {
+      path: "groups/group-1/campaigns/campaign-1/npcs/npc-1/p.webp",
+      url: `https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.storageBucket}/o/p.webp?alt=media&token=t`,
+      width: 1200,
+      height: 1600,
+      uploadedBy: "user-1",
+      uploadedAt: "2026-09-24T12:00:00.000Z",
+    };
+
+    it("keeps the honest empty slot, and offers to add a portrait", () => {
+      renderPage();
+      expect(screen.getByRole("img", { name: "Gandalf — no image added" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Add portrait" })).toBeInTheDocument();
+    });
+
+    it("shows the portrait once there is one, and offers to replace or remove it", () => {
+      mockNPCDataReturn = { ...mockNPCDataReturn, npcs: [{ ...fullNPC, image: portrait }] };
+      renderPage();
+
+      const img = screen.getByRole("img", { name: "Portrait of Gandalf" });
+      expect(img).toHaveAttribute("src", portrait.url);
+      expect(screen.getByRole("button", { name: "Replace portrait" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Remove portrait" })).toBeInTheDocument();
+    });
+
+    it("files the portrait under this NPC in the active group and campaign", () => {
+      mockNPCDataReturn = { ...mockNPCDataReturn, npcs: [{ ...fullNPC, image: portrait }] };
+      renderPage();
+
+      expect(mockImageOptions.prefix).toBe("groups/group-1/campaigns/campaign-1/npcs/npc-1");
+      expect(mockImageOptions.current).toEqual(portrait);
+    });
+
+    it("has nowhere to file a portrait while no campaign is selected", () => {
+      mockActiveCampaignId = null;
+      renderPage();
+      // The gate hides the page; the hook still runs and must not get a prefix.
+      expect(mockImageOptions.prefix).toBeNull();
+    });
+
+    it("saves the portrait onto this NPC and re-reads it", async () => {
+      renderPage();
+
+      await act(() => mockImageOptions.save(portrait));
+
+      expect(mockUpdateNPC).toHaveBeenCalledWith({ ...fullNPC, image: portrait });
+      expect(mockRefreshNPCs).toHaveBeenCalled();
+    });
+
+    it("clears the portrait by saving null", async () => {
+      mockNPCDataReturn = { ...mockNPCDataReturn, npcs: [{ ...fullNPC, image: portrait }] };
+      renderPage();
+
+      await act(() => mockImageOptions.save(null));
+
+      expect(mockUpdateNPC).toHaveBeenCalledWith({ ...fullNPC, image: null });
     });
   });
 
