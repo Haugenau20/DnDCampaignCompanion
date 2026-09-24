@@ -95,6 +95,14 @@ export function useAuth() {
   }, []);
 
   /**
+   * The address another device's request was opened for. Only for approving it.
+   * @param requestId The request id the link carries
+   */
+  const lookUpDeviceSignIn = useCallback((requestId: string): Promise<string> => {
+    return firebaseServices.auth.lookUpDeviceSignIn(requestId);
+  }, []);
+
+  /**
    * Sign in with the token an approved request handed over.
    * @param token From `claimDeviceSignIn`
    * @param rememberMe Whether the session should outlive the browser
@@ -191,6 +199,7 @@ export function useAuth() {
     signInWithGoogle,
     startDeviceSignIn,
     claimDeviceSignIn,
+    lookUpDeviceSignIn,
     signInWithDeviceToken,
     startDeviceApproval,
     linkGoogle,

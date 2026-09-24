@@ -63,6 +63,7 @@ const EmailLinkPage: React.FC = () => {
     completeSignInLink,
     deleteFreshAccount,
     reloadUserContext,
+    lookUpDeviceSignIn,
     startDeviceApproval
   } = useAuth();
   const { joinGroupWithToken } = useInvitations();
@@ -82,6 +83,12 @@ const EmailLinkPage: React.FC = () => {
           : 'needEmail'
   );
   const [email, setEmail] = useState('');
+  // The address the other device's request is for, as the server has it.
+  // Kept apart from `email` on purpose: it must never fill in the "sign in on
+  // this device" form, where typing the address is the guard against being
+  // sent someone else's link.
+  const [approvalEmail, setApprovalEmail] = useState<string | null>(null);
+  const [lookingUp, setLookingUp] = useState(false);
   const [code, setCode] = useState('');
   const [approving, setApproving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -154,17 +161,34 @@ const EmailLinkPage: React.FC = () => {
     finish(email.trim(), false);
   };
 
+  const handleChooseOther = async () => {
+    const device = intent.device;
+    if (!device || lookingUp) return;
+    setLookingUp(true);
+    setError(null);
+    try {
+      setApprovalEmail(await lookUpDeviceSignIn(device));
+      setPhase('approve');
+    } catch (err) {
+      // Usually an expired or already-used request.
+      setError(describeSignInError(err));
+      setPhase('failed');
+    } finally {
+      setLookingUp(false);
+    }
+  };
+
   const handleApproveSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const device = intent.device;
-    if (!device || approving || !EMAIL.test(email.trim()) || !CODE.test(code)) return;
+    if (!device || !approvalEmail || approving || !CODE.test(code)) return;
     setApproving(true);
     setError(null);
 
     let open = approval.current;
     if (!open) {
       try {
-        open = await startDeviceApproval(email.trim(), link);
+        open = await startDeviceApproval(approvalEmail, link);
         approval.current = open;
       } catch (err) {
         // The link itself was refused -- another address, or already used.
@@ -228,13 +252,19 @@ const EmailLinkPage: React.FC = () => {
             This link was asked for on another device. Which one do you want
             to sign in?
           </Typography>
-          <Button className="w-full min-h-[2.75rem]" onClick={() => setPhase('approve')}>
+          <Button
+            className="w-full min-h-[2.75rem]"
+            onClick={handleChooseOther}
+            isLoading={lookingUp}
+            disabled={lookingUp}
+          >
             Sign in on the other device
           </Button>
           <Button
             variant="outline"
             className="w-full min-h-[2.75rem]"
             onClick={() => setPhase('needEmail')}
+            disabled={lookingUp}
           >
             Sign in on this device
           </Button>
@@ -244,19 +274,11 @@ const EmailLinkPage: React.FC = () => {
       {phase === 'approve' && (
         <form onSubmit={handleApproveSubmit} className="card rounded-lg px-6 py-6 space-y-4">
           <Typography color="secondary">
-            Enter the email address the link was sent to, and the code the
-            other device is showing. This device stays signed out.
+            The other device will be signed in as{' '}
+            {/* break-all: an address has no spaces to wrap at on a narrow phone. */}
+            <span className="font-medium text-primary break-all">{approvalEmail}</span>.
+            Enter the code it is showing. This device stays signed out.
           </Typography>
-          <Input
-            label="Email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            // Fixed once the link has been used to prove it.
-            disabled={approving || approval.current !== null}
-          />
           <Input
             label="Code from the other device"
             inputMode="numeric"
@@ -277,7 +299,7 @@ const EmailLinkPage: React.FC = () => {
           )}
           <Button
             type="submit"
-            disabled={approving || !EMAIL.test(email.trim()) || !CODE.test(code)}
+            disabled={approving || !CODE.test(code)}
             isLoading={approving}
             className="w-full min-h-[2.75rem]"
           >

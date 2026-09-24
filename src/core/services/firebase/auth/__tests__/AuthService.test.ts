@@ -492,6 +492,15 @@ describe('AuthService', () => {
       expect(mockCallable).toHaveBeenCalledWith({ requestId: 'r1', secret: 's' });
     });
 
+    test('lookUpDeviceSignIn asks the callable for the address of the request', async () => {
+      mockCallable.mockResolvedValueOnce({ data: { email: 'a@b.com' } });
+      const svc = AuthService.getInstance();
+
+      await expect(svc.lookUpDeviceSignIn('r1')).resolves.toBe('a@b.com');
+      expect(mockHttpsCallable).toHaveBeenCalledWith(expect.anything(), 'lookUpDeviceSignIn');
+      expect(mockCallable).toHaveBeenCalledWith({ requestId: 'r1' });
+    });
+
     test('signInWithDeviceToken signs in with the token, after setting persistence', async () => {
       const fakeUser = { uid: 'uid-device' };
       localStorage.setItem('pendingEmailSignIn', JSON.stringify({ email: 'a@b.com', rememberMe: true }));

@@ -16,5 +16,6 @@ export { gateAccountCreation, reserveSignUp } from "./signUp";
 export {
   approveDeviceSignIn,
   claimDeviceSignIn,
+  lookUpDeviceSignIn,
   startDeviceSignIn,
 } from "./deviceSignIn";
