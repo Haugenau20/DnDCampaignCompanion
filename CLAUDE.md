@@ -99,7 +99,7 @@ When triaging a red test, first establish that it actually executed the code it 
 ### `firebase/functions` has its own suite — root `npm test` does not run it
 `cd firebase/functions && npm test` runs jest against the **running emulators** (start them with
 `start-dev.ps1` first; a `globalSetup` fails fast if they are down). Each suite uses its own `demo-`
-project id, so dev data is untouched. Not in CI (no emulator there). Tests live in
+project id, so dev data is untouched (one exception, below). Not in CI (no emulator there). Tests live in
 `firebase/functions/test/`:
 
 - **Callables** — invoked with `fn.run({data, auth})` against emulator Firestore. Covered:
@@ -112,6 +112,10 @@ project id, so dev data is untouched. Not in CI (no emulator there). Tests live 
 - **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` and acts as real users.
   `RULES_FILE=<path>` runs it against another revision — **that is the control**: run it against
   `git show HEAD:firebase/firestore.rules.prod` and the tests for whatever you closed must fail there.
+- **`test/rules/storage-rules-prod.test.ts`** — the same for `storage.rules.prod`, with the same
+  `RULES_FILE` control. **The one suite that writes to dev data**: the Storage emulator answers the
+  rules' `firestore.get()` from the project the emulators were started with, not the test's `demo-`
+  project, so it seeds membership docs there under `zz-storage-rules-` ids and deletes them after.
 
 The control rule applies to anything new: a suite green on its first run proves the code runs, not
 that it changed anything. Break the thing on purpose once and watch the right tests fail.

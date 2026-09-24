@@ -8,6 +8,7 @@ import {HttpsError} from "firebase-functions/v2/https";
 export const EMULATOR_HOSTS = {
   Firestore: process.env.FIRESTORE_EMULATOR_HOST || "127.0.0.1:8080",
   Auth: process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099",
+  Storage: process.env.FIREBASE_STORAGE_EMULATOR_HOST || "127.0.0.1:9199",
 };
 
 /**
