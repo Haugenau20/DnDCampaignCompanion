@@ -21,12 +21,12 @@
  * BUMP THIS BY HAND whenever the wording changes, and add a PRIVACY_CHANGELOG
  * line saying what changed. Never derive it from Date.now().
  */
-export const PRIVACY_LAST_UPDATED = "2026-09-23";
+export const PRIVACY_LAST_UPDATED = "2026-09-24";
 
 /** What changed in the revision named by PRIVACY_LAST_UPDATED, newest first. */
 export const PRIVACY_CHANGELOG: readonly string[] = [
-  "Passwords are gone: you sign in with a one-time link sent to your email, or with your Google account, and accounts can only be created from an invitation.",
-  "Said what Google shares with us when you sign in with it, and that the address you asked for a sign-in link at is kept on your device until you open the link.",
+  "You can add pictures to NPCs, places and your party's crest. They are stored in the United States, and anyone who has a picture's link can open it.",
+  "Before a photo is uploaded it is shrunk, and its hidden details, including where it was taken, are removed.",
 ];
 
 /**
@@ -44,6 +44,13 @@ export const PRIVACY_CONTROLLER = {
 
 /** Google Cloud region holding Firestore, Authentication and the Cloud Functions. */
 export const PRIVACY_HOSTING_REGION = "europe-west1 (Belgium)";
+
+/**
+ * Google Cloud region of the Storage bucket that holds pictures (T021). Chosen
+ * for Firebase's no-cost Storage quota, which only US regions get -- so it is a
+ * transfer out of the EU, and the page says so.
+ */
+export const IMAGE_STORAGE_REGION = "us-west1 (Oregon, United States)";
 
 /**
  * Whether OpenAI's data processing addendum has been accepted for this
@@ -111,6 +118,13 @@ export const PRIVACY_TABLE_ROWS: readonly PrivacyTableRow[] = [
     why: "Chapters, quests, NPCs, locations and rumors — the app itself",
     where: "Firestore, visible to your group",
     howLong: "Stays with the group if you leave",
+  },
+  {
+    id: "images",
+    what: "Pictures you add",
+    why: "Portraits, places and your party's crest",
+    where: "Google Cloud Storage in the United States, visible to your group",
+    howLong: "Until someone removes it; stays with the group if you leave",
   },
   {
     id: "extraction",
