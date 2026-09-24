@@ -90,7 +90,11 @@ class EntityExtractionService extends BaseFirebaseService {
       // Use Firebase SDK httpsCallable - automatically handles CORS and routing
       const extractEntitiesFunction = httpsCallable(this.functions, 'extractEntities');
       
-      const result = await extractEntitiesFunction({ content });
+      // The active group, so the function can read its members' characters
+      // and keep the party out of the NPC suggestions (T019). The roster is
+      // read on the server; only the group's id travels.
+      const groupId = this.getActiveGroupId();
+      const result = await extractEntitiesFunction(groupId ? { content, groupId } : { content });
 
       const extractionResult = result.data as ExtractEntitiesResponse;
 

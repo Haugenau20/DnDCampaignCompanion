@@ -394,6 +394,26 @@ describe('EntityExtractionService', () => {
       expect(mockFn).toHaveBeenCalledWith({ content: 'Content' });
       expect(JSON.stringify(mockFn.mock.calls[0][0])).not.toContain('gpt-5.2-pro');
     });
+
+    // T019: the function reads the group's characters to keep the party out
+    // of the NPC suggestions, so it needs to know which group. Only the id
+    // travels -- the roster is read on the server.
+    test('sends the active group with the content, and still no model', async () => {
+      const mockFn = jest.fn().mockResolvedValueOnce({
+        data: { success: true, entities: [makeOpenAIEntity()] },
+      });
+      mockHttpsCallable.mockReturnValueOnce(mockFn);
+
+      const svc = EntityExtractionService.getInstance();
+      svc.setActiveGroup('group-1');
+      try {
+        await svc.extractEntities('Content');
+      } finally {
+        svc.setActiveGroup(null);
+      }
+
+      expect(mockFn).toHaveBeenCalledWith({ content: 'Content', groupId: 'group-1' });
+    });
   });
 
   // ─── fetchUsageStatus ───────────────────────────────────────────────────────

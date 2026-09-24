@@ -17,7 +17,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
-| medium | T019 | Extraction reads PCs as NPCs | M | open | Degrades the AI feature on every run; roster data already exists |
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
@@ -176,28 +175,6 @@ Select several rows, then delete or change status in one go.
   (`StoryContext.bugs.test.tsx:440-452`), so the ordering model needs answering
   before the UI does. A recursive `Chapter` inside `Chapter` also has no depth
   limit — decide whether nesting is one level or arbitrary.
-- **Source**: todo.txt, 2026-09-16
-
-### T019 — Smart detection reads player characters as NPCs
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-09-16
-
-Note extraction turns the party's own characters into NPC suggestions.
-
-- **Where**: the cause is one line of prompt.
-  `firebase/functions/src/entityExtraction.ts:418` instructs the model: *"Every
-  named person or character is ALWAYS type `npc`."* (with `:417` forbidding any
-  other value). It has no notion of who the players are.
-- **Touches**: that prompt and its callable payload;
-  `src/features/collaboration/entity-extraction/services/EntityExtractionService.ts:88`,
-  which is where the client would add a PC roster to the call.
-- **Catch**: **the roster already exists** — a group user profile carries
-  `characters[]` with an `activeCharacterId`, read by `getActiveCharacterName` /
-  `getActiveCharacterId` in `src/core/utils/user-utils.ts:38-56` and used for
-  attribution. So this needs no new "define your PCs" configuration; it needs the
-  group's existing character names passed into extraction and excluded. Decide
-  whether to filter in the prompt (cheaper, fuzzier) or post-filter the result
-  (exact, but misses nicknames). **`firebase/functions` has no test suite at all**
-  (see `CLAUDE.md`) — verify against the emulator, with a control.
 - **Source**: todo.txt, 2026-09-16
 
 ### T020 — Attach a screenshot to a contact-form bug report
