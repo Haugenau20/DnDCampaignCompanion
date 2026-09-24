@@ -51,8 +51,11 @@ jest.mock('firebase/firestore', () => ({
   connectFirestoreEmulator: jest.fn()
 }));
 
+// getStorage answers with an object, as the real one always does: the service
+// registry refuses an undefined entry, so a bare jest.fn() would break every
+// service constructed in a suite that doesn't mock Storage itself.
 jest.mock('firebase/storage', () => ({
-  getStorage: jest.fn(),
+  getStorage: jest.fn(() => ({})),
   connectStorageEmulator: jest.fn(),
   ref: jest.fn(),
   uploadBytesResumable: jest.fn(),
