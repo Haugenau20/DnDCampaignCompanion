@@ -24,6 +24,7 @@ is hurt while it waits · `nit` bookkeeping or polish
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
+| medium | T056 | Sign-in errors carry a reportable ref | S | open | Unknown sign-in failures are undiagnosable from a user report; PR #117's took a log dig |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
 | low | T001 | `NPCNote.date` stored shape | S | open | Display already uniform; the remainder is data hygiene |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
@@ -397,6 +398,25 @@ Let a user who wants it add a second step to sign-in.
   Check first that Firebase MFA applies to email-link sign-in at all -- it was
   not confirmed during T022.
 - **Source**: maintainer, 2026-09-23
+
+### T056 — Sign-in errors carry a reference code a user can report
+**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-24
+
+An unrecognised sign-in failure shows only "Something went wrong signing you
+in. Please try again.", so a user report cannot be traced. Append a short
+reference, e.g. "(Ref: S14)", mapped from the Firebase error code, so the
+maintainer can look it up. No raw Firebase text or debug output facing users.
+PR #117's App Check failure (`auth/firebase-app-check-token-is-invalid`) hid
+behind the generic line and could not be read on iOS Safari.
+
+- **Where**: `core/services/firebase/auth/signInErrors.ts:94`, the fallback in
+  `describeSignInError`. The ref table belongs there too. Callers: `SignInForm`,
+  `EmailLinkPage`, `JoinAsNewUser`, `AccountCard`, all of which just show the string.
+- **Catch**: the same function also **passes raw messages through**
+  (`signInErrors.ts:91-93`): any `functions/*` error and any Error without a code
+  returns `error.message`. An uncaught server fault therefore shows the bare
+  word "internal". Decide whether those also get a ref instead.
+- **Source**: maintainer, 2026-09-24 (PR #117 follow-up)
 
 ---
 

@@ -15,6 +15,7 @@ import {
   emulatorHost,
   emulatorPorts
 } from '../config/firebaseConfig';
+import { attachAppCheck } from '../config/appCheck';
 
 /** A throwaway sign-in that can approve another device's request. */
 export interface DeviceApproval {
@@ -64,6 +65,10 @@ export async function openDeviceApproval(email: string, link: string): Promise<D
   };
 
   try {
+    // Before Auth: it attaches the app's App Check token to every request,
+    // and production refuses a sign-in without one. The default app's App
+    // Check does not cover this one.
+    if (!useEmulators) attachAppCheck(app);
     auth = initializeAuth(app, { persistence: inMemoryPersistence });
     functions = getFunctions(app, 'europe-west1');
     if (useEmulators) {
