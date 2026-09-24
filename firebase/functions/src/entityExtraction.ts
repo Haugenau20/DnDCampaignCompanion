@@ -4,13 +4,13 @@ import { HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import OpenAI from "openai";
 import {rethrowHttpsError} from "./shared/httpsErrors";
-import {dropPartyCharacters, partyPrompt, readPartyCharacterNames} from "./partyCharacters";
+import {dropPartyCharacters, partyPrompt, readPartyNames} from "./partyCharacters";
 
 // Types matching your existing OpenAI types
 interface ExtractEntitiesRequest {
   content: string;
   /**
-   * The group the note was written in. Its members' characters are the party,
+   * The group the note was written in. Its members and their characters are the party,
    * and are kept out of the result (T019). Optional so an older client still
    * works; without it nothing is excluded.
    */
@@ -421,7 +421,7 @@ export const extractEntities = functions.onCall(
       // Before usage is counted: a caller outside the group is refused here,
       // and should not be charged an extraction for it.
       const partyNames = groupId ?
-        await readPartyCharacterNames(admin.firestore(), groupId, userId) :
+        await readPartyNames(admin.firestore(), groupId, userId) :
         [];
 
       // Check usage limits and increment counters (only if we're going to call OpenAI)

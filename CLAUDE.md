@@ -2,250 +2,148 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🚧 ARCHITECTURE EVOLUTION IN PROGRESS
+## Project Purpose
+A tool for D&D **players** (not DMs) to collect and organize their shared campaign data: stories,
+rumors, NPCs, locations, and quests. Components should focus on player-facing features.
 
-**IMPORTANT**: All four feature domains are migrated, and the `shared/`/`core/` infrastructure pass
-(Phase 3e) is essentially complete. `src/context/`, `src/components/`, `src/hooks/`, `src/types/`
-and `src/services/` — the old functional layout — no longer exist.
-
-| Domain | Status |
-|---|---|
-| `features/user-management/` (auth, groups, profiles, admin) | ✅ migrated |
-| `features/storytelling/` (chapters, stories, sagas) | ✅ migrated |
-| `features/campaign-entities/` (npcs, quests, locations, rumors) | ✅ migrated |
-| `features/collaboration/` (notes, AI entity extraction) | ✅ migrated |
-| `shared/` + `core/` infrastructure pass | ✅ **essentially complete** (Phase 3e) |
-
-**What that means in practice**: the tree matches the target shape end to end. `app/` holds
-`App.tsx` and the layout shell (`Header`, `Footer`, `Navigation`, `Breadcrumb`, `Layout`). `core/`
-holds infrastructure with no internal dependencies — `components/`, `themes/`, `config/`,
-`constants/`, `services/`, `types/`, `attribution/`. `features/` holds the four migrated domains,
-each behind a barrel `index.ts` — import from the barrel, never reach into internals. `pages/`
-holds the route components plus the aggregating dashboard/journal layouts. `shared/` holds
-cross-domain code that doesn't belong to any one feature — `components/`, `context/`, `hooks/`,
-`utils/`. `src/utils/__dev__/`, `src/test-utils/`, `src/styles/`, `src/index.tsx` and
-`src/setupTests.ts` deliberately stay where they are — none of them is feature-specific or part of
-the dependency graph the rules below describe.
-
-**Two boundary calls that filenames get wrong** — verify by opening the file, not by guessing from
-the name: `UsageContext` sounds like shared infrastructure but imports `EntityExtractionService`, so
-it is `collaboration/entity-extraction/`. `useSessionManager` sounds like collaboration but tracks
-auth session activity via `useAuth`, so it is `user-management/auth/hooks/`. Both are now in their
-correct homes.
-
-**A grep lesson this migration learned twice, the hard way**: this codebase indents file bodies, so
-`grep "^export"` reports one export in a file that has five — the anchor only matches a top-level
-column, and every indented export is invisible to it. Two separate "these are duplicates" /
-"this file barely does anything" conclusions during this phase were wrong for exactly this reason.
-Open the file and read it; don't infer a file's exports, or its size relative to another file, from
-a column-anchored grep.
-
-**All three known deviations from the dependency rules below are now closed** — audited 2026-07-27,
-two resolved by decision (amending the rule to match established practice) and one resolved in code
-the same day. They are kept here because the reasoning matters when the same questions resurface.
-
-1. **`features/` → other `features/`** happens 26 times (campaign-entities and storytelling both
-   depend on user-management; the four entity create/edit forms depend on collaboration for
-   `useNotes().markEntityAsConverted`). All go through the target domain's **barrel**; none reaches
-   into another feature's internals. **Resolved 2026-07-27**: the dependency rule below is amended
-   to match this practice instead of forcing a decoupling seam. Barrel-level coupling is acceptable —
-   it's the same public-API contract every consumer of a feature already goes through — because it
-   preserves the ability to refactor a domain's internals without breaking the domains that depend on
-   it. Internals coupling is the thing the original rule existed to prevent, and audit found none.
-2. **`core/` → `features/`, a genuine inversion that blocked creating `core/` at all.**
-   **Resolved 2026-07-27 in code.** `AuthService`, `UserService`, `GroupService` and
-   `InvitationService` moved back to `services/firebase/{auth,user,group}/` — each file's own header
-   comment still named that path, because they originated there and were carried into
-   `user-management` only because it migrated first. The four remaining consumers use `UserService`
-   purely as a **type** (instances come from `ServiceRegistry`), so those are now `import type` and
-   carry no runtime edge. The 9 imports that reached into user-management's internals are gone too:
-   its barrel now exports the 7 components external callers need, so `app/App.tsx`,
-   `app/layout/Header.tsx` and `shared/components/context-switcher/ContextSwitcher.tsx` go through it.
-
-   **Adding components to that barrel first required removing 12 intra-domain self-barrel imports**,
-   which would otherwise have become real cycles (`index.ts` → `AdminPanel.tsx` → `index.ts`). The
-   three later-migrated domains have zero such imports; user-management was the pre-pattern outlier.
-   **Inside a domain, import siblings directly — never your own barrel.**
-3. **`shared/` → `features/`**, found in `shared/components/{AttributionInfo,GlobalActionButton}.tsx`,
-   `shared/components/context-switcher/ContextSwitcher.tsx` and `shared/context/SearchContext.tsx` —
-   a dozen-plus imports across those four files, every one going through the target domain's barrel (`user-management`,
-   `collaboration`, `storytelling`, `campaign-entities`); none reaches into internals.
-   **Resolved 2026-07-27 by amending the rule, not by moving code.** These four are genuinely
-   cross-cutting: a search context that indexes several domains at once, an attribution line that
-   many entity cards render, a global action button, a group/campaign switcher. They need feature
-   *data*, and no single feature can own them. Relocating them would make things strictly worse —
-   `AttributionInfo` is consumed by feature components, so moving it to `app/` would create a
-   `features/` → `app/` edge, a worse inversion than the one being removed. Avoiding the dependency
-   altogether would need a dependency-injection or event seam, which is a behaviour change and out of
-   scope for a structural pass. Barrel-level coupling is the same public-API contract every other
-   consumer of a feature already uses; internals coupling is what the rules exist to prevent, and the
-   audit measured that at zero.
-
-**Related trap in the same file, also resolved**: `services/firebase/index.ts` used to run
-`initializeFirebaseServices()` — and therefore `getAnalytics()` — at module scope, so any barrel
-re-exporting something with a transitive path to it eagerly initialized Firebase and crashed jsdom
-tests. Initialization is now memoized behind `getFirebaseServices()`, with the exported services as
-lazy stand-ins, so importing the module is side-effect free and the
-`firebaseServices.auth.method()` shape is unchanged. This unblocked
-`test-utils/__tests__/enhanced-test-utils.test.tsx`, which had never been able to load.
-`collaboration`'s barrel still omits `notes/utils/note-relationships`; that omission is now
-belt-and-braces rather than load-bearing.
-
-**Key Documents** (note: `docs/backlog/` no longer exists — these moved):
-- `docs/testing/post-test-coverage-roadmap.md` — **start here**; the live status and execution order
-- `docs/architecture/migration/hybrid-feature-first-restructuring-strategy.md` — the original plan (not updated with progress)
-- `docs/architecture/migration/codebase-restructuring-analysis.md` - Architecture analysis and recommendations
-- `docs/architecture/migration/attribution-consolidation-findings.md` — a worked example of an audit whose predictions were wrong, and why
+**Key documents**
+- `docs/testing/post-test-coverage-roadmap.md` — live status and execution order; **start here**
 - `docs/testing/bug-tracking/README.md` — live bug tracker
-- `docs/architecture/migration/deep-dive-feature-enhancements.md` - Advanced feature roadmap
-- `docs/architecture/migration/third-party-integration-analysis.md` - Integration opportunities
+- `TODO.md` — backlog
+- `docs/architecture/migration/deep-dive-feature-enhancements.md` — long-term feature ideas (nothing in it is installed yet)
 
-## Build Commands
+## Running the Project
 
-### Current Environment Management
-
-**This is how the project is actually run** (confirmed with the maintainer 2026-07-28):
-
-- Run development: **`.\scripts\start-dev.ps1 -Action start`** — starts the Firebase emulators and
-  then `npm start`, **both directly on the host. No Docker is involved.**
+- Start: **`.\scripts\start-dev.ps1 -Action start`** — Firebase emulators, then `npm start`, both
+  directly on the host. **No Docker.**
 - Stop / restart / status: `.\scripts\start-dev.ps1 -Action stop|restart|status` (`stop` exports
-  emulator data to `firebase/emulator-data` first, and `start` re-imports it if present)
-- Generate sample data: `.\scripts\manage-dev-data.ps1 -Action generate`
+  emulator data to `firebase/emulator-data`; `start` re-imports it if present)
+- Sample data: `.\scripts\manage-dev-data.ps1 -Action generate`
 
-**`manage-environment.ps1` and `docker/docker-compose.*.yml` are Docker-based and appear to be
-unused.** This file previously documented them as *the* way to run the project, which cost real time
-during the 2026-07-28 session: a dev-server compile error was diagnosed against a container that was
-never running. Do not reach for them without checking with the maintainer first.
+`scripts/manage-environment.ps1` and `docker/` are Docker-based and unused. Don't reach for them
+without checking with the maintainer — a compile error was once diagnosed against a container that
+was never running.
 
-#### If the dev server reports errors that `tsc` and `npm run build` do not
-
-Almost certainly a stale cache, not a source defect. `npm start` and `npm run build` keep
-**separate** webpack 5 filesystem caches, so the three gates below can all be green while the dev
-server compiles something else entirely. The signature is an error quoting a *new* line in one file
-while claiming a *stale* fact about another.
+### If the dev server reports errors that `tsc` and `npm run build` do not
+Almost certainly a stale cache. `npm start` and `npm run build` keep **separate** webpack caches, so
+every gate can be green while the dev server compiles something else. The signature is an error
+quoting a *new* line in one file while claiming a *stale* fact about another. Confirm the symbol is
+really present on disk and `npx tsc --noEmit` is clean, then:
 
 ```
-rm -rf node_modules/.cache        # default-development, babel-loader, tsconfig.tsbuildinfo
+rm -rf node_modules/.cache
 ```
 
-then restart the dev server. Confirm first that the export/symbol really is missing — check the file
-on disk and run `npx tsc --noEmit` — before assuming either answer.
+and restart the dev server. **A `git checkout` while the dev server runs reliably causes this** —
+the errors name files from whichever branch you visited.
 
-**A `git checkout` of another branch while the dev server runs is a reliable way to cause this** —
-files vanish and reappear under the watcher, and the resulting errors name files from whatever
-branch you visited rather than the ones you changed. Measuring a baseline on `main` mid-session is
-enough to trigger it. Clear the cache and restart before believing the overlay.
-
-Two environment gotchas that both fail silently:
-
-- `start-dev.ps1 -Action restart` can report "Firebase emulators failed to start within 45 seconds"
-  when they *did* start — the readiness probe times out, not the emulators. Check the ports
-  (4000/5001/8080/9099) before retrying. `-Action stop` can also leave an orphaned `react-scripts`
-  tree holding port 3000 that `-Action status` reports as "not running".
-- Responsive checks: a maximized Chrome window silently ignores resize below its minimum width.
-  Render the app in a 320px-wide iframe instead — media queries evaluate against the iframe's own
-  viewport, so this is a real test rather than a simulation.
-- **Signing in as another user in a browser check.** There are no passwords (T022): sign-in is a
-  magic link or Google, and the Auth emulator never sends mail — it keeps every link in an outbox.
-  So any seeded user is reachable without a password. In the dev server the "Check your inbox"
-  screen carries a dev-only **Open the emulator's link** button that does all of this for you
-  (`DevEmailLinkShortcut`; renders only in a development build against the emulators). By hand:
-  request a link from `/signin` (or mint one
-  with `POST http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=fake-api-key`
+### Environment gotchas
+- `start-dev.ps1 -Action restart` can report "emulators failed to start within 45 seconds" when they
+  did start — check ports 4000/5001/8080/9099 before retrying. `-Action stop` can leave an orphaned
+  `react-scripts` holding port 3000 that `-Action status` reports as "not running".
+- Responsive checks: a maximized Chrome window ignores resize below its minimum width. Render the app
+  in a 320px-wide iframe instead — media queries evaluate against the iframe's own viewport.
+- The header overflows horizontally below ~380px on **every** route (tracked in `TODO.md`). If your
+  page "overflows at 320px", check whether the offender is inside `header`/`footer` first.
+- **Signing in as another user in a browser check.** There are no passwords: sign-in is a magic link
+  or Google, and the Auth emulator keeps every link in an outbox instead of sending mail. In the dev
+  server the "Check your inbox" screen has a dev-only **Open the emulator's link** button
+  (`DevEmailLinkShortcut`). By hand: request a link from `/signin` (or mint one with
+  `POST http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=fake-api-key`
   and `{"requestType":"EMAIL_SIGNIN","email":…,"continueUrl":"http://localhost:3000/auth/link…","canHandleCodeInApp":true}`),
   read it from `GET http://127.0.0.1:9099/emulator/v1/projects/dnd-campaign-companion/oobCodes`,
   and navigate to its `oobLink`. Set `localStorage.pendingEmailSignIn` to
-  `{"email":…,"rememberMe":false}` first if the link was not requested from that browser, or the
-  landing page will ask for the address. The Google popup opens in its own window, which the
-  browser agent cannot drive — Google flows are the maintainer's to check.
-  Two seeded accounts exist for exactly these checks (`SAMPLE_MEMBERSHIPS` in
-  `utils/__dev__/generators/userGenerator.ts`): `player9@example.com` (Faramir) is in **no group**,
-  and `player8@example.com` (Eowyn) is a **second admin** in group 1. An emulator dataset older than
-  that table lacks both — regenerate it, which also resets the other seeded users' profiles.
-- **Known, pre-existing: the header overflows horizontally below ~380px on every route.** The logo
-  and the account block both sit at `min-width: auto` and neither yields, so a 320px viewport needs
-  ~348px for a 276px row. Confirmed identical on `/`, `/contact` and `/privacy` — if a page you are
-  working on "overflows at 320px", check whether the offending elements are inside `header`/`footer`
-  before attributing it to your own change. The fix is to extend the header's documented shrink
-  order (`title` at 1200px, `nav` at 1080px in `tailwind.config.js`), not to patch one page.
+  `{"email":…,"rememberMe":false}` first if the link wasn't requested from that browser. Google
+  sign-in opens a popup the browser agent cannot drive — that's the maintainer's to check.
+- Seeded accounts for such checks (`SAMPLE_MEMBERSHIPS` in `utils/__dev__/generators/userGenerator.ts`):
+  `player9@example.com` (Faramir) is in **no group**; `player8@example.com` (Eowyn) is a **second
+  admin** in group 1. An older emulator dataset lacks both — regenerate it (this resets the other
+  seeded profiles too).
 
-### Testing Commands
-- Run test suite: `npm test` (jest)
-- Coverage: `npm run test:coverage` — CI floor is a uniform **80%** in `jest.config.ts` (lowered from 85/81 during Phase 4 batch 3, at the user's direction)
-- Behavioural suites only: `npm run test:behavioral`
-- HTML report: `npm run test:html`
+## Testing
+
+- `npm test` — jest. **The suite is expected to be fully green; any red is a regression.**
+- `npm run test:coverage` — CI floor is a uniform **80%** (`jest.config.ts`)
+- `npm run test:behavioral` — behavioural suites only; `npm run test:html` — HTML report
 - Single file, fast: `npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="<pattern>"`
 
-#### `firebase/functions` has its own suite, and root `npm test` does not run it
+**Baseline**: 0 failed / 2 skipped / 5354 passed / 5356 total across 267 suites (2026-09-24,
+`fix/notes-story-refetch-gate`). The 2 skips are #901's, closed as testability-only.
+- **Measure a new baseline; never carry one forward.** Past figures went stale by up to 25 suites
+  because they were taken on branches that later merged. If your run disagrees, run the suites you
+  touched alone and reconcile the delta before assuming a regression.
+- A full run prints `A worker process has failed to exit gracefully` and still exits 0 — pre-existing,
+  ignore it.
+- Don't run the suite while `npm run build` competes for CPU; it produces spurious timeouts
+  (e.g. `QuickAddForm.test.tsx`).
+- To prove "the same suites failed", run the suspects alone; piping a full run through `tail`
+  discards earlier failures' names.
+- Two catalogued defects (#1414, #1415) are pinned by tests asserting the **defective** behaviour,
+  so they are green. Check the tracker before dismissing any red as "expected".
 
-`cd firebase/functions && npm test` runs jest against the **running emulators** (Firestore + Auth;
-start them with `start-dev.ps1` first — a `globalSetup` fails fast and says so if they are down).
-Every suite works under its own `demo-` project id, so it never touches the dev data. It is not in
-CI, which has no emulator. Two kinds of suite live there, in `firebase/functions/test/`:
+### Testing philosophy
+Tests define expected behaviour and reveal bugs — **never modify a test to make it pass.** Write
+tests from requirements, not the current implementation; fix the code or document the issue in the
+tracker.
 
-- **Callables** — invoked directly with `fn.run({data, auth})`, against real emulator Firestore.
-  Covers `redeemInvitation`, `setMemberRole`, the sign-up gate (`reserveSignUp` and the
-  `gateAccountCreation` blocking function, whose handler is exported as `admitAccount`), the
-  last-admin guard in `removeUserFromGroup` / `deleteUser`, and signing in from another device
-  (`startDeviceSignIn` / `approveDeviceSignIn` / `claimDeviceSignIn`). The older callables (`createGroup`, `deleteCampaign`, `extractEntities`, …) have none
+**A failing test is not automatically a bug.** Three catalogued "bugs" (#013, #014, #300) were a
+missing `crypto.randomUUID` in JSDOM: the tests died on the environment error before any assertion.
+When triaging a red test, first establish that it actually executed the code it names.
+
+### `firebase/functions` has its own suite — root `npm test` does not run it
+`cd firebase/functions && npm test` runs jest against the **running emulators** (start them with
+`start-dev.ps1` first; a `globalSetup` fails fast if they are down). Each suite uses its own `demo-`
+project id, so dev data is untouched. Not in CI (no emulator there). Tests live in
+`firebase/functions/test/`:
+
+- **Callables** — invoked with `fn.run({data, auth})` against emulator Firestore. Covered:
+  `redeemInvitation`, `setMemberRole`, the sign-up gate (`reserveSignUp`, and `gateAccountCreation`
+  whose handler is exported as `admitAccount`), the last-admin guard in `removeUserFromGroup` /
+  `deleteUser`, device sign-in (`startDeviceSignIn` / `approveDeviceSignIn` / `claimDeviceSignIn`),
+  and `extractEntities`'s party exclusion — with OpenAI stubbed by `jest.mock("openai")`, the way to
+  test any callable that calls out. Older callables (`createGroup`, `deleteCampaign`, …) have none
   yet; `test/emulator.ts` is the harness to copy.
-- **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` into the emulator and
-  acts as real users. `RULES_FILE=<path>` runs the same checks against another revision: **that is
-  the control** — run it against the previous revision (`git show HEAD:firebase/firestore.rules.prod`)
-  and the tests for whatever you closed must fail there.
+- **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` and acts as real users.
+  `RULES_FILE=<path>` runs it against another revision — **that is the control**: run it against
+  `git show HEAD:firebase/firestore.rules.prod` and the tests for whatever you closed must fail there.
 
-**`gateAccountCreation` is a blocking function, and the emulator registers it only at startup.**
-The functions emulator hot-reloads a rebuilt `lib/`, so a new *callable* is live at once — but a new
-or renamed `beforeUserCreated` trigger is not wired into the Auth emulator until the emulators
-restart, and until then every account creation succeeds silently. Either restart, or register it
-by hand:
+The control rule applies to anything new: a suite green on its first run proves the code runs, not
+that it changed anything. Break the thing on purpose once and watch the right tests fail.
+
+**`gateAccountCreation` is a blocking function; the emulator registers it only at startup.** New
+callables hot-reload, but a new or renamed `beforeUserCreated` trigger isn't wired in until the
+emulators restart — until then every account creation silently succeeds. Restart, or register it:
 `PATCH http://127.0.0.1:9099/emulator/v1/projects/dnd-campaign-companion/config` with
 `{"blockingFunctions":{"triggers":{"beforeCreate":{"functionUri":"http://127.0.0.1:5001/dnd-campaign-companion/europe-west1/gateAccountCreation"}}}}`.
-Check it with a raw `accounts:signUp` for an uninvited address: it must come back
-`BLOCKING_FUNCTION_ERROR_RESPONSE … INVITE_REQUIRED`. The sample-data generator's `@example.com`
-users are exempt inside the emulator only (`FUNCTIONS_EMULATOR`), and only for **password**
-sign-ups, so seeding keeps working while a Google or magic-link sign-up with an `example.com`
-address still meets the real gate.
+Verify with a raw `accounts:signUp` for an uninvited address: it must return
+`BLOCKING_FUNCTION_ERROR_RESPONSE … INVITE_REQUIRED`. Seeded `@example.com` users are exempt only
+inside the emulator (`FUNCTIONS_EMULATOR`) and only for **password** sign-ups.
 
-The control rule still applies to anything new: a suite that is green on the first run proves the
-code runs, not that it changed anything. Break the thing on purpose once and watch the right tests
-fail.
+**Device sign-in needs one production grant.** `claimDeviceSignIn` calls `createCustomToken`, which
+in production requires the functions' runtime service account to hold **Service Account Token
+Creator** on itself. The emulator needs nothing, so no test catches it — the live symptom is every
+claim failing as `internal`. Expired `deviceSignIns` docs are deleted lazily by `startDeviceSignIn`;
+a Firestore TTL policy on `expiresAt` is the intended sweep.
 
-**Signing in from another device needs one production grant.** `claimDeviceSignIn` mints a custom
-token (`createCustomToken`), which in production requires the functions' runtime service account to
-hold **Service Account Token Creator** (`iam.serviceAccounts.signBlob`) on itself. The emulator needs
-nothing, so no test catches a missing grant — the symptom live is every claim failing as `internal`.
-Expired `deviceSignIns` documents are deleted lazily by `startDeviceSignIn`; a Firestore TTL policy on
-`expiresAt` is the intended sweep for the rest.
+The deployed Firestore rules live in the Firebase console, not a deploy step — don't assume they
+match `firestore.rules.prod` without reading them back.
 
-**The deployed rules live in the console.** On 2026-09-23 the console copy was read back and matched
-`firestore.rules.prod` rule for rule; treat that as a fact about that date, not a standing one.
+`npm run lint` in `firebase/functions` reports ~2,000 pre-existing problems (mostly CRLF
+`linebreak-style`), so it is **not a pass/fail gate** — stash, capture a baseline, and diff.
 
-`npm run lint` there reports ~1,983 pre-existing problems, nearly all `linebreak-style` (Windows
-`core.autocrlf` writes CRLF; `eslint-config-google` demands LF) plus `no-trailing-spaces`. It is
-therefore **not a usable pass/fail gate** — stash, capture a baseline, and diff the output instead of
-reading the total.
+## Verifying a Change Before Proposing a Merge
 
-**The suite is expected to be fully green — any red is a regression.** This reverses long-standing
-advice in this file, which said a non-zero failure count was normal because the behavioural suites
-carried failing bug markers. That stopped being true on 2026-07-28, when the ID-collision cluster
-(#002/#004/#009/#012) was fixed; see the Phase 4 fourth pass in `docs/testing/bug-tracking/README.md`.
-Two catalogued defects are currently pinned by tests that assert the **defective** behaviour
-(#1414, #1415), so they are green too. Never "fix" a red test by editing it — but equally, don't
-dismiss one as an expected marker without checking the tracker first.
+Merging to `main` deploys live.
 
-### Verifying a change before proposing a merge
-- `npx tsc --noEmit` — type errors block the deploy, since `react-scripts build` type-checks all of `src/`
-- `npm test` — compare the failure count against the recorded baseline
-- **`npm run build` — required, and not implied by the two above.** `react-scripts`' webpack honours
-  tsconfig `baseUrl` but **ignores `paths`**, so `@/...` alias imports pass both `tsc` and jest and
-  then fail the production build with `Module not found`. Use bare `baseUrl` imports
-  (`types/common`, `shared/attribution`) in anything that ships; `@/` is safe only in `__tests__/`
-  and `test-utils/`, which are never bundled. Adding a new top-level `src/` directory also means
-  adding it to the resolver allow-list in `jest.config.ts`.
+1. `npx tsc --noEmit` — type errors block the deploy
+2. `npm test` — must be fully green
+3. **`npm run build` — required, not implied by the two above.** webpack honours tsconfig `baseUrl`
+   but **ignores `paths`**, so `@/...` imports pass `tsc` and jest and then fail the build with
+   `Module not found`. Use bare `baseUrl` imports (`core/types/common`) in anything that ships; `@/`
+   is safe only in `__tests__/` and `test-utils/`. A new top-level `src/` directory must also be
+   added to the resolver allow-list in `jest.config.ts`.
 
-**Four resolvers disagree, and no single gate catches all of them.** Keep the whole table in mind
-before assuming green means green:
+**Four resolvers disagree; no single gate catches all of them:**
 
 | Resolver | `baseUrl` | `paths` (`@/…`) |
 |---|---|---|
@@ -254,239 +152,68 @@ before assuming green means green:
 | webpack (`npm run build`) | ✅ | ❌ |
 | **`ts-node`** | **❌** | **❌** |
 
-`ts-node` has no `tsconfig-paths` registration in this repo, so it resolves only relative and
-`node_modules` specifiers. **A bare `core/services/...` import passes all three standard gates and
-then fails at runtime under `ts-node`** — which matters for anything under `src/utils/__dev__/`,
-since that is operator tooling run via `npx ts-node` and never bundled. Use **relative** imports
-there, and verify by actually running the script; no gate will tell you.
-
-## Code Style Guidelines
-
-### Current Standards
-- **TypeScript**: Use strict typing with interfaces/types in dedicated files
-- **Theme System**: NEVER use hardcoded colors - always use theme variables
-- **Formatting**: React components use PascalCase, utilities use camelCase
-- **Quotes**: Use double quotes (") per ESLint config
-- **Documentation**: Provide JSDoc comments for all functions, components, and complex variables
-- **Components**: Components should focus on player-facing features (not DM tools)
-- **Firebase**: Always use service classes from BaseFirebaseService
-
-### Post-Restructuring Standards (PLANNED)
-- **Feature Organization**: Each feature contains components/, hooks/, context/, services/, types/, pages/
-- **Public APIs**: Features export clean interfaces via index.ts barrel exports
-- **Import Restrictions**: Features can import from shared/, core/, and other features' public barrels (index.ts); shared/ can import from core/ and features' public barrels the same way — never another domain's internals
-- **Domain Boundaries**: Campaign entities grouped together, clear separation from storytelling/collaboration
-- **Service Pattern**: All integrations extend BaseFirebaseService singleton pattern
-- **Testing Requirements**: All business logic requires tests before implementation
-
-## Project Purpose
-This is a tool for D&D players (not DMs) to collect and organize their shared campaign data including stories, rumors, NPCs, locations, and quests.
-
-## Development Principles
-- Follow KISS (Keep It Simple, Stupid): Write straightforward, uncomplicated solutions
-- Apply YAGNI (You Aren't Gonna Need It): Don't add speculative features
-- Adhere to SOLID Principles
-- Maintain DRY (Don't Repeat Yourself): Avoid code duplication
+`ts-node` has no `tsconfig-paths` here, so anything under `src/utils/__dev__/` (operator tooling run
+via `npx ts-node`) must use **relative** imports — and be verified by actually running the script.
 
 ## Architecture
 
-### Current Architecture (Feature-First with Shared Infrastructure)
-
-This is now the actual tree, not a target. The old functional layout is gone.
+Feature-first, with shared infrastructure:
 
 ```
 src/
-├── app/                      # Composition root: App.tsx + layout shell
-│   └── layout/               #   Layout, Header, Footer, Navigation
+├── app/                      # Composition root: App.tsx + layout shell (Header, Footer, Navigation, Layout)
 ├── features/                 # Four domains, each behind a barrel index.ts
 │   ├── campaign-entities/    #   NPCs, Quests, Locations, Rumors + relationship logic
 │   ├── storytelling/         #   Chapters, Stories, Sagas
 │   ├── collaboration/        #   Notes, AI entity extraction, AI usage tracking
 │   └── user-management/      #   Auth, Groups, Profiles, Admin
-├── pages/                    # Route components
-│   └── layouts/              #   Dashboard + journal layouts (aggregate several domains)
-├── shared/                   # Cross-domain code owned by no single feature
-│   ├── components/           #   incl. Breadcrumb, context-switcher/, AttributionInfo
-│   ├── context/              #   Navigation, Search
-│   ├── hooks/                #   useFirebaseData, useNavigation, useSearch
-│   └── utils/
+├── pages/                    # Route components; layouts/ aggregates several domains
+├── shared/                   # Cross-domain code owned by no single feature (components, context, hooks, utils)
 ├── core/                     # Infrastructure — depends on nothing internal
 │   ├── components/           #   UI primitives: Button, Card, Dialog, Input, Typography, Roster
 │   ├── services/             #   Firebase (auth/user/group/campaign/data), search, openai
-│   ├── types/                #   common, search, user
 │   ├── attribution/          #   the single place attribution values are built
-│   ├── themes/               #   incl. css/ and definitions/
-│   ├── config/
-│   └── constants/
+│   └── types/ themes/ config/ constants/ utils/
 ├── test-utils/               # Test infrastructure — never bundled
-├── utils/__dev__/            # Sample-data tooling; scripts/manage-dev-data.ps1 depends on it
-├── styles/
-├── index.tsx
-└── setupTests.ts
+├── utils/__dev__/            # Sample-data tooling (used by scripts/manage-dev-data.ps1)
+└── styles/, index.tsx, setupTests.ts
 ```
 
-- **State Management**: React Context API providers, now living with the domain they serve
-- **Firebase**: access through context hooks like `useAuth()`, `useGroups()`; services come from
-  `core/services/firebase`, whose barrel initializes lazily on first use
-- **Feature Organization**: each domain owns its components, hooks, context and types, and exposes
-  them through a single barrel
+- **State**: React Context providers, living with the domain they serve; access via hooks such as
+  `useAuth()`, `useGroups()`
+- **Firebase**: services come from `core/services/firebase`, whose barrel initializes lazily on first
+  use (importing it is side-effect free). All services extend `BaseFirebaseService`.
 
-### Dependency Rules (POST-RESTRUCTURING)
-- `app/` → anything (`features/`, `shared/`, `core/`, `pages/`) — it's the composition root
-- `pages/` → other features' **public barrels**, `shared/`, `core/`
-- `features/` → `shared/`, `core/`, and other features' **public barrels** (never another feature's internals)
-- `shared/` → `core/`, and other features' **public barrels** (never a feature's internals)
+### Dependency rules
+- `app/` → anything (composition root)
+- `pages/`, `features/`, `shared/` → `core/`, `shared/`, and other features' **public barrels**
 - `core/` → nothing internal
 
-**The single invariant behind all five rules**: no area may import another feature's internals —
-every cross-feature edge goes through that feature's barrel. `core/` depends on nothing internal at
-all; everything above it may depend on `core/` and on features' barrels as needed. That invariant is
-what the audit actually checked, and it held: zero cross-domain internals imports found anywhere in
-the tree.
+**The invariant: never import another feature's internals** — every cross-feature edge goes through
+that feature's `index.ts`. **Inside a domain, import siblings directly — never your own barrel**
+(that creates cycles such as `index.ts` → `AdminPanel.tsx` → `index.ts`).
 
-### Migration Status
-- **Phase**: Restructuring is **complete** (all four domains + the `shared`/`core` pass, Phase 3e). Post-migration bug triage (Phase 4) is **largely complete** — 54 of 61 tracker rows resolved as of 2026-07-28. See `docs/testing/post-test-coverage-roadmap.md` for what remains.
-- **Order**: user-management → storytelling → campaign-entities → collaboration. Deliberately sequential; each domain must be green before the next starts. Within collaboration, `notes` had to precede `entity-extraction` for the same reason — extraction imports notes' types and helpers.
-- **Per-domain exit criteria**: all tests pass except the documented bug markers, coverage on the migrated domain does not drop, no new bugs introduced by the move itself, and a `migration/<domain>-complete` tag on `main` at merge.
-- **Risk Level**: Low-Medium (incremental, with a behavioural test suite as the safety net)
+Filenames mislead about where code belongs (e.g. `UsageContext` sounds shared but depends on entity
+extraction). Open the file and check its imports before deciding a boundary.
 
-## Testing Strategy (CRITICAL PRE-RESTRUCTURING)
+**Grep trap**: file bodies here are indented, so `grep "^export"` misses most exports. Read the file;
+don't infer its exports or size from a column-anchored grep.
 
-### Testing Philosophy
-**CRITICAL**: Tests must define expected behavior and reveal bugs - NOT be modified to pass
-
-#### Core Testing Principles
-1. **Specification-Based Testing**: Write tests based on requirements and expected behavior, not current implementation
-2. **Let Tests Fail**: If tests fail, they reveal bugs in the codebase that need fixing
-3. **Tests as Documentation**: Tests serve as the source of truth for what code should do
-4. **No Test Modification**: Never change tests to make them pass - fix the code or document the issue
-5. **Bug Discovery**: Failing tests are valuable - they identify problems before restructuring
-
-#### Test-First Approach
-- **Write tests based on interfaces and specifications**
-- **Let failures reveal auth issues, Firebase config problems, or validation bugs**  
-- **Document any failures as potential issues to investigate**
-- **Use test failures to improve code quality before major refactoring**
-
-### Current State
-- **Testing Infrastructure**: Jest + React Testing Library, **5,144 tests across 260 suites**
-- **Coverage**: **91.96% statements / 92.42% lines / 85.77% functions / 84.05% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-31 on `design-handoff/dashboard-1a`)
-- **Baseline**: **0 failed / 2 skipped / 5354 passed / 5356 total across 267 suites.** Measured 2026-09-24 on `fix/notes-story-refetch-gate` (branched from `main` at 14b27d7). `firebase/functions` was not touched and not re-run; its last figure is below.
-  - The figure this replaced was **0 failed / 2 skipped / 5341 passed / 5343 total across 267 suites**, measured 2026-09-24 on `feat/cross-device-sign-in` (branched from `main` at db08333). `firebase/functions`: **99 passed across 6 suites**, against the emulators.
-  - The figure this replaced was **0 failed / 2 skipped / 5310 passed / 5312 total across 266 suites**, measured 2026-09-23 on `feat/alternative-sign-in`; functions then: 71 across 5 suites.
-  - The figure this replaced was **0 failed / 2 skipped / 5271 passed / 5273 total across 264 suites**, measured 2026-09-23 on `fix/group-membership-authority`. The 2 skips are #901's, closed as testability-only. **Any red is a regression.** Running the suite while `npm run build` competes for CPU produced one timeout in `QuickAddForm.test.tsx` that passes alone — run the two sequentially.
-  - The figure this replaced was **0 failed / 2 skipped / 5142 passed / 5144 total across 260 suites**, measured 2026-09-22 on `fix/entity-loader-consolidation`.
-  - The figure this replaced — `4715 passed / 4717 total across 235 suites` — had gone stale by **25 suites and 427 tests**, having been taken on a branch that later merged. That is the largest drift this line has carried, and it is exactly what the rule below exists to catch. If you are about to trust this number without running it, run it.
-  - A full run also prints `A worker process has failed to exit gracefully`. That is pre-existing on a clean tree and the run still exits 0 — do not chase it, and do not mistake it for a failure.
-  - The previously recorded baseline of 7 failures — the ID-collision markers #002/#004/#009/#012 in the four `*Context.bugs` suites — is **obsolete**: that cluster was fixed 2026-07-28 and those four suites now pass 29/29. If you find advice anywhere telling you to tolerate reds, check `docs/testing/bug-tracking/README.md` before believing it.
-  - Measured 2026-09-03 on `redesign/privacy-policy`. **`main` measured 231 suites / 4688 tests at the
-    same moment** — this branch adds 4 suites and 29 tests. The figure this replaced (230 / 4675) was
-    itself taken on a branch that predated the create-menu merge, which is exactly the staleness the
-    "measure it, don't carry one forward" rule below exists to catch; it was wrong about `main` by
-    1 suite and 13 tests. The previous entry read:
-  - Measured 2026-09-03 on `redesign/header-command-palette`, after the final whole-branch review's fix wave (typeFilter reset, the empty-query state, the combobox ARIA ownership chain, `<mark>` contrast, state-priority order, the `More` button's `nav:hidden` wrapper, palette reset on sign-out, the AltGr/Shift shortcut guard, the trigger-width assertion). The prior baseline on this same branch was 229 suites / 4655 tests, also fully green; this pass is +1 suite (`HighlightedText.test.tsx` added) and +19 tests net, all new coverage for the findings above — no suite was deleted or renamed.
-  - **Recording a new baseline: measure it, don't carry one forward.** The figure above replaced one that had been stale for over a month because it was taken on a branch that later merged. If your run disagrees with this line, run the suites you touched alone and reconcile the delta before assuming a regression.
-  - To prove "the same suites failed", run the suspect suites alone and match counts against the full run; piping a full run through `tail` discards the earlier failures' names.
-- **Firebase Testing**: Emulator integration available but underutilized
-
-#### A failing test is not automatically a bug
-Three of the catalogued "bugs" (#013, #014, #300) turned out to be a missing `crypto.randomUUID` in
-JSDOM: the tests aborted on the environment error *before reaching any assertion*, so the behaviour
-they described was never exercised. They sat in the tracker for a year as deferred architectural
-work. When triaging a red test, first establish that it actually executed the code it names — a test
-that dies on an environment error is indistinguishable, in a failure count, from one that found a
-real defect.
-
-### Required Before Restructuring
-1. **Context Layer Testing**: All Firebase contexts (NPC, Quest, Location, Rumor, Story, Note)
-2. **Cross-Feature Relationships**: Entity relationship integrity and cascading updates
-3. **Critical User Workflows**: End-to-end campaign creation, note-taking, entity extraction
-4. **Data Integrity**: Referential consistency, concurrent modifications, error handling
-5. **Performance Testing**: Large dataset handling, search functionality, load times
-
-### Testing Priorities (See `docs/testing/methodology/test-design-strategy.md`)
-- **Priority 1**: Campaign entity CRUD operations and relationships
-- **Priority 2**: Note-taking and AI entity extraction workflows  
-- **Priority 3**: User management and group system functionality
-- **Priority 4**: Known issues from todo list (StoryContext errors, admin panel issues)
-- **Priority 5**: Performance and scalability edge cases
-
-### Implementation Timeline
-- **Week 1**: Foundation and core context testing
-- **Week 2**: Cross-feature relationships and integration tests
-- **Week 3**: Workflows, edge cases, and performance testing
-- **Success Criteria**: 90%+ context coverage, 100% relationship coverage, all critical paths tested
+## Code Style
+- **TypeScript**: strict typing; interfaces/types in dedicated files
+- **Theme system**: NEVER hardcode colors — always use theme variables
+- **Naming**: components PascalCase, utilities camelCase
+- **Quotes**: double quotes (ESLint)
+- **Docs**: JSDoc on functions, components, and complex variables
+- **Features**: each owns its components/, hooks/, context/, services/, types/ and exposes a clean
+  public API via `index.ts`
+- **New integrations**: extend `BaseFirebaseService`; keep API keys out of the frontend (use Firebase
+  Functions); support both emulator and production configs
+- **Principles**: KISS, YAGNI, SOLID, DRY
 
 ## Technology Stack
-
-### Current Core Stack
-- **Frontend**: React 18.2.0 with TypeScript, TailwindCSS with custom theme system
-- **Backend**: Firebase (Auth, Firestore, Functions, Hosting, Analytics)
-- **AI Integration**: OpenAI (GPT-3.5-turbo/GPT-4) for entity extraction with usage tracking
-- **Development**: Jest + React Testing Library, ESLint, PowerShell automation scripts
-- **Icons**: Lucide React (91+ usages throughout application)
-
-### Planned Advanced Features (Roadmap - See `docs/architecture/migration/deep-dive-feature-enhancements.md`)
-
-#### Rich Content & Editing
-- **TipTap Editor**: Replace basic textareas with collaborative rich text editing
-- **D&D Extensions**: Entity mentions (@NPC_NAME), dice rolling (/roll 1d20+5), stat blocks
-- **Real-time Collaboration**: Yjs + WebSocket for live collaborative editing
-
-#### Data Visualization & Analytics  
-- **React Flow**: Interactive entity relationship networks and campaign mapping
-- **D3.js**: Campaign analytics dashboard, character interaction heatmaps
-- **React Chrono**: Campaign timeline and session chronology visualization
-- **Leaflet**: Interactive world maps with location markers and quest routes
-
-#### Enhanced Search & Discovery
-- **Algolia**: Intelligent multi-index search across all campaign entities
-- **Semantic Search**: AI-powered content discovery and plot consistency analysis
-- **Advanced Filtering**: Cross-entity search with relevance ranking
-
-#### Third-Party Integrations (See `docs/architecture/migration/third-party-integration-analysis.md`)
-- **D&D 5e SRD API**: Official spells, monsters, equipment integration
-- **Discord API**: Campaign coordination via webhooks and bot commands  
-- **Enhanced AI Services**: Multiple AI models for diverse content generation
-- **Analytics**: Sentry (error tracking), Mixpanel (user behavior), GA4 (journeys)
-
-### Integration Architecture Pattern
-- **Service Classes**: All integrations extend BaseFirebaseService singleton pattern
-- **React Hooks**: Consistent loading/error state management (useIntegration pattern)
-- **Context Providers**: Hierarchical state management with dependency injection
-- **Environment Awareness**: Seamless dev/prod configuration with emulator support
-
-## Development Workflow (UPDATED)
-
-### Pre-Development Requirements
-1. **Review Architecture Docs**: Study `docs/architecture/` and `docs/testing/` before starting new features
-2. **Check Migration Status**: Verify which domains have been migrated in restructuring strategy
-3. **Run Test Suite**: Ensure all tests pass before making changes
-4. **Validate Environment**: Confirm Firebase emulators and dependencies are working
-
-### Feature Development Process (CURRENT STRUCTURE)
-1. **Impact Assessment**: Determine if feature should wait for post-restructuring implementation
-2. **Context Integration**: Use existing context providers and service classes
-3. **Component Organization**: Follow current directory structure (components/features/)
-4. **Cross-Feature Dependencies**: Document any dependencies for restructuring consideration
-5. **Testing Requirements**: Add tests for new business logic (prepare for restructuring)
-
-### Feature Development Process (POST-RESTRUCTURING)
-1. **Domain Assignment**: Determine which feature domain your change belongs to
-2. **Public API Design**: Plan how your feature will expose functionality via index.ts
-3. **Import Restrictions**: Use shared/ and core/ only - never direct feature imports
-4. **Service Pattern**: Extend BaseFirebaseService for new integrations
-5. **Testing Requirements**: Comprehensive test coverage for all business logic
-
-### Integration Development Guidelines
-1. **Service Architecture**: Follow BaseFirebaseService extension pattern
-2. **Environment Configuration**: Support both development and production setups
-3. **Error Handling**: Implement circuit breakers and graceful degradation
-4. **Rate Limiting**: Respect third-party API limits and implement usage tracking
-5. **Security**: Never expose API keys in frontend code - use Firebase Functions
-
-### Emergency Fixes During Migration
-- **Small Fixes**: Can be applied to current structure with caution
-- **Large Features**: Should wait for post-restructuring implementation
-- **Bug Fixes**: Prioritize fixing in current structure, plan migration
-- **Critical Issues**: May require temporary workarounds during migration phases
+- React 18 + TypeScript, TailwindCSS with a custom theme system
+- Firebase: Auth, Firestore, Functions, Hosting, Analytics
+- OpenAI for entity extraction (via Functions), with usage tracking
+- Jest + React Testing Library, ESLint, PowerShell automation scripts
+- Icons: Lucide React
