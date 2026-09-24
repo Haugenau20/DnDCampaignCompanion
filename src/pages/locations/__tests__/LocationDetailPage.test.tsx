@@ -837,7 +837,10 @@ describe('LocationDetailPage — the picture (T021)', () => {
   it('shows the picture once there is one', () => {
     mockLocations = withPicture();
     renderPage();
-    expect(screen.getByRole('img', { name: 'Gondolin' })).toHaveAttribute('src', picture.url);
+    const img = screen.getByRole('img', { name: 'Gondolin' });
+    expect(img).toHaveAttribute('src', picture.url);
+    // Heads the page: lazy loading would only delay it.
+    expect(img).toHaveAttribute('loading', 'eager');
     expect(screen.getByRole('button', { name: 'Replace picture' })).toBeInTheDocument();
   });
 

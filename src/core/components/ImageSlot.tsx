@@ -17,6 +17,11 @@ export interface ImageSlotProps {
   image?: StoredImage | null;
   /** Alt text for `image`, e.g. "Portrait of Bilbo". */
   alt?: string;
+  /**
+   * "eager" for a picture at the top of its page, where lazy loading only
+   * delays what is already in view. Defaults to "lazy".
+   */
+  loading?: 'lazy' | 'eager';
   className?: string;
 }
 
@@ -45,6 +50,7 @@ export const ImageSlot: React.FC<ImageSlotProps> = ({
   caption,
   image,
   alt,
+  loading = 'lazy',
   className,
 }) => {
   if (image && isOwnBucketUrl(image.url)) {
@@ -58,7 +64,7 @@ export const ImageSlot: React.FC<ImageSlotProps> = ({
           alt={alt ?? ''}
           width={image.width}
           height={image.height}
-          loading="lazy"
+          loading={loading}
           decoding="async"
           className="block w-full h-full object-cover"
         />

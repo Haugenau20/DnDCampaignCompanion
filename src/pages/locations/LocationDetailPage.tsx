@@ -346,6 +346,7 @@ const LocationDetailPage: React.FC = () => {
               label={`${location.name} — no image added`}
               image={location.image}
               alt={location.name}
+              loading="eager"
             />
           }
           imageControl={
