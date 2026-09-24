@@ -118,7 +118,6 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { user } = useAuth();
   const { activeGroupUserProfile } = useUser();
   const { activeCampaignId } = useCampaigns();
-  const [isUpdating, setIsUpdating] = useState(false);
 
   // Real, held-in-state reading progress. `defaultProgress` remains only the
   // initial/fallback value for a first-time reader who has no persisted document.
@@ -369,7 +368,6 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('No active group or campaign selected');
     }
     
-    setIsUpdating(true);
     try {
       // Get the chapter to update
       const chapter = getChapterById(chapterId);
@@ -516,8 +514,6 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (error) {
       console.error('Failed to update chapter order:', error);
       throw error;
-    } finally {
-      setIsUpdating(false);
     }
   }, [updateData, refreshChapters, chapters, getChapterById, user, deleteData, hasRequiredContext]);
 
@@ -531,7 +527,6 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('No active group or campaign selected');
     }
 
-    setIsUpdating(true);
     try {
       // Refresh chapters to ensure we have latest data
       await refreshChapters();
@@ -618,8 +613,6 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (error) {
       console.error('Failed to create chapter:', error);
       throw error;
-    } finally {
-      setIsUpdating(false);
     }
   }, [refreshChapters, chapters, user, deleteData, hasRequiredContext]);
 
@@ -633,7 +626,6 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('No active group or campaign selected');
     }
 
-    setIsUpdating(true);
     try {
       // Refresh chapters to ensure we have latest data
       await refreshChapters();
@@ -694,8 +686,6 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (error) {
       console.error('Failed to delete chapter:', error);
       throw error;
-    } finally {
-      setIsUpdating(false);
     }
   }, [deleteData, refreshChapters, getChapterById, chapters, user, hasRequiredContext]);
 
@@ -754,7 +744,14 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [chapters, refreshChapters, user, deleteData, hasRequiredContext]);
 
-  const isLoading = chaptersLoading || isUpdating;
+  // `isLoading` means "there is nothing to show yet" (T044), so it is exactly
+  // `useChapterData`'s `loading` -- which already stops counting a refetch
+  // behind chapters on screen. It used to also fold in a write-in-flight flag,
+  // raised for the whole of every create, update and delete: every story page
+  // gates on this value, so pressing Save swapped `ChapterEditPage`'s form for
+  // the gate's skeleton until the write returned. `ChapterForm` and
+  // `DeleteConfirmationDialog` each track their own pending state.
+  const isLoading = chaptersLoading;
 
   // `error` carries real fetch failures only. It used to also carry
   // 'Please select a group and campaign' whenever the selection was absent,

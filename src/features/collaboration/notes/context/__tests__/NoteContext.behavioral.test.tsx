@@ -1172,6 +1172,120 @@ describe('NoteContext Behavioral Tests', () => {
     });
   });
 
+  describe('isLoading means "nothing to show yet", not "a fetch is in flight" (T044)', () => {
+    // `NotesPage` and `NotePage` pass `isLoading` to `usePageGate`. Deleting a
+    // note ends in a refetch, and that refetch used to raise `isLoading`
+    // again, so the gate re-entered `resolving` and `GatedContent` swapped the
+    // page for its skeleton. The same rule already holds for the four entity
+    // hooks (see `useQuestData.test.ts`).
+    const makeNote = (id: string, campaignId = 'test-campaign'): Note => ({
+      id,
+      title: `Note ${id}`,
+      content: 'Content',
+      extractedEntities: [],
+      status: 'active' as NoteStatus,
+      tags: [],
+      updatedAt: '2025-06-15T00:00:00.000Z',
+      campaignId,
+      createdBy: 'test-user',
+      createdByUsername: 'Test User',
+      dateAdded: '2025-06-15T00:00:00.000Z',
+    });
+
+    /** A getCollection result the test resolves by hand. */
+    const deferred = () => {
+      let resolve: (notes: Note[]) => void = () => {};
+      const promise = new Promise<Note[]>((r) => { resolve = r; });
+      return { promise, resolve };
+    };
+
+    test('a refetch behind notes already on screen is not loading', async () => {
+      const kept = makeNote('note-1');
+      mockDocumentService.getCollection.mockResolvedValue([kept, makeNote('note-2')]);
+      mockDocumentService.deleteDocument.mockResolvedValue(undefined);
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => expect(capturedContext.notes).toHaveLength(2));
+
+      // Deleting refetches; hold that refetch open.
+      const refetch = deferred();
+      mockDocumentService.getCollection.mockReturnValue(refetch.promise);
+      let deletion: Promise<void> = Promise.resolve();
+      act(() => {
+        deletion = capturedContext.deleteNote('note-2');
+      });
+      await waitFor(() =>
+        expect(mockDocumentService.getCollection).toHaveBeenCalledTimes(2)
+      );
+
+      expect(capturedContext.notes).toHaveLength(2);
+      expect(capturedContext.isLoading).toBe(false);
+
+      await act(async () => {
+        refetch.resolve([kept]);
+        await deletion;
+      });
+      expect(capturedContext.notes).toHaveLength(1);
+    });
+
+    test('a first read with nothing on screen is loading', async () => {
+      const firstRead = deferred();
+      mockDocumentService.getCollection.mockReturnValue(firstRead.promise);
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+
+      expect(capturedContext.isLoading).toBe(true);
+
+      await act(async () => {
+        firstRead.resolve([]);
+      });
+    });
+
+    test('switching campaign empties the list rather than showing the last one', async () => {
+      // Otherwise the rule above would keep the previous campaign's notes on
+      // screen -- no longer behind a skeleton -- for the whole window between
+      // the switch and the new fetch resolving.
+      mockDocumentService.getCollection.mockResolvedValue([makeNote('note-1')]);
+
+      let capturedContext: any;
+      const { rerender } = render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => expect(capturedContext.notes).toHaveLength(1));
+
+      const secondRead = deferred();
+      mockDocumentService.getCollection.mockReturnValue(secondRead.promise);
+      mockUseCampaigns.mockReturnValue({ activeCampaignId: 'other-campaign' });
+      rerender(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+
+      await waitFor(() =>
+        expect(mockDocumentService.getCollection).toHaveBeenCalledTimes(2)
+      );
+      expect(capturedContext.notes).toEqual([]);
+      expect(capturedContext.isLoading).toBe(true);
+
+      await act(async () => {
+        secondRead.resolve([makeNote('note-1')]);
+      });
+    });
+  });
+
   describe('Hook Usage Requirements', () => {
     test('should throw error when useNotes is used outside provider', () => {
       // Mock console.error to suppress error output in test

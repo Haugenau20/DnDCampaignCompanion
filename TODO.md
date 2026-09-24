@@ -16,7 +16,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T044 | Notes/story pages flash to skeleton on write | S | open | Visible defect on every save; same fix already proven on the entity pages |
 | medium | T051 | Unbounded titles can widen a page | S | open | Already broke the live dashboard once; the audit is small |
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T019 | Extraction reads PCs as NPCs | M | open | Degrades the AI feature on every run; roster data already exists |
@@ -100,7 +99,7 @@ things, all of which cost something.
 times.** Raw ids in `15-2`, a disclosure that never hid in `15-3`, an accessible
 name polluted by a pending indicator, and then the two `15-7` found in ten
 minutes of the running app: every write flashed the page to a skeleton and
-unmounted what was on it (now T044), and the row's controls measured 32px
+unmounted what was on it (fixed everywhere by T044), and the row's controls measured 32px
 against a 44px rule. All five were invisible to jsdom by construction — no CSS,
 no real auth lifecycle, no pointer. The pages built without a browser pass
 (`15-4`, `15-5`, `15-6`) shipped the skeleton defect three times because nobody
@@ -654,35 +653,6 @@ user in a browser check".
   honouring it. Capping the stored value is **not** the fix here, and would
   need `T005`-style agreement about editing stored user text.
 - **Source**: live-site report, 2026-09-22
-
-### T044 — `NotesPage` and the story pages still fold a refetch into the gate
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-22
-
-`usePageGate(page, { loading })` treats the caller's `loading` as "resolving",
-and a write that ends in a refresh sets that flag again — so the save swaps the
-whole page for the gated skeleton, unmounts what was on it, and takes any
-component state with it.
-
-**Closed for the four entity domains.** `useQuestData`, `useNPCData`,
-`useLocationData` and `useRumorData` now report `loading` as *"there is nothing
-to show yet"* — the in-flight flag only counts while the list is empty — so a
-refresh happens behind content someone is reading. Pinned by three cases in each
-of the four hook suites.
-
-- **Where it is still true**: `pages/notes/NotesPage.tsx:30`,
-  `pages/notes/NotePage.tsx:37` and the story pages
-  (`ChaptersPage`, `ChapterCreatePage:19`, `ChapterEditPage:35`), which load
-  through their own hooks rather than the four fixed ones.
-- **Touches**: those hooks, the same one-line shape as the fix above.
-- **Catch**: emptying the list when the group or campaign changes is **part of
-  this fix, not a separate one**. Without it, "keep showing what we have" keeps
-  showing the *previous campaign's* records under the new campaign's name for
-  the length of the fetch.
-- **It shows only as a flash today**, because nothing on those pages holds state
-  across a write — which is exactly how it survived three PRs on the entity
-  pages. **Invisible to jsdom by construction**: the suites mock the data hooks,
-  so `loading` never flips a second time. Verify in Chrome.
-- **Source**: PR 15.7's browser pass
 
 ### T042 — A theme class passed as *data* has no manifest coverage
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-18

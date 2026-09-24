@@ -367,7 +367,8 @@ the tree.
 ### Current State
 - **Testing Infrastructure**: Jest + React Testing Library, **5,144 tests across 260 suites**
 - **Coverage**: **91.96% statements / 92.42% lines / 85.77% functions / 84.05% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-31 on `design-handoff/dashboard-1a`)
-- **Baseline**: **0 failed / 2 skipped / 5341 passed / 5343 total across 267 suites.** Measured 2026-09-24 on `feat/cross-device-sign-in` (branched from `main` at db08333). `firebase/functions`: **99 passed across 6 suites**, against the emulators.
+- **Baseline**: **0 failed / 2 skipped / 5354 passed / 5356 total across 267 suites.** Measured 2026-09-24 on `fix/notes-story-refetch-gate` (branched from `main` at 14b27d7). `firebase/functions` was not touched and not re-run; its last figure is below.
+  - The figure this replaced was **0 failed / 2 skipped / 5341 passed / 5343 total across 267 suites**, measured 2026-09-24 on `feat/cross-device-sign-in` (branched from `main` at db08333). `firebase/functions`: **99 passed across 6 suites**, against the emulators.
   - The figure this replaced was **0 failed / 2 skipped / 5310 passed / 5312 total across 266 suites**, measured 2026-09-23 on `feat/alternative-sign-in`; functions then: 71 across 5 suites.
   - The figure this replaced was **0 failed / 2 skipped / 5271 passed / 5273 total across 264 suites**, measured 2026-09-23 on `fix/group-membership-authority`. The 2 skips are #901's, closed as testability-only. **Any red is a regression.** Running the suite while `npm run build` competes for CPU produced one timeout in `QuickAddForm.test.tsx` that passes alone — run the two sequentially.
   - The figure this replaced was **0 failed / 2 skipped / 5142 passed / 5144 total across 260 suites**, measured 2026-09-22 on `fix/entity-loader-consolidation`.
