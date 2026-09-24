@@ -1,5 +1,6 @@
 // src/features/campaign-entities/locations/types.ts
 import { BaseContent, DomainData } from 'core/types/common';
+import { StoredImage } from 'core/types/storedImage';
 
 /**
  * Types of locations that can exist in the game world
@@ -48,6 +49,8 @@ export interface Location extends BaseContent {
   tags?: string[];
   /** Last session visited */
   lastVisited?: string;
+  /** A picture of the place, if one was added */
+  image?: StoredImage;
 }
 
 /**

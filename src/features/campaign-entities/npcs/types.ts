@@ -1,5 +1,6 @@
 // src/features/campaign-entities/npcs/types.ts
 import { BaseContent, DomainData } from 'core/types/common';
+import { StoredImage } from 'core/types/storedImage';
 import { Location } from '../locations/types';
 
 export type NPCStatus = 'alive' | 'deceased' | 'missing' | 'unknown';
@@ -71,6 +72,8 @@ export interface NPC extends BaseContent {
   notes: NPCNote[];
   /** Free-text labels for grouping, the same shape `Location.tags` uses. */
   tags?: string[];
+  /** The NPC's portrait, if one was added. */
+  image?: StoredImage;
 }
 
 // Context types
