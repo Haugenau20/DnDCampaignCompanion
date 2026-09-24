@@ -14,8 +14,14 @@ users are locked out of something or losing function · `medium` real user
 friction, or a prerequisite for something that is · `low` worth doing, no one
 is hurt while it waits · `nit` bookkeeping or polish
 
+**Maintainer's focus** (2026-09-24): everything touching Firebase Storage and images
+on the site is `high`, ahead of anything that would otherwise rank there.
+
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
+| high | T064 | Portrait NPC image slot | S | open | Maintainer's focus: images. Layout only; images are stored uncropped |
+| high | T020 | Screenshot on bug reports | M | open | Maintainer's focus: Storage. Needs its own path (`support/{uid}/…`), rules and cleanup |
+| high | T058 | Sweep orphaned image files | S | open | Maintainer's focus: Storage. Keeps the bucket honest as uploads grow |
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
@@ -32,8 +38,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T037 | A group cannot be deleted | L | open | Leave exists; deletion is rare and large |
 | low | T017 | Batch actions for other entities | L | open | Convenience; must follow T032's write-amplification fix |
 | low | T018 | Sub-chapters | L | open | New feature; #017 ordering question comes first |
-| low | T020 | Screenshot on bug reports | M | open | Storage exists now; needs its own path, rules and cleanup |
-| low | T058 | Sweep orphaned image files | S | open | Cents of storage, no user harm; only failed writes create them |
 | low | T054 | Sign in with Discord | L | needs scoping | Where tabletop players already are; Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Nobody asked yet; prefer an authenticator app over SMS, which bills per text |
@@ -41,7 +45,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
 | low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; the fix is leaving CRA, which needs a plan |
 | low | T060 | 35 build lint warnings | M | open | One is a real a11y bug (theme menu); the rest want a look each |
-| low | T064 | Portrait NPC image slot | S | open | Layout only; images are stored uncropped |
 | low | T063 | Entity pages look like three products | L | needs scoping | NPC page doesn't use the shell; pick the look first |
 | low | T065 | Firebase CLI 13 → 15 | S | open | Brings the artifact cleanup policy; re-run the emulator suites after |
 | low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
