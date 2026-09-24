@@ -228,4 +228,60 @@ describe('useChapterData', () => {
       expect(result.current.error).toBe('Firestore offline');
     });
   });
+
+  // -------------------------------------------------------------------------
+  // `loading` means "there is nothing to show yet"
+  // -------------------------------------------------------------------------
+  describe('loading means "nothing to show yet", not "a fetch is in flight"', () => {
+    // T044. Every chapter write ends in `refreshChapters()`, which raises
+    // `useFirebaseData`'s in-flight flag. The story pages pass this flag to
+    // `usePageGate`, so a save re-entered `resolving` and `GatedContent`
+    // swapped the page for its skeleton. The same rule already holds for the
+    // four entity hooks (see `useQuestData.test.ts`).
+
+    test('a refetch behind chapters already on screen is not loading', async () => {
+      const chapters = [makeChapter('chapter-01', 'Prologue', 1)];
+      setupFirebaseDataMock({ data: chapters });
+      // The mounting fetch resolves to the same list, so nothing races it
+      // back to empty behind the assertions.
+      mockGetData.mockResolvedValue(chapters);
+      const { result, rerender } = renderHook(() => useChapterData());
+
+      await waitFor(() => expect(result.current.chapters).toHaveLength(1));
+
+      // The write's refresh: in flight, with the list still on screen.
+      setupFirebaseDataMock({ data: chapters, loading: true });
+      rerender();
+
+      expect(result.current.loading).toBe(false);
+      expect(result.current.chapters).toHaveLength(1);
+    });
+
+    test('a first read with nothing on screen is loading', () => {
+      setupFirebaseDataMock({ data: [], loading: true });
+      const { result } = renderHook(() => useChapterData());
+
+      expect(result.current.loading).toBe(true);
+    });
+
+    test('switching campaign empties the list rather than showing the last one', async () => {
+      // Otherwise the rule above would keep the previous campaign's chapters
+      // on screen -- no longer behind a skeleton -- for the whole window
+      // between the switch and the new fetch resolving.
+      const chapters = [makeChapter('chapter-01', 'Prologue', 1)];
+      setupFirebaseDataMock({ data: chapters });
+      mockGetData.mockResolvedValue(chapters);
+      const { result, rerender } = renderHook(() => useChapterData());
+
+      await waitFor(() => expect(result.current.chapters).toHaveLength(1));
+
+      setupContextMocks('group-1', 'campaign-2');
+      setupFirebaseDataMock({ data: [], loading: true });
+      mockGetData.mockResolvedValue([]);
+      rerender();
+
+      expect(result.current.chapters).toEqual([]);
+      expect(result.current.loading).toBe(true);
+    });
+  });
 });

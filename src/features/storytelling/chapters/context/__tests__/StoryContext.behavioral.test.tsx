@@ -873,6 +873,38 @@ describe('StoryContext Behavioral Testing', () => {
       );
     });
 
+    test('a save in flight is not loading (T044)', async () => {
+      // `isLoading` feeds `usePageGate` on every story page. It used to fold
+      // in a write-in-flight flag, so pressing Save on `ChapterEditPage`
+      // re-entered `resolving` and `GatedContent` swapped the form for its
+      // skeleton until the write returned. Loading means "there is nothing to
+      // show yet"; a write behind content already on screen is neither.
+      let finishWrite: () => void = () => {};
+      mockUpdateData.mockReturnValue(
+        new Promise<void>((resolve) => { finishWrite = resolve; })
+      );
+      renderStoryContext();
+
+      await waitFor(() => {
+        expect(storyContext).toBeDefined();
+      });
+
+      let save: Promise<void> = Promise.resolve();
+      act(() => {
+        save = storyContext.updateChapter('chapter-01', { title: 'Updated' });
+      });
+
+      // `updateChapter` refreshes before it writes, so wait until the write
+      // itself is pending.
+      await waitFor(() => expect(mockUpdateData).toHaveBeenCalled());
+      expect(storyContext.isLoading).toBe(false);
+
+      await act(async () => {
+        finishWrite();
+        await save;
+      });
+    });
+
     test('should reject update for non-existent chapter', async () => {
       renderStoryContext();
 

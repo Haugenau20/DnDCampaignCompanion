@@ -106,6 +106,22 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     fetchNotes();
   }, [fetchNotes]);
 
+  /*
+    Switching campaign (or group, or user) must not leave the previous one's
+    notes on screen while the new ones load. `isLoading` below stops counting
+    once there is something to show, so the list is emptied the moment the
+    context it belongs to changes -- otherwise the window between the switch
+    and the fetch resolving would show one campaign's notes under another
+    campaign's name.
+
+    `allNoteIds` is deliberately NOT cleared: it is what new ids are allocated
+    against, and emptying it for the length of a fetch would let `createNote`
+    hand out an id that already exists (bug #1422).
+  */
+  useEffect(() => {
+    setNotes([]);
+  }, [user?.uid, activeGroupId, activeCampaignId]);
+
   /**
    * Get a note by its ID
    */
@@ -491,7 +507,14 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   // Create context value
   const value: NoteContextValue = {
     notes,
-    isLoading: Boolean(loading) || isResolving,
+    /*
+      `isLoading` means "there is nothing to show yet", never "a fetch is in
+      flight" (T044). Deleting a note ends in a refetch, and `NotesPage` and
+      `NotePage` gate on this value, so passing the raw flag swapped the page
+      for its skeleton on every delete. `useQuestData` carries the full
+      reasoning. The `isResolving` half (bug #1413) stays unconditional.
+    */
+    isLoading: (Boolean(loading) && notes.length === 0) || isResolving,
     error,
     getNoteById,
     createNote,

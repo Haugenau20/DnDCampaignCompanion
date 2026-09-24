@@ -57,6 +57,18 @@ export const useChapterData = () => {
     fetchChapters();
   }, [fetchChapters, activeGroupId, activeCampaignId]);
 
+  /*
+    Switching campaign must not leave the previous campaign's chapters on
+    screen while the new ones load. `loading` below stops counting once there
+    is something to show, so the list is emptied the moment the context it
+    belongs to changes -- otherwise the window between the switch and the
+    fetch resolving would show one campaign's story under another campaign's
+    name.
+  */
+  useEffect(() => {
+    setChapters([]);
+  }, [activeGroupId, activeCampaignId]);
+
   // Update chapters when Firebase data changes.
   //
   // Signed out, or no group/campaign selected, is checked FIRST and returns:
@@ -79,9 +91,13 @@ export const useChapterData = () => {
 
   return {
     chapters,
-    // Folds in `isResolving` (bug #1413) -- see useNPCData's identical fold in
+    // `loading` means "there is nothing to show yet", never "a fetch is in
+    // flight" (T044) -- every chapter write ends in `refreshChapters()`, and a
+    // gate fed the raw flag swaps the page for its skeleton on every save.
+    // `useQuestData` carries the full reasoning. The `isResolving` half
+    // (bug #1413) stays unconditional -- see useNPCData's identical fold in
     // campaign-entities for why this can't just be `useGroups().loading`.
-    loading: Boolean(loading) || isResolving,
+    loading: (Boolean(loading) && chapters.length === 0) || isResolving,
     error,
     refreshChapters: fetchChapters,
     hasRequiredContext
