@@ -20,7 +20,7 @@ maintainer's test group, so nothing here has to be reworked at launch.
 - Uploading from a create form — images are added on the detail page afterwards
 - A thumbnail rendition (nothing lists images small yet)
 - A focal point for cropping (see §8)
-- An orphan sweeper (see §7)
+- An orphan sweeper (see §7; built after v1)
 
 ## 2. Decisions and why
 
@@ -186,8 +186,9 @@ policy says this in plain words.
 
 The document is always written before the old file is deleted, so a failure can
 leave an orphaned file but never a document pointing at a missing one. Orphans
-cost storage, not correctness. A scheduled sweep (list objects, compare with the
-documents, delete what's unreferenced after a day) is filed in TODO.md, not built.
+cost storage, not correctness. A daily scheduled sweep lists the objects,
+compares them with the documents, and deletes what's unreferenced after a day
+(`firebase/functions/src/imageMaintenance/sweepOrphanedImages.ts`).
 
 ## 8. UI
 
