@@ -62,7 +62,7 @@ const AccountCard: React.FC = () => {
     }
   };
 
-  const row = "grid grid-cols-1 sm:grid-cols-[170px_1fr_auto] sm:items-center gap-x-3 gap-y-1";
+  const row = "grid grid-cols-1 sm:grid-cols-[170px_minmax(0,1fr)_auto] sm:items-center gap-x-3 gap-y-1";
 
   return (
     <Card>

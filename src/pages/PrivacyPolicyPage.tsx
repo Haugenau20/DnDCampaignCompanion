@@ -136,7 +136,7 @@ const PrivacyPolicyPage: React.FC = () => {
       </div>
 
       {/* ---- The full text ---- */}
-      <div className="lg:grid lg:grid-cols-[14rem_1fr] lg:gap-10">
+      <div className="lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-10">
         <PrivacySectionNav />
 
         <div>

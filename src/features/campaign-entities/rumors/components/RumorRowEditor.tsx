@@ -211,7 +211,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-7 pt-4">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-7 pt-4">
       {/* ------------------------------ the record ----------------------------- */}
       <div className="flex flex-col gap-4">
         {/*

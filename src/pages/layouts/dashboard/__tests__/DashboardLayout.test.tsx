@@ -256,7 +256,7 @@ describe("DashboardLayout", () => {
       // Activity answers "what happened since we last played", so it gets the
       // larger track; it previously sat in the narrow third.
       const grid = container.querySelector(".lg\\:grid");
-      expect(grid?.className).toContain("lg:grid-cols-[1.6fr_1fr]");
+      expect(grid?.className).toContain("lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]");
 
       const feed = screen.getByTestId("activity-feed");
       const quests = screen.getByTestId("open-quests");

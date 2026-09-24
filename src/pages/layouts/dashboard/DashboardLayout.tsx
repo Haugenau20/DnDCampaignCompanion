@@ -55,7 +55,7 @@ const DashboardLayout: React.FC<LayoutProps> = ({
       />
 
       {/* Content first: activity takes the wide column, ~1.6:1 against the aside */}
-      <div className="w-full mt-8 lg:grid lg:grid-cols-[1.6fr_1fr] lg:gap-9 lg:items-start">
+      <div className="w-full mt-8 lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-9 lg:items-start">
         {/*
           `min-w-0` is load-bearing on both tracks. A grid item defaults to
           `min-width: auto`, so its min-content width -- here a single

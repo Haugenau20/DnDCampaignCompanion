@@ -48,7 +48,7 @@ interface RumorDirectoryProps {
 
 /** Column template shared by every row, so the columns line up across groups. */
 const ROW_GRID =
-  'grid-cols-[1fr_auto] md:grid-cols-[1.6fr_128px_128px_150px_26px]';
+  'grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.6fr)_128px_128px_150px_26px]';
 
 /**
  * Fixed, ordered groups, on `QuestDirectory`'s pattern rather than the

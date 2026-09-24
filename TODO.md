@@ -16,7 +16,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T051 | Unbounded titles can widen a page | S | open | Already broke the live dashboard once; the audit is small |
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T019 | Extraction reads PCs as NPCs | M | open | Degrades the AI feature on every run; roster data already exists |
 | medium | T029 | Notes fetched twice, unbounded | M | open | Read cost grows with every past campaign, on every route |
@@ -619,40 +618,6 @@ user in a browser check".
   Joining as an existing account (a group 2 user joining group 1) needs neither
   and was verified that way for T022.
 - **Source**: PR #114, 2026-09-23; narrowed by T022
-
-### T051 — Nothing stops the next unbounded title from widening a page
-**Type** tech debt · **Size** S · **Status** open · **Verified** 2026-09-22
-
-- **Where**: the bare-`fr` grid templates listed by
-  `grep -rn "grid-cols-\[" src --include=*.tsx`. Roughly half already write
-  `minmax(0,1fr)` (`NPCDetailPage.tsx:633`, `MembersCard.tsx:36`,
-  `AdminCampaignsPage.tsx:27`, the detail-page definition rows); the rest write
-  plain `1fr` / `1.5fr` / `1.6fr` and rely on each cell remembering `min-w-0`.
-- **Catch**: a grid item defaults to `min-width: auto`, so its min-content
-  width becomes the track's floor — and a row held on one line by `truncate`
-  has a min-content width of the *whole* string. The `truncate` never fires;
-  the column grows instead, and takes the grid, the page and the hero band with
-  it. This shipped: one rumour with a 165-character typed title widened the
-  whole dashboard past the viewport, because
-  `DashboardLayout.tsx`'s two `lg:grid-cols-[1.6fr_1fr]` children had no
-  `min-w-0`. Measured in a browser before the fix: a 1335px grid inside an
-  896px container, `h4.scrollWidth === h4.clientWidth` (not truncating); after,
-  896px and 399px against 1205px (truncating). The hotfix put `min-w-0` on
-  those two children only.
-- **Touches**: the fix per site is one class, so the work is the audit, not the
-  edit. `minmax(0,1fr)` in the template is the version that cannot be undone by
-  a later cell, and is what the already-correct half uses — prefer it to
-  sprinkling `min-w-0` on children. Checked while fixing the dashboard:
-  `RumorDirectory`'s row grid is safe (its first child carries `min-w-0`).
-  The rest are unchecked.
-- **Related**: the upstream half of the same story is that
-  `rumor-title.ts` caps a *derived* title at
-  `MAX_DERIVED_TITLE_LENGTH` (52) but an explicit typed title is not capped at
-  all — deliberately, per that file's own comment, which says index rows
-  truncate in CSS instead. That contract is fine; the dashboard was simply not
-  honouring it. Capping the stored value is **not** the fix here, and would
-  need `T005`-style agreement about editing stored user text.
-- **Source**: live-site report, 2026-09-22
 
 ### T042 — A theme class passed as *data* has no manifest coverage
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-18
