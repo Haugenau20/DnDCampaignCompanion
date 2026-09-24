@@ -22,9 +22,8 @@ is hurt while it waits · `nit` bookkeeping or polish
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
-| medium | T056 | Sign-in errors carry a reportable ref | S | open | Unknown sign-in failures are undiagnosable from a user report; PR #117's took a log dig |
+| medium | T056 | Sign-in errors carry a reportable ref | S | blocked | On hold for an app-wide error-numbering system, which the maintainer wants first |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
-| low | T001 | `NPCNote.date` stored shape | S | open | Display already uniform; the remainder is data hygiene |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
 | low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
@@ -126,22 +125,7 @@ documents agreed with each other and none of them agreed with the product.
 
 ## Bugs
 
-### T001 — `NPCNote.date` has no agreed stored shape
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-21 · `R16` `R17`
-
-The display half is closed — `formatNoteDate` and `formatAttributionDate` both
-render through `formatCalendarDate` in `shared/utils/dateFormatter`, so no ISO
-timestamp reaches a screen and the two cannot drift apart again. **The stored
-shape is the real job and is untouched.**
-
-- **Where**: the create form writes `YYYY-MM-DD`; the sample-data generator
-  writes a full ISO timestamp. `NPCNote.date` accepts both.
-- **Touches**: the writer, the type, and whatever migration the existing records
-  need — *not* the consumers, which are already uniform.
-- **Catch**: the display fix changed four consumers rather than one writer, which
-  is why this is still open. Agreeing the shape means deciding what happens to
-  records already stored in the other one.
-- **Source**: drift log
+None open.
 
 ---
 
@@ -294,7 +278,11 @@ Let a user who wants it add a second step to sign-in.
 - **Source**: maintainer, 2026-09-23
 
 ### T056 — Sign-in errors carry a reference code a user can report
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-24
+**Type** feature · **Size** S · **Status** blocked · **Verified** 2026-09-24
+
+**On hold — the maintainer wants a general error-numbering system for the whole
+application, not one for sign-in alone** (2026-09-24). Design that first; this
+entry then becomes its first consumer rather than a sign-in-only ref table.
 
 An unrecognised sign-in failure shows only "Something went wrong signing you
 in. Please try again.", so a user report cannot be traced. Append a short

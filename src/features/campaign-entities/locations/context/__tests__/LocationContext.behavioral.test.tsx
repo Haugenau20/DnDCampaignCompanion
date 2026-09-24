@@ -769,6 +769,24 @@ describe('LocationContext Behavioral Testing', () => {
       );
     });
 
+    test('stamps a new note with a calendar date, not a timestamp (T001)', async () => {
+      renderLocationContext();
+
+      await waitFor(() => {
+        expect(locationContext).toBeDefined();
+      });
+
+      await act(async () => {
+        await locationContext.updateLocationNote('test-location', {
+          date: '2025-06-15T10:00:00.000Z',
+          text: 'New session note'
+        });
+      });
+
+      const [, saved] = mockUpdateData.mock.calls[0];
+      expect(saved.notes[saved.notes.length - 1].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
     test('should reject note update for non-existent location', async () => {
       renderLocationContext();
 

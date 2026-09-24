@@ -15,7 +15,7 @@ import {
 import type { NPC, NPCRelationship, NPCStatus } from 'features/campaign-entities';
 import { useUser } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
-import { formatNoteDate } from 'shared/utils/dateFormatter';
+import { formatNoteDate, toNoteDate } from 'shared/utils/dateFormatter';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import { usePageGate, GatedContent } from 'shared/components/gated';
@@ -581,7 +581,7 @@ const NPCDetailPage: React.FC = () => {
       getUserName(activeGroupUserProfile) ||
       undefined;
     await updateNPCNote(npc.id, {
-      date: new Date().toISOString().split('T')[0],
+      date: toNoteDate(),
       text,
       ...(author ? { author } : {}),
     });

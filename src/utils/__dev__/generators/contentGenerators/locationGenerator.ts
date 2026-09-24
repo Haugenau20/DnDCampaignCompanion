@@ -2,6 +2,8 @@
 
 import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from '../userGenerator';
+// Relative, not `shared/...`: this runs under ts-node, which ignores baseUrl.
+import { toNoteDate } from '../../../../shared/utils/dateFormatter';
 import type { Location as AppLocation } from 'features/campaign-entities';
 
 
@@ -63,7 +65,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['frodo', 'bilbo'],
       relatedQuests: ['the-one-ring'],
       notes: [
-        { date: formattedDate, text: 'Home of the hobbits and starting point of the journey.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Home of the hobbits and starting point of the journey.' }
       ],
       tags: ['peaceful', 'farming', 'hobbits'],
       lastVisited: formattedDate,
@@ -85,7 +87,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['elrond', 'gandalf'],
       relatedQuests: ['the-one-ring', 'council-of-elrond'],
       notes: [
-        { date: formattedDate, text: 'Location of the Council where the Fellowship was formed.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Location of the Council where the Fellowship was formed.' }
       ],
       tags: ['elven', 'haven', 'wisdom'],
       lastVisited: formattedDate,
@@ -107,7 +109,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['gandalf', 'gimli', 'balrog'],
       relatedQuests: ['escape-from-moria'],
       notes: [
-        { date: formattedDate, text: 'Gandalf fell here fighting the Balrog of Morgoth.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Gandalf fell here fighting the Balrog of Morgoth.' }
       ],
       tags: ['dangerous', 'underground', 'dwarf ruins'],
       lastVisited: formattedDate,
@@ -129,7 +131,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['sauron', 'gollum'],
       relatedQuests: ['destroy-the-ring'],
       notes: [
-        { date: formattedDate, text: 'The final destination for the Ring-bearer.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'The final destination for the Ring-bearer.' }
       ],
       tags: ['evil', 'volcanic', 'dangerous'],
       lastVisited: null,
@@ -151,7 +153,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['saruman'],
       relatedQuests: ['defeat-saruman'],
       notes: [
-        { date: formattedDate, text: 'Once a beautiful place, now corrupted by Saruman\'s evil.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Once a beautiful place, now corrupted by Saruman\'s evil.' }
       ],
       tags: ['fortress', 'corruption', 'wizardry'],
       lastVisited: null,
@@ -173,7 +175,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['theoden'],
       relatedQuests: ['defeat-saruman'],
       notes: [
-        { date: formattedDate, text: 'Seat of King Théoden, freed from Saruman\'s influence by Gandalf.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Seat of King Théoden, freed from Saruman\'s influence by Gandalf.' }
       ],
       tags: ['rohan', 'capital', 'fortress'],
       lastVisited: null,
@@ -201,7 +203,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['bilbo'],
       relatedQuests: ['unexpected-journey'],
       notes: [
-        { date: formattedDate, text: 'Where the company gathered before setting off on their journey.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Where the company gathered before setting off on their journey.' }
       ],
       tags: ['shire', 'hobbit village', 'peaceful'],
       lastVisited: formattedDate,
@@ -223,7 +225,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['bilbo', 'gandalf'],
       relatedQuests: ['unexpected-journey'],
       notes: [
-        { date: formattedDate, text: 'Starting point of the adventure, where the dwarves gathered.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Starting point of the adventure, where the dwarves gathered.' }
       ],
       tags: ['hobbit-hole', 'comfortable', 'starting point'],
       lastVisited: formattedDate,
@@ -245,7 +247,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['gandalf', 'thorin'],
       relatedQuests: ['unexpected-journey'],
       notes: [
-        { date: formattedDate, text: 'Bilbo found Sting in the troll hoard.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Bilbo found Sting in the troll hoard.' }
       ],
       tags: ['dangerous', 'trolls', 'forest'],
       lastVisited: formattedDate,
@@ -267,7 +269,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['gollum', 'great-goblin'],
       relatedQuests: ['riddles-in-the-dark'],
       notes: [
-        { date: formattedDate, text: 'Bilbo found the One Ring here after getting separated from the company.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Bilbo found the One Ring here after getting separated from the company.' }
       ],
       tags: ['mountains', 'goblins', 'dangerous'],
       lastVisited: formattedDate,
@@ -289,7 +291,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['thranduil', 'spiders'],
       relatedQuests: ['escape-from-mirkwood'],
       notes: [
-        { date: formattedDate, text: 'The company was captured here first by spiders and then by elves.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'The company was captured here first by spiders and then by elves.' }
       ],
       tags: ['forest', 'enchanted', 'dangerous', 'elves'],
       lastVisited: formattedDate,
@@ -311,7 +313,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['thorin', 'smaug'],
       relatedQuests: ['reclaim-erebor', 'slay-the-dragon'],
       notes: [
-        { date: formattedDate, text: 'The destination of the company\'s quest and the ancestral home of Thorin\'s people.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'The destination of the company\'s quest and the ancestral home of Thorin\'s people.' }
       ],
       tags: ['mountain', 'dwarf kingdom', 'treasure', 'dragon'],
       lastVisited: null,
@@ -333,7 +335,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['beorn'],
       relatedQuests: ['unexpected-journey'],
       notes: [
-        { date: formattedDate, text: 'The company rested here and restocked supplies before entering Mirkwood.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'The company rested here and restocked supplies before entering Mirkwood.' }
       ],
       tags: ['refuge', 'skin-changer', 'wilderness'],
       lastVisited: formattedDate,
@@ -355,7 +357,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['radagast'],
       relatedQuests: ['unexpected-journey'],
       notes: [
-        { date: formattedDate, text: 'Home to Radagast and the many creatures he tends.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Home to Radagast and the many creatures he tends.' }
       ],
       tags: ['wizard', 'nature', 'wilderness'],
       lastVisited: null,
@@ -383,7 +385,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['feanor', 'melkor'],
       relatedQuests: ['creation-of-silmarils'],
       notes: [
-        { date: formattedDate, text: 'Source of the light captured in the Silmarils.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Source of the light captured in the Silmarils.' }
       ],
       tags: ['divine', 'blessed', 'light'],
       lastVisited: null,
@@ -405,7 +407,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['beren', 'luthien', 'turin'],
       relatedQuests: ['war-of-jewels', 'quest-for-silmaril'],
       notes: [
-        { date: formattedDate, text: 'The main battleground of the War of the Jewels.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'The main battleground of the War of the Jewels.' }
       ],
       tags: ['first age', 'battleground', 'elven kingdoms'],
       lastVisited: formattedDate,
@@ -427,7 +429,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['morgoth', 'gothmog'],
       relatedQuests: ['war-of-wrath'],
       notes: [
-        { date: formattedDate, text: 'Where Morgoth kept the Silmarils after stealing them.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Where Morgoth kept the Silmarils after stealing them.' }
       ],
       tags: ['fortress', 'evil', 'underground'],
       lastVisited: null,
@@ -449,7 +451,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['turgon', 'ecthelion', 'glorfindel'],
       relatedQuests: ['fall-of-gondolin'],
       notes: [
-        { date: formattedDate, text: 'The last of the great elven kingdoms to fall to Morgoth.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'The last of the great elven kingdoms to fall to Morgoth.' }
       ],
       tags: ['hidden', 'elven', 'city'],
       lastVisited: formattedDate,
@@ -471,7 +473,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['elros', 'ar-pharazon'],
       relatedQuests: ['fall-of-numenor'],
       notes: [
-        { date: formattedDate, text: 'Eventually sunk beneath the waves when its people turned to evil under Sauron\'s influence.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Eventually sunk beneath the waves when its people turned to evil under Sauron\'s influence.' }
       ],
       tags: ['island', 'human kingdom', 'downfall'],
       lastVisited: null,
@@ -493,7 +495,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['thingol', 'luthien'],
       relatedQuests: ['quest-for-silmaril'],
       notes: [
-        { date: formattedDate, text: 'Protected by an enchanted barrier that kept out all but the most determined intruders.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Protected by an enchanted barrier that kept out all but the most determined intruders.' }
       ],
       tags: ['hidden', 'elven kingdom', 'enchanted'],
       lastVisited: null,
@@ -521,7 +523,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['aragorn-young', 'halbarad'],
       relatedQuests: ['protect-the-north'],
       notes: [
-        { date: formattedDate, text: 'Former home of the northern Dúnedain, now patrolled by the Rangers.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Former home of the northern Dúnedain, now patrolled by the Rangers.' }
       ],
       tags: ['ruins', 'kingdom', 'dúnedain'],
       lastVisited: formattedDate,
@@ -543,7 +545,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['aragorn-young', 'barrow-wights'],
       relatedQuests: ['protect-the-shire', 'hunt-for-gollum'],
       notes: [
-        { date: formattedDate, text: 'The main patrolling grounds of the Rangers.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'The main patrolling grounds of the Rangers.' }
       ],
       tags: ['wilderness', 'patrol', 'scattered settlements'],
       lastVisited: formattedDate,
@@ -565,7 +567,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['butterbur', 'aragorn-young'],
       relatedQuests: ['protect-the-north', 'hunt-for-gollum'],
       notes: [
-        { date: formattedDate, text: 'A rare place where Men and Hobbits live together, and a common stop for Rangers.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'A rare place where Men and Hobbits live together, and a common stop for Rangers.' }
       ],
       tags: ['town', 'inn', 'crossroads'],
       lastVisited: formattedDate,
@@ -587,7 +589,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['aragorn-young', 'trolls'],
       relatedQuests: ['protect-the-north'],
       notes: [
-        { date: formattedDate, text: 'An important landmark and meeting place for the Rangers.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'An important landmark and meeting place for the Rangers.' }
       ],
       tags: ['ruins', 'watchtower', 'strategic point'],
       lastVisited: formattedDate,
@@ -609,7 +611,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['aragorn-young', 'halbarad'],
       relatedQuests: ['protect-the-north', 'hunt-for-gollum'],
       notes: [
-        { date: formattedDate, text: 'Location known only to trusted Rangers and allies.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Location known only to trusted Rangers and allies.' }
       ],
       tags: ['secret', 'base', 'rangers'],
       lastVisited: formattedDate,
@@ -631,7 +633,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       connectedNPCs: ['elrond', 'arwen'],
       relatedQuests: ['lost-heritage'],
       notes: [
-        { date: formattedDate, text: 'Where Aragorn was fostered as "Estel" and learned of his true heritage.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Where Aragorn was fostered as "Estel" and learned of his true heritage.' }
       ],
       tags: ['elven', 'haven', 'wisdom'],
       lastVisited: formattedDate,
