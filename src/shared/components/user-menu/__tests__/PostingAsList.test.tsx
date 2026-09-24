@@ -3,6 +3,7 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import PostingAsList from "../PostingAsList";
+import { sigilIndexFor } from "@/core/utils/entity-sigil";
 
 const mockUpdateGroupUserProfile = jest.fn();
 const mockOnSwitched = jest.fn();
@@ -47,6 +48,23 @@ describe("PostingAsList", () => {
 
     const inactiveRow = screen.getByRole("menuitem", { name: /elandra/i });
     expect(inactiveRow.querySelector("svg")).not.toBeInTheDocument();
+  });
+
+  test("marks each character with its own sigil, as the header chip does", () => {
+    setupMocks({
+      characters: [
+        { id: "c1", name: "Elandra" },
+        { id: "c2", name: "Boros" },
+      ],
+      activeCharacterId: "c2",
+    });
+
+    render(<PostingAsList onSwitched={mockOnSwitched} />);
+
+    const sigilOf = (name: RegExp) =>
+      screen.getByRole("menuitem", { name }).querySelector('[data-testid="entity-sigil"]');
+    expect(sigilOf(/elandra/i)).toHaveAttribute("data-sigil-index", String(sigilIndexFor("c1")));
+    expect(sigilOf(/boros/i)).toHaveAttribute("data-sigil-index", String(sigilIndexFor("c2")));
   });
 
   test("switching writes activeCharacterId and closes the popover", async () => {

@@ -43,7 +43,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T040 | No accent pair for the band | S | open | Interim `.band-chip` works; schema-owner decision |
 | low | T048 | Five surfaces mark type, not entity | S | open | Visual consistency |
 | low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
-| nit | T047 | Account chip uses a generic icon | S | open | Cosmetic |
 | nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
 | nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
 | nit | T009 | Hero band fallback never recorded | S | open | Answered by practice; write it down |
@@ -268,38 +267,10 @@ default artwork.
   draft in `storage.rules` assumes `groups/{groupId}/members/{uid}`.
 - **Source**: todo.txt, 2026-09-16
 
-### T047 — The account chip wears a generic person icon, not a sigil
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-22
-
-Everywhere else a person appears — a member row, an NPC, a search hit's
-subject — the app draws an `EntitySigil`: a coloured tile carrying the name's
-initial. The header's own account chip draws a grey circle with lucide's `User`
-glyph, so the one identity that is always on screen is the one that looks like
-nobody in particular.
-
-- **Where**: `src/shared/components/user-menu/UserMenuTrigger.tsx:53-55` renders
-  `<User size={16} />` inside a `bg-secondary` circle. The precedent to copy is
-  `src/features/user-management/admin/components/MembersCard.tsx:195`, which
-  already gives a *user* a sigil: `<EntitySigil entityId={id || name} name={name} />`.
-- **Touches**: `UserMenuTrigger.tsx`, its test, and — if the same mark should
-  follow the account around — `PostingAsList`, `CharacterRow`, and the
-  hand-rolled third variant at
-  `src/shared/components/contact/SenderIdentity.tsx:77-80`, which builds its own
-  initial circle with `.charAt(0).toUpperCase()` rather than using the component.
-- **Catch**: the chip deliberately names the **active character**, not the
-  account (`UserMenuTrigger.tsx:36-38`), so there are two candidate hue seeds and
-  they behave differently. `sigilIndexFor` hashes the id it is given
-  (`core/utils/entity-sigil.ts:49`), so seeding on the character id makes the
-  mark change colour when you switch posting-as, while seeding on the uid makes
-  the letter (character name) and the hue (account) describe different things.
-  Pick one and use it in all the places listed above, or they will disagree.
-- **Source**: todo.txt, 2026-09-22 ("The little icon next to the logged in user
-  should be swapped out for the color pallette with starting letter")
-
 ### T048 — Five surfaces still mark an entity by its *type*, not by itself
 **Type** feature · **Size** S · **Status** open · **Verified** 2026-09-22
 
-The same complaint as T047, one level out: a location is a `MapPin` in some
+A location is a `MapPin` in some
 lists and an `EntitySigil` in others, so the same place does not look like
 itself as you move between screens. The locations feature itself is **already
 converted** — the four sites there all use sigils — so the remaining work is in

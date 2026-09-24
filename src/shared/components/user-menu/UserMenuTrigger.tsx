@@ -2,7 +2,8 @@
 import React, { forwardRef } from "react";
 import { useGroups } from "features/user-management";
 import Typography from "core/components/Typography";
-import { ChevronDown, User } from "lucide-react";
+import EntitySigil from "core/components/EntitySigil";
+import { ChevronDown } from "lucide-react";
 import clsx from "clsx";
 
 /**
@@ -23,6 +24,11 @@ interface UserMenuTriggerProps {
  * that is the identity most decisions in the app actually depend on. Falls
  * back to the group username when no character is active, so the chip is
  * never blank.
+ *
+ * The mark beside the name is that same identity's sigil: a character's is
+ * seeded on its character id, the account's on its uid. So the letter and the
+ * hue always describe one identity, and switching who you post as changes both
+ * -- the same seeds `PostingAsList`, `CharacterRow` and `SenderIdentity` use.
  */
 const UserMenuTrigger = forwardRef<HTMLButtonElement, UserMenuTriggerProps>(
   ({ isOpen, onToggle }, ref) => {
@@ -35,6 +41,8 @@ const UserMenuTrigger = forwardRef<HTMLButtonElement, UserMenuTriggerProps>(
     );
     const displayName =
       activeCharacter?.name ?? activeGroupUserProfile?.username ?? "Account";
+    const sigilId =
+      activeCharacter?.id ?? activeGroupUserProfile?.userId ?? displayName;
 
     return (
       <button
@@ -49,9 +57,7 @@ const UserMenuTrigger = forwardRef<HTMLButtonElement, UserMenuTriggerProps>(
           isOpen ? "dropdown-item-active" : "button-ghost"
         )}
       >
-        <span className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-secondary">
-          <User size={16} className="accent" />
-        </span>
+        <EntitySigil entityId={sigilId} name={displayName} />
         <Typography variant="body-sm" className="hidden nav:inline truncate font-semibold">
           {displayName}
         </Typography>

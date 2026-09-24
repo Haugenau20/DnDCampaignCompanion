@@ -3,8 +3,10 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SenderIdentity from "../SenderIdentity";
+import { sigilIndexFor } from "@/core/utils/entity-sigil";
 
 const baseProps = {
+  signedInId: "user-1",
   signedInName: "DungeonMaster",
   signedInEmail: "dm@example.com",
   showInputs: false,
@@ -60,6 +62,18 @@ describe("SenderIdentity", () => {
       render(<SenderIdentity {...baseProps} />);
 
       expect(screen.getByTestId("sender-avatar")).toHaveTextContent("D");
+    });
+  });
+
+  describe("the avatar", () => {
+    // The contact form sends as the account, not a character, so its mark is
+    // the account's: seeded on the uid, like the header chip's fallback.
+    it("is the account's sigil, not a hand-rolled initial circle", () => {
+      render(<SenderIdentity {...baseProps} />);
+
+      const sigil = screen.getByTestId("sender-avatar").querySelector('[data-testid="entity-sigil"]');
+      expect(sigil).toHaveTextContent("D");
+      expect(sigil).toHaveAttribute("data-sigil-index", String(sigilIndexFor("user-1")));
     });
   });
 
