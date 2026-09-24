@@ -532,6 +532,15 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
     });
   });
 
+  it('dates a new note as a calendar date, the shape the NPC page writes (T001)', async () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Add a note'), { target: { value: 'The gates held.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
+
+    await waitFor(() => expect(mockUpdateLocationNote).toHaveBeenCalled());
+    expect(mockUpdateLocationNote.mock.calls[0][1].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
   it('never links to /locations/edit/:id, which 15-8 retires', () => {
     const { container } = renderPage();
     expect(container.innerHTML).not.toContain('/locations/edit/');

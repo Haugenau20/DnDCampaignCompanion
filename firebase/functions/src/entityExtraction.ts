@@ -4,10 +4,17 @@ import { HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import OpenAI from "openai";
 import {rethrowHttpsError} from "./shared/httpsErrors";
+import {dropPartyCharacters, partyPrompt, readPartyCharacterNames} from "./partyCharacters";
 
 // Types matching your existing OpenAI types
 interface ExtractEntitiesRequest {
   content: string;
+  /**
+   * The group the note was written in. Its members' characters are the party,
+   * and are kept out of the result (T019). Optional so an older client still
+   * works; without it nothing is excluded.
+   */
+  groupId?: string;
 }
 
 /**
@@ -396,7 +403,7 @@ export const extractEntities = functions.onCall(
 
       const userId = request.auth.uid;
       // The model is `EXTRACTION_MODEL`, never anything the caller sent.
-      const { content } = request.data;
+      const { content, groupId } = request.data;
 
       // Validate input BEFORE checking usage
       if (!content || typeof content !== "string") {
@@ -406,6 +413,16 @@ export const extractEntities = functions.onCall(
       if (content.length > 10000) {
         throw new HttpsError("invalid-argument", "Content too long (max 10000 characters)");
       }
+
+      if (groupId !== undefined && (typeof groupId !== "string" || !groupId)) {
+        throw new HttpsError("invalid-argument", "groupId must be a non-empty string");
+      }
+
+      // Before usage is counted: a caller outside the group is refused here,
+      // and should not be charged an extraction for it.
+      const partyNames = groupId ?
+        await readPartyCharacterNames(admin.firestore(), groupId, userId) :
+        [];
 
       // Check usage limits and increment counters (only if we're going to call OpenAI)
       const usageStatus = await checkAndUpdateUsage(userId);
@@ -445,7 +462,7 @@ The function schema strictly defines the allowed 'type' field as one of:
 
 **Never** use any other value (e.g. "character", "person", etc.).  
 Every named person or character is ALWAYS type "npc".
-
+${partyPrompt(partyNames)}
 For a quest, "relatedNPCNames" is the *names* of the people involved, exactly
 as the note writes them. You have never seen this campaign's records and have
 no identifiers for anyone; do not invent any.
@@ -707,7 +724,7 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
 
       return {
         success: true,
-        entities: parsedResponse.entities,
+        entities: dropPartyCharacters(parsedResponse.entities, partyNames),
         usage: usageStatus
       };
 

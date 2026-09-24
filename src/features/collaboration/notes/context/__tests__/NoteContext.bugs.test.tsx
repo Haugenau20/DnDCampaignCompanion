@@ -56,6 +56,13 @@ jest.mock('core/utils/user-utils', () => ({
 
 const { getUserName, getActiveCharacterName } = require('core/utils/user-utils');
 
+/**
+ * The id `createNote` returned in the current test. Ids are random since T029,
+ * so a test that creates a note refers to it by what came back, not by a
+ * literal.
+ */
+let createdId: string;
+
 describe('NoteContext Bug Tests', () => {
   // Test component to access context
   const TestComponent = ({ onRender }: { onRender?: (context: any) => void }) => {
@@ -118,7 +125,7 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
 
       const note = capturedContext.notes[0];
@@ -145,7 +152,7 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
 
       // Verify utilities are called with correct profile data
@@ -192,10 +199,10 @@ describe('NoteContext Bug Tests', () => {
       // `notes` and throws "Note not found" -- a stale-closure test-timing
       // artifact, not the behavior under test.
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
       await act(async () => {
-        await capturedContext.saveNote('note-1', { title: 'Updated Title' });
+        await capturedContext.saveNote(createdId, { title: 'Updated Title' });
       });
 
       // Test for EXPECTED behavior - save operations should have proper attribution
@@ -205,13 +212,13 @@ describe('NoteContext Bug Tests', () => {
           modifiedByUsername: 'Test User', // FAILS until bug fixed
           modifiedByCharacterName: 'Test Character' // FAILS until bug fixed
         }),
-        'note-1'
+        createdId
       );
     });
   });
 
-  describe('Sequential ID Generation Requirements', () => {
-    test('should generate sequential IDs based on existing notes', async () => {
+  describe('ID Generation Requirements', () => {
+    test('should not allocate an id an existing note holds', async () => {
       getUserName.mockReturnValue('Test User');
       getActiveCharacterName.mockReturnValue('Test Character');
 
@@ -244,8 +251,7 @@ describe('NoteContext Bug Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
-      // Wait for the mocked existing notes to actually land in state before
-      // generating the next sequential ID off of them.
+      // Wait for the mocked existing notes to actually land in state first.
       await waitFor(() => {
         expect(capturedContext.notes).toHaveLength(1);
       });
@@ -253,8 +259,10 @@ describe('NoteContext Bug Tests', () => {
       await act(async () => {
         const noteId = await capturedContext.createNote('New Note', 'New content');
 
-        // EXPECTED: Sequential ID generation should handle existing notes correctly
-        expect(noteId).toBe('note-6'); // Should be next in sequence (FAILS until fixed)
+        // Ids are random since T029 -- the only requirement is that it is a
+        // note id and not one already taken.
+        expect(noteId).toMatch(/^note-[a-z0-9]+$/);
+        expect(noteId).not.toBe('note-5');
       });
     });
 
@@ -295,8 +303,8 @@ describe('NoteContext Bug Tests', () => {
       await act(async () => {
         const noteId = await capturedContext.createNote('New Note', 'New content');
 
-        // Should default to note-1 when no valid sequential IDs exist
-        expect(noteId).toBe('note-1');
+        // An existing id in another shape does not disturb allocation.
+        expect(noteId).toMatch(/^note-[a-z0-9]+$/);
 
         console.log('Generated ID with malformed existing IDs:', noteId);
       });
@@ -363,7 +371,10 @@ describe('NoteContext Bug Tests', () => {
         // ... but the id must still clear the other campaign's notes.
         // Before the fix this returned 'note-1', colliding with an existing
         // document and making note creation impossible in this campaign.
-        expect(noteId).toBe('note-3');
+        // Since T029 the context never sees the other campaign's notes, so
+        // this holds because ids are random, not because it counted them.
+        expect(noteId).toMatch(/^note-[a-z0-9]+$/);
+        expect(['note-1', 'note-2']).not.toContain(noteId);
       });
     });
 
@@ -394,8 +405,10 @@ describe('NoteContext Bug Tests', () => {
         second = await capturedContext.createNote('Second', 'content');
       });
 
-      expect(first).toBe('note-2');
-      expect(second).toBe('note-3');
+      expect(first).toMatch(/^note-[a-z0-9]+$/);
+      expect(second).toMatch(/^note-[a-z0-9]+$/);
+      expect(first).not.toBe('note-1');
+      expect(second).not.toBe('note-1');
       expect(first).not.toBe(second);
     });
   });
@@ -416,7 +429,7 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
 
       // Add entity with missing required fields
@@ -431,14 +444,14 @@ describe('NoteContext Bug Tests', () => {
       };
 
       await act(async () => {
-        await capturedContext.updateNote('note-1', {
+        await capturedContext.updateNote(createdId, {
           extractedEntities: [incompleteEntity]
         });
       });
 
       await act(async () => {
         // BUG POTENTIAL: Should there be validation before conversion?
-        const result = await capturedContext.convertEntity('note-1', 'entity-1', 'npc');
+        const result = await capturedContext.convertEntity(createdId, 'entity-1', 'npc');
         expect(result).toBe(''); // Function completes without validation
 
         // Check what data gets passed to navigation
@@ -478,7 +491,7 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
 
       const rumorEntity: ExtractedEntity = {
@@ -495,13 +508,13 @@ describe('NoteContext Bug Tests', () => {
       };
 
       await act(async () => {
-        await capturedContext.updateNote('note-1', {
+        await capturedContext.updateNote(createdId, {
           extractedEntities: [rumorEntity]
         });
       });
 
       await act(async () => {
-        await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
+        await capturedContext.convertEntity(createdId, 'entity-1', 'rumor');
       });
 
       // Unconfirmed is what an unverified rumour *is*, so nothing is lost by
@@ -525,11 +538,11 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
 
       await act(async () => {
-        await capturedContext.updateNote('note-1', {
+        await capturedContext.updateNote(createdId, {
           extractedEntities: [{
             id: 'entity-1',
             text: 'A confirmed thing',
@@ -543,7 +556,7 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
+        await capturedContext.convertEntity(createdId, 'entity-1', 'rumor');
       });
 
       expect(mockAddRumor).toHaveBeenCalledWith(
@@ -571,11 +584,11 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
 
       await act(async () => {
-        await capturedContext.updateNote('note-1', {
+        await capturedContext.updateNote(createdId, {
           extractedEntities: [{
             id: 'entity-1',
             text: 'Strange visitors',
@@ -589,7 +602,7 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
+        await capturedContext.convertEntity(createdId, 'entity-1', 'rumor');
       });
 
       expect(mockAddRumor).toHaveBeenCalledWith(
@@ -611,11 +624,11 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
 
       await act(async () => {
-        await capturedContext.updateNote('note-1', {
+        await capturedContext.updateNote(createdId, {
           extractedEntities: [{
             id: 'entity-1',
             text: 'Strange visitors',
@@ -629,7 +642,7 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
+        await capturedContext.convertEntity(createdId, 'entity-1', 'rumor');
       });
 
       // Blank, not "tavern": the kind is already recorded next door, and the
@@ -654,7 +667,7 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
 
       const rumorEntity: ExtractedEntity = {
@@ -670,13 +683,13 @@ describe('NoteContext Bug Tests', () => {
       };
 
       await act(async () => {
-        await capturedContext.updateNote('note-1', {
+        await capturedContext.updateNote(createdId, {
           extractedEntities: [rumorEntity]
         });
       });
 
       await act(async () => {
-        await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
+        await capturedContext.convertEntity(createdId, 'entity-1', 'rumor');
 
         // CHANGED DELIBERATELY in `15-9`. An unrecognised source used to be
         // coerced to 'other'. Since `15-9`'other' means "heard from none of
@@ -712,7 +725,7 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Campaign A Note', 'Content for campaign A');
+        createdId = await capturedContext.createNote('Campaign A Note', 'Content for campaign A');
       });
 
       expect(capturedContext.notes).toHaveLength(1);
@@ -782,7 +795,7 @@ describe('NoteContext Bug Tests', () => {
       // BUG POTENTIAL: Can notes still be created when in error state?
       await act(async () => {
         const noteId = await capturedContext.createNote('Test Note', 'Test content');
-        expect(noteId).toBe('note-1'); // Should still work locally
+        expect(noteId).toMatch(/^note-[a-z0-9]+$/); // Should still work locally
       });
 
       console.log('Notes can be created locally even when fetch errors occur');
@@ -803,14 +816,14 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
 
       // Simulate save failure
       mockDocumentService.createDocument.mockRejectedValue(new Error('Save failed'));
 
       await act(async () => {
-        await expect(capturedContext.saveNote('note-1')).rejects.toThrow('Save failed');
+        await expect(capturedContext.saveNote(createdId)).rejects.toThrow('Save failed');
       });
 
       // BUG POTENTIAL: Note should remain marked as unsaved after save failure
@@ -837,7 +850,7 @@ describe('NoteContext Bug Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
 
       const malformedEntity: ExtractedEntity = {
@@ -855,7 +868,7 @@ describe('NoteContext Bug Tests', () => {
       };
 
       await act(async () => {
-        await capturedContext.updateNote('note-1', {
+        await capturedContext.updateNote(createdId, {
           extractedEntities: [malformedEntity]
         });
       });
@@ -863,7 +876,7 @@ describe('NoteContext Bug Tests', () => {
       await act(async () => {
         // Documents how malformed extraData is currently processed on the way
         // to the quest create form.
-        await capturedContext.convertEntity('note-1', 'entity-1', 'quest');
+        await capturedContext.convertEntity(createdId, 'entity-1', 'quest');
 
         expect(mockNavigate).toHaveBeenCalledWith('/quests/create', {
           state: expect.objectContaining({

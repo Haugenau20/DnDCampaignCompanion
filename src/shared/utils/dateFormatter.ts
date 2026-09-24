@@ -94,19 +94,26 @@ export const convertFirestoreTimestamp = (firestoreTimestamp: any): Date | null 
     return convertedDate.toLocaleString();
   };
 /**
+ * The stored shape of a note's date: `YYYY-MM-DD`.
+ *
+ * `NPCNote.date` and `LocationNote.date` used to have no agreed shape -- the
+ * NPC page wrote `YYYY-MM-DD`, the location page and the sample-data generator
+ * wrote a full ISO timestamp. Every writer now goes through this, so a new
+ * note is always a calendar date (T001).
+ *
+ * The day is the UTC one, as it always was on the NPC page. Records already
+ * stored as a full timestamp are left as they are: `formatNoteDate` reads both.
+ */
+export const toNoteDate = (value: Date = new Date()): string =>
+  value.toISOString().slice(0, 10);
+
+/**
  * A note's date, rendered as a date.
  *
- * `NPCNote.date` and `LocationNote.date` are plain strings with no agreed
- * shape: the create forms write `YYYY-MM-DD`, the sample-data generator writes
- * a full ISO timestamp, and each consumer used to print whatever it was
- * handed. Two directories printed the raw value, so a row showed
- * `2025-05-31T19:27:30.387Z` while the NPC detail page rendered the same value
- * properly (T001).
- *
- * This is the display half of that entry, lifted from `NPCDetailPage`'s own
- * `formatNoteDate`. **The stored shape is not fixed here** -- T001 records that
- * agreeing it is the actual job, and doing that is a data change, not a
- * rendering one.
+ * Takes the stored `YYYY-MM-DD` that `toNoteDate` writes, and also the full
+ * ISO timestamp that older records carry. Two directories once printed the raw
+ * value, so a row showed `2025-05-31T19:27:30.387Z` while the NPC detail page
+ * rendered the same value properly.
  *
  * A value that cannot be parsed is returned untouched: a date the reader
  * cannot read is not a date, and showing the raw string is more honest than

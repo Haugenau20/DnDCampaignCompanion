@@ -5,6 +5,7 @@ import { descendantIdsDeepestFirst, wouldCreateCycle } from '../utils/location-t
 import { DomainData } from 'core/types/common';
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { toNoteDate } from 'shared/utils/dateFormatter';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { generateUniqueEntityId } from 'core/utils/entity-id';
 
@@ -124,7 +125,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ...(location.notes || []),
         {
           ...note,
-          date: new Date().toISOString()
+          date: toNoteDate()
         }
       ]
     };

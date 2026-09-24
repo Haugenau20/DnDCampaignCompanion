@@ -32,6 +32,11 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate
 }));
 
+// `where` is observable, so a test can see what the read was constrained to.
+jest.mock('firebase/firestore', () => ({
+  where: (field: string, op: string, value: unknown) => ({ field, op, value })
+}));
+
 // Mock DocumentService
 const mockDocumentService = {
   getCollection: jest.fn(),
@@ -55,6 +60,13 @@ jest.mock('core/utils/user-utils', () => ({
 }));
 
 const { getUserName, getActiveCharacterName } = require('core/utils/user-utils');
+
+/**
+ * The id `createNote` returned in the current test. Ids are random since T029,
+ * so a test that creates a note refers to it by what came back, not by a
+ * literal.
+ */
+let createdId: string;
 
 describe('NoteContext Behavioral Tests', () => {
   // Test component to access context
@@ -98,6 +110,54 @@ describe('NoteContext Behavioral Tests', () => {
 
     // Default empty collection
     mockDocumentService.getCollection.mockResolvedValue([]);
+  });
+
+  // T029: the provider is mounted on every route, so what it reads is paid
+  // on every page load.
+  describe('What is read', () => {
+    const renderProvider = () => {
+      let capturedContext: any;
+      const utils = render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      return { ...utils, context: () => capturedContext };
+    };
+
+    test("reads only the active campaign's notes", async () => {
+      renderProvider();
+
+      await waitFor(() => expect(mockDocumentService.getCollection).toHaveBeenCalled());
+      expect(mockDocumentService.getCollection).toHaveBeenCalledWith(
+        'groups/test-group/users/test-user/notes',
+        [{ field: 'campaignId', op: '==', value: 'test-campaign' }]
+      );
+    });
+
+    test('reads nothing while no campaign is selected', async () => {
+      mockUseCampaigns.mockReturnValue({ activeCampaignId: null });
+      const { context } = renderProvider();
+
+      await waitFor(() => expect(context().isLoading).toBe(false));
+      expect(mockDocumentService.getCollection).not.toHaveBeenCalled();
+      expect(context().notes).toEqual([]);
+    });
+
+    test('reads once when the campaign resolves after the group', async () => {
+      mockUseCampaigns.mockReturnValue({ activeCampaignId: null });
+      const { rerender } = renderProvider();
+
+      mockUseCampaigns.mockReturnValue({ activeCampaignId: 'test-campaign' });
+      rerender(
+        <NoteProvider>
+          <TestComponent />
+        </NoteProvider>
+      );
+
+      await waitFor(() => expect(mockDocumentService.getCollection).toHaveBeenCalled());
+      expect(mockDocumentService.getCollection).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Authentication Requirements', () => {
@@ -151,7 +211,7 @@ describe('NoteContext Behavioral Tests', () => {
   });
 
   describe('Note Creation (createNote)', () => {
-    test('should create note with sequential ID and metadata', async () => {
+    test('should create note with a note- id and metadata', async () => {
       // NOTE: The mount-time fetchNotes() call is asynchronous (mocked
       // getCollection resolves on a later microtask). If we act on the
       // context before that initial fetch settles, fetchNotes' own
@@ -169,15 +229,16 @@ describe('NoteContext Behavioral Tests', () => {
         expect(capturedContext.isLoading).toBe(false);
       });
 
+      let noteId = '';
       await act(async () => {
-        const noteId = await capturedContext.createNote('Test Note', 'Test content here');
-        expect(noteId).toBe('note-1');
+        noteId = await capturedContext.createNote('Test Note', 'Test content here');
       });
+      expect(noteId).toMatch(/^note-[a-z0-9]+$/);
 
       // Verify note was added to local state
       expect(capturedContext.notes).toHaveLength(1);
       expect(capturedContext.notes[0]).toMatchObject({
-        id: 'note-1',
+        id: noteId,
         title: 'Test Note',
         content: 'Test content here',
         status: 'active',
@@ -189,7 +250,7 @@ describe('NoteContext Behavioral Tests', () => {
       });
     });
 
-    test('should generate sequential note IDs', async () => {
+    test('should not allocate an id an existing note holds', async () => {
       // Mock existing notes to test sequence
       const existingNotes: Note[] = [
         {
@@ -219,15 +280,15 @@ describe('NoteContext Behavioral Tests', () => {
           <TestComponent onRender={(ctx) => capturedContext = ctx} />
         </NoteProvider>
       );
-      // Wait for the mocked existing notes to actually land in state before
-      // generating the next sequential ID off of them.
+      // Wait for the mocked existing notes to actually land in state first.
       await waitFor(() => {
         expect(capturedContext.notes).toHaveLength(1);
       });
 
       await act(async () => {
         const noteId = await capturedContext.createNote('New Note', 'New content');
-        expect(noteId).toBe('note-4'); // Should be next in sequence
+        expect(noteId).toMatch(/^note-[a-z0-9]+$/);
+        expect(noteId).not.toBe('note-3');
       });
     });
 
@@ -243,7 +304,7 @@ describe('NoteContext Behavioral Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
 
       const note = capturedContext.notes[0];
@@ -277,21 +338,21 @@ describe('NoteContext Behavioral Tests', () => {
       // still sees the pre-createNote (empty) `notes` and throws "Note not
       // found" -- a stale-closure timing issue, not a behavior under test.
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
       await act(async () => {
-        await capturedContext.saveNote('note-1');
+        await capturedContext.saveNote(createdId);
       });
 
       // Verify Firebase createDocument was called
       expect(mockDocumentService.createDocument).toHaveBeenCalledWith(
         'groups/test-group/users/test-user/notes',
         expect.objectContaining({
-          id: 'note-1',
+          id: createdId,
           title: 'Test Note',
           content: 'Test content'
         }),
-        'note-1'
+        createdId
       );
 
       // Verify isUnsaved flag was removed locally
@@ -311,16 +372,16 @@ describe('NoteContext Behavioral Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
       await act(async () => {
-        await capturedContext.saveNote('note-1'); // Save it first
+        await capturedContext.saveNote(createdId); // Save it first
       });
       jest.clearAllMocks();
 
       // Now update it
       await act(async () => {
-        await capturedContext.saveNote('note-1', { title: 'Updated Title' });
+        await capturedContext.saveNote(createdId, { title: 'Updated Title' });
       });
 
       // Verify the update reached Firebase through the attribution-aware write.
@@ -330,7 +391,7 @@ describe('NoteContext Behavioral Tests', () => {
       // content type. The old assertion encoded the superseded contract.
       expect(mockDocumentService.updateDocumentWithAttribution).toHaveBeenCalledWith(
         'groups/test-group/users/test-user/notes',
-        'note-1',
+        createdId,
         expect.objectContaining({
           title: 'Updated Title'
         })
@@ -447,10 +508,10 @@ describe('NoteContext Behavioral Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
       await act(async () => {
-        await capturedContext.updateNote('note-1', { title: 'Updated Title' });
+        await capturedContext.updateNote(createdId, { title: 'Updated Title' });
       });
 
       // Should update locally but not call Firebase
@@ -471,15 +532,15 @@ describe('NoteContext Behavioral Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
       await act(async () => {
-        await capturedContext.saveNote('note-1'); // Save it first
+        await capturedContext.saveNote(createdId); // Save it first
       });
       jest.clearAllMocks();
 
       await act(async () => {
-        await capturedContext.updateNote('note-1', { title: 'Updated Title' });
+        await capturedContext.updateNote(createdId, { title: 'Updated Title' });
       });
 
       // Should call saveNote internally, which routes an already-saved note
@@ -538,13 +599,13 @@ describe('NoteContext Behavioral Tests', () => {
       await waitFor(() => expect(capturedContext.isLoading).toBe(false));
 
       await act(async () => {
-        await capturedContext.createNote('Session 12', 'Test content');
+        createdId = await capturedContext.createNote('Session 12', 'Test content');
       });
       await act(async () => {
-        await capturedContext.updateNote('note-1', { extractedEntities: [entity] });
+        await capturedContext.updateNote(createdId, { extractedEntities: [entity] });
       });
       await act(async () => {
-        await capturedContext.convertEntity('note-1', 'entity-1', type);
+        await capturedContext.convertEntity(createdId, 'entity-1', type);
       });
 
       const call = mockNavigate.mock.calls[mockNavigate.mock.calls.length - 1];
@@ -638,16 +699,16 @@ describe('NoteContext Behavioral Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
       await act(async () => {
         // Add entity to note
-        await capturedContext.updateNote('note-1', {
+        await capturedContext.updateNote(createdId, {
           extractedEntities: [mockEntity]
         });
       });
       await act(async () => {
-        const result = await capturedContext.convertEntity('note-1', 'entity-1', 'npc');
+        const result = await capturedContext.convertEntity(createdId, 'entity-1', 'npc');
         expect(result).toBe(''); // Returns empty string for navigation
       });
 
@@ -658,7 +719,7 @@ describe('NoteContext Behavioral Tests', () => {
             title: 'the Wise',
             race: 'Elf'
           }),
-          noteId: 'note-1',
+          noteId: createdId,
           entityId: 'entity-1'
         }
       });
@@ -686,15 +747,15 @@ describe('NoteContext Behavioral Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
       await act(async () => {
-        await capturedContext.updateNote('note-1', {
+        await capturedContext.updateNote(createdId, {
           extractedEntities: [locationEntity]
         });
       });
       await act(async () => {
-        await capturedContext.convertEntity('note-1', 'entity-1', 'location');
+        await capturedContext.convertEntity(createdId, 'entity-1', 'location');
       });
 
       expect(mockNavigate).toHaveBeenCalledWith('/locations/create', {
@@ -703,7 +764,7 @@ describe('NoteContext Behavioral Tests', () => {
             name: 'Waterdeep',
             type: 'city'
           }),
-          noteId: 'note-1',
+          noteId: createdId,
           entityId: 'entity-1'
         }
       });
@@ -802,15 +863,15 @@ describe('NoteContext Behavioral Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
       await act(async () => {
-        await capturedContext.updateNote('note-1', {
+        await capturedContext.updateNote(createdId, {
           extractedEntities: [rumorEntity]
         });
       });
       await act(async () => {
-        await capturedContext.convertEntity('note-1', 'entity-1', 'rumor');
+        await capturedContext.convertEntity(createdId, 'entity-1', 'rumor');
       });
 
       // CHANGED DELIBERATELY in `15-9`. This navigated to `/rumors/create`
@@ -862,10 +923,10 @@ describe('NoteContext Behavioral Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
       await act(async () => {
-        await expect(capturedContext.convertEntity('note-1', 'nonexistent-entity', 'npc'))
+        await expect(capturedContext.convertEntity(createdId, 'nonexistent-entity', 'npc'))
           .rejects.toThrow('Entity not found');
       });
     });
@@ -893,15 +954,15 @@ describe('NoteContext Behavioral Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
       await act(async () => {
-        await capturedContext.updateNote('note-1', {
+        await capturedContext.updateNote(createdId, {
           extractedEntities: [mockEntity]
         });
       });
       await act(async () => {
-        await capturedContext.markEntityAsConverted('note-1', 'entity-1', 'galadriel-the-wise');
+        await capturedContext.markEntityAsConverted(createdId, 'entity-1', 'galadriel-the-wise');
       });
 
       const updatedNote = capturedContext.notes[0];
@@ -941,10 +1002,10 @@ describe('NoteContext Behavioral Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
 
-      const note = capturedContext.getNoteById('note-1');
+      const note = capturedContext.getNoteById(createdId);
       expect(note).toBeDefined();
       expect(note?.title).toBe('Test Note');
     });
@@ -978,10 +1039,10 @@ describe('NoteContext Behavioral Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
       await act(async () => {
-        await capturedContext.archiveNote('note-1');
+        await capturedContext.archiveNote(createdId);
       });
 
       const note = capturedContext.notes[0];
@@ -1002,18 +1063,18 @@ describe('NoteContext Behavioral Tests', () => {
       });
 
       await act(async () => {
-        await capturedContext.createNote('Test Note', 'Test content');
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
       });
       await act(async () => {
-        await capturedContext.saveNote('note-1'); // Save it first
+        await capturedContext.saveNote(createdId); // Save it first
       });
       await act(async () => {
-        await capturedContext.deleteNote('note-1');
+        await capturedContext.deleteNote(createdId);
       });
 
       expect(mockDocumentService.deleteDocument).toHaveBeenCalledWith(
         'groups/test-group/users/test-user/notes',
-        'note-1'
+        createdId
       );
       expect(mockDocumentService.getCollection).toHaveBeenCalledTimes(2); // Initial fetch + refresh
     });

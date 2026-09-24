@@ -2,6 +2,8 @@
 
 import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from '../userGenerator';
+// Relative, not `shared/...`: this runs under ts-node, which ignores baseUrl.
+import { toNoteDate } from '../../../../shared/utils/dateFormatter';
 import { NPC } from 'features/campaign-entities';
 
 // NPC types
@@ -67,7 +69,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['the-one-ring', 'destroy-the-ring']
       },
       notes: [
-        { date: formattedDate, text: 'Bearer of the One Ring and central character of the quest.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Bearer of the One Ring and central character of the quest.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -96,7 +98,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['the-one-ring']
       },
       notes: [
-        { date: formattedDate, text: 'Found the One Ring in Gollum\'s cave during his adventure with the dwarves.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Found the One Ring in Gollum\'s cave during his adventure with the dwarves.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -125,7 +127,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['council-of-elrond']
       },
       notes: [
-        { date: formattedDate, text: 'Hosted the Council that decided the fate of the One Ring.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Hosted the Council that decided the fate of the One Ring.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -154,7 +156,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['the-one-ring', 'council-of-elrond', 'escape-from-moria']
       },
       notes: [
-        { date: formattedDate, text: 'Fell in battle with the Balrog but will return transformed.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Fell in battle with the Balrog but will return transformed.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -183,7 +185,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['council-of-elrond', 'destroy-the-ring']
       },
       notes: [
-        { date: formattedDate, text: 'Carries the shards of Narsil, the sword that cut the Ring from Sauron\'s hand.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Carries the shards of Narsil, the sword that cut the Ring from Sauron\'s hand.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -212,7 +214,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['council-of-elrond', 'escape-from-moria']
       },
       notes: [
-        { date: formattedDate, text: 'Became a close friend of Legolas, breaking the traditional enmity between dwarves and elves.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Became a close friend of Legolas, breaking the traditional enmity between dwarves and elves.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -241,7 +243,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['defeat-saruman']
       },
       notes: [
-        { date: formattedDate, text: 'Building an army of Uruk-hai to serve his and Sauron\'s purposes.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Building an army of Uruk-hai to serve his and Sauron\'s purposes.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -270,7 +272,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['escape-from-moria']
       },
       notes: [
-        { date: formattedDate, text: 'Fought Gandalf on the Bridge of Khazad-dûm, causing both to fall into the abyss.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Fought Gandalf on the Bridge of Khazad-dûm, causing both to fall into the abyss.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -299,7 +301,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['the-one-ring', 'destroy-the-ring']
       },
       notes: [
-        { date: formattedDate, text: 'His power and fate are bound to the One Ring.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'His power and fate are bound to the One Ring.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -328,7 +330,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['the-one-ring', 'destroy-the-ring']
       },
       notes: [
-        { date: formattedDate, text: 'Follows the Ring-bearer out of obsession with "his precious."' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Follows the Ring-bearer out of obsession with "his precious."' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -357,7 +359,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['council-of-elrond', 'destroy-the-ring']
       },
       notes: [
-        { date: formattedDate, text: 'Forms an unlikely friendship with Gimli the dwarf, breaking centuries of mistrust between their peoples.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Forms an unlikely friendship with Gimli the dwarf, breaking centuries of mistrust between their peoples.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -386,7 +388,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: []
       },
       notes: [
-        { date: formattedDate, text: 'Gave the Evenstar pendant to Aragorn as a token of her love and faith.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Gave the Evenstar pendant to Aragorn as a token of her love and faith.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -415,7 +417,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['the-one-ring', 'destroy-the-ring']
       },
       notes: [
-        { date: formattedDate, text: 'His loyalty to Frodo never wavers, even in the darkest moments.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'His loyalty to Frodo never wavers, even in the darkest moments.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -448,7 +450,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['destroy-the-ring']
       },
       notes: [
-        { date: formattedDate, text: 'Possesses the Mirror of Galadriel, which shows things that were, things that are, and things that yet may be.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Possesses the Mirror of Galadriel, which shows things that were, things that are, and things that yet may be.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -477,7 +479,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['council-of-elrond', 'destroy-the-ring']
       },
       notes: [
-        { date: formattedDate, text: 'Increasingly tempted by the Ring, seeing it as a weapon that could save his people.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Increasingly tempted by the Ring, seeing it as a weapon that could save his people.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -506,7 +508,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['defeat-saruman']
       },
       notes: [
-        { date: formattedDate, text: 'His mind is poisoned by his advisor Gríma Wormtongue, who serves Saruman.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'His mind is poisoned by his advisor Gríma Wormtongue, who serves Saruman.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -541,7 +543,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['reclaim-erebor']
       },
       notes: [
-        { date: formattedDate, text: 'Finds the One Ring in Gollum\'s cave.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Finds the One Ring in Gollum\'s cave.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -570,7 +572,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['unexpected-journey', 'reclaim-erebor']
       },
       notes: [
-        { date: formattedDate, text: 'Provides Thorin with the map and key to the secret door of Erebor.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Provides Thorin with the map and key to the secret door of Erebor.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -599,7 +601,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['reclaim-erebor', 'slay-the-dragon']
       },
       notes: [
-        { date: formattedDate, text: 'Named "Oakenshield" after using an oak branch as a shield in battle against orcs.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Named "Oakenshield" after using an oak branch as a shield in battle against orcs.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -628,7 +630,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['reclaim-erebor', 'slay-the-dragon']
       },
       notes: [
-        { date: formattedDate, text: 'Has a single vulnerability - a bare patch on his left breast where a scale is missing.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Has a single vulnerability - a bare patch on his left breast where a scale is missing.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -657,7 +659,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['riddles-in-the-dark']
       },
       notes: [
-        { date: formattedDate, text: 'Refers to himself as "precious" and speaks with a distinctive hissing voice.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Refers to himself as "precious" and speaks with a distinctive hissing voice.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -686,7 +688,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['reclaim-erebor']
       },
       notes: [
-        { date: formattedDate, text: 'One of the more friendly dwarves toward Bilbo from the beginning.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'One of the more friendly dwarves toward Bilbo from the beginning.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -715,7 +717,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['escape-from-mirkwood']
       },
       notes: [
-        { date: formattedDate, text: 'Has a strained relationship with the dwarves due to past disputes.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Has a strained relationship with the dwarves due to past disputes.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -747,7 +749,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['slay-the-dragon']
       },
       notes: [
-        { date: formattedDate, text: 'Possesses the last black arrow capable of killing Smaug.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Possesses the last black arrow capable of killing Smaug.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -776,7 +778,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['unexpected-journey']
       },
       notes: [
-        { date: formattedDate, text: 'Keeps many animals that serve him and can speak with them.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Keeps many animals that serve him and can speak with them.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -805,7 +807,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['unexpected-journey']
       },
       notes: [
-        { date: formattedDate, text: 'Can communicate with birds and uses them as messengers.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Can communicate with birds and uses them as messengers.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -840,7 +842,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['oath-of-feanor']
       },
       notes: [
-        { date: formattedDate, text: 'His oath to recover the Silmarils drives much of the tragedy of the First Age.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'His oath to recover the Silmarils drives much of the tragedy of the First Age.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -869,7 +871,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['war-of-wrath']
       },
       notes: [
-        { date: formattedDate, text: 'Stole the Silmarils and set them in his Iron Crown.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Stole the Silmarils and set them in his Iron Crown.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -898,7 +900,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['war-of-jewels']
       },
       notes: [
-        { date: formattedDate, text: 'Challenged Morgoth to single combat at the gates of Angband.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Challenged Morgoth to single combat at the gates of Angband.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -927,7 +929,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['quest-for-silmaril']
       },
       notes: [
-        { date: formattedDate, text: 'Lost his hand to Carcharoth while holding a Silmaril.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Lost his hand to Carcharoth while holding a Silmaril.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -956,7 +958,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['quest-for-silmaril']
       },
       notes: [
-        { date: formattedDate, text: 'Used her enchantments to put Morgoth himself to sleep.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Used her enchantments to put Morgoth himself to sleep.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -985,7 +987,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: []
       },
       notes: [
-        { date: formattedDate, text: 'Unwittingly married his sister Nienor, leading to their tragic suicides.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Unwittingly married his sister Nienor, leading to their tragic suicides.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1014,7 +1016,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['fall-of-gondolin']
       },
       notes: [
-        { date: formattedDate, text: 'Gondolin remained hidden for nearly 400 years before its fall.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Gondolin remained hidden for nearly 400 years before its fall.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1043,7 +1045,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['fall-of-gondolin']
       },
       notes: [
-        { date: formattedDate, text: 'Known for his silver flute and the music he would play at the fountains.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Known for his silver flute and the music he would play at the fountains.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1072,7 +1074,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['fall-of-gondolin']
       },
       notes: [
-        { date: formattedDate, text: 'Slew a Balrog during the escape from Gondolin, though it cost him his life.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Slew a Balrog during the escape from Gondolin, though it cost him his life.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1101,7 +1103,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['quest-for-silmaril']
       },
       notes: [
-        { date: formattedDate, text: 'Demanded a Silmaril as bride-price for his daughter Lúthien\'s hand.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Demanded a Silmaril as bride-price for his daughter Lúthien\'s hand.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1136,7 +1138,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['hunt-for-gollum']
       },
       notes: [
-        { date: formattedDate, text: 'Also known as Strider, one of many names he uses in his travels.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Also known as Strider, one of many names he uses in his travels.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1165,7 +1167,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['protect-the-north', 'protect-the-shire']
       },
       notes: [
-        { date: formattedDate, text: 'One of Aragorn\'s most trusted companions.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'One of Aragorn\'s most trusted companions.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1194,7 +1196,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['lost-heritage']
       },
       notes: [
-        { date: formattedDate, text: 'Raised Aragorn as "Estel" (Hope) in Rivendell, concealing his true identity until he came of age.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Raised Aragorn as "Estel" (Hope) in Rivendell, concealing his true identity until he came of age.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1223,7 +1225,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: []
       },
       notes: [
-        { date: formattedDate, text: 'Met Aragorn in the woods of Rivendell when he was 20 years old and mistook her for Lúthien.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Met Aragorn in the woods of Rivendell when he was 20 years old and mistook her for Lúthien.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1252,7 +1254,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['hunt-for-gollum']
       },
       notes: [
-        { date: formattedDate, text: 'Works closely with Aragorn and the Rangers on matters concerning the growing darkness.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Works closely with Aragorn and the Rangers on matters concerning the growing darkness.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1281,7 +1283,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['barrow-downs-haunting']
       },
       notes: [
-        { date: formattedDate, text: 'They entice travelers into their barrows, where they intend to kill them and make them one of their own.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'They entice travelers into their barrows, where they intend to kill them and make them one of their own.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1310,7 +1312,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['hunt-for-gollum']
       },
       notes: [
-        { date: formattedDate, text: 'A challenging quarry who is both pitiable and dangerous.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'A challenging quarry who is both pitiable and dangerous.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1339,7 +1341,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['protect-the-north']
       },
       notes: [
-        { date: formattedDate, text: 'Unusually active in the Weather Hills, suggesting something may be driving them from their usual territories.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Unusually active in the Weather Hills, suggesting something may be driving them from their usual territories.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1368,7 +1370,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['lost-heritage']
       },
       notes: [
-        { date: formattedDate, text: 'Remembers the days when the Rangers were more numerous and the threat of Angmar was still fresh.' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Remembers the days when the Rangers were more numerous and the threat of Angmar was still fresh.' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',
@@ -1397,7 +1399,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
         relatedQuests: ['protect-the-shire']
       },
       notes: [
-        { date: formattedDate, text: 'Doesn\'t know Aragorn\'s true identity but recognizes him as the Ranger called "Strider."' }
+        { date: toNoteDate(new Date(formattedDate)), text: 'Doesn\'t know Aragorn\'s true identity but recognizes him as the Ranger called "Strider."' }
       ],
       createdBy: dmUid,
       createdByUsername: 'DungeonMaster',

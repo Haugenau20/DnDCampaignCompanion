@@ -54,6 +54,11 @@ export interface Location extends BaseContent {
  * Note for a location
  */
 export interface LocationNote {
+  /**
+   * `YYYY-MM-DD`, written by `toNoteDate`. Notes stored before that was agreed
+   * may hold a full ISO timestamp instead; they are left as they are, and
+   * `formatNoteDate` renders both.
+   */
   date: string;
   text: string;
   /**

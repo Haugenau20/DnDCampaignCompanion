@@ -17,14 +17,11 @@ is hurt while it waits · `nit` bookkeeping or polish
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
-| medium | T019 | Extraction reads PCs as NPCs | M | open | Degrades the AI feature on every run; roster data already exists |
-| medium | T029 | Notes fetched twice, unbounded | M | open | Read cost grows with every past campaign, on every route |
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
-| medium | T056 | Sign-in errors carry a reportable ref | S | open | Unknown sign-in failures are undiagnosable from a user report; PR #117's took a log dig |
+| medium | T056 | Sign-in errors carry a reportable ref | S | blocked | On hold for an app-wide error-numbering system, which the maintainer wants first |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
-| low | T001 | `NPCNote.date` stored shape | S | open | Display already uniform; the remainder is data hygiene |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
 | low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
@@ -126,22 +123,7 @@ documents agreed with each other and none of them agreed with the product.
 
 ## Bugs
 
-### T001 — `NPCNote.date` has no agreed stored shape
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-21 · `R16` `R17`
-
-The display half is closed — `formatNoteDate` and `formatAttributionDate` both
-render through `formatCalendarDate` in `shared/utils/dateFormatter`, so no ISO
-timestamp reaches a screen and the two cannot drift apart again. **The stored
-shape is the real job and is untouched.**
-
-- **Where**: the create form writes `YYYY-MM-DD`; the sample-data generator
-  writes a full ISO timestamp. `NPCNote.date` accepts both.
-- **Touches**: the writer, the type, and whatever migration the existing records
-  need — *not* the consumers, which are already uniform.
-- **Catch**: the display fix changed four consumers rather than one writer, which
-  is why this is still open. Agreeing the shape means deciding what happens to
-  records already stored in the other one.
-- **Source**: drift log
+None open.
 
 ---
 
@@ -193,28 +175,6 @@ Select several rows, then delete or change status in one go.
   (`StoryContext.bugs.test.tsx:440-452`), so the ordering model needs answering
   before the UI does. A recursive `Chapter` inside `Chapter` also has no depth
   limit — decide whether nesting is one level or arbitrary.
-- **Source**: todo.txt, 2026-09-16
-
-### T019 — Smart detection reads player characters as NPCs
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-09-16
-
-Note extraction turns the party's own characters into NPC suggestions.
-
-- **Where**: the cause is one line of prompt.
-  `firebase/functions/src/entityExtraction.ts:418` instructs the model: *"Every
-  named person or character is ALWAYS type `npc`."* (with `:417` forbidding any
-  other value). It has no notion of who the players are.
-- **Touches**: that prompt and its callable payload;
-  `src/features/collaboration/entity-extraction/services/EntityExtractionService.ts:88`,
-  which is where the client would add a PC roster to the call.
-- **Catch**: **the roster already exists** — a group user profile carries
-  `characters[]` with an `activeCharacterId`, read by `getActiveCharacterName` /
-  `getActiveCharacterId` in `src/core/utils/user-utils.ts:38-56` and used for
-  attribution. So this needs no new "define your PCs" configuration; it needs the
-  group's existing character names passed into extraction and excluded. Decide
-  whether to filter in the prompt (cheaper, fuzzier) or post-filter the result
-  (exact, but misses nicknames). **`firebase/functions` has no test suite at all**
-  (see `CLAUDE.md`) — verify against the emulator, with a control.
 - **Source**: todo.txt, 2026-09-16
 
 ### T020 — Attach a screenshot to a contact-form bug report
@@ -294,7 +254,11 @@ Let a user who wants it add a second step to sign-in.
 - **Source**: maintainer, 2026-09-23
 
 ### T056 — Sign-in errors carry a reference code a user can report
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-24
+**Type** feature · **Size** S · **Status** blocked · **Verified** 2026-09-24
+
+**On hold — the maintainer wants a general error-numbering system for the whole
+application, not one for sign-in alone** (2026-09-24). Design that first; this
+entry then becomes its first consumer rather than a sign-in-only ref table.
 
 An unrecognised sign-in failure shows only "Something went wrong signing you
 in. Please try again.", so a user report cannot be traced. Append a short
@@ -676,7 +640,7 @@ review says so itself. Six findings were re-checked on 2026-09-16 at `ebc0a28`:
 | `PERF-01` search never terminates on whitespace | Critical | **Fixed.** All three split sites are now `split(/\s+/).filter(Boolean)`, and `findWordMatches` (`SearchService.ts:294`) guards `if (!word) return []`. `SearchBar.tsx` is gone, replaced by `shared/components/command-palette/`. The regression test that did not ship with the fix landed as T031 (2026-09-23), pinning each guard separately. |
 | `PERF-07` context switch refreshes then reloads | High | **Fixed.** The only `window.location.reload()` left in `src/` is `ErrorBoundary.tsx:62`. |
 | `PERF-10` all routes + full Lodash in one bundle | Medium | **Half fixed.** Zero `lodash` imports remain in `src/`. Route splitting is still open — see T030. |
-| `PERF-04` notes loaded twice, unbounded | High | **Still true** — see T029. |
+| `PERF-04` notes loaded twice, unbounded | High | **Fixed** 2026-09-24 — `NoteContext` reads once, constrained to the active campaign, and reads nothing before one is selected. New note ids are random, so nothing needs the other campaigns' notes. |
 | `PERF-08` duplicate collection owners | Medium | **Fixed** 2026-09-22 — one fetch per collection, pinned by `shared/hooks/__tests__/provider-fetch-counts.test.tsx`. |
 | `PERF-15` duplicate `NavigationProvider` | Low | **Fixed** 2026-09-24 — `index.tsx` mounts no provider of its own; `App`'s is the only one. |
 
@@ -684,22 +648,6 @@ The **other nine are unverified against current `main`** — `PERF-02`, `03`,
 `05`, `06`, `09`, `11`, `12`, `13`, `14`. That is T033. The review's own
 prioritized list opens with a finding that is already fixed, so do not work
 straight down it.
-
-### T029 — Notes are fetched twice on every authenticated route, unbounded
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-16 · `PERF-04`
-
-- **Where**: `src/features/collaboration/notes/context/NoteContext.tsx` reads the
-  whole `groups/{group}/users/{user}/notes` path with no campaign constraint and
-  filters by `campaignId` in memory at `:69-73`. Its callback lists
-  `activeCampaignId` at `:99` even though the Firestore path never uses it, so it
-  runs once when the group arrives and again when the campaign does.
-- **Touches**: `NoteContext`, a Firestore composite index for the constrained
-  query, and `app/App.tsx`, which mounts the provider for every route.
-- **Catch**: cost grows with a user's notes across **all historical campaigns**,
-  not with the active one, and both runtime runs saw two identical notes targets
-  on Home, Privacy, NPCs, Locations and Notes alike. Fixing the dependency list
-  without also constraining the query only halves it.
-- **Source**: performance review
 
 ### T030 — One eager bundle ships every route
 **Type** debt · **Size** M · **Status** open · **Verified** 2026-09-16 · `PERF-10`

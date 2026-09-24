@@ -6,6 +6,7 @@ import {
   formatDisplayDate,
   formatDateTime,
   formatNoteDate,
+  toNoteDate,
 } from '../dateFormatter';
 import { formatAttributionDate } from '../attribution-utils';
 
@@ -309,6 +310,26 @@ describe('formatDisplayDate (additional cases merged from layouts copy)', () => 
     const fromString = formatDisplayDate(date.toISOString());
     // Both should produce the same calendar date representation
     expect(fromDate).toBe(fromString);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// toNoteDate (T001: the one stored shape of a note's date)
+// ---------------------------------------------------------------------------
+
+describe('toNoteDate', () => {
+  it('writes a calendar date, never a timestamp', () => {
+    expect(toNoteDate(new Date('2025-05-31T19:27:30.387Z'))).toBe('2025-05-31');
+  });
+
+  it('dates to now when given nothing', () => {
+    expect(toNoteDate()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(toNoteDate()).toBe(new Date().toISOString().slice(0, 10));
+  });
+
+  it('writes what formatNoteDate reads back as the same day', () => {
+    const when = new Date('2025-05-31T12:00:00.000Z');
+    expect(formatNoteDate(toNoteDate(when))).toBe(formatNoteDate(when.toISOString()));
   });
 });
 

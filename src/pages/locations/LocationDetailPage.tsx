@@ -30,7 +30,7 @@ import { EntityPageShell, EntityPageSection, FieldPrompt } from 'shared/componen
 import { usePageGate, GatedContent } from 'shared/components/gated';
 import { useQuickAdd } from 'shared/context/QuickAddContext';
 import { useNavigation } from 'shared/context/NavigationContext';
-import { formatNoteDate } from 'shared/utils/dateFormatter';
+import { formatNoteDate, toNoteDate } from 'shared/utils/dateFormatter';
 import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
 import { InlineEditor } from 'shared/components/inline-edit';
 import { rumorTitleText } from 'features/campaign-entities';
@@ -255,7 +255,7 @@ const LocationDetailPage: React.FC = () => {
       undefined;
     // The context stamps the date itself.
     await updateLocationNote(location.id, {
-      date: new Date().toISOString(),
+      date: toNoteDate(),
       text,
       ...(author ? { author } : {}),
     });
