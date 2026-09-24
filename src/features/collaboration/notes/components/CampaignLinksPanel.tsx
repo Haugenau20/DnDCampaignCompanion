@@ -10,7 +10,8 @@ import { EXTRACTION_FACTS } from "../../../../core/constants/privacy";
 import { useEntityExtractor } from "../../entity-extraction/hooks/useEntityExtractor";
 import { useNavigation } from "shared/hooks/useNavigation";
 import { useNPCs, useLocations, useQuests, useRumors } from "features/campaign-entities";
-import { Loader2, Search, AlertCircle, ExternalLink, Users, MapPin, Scroll, MessageSquare } from 'lucide-react';
+import EntitySigil from "../../../../core/components/EntitySigil";
+import { Loader2, Search, AlertCircle, ExternalLink } from 'lucide-react';
 import { entityPath } from "../utils/entity-path";
 
 export interface CampaignLinksPanelProps {
@@ -44,24 +45,6 @@ function getEntityTypeName(type: EntityType): string {
       return "Rumor";
     default:
       return type;
-  }
-}
-
-/**
- * Get icon for entity type
- */
-function getEntityIcon(type: EntityType): React.ReactNode {
-  switch (type) {
-    case "npc":
-      return <Users className="w-4 h-4" />;
-    case "location":
-      return <MapPin className="w-4 h-4" />;
-    case "quest":
-      return <Scroll className="w-4 h-4" />;
-    case "rumor":
-      return <MessageSquare className="w-4 h-4" />;
-    default:
-      return null;
   }
 }
 
@@ -445,7 +428,8 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
                 onClick={() => navigateToEntity(reference)}
                 className="dropdown-item w-full flex items-center gap-3 px-2 py-1.5 rounded text-left"
               >
-                <span className="primary flex-shrink-0">{getEntityIcon(reference.type)}</span>
+                {/* Its own mark, as on its page; the type name at the end of the row says what kind. */}
+                <EntitySigil entityId={reference.id} name={reference.title} size={20} />
                 <Typography variant="body-sm" className="flex-1 truncate">
                   {reference.title}
                 </Typography>

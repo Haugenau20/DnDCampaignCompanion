@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useAuth, useGroups, useUser } from "features/user-management";
 import Typography from "core/components/Typography";
+import EntitySigil from "core/components/EntitySigil";
 import { Check } from "lucide-react";
 import clsx from "clsx";
 
@@ -84,7 +85,10 @@ const PostingAsList: React.FC<PostingAsListProps> = ({ onSwitched }) => {
                 isActive ? "dropdown-item-active" : "dropdown-item"
               )}
             >
-              <Typography className="truncate">{character.name}</Typography>
+              <span className="flex items-center gap-2 min-w-0">
+                <EntitySigil entityId={character.id} name={character.name} size={22} />
+                <Typography className="truncate">{character.name}</Typography>
+              </span>
               {isActive && <Check className="w-4 h-4 flex-shrink-0 accent" />}
             </button>
           );

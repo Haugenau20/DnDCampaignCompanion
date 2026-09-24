@@ -3,6 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CommandPalette from "../CommandPalette";
 import type { SearchResult } from "core/types/search";
+import { sigilIndexFor } from "core/utils/entity-sigil";
 
 const mockNavigateToPage = jest.fn();
 const mockOnSearch = jest.fn();
@@ -64,6 +65,22 @@ describe("CommandPalette", () => {
     open();
     expect(screen.getByText("NPCS")).toBeInTheDocument();
     expect(screen.getByText("STORY")).toBeInTheDocument();
+  });
+
+  // A hit is marked as itself -- the same sigil it wears on its own page and in
+  // the activity feed -- not by its type's glyph. The type stays readable from
+  // the group heading the hit sits under.
+  it("marks each hit with its own sigil, not its type's icon", () => {
+    open();
+    const options = screen.getAllByRole("option");
+    const droop = options.find((o) => o.id === "cmdk-option-npc-droop")!;
+    const ch12 = options.find((o) => o.id === "cmdk-option-story-ch12")!;
+    const sigilOf = (el: HTMLElement) => el.querySelector('[data-testid="entity-sigil"]');
+
+    expect(sigilOf(droop)).toHaveTextContent("D");
+    expect(sigilOf(droop)).toHaveAttribute("data-sigil-index", String(sigilIndexFor("droop")));
+    expect(sigilOf(ch12)).toHaveAttribute("data-sigil-index", String(sigilIndexFor("ch12")));
+    expect(droop.querySelector("svg")).not.toBeInTheDocument();
   });
 
   it("marks the matched term in the title", () => {

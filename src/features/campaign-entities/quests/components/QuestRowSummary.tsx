@@ -64,7 +64,7 @@ export const QuestRowSummary: React.FC<QuestRowSummaryProps> = ({
   const relatedNPCIds = quest.relatedNPCIds ?? [];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 pt-4">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-6 pt-4">
       <div className="flex flex-col gap-4">
         <Typography variant="body-sm">{quest.description}</Typography>
 

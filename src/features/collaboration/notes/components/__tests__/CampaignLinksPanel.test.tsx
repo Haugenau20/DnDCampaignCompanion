@@ -5,6 +5,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import CampaignLinksPanel from '../CampaignLinksPanel';
 import { Note } from '../../types';
 import { PotentialReference } from '../NoteReferences';
+import { sigilIndexFor } from 'core/utils/entity-sigil';
 
 const mockNavigateToPage = jest.fn();
 const mockGetNoteById = jest.fn();
@@ -243,6 +244,19 @@ describe('CampaignLinksPanel', () => {
 
       expect(screen.getByText('NPC')).toBeInTheDocument();
       expect(screen.getByText('Location')).toBeInTheDocument();
+    });
+
+    // The row names the entity with its own sigil -- the mark it wears on its
+    // page -- and keeps the type as a word, because this list mixes kinds.
+    test('should mark each entity with its own sigil beside the type name', () => {
+      setupMocks({ references });
+      render(<CampaignLinksPanel noteId="note-1" />);
+
+      const row = screen.getByText('Gundren Rockseeker').closest('button') as HTMLElement;
+      const sigil = row.querySelector('[data-testid="entity-sigil"]');
+      expect(sigil).toHaveTextContent('G');
+      expect(sigil).toHaveAttribute('data-sigil-index', String(sigilIndexFor('npc-1')));
+      expect(row).toHaveTextContent('NPC');
     });
 
     // T014: an NPC and a location have their own pages, so a link to one

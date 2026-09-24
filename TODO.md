@@ -16,7 +16,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T051 | Unbounded titles can widen a page | S | open | Already broke the live dashboard once; the audit is small |
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T019 | Extraction reads PCs as NPCs | M | open | Degrades the AI feature on every run; roster data already exists |
 | medium | T029 | Notes fetched twice, unbounded | M | open | Read cost grows with every past campaign, on every route |
@@ -28,8 +27,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T001 | `NPCNote.date` stored shape | S | open | Display already uniform; the remainder is data hygiene |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
-| low | T049 | "Unplaced" is unexplained | S | open | Confusing copy; the dev-data half is already closed |
-| low | T024 | Remove `?route=` hack + duplicate provider | S | open | Dead weight in production; tidy-up |
 | low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
 | low | T043 | Orphaned `importantNPCs` names | S | open | Nothing was destroyed; a judgement call about one campaign |
 | low | T042 | Theme class as data has no gate | S | open | Latent pattern; bitten once, now partly gated |
@@ -38,14 +35,11 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T018 | Sub-chapters | L | open | New feature; #017 ordering question comes first |
 | low | T021 | Firebase Storage for images | L | open | New capability; prerequisite for T020 |
 | low | T020 | Screenshot on bug reports | M | open | Blocked in practice on T021 |
-| low | T053 | A seeded user in no group | S | open | Switching users is solved by the emulator's link outbox; only the no-group state is left |
 | low | T054 | Sign in with Discord | L | needs scoping | Where tabletop players already are; Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Nobody asked yet; prefer an authenticator app over SMS, which bills per text |
 | low | T040 | No accent pair for the band | S | open | Interim `.band-chip` works; schema-owner decision |
-| low | T048 | Five surfaces mark type, not entity | S | open | Visual consistency |
 | low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
-| nit | T047 | Account chip uses a generic icon | S | open | Cosmetic |
 | nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
 | nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
 | nit | T009 | Hero band fallback never recorded | S | open | Answered by practice; write it down |
@@ -269,106 +263,6 @@ default artwork.
   `isMemberOfGroup` helper against the real Firestore shape while writing it; the
   draft in `storage.rules` assumes `groups/{groupId}/members/{uid}`.
 - **Source**: todo.txt, 2026-09-16
-
-### T047 — The account chip wears a generic person icon, not a sigil
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-22
-
-Everywhere else a person appears — a member row, an NPC, a search hit's
-subject — the app draws an `EntitySigil`: a coloured tile carrying the name's
-initial. The header's own account chip draws a grey circle with lucide's `User`
-glyph, so the one identity that is always on screen is the one that looks like
-nobody in particular.
-
-- **Where**: `src/shared/components/user-menu/UserMenuTrigger.tsx:53-55` renders
-  `<User size={16} />` inside a `bg-secondary` circle. The precedent to copy is
-  `src/features/user-management/admin/components/MembersCard.tsx:195`, which
-  already gives a *user* a sigil: `<EntitySigil entityId={id || name} name={name} />`.
-- **Touches**: `UserMenuTrigger.tsx`, its test, and — if the same mark should
-  follow the account around — `PostingAsList`, `CharacterRow`, and the
-  hand-rolled third variant at
-  `src/shared/components/contact/SenderIdentity.tsx:77-80`, which builds its own
-  initial circle with `.charAt(0).toUpperCase()` rather than using the component.
-- **Catch**: the chip deliberately names the **active character**, not the
-  account (`UserMenuTrigger.tsx:36-38`), so there are two candidate hue seeds and
-  they behave differently. `sigilIndexFor` hashes the id it is given
-  (`core/utils/entity-sigil.ts:49`), so seeding on the character id makes the
-  mark change colour when you switch posting-as, while seeding on the uid makes
-  the letter (character name) and the hue (account) describe different things.
-  Pick one and use it in all the places listed above, or they will disagree.
-- **Source**: todo.txt, 2026-09-22 ("The little icon next to the logged in user
-  should be swapped out for the color pallette with starting letter")
-
-### T048 — Five surfaces still mark an entity by its *type*, not by itself
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-22
-
-The same complaint as T047, one level out: a location is a `MapPin` in some
-lists and an `EntitySigil` in others, so the same place does not look like
-itself as you move between screens. The locations feature itself is **already
-converted** — the four sites there all use sigils — so the remaining work is in
-the cross-domain surfaces that render a mixed list.
-
-- **Where**, all verified by opening the file:
-  - `src/shared/components/command-palette/CommandPalette.tsx:31-38` — a
-    `resultTypeIcons` map giving every search hit its type's glyph.
-  - `src/pages/layouts/common/utils/contentTypeUtils.tsx:11-25` —
-    `getContentIcon`, used for the chapter card at
-    `dashboard/sections/ActivityFeed.tsx:112` (that feed already uses a sigil for
-    entities at `:148`).
-  - `src/features/collaboration/notes/components/NoteReferences.tsx:177-186`
-  - `src/features/collaboration/notes/components/CampaignLinksPanel.tsx:55-62`
-  - `src/features/collaboration/entity-extraction/components/EntityCard.tsx:37-41`
-- **Touches**: those five files and their tests; nothing in
-  `features/campaign-entities/locations/`, which is already done
-  (`LocationRowSummary.tsx:49`, `LocationTreeRow.tsx:121`,
-  `WhereThisSits.tsx:63`, `LocationDetailPage.tsx:376`).
-- **Catch**: the type glyph is not pure decoration in two of these. A search
-  result list and the extractor's review list are **heterogeneous** — the glyph
-  is the only thing saying "this hit is a quest, that one is an NPC" — and a
-  sigil deliberately carries no type information. Either keep a type label
-  beside the sigil in those two, or accept that the kind is only readable from
-  the section heading. `EntityCard` also has no entity id yet (the extracted
-  entity's id is a synthesised `npc-<timestamp>-<random>`,
-  `entityMapper.ts:13`), so its hue would be random per extraction run rather
-  than stable.
-- **Source**: todo.txt, 2026-09-22 ("In locations (and potentially other places),
-  then lucide icon should be swapped out with the color pallette with letter")
-
-### T049 — "Unplaced" is a diagnosis the reader is not given
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-22
-
-The locations directory groups places whose `parentId` names nothing under a
-muted heading reading **"Unplaced"**, with no further text. That is precise to
-whoever wrote it and opaque to everybody else: the row looks normal, the place
-plainly *has* a parent recorded, and nothing on screen says the reference is
-broken or what to do about it. The sibling group one block up gets an
-explanatory line when searching; this one gets none.
-
-- **Where**: `src/features/campaign-entities/locations/components/LocationDirectory.tsx:396-400`.
-  The condition behind it is `buildLocationIndex`'s `orphans`
-  (`locations/utils/location-tree.ts:66-69`): a `parentId` that is not `''`/
-  `undefined` and is not in the loaded set. The group was added by #1416, which
-  made these rows visible at all — before it they rendered nowhere.
-- **Touches**: the `RosterGroup` call and its copy; possibly a per-row hint
-  ("its parent, `hobbiton`, is not in this campaign") and a route to fixing it,
-  since `Move elsewhere` already exists.
-- **Catch**: the honest text depends on which cause you are naming. Two are
-  live: a renamed parent (#303) and a deleted parent. A third — note conversion
-  writing a location's *name* into `parentId` — was closed by `9cf2b8a`
-  (2026-09-22): `useQuickAddCreate` resolves the extractor's `parentLocation`
-  through `shared/utils/resolve-name-to-id`, and an unmatched or ambiguous name
-  now leaves `parentId` empty rather than dangling. Records converted *before*
-  that commit can still carry a name there.
-- **The dev-data half of this report is already closed.** The seed generator now
-  creates `hobbiton`, in the same Hobbit array as `bag-end`
-  (`src/utils/__dev__/generators/contentGenerators/locationGenerator.ts:194`,
-  added by `e668807` on 2026-07-31); checking all four campaigns' arrays found
-  **no dangling `parentId` anywhere** in current seed data. So Bag End showing as
-  unplaced means the emulator dataset in hand predates that commit —
-  `.\scripts\manage-dev-data.ps1 -Action generate` should clear it. *Unverified*:
-  this was read from the generator, not observed in a running emulator.
-- **Source**: todo.txt, 2026-09-22 ("Right now in the dev data one location is
-  'Unplaced'. No idea what this means or how it is even possible? (The Hobbit -
-  Bag End)")
 
 ### T054 — Sign in with Discord
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-23
@@ -601,59 +495,6 @@ Measured against the four create forms, the premise holds for the quest only.
 
 ## Tech debt and platform
 
-### T053 — No seeded user is in no group
-**Type** tech debt · **Size** S · **Status** open · **Verified** 2026-09-23
-
-Most of this item was closed by T022 without a helper. Sign-in is by magic link
-now, and the Auth emulator never sends mail: it keeps every link in an outbox
-an agent can read, so a browser check can sign in as any seeded user with no
-password anywhere. The recipe is in `CLAUDE.md` under "Signing in as another
-user in a browser check".
-
-- **What is left**: the sample-data generator
-  (`utils/__dev__/generators/userGenerator.ts`) seeds nobody in **no group**,
-  which is the state a first-time invitee is in, and a second admin in group 1
-  for role and last-admin flows. Both are template entries.
-- **Catch**: creating a *new* account through the join form in a browser check
-  is still for the maintainer to do or explicitly allow, even on the emulator.
-  Joining as an existing account (a group 2 user joining group 1) needs neither
-  and was verified that way for T022.
-- **Source**: PR #114, 2026-09-23; narrowed by T022
-
-### T051 — Nothing stops the next unbounded title from widening a page
-**Type** tech debt · **Size** S · **Status** open · **Verified** 2026-09-22
-
-- **Where**: the bare-`fr` grid templates listed by
-  `grep -rn "grid-cols-\[" src --include=*.tsx`. Roughly half already write
-  `minmax(0,1fr)` (`NPCDetailPage.tsx:633`, `MembersCard.tsx:36`,
-  `AdminCampaignsPage.tsx:27`, the detail-page definition rows); the rest write
-  plain `1fr` / `1.5fr` / `1.6fr` and rely on each cell remembering `min-w-0`.
-- **Catch**: a grid item defaults to `min-width: auto`, so its min-content
-  width becomes the track's floor — and a row held on one line by `truncate`
-  has a min-content width of the *whole* string. The `truncate` never fires;
-  the column grows instead, and takes the grid, the page and the hero band with
-  it. This shipped: one rumour with a 165-character typed title widened the
-  whole dashboard past the viewport, because
-  `DashboardLayout.tsx`'s two `lg:grid-cols-[1.6fr_1fr]` children had no
-  `min-w-0`. Measured in a browser before the fix: a 1335px grid inside an
-  896px container, `h4.scrollWidth === h4.clientWidth` (not truncating); after,
-  896px and 399px against 1205px (truncating). The hotfix put `min-w-0` on
-  those two children only.
-- **Touches**: the fix per site is one class, so the work is the audit, not the
-  edit. `minmax(0,1fr)` in the template is the version that cannot be undone by
-  a later cell, and is what the already-correct half uses — prefer it to
-  sprinkling `min-w-0` on children. Checked while fixing the dashboard:
-  `RumorDirectory`'s row grid is safe (its first child carries `min-w-0`).
-  The rest are unchecked.
-- **Related**: the upstream half of the same story is that
-  `rumor-title.ts` caps a *derived* title at
-  `MAX_DERIVED_TITLE_LENGTH` (52) but an explicit typed title is not capped at
-  all — deliberately, per that file's own comment, which says index rows
-  truncate in CSS instead. That contract is fine; the dashboard was simply not
-  honouring it. Capping the stored value is **not** the fix here, and would
-  need `T005`-style agreement about editing stored user text.
-- **Source**: live-site report, 2026-09-22
-
 ### T042 — A theme class passed as *data* has no manifest coverage
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-18
 
@@ -721,36 +562,6 @@ migrate them into — they are prep notes about somebody who was never entered.
   is a judgement about a campaign, not a data repair, which is why the script
   has no `migrate` mode.
 - **Source**: PR 15.5, from its handoff's instruction to check before deleting
-
-### T024 — Remove the `?route=` 404 redirect hack, and the duplicate `NavigationProvider`
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-16 · `PERF-15`
-
-The app carries a static-host workaround it no longer needs, and the provider
-that exists to serve it is mounted twice.
-
-- **Where**: `public/404.html:16` rewrites a deep link into
-  `/?route=<path>`, and `src/index.tsx:83-98` (`RouterWrapper`) unpicks it again
-  on mount — reading the param, rewriting the URL with `history.replaceState`,
-  then navigating. `RouterWrapper` needs `useNavigation`, which is why
-  `NavigationProvider` is mounted at `src/index.tsx:109` **as well as**
-  `src/app/App.tsx:43`; the inner one shadows the outer for nearly every
-  consumer, and both track navigation state and update on every route change.
-- **Touches**: `public/404.html`, `RouterWrapper` and the outer provider in
-  `src/index.tsx`.
-- **Bonus**: deleting the hack removes the only reason the outer provider exists,
-  so `PERF-15`'s duplicate-provider finding falls out of the same change. The
-  rest of `PERF-15` — un-memoized context values across seven providers — belongs
-  to T032, not here.
-- **Catch**: this is already dead weight. `firebase/firebase.json:22-27` rewrites
-  `**` → `/index.html`, so Firebase Hosting serves deep links directly and
-  `404.html` is never reached in production. Confirm that against a real deploy
-  before deleting — the file may still be load-bearing on some other host or on
-  the emulator.
-- **Source**: todo.txt, 2026-09-16 ("Make project true Single Page Application").
-  Note the literal request is already satisfied: the app is a `react-router`
-  SPA (`src/app/App.tsx:3`), and the only remaining `window.location` writes are
-  an `ErrorBoundary` reload and this hack. If something else prompted that note,
-  it needs re-reporting with a symptom.
 
 ### T025 — Admin panel needs a do-over, and its bug list needs re-checking
 **Type** debt · **Size** L · **Status** needs investigation · **Verified** 2026-09-16
@@ -867,7 +678,7 @@ review says so itself. Six findings were re-checked on 2026-09-16 at `ebc0a28`:
 | `PERF-10` all routes + full Lodash in one bundle | Medium | **Half fixed.** Zero `lodash` imports remain in `src/`. Route splitting is still open — see T030. |
 | `PERF-04` notes loaded twice, unbounded | High | **Still true** — see T029. |
 | `PERF-08` duplicate collection owners | Medium | **Fixed** 2026-09-22 — one fetch per collection, pinned by `shared/hooks/__tests__/provider-fetch-counts.test.tsx`. |
-| `PERF-15` duplicate `NavigationProvider` | Low | **Still true** — folded into T024, same file. |
+| `PERF-15` duplicate `NavigationProvider` | Low | **Fixed** 2026-09-24 — `index.tsx` mounts no provider of its own; `App`'s is the only one. |
 
 The **other nine are unverified against current `main`** — `PERF-02`, `03`,
 `05`, `06`, `09`, `11`, `12`, `13`, `14`. That is T033. The review's own

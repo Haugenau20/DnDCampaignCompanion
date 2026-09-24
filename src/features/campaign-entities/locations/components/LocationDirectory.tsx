@@ -395,6 +395,15 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
 
           {orphanRows.length > 0 && (
             <RosterGroup title="Unplaced" count={orphanRows.filter(Boolean).length} muted>
+              <Typography
+                variant="body-sm"
+                color="secondary"
+                className="px-5 py-2 text-xs"
+              >
+                Each of these was filed inside a place that is no longer in this
+                campaign — it was deleted, or the link to it broke. Open one and
+                use Move elsewhere to put it back on the map.
+              </Typography>
               {orphanRows}
             </RosterGroup>
           )}

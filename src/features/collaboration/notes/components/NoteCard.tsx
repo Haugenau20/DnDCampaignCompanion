@@ -87,7 +87,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onSaveNow }) => {
   return (
     <div
       onClick={handleViewNote}
-      className={`note-card grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-4 px-5 py-4 cursor-pointer transition-colors ${
+      className={`note-card grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_220px] gap-4 px-5 py-4 cursor-pointer transition-colors ${
         note.isUnsaved ? "border-l-[3px] feedback-warning-edge" : ""
       }`}
     >

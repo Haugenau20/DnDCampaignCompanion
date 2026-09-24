@@ -158,6 +158,10 @@ Two environment gotchas that both fail silently:
   `{"email":…,"rememberMe":false}` first if the link was not requested from that browser, or the
   landing page will ask for the address. The Google popup opens in its own window, which the
   browser agent cannot drive — Google flows are the maintainer's to check.
+  Two seeded accounts exist for exactly these checks (`SAMPLE_MEMBERSHIPS` in
+  `utils/__dev__/generators/userGenerator.ts`): `player9@example.com` (Faramir) is in **no group**,
+  and `player8@example.com` (Eowyn) is a **second admin** in group 1. An emulator dataset older than
+  that table lacks both — regenerate it, which also resets the other seeded users' profiles.
 - **Known, pre-existing: the header overflows horizontally below ~380px on every route.** The logo
   and the account block both sit at `min-width: auto` and neither yields, so a 320px viewport needs
   ~348px for a 276px row. Confirmed identical on `/`, `/contact` and `/privacy` — if a page you are

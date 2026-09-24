@@ -714,6 +714,41 @@ describe('LocationDetailPage — arriving from quick add (15-1 item 7)', () => {
   });
 });
 
+describe('LocationDetailPage — a parent that is no longer in the campaign', () => {
+  // The directory files these under "Unplaced": the record names a parent, but
+  // nothing loaded carries that id -- it was deleted, or the reference broke.
+  beforeEach(() => {
+    mockLocations = [place('lost', 'Lost Outpost', { parentId: 'gone' })];
+    mockLocationId = 'lost';
+    mockNPCs = [];
+    mockQuests = [];
+    mockRumors = [];
+  });
+
+  it('does not claim the place sits at the top level', () => {
+    renderPage();
+    expect(within(hierarchy()).queryByText(/At the top level/)).not.toBeInTheDocument();
+    expect(
+      within(hierarchy()).getByText(/no longer in this campaign/)
+    ).toBeInTheDocument();
+  });
+
+  it('offers the top level as a way out, since there is no parent chip to detach', async () => {
+    renderPage();
+    fireEvent.click(
+      within(hierarchy()).getByRole('button', { name: 'Move to the top level' })
+    );
+    await waitFor(() => expect(mockMoveLocation).toHaveBeenCalledWith('lost', undefined));
+  });
+
+  it('still offers Move elsewhere to file it under a real place', () => {
+    renderPage();
+    expect(
+      within(hierarchy()).getByRole('button', { name: /Move elsewhere/ })
+    ).toBeInTheDocument();
+  });
+});
+
 describe('LocationDetailPage — cycle safety, asserted not eyeballed (§6.3)', () => {
   // Every assertion here is really an assertion that the render *returned*.
   beforeEach(() => {

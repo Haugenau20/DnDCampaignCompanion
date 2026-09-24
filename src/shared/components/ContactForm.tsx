@@ -322,6 +322,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialMessage = "" }) => {
         <hr className="card-divider border-t" />
 
         <SenderIdentity
+          signedInId={user?.uid ?? null}
           signedInName={signedInName}
           signedInEmail={signedInEmail}
           showInputs={showIdentityInputs}

@@ -1,6 +1,7 @@
 // src/features/user-management/profiles/components/CharacterRow.tsx
 import React, { useEffect, useState } from "react";
 import Typography from "core/components/Typography";
+import EntitySigil from "core/components/EntitySigil";
 import Button from "core/components/Button";
 import Input from "core/components/Input";
 import { AlertCircle, Star } from "lucide-react";
@@ -158,6 +159,7 @@ const CharacterRow: React.FC<CharacterRowProps> = ({
       <div className="flex items-center justify-between p-3 rounded-md selectable-item">
         <div className="flex items-center gap-2">
           {isActive && <Star size={16} className="accent" aria-hidden="true" />}
+          <EntitySigil entityId={character.id} name={character.name} size={24} />
           <Typography>{character.name}</Typography>
           {isActive && (
             <Typography variant="caption" className="accent">

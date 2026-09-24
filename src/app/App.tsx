@@ -42,6 +42,7 @@ import EditRouteRedirect from 'app/EditRouteRedirect';
 import { NotesPage, NotePage } from 'pages/notes';
 import PrivacyPolicyPage from 'pages/PrivacyPolicyPage';
 import ContactPage from 'pages/ContactPage';
+import NotFoundPage from 'pages/NotFoundPage';
 import { ProfilePage } from 'pages/profile';
 
 const App: React.FC = () => {
@@ -175,6 +176,8 @@ const App: React.FC = () => {
                                   <Route path="/signin" element={<SignInPage />} />
                                   <Route path="/auth/link" element={<EmailLinkPage />} />
                                   <Route path="/join" element={<JoinPage />} />
+                                  {/* Last: any address no route above claims. */}
+                                  <Route path="*" element={<NotFoundPage />} />
                                 </Routes>
                               </Layout>
                             </QuickAddProvider>

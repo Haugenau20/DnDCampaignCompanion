@@ -1,12 +1,15 @@
 // src/shared/components/contact/SenderIdentity.tsx
 import React from "react";
 import Typography from "core/components/Typography";
+import EntitySigil from "core/components/EntitySigil";
 import Input from "core/components/Input";
 
 /**
  * Props for the SenderIdentity component
  */
 interface SenderIdentityProps {
+  /** The signed-in user's uid, or null when signed out. Seeds the avatar's hue. */
+  signedInId: string | null;
   /** The signed-in user's group username, or null when signed out */
   signedInName: string | null;
   /** The signed-in user's email, or null when signed out */
@@ -36,6 +39,7 @@ interface SenderIdentityProps {
  * sees.
  */
 const SenderIdentity: React.FC<SenderIdentityProps> = ({
+  signedInId,
   signedInName,
   signedInEmail,
   showInputs,
@@ -72,11 +76,17 @@ const SenderIdentity: React.FC<SenderIdentityProps> = ({
 
   return (
     <div className="card card-border rounded-lg p-4 flex items-start gap-3">
-      <div
-        data-testid="sender-avatar"
-        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-secondary typography"
-      >
-        {(signedInName || signedInEmail || "?").charAt(0).toUpperCase()}
+      {/*
+        The message is sent as the account, not a character, so this is the
+        account's sigil -- seeded on the uid, as the header chip is when no
+        character is posting.
+      */}
+      <div data-testid="sender-avatar" className="shrink-0">
+        <EntitySigil
+          entityId={signedInId || signedInEmail || "?"}
+          name={signedInName || signedInEmail || "?"}
+          size={32}
+        />
       </div>
 
       <div className="flex-1 min-w-0">

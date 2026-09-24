@@ -3,6 +3,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CharacterRow from "../CharacterRow";
+import { sigilIndexFor } from "@/core/utils/entity-sigil";
 import { unnamedControlsIn } from "@/test-utils/accessible-names";
 import { formAccentsIn } from "@/test-utils/accent-budget";
 
@@ -37,6 +38,13 @@ describe("CharacterRow", () => {
     expect(screen.getByRole("button", { name: "Post as this" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Rename" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+  });
+
+  test("marks the character with the same sigil it wears in the header", () => {
+    renderRow();
+    const sigil = screen.getByTestId("entity-sigil");
+    expect(sigil).toHaveTextContent("G");
+    expect(sigil).toHaveAttribute("data-sigil-index", String(sigilIndexFor("char-1")));
   });
 
   test("omits 'Post as this' on the row that is already posting", () => {

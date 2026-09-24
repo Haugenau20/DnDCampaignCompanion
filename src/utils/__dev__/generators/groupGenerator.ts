@@ -1,7 +1,7 @@
 // src/utils/__dev__/generators/groupGenerator.ts
 
 import { doc, setDoc } from 'firebase/firestore';
-import { UserData, UserMapping } from './userGenerator';
+import { SAMPLE_MEMBERSHIPS, UserData, UserMapping } from './userGenerator';
 
 // Create two groups with actual creator UID
 export const createGroups = async (db: any, userMapping: UserMapping) => {
@@ -38,27 +38,10 @@ export const createGroups = async (db: any, userMapping: UserMapping) => {
 export const addUsersToGroups = async (db: any, users: UserData[], groups: { group1Id: string, group2Id: string }, formattedDate: string) => {
   // Process each user
   for (const user of users) {
-    // Determine which group(s) this user belongs to
-    let userGroups = [];
-    let isAdmin = false;
-    
-    if (user.username === 'DungeonMaster') {
-      // DM is admin in both groups
-      userGroups = [groups.group1Id, groups.group2Id];
-      isAdmin = true;
-    } else if (user.username === 'Aragorn') {
-      // Aragorn is in both groups as a regular member
-      userGroups = [groups.group1Id, groups.group2Id];
-      isAdmin = false;
-    } else if (['Gandalf', 'Gimli', 'Legolas'].includes(user.username)) {
-      // These users are only in group 1
-      userGroups = [groups.group1Id];
-      isAdmin = false;
-    } else {
-      // Frodo, Samwise, and Pippin are only in group 2
-      userGroups = [groups.group2Id];
-      isAdmin = false;
-    }
+    // Membership comes from the same table the global profile reads
+    const membership = SAMPLE_MEMBERSHIPS[user.username] ?? { groups: [], admin: false };
+    const userGroups = membership.groups.map(g => (g === 'group1' ? groups.group1Id : groups.group2Id));
+    const isAdmin = membership.admin;
     
     // Add user to each applicable group
     for (const groupId of userGroups) {

@@ -4,7 +4,7 @@
 // on the wiring in App.tsx itself.
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // Mock react-router-dom
@@ -217,6 +217,11 @@ jest.mock("../pages/ContactPage", () => ({
   default: () => <div data-testid="page-contact" />,
 }));
 
+jest.mock("../pages/NotFoundPage", () => ({
+  __esModule: true,
+  default: () => <div data-testid="page-not-found" />,
+}));
+
 jest.mock("../pages/profile", () => ({
   __esModule: true,
   ProfilePage: () => <div data-testid="page-profile" />,
@@ -316,6 +321,9 @@ const EXPECTED_ROUTES = [
   "/signin",
   "/auth/link",
   "/join",
+  // Any address nothing above claims. Firebase Hosting rewrites every path to
+  // index.html, so the router is the only thing that ever sees an unknown one.
+  "*",
 ];
 
 // ---------------------------------------------------------------------------
@@ -515,6 +523,13 @@ describe("App", () => {
         expect(capturedRoutes).toContain(expectedPath);
       }
     );
+
+    test("sends an unmatched address to the not-found page", () => {
+      render(<App />);
+      expect(
+        within(screen.getByTestId("route-*")).getByTestId("page-not-found")
+      ).toBeInTheDocument();
+    });
 
     test(`declares exactly ${EXPECTED_ROUTES.length} routes`, () => {
       render(<App />);

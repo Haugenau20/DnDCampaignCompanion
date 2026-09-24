@@ -140,7 +140,7 @@ jest.mock("react-router-dom", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mock NavigationContext — RouterWrapper uses useNavigation
+// Mock NavigationContext — so the tree can assert index.tsx mounts no provider of its own
 // ---------------------------------------------------------------------------
 const MockNavigationProvider = ({ children }: { children: React.ReactNode }) => (
   <div data-testid="navigation-provider">{children}</div>
@@ -414,30 +414,21 @@ describe("index.tsx entry point", () => {
       expect(treeContainsType(themeProviderEl, MockBrowserRouter)).toBe(true);
     });
 
-    test("NavigationProvider is present in the element tree", () => {
-      expect(capturedRootElement).not.toBeNull();
-      expect(treeContainsType(capturedRootElement, MockNavigationProvider)).toBe(true);
-    });
-
-    test("NavigationProvider is a descendant of BrowserRouter", () => {
+    test("App is a descendant of BrowserRouter", () => {
       expect(capturedRootElement).not.toBeNull();
       const browserRouterEl = findInTree(capturedRootElement, MockBrowserRouter);
       expect(browserRouterEl).not.toBeNull();
-      expect(treeContainsType(browserRouterEl, MockNavigationProvider)).toBe(true);
+      expect(treeContainsType(browserRouterEl, MockApp)).toBe(true);
     });
 
-    test("App is a descendant of NavigationProvider", () => {
+    // App mounts the NavigationProvider every consumer reads. A second one out
+    // here existed only so the GitHub Pages `?route=` redirect could call
+    // `useNavigation` before App rendered; Firebase Hosting rewrites every
+    // path to index.html, so that redirect never ran, and the outer provider
+    // was a duplicate tracking every route change for nobody.
+    test("mounts no NavigationProvider of its own -- App owns it", () => {
       expect(capturedRootElement).not.toBeNull();
-      const navProviderEl = findInTree(capturedRootElement, MockNavigationProvider);
-      expect(navProviderEl).not.toBeNull();
-      // App is rendered via RouterWrapper; RouterWrapper renders MockApp.
-      // The element tree contains RouterWrapper (whose children render MockApp),
-      // but tree-walking JSX props won't reveal the RouterWrapper's render output —
-      // we can only verify the element type declared in JSX at definition time.
-      // RouterWrapper is defined inline in index.tsx (not exported), so we check
-      // that NavigationProvider's children prop is present (RouterWrapper lives there).
-      const navProviderChildren = (navProviderEl as React.ReactElement<any>).props?.children;
-      expect(navProviderChildren).not.toBeNull();
+      expect(treeContainsType(capturedRootElement, MockNavigationProvider)).toBe(false);
     });
   });
 });

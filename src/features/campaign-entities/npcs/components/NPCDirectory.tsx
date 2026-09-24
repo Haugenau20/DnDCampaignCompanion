@@ -33,7 +33,7 @@ interface NPCDirectoryProps {
 
 /** Column template shared by every row, so the columns line up across groups. */
 const ROW_GRID =
-  'grid-cols-[1fr_auto] md:grid-cols-[1.5fr_112px_132px_1.15fr_26px]';
+  'grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.5fr)_112px_132px_minmax(0,1.15fr)_26px]';
 
 const RELATIONSHIP_FILTERS = [
   { value: 'all', label: 'All' },
@@ -292,7 +292,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                     toggleLabel={npc.name}
                     onToggle={() => setExpandedNpcId(isExpanded ? null : npc.id)}
                     expandedContent={
-                      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-7 pt-4">
+                      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-7 pt-4">
                         <div className="flex flex-col gap-4">
                           <RosterField
                             label="Description"

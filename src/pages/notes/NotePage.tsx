@@ -225,7 +225,7 @@ const NotePage: React.FC = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-5 items-start">
               <NoteEditor
                 ref={noteEditorRef}
                 noteId={noteId}

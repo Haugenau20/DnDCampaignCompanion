@@ -666,6 +666,17 @@ describe('LocationDirectory', () => {
       expect(screen.getByText('Lost Outpost')).toBeInTheDocument();
     });
 
+    test('says what an unplaced place is, and how to put it back', () => {
+      render(
+        <LocationDirectory
+          locations={[makeLocation('orphan-1', 'Lost Outpost', { parentId: 'nonexistent' })]}
+        />
+      );
+      const group = screen.getByRole('heading', { name: 'Unplaced' }).closest('section') as HTMLElement;
+      expect(within(group).getByText(/no longer in this campaign/)).toBeInTheDocument();
+      expect(within(group).getByText(/Move elsewhere/)).toBeInTheDocument();
+    });
+
     test("an orphan's own children still nest under it", () => {
       render(
         <LocationDirectory
