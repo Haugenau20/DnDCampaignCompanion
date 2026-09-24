@@ -25,9 +25,11 @@ emulator won't start under the real project id without a `storage.rules` key, an
 `firebase.json` would let a bare `firebase deploy` push the permissive emulator rules live. Starting
 emulators by hand? Pass `--config firebase.emulators.json` too, or Storage (9199) is missing.
 
-`scripts/manage-environment.ps1` and `docker/` are Docker-based and unused. Don't reach for them
-without checking with the maintainer — a compile error was once diagnosed against a container that
-was never running.
+`scripts/manage-environment.ps1` and `docker/`'s compose setup are Docker-based and unused for local
+development. Don't reach for them without checking with the maintainer — a compile error was once
+diagnosed against a container that was never running. **But `docker/` is not dead:** CI builds the
+frontend with `docker/Dockerfile.frontend.prod` (`npm install --legacy-peer-deps`, then
+`npm run build` — see T059).
 
 ### If the dev server reports errors that `tsc` and `npm run build` do not
 Almost certainly a stale cache. `npm start` and `npm run build` keep **separate** webpack caches, so

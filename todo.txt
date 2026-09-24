@@ -7,22 +7,4 @@ Run `/todo` to drain this file: each entry is checked against the code, located,
 sized and filed into TODO.md, then removed from here. `/todo <idea>` files a
 single item directly without going through this file.
 
-Last drained: 2026-09-22
-
-We need to look at dependencies in this project, and how they go together. I think right now we have to build with legacy peer deps or something like that. that can't be good long term? 
-
-Look at linting errors during building. 
-
-Set up more CI gates on PR (linting, etc.)
-
-When adding NPC, Location, and Quest from e.g. Notes or the stie itself, the fields to fill in are very small. especially pops out when doing it from notes, since the field is autofilled with stuff, but almost impossible to read any of it, due to the small window. 
-
-Streamline the specific NPC location and quest pages in terms of looks.
-
-The NPC photo placeholder should be changed to be portrait of some kind. right now it is landscape, which is awkward for a picture of an NPC. 
-
-Firebase seems to be able to update from 13.X to 15.X: Update available 13.32.0 → 15.30.2 | To update to the latest version using npm, run | npm install -g firebase-tools | For other CLI management options, visit the CLI documentation | (https://firebase.google.com/docs/cli#update-cli)  
-
-Cleanup of files in repo (e.g. doc files).
-
-There are two stale branches on remote. can they be deleted? 
+Last drained: 2026-09-24
