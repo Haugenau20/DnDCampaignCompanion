@@ -1,6 +1,7 @@
 // functions/test/extractEntities.test.ts
 //
-// T019: smart detection must not suggest the party's own characters as NPCs.
+// T019: smart detection must not suggest the party -- a member's username or
+// any of their characters -- as NPCs.
 // OpenAI is replaced with a stub that records the prompt and returns what the
 // test tells it to; everything else -- the roster read, the membership check,
 // usage counting -- runs against the emulator.
@@ -77,6 +78,23 @@ describe("extractEntities and the party's own characters", () => {
     expect(prompt).not.toContain("\"\"");
   });
 
+  it("names the members by the username they signed up with, too", async () => {
+    modelReturns([]);
+    await extract({content: CONTENT, groupId: GROUP}, "frodo");
+
+    const prompt = systemPrompt();
+    for (const username of ["frodo", "sam", "pippin"]) {
+      expect(prompt).toContain(JSON.stringify(username));
+    }
+  });
+
+  it("drops a member's username the model returned as an NPC", async () => {
+    modelReturns([npc("Pippin"), npc("Barliman Butterbur")]);
+    const result = await extract({content: CONTENT, groupId: GROUP}, "frodo");
+
+    expect(result.entities.map((e) => e.name)).toEqual(["Barliman Butterbur"]);
+  });
+
   it("drops a party character the model returned anyway, and keeps the real NPC", async () => {
     modelReturns([npc("Aragorn"), npc("legolas"), npc("Barliman Butterbur")]);
     const result = await extract({content: CONTENT, groupId: GROUP}, "frodo");
@@ -96,7 +114,7 @@ describe("extractEntities and the party's own characters", () => {
     const result = await extract({content: CONTENT}, "frodo");
 
     expect(result.entities.map((e) => e.name)).toEqual(["Aragorn"]);
-    expect(systemPrompt()).not.toContain("player characters");
+    expect(systemPrompt()).not.toContain("They are the party");
   });
 
   it("refuses a caller outside the group, before calling the model or counting usage", async () => {
