@@ -16,6 +16,12 @@ export interface SignInLinkIntent {
   /** Where to go after signing in. Unvalidated -- pass through `safeNextPath`. */
   next: string | null;
   invitation: InvitationToRedeem | null;
+  /**
+   * The sign-in request of the device that asked for the link, so that
+   * another device opening it can approve that one instead of itself. Never
+   * set on an invitation link.
+   */
+  device: string | null;
 }
 
 /**
@@ -31,7 +37,7 @@ export interface SignInLinkIntent {
  * query string.
  *
  * @param origin The app's origin, e.g. `window.location.origin`
- * @param intent Where to go next, or which invitation to redeem
+ * @param intent Where to go next and which device asked, or which invitation to redeem
  */
 export function signInLinkUrl(
   origin: string,
@@ -42,8 +48,9 @@ export function signInLinkUrl(
     params.set('groupId', intent.invitation.groupId);
     params.set('token', intent.invitation.token);
     params.set('username', intent.invitation.username);
-  } else if (intent.next) {
-    params.set('next', intent.next);
+  } else {
+    if (intent.next) params.set('next', intent.next);
+    if (intent.device) params.set('device', intent.device);
   }
   const query = params.toString();
   return `${origin}${EMAIL_LINK_PATH}${query ? `?${query}` : ''}`;
@@ -57,9 +64,11 @@ export function readSignInLinkIntent(params: URLSearchParams): SignInLinkIntent 
   const groupId = params.get('groupId');
   const token = params.get('token');
   const username = params.get('username');
+  const invitation =
+    groupId && token && username ? { groupId, token, username } : null;
   return {
     next: params.get('next'),
-    invitation:
-      groupId && token && username ? { groupId, token, username } : null,
+    invitation,
+    device: invitation ? null : params.get('device'),
   };
 }

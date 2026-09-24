@@ -15,6 +15,7 @@ describe('signInLinkUrl', () => {
     expect(roundTrip(signInLinkUrl(ORIGIN, { next: '/npcs?filter=alive' }))).toEqual({
       next: '/npcs?filter=alive',
       invitation: null,
+      device: null,
     });
   });
 
@@ -25,6 +26,7 @@ describe('signInLinkUrl', () => {
     expect(roundTrip(signInLinkUrl(ORIGIN, { invitation }))).toEqual({
       next: null,
       invitation,
+      device: null,
     });
   });
 
@@ -33,6 +35,21 @@ describe('signInLinkUrl', () => {
   test('drops `next` when there is an invitation', () => {
     const invitation = { groupId: 'g-1', token: 'tok', username: 'Sam' };
     expect(roundTrip(signInLinkUrl(ORIGIN, { invitation, next: '/quests' })).next).toBeNull();
+  });
+
+  test('carries the asking device\'s request beside a destination', () => {
+    expect(roundTrip(signInLinkUrl(ORIGIN, { next: '/quests', device: 'req-1' }))).toEqual({
+      next: '/quests',
+      invitation: null,
+      device: 'req-1',
+    });
+  });
+
+  // Approving another device is for plain sign-ins; an invitation link joins
+  // a group, and that path does not run through an approval.
+  test('drops `device` when there is an invitation', () => {
+    const invitation = { groupId: 'g-1', token: 'tok', username: 'Sam' };
+    expect(roundTrip(signInLinkUrl(ORIGIN, { invitation, device: 'req-1' })).device).toBeNull();
   });
 
   test('names the group `groupId`, as the invitation service reads it', () => {
@@ -44,7 +61,7 @@ describe('signInLinkUrl', () => {
 describe('readSignInLinkIntent', () => {
   test('ignores Firebase\'s own parameters', () => {
     const params = new URLSearchParams('mode=signIn&oobCode=abc&apiKey=k&next=%2Fquests');
-    expect(readSignInLinkIntent(params)).toEqual({ next: '/quests', invitation: null });
+    expect(readSignInLinkIntent(params)).toEqual({ next: '/quests', invitation: null, device: null });
   });
 
   test('is no invitation when any part of one is missing', () => {

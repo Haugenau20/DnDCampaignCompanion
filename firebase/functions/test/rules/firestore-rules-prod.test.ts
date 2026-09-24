@@ -113,6 +113,25 @@ describe("global admin", () => {
   });
 });
 
+describe("signing in from another device", () => {
+  // The requests hold a hash of the secret and the code the approving device
+  // must type; reading one would hand a phisher the code.
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc("deviceSignIns/req").set({email: "frodo@shire.dev", code: "1234"});
+    });
+  });
+
+  it("nobody reads a request from the client, signed in or not", async () => {
+    await assertFails(as("frodo").doc("deviceSignIns/req").get());
+    await assertFails(env.unauthenticatedContext().firestore().doc("deviceSignIns/req").get());
+  });
+
+  it("nobody approves a request from the client", async () => {
+    await assertFails(as("frodo").doc("deviceSignIns/req").update({status: "approved", uid: "frodo"}));
+  });
+});
+
 describe("roles (T034)", () => {
   it("a group admin cannot change a role directly -- only setMemberRole can", async () => {
     await assertFails(as("gandalf").doc(`groups/${G}/users/frodo`).update({role: "admin"}));
