@@ -99,7 +99,7 @@ things, all of which cost something.
 times.** Raw ids in `15-2`, a disclosure that never hid in `15-3`, an accessible
 name polluted by a pending indicator, and then the two `15-7` found in ten
 minutes of the running app: every write flashed the page to a skeleton and
-unmounted what was on it (fixed everywhere by T044), and the row's controls measured 32px
+unmounted what was on it, and the row's controls measured 32px
 against a 44px rule. All five were invisible to jsdom by construction — no CSS,
 no real auth lifecycle, no pointer. The pages built without a browser pass
 (`15-4`, `15-5`, `15-6`) shipped the skeleton defect three times because nobody
