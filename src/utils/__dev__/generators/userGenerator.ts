@@ -16,7 +16,38 @@ export interface UserMapping {
   [key: string]: string; // For direct access by role/username
 }
 
-// Create 8 users with Firebase Auth and get their actual UIDs
+/** Which sample groups a user belongs to, and whether they administer them. */
+export interface SampleMembership {
+  groups: Array<'group1' | 'group2'>;
+  admin: boolean;
+}
+
+/**
+ * The one place the sample data decides who is in which group.
+ *
+ * `createUserProfiles` (the profile's `groups` list) and `addUsersToGroups`
+ * (the membership documents) both read it, so the two cannot drift apart.
+ *
+ * Two entries exist for browser checks rather than for the story:
+ * - **Eowyn** is a second admin in group 1, for role changes and the
+ *   last-admin guard -- with one admin there is nobody to demote.
+ * - **Faramir** is in no group: where a first-time invitee, or someone who
+ *   left their only group, lands.
+ */
+export const SAMPLE_MEMBERSHIPS: Record<string, SampleMembership> = {
+  DungeonMaster: { groups: ['group1', 'group2'], admin: true },
+  Aragorn: { groups: ['group1', 'group2'], admin: false },
+  Gandalf: { groups: ['group1'], admin: false },
+  Gimli: { groups: ['group1'], admin: false },
+  Legolas: { groups: ['group1'], admin: false },
+  Eowyn: { groups: ['group1'], admin: true },
+  Frodo: { groups: ['group2'], admin: false },
+  Samwise: { groups: ['group2'], admin: false },
+  Pippin: { groups: ['group2'], admin: false },
+  Faramir: { groups: [], admin: false },
+};
+
+// Create the sample users with Firebase Auth and get their actual UIDs
 export const createSampleUsers = async (auth: any) => {
   const userTemplates = [
     // Users 1-5 (in group 1)
@@ -29,7 +60,11 @@ export const createSampleUsers = async (auth: any) => {
     // Users 6-8 (only in group 2)
     { email: 'player5@example.com', password: 'password123', username: 'Frodo', role: 'frodo' },          // User 6 (only in group 2)
     { email: 'player6@example.com', password: 'password123', username: 'Samwise', role: 'samwise' },      // User 7 (only in group 2)
-    { email: 'player7@example.com', password: 'password123', username: 'Pippin', role: 'pippin' }         // User 8 (only in group 2)
+    { email: 'player7@example.com', password: 'password123', username: 'Pippin', role: 'pippin' },        // User 8 (only in group 2)
+
+    // Users 9-10 exist for browser checks; see SAMPLE_MEMBERSHIPS
+    { email: 'player8@example.com', password: 'password123', username: 'Eowyn', role: 'eowyn' },          // User 9 (second admin in group 1)
+    { email: 'player9@example.com', password: 'password123', username: 'Faramir', role: 'faramir' }       // User 10 (in no group)
   ];
 
   console.log('Creating users...');
@@ -105,29 +140,18 @@ export const createUserProfiles = async (db: any, users: UserData[]) => {
   console.log('Creating global user profiles...');
   
   for (const user of users) {
-    // Determine which groups the user belongs to
-    let groups = [];
-    
-    if (user.username === 'DungeonMaster' || user.username === 'Aragorn') {
-      // Users 1-2 are in both groups
-      groups = ['group1', 'group2'];
-    } else if (['Gandalf', 'Gimli', 'Legolas'].includes(user.username)) {
-      // Users 3-5 are only in group 1
-      groups = ['group1'];
-    } else {
-      // Users 6-8 (Frodo, Samwise, Pippin) are only in group 2
-      groups = ['group2'];
-    }
+    const groups = SAMPLE_MEMBERSHIPS[user.username]?.groups ?? [];
     
     const userData = {
       email: user.email,
       groups: groups,
       lastLoginAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
-      activeGroupId: groups[0] // Set first group as active
+      // First group as active; null for nobody's-member, as removeUserFromGroup leaves it
+      activeGroupId: groups[0] ?? null
     };
     
     await setDoc(doc(db, 'users', user.id), userData);
-    console.log(`Created global profile for: ${user.username} with UID: ${user.id} in groups: ${groups.join(', ')}`);
+    console.log(`Created global profile for: ${user.username} with UID: ${user.id} in groups: ${groups.join(', ') || '(none)'}`);
   }
 };

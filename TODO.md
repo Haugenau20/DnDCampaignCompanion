@@ -36,7 +36,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T018 | Sub-chapters | L | open | New feature; #017 ordering question comes first |
 | low | T021 | Firebase Storage for images | L | open | New capability; prerequisite for T020 |
 | low | T020 | Screenshot on bug reports | M | open | Blocked in practice on T021 |
-| low | T053 | A seeded user in no group | S | open | Switching users is solved by the emulator's link outbox; only the no-group state is left |
 | low | T054 | Sign in with Discord | L | needs scoping | Where tabletop players already are; Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Nobody asked yet; prefer an authenticator app over SMS, which bills per text |
@@ -496,25 +495,6 @@ Measured against the four create forms, the premise holds for the quest only.
 ---
 
 ## Tech debt and platform
-
-### T053 — No seeded user is in no group
-**Type** tech debt · **Size** S · **Status** open · **Verified** 2026-09-23
-
-Most of this item was closed by T022 without a helper. Sign-in is by magic link
-now, and the Auth emulator never sends mail: it keeps every link in an outbox
-an agent can read, so a browser check can sign in as any seeded user with no
-password anywhere. The recipe is in `CLAUDE.md` under "Signing in as another
-user in a browser check".
-
-- **What is left**: the sample-data generator
-  (`utils/__dev__/generators/userGenerator.ts`) seeds nobody in **no group**,
-  which is the state a first-time invitee is in, and a second admin in group 1
-  for role and last-admin flows. Both are template entries.
-- **Catch**: creating a *new* account through the join form in a browser check
-  is still for the maintainer to do or explicitly allow, even on the emulator.
-  Joining as an existing account (a group 2 user joining group 1) needs neither
-  and was verified that way for T022.
-- **Source**: PR #114, 2026-09-23; narrowed by T022
 
 ### T042 — A theme class passed as *data* has no manifest coverage
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-18
