@@ -171,4 +171,41 @@ describe('ImageUploadControl', () => {
 
     expect(onRemove).not.toHaveBeenCalled();
   });
+
+  // The compact form sits on the picture itself, so it is icons only. Their
+  // names are the same words the full form prints, so nothing else changes.
+  describe('compact', () => {
+    it('offers to add with an icon whose name says what it does', () => {
+      render(<ImageUploadControl variant="compact" subject="portrait" hasImage={false} onUpload={jest.fn()} onRemove={jest.fn()} />);
+      const add = screen.getByRole('button', { name: 'Add portrait' });
+      expect(add.textContent).toBe('');
+      // A mouse user gets the same words as a tooltip.
+      expect(add).toHaveAttribute('title', 'Add portrait');
+      expect(screen.queryByRole('button', { name: /Remove/ })).toBeNull();
+    });
+
+    it('offers to replace or remove with icons when there is an image', () => {
+      render(<ImageUploadControl variant="compact" subject="portrait" hasImage onUpload={jest.fn()} onRemove={jest.fn()} />);
+      expect(screen.getByRole('button', { name: 'Replace portrait' }).textContent).toBe('');
+      expect(screen.getByRole('button', { name: 'Remove portrait' }).textContent).toBe('');
+    });
+
+    it('still says when an upload is under way', async () => {
+      const upload = deferred();
+      render(<ImageUploadControl variant="compact" subject="portrait" hasImage={false} onUpload={() => upload.promise} onRemove={jest.fn()} />);
+
+      await userEvent.upload(fileInput(), photo());
+      expect(await screen.findByRole('status')).toHaveTextContent(/Uploading/);
+      expect(screen.getByRole('button', { name: 'Add portrait' })).toBeDisabled();
+
+      await act(async () => upload.resolve());
+    });
+
+    it('still says why an upload failed', async () => {
+      render(<ImageUploadControl variant="compact" subject="portrait" hasImage={false} onUpload={jest.fn().mockRejectedValue(new Error('x'))} onRemove={jest.fn()} />);
+
+      await userEvent.upload(fileInput(), photo());
+      expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't upload the image");
+    });
+  });
 });

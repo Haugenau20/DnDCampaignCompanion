@@ -1,6 +1,7 @@
 // src/shared/components/ImageUploadControl.tsx
 import React, { useRef, useState } from 'react';
 import { ImagePlus, Trash2 } from 'lucide-react';
+import clsx from 'clsx';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import {
@@ -23,6 +24,24 @@ interface ImageUploadControlProps {
   onUpload: (image: PreparedImage, onProgress: (fraction: number) => void) => Promise<void>;
   /** Remove the image. Rejecting shows the error in the confirmation dialog. */
   onRemove: () => Promise<void>;
+  /**
+   * "full" (the default) prints its actions as labelled buttons in a row.
+   *
+   * "compact" wraps `children` -- the picture, or what stands in for it -- and
+   * lays icon buttons over its top-right corner. Where the device can hover
+   * they stay hidden until the pointer is over the picture or a button has
+   * focus. Progress and errors are never hidden: they show as a small note
+   * just below the picture, laid over the page rather than pushing it about.
+   */
+  variant?: 'full' | 'compact';
+  /** What the compact control is laid over. Ignored by "full". */
+  children?: React.ReactNode;
+  /**
+   * Where the compact buttons sit on the corner: "inside" it (the default),
+   * or "outside", straddling it, for something too small to cover -- a 56px
+   * sigil would lose half its letter to an inside button.
+   */
+  placement?: 'inside' | 'outside';
   className?: string;
 }
 
@@ -32,6 +51,17 @@ type Phase =
   | { kind: 'uploading'; fraction: number };
 
 const UPLOAD_FAILED = "Couldn't upload the image. Please try again.";
+
+/**
+ * Hidden until wanted, but only where "wanted" can be expressed: a touch
+ * screen has no hover, so there the buttons are always shown. Focus reveals
+ * them too, so a keyboard user never tabs onto something invisible.
+ */
+const REVEAL_ON_HOVER =
+  '[@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity';
+
+/** The icon buttons' own recipe: square, and opaque over a photograph. */
+const ICON_BUTTON = 'p-1.5 bg-[var(--surface-card-bg)]';
 
 /**
  * Add, replace or remove one image.
@@ -46,14 +76,28 @@ const ImageUploadControl: React.FC<ImageUploadControlProps> = ({
   hasImage,
   onUpload,
   onRemove,
+  variant = 'full',
+  children,
+  placement = 'inside',
   className,
 }) => {
+  const compact = variant === 'compact';
   const inputRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [error, setError] = useState<string | null>(null);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   const busy = phase.kind !== 'idle';
+  const addLabel = hasImage ? `Replace ${subject}` : `Add ${subject}`;
+  const removeLabel = `Remove ${subject}`;
+
+  const status = busy && (
+    <Typography variant="body-sm" color="muted" role="status">
+      {phase.kind === 'uploading'
+        ? `Uploading… ${Math.round(phase.fraction * 100)}%`
+        : 'Preparing…'}
+    </Typography>
+  );
 
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -75,26 +119,101 @@ const ImageUploadControl: React.FC<ImageUploadControlProps> = ({
     }
   };
 
+  const pickFile = () => inputRef.current?.click();
+  const confirmRemove = () => setConfirmingRemove(true);
+
+  const fileInput = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept="image/*"
+      className="hidden"
+      onChange={handleFile}
+      data-testid="image-upload-input"
+    />
+  );
+
+  const removeDialog = (
+    <DeleteConfirmationDialog
+      isOpen={confirmingRemove}
+      onClose={() => setConfirmingRemove(false)}
+      onConfirm={onRemove}
+      itemName=""
+      itemType={subject}
+      message={`The ${subject} is removed for everyone in the group.`}
+    />
+  );
+
+  if (compact) {
+    return (
+      <div className={clsx('group relative', className)}>
+        {fileInput}
+        {children}
+
+        <div
+          className={clsx(
+            'absolute flex gap-1',
+            placement === 'inside' ? 'top-1 right-1' : '-top-3 -right-3',
+            // Kept in view while busy: the disabled buttons are what says the
+            // control is not idle.
+            !busy && REVEAL_ON_HOVER
+          )}
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            className={ICON_BUTTON}
+            aria-label={addLabel}
+            title={addLabel}
+            onClick={pickFile}
+            disabled={busy}
+          >
+            <ImagePlus size={16} aria-hidden="true" />
+          </Button>
+          {hasImage && (
+            <Button
+              variant="outline"
+              size="sm"
+              className={ICON_BUTTON}
+              aria-label={removeLabel}
+              title={removeLabel}
+              onClick={confirmRemove}
+              disabled={busy}
+            >
+              <Trash2 size={16} aria-hidden="true" />
+            </Button>
+          )}
+        </div>
+
+        {(busy || error) && (
+          <div className="card absolute left-0 top-full z-10 mt-1 w-max max-w-[16rem] px-2 py-1">
+            {status}
+            {error && (
+              <Typography variant="body-sm" color="error" role="alert">
+                {error}
+              </Typography>
+            )}
+          </div>
+        )}
+
+        {removeDialog}
+      </div>
+    );
+  }
+
   return (
     <div className={className}>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFile}
-        data-testid="image-upload-input"
-      />
+      {fileInput}
 
       <div className="flex flex-wrap items-center gap-2">
         <Button
           variant="outline"
           size="sm"
           startIcon={<ImagePlus size={16} aria-hidden="true" />}
-          onClick={() => inputRef.current?.click()}
+          onClick={pickFile}
           disabled={busy}
         >
-          {hasImage ? `Replace ${subject}` : `Add ${subject}`}
+          {addLabel}
         </Button>
 
         {hasImage && (
@@ -102,20 +221,14 @@ const ImageUploadControl: React.FC<ImageUploadControlProps> = ({
             variant="ghost"
             size="sm"
             startIcon={<Trash2 size={16} aria-hidden="true" />}
-            onClick={() => setConfirmingRemove(true)}
+            onClick={confirmRemove}
             disabled={busy}
           >
-            {`Remove ${subject}`}
+            {removeLabel}
           </Button>
         )}
 
-        {busy && (
-          <Typography variant="body-sm" color="muted" role="status">
-            {phase.kind === 'uploading'
-              ? `Uploading… ${Math.round(phase.fraction * 100)}%`
-              : 'Preparing…'}
-          </Typography>
-        )}
+        {status}
       </div>
 
       {error && (
@@ -124,14 +237,7 @@ const ImageUploadControl: React.FC<ImageUploadControlProps> = ({
         </Typography>
       )}
 
-      <DeleteConfirmationDialog
-        isOpen={confirmingRemove}
-        onClose={() => setConfirmingRemove(false)}
-        onConfirm={onRemove}
-        itemName=""
-        itemType={subject}
-        message={`The ${subject} is removed for everyone in the group.`}
-      />
+      {removeDialog}
     </div>
   );
 };

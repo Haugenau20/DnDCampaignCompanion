@@ -886,6 +886,24 @@
 }
 
 /*
+  A slot drawn as a framed picture of its own, such as an NPC's portrait
+  beside the name, rather than as a band across the top of a card. The band's
+  single rule becomes a whole hairline frame.
+*/
+.portrait-frame {
+  border: var(--border-width-sm) solid var(--surface-card-border);
+  border-radius: var(--border-radius-md);
+}
+
+/*
+  Cropped from above the middle: a portrait's face sits in its upper part,
+  and a centred crop is what cuts it (T064).
+*/
+.portrait-frame img {
+  object-position: 50% 25%;
+}
+
+/*
   The caption sits on the ruling, so it takes the muted ink of the sunken
   surface it is drawn on rather than the page's.
 */

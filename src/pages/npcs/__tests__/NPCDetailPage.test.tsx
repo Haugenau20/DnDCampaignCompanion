@@ -290,6 +290,11 @@ function fieldValue(label: string): string {
   return field.textContent?.replace(label, "").trim() ?? "";
 }
 
+/** The identity card: the section that holds the NPC's name. */
+function identityCard(): HTMLElement {
+  return screen.getByRole("heading", { level: 1 }).closest("section") as HTMLElement;
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -524,11 +529,10 @@ describe("NPCDetailPage", () => {
       ).toBeInTheDocument();
     });
 
-    it("reserves the image slot, and says it is optional rather than missing", () => {
+    it("reserves no empty frame for a portrait: the sigil stands in (T064)", () => {
       renderPage();
-      const slot = screen.getByTestId("image-slot");
-      expect(slot).toHaveAttribute("role", "img");
-      expect(slot.getAttribute("aria-label")).toMatch(/no image added/i);
+      expect(screen.queryByTestId("image-slot")).toBeNull();
+      expect(within(identityCard()).getByTestId("entity-sigil")).toBeInTheDocument();
     });
 
     it("states the standing facts in a fixed order", () => {
@@ -1474,10 +1478,34 @@ describe("NPCDetailPage", () => {
       uploadedAt: "2026-09-24T12:00:00.000Z",
     };
 
-    it("keeps the honest empty slot, and offers to add a portrait", () => {
+    it("offers to add a portrait beside the sigil when there is none", () => {
       renderPage();
-      expect(screen.getByRole("img", { name: "Gandalf — no image added" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Add portrait" })).toBeInTheDocument();
+      const card = identityCard();
+      expect(within(card).getByTestId("entity-sigil")).toBeInTheDocument();
+      expect(within(card).getByRole("button", { name: "Add portrait" })).toBeInTheDocument();
+    });
+
+    it("shows the portrait in place of the sigil, not as a banner", () => {
+      mockNPCDataReturn = { ...mockNPCDataReturn, npcs: [{ ...fullNPC, image: portrait }] };
+      renderPage();
+
+      const card = identityCard();
+      // The portrait is the NPC's picture; a letter beside it says nothing more.
+      expect(within(card).queryByTestId("entity-sigil")).toBeNull();
+      expect(within(card).getByRole("img", { name: "Portrait of Gandalf" })).toBeInTheDocument();
+    });
+
+    it("treats a portrait it will not show as no portrait at all", () => {
+      // ImageSlot refuses URLs outside the app's bucket. The card must not
+      // then draw an empty frame and drop the sigil for a picture never shown.
+      const planted = { ...portrait, url: "https://example.com/tracker.png" };
+      mockNPCDataReturn = { ...mockNPCDataReturn, npcs: [{ ...fullNPC, image: planted }] };
+      renderPage();
+
+      const card = identityCard();
+      expect(screen.queryByTestId("image-slot")).toBeNull();
+      expect(within(card).getByTestId("entity-sigil")).toBeInTheDocument();
+      expect(within(card).getByRole("button", { name: "Add portrait" })).toBeInTheDocument();
     });
 
     it("shows the portrait once there is one, and offers to replace or remove it", () => {
