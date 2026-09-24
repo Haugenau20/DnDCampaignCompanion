@@ -51,6 +51,15 @@ jest.mock('firebase/firestore', () => ({
   connectFirestoreEmulator: jest.fn()
 }));
 
+jest.mock('firebase/storage', () => ({
+  getStorage: jest.fn(),
+  connectStorageEmulator: jest.fn(),
+  ref: jest.fn(),
+  uploadBytesResumable: jest.fn(),
+  getDownloadURL: jest.fn(),
+  deleteObject: jest.fn()
+}));
+
 jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(),
   signInWithEmailAndPassword: jest.fn(),

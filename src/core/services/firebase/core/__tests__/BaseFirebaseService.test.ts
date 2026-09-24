@@ -15,6 +15,7 @@ const mockAuth = { currentUser: null as any };
 const mockDb = {};
 const mockAnalytics = {};
 const mockFunctions = {};
+const mockStorage = {};
 const mockApp = {};
 
 jest.mock('firebase/app', () => ({
@@ -39,13 +40,17 @@ jest.mock('firebase/functions', () => ({
   getFunctions: jest.fn(() => mockFunctions),
   connectFunctionsEmulator: jest.fn(),
 }));
+jest.mock('firebase/storage', () => ({
+  getStorage: jest.fn(() => mockStorage),
+  connectStorageEmulator: jest.fn(),
+}));
 
 // Mock the firebaseConfig module
 jest.mock('../../config/firebaseConfig', () => ({
   firebaseConfig: { apiKey: 'test', projectId: 'test-project' },
   useEmulators: false,
   emulatorHost: 'localhost',
-  emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001' },
+  emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001', storage: '9199' },
 }));
 
 // ─── Test subclass & suite ────────────────────────────────────────────────────
@@ -72,11 +77,15 @@ describe('BaseFirebaseService', () => {
       getFunctions: jest.fn(() => mockFunctions),
       connectFunctionsEmulator: jest.fn(),
     }));
+    jest.doMock('firebase/storage', () => ({
+      getStorage: jest.fn(() => mockStorage),
+      connectStorageEmulator: jest.fn(),
+    }));
     jest.doMock('../../config/firebaseConfig', () => ({
       firebaseConfig: { apiKey: 'test', projectId: 'test-project' },
       useEmulators: false,
       emulatorHost: 'localhost',
-      emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001' },
+      emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001', storage: '9199' },
     }));
 
     ServiceRegistry = require('../ServiceRegistry').default;
@@ -97,6 +106,25 @@ describe('BaseFirebaseService', () => {
       new Concrete(); // First instantiation registers app
       new Concrete(); // Second should not call initializeApp again
       expect(initializeApp).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ─── storage ─────────────────────────────────────────────────────────────────
+
+  describe('storage', () => {
+    test('exposes Storage from the same app, and registers it once', () => {
+      const { getStorage } = require('firebase/storage');
+      class Concrete extends (BaseFirebaseService as any) {}
+      const first = new Concrete();
+      const second = new Concrete();
+
+      // The default app is the one App Check is attached to, which production
+      // Storage enforces -- a second app would be refused.
+      expect(getStorage).toHaveBeenCalledTimes(1);
+      expect(getStorage).toHaveBeenCalledWith(mockApp);
+      expect(first.storage).toBe(mockStorage);
+      expect(second.storage).toBe(mockStorage);
+      expect(ServiceRegistry.getInstance().get('storage')).toBe(mockStorage);
     });
   });
 
@@ -246,11 +274,15 @@ describe('BaseFirebaseService', () => {
         getFunctions: jest.fn(() => mockFunctions),
         connectFunctionsEmulator: jest.fn(),
       }));
+      jest.doMock('firebase/storage', () => ({
+        getStorage: jest.fn(() => mockStorage),
+        connectStorageEmulator: jest.fn(),
+      }));
       jest.doMock('../../config/firebaseConfig', () => ({
         firebaseConfig: { apiKey: 'test', projectId: 'test-project' },
         useEmulators: true, // <-- emulators enabled
         emulatorHost: 'localhost',
-        emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001' },
+        emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001', storage: '9199' },
       }));
 
       const BFS = require('../BaseFirebaseService').default;
@@ -264,6 +296,9 @@ describe('BaseFirebaseService', () => {
       expect(connectAuthEmulator).toHaveBeenCalled();
       expect(connectFirestoreEmulator).toHaveBeenCalled();
       expect(connectFunctionsEmulator).toHaveBeenCalled();
+
+      const { connectStorageEmulator } = require('firebase/storage');
+      expect(connectStorageEmulator).toHaveBeenCalledWith(mockStorage, 'localhost', 9199);
     });
 
     test('should NOT connect to emulators when useEmulators is false', () => {
@@ -282,11 +317,15 @@ describe('BaseFirebaseService', () => {
         getFunctions: jest.fn(() => mockFunctions),
         connectFunctionsEmulator: jest.fn(),
       }));
+      jest.doMock('firebase/storage', () => ({
+        getStorage: jest.fn(() => mockStorage),
+        connectStorageEmulator: jest.fn(),
+      }));
       jest.doMock('../../config/firebaseConfig', () => ({
         firebaseConfig: { apiKey: 'test', projectId: 'test-project' },
         useEmulators: false,
         emulatorHost: 'localhost',
-        emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001' },
+        emulatorPorts: { auth: '9099', firestore: '8080', functions: '5001', storage: '9199' },
       }));
 
       const BFS = require('../BaseFirebaseService').default;
@@ -295,6 +334,9 @@ describe('BaseFirebaseService', () => {
 
       const { connectAuthEmulator } = require('firebase/auth');
       expect(connectAuthEmulator).not.toHaveBeenCalled();
+
+      const { connectStorageEmulator } = require('firebase/storage');
+      expect(connectStorageEmulator).not.toHaveBeenCalled();
     });
   });
 });
