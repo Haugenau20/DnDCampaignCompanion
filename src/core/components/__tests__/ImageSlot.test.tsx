@@ -49,6 +49,12 @@ describe('ImageSlot', () => {
       expect(img).toHaveAttribute('decoding', 'async');
     });
 
+    it('loads right away when the page asks, for a picture at the top of the page', () => {
+      // Lazy loading only delays a picture that is already in view.
+      render(<ImageSlot label="x" image={image()} alt="Portrait of Bilbo" loading="eager" />);
+      expect(screen.getByRole('img', { name: 'Portrait of Bilbo' })).toHaveAttribute('loading', 'eager');
+    });
+
     it('no longer draws the empty ruling, its caption, or the "none added" label', () => {
       render(
         <ImageSlot label="Bilbo — no image added" caption="Optional." image={image()} alt="Portrait of Bilbo" />

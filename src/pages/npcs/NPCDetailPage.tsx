@@ -654,6 +654,7 @@ const NPCDetailPage: React.FC = () => {
                   caption="Optional. The page is finished without one."
                   image={npc.image}
                   alt={`Portrait of ${npc.name}`}
+                  loading="eager"
                 />
                 <ImageUploadControl
                   className="px-6 pt-4"

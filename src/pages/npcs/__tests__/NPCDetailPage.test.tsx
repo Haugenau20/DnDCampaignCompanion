@@ -1486,6 +1486,8 @@ describe("NPCDetailPage", () => {
 
       const img = screen.getByRole("img", { name: "Portrait of Gandalf" });
       expect(img).toHaveAttribute("src", portrait.url);
+      // Top of the page: lazy loading would only delay it.
+      expect(img).toHaveAttribute("loading", "eager");
       expect(screen.getByRole("button", { name: "Replace portrait" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Remove portrait" })).toBeInTheDocument();
     });

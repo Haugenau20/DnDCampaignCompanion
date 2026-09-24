@@ -14,14 +14,22 @@ users are locked out of something or losing function · `medium` real user
 friction, or a prerequisite for something that is · `low` worth doing, no one
 is hurt while it waits · `nit` bookkeeping or polish
 
+**Maintainer's focus** (2026-09-24): everything touching Firebase Storage and images
+on the site is `high`, ahead of anything that would otherwise rank there.
+
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
+| high | T064 | Portrait NPC image slot | S | open | Maintainer's focus: images. Layout only; images are stored uncropped |
+| high | T020 | Screenshot on bug reports | M | open | Maintainer's focus: Storage. Needs its own path (`support/{uid}/…`), rules and cleanup |
+| high | T058 | Sweep orphaned image files | S | open | Maintainer's focus: Storage. Keeps the bucket honest as uploads grow |
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
 | medium | T056 | Sign-in errors carry a reportable ref | S | blocked | On hold for an app-wide error-numbering system, which the maintainer wants first |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
+| medium | T062 | Quick add's description box is two rows | S | open | Every note conversion lands text in it; real friction, small fix |
+| medium | T061 | PRs are checked by the build alone | M | open | Tests never run in CI, and merging deploys live |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
 | low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
@@ -30,14 +38,18 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T037 | A group cannot be deleted | L | open | Leave exists; deletion is rare and large |
 | low | T017 | Batch actions for other entities | L | open | Convenience; must follow T032's write-amplification fix |
 | low | T018 | Sub-chapters | L | open | New feature; #017 ordering question comes first |
-| low | T020 | Screenshot on bug reports | M | open | Storage exists now; needs its own path, rules and cleanup |
-| low | T058 | Sweep orphaned image files | S | open | Cents of storage, no user harm; only failed writes create them |
 | low | T054 | Sign in with Discord | L | needs scoping | Where tabletop players already are; Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Nobody asked yet; prefer an authenticator app over SMS, which bills per text |
 | low | T040 | No accent pair for the band | S | open | Interim `.band-chip` works; schema-owner decision |
 | low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
+| low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; the fix is leaving CRA, which needs a plan |
+| low | T060 | 35 build lint warnings | M | open | One is a real a11y bug (theme menu); the rest want a look each |
+| low | T063 | Entity pages look like three products | L | needs scoping | NPC page doesn't use the shell; pick the look first |
+| low | T065 | Firebase CLI 13 → 15 | S | open | Brings the artifact cleanup policy; re-run the emulator suites after |
+| low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
 | nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
+| nit | T066 | Two stale remote branches | S | open | One is merged; the other holds 5 unmerged 2025 commits |
 | nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
 | nit | T009 | Hero band fallback never recorded | S | open | Answered by practice; write it down |
 | nit | T010 | Two `D36`s in `colour-schema.md` | S | open | Ambiguous citations |
@@ -201,24 +213,6 @@ has the drop zone.
   questions without one.
 - **Source**: todo.txt, 2026-09-16
 
-### T058 — Sweep orphaned image files
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-24
-
-Image writes are ordered so a failure can orphan a file but never leave a
-document pointing at a missing one (`shared/hooks/useImageAttachment.ts`). So
-orphans exist by design: an upload whose document write failed, an old file
-whose delete failed after a replace, the image of a deleted NPC or location
-when that delete's follow-up failed.
-
-- **Where**: a scheduled Cloud Function listing `groups/**` in the image bucket
-  (`firebase/functions/src/shared/imageBucket.ts`) and deleting any object that
-  no `image`/`crest` field references and that is older than a day (the age
-  guard keeps it off an upload still being saved).
-- **Why it can wait**: each orphan is ~200 KB against a 5 GB free quota, and
-  only failed writes make one. `deleteCampaign` already removes a whole
-  campaign's prefix.
-- **Source**: `docs/superpowers/specs/2026-09-24-storage-images-design.md` §7
-
 ### T054 — Sign in with Discord
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-23
 
@@ -309,6 +303,50 @@ The same email can keep the magic link for signing in on the device that opens i
 - **Rollback**: the current approve-from-the-phone flow keeps working without
   any of this, so it stays the fallback.
 - **Source**: maintainer, 2026-09-24
+
+### T062 — Quick add's description box is two rows tall
+**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-24
+
+Creating an NPC, location or quest from a note pre-fills the description with
+the extracted text, and it lands in a two-row box. Long text is nearly
+unreadable before the user decides whether to keep it.
+
+- **Where**: `shared/components/quick-add/QuickAddForm.tsx:162` — the line field
+  is `isTextArea` with `rows={2}`. Note conversion navigates to `/npcs/create`
+  etc. (`features/collaboration/notes/context/NoteContext.tsx:420`), which
+  renders `QuickAddPage.tsx:47` with the text as `initialLine`. The dialog form
+  of the same component is `max-w-lg` (`QuickAddDialog.tsx:51`).
+- **Catch**: one form serves both the dialog and the page. The field should grow
+  with what it holds rather than be taller for everyone.
+- **Source**: todo.txt, 2026-09-24
+
+### T063 — The NPC, location and quest pages look like three products
+**Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-24
+
+The maintainer wants the three entity pages streamlined in how they look.
+
+- **Measured**: the location and quest pages share `EntityPageShell` (a dark
+  band header, a two-column body); the NPC page does not use it at all. It has
+  its own identity card with the image on top (`pages/npcs/NPCDetailPage.tsx:650`).
+  The shell's own doc comment says `15-6` consumed it unchanged. That is not
+  what the tree shows.
+- **Question before sizing**: which look wins, the band or the card? And is the
+  goal one shell for all three, or a shared visual language only? T064 (a
+  portrait NPC slot) is a piece of this, and small enough to do first.
+- **Source**: todo.txt, 2026-09-24
+
+### T064 — The NPC's image slot is landscape; a portrait wants to be tall
+**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-24
+
+The NPC image spans the identity card at `h-40 sm:h-48`, so a portrait photo is
+centre-cropped into a wide strip.
+
+- **Where**: `pages/npcs/NPCDetailPage.tsx:652`, the `ImageSlot`'s `className`.
+- **Catch**: none in the data. Images are stored uncropped with their size
+  (`core/types/storedImage.ts`), so this is layout only. A tall slot beside the
+  name changes the card's layout, which is T063's question. Centre-cropping can
+  still cut a face; a focal point on `StoredImage` is the fix if it bites.
+- **Source**: todo.txt, 2026-09-24
 
 ---
 
@@ -449,6 +487,19 @@ Measured against the four create forms, the premise holds for the quest only.
 - **Source**: `docs/design/plan/15-entity-authoring/handoff/15-1-quick-add.md`
   item 1 against `00-entity-authoring.md` §1.2 and §4
 
+
+### T066 — Two stale branches on the remote
+**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-24
+
+Two old branches remain on GitHub, and neither ever had a PR.
+
+- **`feature/third-party-integrations`**: fully merged into `main`. Deleting it
+  loses nothing.
+- **`feature/form-context-separation`**: **5 commits not on `main`**, last one
+  2025-06-07 ("complete form/context separation refactoring with standardized
+  entity architecture"). The 2026 feature-first restructure almost certainly
+  superseded it. But deleting it discards those commits, which is the maintainer's call.
+- **Source**: todo.txt, 2026-09-24
 
 ---
 
@@ -616,6 +667,85 @@ handoff instructed.
   the quest was created and then nothing in the product referred to it.
 - **Source**: Phase 14.5, from its own instruction to check rather than assume
 
+### T058 — Sweep orphaned image files
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-24
+
+Image writes are ordered so a failure can orphan a file but never leave a
+document pointing at a missing one (`shared/hooks/useImageAttachment.ts`). So
+orphans exist by design: an upload whose document write failed, an old file
+whose delete failed after a replace, the image of a deleted NPC or location
+when that delete's follow-up failed.
+
+- **Where**: a scheduled Cloud Function listing `groups/**` in the image bucket
+  (`firebase/functions/src/shared/imageBucket.ts`) and deleting any object that
+  no `image`/`crest` field references and that is older than a day (the age
+  guard keeps it off an upload still being saved).
+- **Why it can wait**: each orphan is ~200 KB against a 5 GB free quota, and
+  only failed writes make one. `deleteCampaign` already removes a whole
+  campaign's prefix.
+- **Source**: `docs/superpowers/specs/2026-09-24-storage-images-design.md` §7
+
+### T059 — Create React App's peer dependencies no longer resolve
+**Type** debt · **Size** L · **Status** open · **Verified** 2026-09-24
+
+A plain `npm install` fails with `ERESOLVE`. It only works with
+`--legacy-peer-deps`, which is what CI uses.
+
+- **Measured**: `react-scripts@5.0.1` declares TypeScript `^3.2.1 || ^4` against
+  the project's `^5.7.3`; its `jest-watch-typeahead@1.1.0` wants Jest 27/28
+  against `^29.7.0`. CRA itself is no longer maintained, so no upgrade of it fixes this.
+- **Where**: `package.json:21`; CI installs in `docker/Dockerfile.frontend.prod:8`
+  (`npm install --legacy-peer-deps`, not `npm ci`, so the lockfile is not enforced).
+- **Catch**: the real fix is leaving CRA (e.g. Vite), which touches the build,
+  env-var names (`REACT_APP_*`), jest config and the four-resolvers table in
+  `CLAUDE.md`. Needs its own plan. It may also answer T030's bundle question.
+- **Source**: todo.txt, 2026-09-24
+
+### T060 — The build prints 35 lint warnings
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-24
+
+`npm run build` compiles "with warnings": 35 in 20 files, all pre-existing.
+
+- **Measured** (2026-09-24): 19 `react-hooks/exhaustive-deps`, 15
+  `@typescript-eslint/no-unused-vars`, and 1 `jsx-a11y/role-supports-aria-props`.
+- **The one that is a bug**: `shared/components/user-menu/ThemeSegmented.tsx:48`
+  puts `aria-pressed` on `role="menuitem"`. A screen reader is not told which
+  theme is selected; `menuitemradio` + `aria-checked` is the pattern.
+- **Catch**: an `exhaustive-deps` "fix" can change when an effect runs. Each one
+  wants a look, not a blanket autofix. And CRA turns warnings into errors when
+  `CI=true`, which matters for T061.
+- **Source**: todo.txt, 2026-09-24
+
+### T061 — Pull requests are checked by the build alone
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-24
+
+The PR workflow builds the app in Docker and deploys a preview. That is the
+only gate. Tests, lint and the functions suite never run in CI.
+
+- **Where**: `.github/workflows/firebase-hosting-pull-request.yml`: one job,
+  `build_and_preview` (the build does type-check, via CRA).
+- **What is missing**: `npm test` (the ~5,500-test suite a merge is supposed to
+  keep green), lint, and `firebase/functions`' suite. The functions suite
+  needs the emulators, which `firebase emulators:exec` can run in CI.
+- **Catch**: a lint gate is red on day one until T060 is done. And a failing
+  test does not block the merge-to-main deploy today, so this is what turns
+  "must be green" into something enforced.
+- **Source**: todo.txt, 2026-09-24
+
+### T065 — The Firebase CLI is two major versions behind
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-24
+
+Installed globally: `firebase-tools` 13.32.0; the CLI offers 15.x.
+
+- **Why now**: the 2026-09-24 functions deploy ended with "Unhandled error
+  cleaning up build images. This could result in a small monthly bill". The
+  newer CLI's `firebase functions:artifacts:setpolicy` sets a cleanup policy
+  for that.
+- **Catch**: two majors can change emulator behaviour this repo leans on. Re-run
+  `firebase/functions`' suite (including the Storage rules suite and its
+  project-id quirk) and a `start-dev.ps1` round trip after upgrading.
+- **Source**: todo.txt, 2026-09-24
+
 ---
 
 ## Performance
@@ -757,6 +887,25 @@ because almost all of them are read-only to an implementing change.
   maintainer's hand, like `T010` and `T011`. The cheapest honest fix may be a
   single line in each tracker's header rather than 54 edits.
 - **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13
+
+### T067 — The repository carries files nobody reads
+**Type** docs · **Size** M · **Status** needs scoping · **Verified** 2026-09-24
+
+The maintainer wants the repo cleaned up, doc files especially.
+
+- **Measured**: 208 Markdown files under `docs/`: `testing/` 109, `design/` 59,
+  `superpowers/` 21, and a few each in `architecture/`, `project/` and `performance/`.
+  `CLAUDE.md` still names `docs/testing/post-test-coverage-roadmap.md` as
+  "start here", and it was last updated 2026-08-28 (it still warns about deploy
+  steps TODO.md shows were done since). T039 is one symptom of the same drift.
+- **Scripts**: `scripts/copyFeatureFiles.ps1` lists pre-restructure paths;
+  `scripts/manage-environment.ps1` is Docker-based and unused.
+- **Catch**: `docker/` is *not* dead. `CLAUDE.md` calls it unused, but CI builds
+  the frontend with `docker/Dockerfile.frontend.prod`. And many docs are phase
+  handoffs that code comments cite by name, so deleting one breaks references.
+- **Question before sizing**: archive (move under `docs/archive/`) or delete?
+  And is `TODO.md` the one "start here" file from now on?
+- **Source**: todo.txt, 2026-09-24
 
 ---
 
