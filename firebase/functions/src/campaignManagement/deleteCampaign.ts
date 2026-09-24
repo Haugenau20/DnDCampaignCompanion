@@ -2,6 +2,7 @@
 import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import {rethrowHttpsError} from "../shared/httpsErrors";
+import {imageBucket} from "../shared/imageBucket";
 
 interface DeleteCampaignData {
   groupId: string;
@@ -10,6 +11,7 @@ interface DeleteCampaignData {
 
 /**
  * Deletes a campaign and everything that belongs to it.
+ * That includes its images in Storage.
  *
  * This has to run server-side with the Admin SDK for two reasons:
  *  - Firestore does not cascade-delete subcollections when a parent document
@@ -121,7 +123,17 @@ export const deleteCampaign = functions.onCall(
       // Rejects if any queued write exhausted its retries.
       await writer.close();
 
-      // 2. Recursively delete the campaign document and every subcollection
+      // 2. The campaign's images (T021). They are keyed by the same path as
+      // the campaign, so one prefix covers every entity's files. The trailing
+      // slash matters: without it, deleting "c1" would also take "c10".
+      // Before recursiveDelete for the same reason as step 1: while the
+      // campaign document exists, a failure here is retried by retrying the
+      // call, and files already gone are simply not listed the second time.
+      await imageBucket().deleteFiles({
+        prefix: `groups/${groupId}/campaigns/${campaignId}/`,
+      });
+
+      // 3. Recursively delete the campaign document and every subcollection
       // beneath it (npcs, locations, quests, rumors, chapters,
       // story-progress, saga -- and any subcollection added later).
       // `recursiveDelete` enumerates subcollections via `listCollections()`,

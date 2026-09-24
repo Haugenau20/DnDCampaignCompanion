@@ -10,6 +10,7 @@ import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from "core/constants/time";
 import {
   PRIVACY_CONTROLLER,
   PRIVACY_HOSTING_REGION,
+  IMAGE_STORAGE_REGION,
   EXTRACTION_FACTS,
   OPENAI_DPA_ACCEPTED,
 } from "core/constants/privacy";
@@ -77,7 +78,7 @@ const PrivacyPolicyPage: React.FC = () => {
             <Typography variant="body-sm" color="secondary">
               {PRIVACY_CONTROLLER.name}, {PRIVACY_CONTROLLER.country}, is
               responsible for it. Stored in Google Firebase, in{" "}
-              {PRIVACY_HOSTING_REGION}.
+              {PRIVACY_HOSTING_REGION}; pictures in {IMAGE_STORAGE_REGION}.
             </Typography>
             <Button
               variant="link"
@@ -176,6 +177,12 @@ const PrivacyPolicyPage: React.FC = () => {
               store what you type into it.
             </Typography>
             <Typography>
+              Pictures you add to an NPC, a place or your party's crest. Before
+              a photo leaves your device it is shrunk and re-saved, which removes
+              its hidden details — the camera it came from, and where the photo
+              was taken. Only the picture itself is uploaded.
+            </Typography>
+            <Typography>
               We do not record which pages you visit or what you click. Session
               activity is detected only to decide whether you are still there.
             </Typography>
@@ -192,6 +199,12 @@ const PrivacyPolicyPage: React.FC = () => {
               quests, NPCs and locations you wrote stay with the group for the
               rest of the table; your name, your characters and your private
               notes are deleted.
+            </Typography>
+            <Typography>
+              Pictures are shown to the members of the group they belong to.
+              Each one is served from a link that is hard to guess, and anyone
+              who has its link can open it — the app only ever gives that link
+              to members of the group, but a member could pass it on.
             </Typography>
           </Section>
 
@@ -278,10 +291,12 @@ const PrivacyPolicyPage: React.FC = () => {
               expressed by pressing the button, and you can simply not press it.
             </Typography>
             <Typography>
-              Data is held in Google Firebase in {PRIVACY_HOSTING_REGION}. Two
-              things reach outside the EU: entity extraction, described above,
-              and Google's own operation of the platform, which can involve
-              support access from other countries.
+              Data is held in Google Firebase in {PRIVACY_HOSTING_REGION}. Three
+              things reach outside the EU: entity extraction, described above;
+              pictures, which are stored in {IMAGE_STORAGE_REGION} under
+              Google's data processing terms for Firebase; and Google's own
+              operation of the platform, which can involve support access from
+              other countries.
             </Typography>
           </Section>
 

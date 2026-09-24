@@ -7,6 +7,9 @@ import {
   getFirestore, Firestore, connectFirestoreEmulator 
 } from "firebase/firestore";
 import { getAnalytics, Analytics } from "firebase/analytics";
+import {
+  getStorage, FirebaseStorage, connectStorageEmulator
+} from "firebase/storage";
 import { 
   getFunctions, Functions, connectFunctionsEmulator 
 } from "firebase/functions";
@@ -29,6 +32,7 @@ abstract class BaseFirebaseService {
   protected db: Firestore;
   protected analytics: Analytics;
   protected functions: Functions;
+  protected storage: FirebaseStorage;
   
   // Shared group and campaign context
   private static activeGroupId: string | null = null;
@@ -47,6 +51,9 @@ abstract class BaseFirebaseService {
       const db = getFirestore(app);
       const analytics = getAnalytics(app);
       const functions = getFunctions(app, 'europe-west1');
+      // From the default app: it is the one App Check is attached to
+      // (src/index.tsx), and production Storage enforces App Check.
+      const storage = getStorage(app);
       
       // Connect to emulators in development environment
       if (useEmulators) {
@@ -72,12 +79,20 @@ abstract class BaseFirebaseService {
           emulatorHost, 
           parseInt(emulatorPorts.functions)
         );
+
+        // Connect Storage to emulator
+        connectStorageEmulator(
+          storage,
+          emulatorHost,
+          parseInt(emulatorPorts.storage)
+        );
       }
       
       this.registry.register("auth", auth);
       this.registry.register("db", db);
       this.registry.register("analytics", analytics);
       this.registry.register("functions", functions);
+      this.registry.register("storage", storage);
     }
     
     // Get Firebase services from registry
@@ -86,6 +101,7 @@ abstract class BaseFirebaseService {
     this.db = this.registry.get("db");
     this.analytics = this.registry.get("analytics");
     this.functions = this.registry.get("functions");
+    this.storage = this.registry.get("storage");
   }
   
   /**

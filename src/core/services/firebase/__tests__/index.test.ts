@@ -130,6 +130,10 @@ describe('firebase/index', () => {
     test('should have a document property', () => {
       expect(firebaseServices).toHaveProperty('document');
     });
+
+    test('should have an images property', () => {
+      expect(firebaseServices).toHaveProperty('images');
+    });
   });
 
   // ─── Named exports ────────────────────────────────────────────────────────
@@ -162,6 +166,12 @@ describe('firebase/index', () => {
 
     test('should export document as named export', () => {
       expect(indexModule.document).toBeDefined();
+    });
+
+    test('should export images as named export, backed by ImageStorageService', () => {
+      expect(indexModule.images).toBeDefined();
+      expect(typeof indexModule.images.upload).toBe('function');
+      expect(typeof indexModule.images.remove).toBe('function');
     });
   });
 

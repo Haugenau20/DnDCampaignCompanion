@@ -20,6 +20,11 @@ rumors, NPCs, locations, and quests. Components should focus on player-facing fe
   emulator data to `firebase/emulator-data`; `start` re-imports it if present)
 - Sample data: `.\scripts\manage-dev-data.ps1 -Action generate`
 
+The emulators run from **`firebase/firebase.emulators.json`**, not `firebase.json`: the Storage
+emulator won't start under the real project id without a `storage.rules` key, and that key in
+`firebase.json` would let a bare `firebase deploy` push the permissive emulator rules live. Starting
+emulators by hand? Pass `--config firebase.emulators.json` too, or Storage (9199) is missing.
+
 `scripts/manage-environment.ps1` and `docker/` are Docker-based and unused. Don't reach for them
 without checking with the maintainer — a compile error was once diagnosed against a container that
 was never running.
@@ -39,7 +44,8 @@ the errors name files from whichever branch you visited.
 
 ### Environment gotchas
 - `start-dev.ps1 -Action restart` can report "emulators failed to start within 45 seconds" when they
-  did start — check ports 4000/5001/8080/9099 before retrying. `-Action stop` can leave an orphaned
+  did start — check ports 4000/5001/8080/9099/9199 before retrying. `-Action start` stops at that
+  message without starting `npm start`; start the dev server yourself. `-Action stop` can leave an orphaned
   `react-scripts` holding port 3000 that `-Action status` reports as "not running".
 - Responsive checks: a maximized Chrome window ignores resize below its minimum width. Render the app
   in a 320px-wide iframe instead — media queries evaluate against the iframe's own viewport.
@@ -93,7 +99,7 @@ When triaging a red test, first establish that it actually executed the code it 
 ### `firebase/functions` has its own suite — root `npm test` does not run it
 `cd firebase/functions && npm test` runs jest against the **running emulators** (start them with
 `start-dev.ps1` first; a `globalSetup` fails fast if they are down). Each suite uses its own `demo-`
-project id, so dev data is untouched. Not in CI (no emulator there). Tests live in
+project id, so dev data is untouched (one exception, below). Not in CI (no emulator there). Tests live in
 `firebase/functions/test/`:
 
 - **Callables** — invoked with `fn.run({data, auth})` against emulator Firestore. Covered:
@@ -106,6 +112,10 @@ project id, so dev data is untouched. Not in CI (no emulator there). Tests live 
 - **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` and acts as real users.
   `RULES_FILE=<path>` runs it against another revision — **that is the control**: run it against
   `git show HEAD:firebase/firestore.rules.prod` and the tests for whatever you closed must fail there.
+- **`test/rules/storage-rules-prod.test.ts`** — the same for `storage.rules.prod`, with the same
+  `RULES_FILE` control. **The one suite that writes to dev data**: the Storage emulator answers the
+  rules' `firestore.get()` from the project the emulators were started with, not the test's `demo-`
+  project, so it seeds membership docs there under `zz-storage-rules-` ids and deletes them after.
 
 The control rule applies to anything new: a suite green on its first run proves the code runs, not
 that it changed anything. Break the thing on purpose once and watch the right tests fail.

@@ -876,6 +876,16 @@
 }
 
 /*
+  A slot with a picture in it. The sunken fill shows only while the image
+  loads; the rule under it matches the empty state's, so filling a slot moves
+  nothing.
+*/
+.image-slot-filled {
+  background-color: var(--surface-sunken-bg);
+  border-bottom: var(--border-width-sm) solid var(--surface-card-border);
+}
+
+/*
   The caption sits on the ruling, so it takes the muted ink of the sunken
   surface it is drawn on rather than the page's.
 */

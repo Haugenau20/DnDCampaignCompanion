@@ -2,6 +2,7 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useFirebaseContext } from 'features/user-management/auth/context/FirebaseContext';
 import firebaseServices from 'core/services/firebase';
+import { StoredImage } from 'core/types/storedImage';
 
 export function useGroups() {
   const {
@@ -87,6 +88,18 @@ export function useGroups() {
       throw err;
     }
   }, [activeGroupId, setError, refreshGroups]);
+
+  /**
+   * Set or clear the active group's crest (admin only, T021), then refresh the
+   * group list the crest is read from.
+   */
+  const setGroupCrest = useCallback(async (crest: StoredImage | null): Promise<void> => {
+    if (!activeGroupId) {
+      throw new Error('No active group selected');
+    }
+    await firebaseServices.group.setGroupCrest(activeGroupId, crest);
+    await refreshGroups();
+  }, [activeGroupId, refreshGroups]);
 
   // Switch active group (alias for setActiveGroup for backward compatibility)
   //
@@ -214,6 +227,7 @@ export function useGroups() {
     activeGroupUserProfile,
     createGroup,
     updateGroup,
+    setGroupCrest,
     setActiveGroup,
     switchGroup,          
     joinGroupWithToken,   

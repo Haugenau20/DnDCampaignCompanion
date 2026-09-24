@@ -15,8 +15,16 @@ describe("PrivacyLastUpdated", () => {
   });
 
   it("formats the date en-GB — day before month, month spelled out", () => {
+    // Built from the constant, not a literal: the date is bumped by hand with
+    // every revision, and the literal this replaced ("3 September 2026") kept
+    // passing on the 23rd only because "23 September" contains it.
+    const [year, month, day] = PRIVACY_LAST_UPDATED.split("-").map(Number);
+    const monthName = new Date(Date.UTC(year, month - 1, 1)).toLocaleString("en-GB", {
+      month: "long",
+      timeZone: "UTC",
+    });
     render(<PrivacyLastUpdated />);
-    expect(screen.getByText(/3 September 2026/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`\\b${day} ${monthName} ${year}\\b`))).toBeInTheDocument();
   });
 
   it("does not follow the clock", () => {

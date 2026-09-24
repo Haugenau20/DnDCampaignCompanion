@@ -1,57 +1,91 @@
 // src/core/components/ImageSlot.tsx
 import React from 'react';
 import clsx from 'clsx';
+import { StoredImage } from '../types/storedImage';
+import { isOwnBucketUrl } from '../services/firebase/storage/ImageStorageService';
 
 export interface ImageSlotProps {
   /**
-   * What a screen reader is told. Must state the *state* honestly -- that no
-   * image has been added -- rather than describing an image that is not there.
+   * What a screen reader is told while the slot is empty. Must state the
+   * *state* honestly -- that no image has been added -- rather than describing
+   * an image that is not there.
    */
   label: string;
   /** A quiet line inside the band, for slots large enough to carry one. */
   caption?: string;
+  /** The image to show, when one has been added. */
+  image?: StoredImage | null;
+  /** Alt text for `image`, e.g. "Portrait of Bilbo". */
+  alt?: string;
   className?: string;
 }
 
 /**
- * The reserved space where an entity's image would go.
+ * The space where an entity's image goes.
  *
- * No bitmaps ship (D6), so **the empty state is the whole component**. Most
- * slots will be empty for most entities for the life of a campaign, which makes
- * "empty" the state that has to look deliberate; a slot that only looks right
- * once someone uploads something is a slot that looks wrong almost always.
- *
+ * **Empty is the common state**, and it has to look deliberate: most slots
+ * will be empty for most entities for the life of a campaign, and a slot that
+ * only looks right once someone uploads something looks wrong almost always.
  * Diagonal ruling in the page's own sunken tone reads as reserved space with a
- * design. A stock illustration would read as a wrong picture, and an upload
- * affordance would promise something this build cannot do -- there is no
- * Storage, no picker, and no generation behind it.
+ * design. A stock illustration would read as a wrong picture.
  *
- * Generalised from `PartyCrest`, which had the only instance until the NPC page
- * became the second. Two uses is the threshold; one was not.
+ * Filled, the picture covers the frame the caller sized. The stored image is
+ * uncropped and carries its own size, so any frame shape just crops it, and
+ * the width and height attributes reserve the space before the bytes arrive.
+ *
+ * An image whose URL is not a download URL for this app's own bucket is
+ * treated as absent: a member can write any string into a document, and a
+ * planted third-party URL would log everyone who opens the page.
+ *
+ * Adding, replacing and removing is `ImageUploadControl`'s job; this only
+ * shows what is there.
  */
 export const ImageSlot: React.FC<ImageSlotProps> = ({
   label,
   caption,
+  image,
+  alt,
   className,
-}) => (
-  <div
-    className={clsx(
-      'image-slot flex items-center justify-center px-4 text-center',
-      className
-    )}
-    role="img"
-    aria-label={label}
-    data-testid="image-slot"
-  >
-    {caption && (
-      // Hidden from the accessibility tree: `role="img"` already gives this
-      // element its whole accessible name, so the caption would either be
-      // ignored or read twice.
-      <span aria-hidden="true" className="image-slot-caption text-xs">
-        {caption}
-      </span>
-    )}
-  </div>
-);
+}) => {
+  if (image && isOwnBucketUrl(image.url)) {
+    return (
+      <div
+        className={clsx('image-slot-filled overflow-hidden', className)}
+        data-testid="image-slot"
+      >
+        <img
+          src={image.url}
+          alt={alt ?? ''}
+          width={image.width}
+          height={image.height}
+          loading="lazy"
+          decoding="async"
+          className="block w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={clsx(
+        'image-slot flex items-center justify-center px-4 text-center',
+        className
+      )}
+      role="img"
+      aria-label={label}
+      data-testid="image-slot"
+    >
+      {caption && (
+        // Hidden from the accessibility tree: `role="img"` already gives this
+        // element its whole accessible name, so the caption would either be
+        // ignored or read twice.
+        <span aria-hidden="true" className="image-slot-caption text-xs">
+          {caption}
+        </span>
+      )}
+    </div>
+  );
+};
 
 export default ImageSlot;

@@ -8,6 +8,7 @@ import {HttpsError} from "firebase-functions/v2/https";
 export const EMULATOR_HOSTS = {
   Firestore: process.env.FIRESTORE_EMULATOR_HOST || "127.0.0.1:8080",
   Auth: process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099",
+  Storage: process.env.FIREBASE_STORAGE_EMULATOR_HOST || "127.0.0.1:9199",
 };
 
 /**
@@ -26,6 +27,7 @@ export function useEmulatorProject(projectId: string): admin.firestore.Firestore
   }
   process.env.FIRESTORE_EMULATOR_HOST = EMULATOR_HOSTS.Firestore;
   process.env.FIREBASE_AUTH_EMULATOR_HOST = EMULATOR_HOSTS.Auth;
+  process.env.FIREBASE_STORAGE_EMULATOR_HOST = EMULATOR_HOSTS.Storage;
   process.env.GCLOUD_PROJECT = projectId;
   if (admin.apps.length === 0) {
     admin.initializeApp({projectId});

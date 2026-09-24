@@ -8,6 +8,7 @@ import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { toNoteDate } from 'shared/utils/dateFormatter';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { generateUniqueEntityId } from 'core/utils/entity-id';
+import { discardImage } from 'shared/hooks/useImageAttachment';
 
 // Custom event for location changes (deletion, update, etc.)
 export const LOCATION_CHANGED_EVENT = 'location-data-changed';
@@ -248,6 +249,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       await deleteData(locationId);
+      // After the document: a failure can then only orphan the file.
+      if (location.image) discardImage(location.image.path);
 
       setLocations(prevLocations =>
         prevLocations
@@ -277,6 +280,12 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Then delete the parent location
     await deleteData(locationId);
+
+    // Every deleted place's picture, once all the documents are gone.
+    for (const id of [...childrenIds, locationId]) {
+      const image = getLocationById(id)?.image;
+      if (image) discardImage(image.path);
+    }
 
     // Optimistically update local state by removing deleted locations
     setLocations(prevLocations =>

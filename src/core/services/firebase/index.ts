@@ -7,6 +7,7 @@ import GroupService from './group/GroupService';
 import InvitationService from './group/InvitationService';
 import CampaignService from './campaign/CampaignService';
 import DocumentService from './data/DocumentService';
+import ImageStorageService from './storage/ImageStorageService';
 
 /**
  * The set of Firebase-backed services this module exposes.
@@ -18,6 +19,7 @@ export interface FirebaseServices {
   invitation: InvitationService;
   campaign: CampaignService;
   document: DocumentService;
+  images: ImageStorageService;
 }
 
 /** Memoized bundle; populated on first use, never at module scope. */
@@ -53,13 +55,18 @@ function initializeFirebaseServices(): FirebaseServices {
   const documentService = DocumentService.getInstance();
   registry.register('documentService', documentService);
 
+  // Not 'storage': that registry key holds the FirebaseStorage instance itself.
+  const imageStorageService = ImageStorageService.getInstance();
+  registry.register('imageStorageService', imageStorageService);
+
   return {
     auth: authService,
     user: userService,
     group: groupService,
     invitation: invitationService,
     campaign: campaignService,
-    document: documentService
+    document: documentService,
+    images: imageStorageService
   };
 }
 
@@ -113,6 +120,7 @@ export const group = lazyService('group');
 export const invitation = lazyService('invitation');
 export const campaign = lazyService('campaign');
 export const document = lazyService('document');
+export const images = lazyService('images');
 
 /**
  * Firebase services API
@@ -123,8 +131,15 @@ const firebaseServices: FirebaseServices = {
   group,
   invitation,
   campaign,
-  document
+  document,
+  images
 };
 
 export default firebaseServices;
 export { firebaseConfig };
+export {
+  entityImagePrefix,
+  crestPrefix,
+  isOwnBucketUrl
+} from './storage/ImageStorageService';
+export type { ImageEntityType } from './storage/ImageStorageService';

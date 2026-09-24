@@ -426,6 +426,42 @@ describe('GroupService', () => {
 
   // ─── updateGroup (T036) ──────────────────────────────────────────────────────
 
+  describe('setGroupCrest (T021)', () => {
+    const crest = {
+      path: 'groups/g1/crest/a.webp',
+      url: 'https://example/a',
+      width: 10,
+      height: 10,
+      uploadedBy: AUTH_UID,
+      uploadedAt: '2026-09-24T12:00:00.000Z',
+    };
+
+    test('writes the crest, and only the crest, to the group document', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(true);
+      mockUpdateDoc.mockResolvedValueOnce(undefined);
+      await GroupService.getInstance().setGroupCrest('g1', crest);
+      expect(mockUpdateDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'groups/g1' }),
+        { crest }
+      );
+    });
+
+    test('clears the crest with null', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(true);
+      mockUpdateDoc.mockResolvedValueOnce(undefined);
+      await GroupService.getInstance().setGroupCrest('g1', null);
+      expect(mockUpdateDoc.mock.calls[0][1]).toEqual({ crest: null });
+    });
+
+    test('refuses a non-admin without writing', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(false);
+      await expect(GroupService.getInstance().setGroupCrest('g1', crest)).rejects.toThrow(
+        'Only group admins can change the crest'
+      );
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
+    });
+  });
+
   describe('updateGroup', () => {
     test('writes the trimmed name and description to the group document', async () => {
       mockIsUserAdmin.mockResolvedValueOnce(true);

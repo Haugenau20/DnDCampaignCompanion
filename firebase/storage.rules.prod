@@ -1,0 +1,95 @@
+// firebase/storage.rules.prod
+//
+// ============================================================================
+// THIS FILE IS A REVIEW COPY. IT IS NOT DEPLOYED FROM HERE. EDITING IT CHANGES
+// NOTHING IN PRODUCTION. Paste it into the Firebase console to deploy.
+// ============================================================================
+//
+// The production Storage ruleset is authored and deployed through the Firebase
+// console, exactly as Firestore's is (see firestore.rules.prod). `firebase.json`
+// carries no `storage` key, so `firebase deploy` cannot touch Storage rules.
+// `storage.rules` is the PERMISSIVE EMULATOR ruleset, loaded only through
+// `firebase.emulators.json`. Do not "reconcile" the two.
+//
+// When pasting, the console asks to let Storage read Firestore. Accept: the
+// membership checks below are `firestore.get()` calls, and without that grant
+// every one of them fails, so every read and write is denied.
+//
+// Pinned by functions/test/rules/storage-rules-prod.test.ts.
+//
+// ---------------------------------------------------------------------------
+// WHAT THIS ALLOWS (design: docs/superpowers/specs/2026-09-24-storage-images-design.md)
+// ---------------------------------------------------------------------------
+// - Group members read, create and delete images on their campaign's NPCs and
+//   locations. Delete matches Firestore's relaxed entity delete (#1406).
+// - Group admins create and delete the group crest; members may read it. That
+//   matches who may update the group document.
+// - Nobody overwrites a file. Every upload is a new, random name (D3), which is
+//   what lets a download URL be cached forever.
+// - Only WebP or JPEG under 2 MB -- what `prepareImage` produces. The limit is
+//   MAX_UPLOAD_BYTES in src/core/utils/prepare-image.ts; keep the two equal.
+// - Everything else, including any path not listed, is denied.
+//
+// `read` governs issuing a download URL (and listing), NOT viewing through a
+// URL already issued: a download URL is a bearer link. Each `firestore.get()`
+// or `firestore.exists()` is billed as one Firestore read, so rules cost a
+// couple of reads per upload or URL issued and nothing per image view.
+//
+// Global admins are deliberately not granted anything here: nothing needs it,
+// and it would cost another Firestore read on every evaluation.
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Same source of truth as firestore.rules.prod's isGroupMember:
+    // the `groups` array on users/{uid}.
+    function isGroupMember(groupId) {
+      let userPath = /databases/(default)/documents/users/$(request.auth.uid);
+      return isSignedIn() &&
+             firestore.exists(userPath) &&
+             firestore.get(userPath).data.groups.hasAny([groupId]);
+    }
+
+    // Same source of truth as firestore.rules.prod's isGroupAdmin:
+    // `role` on groups/{groupId}/users/{uid}.
+    function isGroupAdmin(groupId) {
+      let profilePath = /databases/(default)/documents/groups/$(groupId)/users/$(request.auth.uid);
+      return isSignedIn() &&
+             firestore.exists(profilePath) &&
+             firestore.get(profilePath).data.role == "admin";
+    }
+
+    // A NEW file `prepareImage` could have produced, under a name
+    // `ImageStorageService.upload` could have chosen. `resource == null` is
+    // what actually forbids overwriting: with `update: false` alone, an upload
+    // to an existing name still succeeded (verified in the emulator,
+    // 2026-09-24), so immutability can't rest on `update` alone.
+    function isPreparedImage(fileName) {
+      return resource == null &&
+             request.resource.size < 2 * 1024 * 1024 &&
+             request.resource.contentType.matches('image/(webp|jpeg)') &&
+             fileName.matches('[0-9a-f-]{36}[.](webp|jpg)');
+    }
+
+    match /groups/{groupId}/campaigns/{campaignId}/{entityType}/{entityId}/{fileName} {
+      allow read: if isGroupMember(groupId);
+      allow create: if entityType in ['npcs', 'locations'] &&
+                       isPreparedImage(fileName) &&
+                       isGroupMember(groupId);
+      allow update: if false;
+      allow delete: if isGroupMember(groupId);
+    }
+
+    match /groups/{groupId}/crest/{fileName} {
+      allow read: if isGroupMember(groupId);
+      allow create: if isPreparedImage(fileName) && isGroupAdmin(groupId);
+      allow update: if false;
+      allow delete: if isGroupAdmin(groupId);
+    }
+  }
+}

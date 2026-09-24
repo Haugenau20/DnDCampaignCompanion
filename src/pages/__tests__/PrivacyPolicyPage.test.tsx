@@ -8,6 +8,7 @@ import {
   PRIVACY_SECTIONS,
   PRIVACY_CONTROLLER,
   PRIVACY_HOSTING_REGION,
+  IMAGE_STORAGE_REGION,
 } from "core/constants/privacy";
 import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from "core/constants/time";
 import { unnamedControlsIn } from "@/test-utils/accessible-names";
@@ -205,6 +206,33 @@ describe("PrivacyPolicyPage — content that must be there", () => {
     expect(
       screen.getAllByText(new RegExp(PRIVACY_HOSTING_REGION.split(" ")[0]))
     ).toHaveLength(2);
+  });
+
+  describe("pictures (T021)", () => {
+    it("names where pictures are stored, in the summary card and in the legal basis", () => {
+      render(<PrivacyPolicyPage />);
+      expect(screen.getAllByText(new RegExp(IMAGE_STORAGE_REGION.split(" ")[0]))).toHaveLength(2);
+    });
+
+    it("says what is collected, and that a photo's hidden details are removed first", () => {
+      const { container } = render(<PrivacyPolicyPage />);
+      const section = container.querySelector("#what-we-collect");
+      expect(section!.textContent).toMatch(/pictures/i);
+      expect(section!.textContent).toMatch(/where (a|the) photo was taken/i);
+    });
+
+    it("says a picture's link opens it for anyone who has it", () => {
+      const { container } = render(<PrivacyPolicyPage />);
+      const section = container.querySelector("#groups-and-sharing");
+      expect(section!.textContent).toMatch(/anyone who has (its|the) link/i);
+    });
+
+    it("counts pictures among what leaves the EU", () => {
+      const { container } = render(<PrivacyPolicyPage />);
+      const section = container.querySelector("#legal-basis");
+      expect(section!.textContent).toMatch(/Three things reach outside the EU/);
+      expect(section!.textContent).toMatch(/pictures/i);
+    });
   });
 
   it("names Datatilsynet and says you need not come to us first", () => {

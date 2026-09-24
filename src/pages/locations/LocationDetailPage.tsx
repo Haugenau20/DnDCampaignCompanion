@@ -6,6 +6,8 @@ import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
 import Select from 'core/components/Select';
 import EntitySigil from 'core/components/EntitySigil';
+import ImageSlot from 'core/components/ImageSlot';
+import { entityImagePrefix } from 'core/services/firebase/storage/ImageStorageService';
 import {
   useLocations,
   useNPCs,
@@ -22,8 +24,10 @@ import {
   KNOWLEDGE_OPTIONS,
 } from 'features/campaign-entities';
 import type { Location, LocationType, LocationStatus } from 'features/campaign-entities';
-import { useUser } from 'features/user-management';
+import { useUser, useGroups, useCampaigns } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
+import ImageUploadControl from 'shared/components/ImageUploadControl';
+import { useImageAttachment } from 'shared/hooks/useImageAttachment';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { EntityPageShell, EntityPageSection, FieldPrompt } from 'shared/components/entity-page';
@@ -93,8 +97,8 @@ const LocationNotFound: React.FC<{ onBack: () => void }> = ({ onBack }) => (
  *   under the description; `ContentAttribution` holds created-by and
  *   last-modified-by and **nothing in between** (§8, T005), so a line under one
  *   field would be inventing a history the data does not carry.
- * - No image beyond `ImageSlot`'s reserved space. Uploads are T021 and need
- *   Storage rules this repo does not deploy.
+ * - No gallery. One picture heads the page (T021); anything more is a
+ *   different feature.
  */
 const LocationDetailPage: React.FC = () => {
   const { locationId } = useParams<{ locationId: string }>();
@@ -112,6 +116,8 @@ const LocationDetailPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
   const { openQuickAdd } = useQuickAdd();
   const { activeGroupUserProfile } = useUser();
+  const { activeGroupId } = useGroups();
+  const { activeCampaignId } = useCampaigns();
 
   const {
     locations,
@@ -247,6 +253,15 @@ const LocationDetailPage: React.FC = () => {
     await refreshLocations();
   };
 
+  const picture = useImageAttachment({
+    prefix:
+      location && activeGroupId && activeCampaignId
+        ? entityImagePrefix(activeGroupId, activeCampaignId, 'locations', location.id)
+        : null,
+    current: location?.image,
+    save: (image) => save({ image }),
+  });
+
   const addNote = async (text: string) => {
     if (!location) return;
     const author =
@@ -325,6 +340,24 @@ const LocationDetailPage: React.FC = () => {
             insideCount,
             location.lastVisited ? formatNoteDate(location.lastVisited) : undefined
           )}
+          image={
+            <ImageSlot
+              className="h-40 sm:h-56"
+              label={`${location.name} — no image added`}
+              image={location.image}
+              alt={location.name}
+            />
+          }
+          imageControl={
+            canAct && (
+              <ImageUploadControl
+                subject="picture"
+                hasImage={Boolean(location.image)}
+                onUpload={picture.upload}
+                onRemove={picture.remove}
+              />
+            )
+          }
           bandControl={
             canAct && (
               <StateLadder

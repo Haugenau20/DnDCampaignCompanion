@@ -1,4 +1,6 @@
 // src/core/types/user.ts
+import { StoredImage } from "./storedImage";
+
 /**
  * Character name entry with optional campaign association
  */
@@ -83,6 +85,8 @@ export interface Group {
   createdAt: Date | string;
   /** UID of the user who created the group */
   createdBy: string;
+  /** The party's crest, set by group admins only; null once removed */
+  crest?: StoredImage | null;
 }
 
 /**

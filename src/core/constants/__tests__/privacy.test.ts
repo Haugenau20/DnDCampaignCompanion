@@ -6,6 +6,7 @@ import {
   PRIVACY_TABLE_ROWS,
   PRIVACY_SECTIONS,
   EXTRACTION_FACTS,
+  IMAGE_STORAGE_REGION,
 } from "../privacy";
 
 describe("privacy constants", () => {
@@ -55,11 +56,21 @@ describe("privacy constants", () => {
     expect(serialised).not.toMatch(/@[\w.-]+\.\w+/);
   });
 
-  it("covers all five disclosed data categories, with extraction highlighted", () => {
-    expect(PRIVACY_TABLE_ROWS).toHaveLength(5);
+  // Six since T021 added pictures; the category count is the requirement.
+  it("covers all six disclosed data categories, with extraction highlighted", () => {
+    expect(PRIVACY_TABLE_ROWS).toHaveLength(6);
     const highlighted = PRIVACY_TABLE_ROWS.filter((row) => row.highlighted);
     expect(highlighted).toHaveLength(1);
     expect(highlighted[0].where).toContain("OpenAI");
+  });
+
+  it("discloses pictures as stored in the United States, visible to the group", () => {
+    const images = PRIVACY_TABLE_ROWS.find((row) => row.id === "images");
+    expect(images).toBeDefined();
+    expect(images!.where).toContain("United States");
+    expect(images!.where).toMatch(/group/i);
+    expect(IMAGE_STORAGE_REGION).toMatch(/us-west1/);
+    expect(IMAGE_STORAGE_REGION).toContain("United States");
   });
 
   it("gives every table row a unique id", () => {
