@@ -43,10 +43,13 @@ and restart the dev server. **A `git checkout` while the dev server runs reliabl
 the errors name files from whichever branch you visited.
 
 ### Environment gotchas
-- `start-dev.ps1 -Action restart` can report "emulators failed to start within 45 seconds" when they
-  did start — check ports 4000/5001/8080/9099/9199 before retrying. `-Action start` stops at that
-  message without starting `npm start`; start the dev server yourself. `-Action stop` can leave an orphaned
-  `react-scripts` holding port 3000 that `-Action status` reports as "not running".
+- The scripts' health checks must use `127.0.0.1` and `Invoke-WebRequest -UseBasicParsing`. Until
+  2026-09-24 they used `localhost` without it, and always failed: Windows PowerShell's default
+  parser refuses to run non-interactively, and the dev server listens on IPv4 only, so `localhost`
+  tries `::1` first and outlasts the 2 s timeout. Symptoms, if they return: `start`/`restart` claims
+  the emulators "failed to start within 45 seconds" and never runs `npm start`, `stop` **silently
+  skips the export**, and `status` says nothing is running. Check ports 3000/4000/5001/8080/9099/9199.
+- `-Action stop` can leave an orphaned `react-scripts` holding port 3000.
 - Responsive checks: a maximized Chrome window ignores resize below its minimum width. Render the app
   in a 320px-wide iframe instead — media queries evaluate against the iframe's own viewport.
 - The header overflows horizontally below ~380px on **every** route (tracked in `TODO.md`). If your

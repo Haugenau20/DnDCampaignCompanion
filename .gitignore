@@ -44,7 +44,6 @@ coverage
 # Test reports
 /test-reports/
 
-/scripts/*
 # One-off data-migration artefacts written into the repo root by
 # src/utils/__dev__/normalizeChapterDateModified.ts. Audit reports list document
 # paths; migrate journals contain the before/after values used for rollback.
