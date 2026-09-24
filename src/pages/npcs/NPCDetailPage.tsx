@@ -1,5 +1,6 @@
 // src/pages/npcs/NPCDetailPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import clsx from 'clsx';
 import { useParams } from 'react-router-dom';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
@@ -17,7 +18,10 @@ import { useUser, useGroups, useCampaigns } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
 import ImageUploadControl from 'shared/components/ImageUploadControl';
 import { useImageAttachment } from 'shared/hooks/useImageAttachment';
-import { entityImagePrefix } from 'core/services/firebase/storage/ImageStorageService';
+import {
+  entityImagePrefix,
+  isOwnBucketUrl,
+} from 'core/services/firebase/storage/ImageStorageService';
 import { formatNoteDate, toNoteDate } from 'shared/utils/dateFormatter';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
@@ -491,6 +495,13 @@ const NPCDetailPage: React.FC = () => {
     save: (image) => save({ image }),
   });
 
+  /**
+   * Whether the card has a portrait to show. Asked the way `ImageSlot` asks
+   * it: an image outside the app's own bucket is never drawn, so it must not
+   * take the sigil's place or reserve a frame either.
+   */
+  const hasPortrait = Boolean(npc?.image && isOwnBucketUrl(npc.image.url));
+
   /** Close one editor, credit the save in words, and take focus back. */
   const afterSave = (field: EditableField) => {
     closeField(field);
@@ -647,27 +658,46 @@ const NPCDetailPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
             <div className="flex flex-col gap-6 min-w-0">
               {/* ---- Identity. The band and the card are one object. ---- */}
-              <section className="card rounded-lg overflow-hidden">
-                <ImageSlot
-                  className="h-40 sm:h-48"
-                  label={`${npc.name} — no image added`}
-                  caption="Optional. The page is finished without one."
-                  image={npc.image}
-                  alt={`Portrait of ${npc.name}`}
-                  loading="eager"
-                />
-                <ImageUploadControl
-                  className="px-6 pt-4"
-                  subject="portrait"
-                  hasImage={Boolean(npc.image)}
-                  onUpload={portrait.upload}
-                  onRemove={portrait.remove}
-                />
+              {/* A person is taller than they are wide, so the portrait
+                  stands beside the name rather than spanning the card as a
+                  location's picture does (T064). Without one there is no
+                  empty frame: the sigil is the NPC's picture until then. */}
+              <section className="card rounded-lg p-6 flex flex-col sm:flex-row sm:items-start gap-6">
+                {hasPortrait && (
+                  <ImageUploadControl
+                    variant="compact"
+                    className="w-40 sm:w-44 shrink-0 self-center sm:self-start"
+                    subject="portrait"
+                    hasImage
+                    onUpload={portrait.upload}
+                    onRemove={portrait.remove}
+                  >
+                    <ImageSlot
+                      className="portrait-frame aspect-[3/4]"
+                      label={`${npc.name} — no image added`}
+                      image={npc.image}
+                      alt={`Portrait of ${npc.name}`}
+                      loading="eager"
+                    />
+                  </ImageUploadControl>
+                )}
 
-                <div className="p-6 flex flex-col gap-5">
+                <div className="flex-1 min-w-0 flex flex-col gap-5">
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="flex items-center gap-4 min-w-0">
-                      <EntitySigil entityId={npc.id} name={npc.name} size={56} />
+                      {!hasPortrait && (
+                        <ImageUploadControl
+                          variant="compact"
+                          placement="outside"
+                          className="shrink-0"
+                          subject="portrait"
+                          hasImage={false}
+                          onUpload={portrait.upload}
+                          onRemove={portrait.remove}
+                        >
+                          <EntitySigil entityId={npc.id} name={npc.name} size={56} />
+                        </ImageUploadControl>
+                      )}
                       <div className="min-w-0 flex flex-col gap-1">
                         {isEditing('name') ? (
                           <InlineEditor
@@ -778,7 +808,14 @@ const NPCDetailPage: React.FC = () => {
 
                       Each opens where it sits. The resting state is exactly
                       what it was: a label and a word. */}
-                  <div className="border-t divider pt-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div
+                    className={clsx(
+                      'border-t divider pt-5 grid grid-cols-2 gap-4',
+                      // Beside a portrait the column is narrower, and four
+                      // across would wrap "Human (Dúnedain)" until there is room.
+                      hasPortrait ? 'xl:grid-cols-4' : 'sm:grid-cols-4'
+                    )}
+                  >
                     <div className="flex flex-col gap-1">
                       {isEditing('status') ? (
                         <StateLadder

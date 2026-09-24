@@ -19,7 +19,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T064 | Portrait NPC image slot | S | open | Maintainer's focus: images. Layout only; images are stored uncropped |
+| high | T068 | Hover image controls on location and crest | S | open | Maintainer's focus: images. The NPC portrait already has them |
 | high | T020 | Screenshot on bug reports | M | open | Maintainer's focus: Storage. Needs its own path (`support/{uid}/…`), rules and cleanup |
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
@@ -29,6 +29,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
 | medium | T062 | Quick add's description box is two rows | S | open | Every note conversion lands text in it; real friction, small fix |
 | medium | T061 | PRs are checked by the build alone | M | open | Tests never run in CI, and merging deploys live |
+| low | T069 | Breadcrumb overflows at 320px | S | open | Masked today by the header, which overflows on every route |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
 | low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
@@ -134,7 +135,21 @@ documents agreed with each other and none of them agreed with the product.
 
 ## Bugs
 
-None open.
+### T069 — A long breadcrumb overflows the page at 320px
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-24
+
+On `/npcs/aragorn` in a 320px iframe, `main` scrolls to 327px in a 303px
+viewport. The only overflowing elements outside header and footer are the
+breadcrumb's `ol`, its `li`s and the current-page label.
+
+- **Where**: `shared/components/Breadcrumb.tsx:37`, where the `ol` is
+  `flex items-center space-x-2`, with no wrap and no truncation.
+- **Touches**: every page that renders a breadcrumb (NPC, EntityPageShell's
+  location and quest pages, the story pages, quick add). Only the NPC page
+  was measured.
+- **Catch**: hidden behind the header's own overflow below ~380px (see
+  `CLAUDE.md`), so fixing this alone won't stop the page scrolling sideways.
+- **Source**: found checking T064's layout, 2026-09-24
 
 ---
 
@@ -326,25 +341,31 @@ The maintainer wants the three entity pages streamlined in how they look.
 
 - **Measured**: the location and quest pages share `EntityPageShell` (a dark
   band header, a two-column body); the NPC page does not use it at all. It has
-  its own identity card with the image on top (`pages/npcs/NPCDetailPage.tsx:650`).
+  its own identity card, with a tall portrait beside the name rather than a
+  band across the top (`pages/npcs/NPCDetailPage.tsx:665`). Places are wide
+  and people are tall, so the two need not share one image shape.
   The shell's own doc comment says `15-6` consumed it unchanged. That is not
   what the tree shows.
 - **Question before sizing**: which look wins, the band or the card? And is the
-  goal one shell for all three, or a shared visual language only? T064 (a
-  portrait NPC slot) is a piece of this, and small enough to do first.
+  goal one shell for all three, or a shared visual language only?
 - **Source**: todo.txt, 2026-09-24
 
-### T064 — The NPC's image slot is landscape; a portrait wants to be tall
+### T068 — The location picture and party crest still carry a row of image buttons
 **Type** feature · **Size** S · **Status** open · **Verified** 2026-09-24
 
-The NPC image spans the identity card at `h-40 sm:h-48`, so a portrait photo is
-centre-cropped into a wide strip.
+The maintainer wants add/replace/remove to appear on hover in the image's
+top-right corner, not as a full-width button row. The NPC portrait does this
+now through `ImageUploadControl`'s `variant="compact"`; two images still don't.
 
-- **Where**: `pages/npcs/NPCDetailPage.tsx:652`, the `ImageSlot`'s `className`.
-- **Catch**: none in the data. Images are stored uncropped with their size
-  (`core/types/storedImage.ts`), so this is layout only. A tall slot beside the
-  name changes the card's layout, which is T063's question. Centre-cropping can
-  still cut a face; a focal point on `StoredImage` is the fix if it bites.
+- **Where**: `pages/locations/LocationDetailPage.tsx:352` (`imageControl`, a
+  full row under the band) and `pages/layouts/dashboard/sections/PartyCrest.tsx:68`
+  (a full row under the group name).
+- **Catch**: the location page goes through `EntityPageShell`, which puts
+  `imageControl` under the band on purpose (T040: the band has no authored
+  colour pair for status and error text; `EntityPageShell.tsx:41`). The
+  compact control shows its messages on a `card` note below the picture,
+  which would sit over the band. Check that reads right before dropping the
+  shell's slot. The crest has no such catch.
 - **Source**: todo.txt, 2026-09-24
 
 ---
