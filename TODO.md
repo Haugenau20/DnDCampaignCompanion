@@ -21,7 +21,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 |---|---|---|---|---|---|
 | high | T064 | Portrait NPC image slot | S | open | Maintainer's focus: images. Layout only; images are stored uncropped |
 | high | T020 | Screenshot on bug reports | M | open | Maintainer's focus: Storage. Needs its own path (`support/{uid}/…`), rules and cleanup |
-| high | T058 | Sweep orphaned image files | S | open | Maintainer's focus: Storage. Keeps the bucket honest as uploads grow |
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
@@ -666,24 +665,6 @@ handoff instructed.
   "View quest" link opens it too. That was the missing half of the conversion:
   the quest was created and then nothing in the product referred to it.
 - **Source**: Phase 14.5, from its own instruction to check rather than assume
-
-### T058 — Sweep orphaned image files
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-24
-
-Image writes are ordered so a failure can orphan a file but never leave a
-document pointing at a missing one (`shared/hooks/useImageAttachment.ts`). So
-orphans exist by design: an upload whose document write failed, an old file
-whose delete failed after a replace, the image of a deleted NPC or location
-when that delete's follow-up failed.
-
-- **Where**: a scheduled Cloud Function listing `groups/**` in the image bucket
-  (`firebase/functions/src/shared/imageBucket.ts`) and deleting any object that
-  no `image`/`crest` field references and that is older than a day (the age
-  guard keeps it off an upload still being saved).
-- **Why it can wait**: each orphan is ~200 KB against a 5 GB free quota, and
-  only failed writes make one. `deleteCampaign` already removes a whole
-  campaign's prefix.
-- **Source**: `docs/superpowers/specs/2026-09-24-storage-images-design.md` §7
 
 ### T059 — Create React App's peer dependencies no longer resolve
 **Type** debt · **Size** L · **Status** open · **Verified** 2026-09-24

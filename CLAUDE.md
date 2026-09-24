@@ -114,6 +114,9 @@ project id, so dev data is untouched (one exception, below). Not in CI (no emula
   and `extractEntities`'s party exclusion — with OpenAI stubbed by `jest.mock("openai")`, the way to
   test any callable that calls out. Older callables (`createGroup`, `deleteCampaign`, …) have none
   yet; `test/emulator.ts` is the harness to copy.
+- **Scheduled** — `sweepOrphanedImagesDaily` never fires in the emulator; its body,
+  `sweepOrphanedImages(now)`, is tested directly. `now` is injected because the Storage emulator
+  cannot backdate a file's `timeCreated`.
 - **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` and acts as real users.
   `RULES_FILE=<path>` runs it against another revision — **that is the control**: run it against
   `git show HEAD:firebase/firestore.rules.prod` and the tests for whatever you closed must fail there.
