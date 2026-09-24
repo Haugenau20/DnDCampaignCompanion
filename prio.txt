@@ -35,7 +35,7 @@ Do first: T046 → T023 (the loader cluster)
 
   The extractor is the feature that most distinguishes this app from a wiki, and right now conversion
   writes references that cannot resolve — a location name into parentId, NPC names into relatedNPCIds,
-  objectives as strings against an object field. It also manufactures T049's "Unplaced" rows on
+  objectives as strings against an object field. It also manufactures the directory's "Unplaced" rows on
   purpose. It's M rather than S only because the name→id resolution needs a decision (no match / two
   matches) before anything else can be mapped; the other four findings are plumbing and could ship
   first.

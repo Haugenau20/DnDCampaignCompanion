@@ -175,6 +175,28 @@ export const WhereThisSits: React.FC<WhereThisSitsProps> = ({
             note={`${formatLocationType(parent.type)} · the parent`}
             onOpen={() => onOpen(parent.id)}
           />
+        ) : parentId ? (
+          /*
+            The record names a parent, but nothing loaded carries that id -- the
+            directory files these under "Unplaced". Saying "at the top level"
+            here would be false. The tray's parent chip cannot render for an id
+            that resolves to nothing, so its `x` -- the usual way to the top
+            level -- is missing; this button stands in for it.
+          */
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+            <Typography variant="body-sm" color="secondary" className="italic">
+              The place that held this one is no longer in this campaign.
+            </Typography>
+            {canAct && (
+              <button
+                type="button"
+                onClick={() => void run(() => onMove(undefined))}
+                className="text-sm selectable-item rounded-md px-2 py-1"
+              >
+                Move to the top level
+              </button>
+            )}
+          </div>
         ) : (
           <Typography variant="body-sm" color="secondary" className="px-3 py-2 italic">
             At the top level — nothing holds this place.

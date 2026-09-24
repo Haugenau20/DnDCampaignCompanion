@@ -27,7 +27,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T001 | `NPCNote.date` stored shape | S | open | Display already uniform; the remainder is data hygiene |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
-| low | T049 | "Unplaced" is unexplained | S | open | Confusing copy; the dev-data half is already closed |
 | low | T024 | Remove `?route=` hack + duplicate provider | S | open | Dead weight in production; tidy-up |
 | low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
 | low | T043 | Orphaned `importantNPCs` names | S | open | Nothing was destroyed; a judgement call about one campaign |
@@ -331,43 +330,6 @@ the cross-domain surfaces that render a mixed list.
   than stable.
 - **Source**: todo.txt, 2026-09-22 ("In locations (and potentially other places),
   then lucide icon should be swapped out with the color pallette with letter")
-
-### T049 — "Unplaced" is a diagnosis the reader is not given
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-22
-
-The locations directory groups places whose `parentId` names nothing under a
-muted heading reading **"Unplaced"**, with no further text. That is precise to
-whoever wrote it and opaque to everybody else: the row looks normal, the place
-plainly *has* a parent recorded, and nothing on screen says the reference is
-broken or what to do about it. The sibling group one block up gets an
-explanatory line when searching; this one gets none.
-
-- **Where**: `src/features/campaign-entities/locations/components/LocationDirectory.tsx:396-400`.
-  The condition behind it is `buildLocationIndex`'s `orphans`
-  (`locations/utils/location-tree.ts:66-69`): a `parentId` that is not `''`/
-  `undefined` and is not in the loaded set. The group was added by #1416, which
-  made these rows visible at all — before it they rendered nowhere.
-- **Touches**: the `RosterGroup` call and its copy; possibly a per-row hint
-  ("its parent, `hobbiton`, is not in this campaign") and a route to fixing it,
-  since `Move elsewhere` already exists.
-- **Catch**: the honest text depends on which cause you are naming. Two are
-  live: a renamed parent (#303) and a deleted parent. A third — note conversion
-  writing a location's *name* into `parentId` — was closed by `9cf2b8a`
-  (2026-09-22): `useQuickAddCreate` resolves the extractor's `parentLocation`
-  through `shared/utils/resolve-name-to-id`, and an unmatched or ambiguous name
-  now leaves `parentId` empty rather than dangling. Records converted *before*
-  that commit can still carry a name there.
-- **The dev-data half of this report is already closed.** The seed generator now
-  creates `hobbiton`, in the same Hobbit array as `bag-end`
-  (`src/utils/__dev__/generators/contentGenerators/locationGenerator.ts:194`,
-  added by `e668807` on 2026-07-31); checking all four campaigns' arrays found
-  **no dangling `parentId` anywhere** in current seed data. So Bag End showing as
-  unplaced means the emulator dataset in hand predates that commit —
-  `.\scripts\manage-dev-data.ps1 -Action generate` should clear it. *Unverified*:
-  this was read from the generator, not observed in a running emulator.
-- **Source**: todo.txt, 2026-09-22 ("Right now in the dev data one location is
-  'Unplaced'. No idea what this means or how it is even possible? (The Hobbit -
-  Bag End)")
 
 ### T054 — Sign in with Discord
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-23
