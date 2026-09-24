@@ -10,4 +10,4 @@ The consolidated review is the source of truth for the audit performed on 2026-0
 
 Six findings were re-checked against `main` at `ebc0a28`, and **three were already fixed** by work that landed after the audit — including `PERF-01`, the Critical one, and `PERF-07`. `PERF-10` is half closed. **The review's prioritized remediation order therefore opens with a finding that no longer exists; do not work straight down it.** The remaining nine (`PERF-02`, `03`, `05`, `06`, `09`, `11`, `12`, `13`, `14`) have not been checked at all.
 
-Which findings are still open, and what is tracked against them, lives in [`TODO.md`](../../TODO.md) under **Performance** — entries `T029`–`T033`. This directory stays the record of the audit and its evidence; it is not updated as findings close.
+Which findings are still open, and what is tracked against them, lives in [`TODO.md`](../../TODO.md) under **Performance** — entries `T030`, `T032` and `T033`. This directory stays the record of the audit and its evidence; it is not updated as findings close.

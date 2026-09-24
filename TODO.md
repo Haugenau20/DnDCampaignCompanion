@@ -18,7 +18,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 |---|---|---|---|---|---|
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T019 | Extraction reads PCs as NPCs | M | open | Degrades the AI feature on every run; roster data already exists |
-| medium | T029 | Notes fetched twice, unbounded | M | open | Read cost grows with every past campaign, on every route |
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
@@ -664,7 +663,7 @@ review says so itself. Six findings were re-checked on 2026-09-16 at `ebc0a28`:
 | `PERF-01` search never terminates on whitespace | Critical | **Fixed.** All three split sites are now `split(/\s+/).filter(Boolean)`, and `findWordMatches` (`SearchService.ts:294`) guards `if (!word) return []`. `SearchBar.tsx` is gone, replaced by `shared/components/command-palette/`. The regression test that did not ship with the fix landed as T031 (2026-09-23), pinning each guard separately. |
 | `PERF-07` context switch refreshes then reloads | High | **Fixed.** The only `window.location.reload()` left in `src/` is `ErrorBoundary.tsx:62`. |
 | `PERF-10` all routes + full Lodash in one bundle | Medium | **Half fixed.** Zero `lodash` imports remain in `src/`. Route splitting is still open — see T030. |
-| `PERF-04` notes loaded twice, unbounded | High | **Still true** — see T029. |
+| `PERF-04` notes loaded twice, unbounded | High | **Fixed** 2026-09-24 — `NoteContext` reads once, constrained to the active campaign, and reads nothing before one is selected. New note ids are random, so nothing needs the other campaigns' notes. |
 | `PERF-08` duplicate collection owners | Medium | **Fixed** 2026-09-22 — one fetch per collection, pinned by `shared/hooks/__tests__/provider-fetch-counts.test.tsx`. |
 | `PERF-15` duplicate `NavigationProvider` | Low | **Fixed** 2026-09-24 — `index.tsx` mounts no provider of its own; `App`'s is the only one. |
 
@@ -672,22 +671,6 @@ The **other nine are unverified against current `main`** — `PERF-02`, `03`,
 `05`, `06`, `09`, `11`, `12`, `13`, `14`. That is T033. The review's own
 prioritized list opens with a finding that is already fixed, so do not work
 straight down it.
-
-### T029 — Notes are fetched twice on every authenticated route, unbounded
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-16 · `PERF-04`
-
-- **Where**: `src/features/collaboration/notes/context/NoteContext.tsx` reads the
-  whole `groups/{group}/users/{user}/notes` path with no campaign constraint and
-  filters by `campaignId` in memory at `:69-73`. Its callback lists
-  `activeCampaignId` at `:99` even though the Firestore path never uses it, so it
-  runs once when the group arrives and again when the campaign does.
-- **Touches**: `NoteContext`, a Firestore composite index for the constrained
-  query, and `app/App.tsx`, which mounts the provider for every route.
-- **Catch**: cost grows with a user's notes across **all historical campaigns**,
-  not with the active one, and both runtime runs saw two identical notes targets
-  on Home, Privacy, NPCs, Locations and Notes alike. Fixing the dependency list
-  without also constraining the query only halves it.
-- **Source**: performance review
 
 ### T030 — One eager bundle ships every route
 **Type** debt · **Size** M · **Status** open · **Verified** 2026-09-16 · `PERF-10`
