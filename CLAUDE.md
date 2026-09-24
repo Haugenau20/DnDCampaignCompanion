@@ -181,8 +181,9 @@ CI, which has no emulator. Two kinds of suite live there, in `firebase/functions
 
 - **Callables** — invoked directly with `fn.run({data, auth})`, against real emulator Firestore.
   Covers `redeemInvitation`, `setMemberRole`, the sign-up gate (`reserveSignUp` and the
-  `gateAccountCreation` blocking function, whose handler is exported as `admitAccount`) and the
-  last-admin guard in `removeUserFromGroup` / `deleteUser`. The older callables (`createGroup`, `deleteCampaign`, `extractEntities`, …) have none
+  `gateAccountCreation` blocking function, whose handler is exported as `admitAccount`), the
+  last-admin guard in `removeUserFromGroup` / `deleteUser`, and signing in from another device
+  (`startDeviceSignIn` / `approveDeviceSignIn` / `claimDeviceSignIn`). The older callables (`createGroup`, `deleteCampaign`, `extractEntities`, …) have none
   yet; `test/emulator.ts` is the harness to copy.
 - **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` into the emulator and
   acts as real users. `RULES_FILE=<path>` runs the same checks against another revision: **that is
@@ -205,6 +206,13 @@ address still meets the real gate.
 The control rule still applies to anything new: a suite that is green on the first run proves the
 code runs, not that it changed anything. Break the thing on purpose once and watch the right tests
 fail.
+
+**Signing in from another device needs one production grant.** `claimDeviceSignIn` mints a custom
+token (`createCustomToken`), which in production requires the functions' runtime service account to
+hold **Service Account Token Creator** (`iam.serviceAccounts.signBlob`) on itself. The emulator needs
+nothing, so no test catches a missing grant — the symptom live is every claim failing as `internal`.
+Expired `deviceSignIns` documents are deleted lazily by `startDeviceSignIn`; a Firestore TTL policy on
+`expiresAt` is the intended sweep for the rest.
 
 **The deployed rules live in the console.** On 2026-09-23 the console copy was read back and matched
 `firestore.rules.prod` rule for rule; treat that as a fact about that date, not a standing one.
@@ -359,7 +367,8 @@ the tree.
 ### Current State
 - **Testing Infrastructure**: Jest + React Testing Library, **5,144 tests across 260 suites**
 - **Coverage**: **91.96% statements / 92.42% lines / 85.77% functions / 84.05% branches**, against a uniform 80% CI floor in `jest.config.ts` (measured 2026-07-31 on `design-handoff/dashboard-1a`)
-- **Baseline**: **0 failed / 2 skipped / 5310 passed / 5312 total across 266 suites.** Measured 2026-09-23 on `feat/alternative-sign-in` (branched from `main` at 4fb444e; `main` itself was not re-measured). `firebase/functions`: **71 passed across 5 suites**, against the emulators.
+- **Baseline**: **0 failed / 2 skipped / 5341 passed / 5343 total across 267 suites.** Measured 2026-09-24 on `feat/cross-device-sign-in` (branched from `main` at db08333). `firebase/functions`: **99 passed across 6 suites**, against the emulators.
+  - The figure this replaced was **0 failed / 2 skipped / 5310 passed / 5312 total across 266 suites**, measured 2026-09-23 on `feat/alternative-sign-in`; functions then: 71 across 5 suites.
   - The figure this replaced was **0 failed / 2 skipped / 5271 passed / 5273 total across 264 suites**, measured 2026-09-23 on `fix/group-membership-authority`. The 2 skips are #901's, closed as testability-only. **Any red is a regression.** Running the suite while `npm run build` competes for CPU produced one timeout in `QuickAddForm.test.tsx` that passes alone — run the two sequentially.
   - The figure this replaced was **0 failed / 2 skipped / 5142 passed / 5144 total across 260 suites**, measured 2026-09-22 on `fix/entity-loader-consolidation`.
   - The figure this replaced — `4715 passed / 4717 total across 235 suites` — had gone stale by **25 suites and 427 tests**, having been taken on a branch that later merged. That is the largest drift this line has carried, and it is exactly what the rule below exists to catch. If you are about to trust this number without running it, run it.

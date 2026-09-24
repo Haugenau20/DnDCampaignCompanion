@@ -7,6 +7,7 @@ import {
     isSignInWithEmailLink,
     signInWithEmailLink,
     signInWithPopup,
+    signInWithCustomToken,
     linkWithPopup,
     getAdditionalUserInfo,
     deleteUser,
@@ -16,6 +17,7 @@ import {
     browserSessionPersistence
   } from 'firebase/auth';
   import { doc, updateDoc, getDoc } from 'firebase/firestore';
+  import { httpsCallable } from 'firebase/functions';
   import BaseFirebaseService from '../core/BaseFirebaseService';
   import ServiceRegistry from '../core/ServiceRegistry';
   import type UserService from '../user/UserService';
@@ -29,6 +31,25 @@ import {
     email: string;
     rememberMe: boolean;
   }
+
+  /**
+   * A request to sign this device in from another one, as `startDeviceSignIn`
+   * opened it. `secret` never leaves this device; `code` is shown to the
+   * reader, who types it on the device that approves.
+   */
+  export interface DeviceSignInRequest {
+    requestId: string;
+    secret: string;
+    code: string;
+    /** Epoch millis after which the request can no longer be used. */
+    expiresAt: number;
+  }
+
+  /** What polling a request reports. */
+  export type DeviceSignInClaim =
+    | { status: 'pending' }
+    | { status: 'expired' }
+    | { status: 'approved'; token: string };
 
   /** A way into an account, as the account settings name it. */
   export type SignInMethod = 'email' | 'google';
@@ -252,6 +273,39 @@ import {
     public async completeSignInLink(email: string, url: string, rememberMe: boolean = false): Promise<SignInResult> {
       await setPersistence(this.auth, persistenceFor(rememberMe));
       const credential = await signInWithEmailLink(this.auth, email, url);
+      localStorage.removeItem(PENDING_EMAIL_SIGN_IN_KEY);
+      return this.finishSignIn(credential, rememberMe);
+    }
+
+    /**
+     * Open a request to sign this device in from another one -- the device the
+     * magic link will be opened on. Its id goes into the link.
+     * @param email The address the link is about to be sent to
+     */
+    public async startDeviceSignIn(email: string): Promise<DeviceSignInRequest> {
+      const start = httpsCallable<{ email: string }, DeviceSignInRequest>(this.functions, 'startDeviceSignIn');
+      return (await start({ email })).data;
+    }
+
+    /**
+     * Ask whether another device has approved the request yet, and collect the
+     * sign-in token when it has. The token is handed over once only.
+     * @param request The request `startDeviceSignIn` opened
+     */
+    public async claimDeviceSignIn(request: Pick<DeviceSignInRequest, 'requestId' | 'secret'>): Promise<DeviceSignInClaim> {
+      const claim = httpsCallable<{ requestId: string; secret: string }, DeviceSignInClaim>(this.functions, 'claimDeviceSignIn');
+      return (await claim({ requestId: request.requestId, secret: request.secret })).data;
+    }
+
+    /**
+     * Sign in with the token an approved request handed over. The account
+     * exists already -- the approval came from it -- so nothing is created.
+     * @param token From `claimDeviceSignIn`
+     * @param rememberMe Whether the session should outlive the browser
+     */
+    public async signInWithDeviceToken(token: string, rememberMe: boolean = false): Promise<SignInResult> {
+      await setPersistence(this.auth, persistenceFor(rememberMe));
+      const credential = await signInWithCustomToken(this.auth, token);
       localStorage.removeItem(PENDING_EMAIL_SIGN_IN_KEY);
       return this.finishSignIn(credential, rememberMe);
     }

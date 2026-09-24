@@ -2,7 +2,11 @@
 import { useState, useCallback } from 'react';
 import { useFirebaseContext } from '../context/FirebaseContext';
 import firebaseServices from 'core/services/firebase';
+import { openDeviceApproval } from 'core/services/firebase/auth/deviceApproval';
+import type { DeviceApproval } from 'core/services/firebase/auth/deviceApproval';
 import type {
+  DeviceSignInClaim,
+  DeviceSignInRequest,
   PendingEmailSignIn,
   SignInMethod,
   SignInResult
@@ -74,6 +78,51 @@ export function useAuth() {
     }
   }, [setError]);
 
+  /**
+   * Open a request to sign this device in from the device the link is opened on.
+   * @param email The address the link is about to be sent to
+   */
+  const startDeviceSignIn = useCallback((email: string): Promise<DeviceSignInRequest> => {
+    return firebaseServices.auth.startDeviceSignIn(email);
+  }, []);
+
+  /**
+   * Whether another device has approved the request, with the sign-in token once it has.
+   * @param request The request `startDeviceSignIn` opened
+   */
+  const claimDeviceSignIn = useCallback((request: DeviceSignInRequest): Promise<DeviceSignInClaim> => {
+    return firebaseServices.auth.claimDeviceSignIn(request);
+  }, []);
+
+  /**
+   * Sign in with the token an approved request handed over.
+   * @param token From `claimDeviceSignIn`
+   * @param rememberMe Whether the session should outlive the browser
+   */
+  const signInWithDeviceToken = useCallback(async (
+    token: string,
+    rememberMe: boolean = false
+  ): Promise<SignInResult> => {
+    try {
+      setError(null);
+      const result = await firebaseServices.auth.signInWithDeviceToken(token, rememberMe);
+      setSessionExpired(false);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred during sign in');
+      throw err;
+    }
+  }, [setError]);
+
+  /**
+   * Use a magic link to approve another device, without signing this one in.
+   * @param email The address the link was sent to
+   * @param link The link as opened
+   */
+  const startDeviceApproval = useCallback((email: string, link: string): Promise<DeviceApproval> => {
+    return openDeviceApproval(email, link);
+  }, []);
+
   /** Attach Google to the signed-in account. */
   const linkGoogle = useCallback(async (): Promise<void> => {
     await firebaseServices.auth.linkGoogle();
@@ -140,6 +189,10 @@ export function useAuth() {
     sendSignInLink,
     completeSignInLink,
     signInWithGoogle,
+    startDeviceSignIn,
+    claimDeviceSignIn,
+    signInWithDeviceToken,
+    startDeviceApproval,
     linkGoogle,
     getSignInMethods,
     getPendingEmailSignIn,

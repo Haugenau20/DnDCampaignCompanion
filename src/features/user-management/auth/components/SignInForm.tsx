@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useDeviceSignInWait } from '../hooks/useDeviceSignInWait';
+import type { DeviceSignInRequest } from 'core/services/firebase/auth/AuthService';
 import Typography from 'core/components/Typography';
 import Input from 'core/components/Input';
 import Button from 'core/components/Button';
@@ -14,7 +16,10 @@ import { signInLinkUrl } from '../utils/email-link';
 import DevEmailLinkShortcut from './DevEmailLinkShortcut';
 
 interface SignInFormProps {
-  /** Called once a Google sign-in has completed on this page. */
+  /**
+   * Called once a sign-in has completed on this page: Google, or another
+   * device approving this one.
+   */
   onSuccess?: () => void;
   /**
    * Where a magic link should take the reader once it has signed them in.
@@ -38,6 +43,13 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * an address with no account still sends one, because Firebase does not say
  * whether an address has an account; the refusal comes when the link is
  * opened, and that page explains it.
+ *
+ * Every link also opens a request for *this* device to be signed in from the
+ * one the link is opened on -- usually a phone, where the inbox is. The
+ * "Check your inbox" screen shows the code to type there, and signs this
+ * device in by itself once it is approved. If the request cannot be opened,
+ * the link is sent without it: signing in on the device that opens the link
+ * must never depend on it.
  */
 const SignInForm: React.FC<SignInFormProps> = ({ onSuccess, next }) => {
   const [email, setEmail] = useState('');
@@ -45,8 +57,22 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess, next }) => {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<'link' | 'google' | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [deviceRequest, setDeviceRequest] = useState<DeviceSignInRequest | null>(null);
+  const [signingInHere, setSigningInHere] = useState(false);
 
-  const { sendSignInLink, signInWithGoogle } = useAuth();
+  const { sendSignInLink, signInWithGoogle, startDeviceSignIn, signInWithDeviceToken } = useAuth();
+
+  const deviceWait = useDeviceSignInWait(deviceRequest, async (token) => {
+    setSigningInHere(true);
+    setError(null);
+    try {
+      await signInWithDeviceToken(token, rememberMe);
+      onSuccess?.();
+    } catch (err) {
+      setError(describeSignInError(err));
+      setSigningInHere(false);
+    }
+  });
 
   const emailValid = EMAIL.test(email.trim());
   const busy = pending !== null;
@@ -59,7 +85,18 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess, next }) => {
 
     try {
       const address = email.trim();
-      await sendSignInLink(address, signInLinkUrl(window.location.origin, { next }), rememberMe);
+      let request: DeviceSignInRequest | null = null;
+      try {
+        request = await startDeviceSignIn(address);
+      } catch (err) {
+        console.error('Could not open a request to sign in from another device:', err);
+      }
+      await sendSignInLink(
+        address,
+        signInLinkUrl(window.location.origin, { next, device: request?.requestId }),
+        rememberMe
+      );
+      setDeviceRequest(request);
       setSentTo(address);
     } catch (err) {
       setError(describeSignInError(err));
@@ -103,12 +140,51 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess, next }) => {
             this device and you are in — no password needed.
           </Typography>
         </div>
+        {deviceRequest && (
+          <div className="card rounded-lg px-4 py-4 space-y-2" data-testid="device-sign-in">
+            {deviceWait === 'expired' ? (
+              <Typography variant="body-sm" color="secondary">
+                The code for signing in from another device has expired. Opening
+                the link on this device still works, or send a new one.
+              </Typography>
+            ) : (
+              <>
+                <Typography variant="body-sm">
+                  Opening the email on another device, like your phone? Choose{' '}
+                  <strong>Sign in on the other device</strong> there and enter
+                  this code:
+                </Typography>
+                <Typography
+                  className="font-heading text-3xl tracking-[0.4em] text-center py-1"
+                  aria-label={`Code ${deviceRequest.code.split('').join(' ')}`}
+                >
+                  {deviceRequest.code}
+                </Typography>
+                <Typography variant="body-sm" color="secondary" role="status">
+                  {signingInHere ? 'Approved — signing you in…' : 'This page signs you in by itself once you have.'}
+                </Typography>
+              </>
+            )}
+          </div>
+        )}
+        {error && (
+          <div
+            role="alert"
+            className="rounded-md border px-3 py-2 feedback-banner feedback-banner-error"
+          >
+            <Typography variant="body-sm">{error}</Typography>
+          </div>
+        )}
         <Typography variant="body-sm" color="secondary">
           Nothing there after a minute? Check your spam folder, or{' '}
           <button
             type="button"
             className="button-link underline"
-            onClick={() => setSentTo(null)}
+            onClick={() => {
+              setSentTo(null);
+              setDeviceRequest(null);
+              setError(null);
+            }}
           >
             use a different email
           </button>

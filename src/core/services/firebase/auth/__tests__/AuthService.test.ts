@@ -20,6 +20,9 @@ const mockLinkWithPopup = jest.fn();
 const mockGetAdditionalUserInfo = jest.fn();
 const mockDeleteUser = jest.fn();
 const mockSetCustomParameters = jest.fn();
+const mockSignInWithCustomToken = jest.fn();
+const mockCallable = jest.fn();
+const mockHttpsCallable = jest.fn((_fns: any, _name: string) => mockCallable);
 
 /** The `firebase/auth` surface AuthService uses, for both mock registrations. */
 const mockFirebaseAuthModule = () => ({
@@ -29,6 +32,7 @@ const mockFirebaseAuthModule = () => ({
   isSignInWithEmailLink: (a: any, b: any) => mockIsSignInWithEmailLink(a, b),
   signInWithEmailLink: (a: any, b: any, c: any) => mockSignInWithEmailLink(a, b, c),
   signInWithPopup: (a: any, b: any) => mockSignInWithPopup(a, b),
+  signInWithCustomToken: (a: any, b: any) => mockSignInWithCustomToken(a, b),
   linkWithPopup: (a: any, b: any) => mockLinkWithPopup(a, b),
   getAdditionalUserInfo: (a: any) => mockGetAdditionalUserInfo(a),
   deleteUser: (a: any) => mockDeleteUser(a),
@@ -62,6 +66,7 @@ jest.mock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
 jest.mock('firebase/functions', () => ({
   getFunctions: jest.fn(() => ({})),
   connectFunctionsEmulator: jest.fn(),
+  httpsCallable: (a: any, b: string) => mockHttpsCallable(a, b),
 }));
 
 jest.mock('@/core/services/firebase/config/firebaseConfig', () => ({
@@ -136,6 +141,7 @@ describe('AuthService', () => {
     jest.doMock('firebase/functions', () => ({
       getFunctions: jest.fn(() => ({})),
       connectFunctionsEmulator: jest.fn(),
+      httpsCallable: (a: any, b: string) => mockHttpsCallable(a, b),
     }));
     jest.doMock('@/core/services/firebase/config/firebaseConfig', () => ({
       firebaseConfig: { apiKey: 'test', projectId: 'test' },
@@ -169,9 +175,10 @@ describe('AuthService', () => {
     [
       mockSendSignInLinkToEmail, mockIsSignInWithEmailLink, mockSignInWithEmailLink,
       mockSignInWithPopup, mockLinkWithPopup, mockGetAdditionalUserInfo,
-      mockDeleteUser, mockSetCustomParameters,
+      mockDeleteUser, mockSetCustomParameters, mockSignInWithCustomToken, mockCallable,
     ].forEach((mock) => mock.mockReset());
     mockSignOut.mockReset();
+    mockHttpsCallable.mockClear();
     mockSetPersistence.mockReset();
     mockGetDoc.mockReset();
     mockUpdateDoc.mockReset();
@@ -460,6 +467,47 @@ describe('AuthService', () => {
       const svc = AuthService.getInstance();
       await expect(svc.completeSignInLink('a@b.com', 'link')).rejects.toThrow('INVITE_REQUIRED');
       expect(svc.getPendingEmailSignIn()).toEqual({ email: 'a@b.com', rememberMe: false });
+    });
+  });
+
+  describe('signing in from another device', () => {
+    test('startDeviceSignIn opens a request through the callable', async () => {
+      const request = { requestId: 'r1', secret: 's', code: '0471', expiresAt: 1 };
+      mockCallable.mockResolvedValueOnce({ data: request });
+      const svc = AuthService.getInstance();
+
+      await expect(svc.startDeviceSignIn('a@b.com')).resolves.toEqual(request);
+      expect(mockHttpsCallable).toHaveBeenCalledWith(expect.anything(), 'startDeviceSignIn');
+      expect(mockCallable).toHaveBeenCalledWith({ email: 'a@b.com' });
+    });
+
+    test('claimDeviceSignIn sends the id and secret, never the code', async () => {
+      mockCallable.mockResolvedValueOnce({ data: { status: 'pending' } });
+      const svc = AuthService.getInstance();
+
+      await expect(
+        svc.claimDeviceSignIn({ requestId: 'r1', secret: 's', code: '0471', expiresAt: 1 } as any)
+      ).resolves.toEqual({ status: 'pending' });
+      expect(mockHttpsCallable).toHaveBeenCalledWith(expect.anything(), 'claimDeviceSignIn');
+      expect(mockCallable).toHaveBeenCalledWith({ requestId: 'r1', secret: 's' });
+    });
+
+    test('signInWithDeviceToken signs in with the token, after setting persistence', async () => {
+      const fakeUser = { uid: 'uid-device' };
+      localStorage.setItem('pendingEmailSignIn', JSON.stringify({ email: 'a@b.com', rememberMe: true }));
+      mockSignInWithCustomToken.mockResolvedValueOnce({ user: fakeUser });
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(false));
+      const svc = AuthService.getInstance();
+
+      const result = await svc.signInWithDeviceToken('tok', true);
+
+      expect(mockSignInWithCustomToken).toHaveBeenCalledWith(mockAuth, 'tok');
+      expect(mockSetPersistence).toHaveBeenCalledWith(mockAuth, 'LOCAL');
+      expect(mockSetPersistence.mock.invocationCallOrder[0])
+        .toBeLessThan(mockSignInWithCustomToken.mock.invocationCallOrder[0]);
+      expect(result.user).toBe(fakeUser);
+      // The link that was sent is not needed any more on this device.
+      expect(svc.getPendingEmailSignIn()).toBeNull();
     });
   });
 

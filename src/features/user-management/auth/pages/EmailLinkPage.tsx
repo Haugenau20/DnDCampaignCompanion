@@ -5,15 +5,34 @@ import Typography from 'core/components/Typography';
 import Input from 'core/components/Input';
 import Button from 'core/components/Button';
 import { describeSignInError } from 'core/services/firebase/auth/signInErrors';
+import type { DeviceApproval } from 'core/services/firebase/auth/deviceApproval';
 import { useAuth } from '../hooks/useAuth';
 import { useInvitations } from '../../groups/hooks/useInvitations';
 import { readSignInLinkIntent } from '../utils/email-link';
 import { safeNextPath, CAMPAIGN_HOME } from '../utils/next-path';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CODE = /^\d{4}$/;
 
 /** Where the page is. */
-type Phase = 'invalid' | 'needEmail' | 'working' | 'failed';
+type Phase =
+  | 'invalid'
+  | 'choose'
+  | 'needEmail'
+  | 'approve'
+  | 'approved'
+  | 'working'
+  | 'failed';
+
+/**
+ * The error code a refusal carries, if any. A callable's `invalid-argument`
+ * is a mistyped code, which may be retried; anything else ends the approval.
+ * @param err Whatever the approval threw
+ */
+const errorCode = (err: unknown): string | undefined => {
+  const code = (err as { code?: unknown })?.code;
+  return typeof code === 'string' ? code : undefined;
+};
 
 /**
  * `/auth/link` -- where a magic sign-in link lands.
@@ -28,6 +47,12 @@ type Phase = 'invalid' | 'needEmail' | 'working' | 'failed';
  * taken meanwhile, the invitation was spent) is deleted again: an account in
  * no group can see nothing, and leaving it would count against the account
  * limit for nothing. The reader is sent back to the invitation to try again.
+ *
+ * A plain sign-in link that carries a `device` request, opened somewhere other
+ * than the browser that asked for it, first asks *which* device to sign in:
+ * this one, or the one that asked -- usually a laptop that asked, and a phone
+ * with the inbox. Approving the other one takes the code it shows, and signs
+ * in only that one (see `openDeviceApproval`).
  */
 const EmailLinkPage: React.FC = () => {
   const navigate = useNavigate();
@@ -37,7 +62,8 @@ const EmailLinkPage: React.FC = () => {
     getPendingEmailSignIn,
     completeSignInLink,
     deleteFreshAccount,
-    reloadUserContext
+    reloadUserContext,
+    startDeviceApproval
   } = useAuth();
   const { joinGroupWithToken } = useInvitations();
 
@@ -47,11 +73,30 @@ const EmailLinkPage: React.FC = () => {
   const [link] = useState(() => window.location.href);
   const [pending] = useState(() => getPendingEmailSignIn());
   const [phase, setPhase] = useState<Phase>(() =>
-    !isSignInLink(link) ? 'invalid' : pending ? 'working' : 'needEmail'
+    !isSignInLink(link)
+      ? 'invalid'
+      : pending
+        ? 'working'
+        : intent.device
+          ? 'choose'
+          : 'needEmail'
   );
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [approving, setApproving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const started = useRef(false);
+  // The throwaway sign-in that approves. Kept open while the form is up: the
+  // link can be used once, and a mistyped code should not cost it.
+  const approval = useRef<DeviceApproval | null>(null);
+
+  const closeApproval = useCallback(() => {
+    const open = approval.current;
+    approval.current = null;
+    open?.close().catch((err) => console.error('Error closing the approval sign-in:', err));
+  }, []);
+
+  useEffect(() => closeApproval, [closeApproval]);
 
   const inviteLink = intent.invitation
     ? `/join?groupId=${encodeURIComponent(intent.invitation.groupId)}&token=${encodeURIComponent(intent.invitation.token)}`
@@ -109,6 +154,44 @@ const EmailLinkPage: React.FC = () => {
     finish(email.trim(), false);
   };
 
+  const handleApproveSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const device = intent.device;
+    if (!device || approving || !EMAIL.test(email.trim()) || !CODE.test(code)) return;
+    setApproving(true);
+    setError(null);
+
+    let open = approval.current;
+    if (!open) {
+      try {
+        open = await startDeviceApproval(email.trim(), link);
+        approval.current = open;
+      } catch (err) {
+        // The link itself was refused -- another address, or already used.
+        setError(describeSignInError(err));
+        setPhase('failed');
+        setApproving(false);
+        return;
+      }
+    }
+
+    try {
+      await open.approve(device, code);
+      closeApproval();
+      setPhase('approved');
+    } catch (err) {
+      setError(describeSignInError(err));
+      if (errorCode(err) === 'functions/invalid-argument') {
+        setCode('');
+      } else {
+        closeApproval();
+        setPhase('failed');
+      }
+    } finally {
+      setApproving(false);
+    }
+  };
+
   return (
     <div className="max-w-md mx-auto px-4 py-12">
       <Typography variant="h1" className="font-heading text-2xl mb-6">
@@ -136,6 +219,94 @@ const EmailLinkPage: React.FC = () => {
           <Link to="/signin" className="button-link underline">
             Go to sign in
           </Link>
+        </div>
+      )}
+
+      {phase === 'choose' && (
+        <div className="card rounded-lg px-6 py-6 space-y-4">
+          <Typography color="secondary">
+            This link was asked for on another device. Which one do you want
+            to sign in?
+          </Typography>
+          <Button className="w-full min-h-[2.75rem]" onClick={() => setPhase('approve')}>
+            Sign in on the other device
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full min-h-[2.75rem]"
+            onClick={() => setPhase('needEmail')}
+          >
+            Sign in on this device
+          </Button>
+        </div>
+      )}
+
+      {phase === 'approve' && (
+        <form onSubmit={handleApproveSubmit} className="card rounded-lg px-6 py-6 space-y-4">
+          <Typography color="secondary">
+            Enter the email address the link was sent to, and the code the
+            other device is showing. This device stays signed out.
+          </Typography>
+          <Input
+            label="Email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+            // Fixed once the link has been used to prove it.
+            disabled={approving || approval.current !== null}
+          />
+          <Input
+            label="Code from the other device"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={4}
+            value={code}
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+            required
+            disabled={approving}
+          />
+          {error && (
+            <div
+              role="alert"
+              className="rounded-md border px-3 py-2 feedback-banner feedback-banner-error"
+            >
+              <Typography variant="body-sm">{error}</Typography>
+            </div>
+          )}
+          <Button
+            type="submit"
+            disabled={approving || !EMAIL.test(email.trim()) || !CODE.test(code)}
+            isLoading={approving}
+            className="w-full min-h-[2.75rem]"
+          >
+            Approve the other device
+          </Button>
+          <button
+            type="button"
+            className="button-link underline text-sm"
+            onClick={() => {
+              closeApproval();
+              setError(null);
+              setPhase('choose');
+            }}
+            disabled={approving}
+          >
+            Back
+          </button>
+        </form>
+      )}
+
+      {phase === 'approved' && (
+        <div role="status" className="card rounded-lg px-6 py-6 space-y-3">
+          <Typography variant="h2" className="font-heading text-xl">
+            Approved
+          </Typography>
+          <Typography color="secondary">
+            Your other device is signing in now. Nothing was signed in here, so
+            you can close this page.
+          </Typography>
         </div>
       )}
 

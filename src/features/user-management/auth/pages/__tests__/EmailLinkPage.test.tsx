@@ -23,6 +23,7 @@ const completeSignInLink = jest.fn();
 const deleteFreshAccount = jest.fn();
 const reloadUserContext = jest.fn();
 const joinGroupWithToken = jest.fn();
+const startDeviceApproval = jest.fn();
 
 const LocationProbe: React.FC = () => {
   const location = useLocation();
@@ -45,6 +46,7 @@ function setup({
     completeSignInLink,
     deleteFreshAccount,
     reloadUserContext,
+    startDeviceApproval,
   });
   useInvitations.mockReturnValue({ joinGroupWithToken });
 
@@ -165,5 +167,159 @@ describe("EmailLinkPage", () => {
       await screen.findByRole("alert");
       expect(deleteFreshAccount).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("EmailLinkPage — approving another device", () => {
+  const approve = jest.fn();
+  const close = jest.fn();
+  const DEVICE = "?device=req-1&next=%2Fquests";
+
+  /** A refusal shaped like one from a callable. */
+  const callableError = (code: string, message: string) =>
+    Object.assign(new Error(message), { code: `functions/${code}` });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    approve.mockResolvedValue(undefined);
+    close.mockResolvedValue(undefined);
+    startDeviceApproval.mockResolvedValue({ approve, close });
+    completeSignInLink.mockResolvedValue({ user: { uid: "u1" }, isNewUser: false });
+  });
+
+  /** Open a device link on a browser that did not ask for it, and choose to approve. */
+  async function openApproveForm() {
+    const rendered = setup({ query: DEVICE, pending: null });
+    await userEvent.click(screen.getByRole("button", { name: /sign in on the other device/i }));
+    return rendered;
+  }
+
+  async function fillAndApprove(email: string, code: string) {
+    const emailBox = screen.getByLabelText(/email/i);
+    if (!(emailBox as HTMLInputElement).disabled) {
+      await userEvent.clear(emailBox);
+      await userEvent.type(emailBox, email);
+    }
+    await userEvent.type(screen.getByLabelText(/code from the other device/i), code);
+    await userEvent.click(screen.getByRole("button", { name: /approve the other device/i }));
+  }
+
+  test("asks which device to sign in, and signs nobody in yet", () => {
+    setup({ query: DEVICE, pending: null });
+    expect(screen.getByRole("button", { name: /sign in on the other device/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sign in on this device/i })).toBeInTheDocument();
+    expect(completeSignInLink).not.toHaveBeenCalled();
+    expect(startDeviceApproval).not.toHaveBeenCalled();
+  });
+
+  // The browser that asked for the link is the one being signed in.
+  test("does not ask in the browser that asked for the link", async () => {
+    setup({ query: DEVICE });
+    await waitFor(() => expect(completeSignInLink).toHaveBeenCalled());
+    expect(screen.queryByRole("button", { name: /sign in on the other device/i })).not.toBeInTheDocument();
+  });
+
+  test("does not ask on a link without a request", () => {
+    setup({ query: "?next=%2Fquests", pending: null });
+    expect(screen.queryByRole("button", { name: /sign in on the other device/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /continue/i })).toBeInTheDocument();
+  });
+
+  test("\"this device\" is the ordinary sign-in", async () => {
+    setup({ query: DEVICE, pending: null });
+    await userEvent.click(screen.getByRole("button", { name: /sign in on this device/i }));
+    await userEvent.type(screen.getByLabelText(/email/i), "frodo@shire.dev");
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+    await waitFor(() =>
+      expect(completeSignInLink).toHaveBeenCalledWith("frodo@shire.dev", expect.any(String), false)
+    );
+    expect(await screen.findByTestId("landed")).toHaveTextContent("/quests");
+    expect(startDeviceApproval).not.toHaveBeenCalled();
+  });
+
+  test("approves the other device, and signs this one in nowhere", async () => {
+    await openApproveForm();
+    await fillAndApprove("frodo@shire.dev", "0471");
+
+    await waitFor(() => expect(approve).toHaveBeenCalledWith("req-1", "0471"));
+    expect(startDeviceApproval).toHaveBeenCalledWith("frodo@shire.dev", window.location.href);
+    expect(completeSignInLink).not.toHaveBeenCalled();
+    expect(await screen.findByText(/your other device is signing in now/i)).toBeInTheDocument();
+    expect(close).toHaveBeenCalled();
+    expect(screen.queryByTestId("landed")).not.toBeInTheDocument();
+  });
+
+  test("does not approve until the code is four digits", async () => {
+    await openApproveForm();
+    await userEvent.type(screen.getByLabelText(/email/i), "frodo@shire.dev");
+    await userEvent.type(screen.getByLabelText(/code from the other device/i), "04a7");
+    expect(screen.getByRole("button", { name: /approve the other device/i })).toBeDisabled();
+  });
+
+  // The link is spent by the first attempt; a mistyped code must not cost it.
+  test("a wrong code can be retyped, on the same sign-in", async () => {
+    approve.mockRejectedValueOnce(
+      callableError("invalid-argument", "That code does not match the one on the other device. 2 tries left.")
+    );
+    await openApproveForm();
+    await fillAndApprove("frodo@shire.dev", "0000");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/2 tries left/);
+    expect(screen.getByLabelText(/email/i)).toBeDisabled();
+    expect(close).not.toHaveBeenCalled();
+
+    await fillAndApprove("frodo@shire.dev", "0471");
+    expect(await screen.findByText(/your other device is signing in now/i)).toBeInTheDocument();
+    expect(startDeviceApproval).toHaveBeenCalledTimes(1);
+  });
+
+  test("ends the approval when the request is closed or expired", async () => {
+    approve.mockRejectedValueOnce(
+      callableError("failed-precondition", "This sign-in request has expired. Ask for a new link on the other device.")
+    );
+    await openApproveForm();
+    await fillAndApprove("frodo@shire.dev", "0471");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/has expired/);
+    expect(close).toHaveBeenCalled();
+    expect(screen.getByRole("link", { name: /back to sign in/i })).toBeInTheDocument();
+  });
+
+  test("says so when the link itself is refused", async () => {
+    startDeviceApproval.mockRejectedValueOnce(
+      Object.assign(new Error("expired"), { code: "auth/expired-action-code" })
+    );
+    await openApproveForm();
+    await fillAndApprove("frodo@shire.dev", "0471");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/expired or has already been used/i);
+    expect(approve).not.toHaveBeenCalled();
+  });
+
+  test("closes the throwaway sign-in when the reader goes back", async () => {
+    approve.mockRejectedValueOnce(callableError("invalid-argument", "That code does not match. 2 tries left."));
+    await openApproveForm();
+    await fillAndApprove("frodo@shire.dev", "0000");
+    await screen.findByRole("alert");
+
+    await userEvent.click(screen.getByRole("button", { name: /^back$/i }));
+    expect(close).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /sign in on the other device/i })).toBeInTheDocument();
+  });
+
+  test("closes the throwaway sign-in when the page goes away", async () => {
+    approve.mockRejectedValueOnce(callableError("invalid-argument", "That code does not match. 2 tries left."));
+    const { unmount } = await openApproveForm();
+    await fillAndApprove("frodo@shire.dev", "0000");
+    await screen.findByRole("alert");
+    expect(close).not.toHaveBeenCalled();
+
+    unmount();
+    expect(close).toHaveBeenCalled();
+  });
+
+  test("an invitation link never offers to approve another device", () => {
+    setup({ query: `${INVITE}&device=req-1`, pending: null });
+    expect(screen.queryByRole("button", { name: /sign in on the other device/i })).not.toBeInTheDocument();
   });
 });
