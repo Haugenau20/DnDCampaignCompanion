@@ -11,7 +11,7 @@
 // with nothing written looking **new, not broken**.
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LocationDetailPage from '../LocationDetailPage';
 
@@ -180,6 +180,16 @@ jest.mock('shared/context/QuickAddContext', () => ({
 const mockNavigateToPage = jest.fn();
 jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
+}));
+
+// The upload/save/delete ordering is useImageAttachment's own suite; here the
+// page is only asked what it hands the hook, and what its save writes.
+let mockImageOptions: any = null;
+jest.mock('shared/hooks/useImageAttachment', () => ({
+  useImageAttachment: (options: any) => {
+    mockImageOptions = options;
+    return { upload: jest.fn(), remove: jest.fn() };
+  },
 }));
 
 // Reaches Firebase for usernames; the page owns the label above it, not this.
@@ -801,5 +811,50 @@ describe('LocationDetailPage — a link that no longer resolves', () => {
     expect(screen.getByText('No place with that id')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Back to Locations' }));
     expect(mockNavigateToPage).toHaveBeenCalledWith('/locations');
+  });
+});
+
+describe('LocationDetailPage — the picture (T021)', () => {
+  const { firebaseConfig } = jest.requireActual('core/services/firebase/config/firebaseConfig');
+  const picture = {
+    path: 'groups/group-1/campaigns/campaign-1/locations/gondolin/p.webp',
+    url: `https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.storageBucket}/o/p.webp?alt=media&token=t`,
+    width: 1600,
+    height: 900,
+    uploadedBy: 'user-1',
+    uploadedAt: '2026-09-24T12:00:00.000Z',
+  };
+  const withPicture = () =>
+    TREE.map((loc: any) => (loc.id === 'gondolin' ? { ...loc, image: picture } : loc));
+
+  it('reserves an honest empty slot above the band, and offers to add a picture', () => {
+    const { container } = renderPage();
+    const slot = screen.getByRole('img', { name: 'Gondolin — no image added' });
+    expect((container.querySelector('.hero-band') as HTMLElement).contains(slot)).toBe(false);
+    expect(screen.getByRole('button', { name: 'Add picture' })).toBeInTheDocument();
+  });
+
+  it('shows the picture once there is one', () => {
+    mockLocations = withPicture();
+    renderPage();
+    expect(screen.getByRole('img', { name: 'Gondolin' })).toHaveAttribute('src', picture.url);
+    expect(screen.getByRole('button', { name: 'Replace picture' })).toBeInTheDocument();
+  });
+
+  it('files the picture under this location in the active group and campaign', () => {
+    mockLocations = withPicture();
+    renderPage();
+    expect(mockImageOptions.prefix).toBe('groups/group-1/campaigns/campaign-1/locations/gondolin');
+    expect(mockImageOptions.current).toEqual(picture);
+  });
+
+  it('saves the picture onto this location, and clears it with null', async () => {
+    renderPage();
+
+    await act(() => mockImageOptions.save(picture));
+    expect(mockUpdateLocation).toHaveBeenCalledWith('gondolin', { image: picture });
+
+    await act(() => mockImageOptions.save(null));
+    expect(mockUpdateLocation).toHaveBeenCalledWith('gondolin', { image: null });
   });
 });

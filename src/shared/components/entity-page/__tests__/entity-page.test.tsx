@@ -81,6 +81,39 @@ describe('EntityPageShell', () => {
       .closest('.hero-band') as HTMLElement;
     expect(within(band).getByRole('button', { name: 'Add a place inside' })).toBeInTheDocument();
   });
+
+  describe('the image (T021)', () => {
+    it('heads the page above the band, off the band surface', () => {
+      const { container } = renderShell({ image: <div data-testid="image">picture</div> });
+      const image = screen.getByTestId('image');
+      const band = container.querySelector('.hero-band') as HTMLElement;
+
+      expect(band.contains(image)).toBe(false);
+      expect(image.compareDocumentPosition(band) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('puts its control on the page surface, between the band and the body', () => {
+      // Off the band for the same reason as the accent rule above: the band has
+      // no authored pair for a control's status and error text (T040).
+      const { container } = renderShell({
+        imageControl: <button type="button">Add picture</button>,
+      });
+      const control = screen.getByRole('button', { name: 'Add picture' });
+      const band = container.querySelector('.hero-band') as HTMLElement;
+
+      expect(band.contains(control)).toBe(false);
+      expect(band.compareDocumentPosition(control) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(
+        control.compareDocumentPosition(screen.getByTestId('body')) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    });
+
+    it('adds nothing for a page that has no image', () => {
+      renderShell();
+      expect(screen.queryByTestId('entity-page-image')).toBeNull();
+      expect(screen.queryByTestId('entity-page-image-control')).toBeNull();
+    });
+  });
 });
 
 describe('EntityPageSection', () => {

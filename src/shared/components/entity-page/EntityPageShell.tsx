@@ -33,6 +33,17 @@ export interface EntityPageShellProps {
   children: React.ReactNode;
   /** Relations and record. The right column, and the second on a phone. */
   aside?: React.ReactNode;
+  /**
+   * The record's picture, usually an `ImageSlot`: drawn full width above the
+   * band, so no band text ever sits on a photograph.
+   */
+  image?: React.ReactNode;
+  /**
+   * Add/replace/remove for `image`. On the page surface under the band, not on
+   * the band: the band has no authored pair for a control's status and error
+   * text (T040).
+   */
+  imageControl?: React.ReactNode;
   className?: string;
 }
 
@@ -63,6 +74,8 @@ export const EntityPageShell: React.FC<EntityPageShellProps> = ({
   actions,
   children,
   aside,
+  image,
+  imageControl,
   className,
 }) => (
   <div className={clsx('px-4 py-4', className)}>
@@ -71,7 +84,12 @@ export const EntityPageShell: React.FC<EntityPageShellProps> = ({
       chrome above it with no seam of page colour between them -- the same
       treatment `CampaignBanner` and `AdminLayout` already use.
     */}
-    <div className="-mx-4 -mt-4 hero-band py-6 sm:py-8">
+    {image && (
+      <div className="-mx-4 -mt-4" data-testid="entity-page-image">
+        {image}
+      </div>
+    )}
+    <div className={clsx('-mx-4 hero-band py-6 sm:py-8', !image && '-mt-4')}>
       <div className="px-4">
         <div className="max-w-7xl mx-auto flex flex-col gap-4">
           <Breadcrumb items={breadcrumb} tone="band" className="py-0" />
@@ -106,6 +124,12 @@ export const EntityPageShell: React.FC<EntityPageShellProps> = ({
         </div>
       </div>
     </div>
+
+    {imageControl && (
+      <div className="max-w-7xl mx-auto mt-4" data-testid="entity-page-image-control">
+        {imageControl}
+      </div>
+    )}
 
     <div
       className={clsx(
