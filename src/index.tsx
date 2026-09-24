@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { NavigationProvider, useNavigation } from 'shared/context/NavigationContext';
 import { ThemeProvider } from './core/themes/ThemeContext';
 import App from 'app/App';
 import './styles/globals.css';
@@ -67,25 +66,6 @@ if (process.env.NODE_ENV === 'development') {
     console.log('Firebase App Check skipped (using emulators) - see bug #1411');
   }
 
-// Router wrapper component to handle redirects
-const RouterWrapper = () => {
-  const { navigateToPage, createPath, getCurrentQueryParams } = useNavigation();
-
-  useEffect(() => {
-    // Get the route from URL parameters
-    const { route } = getCurrentQueryParams();
-    
-    if (route) {
-      // Remove the query parameter and navigate to the actual route
-      const newUrl = window.location.pathname.replace(/\/$/, '');
-      window.history.replaceState(null, '', newUrl);
-      navigateToPage(createPath('/' + route))
-    }
-  }, [navigateToPage, createPath, getCurrentQueryParams]);
-
-  return <App />;
-};
-
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
@@ -93,10 +73,13 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <ThemeProvider>
+      {/*
+        No NavigationProvider here: App mounts the one every consumer reads.
+        Firebase Hosting rewrites every path to index.html, so a deep link
+        reaches the router directly and unknown paths meet NotFoundPage.
+      */}
       <BrowserRouter>
-        <NavigationProvider>
-          <RouterWrapper />
-        </NavigationProvider>
+        <App />
       </BrowserRouter>
     </ThemeProvider>
   </React.StrictMode>

@@ -27,7 +27,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T001 | `NPCNote.date` stored shape | S | open | Display already uniform; the remainder is data hygiene |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
-| low | T024 | Remove `?route=` hack + duplicate provider | S | open | Dead weight in production; tidy-up |
 | low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
 | low | T043 | Orphaned `importantNPCs` names | S | open | Nothing was destroyed; a judgement call about one campaign |
 | low | T042 | Theme class as data has no gate | S | open | Latent pattern; bitten once, now partly gated |
@@ -564,36 +563,6 @@ migrate them into — they are prep notes about somebody who was never entered.
   has no `migrate` mode.
 - **Source**: PR 15.5, from its handoff's instruction to check before deleting
 
-### T024 — Remove the `?route=` 404 redirect hack, and the duplicate `NavigationProvider`
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-16 · `PERF-15`
-
-The app carries a static-host workaround it no longer needs, and the provider
-that exists to serve it is mounted twice.
-
-- **Where**: `public/404.html:16` rewrites a deep link into
-  `/?route=<path>`, and `src/index.tsx:83-98` (`RouterWrapper`) unpicks it again
-  on mount — reading the param, rewriting the URL with `history.replaceState`,
-  then navigating. `RouterWrapper` needs `useNavigation`, which is why
-  `NavigationProvider` is mounted at `src/index.tsx:109` **as well as**
-  `src/app/App.tsx:43`; the inner one shadows the outer for nearly every
-  consumer, and both track navigation state and update on every route change.
-- **Touches**: `public/404.html`, `RouterWrapper` and the outer provider in
-  `src/index.tsx`.
-- **Bonus**: deleting the hack removes the only reason the outer provider exists,
-  so `PERF-15`'s duplicate-provider finding falls out of the same change. The
-  rest of `PERF-15` — un-memoized context values across seven providers — belongs
-  to T032, not here.
-- **Catch**: this is already dead weight. `firebase/firebase.json:22-27` rewrites
-  `**` → `/index.html`, so Firebase Hosting serves deep links directly and
-  `404.html` is never reached in production. Confirm that against a real deploy
-  before deleting — the file may still be load-bearing on some other host or on
-  the emulator.
-- **Source**: todo.txt, 2026-09-16 ("Make project true Single Page Application").
-  Note the literal request is already satisfied: the app is a `react-router`
-  SPA (`src/app/App.tsx:3`), and the only remaining `window.location` writes are
-  an `ErrorBoundary` reload and this hack. If something else prompted that note,
-  it needs re-reporting with a symptom.
-
 ### T025 — Admin panel needs a do-over, and its bug list needs re-checking
 **Type** debt · **Size** L · **Status** needs investigation · **Verified** 2026-09-16
 
@@ -709,7 +678,7 @@ review says so itself. Six findings were re-checked on 2026-09-16 at `ebc0a28`:
 | `PERF-10` all routes + full Lodash in one bundle | Medium | **Half fixed.** Zero `lodash` imports remain in `src/`. Route splitting is still open — see T030. |
 | `PERF-04` notes loaded twice, unbounded | High | **Still true** — see T029. |
 | `PERF-08` duplicate collection owners | Medium | **Fixed** 2026-09-22 — one fetch per collection, pinned by `shared/hooks/__tests__/provider-fetch-counts.test.tsx`. |
-| `PERF-15` duplicate `NavigationProvider` | Low | **Still true** — folded into T024, same file. |
+| `PERF-15` duplicate `NavigationProvider` | Low | **Fixed** 2026-09-24 — `index.tsx` mounts no provider of its own; `App`'s is the only one. |
 
 The **other nine are unverified against current `main`** — `PERF-02`, `03`,
 `05`, `06`, `09`, `11`, `12`, `13`, `14`. That is T033. The review's own
