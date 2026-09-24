@@ -30,8 +30,8 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T037 | A group cannot be deleted | L | open | Leave exists; deletion is rare and large |
 | low | T017 | Batch actions for other entities | L | open | Convenience; must follow T032's write-amplification fix |
 | low | T018 | Sub-chapters | L | open | New feature; #017 ordering question comes first |
-| low | T021 | Firebase Storage for images | L | open | New capability; prerequisite for T020 |
-| low | T020 | Screenshot on bug reports | M | open | Blocked in practice on T021 |
+| low | T020 | Screenshot on bug reports | M | open | Storage exists now; needs its own path, rules and cleanup |
+| low | T058 | Sweep orphaned image files | S | open | Cents of storage, no user harm; only failed writes create them |
 | low | T054 | Sign in with Discord | L | needs scoping | Where tabletop players already are; Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Nobody asked yet; prefer an authenticator app over SMS, which bills per text |
@@ -189,7 +189,9 @@ has the drop zone.
   in the callable payload that `firebase/functions/src/contact.ts` links from the
   email body (`ContactFormData` is declared at `:36`).
 - **Touches**: the contact components, the callable's payload shape, the Cloud
-  Function, and Firebase Storage setup — see T021, which this depends on.
+  Function, and a Storage path of its own. `support/{uid}/…` is the one the
+  image design reserved (`docs/superpowers/specs/2026-09-24-storage-images-design.md` §1);
+  `storage.rules.prod` denies it until a rule is added.
 - **Catch**: it is not a UI change. It needs Storage wiring, rules scoped so one
   user cannot read another's uploads, size and MIME-type limits, cleanup of
   orphaned uploads when a submission is abandoned, and a new failure mode on
@@ -199,30 +201,23 @@ has the drop zone.
   questions without one.
 - **Source**: todo.txt, 2026-09-16
 
-### T021 — Firebase Storage for campaign images
-**Type** feature · **Size** L · **Status** open · **Verified** 2026-09-16
+### T058 — Sweep orphaned image files
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-24
 
-Let users upload pictures for their campaigns, and let the maintainer upload
-default artwork.
+Image writes are ordered so a failure can orphan a file but never leave a
+document pointing at a missing one (`shared/hooks/useImageAttachment.ts`). So
+orphans exist by design: an upload whose document write failed, an old file
+whose delete failed after a replace, the image of a deleted NPC or location
+when that delete's follow-up failed.
 
-- **Where**: nothing in `src/` imports `firebase/storage` — no `getStorage`, no
-  `uploadBytes`, anywhere. `src/core/components/ImageSlot.tsx` is the render-side
-  placeholder the design already has.
-- **Touches**: a new service under `src/core/services/firebase/` following the
-  `BaseFirebaseService` pattern, `ImageSlot`, and the entity forms.
-- **Catch**: security rules are **not deployed from this repo**, and must not
-  become so. `firebase/firebase.json` deliberately carries no rules keys (see its
-  `//` comments) precisely so a `firebase deploy` cannot touch them; production
-  rules are authored in the Firebase console, with a reviewed copy kept in-repo
-  as `firestore.rules.prod`. `firebase/storage.rules` is the permissive
-  **emulator** ruleset and is correct as it stands — do not "reconcile" it with
-  production, which is the mistake `firestore.rules.prod`'s header warns about by
-  name. So this item includes writing a `storage.rules.prod` review copy, on the
-  `firestore.rules.prod` model, and pasting it into the console — and that is a
-  deploy step no CI gate will perform or verify for you. Check its
-  `isMemberOfGroup` helper against the real Firestore shape while writing it; the
-  draft in `storage.rules` assumes `groups/{groupId}/members/{uid}`.
-- **Source**: todo.txt, 2026-09-16
+- **Where**: a scheduled Cloud Function listing `groups/**` in the image bucket
+  (`firebase/functions/src/shared/imageBucket.ts`) and deleting any object that
+  no `image`/`crest` field references and that is older than a day (the age
+  guard keeps it off an upload still being saved).
+- **Why it can wait**: each orphan is ~200 KB against a 5 GB free quota, and
+  only failed writes make one. `deleteCampaign` already removes a whole
+  campaign's prefix.
+- **Source**: `docs/superpowers/specs/2026-09-24-storage-images-design.md` §7
 
 ### T054 — Sign in with Discord
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-23
