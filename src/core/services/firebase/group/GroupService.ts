@@ -10,6 +10,7 @@ import BaseFirebaseService from '../core/BaseFirebaseService';
 import ServiceRegistry from '../core/ServiceRegistry';
 import type UserService from '../user/UserService';
 import { Group } from '../../../types/user';
+import { StoredImage } from '../../../types/storedImage';
 import { httpsCallable } from 'firebase/functions';
 
   /**
@@ -174,6 +175,31 @@ import { httpsCallable } from 'firebase/functions';
         name,
         description: (updates.description ?? '').trim()
       });
+    }
+
+    /**
+     * Set or clear the group's crest (admin only, T021).
+     *
+     * Same shape as updateGroup: a client write the rules already allow a
+     * group admin, restricted here to the one field. The image itself is
+     * uploaded (and the old one deleted) by the caller; this only records it.
+     *
+     * @param groupId ID of the group
+     * @param crest The uploaded image, or null to clear it -- Firestore cannot
+     *   store undefined
+     */
+    public async setGroupCrest(groupId: string, crest: StoredImage | null): Promise<void> {
+      const userId = this.getCurrentUser()?.uid;
+      if (!userId) {
+        throw new Error('Not authenticated');
+      }
+
+      const isAdmin = await this.userService.isUserAdmin(groupId, userId);
+      if (!isAdmin) {
+        throw new Error('Only group admins can change the crest');
+      }
+
+      await updateDoc(doc(this.db, 'groups', groupId), { crest });
     }
 
     /**

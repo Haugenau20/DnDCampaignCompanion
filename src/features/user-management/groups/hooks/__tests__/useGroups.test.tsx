@@ -21,6 +21,7 @@ import { useGroups } from "../useGroups";
 // ---------------------------------------------------------------------------
 const mockCreateGroup = jest.fn();
 const mockUpdateGroup = jest.fn();
+const mockSetGroupCrest = jest.fn();
 const mockGetGroupUsers = jest.fn();
 const mockRemoveUserFromGroup = jest.fn();
 const mockUpdateUserProfile = jest.fn();
@@ -33,6 +34,7 @@ jest.mock("@/core/services/firebase", () => ({
     group: {
       createGroup: (...args: any[]) => mockCreateGroup(...args),
       updateGroup: (...args: any[]) => mockUpdateGroup(...args),
+      setGroupCrest: (...args: any[]) => mockSetGroupCrest(...args),
       getGroupUsers: (...args: any[]) => mockGetGroupUsers(...args),
       removeUserFromGroup: (...args: any[]) => mockRemoveUserFromGroup(...args),
     },
@@ -328,6 +330,55 @@ describe("useGroups Behavioral Testing", () => {
   });
 
   // -------------------------------------------------------------------------
+  describe("setGroupCrest Behavior (T021)", () => {
+    const crest = {
+      path: "groups/g1/crest/a.webp",
+      url: "https://example/a",
+      width: 10,
+      height: 10,
+      uploadedBy: "u1",
+      uploadedAt: "2026-09-24T12:00:00.000Z",
+    };
+
+    test("should record the crest on the active group, then refresh the group list", async () => {
+      mockContextValue = makeContext({ activeGroupId: "g1" });
+      mockSetGroupCrest.mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useGroups());
+      await act(async () => {
+        await result.current.setGroupCrest(crest);
+      });
+
+      expect(mockSetGroupCrest).toHaveBeenCalledWith("g1", crest);
+      expect(mockSetGroupCrest.mock.invocationCallOrder[0]).toBeLessThan(
+        mockRefreshGroups.mock.invocationCallOrder[0]
+      );
+    });
+
+    test("should refuse without an active group, writing nothing", async () => {
+      mockContextValue = makeContext({ activeGroupId: null });
+
+      const { result } = renderHook(() => useGroups());
+      await act(async () => {
+        await expect(result.current.setGroupCrest(null)).rejects.toThrow("No active group selected");
+      });
+
+      expect(mockSetGroupCrest).not.toHaveBeenCalled();
+    });
+
+    test("should re-throw a failure, without refreshing", async () => {
+      mockContextValue = makeContext({ activeGroupId: "g1" });
+      mockSetGroupCrest.mockRejectedValue(new Error("permission-denied"));
+
+      const { result } = renderHook(() => useGroups());
+      await act(async () => {
+        await expect(result.current.setGroupCrest(null)).rejects.toThrow("permission-denied");
+      });
+
+      expect(mockRefreshGroups).not.toHaveBeenCalled();
+    });
+  });
+
   describe("updateGroup Behavior (T036)", () => {
     test("should update the active group, then refresh the group list", async () => {
       mockContextValue = makeContext({ activeGroupId: "g1" });
