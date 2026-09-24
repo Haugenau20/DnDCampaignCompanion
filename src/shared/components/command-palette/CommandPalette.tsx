@@ -2,9 +2,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { clsx } from "clsx";
-import { Book, MapPin, MessageSquare, Plus, Scroll, Search, StickyNote, Users, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import type { SearchResult, SearchResultType } from "core/types/search";
 import Typography from "core/components/Typography";
+import EntitySigil from "core/components/EntitySigil";
 import { useSearch } from "shared/hooks/useSearch";
 import { useCreateActions } from "shared/hooks/useCreateActions";
 import { useNavigation } from "shared/context/NavigationContext";
@@ -22,19 +23,6 @@ interface CommandPaletteProps {
   /** The trigger button that opened the palette, for focus return (Task 4). */
   triggerRef: React.RefObject<HTMLButtonElement>;
 }
-
-// Map of icons for each result type. `note` uses `StickyNote` to match the
-// icon `src/app/layout/Navigation.tsx` already uses for the `/notes` nav
-// item -- the same destination should not change icon between the nav and
-// the search results.
-const resultTypeIcons: Record<SearchResultType, React.ComponentType<{ className?: string }>> = {
-  story: Book,
-  quest: Scroll,
-  npc: Users,
-  location: MapPin,
-  rumors: MessageSquare,
-  note: StickyNote,
-};
 
 /** The DOM id given to a result's `role="option"` row. */
 const optionId = (result: SearchResult): string => `cmdk-option-${result.type}-${result.id}`;
@@ -239,7 +227,6 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
         </Typography>
         {group.results.map((result) => {
           const index = flatResults.indexOf(result);
-          const Icon = resultTypeIcons[result.type];
           const isSelected = index === selectedIndex;
           return (
             <div
@@ -257,7 +244,12 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
                 isSelected ? "search-result-selected border-accent" : "search-result border-transparent"
               )}
             >
-              <Icon className="w-4 h-4 mt-0.5 flex-shrink-0 primary" />
+              {/*
+                Each hit wears its own sigil, as it does on its page and in the
+                activity feed, so the same record looks like itself everywhere.
+                The kind is not lost: every hit sits under its type's heading.
+              */}
+              <EntitySigil entityId={result.id} name={result.title} size={22} />
               <div className="min-w-0 flex-1">
                 <Typography className="font-medium">
                   <HighlightedText text={result.title} query={query} />

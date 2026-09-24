@@ -41,7 +41,6 @@ is hurt while it waits · `nit` bookkeeping or polish
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Nobody asked yet; prefer an authenticator app over SMS, which bills per text |
 | low | T040 | No accent pair for the band | S | open | Interim `.band-chip` works; schema-owner decision |
-| low | T048 | Five surfaces mark type, not entity | S | open | Visual consistency |
 | low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
 | nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
 | nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
@@ -266,41 +265,6 @@ default artwork.
   `isMemberOfGroup` helper against the real Firestore shape while writing it; the
   draft in `storage.rules` assumes `groups/{groupId}/members/{uid}`.
 - **Source**: todo.txt, 2026-09-16
-
-### T048 — Five surfaces still mark an entity by its *type*, not by itself
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-22
-
-A location is a `MapPin` in some
-lists and an `EntitySigil` in others, so the same place does not look like
-itself as you move between screens. The locations feature itself is **already
-converted** — the four sites there all use sigils — so the remaining work is in
-the cross-domain surfaces that render a mixed list.
-
-- **Where**, all verified by opening the file:
-  - `src/shared/components/command-palette/CommandPalette.tsx:31-38` — a
-    `resultTypeIcons` map giving every search hit its type's glyph.
-  - `src/pages/layouts/common/utils/contentTypeUtils.tsx:11-25` —
-    `getContentIcon`, used for the chapter card at
-    `dashboard/sections/ActivityFeed.tsx:112` (that feed already uses a sigil for
-    entities at `:148`).
-  - `src/features/collaboration/notes/components/NoteReferences.tsx:177-186`
-  - `src/features/collaboration/notes/components/CampaignLinksPanel.tsx:55-62`
-  - `src/features/collaboration/entity-extraction/components/EntityCard.tsx:37-41`
-- **Touches**: those five files and their tests; nothing in
-  `features/campaign-entities/locations/`, which is already done
-  (`LocationRowSummary.tsx:49`, `LocationTreeRow.tsx:121`,
-  `WhereThisSits.tsx:63`, `LocationDetailPage.tsx:376`).
-- **Catch**: the type glyph is not pure decoration in two of these. A search
-  result list and the extractor's review list are **heterogeneous** — the glyph
-  is the only thing saying "this hit is a quest, that one is an NPC" — and a
-  sigil deliberately carries no type information. Either keep a type label
-  beside the sigil in those two, or accept that the kind is only readable from
-  the section heading. `EntityCard` also has no entity id yet (the extracted
-  entity's id is a synthesised `npc-<timestamp>-<random>`,
-  `entityMapper.ts:13`), so its hue would be random per extraction run rather
-  than stable.
-- **Source**: todo.txt, 2026-09-22 ("In locations (and potentially other places),
-  then lucide icon should be swapped out with the color pallette with letter")
 
 ### T054 — Sign in with Discord
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-23
