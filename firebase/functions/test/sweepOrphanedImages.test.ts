@@ -21,6 +21,8 @@ const FILES = {
   npcRemoved: "groups/g1/campaigns/c1/npcs/n2/removed.webp",
   locationImage: "groups/g1/campaigns/c1/locations/l1/current.jpg",
   locationOrphan: "groups/g1/campaigns/c1/locations/l1/failed-write.jpg",
+  banner: "groups/g1/campaigns/c1/banner/current.webp",
+  bannerOrphan: "groups/g1/campaigns/c1/banner/replaced.webp",
   crest: "groups/g1/crest/current.webp",
   crestOrphan: "groups/g1/crest/replaced.webp",
   otherGroupImage: "groups/g2/campaigns/c9/npcs/n9/current.webp",
@@ -54,6 +56,7 @@ beforeEach(async () => {
 
   await db.doc("groups/g1").set({name: "Fellowship", crest: stored(FILES.crest)});
   await db.doc("groups/g2").set({name: "Rangers"});
+  await db.doc("groups/g1/campaigns/c1").set({name: "There and Back", banner: stored(FILES.banner)});
   await db.doc("groups/g1/campaigns/c1/npcs/n1").set({name: "Bilbo", image: stored(FILES.npcImage)});
   await db.doc("groups/g1/campaigns/c1/npcs/n2").set({name: "Sam", image: null});
   await db.doc("groups/g1/campaigns/c1/npcs/n3").set({name: "Pippin"});
@@ -85,6 +88,7 @@ describe("sweeping orphaned images", () => {
 
     expect(await exists(FILES.npcImage)).toBe(true);
     expect(await exists(FILES.locationImage)).toBe(true);
+    expect(await exists(FILES.banner)).toBe(true);
     expect(await exists(FILES.crest)).toBe(true);
     expect(await exists(FILES.otherGroupImage)).toBe(true);
   });
@@ -111,6 +115,12 @@ describe("sweeping orphaned images", () => {
     await sweepOrphanedImages(later());
 
     expect(await exists(FILES.locationOrphan)).toBe(false);
+  });
+
+  it("deletes a banner file that is no longer the campaign's banner", async () => {
+    await sweepOrphanedImages(later());
+
+    expect(await exists(FILES.bannerOrphan)).toBe(false);
   });
 
   it("deletes a crest file that is no longer the group's crest", async () => {
@@ -142,6 +152,7 @@ describe("sweeping orphaned images", () => {
         FILES.npcDeleted,
         FILES.npcRemoved,
         FILES.locationOrphan,
+        FILES.bannerOrphan,
         FILES.crestOrphan,
       ].sort()
     );

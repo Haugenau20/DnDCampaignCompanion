@@ -177,10 +177,11 @@ const PrivacyPolicyPage: React.FC = () => {
               store what you type into it.
             </Typography>
             <Typography>
-              Pictures you add to an NPC, a place or your party's crest. Before
-              a photo leaves your device it is shrunk and re-saved, which removes
-              its hidden details — the camera it came from, and where the photo
-              was taken. Only the picture itself is uploaded.
+              Pictures you add to an NPC, a place, your campaign's banner or
+              your party's crest. Before a photo leaves your device it is shrunk
+              and re-saved, which removes its hidden details — the camera it came
+              from, and where the photo was taken. Only the picture itself is
+              uploaded.
             </Typography>
             <Typography>
               We do not record which pages you visit or what you click. Session

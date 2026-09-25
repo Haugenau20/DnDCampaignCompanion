@@ -50,6 +50,14 @@ export function entityImagePrefix(
   ].join("/");
 }
 
+/**
+ * The folder a campaign's banner lives in. Under the campaign's own folder, so
+ * deleting the campaign's prefix takes the banner with it.
+ */
+export function campaignBannerPrefix(groupId: string, campaignId: string): string {
+  return ["groups", segment(groupId), "campaigns", segment(campaignId), "banner"].join("/");
+}
+
 /** The folder a group's crest lives in. */
 export function crestPrefix(groupId: string): string {
   return `groups/${segment(groupId)}/crest`;
@@ -106,7 +114,7 @@ class ImageStorageService extends BaseFirebaseService {
 
   /**
    * Upload a prepared image under a new, random name in `prefix`.
-   * @param prefix Folder from `entityImagePrefix` or `crestPrefix`
+   * @param prefix Folder from `entityImagePrefix`, `campaignBannerPrefix` or `crestPrefix`
    * @param image Output of `prepareImage`
    * @param onProgress Called with the fraction uploaded, 0 to 1
    * @returns What to store on the document

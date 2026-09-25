@@ -17,6 +17,19 @@ jest.mock(
   })
 );
 
+const mockUpdateCampaign = jest.fn();
+jest.mock("features/user-management", () => ({
+  useCampaigns: () => ({ updateCampaign: mockUpdateCampaign }),
+}));
+
+let mockImageOptions: any = null;
+jest.mock("shared/hooks/useImageAttachment", () => ({
+  useImageAttachment: (options: any) => {
+    mockImageOptions = options;
+    return { upload: jest.fn(), remove: jest.fn() };
+  },
+}));
+
 // Mock core Typography
 jest.mock("core/components/Typography", () => ({
   __esModule: true,
@@ -67,9 +80,21 @@ const makeCampaign = (
 // Tests
 // ---------------------------------------------------------------------------
 
+const { firebaseConfig } = jest.requireActual("core/services/firebase/config/firebaseConfig");
+const banner = {
+  path: "groups/g1/campaigns/c1/banner/a.webp",
+  url: `https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.storageBucket}/o/a.webp?alt=media&token=t`,
+  width: 1600,
+  height: 900,
+  uploadedBy: "u1",
+  uploadedAt: "2026-09-25T12:00:00.000Z",
+};
+
 describe("CampaignBanner", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockImageOptions = null;
+    mockUpdateCampaign.mockResolvedValue(undefined);
   });
 
   // -------------------------------------------------------------------------
@@ -295,6 +320,100 @@ describe("CampaignBanner", () => {
       expect(
         screen.getByText("Welcome to D&D Campaign Companion")
       ).toBeInTheDocument();
+    });
+  });
+  // -------------------------------------------------------------------------
+  // The banner picture
+  // -------------------------------------------------------------------------
+  describe("banner picture", () => {
+    const withCampaign = (campaign: any) =>
+      setupHook({
+        activeGroup: makeGroup(),
+        activeCampaign: campaign,
+        hasGroup: true,
+        hasCampaign: true,
+      });
+
+    it("draws the band as before, with no empty slot, when there is no banner", () => {
+      withCampaign(makeCampaign("Curse of Strahd"));
+      render(<CampaignBanner />);
+
+      expect(screen.queryByTestId("campaign-banner-image")).toBeNull();
+      expect(screen.queryByRole("img")).toBeNull();
+      expect(screen.getByTestId("campaign-banner")).not.toHaveClass("hero-band-pictured");
+    });
+
+    it("draws the banner behind the band's text", () => {
+      withCampaign({ ...makeCampaign("Curse of Strahd"), banner });
+      render(<CampaignBanner />);
+
+      const band = screen.getByTestId("campaign-banner");
+      const picture = screen.getByRole("img", { name: "Curse of Strahd" });
+      expect(picture).toHaveAttribute("src", banner.url);
+      // Inside the band, not above it, and under the band's own scrim.
+      expect(band).toContainElement(picture);
+      expect(band).toHaveClass("hero-band", "hero-band-pictured");
+      expect(band.querySelector(".hero-picture-scrim")).not.toBeNull();
+      // The title still renders over it.
+      expect(screen.getByText("Curse of Strahd")).toBeInTheDocument();
+    });
+
+    it("refuses a URL outside the app's bucket", () => {
+      withCampaign({
+        ...makeCampaign("Curse of Strahd"),
+        banner: { ...banner, url: "https://tracker.example/pixel.webp" },
+      });
+      render(<CampaignBanner />);
+
+      expect(screen.queryByRole("img")).toBeNull();
+      expect(screen.getByTestId("campaign-banner")).not.toHaveClass("hero-band-pictured");
+    });
+
+    it("offers a member Add, then Replace and Remove", () => {
+      withCampaign(makeCampaign("Curse of Strahd"));
+      const { rerender } = render(<CampaignBanner />);
+      expect(screen.getByRole("button", { name: "Add banner" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Remove banner" })).toBeNull();
+
+      withCampaign({ ...makeCampaign("Curse of Strahd"), banner });
+      rerender(<CampaignBanner />);
+      expect(screen.getByRole("button", { name: "Replace banner" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Remove banner" })).toBeInTheDocument();
+    });
+
+    it("lays the controls over the band itself", () => {
+      withCampaign(makeCampaign("Curse of Strahd"));
+      render(<CampaignBanner />);
+
+      const control = screen.getByTestId("campaign-banner").parentElement!;
+      expect(control).toContainElement(screen.getByRole("button", { name: "Add banner" }));
+      expect(control).toHaveClass("relative");
+    });
+
+    it("offers no controls before there is a campaign", () => {
+      setupHook({ activeGroup: makeGroup(), hasGroup: true, hasCampaign: false });
+      render(<CampaignBanner />);
+
+      expect(screen.queryByRole("button", { name: /banner/ })).toBeNull();
+    });
+
+    it("stores the file in the campaign's own folder", () => {
+      withCampaign({ ...makeCampaign("Curse of Strahd"), banner });
+      render(<CampaignBanner />);
+
+      expect(mockImageOptions.prefix).toBe("groups/g1/campaigns/c1/banner");
+      expect(mockImageOptions.current).toBe(banner);
+    });
+
+    it("saves the banner, or its removal, on the campaign document", async () => {
+      withCampaign(makeCampaign("Curse of Strahd"));
+      render(<CampaignBanner />);
+
+      await mockImageOptions.save(banner);
+      expect(mockUpdateCampaign).toHaveBeenCalledWith("c1", { banner });
+
+      await mockImageOptions.save(null);
+      expect(mockUpdateCampaign).toHaveBeenLastCalledWith("c1", { banner: null });
     });
   });
 });

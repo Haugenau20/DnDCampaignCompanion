@@ -50,6 +50,7 @@ jest.mock('../../config/firebaseConfig', () => mockConfig);
 import ImageStorageService, {
   entityImagePrefix,
   crestPrefix,
+  campaignBannerPrefix,
   isOwnBucketUrl,
   IMMUTABLE_CACHE_CONTROL,
 } from '../ImageStorageService';
@@ -103,6 +104,11 @@ describe('path helpers', () => {
     expect(entityImagePrefix('g1', 'c1', 'locations', 'l1')).toBe('groups/g1/campaigns/c1/locations/l1');
   });
 
+  it("builds a campaign's banner prefix inside the campaign's own folder", () => {
+    // Inside it, so deleteCampaign's prefix delete takes the banner too.
+    expect(campaignBannerPrefix('g1', 'c1')).toBe('groups/g1/campaigns/c1/banner');
+  });
+
   it('builds the crest prefix under the group', () => {
     expect(crestPrefix('g1')).toBe('groups/g1/crest');
   });
@@ -110,6 +116,7 @@ describe('path helpers', () => {
   it('refuses an id that would escape its folder', () => {
     expect(() => entityImagePrefix('g1', 'c1', 'npcs', '../x')).toThrow();
     expect(() => crestPrefix('')).toThrow();
+    expect(() => campaignBannerPrefix('g1', '..')).toThrow();
   });
 });
 

@@ -814,7 +814,8 @@
   }
 
   /*
-    A band with a record's picture in it (`EntityPageShell`). The picture fills
+    A band with a picture in it (`BandPicture`: a record's picture in
+    `EntityPageShell`, the campaign's banner in `CampaignBanner`). The picture fills
     the band; a window at the top shows it nearly clear, and a scrim in the
     band's own colour closes over it by the window's foot, before any text.
 

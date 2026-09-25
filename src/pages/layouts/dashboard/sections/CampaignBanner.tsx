@@ -1,7 +1,13 @@
 // src/pages/layouts/dashboard/sections/CampaignBanner.tsx
-import React from 'react';
+import React, { useCallback } from 'react';
 import clsx from 'clsx';
 import Typography from 'core/components/Typography';
+import { campaignBannerPrefix } from 'core/services/firebase/storage/ImageStorageService';
+import { StoredImage } from 'core/types/storedImage';
+import { useCampaigns } from 'features/user-management';
+import BandPicture, { bandPicture } from 'shared/components/BandPicture';
+import ImageUploadControl from 'shared/components/ImageUploadControl';
+import { useImageAttachment } from 'shared/hooks/useImageAttachment';
 import { useCampaignInfo } from '../../../layouts/common/hooks/useCampaignInfo';
 
 interface CampaignBannerProps {
@@ -22,10 +28,34 @@ interface CampaignBannerProps {
  * Most slots will be empty most of the time, so the empty state is the real
  * design: the campaign's own sigil, derived from its id exactly as every entity
  * mark is. Nothing here depends on content a user may never add.
+ *
+ * The campaign may carry a banner picture, drawn into the band behind the text
+ * as a location's picture is (`BandPicture`): a window at the top shows it, and
+ * a scrim in the band's colour closes over it before the text starts. Without
+ * one the band is drawn as always, with no empty slot. Any member may add,
+ * replace or remove it -- the same members who may edit the campaign document
+ * (`firestore.rules.prod`) -- from icon buttons on the band's top-right corner.
  */
 const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
   const { activeGroup, activeCampaign, formattedCreationDate, hasCampaign, hasGroup } =
     useCampaignInfo();
+  const { updateCampaign } = useCampaigns();
+
+  const campaignId = activeCampaign?.id;
+  // The group `updateCampaign` writes to, so the file and the document agree.
+  const groupId = activeGroup?.id;
+  const saveBanner = useCallback(
+    async (banner: StoredImage | null) => {
+      if (!campaignId) throw new Error('No campaign selected');
+      await updateCampaign(campaignId, { banner });
+    },
+    [campaignId, updateCampaign]
+  );
+  const banner = useImageAttachment({
+    prefix: groupId && campaignId ? campaignBannerPrefix(groupId, campaignId) : null,
+    current: activeCampaign?.banner,
+    save: saveBanner,
+  });
 
   // Cancels the page container's padding so the band spans the full content
   // width and meets the chrome above it, rather than floating as a card.
@@ -40,7 +70,11 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
   // `-m*-4` cancels `main`'s 16px padding on three sides -- exact, and immune
   // to the scrollbar in a way `50vw` is not. The band renders above the page
   // column now, so nothing else insets it.
-  const bandFrame = '-mx-4 -mt-4 mb-4 py-8 sm:py-10 hero-band';
+  //
+  // The margins sit on `bandBleed`, around the band, so that the upload
+  // control's wrapper bleeds with it and its buttons land on the band's corner.
+  const bandBleed = '-mx-4 -mt-4 mb-4';
+  const bandFrame = 'py-8 sm:py-10 hero-band';
 
   // Re-creates `main` > `max-w-7xl` > `container` so the band's content sits in
   // exactly the same column as the page content below it. Mirroring the chain
@@ -52,7 +86,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
 
   if (!hasGroup || !hasCampaign) {
     return (
-      <div className={bandFrame} data-testid="campaign-banner">
+      <div className={clsx(bandBleed, bandFrame)} data-testid="campaign-banner">
        <div className={bandInner}><div className={bandColumn}><div className={clsx(bandGutter, 'text-center')}>
         <Typography variant="h2" className="mb-2">
           Welcome to D&D Campaign Companion
@@ -72,9 +106,20 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
     chapterCount ? `Chapter ${chapterCount}` : null,
   ].filter(Boolean) as string[];
 
-  return (
-    <div className={bandFrame} data-testid="campaign-banner">
-     <div className={bandInner}><div className={bandColumn}><div className={bandGutter}>
+  const picture = bandPicture(activeCampaign?.banner);
+
+  const band = (
+    <div
+      className={clsx(bandFrame, 'relative', picture && 'hero-band-pictured')}
+      data-testid="campaign-banner"
+    >
+     {picture && (
+       <BandPicture image={picture} alt={activeCampaign?.name ?? ''} testId="campaign-banner-image" />
+     )}
+     {/* Positioned, so it paints above the picture and its scrim. */}
+     <div className={clsx(bandInner, 'relative')}>
+     {picture && <div className="hero-picture-window" aria-hidden="true" />}
+     <div className={bandColumn}><div className={bandGutter}>
       {/* Stacked until `sm`. Side by side, the `shrink-0` toggle claims ~180px of
           a 320px viewport and squeezes the title column to almost nothing, at
           which point `break-words` sets the campaign name one character per
@@ -91,7 +136,12 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
             {activeGroup?.name && (
               <Typography
                 variant="body-sm"
-                className="hero-eyebrow text-[11px] font-semibold uppercase tracking-wider"
+                className={clsx(
+                  'hero-eyebrow text-[11px] font-semibold uppercase tracking-wider',
+                  // Room for the corner buttons, which reach the first line on
+                  // a phone when there is no picture window above it.
+                  !picture && 'pr-20 sm:pr-0'
+                )}
               >
                 {activeGroup.name}
               </Typography>
@@ -131,6 +181,20 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
 
       </div>
      </div></div></div>
+    </div>
+  );
+
+  return (
+    <div className={bandBleed}>
+      <ImageUploadControl
+        variant="compact"
+        subject="banner"
+        hasImage={Boolean(picture)}
+        onUpload={banner.upload}
+        onRemove={banner.remove}
+      >
+        {band}
+      </ImageUploadControl>
     </div>
   );
 };

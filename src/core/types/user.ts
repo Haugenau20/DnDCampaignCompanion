@@ -107,6 +107,8 @@ export interface Campaign {
   createdBy: string;
   /** Whether the campaign is active */
   isActive: boolean;
+  /** The picture behind the dashboard's banner, set by any member; null once removed */
+  banner?: StoredImage | null;
 }
 
 /**

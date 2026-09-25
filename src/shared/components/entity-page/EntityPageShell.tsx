@@ -5,8 +5,8 @@ import Typography from 'core/components/Typography';
 import EntitySigil from 'core/components/EntitySigil';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import ImageUploadControl, { ImageUploadControlProps } from 'shared/components/ImageUploadControl';
+import BandPicture, { bandPicture } from 'shared/components/BandPicture';
 import { StoredImage } from 'core/types/storedImage';
-import { isOwnBucketUrl } from 'core/services/firebase/storage/ImageStorageService';
 
 export interface EntityPageBreadcrumbItem {
   label: string;
@@ -91,23 +91,12 @@ export const EntityPageShell: React.FC<EntityPageShellProps> = ({
   imageUpload,
   className,
 }) => {
-  // The same refusal `ImageSlot` makes: a member can write any string into a
-  // document, and a planted third-party URL would log everyone who opens the page.
-  const picture = image && isOwnBucketUrl(image.url) ? image : null;
+  const picture = bandPicture(image);
 
   const band = (
     <div className={clsx('hero-band relative py-6 sm:py-8', picture && 'hero-band-pictured')}>
       {picture && (
-        <div className="absolute inset-0 overflow-hidden" data-testid="entity-page-image">
-          <img
-            src={picture.url}
-            alt={imageAlt ?? ''}
-            loading="eager"
-            decoding="async"
-            className="hero-picture block w-full h-full object-cover"
-          />
-          <div className="hero-picture-scrim absolute inset-0" aria-hidden="true" />
-        </div>
+        <BandPicture image={picture} alt={imageAlt ?? ''} testId="entity-page-image" />
       )}
       {/* Positioned, so it paints above the picture and its scrim. */}
       <div className="relative px-4">
