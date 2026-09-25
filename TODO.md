@@ -25,10 +25,8 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
 | medium | T056 | Sign-in errors carry a reportable ref | S | blocked | On hold for an app-wide error-numbering system, which the maintainer wants first |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
-| medium | T062 | Quick add's description box is two rows | S | open | Every note conversion lands text in it; real friction, small fix |
 | medium | T061 | PRs are checked by the build alone | M | open | Tests never run in CI, and merging deploys live |
 | medium | T070 | Functions are deployed by hand | M | needs investigation | Frontend and functions can drift in prod; contact secrets must move first. Service account roles unchecked |
-| low | T069 | Breadcrumb overflows at 320px | S | open | Masked today by the header, which overflows on every route |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
 | low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
@@ -43,7 +41,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T040 | No accent pair for the band | S | open | Interim `.band-chip` works; schema-owner decision |
 | low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
 | low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; the fix is leaving CRA, which needs a plan |
-| low | T060 | 35 build lint warnings | M | open | One is a real a11y bug (theme menu); the rest want a look each |
+| low | T060 | 35 build lint warnings | M | open | Each wants a look, not an autofix; blocks a lint gate in T061 |
 | low | T063 | Entity pages look like three products | L | needs scoping | NPC page doesn't use the shell; pick the look first |
 | low | T065 | Firebase CLI 13 → 15 | S | open | Brings the artifact cleanup policy; re-run the emulator suites after |
 | low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
@@ -134,21 +132,7 @@ documents agreed with each other and none of them agreed with the product.
 
 ## Bugs
 
-### T069 — A long breadcrumb overflows the page at 320px
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-24
-
-On `/npcs/aragorn` in a 320px iframe, `main` scrolls to 327px in a 303px
-viewport. The only overflowing elements outside header and footer are the
-breadcrumb's `ol`, its `li`s and the current-page label.
-
-- **Where**: `shared/components/Breadcrumb.tsx:37`, where the `ol` is
-  `flex items-center space-x-2`, with no wrap and no truncation.
-- **Touches**: every page that renders a breadcrumb (NPC, EntityPageShell's
-  location and quest pages, the story pages, quick add). Only the NPC page
-  was measured.
-- **Catch**: hidden behind the header's own overflow below ~380px (see
-  `CLAUDE.md`), so fixing this alone won't stop the page scrolling sideways.
-- **Source**: found checking T064's layout, 2026-09-24
+Nothing open.
 
 ---
 
@@ -292,22 +276,6 @@ The same email can keep the magic link for signing in on the device that opens i
 - **Rollback**: the current approve-from-the-phone flow keeps working without
   any of this, so it stays the fallback.
 - **Source**: maintainer, 2026-09-24
-
-### T062 — Quick add's description box is two rows tall
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-24
-
-Creating an NPC, location or quest from a note pre-fills the description with
-the extracted text, and it lands in a two-row box. Long text is nearly
-unreadable before the user decides whether to keep it.
-
-- **Where**: `shared/components/quick-add/QuickAddForm.tsx:162` — the line field
-  is `isTextArea` with `rows={2}`. Note conversion navigates to `/npcs/create`
-  etc. (`features/collaboration/notes/context/NoteContext.tsx:420`), which
-  renders `QuickAddPage.tsx:47` with the text as `initialLine`. The dialog form
-  of the same component is `max-w-lg` (`QuickAddDialog.tsx:51`).
-- **Catch**: one form serves both the dialog and the page. The field should grow
-  with what it holds rather than be taller for everyone.
-- **Source**: todo.txt, 2026-09-24
 
 ### T063 — The NPC, location and quest pages look like three products
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-24
@@ -661,15 +629,14 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
 - **Source**: todo.txt, 2026-09-24
 
 ### T060 — The build prints 35 lint warnings
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-24
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-25
 
 `npm run build` compiles "with warnings": 35 in 20 files, all pre-existing.
 
-- **Measured** (2026-09-24): 19 `react-hooks/exhaustive-deps`, 15
-  `@typescript-eslint/no-unused-vars`, and 1 `jsx-a11y/role-supports-aria-props`.
-- **The one that is a bug**: `shared/components/user-menu/ThemeSegmented.tsx:48`
-  puts `aria-pressed` on `role="menuitem"`. A screen reader is not told which
-  theme is selected; `menuitemradio` + `aria-checked` is the pattern.
+- **Measured** (2026-09-25): 19 `react-hooks/exhaustive-deps` and 16
+  `@typescript-eslint/no-unused-vars`. The one accessibility warning, the theme
+  menu's `aria-pressed` on a `menuitem`, is fixed; an unused variable merged
+  since the first count keeps the total at 35.
 - **Catch**: an `exhaustive-deps` "fix" can change when an effect runs. Each one
   wants a look, not a blanket autofix. And CRA turns warnings into errors when
   `CI=true`, which matters for T061.

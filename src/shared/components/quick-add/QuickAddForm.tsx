@@ -13,6 +13,7 @@ import {
   type QuickAddErrors,
 } from "./quickAddSpecs";
 import { useQuickAddCreate } from "./useQuickAddCreate";
+import { useAutoGrow } from "shared/hooks/useAutoGrow";
 
 export interface QuickAddFormProps {
   entity: QuickAddEntity;
@@ -85,6 +86,12 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
   const [addedCount, setAddedCount] = useState(0);
 
   const nameRef = useRef<HTMLInputElement>(null);
+  const lineRef = useRef<HTMLTextAreaElement>(null);
+
+  // Note conversion lands its extracted text here, often a paragraph. Two rows
+  // stay the floor so an empty form is no taller than before; the box grows to
+  // show what it holds, up to half the screen, then scrolls (T062).
+  useAutoGrow(lineRef, line);
 
   useEffect(() => {
     if (autoFocus) nameRef.current?.focus();
@@ -160,13 +167,14 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
       />
 
       <Input
+        ref={lineRef as React.Ref<HTMLTextAreaElement>}
         label={spec.labels.lineLabel}
         placeholder={spec.labels.linePlaceholder}
         value={line}
         onChange={(event) => setLine(event.target.value)}
         error={fieldErrors.line}
         aria-invalid={Boolean(fieldErrors.line)}
-        className="font-heading"
+        className="font-heading max-h-[50vh]"
         isTextArea
         rows={2}
         fullWidth

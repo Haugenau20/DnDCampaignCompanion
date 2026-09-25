@@ -357,5 +357,51 @@ describe("QuickAddForm", () => {
       expect(nameField()).toHaveValue("Elrond");
       expect(lineField()).toHaveValue("Elf lord");
     });
+
+    /*
+      T062. Conversion lands a paragraph in the line field, and a two-row box
+      made it unreadable before the user could decide whether to keep it. The
+      box must open at the height of what it holds. jsdom does no layout, so
+      the content height is stubbed to follow the value, one pixel per
+      character.
+    */
+    describe("a long extracted description", () => {
+      const original = Object.getOwnPropertyDescriptor(
+        HTMLTextAreaElement.prototype,
+        "scrollHeight"
+      );
+
+      beforeAll(() => {
+        Object.defineProperty(HTMLTextAreaElement.prototype, "scrollHeight", {
+          configurable: true,
+          get(this: HTMLTextAreaElement) {
+            return this.value.length;
+          },
+        });
+      });
+
+      afterAll(() => {
+        if (original) {
+          Object.defineProperty(HTMLTextAreaElement.prototype, "scrollHeight", original);
+        } else {
+          delete (HTMLTextAreaElement.prototype as unknown as Record<string, unknown>)
+            .scrollHeight;
+        }
+      });
+
+      it("opens the line box tall enough to show all of it", () => {
+        const extracted = "An elf lord of Rivendell. ".repeat(20);
+        renderForm({ initialName: "Elrond", initialLine: extracted });
+        expect(lineField().style.height).toBe(`${extracted.length}px`);
+      });
+
+      it("keeps growing as the user adds to it", async () => {
+        renderForm({ initialName: "Elrond", initialLine: "Elf lord" });
+        await userEvent.type(lineField(), " of Rivendell");
+        expect(lineField().style.height).toBe(
+          `${"Elf lord of Rivendell".length}px`
+        );
+      });
+    });
   });
 });

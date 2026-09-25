@@ -31,7 +31,49 @@ const Harness: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
   );
 };
 
+/**
+ * A popover whose rows mix the three menu item roles, the way the account
+ * menu mixes plain rows with its theme switch's radio items.
+ */
+const MixedRowsHarness: React.FC = () => {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  usePopoverKeys({ isOpen: true, panelRef, triggerRef, onClose: () => {} });
+
+  return (
+    <div>
+      <button ref={triggerRef}>Trigger</button>
+      <div ref={panelRef} role="menu">
+        <button role="menuitem">Plain</button>
+        <div role="group" aria-label="Theme">
+          <button role="menuitemradio" aria-checked="true">Light</button>
+          <button role="menuitemradio" aria-checked="false">Dark</button>
+        </div>
+        <button role="menuitemcheckbox" aria-checked="false">Toggle</button>
+        <button>Not a row</button>
+      </div>
+    </div>
+  );
+};
+
 describe("usePopoverKeys", () => {
+  test("walks radio and checkbox items as rows, and skips non-rows", () => {
+    render(<MixedRowsHarness />);
+    expect(screen.getByText("Plain")).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    expect(screen.getByText("Light")).toHaveFocus();
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    expect(screen.getByText("Dark")).toHaveFocus();
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    expect(screen.getByText("Toggle")).toHaveFocus();
+    // Wraps past the plain button, which is not a menu row.
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    expect(screen.getByText("Plain")).toHaveFocus();
+  });
+
+
   test("moves focus into the popover when it opens", () => {
     render(<Harness />);
     expect(screen.getByText("First")).toHaveFocus();

@@ -34,19 +34,28 @@ describe("ThemeSegmented", () => {
     mockSetAccountTheme.mockResolvedValue(undefined);
   });
 
-  test("marks the current theme", () => {
+  test("marks the current theme as checked", () => {
     setupMocks("dark");
 
     render(<ThemeSegmented />);
 
-    expect(screen.getByRole("menuitem", { name: "Dark" })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
-    expect(screen.getByRole("menuitem", { name: "Light" })).toHaveAttribute(
-      "aria-pressed",
-      "false"
-    );
+    // A choice of one inside a menu: radio items with `aria-checked`, which a
+    // screen reader announces. `aria-pressed` on a plain menu item is not
+    // supported there and was silently dropped (T060).
+    expect(
+      screen.getByRole("menuitemradio", { name: "Dark", checked: true })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitemradio", { name: "Light", checked: false })
+    ).toBeInTheDocument();
+  });
+
+  test("does not use aria-pressed, which a menu item does not support", () => {
+    render(<ThemeSegmented />);
+
+    for (const option of screen.getAllByRole("menuitemradio")) {
+      expect(option).not.toHaveAttribute("aria-pressed");
+    }
   });
 
   test("offers exactly the themes that exist", () => {
@@ -56,14 +65,14 @@ describe("ThemeSegmented", () => {
     // added to the control without being added to the registry -- or a retired
     // one left behind, which is what this replaced -- fails here.
     expect(
-      screen.getAllByRole("menuitem").map((option) => option.textContent)
+      screen.getAllByRole("menuitemradio").map((option) => option.textContent)
     ).toEqual(["Light", "Dark"]);
   });
 
   test("switching goes through the account theme writer", async () => {
     render(<ThemeSegmented />);
 
-    await userEvent.click(screen.getByRole("menuitem", { name: "Dark" }));
+    await userEvent.click(screen.getByRole("menuitemradio", { name: "Dark" }));
 
     expect(mockSetAccountTheme).toHaveBeenCalledWith("dark");
   });

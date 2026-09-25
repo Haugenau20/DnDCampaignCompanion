@@ -7,13 +7,27 @@ import { useEffect } from "react";
 interface UsePopoverKeysOptions {
   /** Whether the popover is currently open. */
   isOpen: boolean;
-  /** The popover panel. Rows are located inside it by `[role="menuitem"]`. */
+  /**
+   * The popover panel. Rows are located inside it by any of the three menu
+   * item roles (see {@link MENU_ROW_SELECTOR}).
+   */
   panelRef: React.RefObject<HTMLElement>;
   /** The trigger, refocused when the popover closes on Escape. */
   triggerRef: React.RefObject<HTMLElement>;
   /** Close the popover. */
   onClose: () => void;
 }
+
+/**
+ * Every role a row of a menu can take.
+ *
+ * A row that says which option is chosen is a `menuitemradio` (or a
+ * `menuitemcheckbox`), not a `menuitem` with `aria-pressed` -- that attribute
+ * is not supported on a menu item, so a screen reader never announces it.
+ * Matching only `menuitem` here would drop such a row out of the arrow keys.
+ */
+const MENU_ROW_SELECTOR =
+  '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]';
 
 /**
  * The keyboard contract for an open popover menu.
@@ -40,7 +54,7 @@ export function usePopoverKeys({
     if (!panel) return;
 
     const rowsOf = () =>
-      Array.from(panel.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+      Array.from(panel.querySelectorAll<HTMLElement>(MENU_ROW_SELECTOR));
 
     // Move focus into the popover so the arrow keys have somewhere to start.
     rowsOf()[0]?.focus();
