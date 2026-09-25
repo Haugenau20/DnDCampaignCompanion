@@ -814,15 +814,10 @@
   }
 
   /*
-    A band with a picture in it (`BandPicture`: a record's picture in
-    `EntityPageShell`, the campaign's banner in `CampaignBanner`). The picture fills
-    the band; a window at the top shows it nearly clear, and a scrim in the
-    band's own colour closes over it by the window's foot, before any text.
-
-    The text below sits on at least 90% band colour. Measured against the worst
-    case, a pure white picture: band-on-muted needs 86% (light) / 83% (dark) to
-    keep 4.5:1, band-on 66% / 62%. So the band pair holds whatever is uploaded,
-    and no text here takes a shadow or a colour of its own.
+    A band with a picture in it (`PicturedBand`, design D10): the campaign's
+    banner in `CampaignBanner`, a record's picture in `EntityPageShell`. The
+    picture fills the band and shows untouched except behind its text. On a
+    phone a window at the top of the band shows it above the text.
   */
   .hero-band-pictured {
     --hero-picture-window: 6rem;
@@ -854,33 +849,29 @@
     object-position: center 30%;
   }
 
-  .hero-picture-scrim {
-    background-image: linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--surface-band-bg) 10%, transparent) 0,
-      color-mix(in srgb, var(--surface-band-bg) 90%, transparent) var(--hero-picture-window),
-      color-mix(in srgb, var(--surface-band-bg) 95%, transparent) 100%
-    );
-  }
-
   /*
-    The adaptive band (`CampaignBanner`): the picture across the whole band,
-    and the dimming only behind the text.
+    Text on the picture: each `.hero-dim-region` (`BandRegion`).
 
-    The full-band scrim is replaced by a patch of the band's own colour behind
-    `.hero-identity`, at full strength over the text box itself and fading
-    softly to nothing around it, so the rest of the picture shows untouched. Being attached to the text block, it grows and shrinks
-    with the name and description on its own.
+    The silhouette is what keeps it readable. Every child of a region is drawn
+    through `--hero-silhouette`, an SVG filter (`BandSilhouette`) that lays a
+    halo of the band colour behind each glyph -- the glyph grown 3px, its edge
+    softened by 1.5px. Where the halo meets a stroke it is over 97% band
+    colour, so every letter sits on the band itself and keeps the band pair's
+    contrast (band-on and band-on-muted both pass 4.5:1 there), whatever the
+    picture does beside it. Control outlines get the same halo.
 
-    Its strength, `--hero-dim`, is set on the band by `useBandDim`: the least
-    share of the band colour that keeps the band pair at 4.5:1 over the
-    brightest part of the picture under the text. 0.9 is the fallback before
-    that is known -- above the 86% (light) / 83% (dark) a pure white picture
-    needs, so the text is readable from the first paint.
+    Behind that, a faint patch of the band colour calms the picture's texture:
+    a blurred rectangle a little larger than the region, at a third of
+    `--hero-dim` -- the strength `useBandDim` measured the region would need
+    with no silhouette at all, written onto the region. Until it is measured,
+    the band's 0.9, the worst case.
 
-    `isolation` makes the text block its own stacking context, so the patch
-    (`z-index: -1`) sits behind its text but above the picture. The band clips
-    the patch where it runs past the band's edges.
+    `isolation` makes a region its own stacking context, so the patch
+    (`z-index: -1`) sits behind its text but above the picture, and the band
+    clips the patch where it runs past the band's edges. The filter goes on
+    the children, not the region, so the patch is not grown a halo of its own.
+    A filter makes each child a containing block for `position: fixed`, so a
+    popover opened from band text must render outside the region.
   */
   .hero-band-adaptive {
     /*
@@ -889,63 +880,78 @@
       edge shows, so the picture window above stays clear.
     */
     --hero-dim-soften: 0.75rem;
-    /* Until `useBandDim` sets the measured strength inline: the worst case. */
+    /* Until `useBandDim` writes the measured strength on each region: the worst case. */
     --hero-dim: 0.9;
+    /* The patch's share of that strength: E in the 2026-09-25 comparison. */
+    --hero-patch-share: 0.33;
+    /* The band's own filter, which `PicturedBand` names inline; no halo until it does. */
+    --hero-silhouette: none;
     overflow: hidden;
   }
 
-  .hero-band-adaptive .hero-picture-scrim {
-    display: none;
-  }
-
-  .hero-band-adaptive .hero-identity {
+  .hero-band-adaptive .hero-dim-region {
     position: relative;
     isolation: isolate;
+  }
+
+  .hero-band-adaptive .hero-dim-region > * {
+    filter: var(--hero-silhouette);
+  }
+
+  /* The halo's colour: the band's own, from the theme. */
+  .hero-silhouette-flood {
+    flood-color: var(--surface-band-bg);
   }
 
   /*
     A blurred rectangle rather than masked ramps: a Gaussian edge has no
     corners and no visible start. The rectangle runs at least three blur radii
-    past the text on every side, so over the text box itself the patch is
-    still at full strength (99.9%) -- the strength `useBandDim` worked out.
+    past the text on every side, so over the text box itself the patch is at
+    its full (faint) strength.
   */
-  .hero-band-adaptive .hero-identity::before {
+  .hero-band-adaptive .hero-dim-region::before {
     content: "";
     position: absolute;
     inset: calc(-3 * var(--hero-dim-soften)) calc(-4 * var(--hero-dim-soften));
     z-index: -1;
     pointer-events: none;
     background-color: var(--surface-band-bg);
-    opacity: var(--hero-dim);
+    opacity: calc(var(--hero-dim) * var(--hero-patch-share));
     filter: blur(var(--hero-dim-soften));
   }
 
-  /*
-    On a desktop the band is taller, so a landscape photo is not cut to a thin
-    strip, and the text is centred in it with no window above. The text column
-    is capped, which keeps the dimmed patch compact.
-  */
   @media (min-width: 1024px) {
     .hero-band-adaptive {
       /* Wide on a desktop, where the edge you see is the long one to the right. */
       --hero-dim-soften: 2rem;
+    }
+  }
+
+  /*
+    The campaign banner's own layout, with a picture. On a desktop the band is
+    taller, so a landscape photo is not cut to a thin strip, and the text is
+    centred in it with no window above. The text column is capped, which keeps
+    the patch compact and most of the picture clear.
+  */
+  @media (min-width: 1024px) {
+    .hero-band-banner.hero-band-adaptive {
       min-height: 17rem;
       display: flex;
       flex-direction: column;
       justify-content: center;
     }
 
-    .hero-band-adaptive .hero-picture-window {
+    .hero-band-banner.hero-band-adaptive .hero-picture-window {
       display: none;
     }
 
-    .hero-band-adaptive .hero-identity {
+    .hero-band-banner.hero-band-adaptive .hero-identity {
       max-width: 24rem;
     }
   }
 
   @media (min-width: 1280px) {
-    .hero-band-adaptive .hero-identity {
+    .hero-band-banner.hero-band-adaptive .hero-identity {
       max-width: 28rem;
     }
   }

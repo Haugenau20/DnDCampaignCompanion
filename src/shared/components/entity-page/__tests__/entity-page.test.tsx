@@ -109,16 +109,26 @@ describe('EntityPageShell', () => {
       ).toBeTruthy();
     });
 
-    it('lays a scrim in the band colour between the picture and the text', () => {
-      // Readability does not depend on what was uploaded: the text sits on the
-      // scrim, which is the band's own surface colour (see `.hero-picture-scrim`).
-      const { container } = renderShell({ image: picture, imageAlt: 'Gondolin' });
-      const scrim = container.querySelector('.hero-band .hero-picture-scrim');
-      expect(scrim).not.toBeNull();
-      expect(
-        screen.getByRole('img', { name: 'Gondolin' }).compareDocumentPosition(scrim as Node) &
-          Node.DOCUMENT_POSITION_FOLLOWING
-      ).toBeTruthy();
+    it('keeps the trail, the name and the controls readable, each on its own', () => {
+      // D10: each block of text on the picture is a region, which gets a
+      // silhouette around its glyphs and a faint patch measured for it alone.
+      const { container } = renderShell({
+        image: picture,
+        imageAlt: 'Gondolin',
+        bandControl: <button type="button">Explored</button>,
+        actions: <button type="button">Add a place inside</button>,
+      });
+      const band = container.querySelector('.hero-band') as HTMLElement;
+      expect(band).toHaveClass('hero-band-adaptive');
+
+      const regions = Array.from(band.querySelectorAll('.hero-dim-region'));
+      expect(regions).toHaveLength(3);
+      const regionOf = (element: HTMLElement) => regions.find(region => region.contains(element));
+      const trail = regionOf(screen.getByRole('navigation'));
+      const name = regionOf(screen.getByRole('heading', { level: 1 }));
+      const controls = regionOf(screen.getByRole('button', { name: 'Explored' }));
+      expect(new Set([trail, name, controls]).size).toBe(3);
+      expect(controls).toContainElement(screen.getByRole('button', { name: 'Add a place inside' }));
     });
 
     it('draws no picture from outside the app’s own bucket', () => {
@@ -136,7 +146,8 @@ describe('EntityPageShell', () => {
       const { container } = renderShell();
       expect(screen.queryByTestId('entity-page-image')).toBeNull();
       expect(screen.queryByRole('img')).toBeNull();
-      expect(container.querySelector('.hero-picture-scrim')).toBeNull();
+      expect(container.querySelector('.hero-band-adaptive')).toBeNull();
+      expect(container.querySelector('filter')).toBeNull();
     });
 
     it('offers whoever may edit add, replace and remove on the band itself', () => {

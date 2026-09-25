@@ -5,7 +5,8 @@ import Typography from 'core/components/Typography';
 import EntitySigil from 'core/components/EntitySigil';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import ImageUploadControl, { ImageUploadControlProps } from 'shared/components/ImageUploadControl';
-import BandPicture, { bandPicture } from 'shared/components/BandPicture';
+import { bandPicture } from 'shared/components/BandPicture';
+import PicturedBand, { BandRegion } from 'shared/components/PicturedBand';
 import { StoredImage } from 'core/types/storedImage';
 
 export interface EntityPageBreadcrumbItem {
@@ -37,14 +38,14 @@ export interface EntityPageShellProps {
   /** Relations and record. The right column, and the second on a phone. */
   aside?: React.ReactNode;
   /**
-   * The record's picture, drawn into the band behind its text.
+   * The record's picture, drawn across the band behind its text.
    *
-   * The band opens a window at its top where the picture shows nearly clear,
-   * then a scrim in the band's own colour closes over it before the text
-   * starts (`.hero-picture-scrim`). So the text still sits on the band surface,
-   * and keeps the band pair's contrast whatever was uploaded. Without a
-   * picture the band is drawn as it always was: most records never get one,
-   * and an empty slot on every one of them would be the page's main feature.
+   * `PicturedBand` keeps each block of text on it -- the trail, the name,
+   * the controls -- readable: a silhouette of the band colour around each
+   * glyph, and a faint patch behind the block (design D10). A window at the
+   * band's top shows the picture above the text. Without a picture the band
+   * is drawn as it always was: most records never get one, and an empty slot
+   * on every one of them would be the page's main feature.
    */
   image?: StoredImage | null;
   /** Alt text for `image`. */
@@ -94,14 +95,16 @@ export const EntityPageShell: React.FC<EntityPageShellProps> = ({
   const picture = bandPicture(image);
 
   const band = (
-    <div className={clsx('hero-band relative py-6 sm:py-8', picture && 'hero-band-pictured')}>
-      {picture && (
-        <BandPicture image={picture} alt={imageAlt ?? ''} testId="entity-page-image" />
-      )}
-      {/* Positioned, so it paints above the picture and its scrim. */}
-      <div className="relative px-4">
-        {picture && <div className="hero-picture-window" aria-hidden="true" />}
-        <div className="max-w-7xl mx-auto flex flex-col gap-4">
+    <PicturedBand
+      image={picture}
+      alt={imageAlt ?? ''}
+      className="hero-band py-6 sm:py-8"
+      innerClassName="px-4"
+      pictureTestId="entity-page-image"
+    >
+      <div className="max-w-7xl mx-auto flex flex-col gap-4">
+        {/* Sized to the trail, so its patch covers the words and not the row. */}
+        <BandRegion className="self-start max-w-full">
           <Breadcrumb
             items={breadcrumb}
             tone="band"
@@ -109,37 +112,37 @@ export const EntityPageShell: React.FC<EntityPageShellProps> = ({
             // there is no picture window above it.
             className={clsx('py-0', imageUpload && !picture && 'pr-20')}
           />
+        </BandRegion>
 
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-            <div className="flex items-start gap-4 min-w-0">
-              <EntitySigil entityId={entityId} name={name} size={48} className="shrink-0" />
-              <div className="min-w-0 flex flex-col gap-1">
-                {/*
-                  The name is the campaign's voice and takes the serif, which
-                  `Typography`'s heading variants already carry (design language
-                  §4). Everything else on this page is the application talking.
-                */}
-                <Typography variant="h1" className="text-3xl sm:text-4xl break-words">
-                  {name}
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <BandRegion className="flex items-start gap-4 min-w-0">
+            <EntitySigil entityId={entityId} name={name} size={48} className="shrink-0" />
+            <div className="min-w-0 flex flex-col gap-1">
+              {/*
+                The name is the campaign's voice and takes the serif, which
+                `Typography`'s heading variants already carry (design language
+                §4). Everything else on this page is the application talking.
+              */}
+              <Typography variant="h1" className="text-3xl sm:text-4xl break-words">
+                {name}
+              </Typography>
+              {meta && (
+                <Typography variant="body-sm" className="hero-muted">
+                  {meta}
                 </Typography>
-                {meta && (
-                  <Typography variant="body-sm" className="hero-muted">
-                    {meta}
-                  </Typography>
-                )}
-              </div>
+              )}
             </div>
+          </BandRegion>
 
-            {(bandControl || actions) && (
-              <div className="flex flex-wrap items-center gap-3 lg:justify-end shrink-0">
-                {bandControl}
-                {actions}
-              </div>
-            )}
-          </div>
+          {(bandControl || actions) && (
+            <BandRegion className="flex flex-wrap items-center gap-3 lg:justify-end shrink-0 self-start">
+              {bandControl}
+              {actions}
+            </BandRegion>
+          )}
         </div>
       </div>
-    </div>
+    </PicturedBand>
   );
 
   return (
