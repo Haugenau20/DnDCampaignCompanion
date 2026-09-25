@@ -21,12 +21,12 @@
  * BUMP THIS BY HAND whenever the wording changes, and add a PRIVACY_CHANGELOG
  * line saying what changed. Never derive it from Date.now().
  */
-export const PRIVACY_LAST_UPDATED = "2026-09-24";
+export const PRIVACY_LAST_UPDATED = "2026-09-25";
 
 /** What changed in the revision named by PRIVACY_LAST_UPDATED, newest first. */
 export const PRIVACY_CHANGELOG: readonly string[] = [
-  "You can add pictures to NPCs, places and your party's crest. They are stored in the United States, and anyone who has a picture's link can open it.",
-  "Before a photo is uploaded it is shrunk, and its hidden details, including where it was taken, are removed.",
+  "A campaign can have a banner picture on its dashboard. Anyone in the group can add, replace or remove it.",
+  "It is stored and shared exactly as the other pictures are: in the United States, shrunk and stripped of its hidden details before upload, and visible to your group.",
 ];
 
 /**
@@ -122,7 +122,7 @@ export const PRIVACY_TABLE_ROWS: readonly PrivacyTableRow[] = [
   {
     id: "images",
     what: "Pictures you add",
-    why: "Portraits, places and your party's crest",
+    why: "Portraits, places, your campaign's banner and your party's crest",
     where: "Google Cloud Storage in the United States, visible to your group",
     howLong: "Until someone removes it; stays with the group if you leave",
   },

@@ -44,6 +44,7 @@ const uid = (name: string) => `${NS}${name}`;
 const NAME = "0f8fad5b-d9cb-469f-a165-70867728950e.webp";
 const NPC_DIR = `groups/${G}/campaigns/c1/npcs/n1`;
 const CREST_DIR = `groups/${G}/crest`;
+const BANNER_DIR = `groups/${G}/campaigns/c1/banner`;
 
 const WEBP = {contentType: "image/webp"};
 const small = () => new Uint8Array(100 * 1024);
@@ -102,13 +103,14 @@ afterAll(async () => {
 /**
  * gandalf is the group admin, frodo a member, sauron a stranger with an
  * account in another group, and gollum has an account and no profile at all.
- * An NPC image and a crest already exist.
+ * An NPC image, a campaign banner and a crest already exist.
  */
 beforeEach(async () => {
   await env.clearStorage();
   await env.withSecurityRulesDisabled(async (context) => {
     const storage = context.storage();
     await storage.ref(`${NPC_DIR}/${NAME}`).put(small(), WEBP);
+    await storage.ref(`${BANNER_DIR}/${NAME}`).put(small(), WEBP);
     await storage.ref(`${CREST_DIR}/${NAME}`).put(small(), WEBP);
   });
 });
@@ -181,6 +183,46 @@ describe("campaign entity images", () => {
 
   it("a stranger cannot delete an image", async () => {
     await assertFails(as("sauron").ref(`${NPC_DIR}/${NAME}`).delete());
+  });
+});
+
+describe("the campaign banner", () => {
+  it("a member can get its download URL", async () => {
+    await assertSucceeds(as("frodo").ref(`${BANNER_DIR}/${NAME}`).getDownloadURL());
+  });
+
+  it("a stranger cannot", async () => {
+    await assertFails(as("sauron").ref(`${BANNER_DIR}/${NAME}`).getDownloadURL());
+  });
+
+  it("a plain member can upload one -- any member may edit the campaign", async () => {
+    await assertSucceeds(as("frodo").ref(fresh(BANNER_DIR)).put(small(), WEBP).then());
+  });
+
+  it("a stranger cannot upload one", async () => {
+    await assertFails(as("sauron").ref(fresh(BANNER_DIR)).put(small(), WEBP).then());
+  });
+
+  it("a PNG is refused", async () => {
+    await assertFails(as("frodo").ref(fresh(BANNER_DIR, "png")).put(small(), {contentType: "image/png"}).then());
+  });
+
+  it("an existing file cannot be overwritten", async () => {
+    await assertFails(as("frodo").ref(`${BANNER_DIR}/${NAME}`).put(small(), WEBP).then());
+  });
+
+  it("a plain member can delete it", async () => {
+    await assertSucceeds(as("frodo").ref(`${BANNER_DIR}/${NAME}`).delete());
+  });
+
+  it("a stranger cannot delete it", async () => {
+    await assertFails(as("sauron").ref(`${BANNER_DIR}/${NAME}`).delete());
+  });
+
+  it("a folder of another name at the same depth is refused", async () => {
+    await assertFails(
+      as("frodo").ref(fresh(`groups/${G}/campaigns/c1/other`)).put(small(), WEBP).then()
+    );
   });
 });
 

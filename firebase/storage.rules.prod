@@ -22,6 +22,8 @@
 // ---------------------------------------------------------------------------
 // - Group members read, create and delete images on their campaign's NPCs and
 //   locations. Delete matches Firestore's relaxed entity delete (#1406).
+// - Group members read, create and delete their campaign's banner. That matches
+//   who may update the campaign document (any member).
 // - Group admins create and delete the group crest; members may read it. That
 //   matches who may update the group document.
 // - Nobody overwrites a file. Every upload is a new, random name (D3), which is
@@ -81,6 +83,16 @@ service firebase.storage {
       allow create: if entityType in ['npcs', 'locations'] &&
                        isPreparedImage(fileName) &&
                        isGroupMember(groupId);
+      allow update: if false;
+      allow delete: if isGroupMember(groupId);
+    }
+
+    // One level shallower than an entity's folder, so the match above never
+    // reaches it. Inside the campaign's folder, so deleteCampaign's prefix
+    // delete takes it too.
+    match /groups/{groupId}/campaigns/{campaignId}/banner/{fileName} {
+      allow read: if isGroupMember(groupId);
+      allow create: if isPreparedImage(fileName) && isGroupMember(groupId);
       allow update: if false;
       allow delete: if isGroupMember(groupId);
     }

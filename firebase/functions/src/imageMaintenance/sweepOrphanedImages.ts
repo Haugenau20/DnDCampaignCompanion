@@ -16,7 +16,7 @@ const MIN_AGE_MS = 24 * 60 * 60 * 1000;
  * later -- is not the sweep's to judge, however unreferenced it looks.
  */
 const IMAGE_PATH = new RegExp(
-  "^groups/[^/]+/(campaigns/[^/]+/(npcs|locations)/[^/]+|crest)/[^/]+$"
+  "^groups/[^/]+/(campaigns/[^/]+/((npcs|locations)/[^/]+|banner)|crest)/[^/]+$"
 );
 
 /** What one sweep did, for the log and for tests. */
@@ -31,7 +31,7 @@ export interface SweepResult {
 
 /**
  * The path of every image a document points at: each NPC's and location's
- * `image`, and each group's `crest`.
+ * `image`, each campaign's `banner`, and each group's `crest`.
  *
  * Reads every NPC and location rather than querying `image != null`: a filter
  * on a collection group needs a collection-group index, which Firestore does
@@ -42,9 +42,10 @@ export interface SweepResult {
  */
 async function referencedPaths(): Promise<Set<string>> {
   const db = admin.firestore();
-  const [npcs, locations, groups] = await Promise.all([
+  const [npcs, locations, campaigns, groups] = await Promise.all([
     db.collectionGroup("npcs").select("image").get(),
     db.collectionGroup("locations").select("image").get(),
+    db.collectionGroup("campaigns").select("banner").get(),
     db.collection("groups").select("crest").get(),
   ]);
 
@@ -55,6 +56,7 @@ async function referencedPaths(): Promise<Set<string>> {
   };
   npcs.docs.forEach((doc) => add(doc.get("image")));
   locations.docs.forEach((doc) => add(doc.get("image")));
+  campaigns.docs.forEach((doc) => add(doc.get("banner")));
   groups.docs.forEach((doc) => add(doc.get("crest")));
   return paths;
 }
