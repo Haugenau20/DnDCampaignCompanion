@@ -27,6 +27,7 @@ export const PRIVACY_LAST_UPDATED = "2026-09-25";
 export const PRIVACY_CHANGELOG: readonly string[] = [
   "A campaign can have a banner picture on its dashboard. Anyone in the group can add, replace or remove it.",
   "It is stored and shared exactly as the other pictures are: in the United States, shrunk and stripped of its hidden details before upload, and visible to your group.",
+  "Signed in, you can attach a screenshot to a message you send us. It is shrunk and stripped of its hidden details, passes through Google Cloud Storage in the United States, and is deleted as soon as the email is sent, or after a day if the message never is.",
 ];
 
 /**
@@ -136,10 +137,10 @@ export const PRIVACY_TABLE_ROWS: readonly PrivacyTableRow[] = [
   },
   {
     id: "messages",
-    what: "Messages you send us",
+    what: "Messages you send us, and any screenshot you attach",
     why: "To answer you",
-    where: "Email, via a Cloud Function",
-    howLong: "Until your question is resolved",
+    where: "Email, via a Cloud Function; a screenshot passes through Google Cloud Storage in the United States on the way",
+    howLong: "Until your question is resolved; the uploaded screenshot is deleted once it is sent, or after a day",
   },
 ];
 

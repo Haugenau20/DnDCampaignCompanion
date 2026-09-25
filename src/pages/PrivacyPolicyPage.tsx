@@ -184,6 +184,13 @@ const PrivacyPolicyPage: React.FC = () => {
               uploaded.
             </Typography>
             <Typography>
+              A screenshot you attach to a message you send us, if you are
+              signed in. It is shrunk and stripped the same way, then uploaded
+              to a folder that only you can add to and nobody can open from the
+              app — not even you. We read it once, to attach it to the email,
+              and delete it straight after.
+            </Typography>
+            <Typography>
               We do not record which pages you visit or what you click. Session
               activity is detected only to decide whether you are still there.
             </Typography>
@@ -278,7 +285,9 @@ const PrivacyPolicyPage: React.FC = () => {
               The campaign content you wrote stays with the group, so you don't
               take the table's shared history with you when you go. Messages you
               send through the contact form are kept only until your question is
-              resolved, and are never used to market anything at you.
+              resolved, and are never used to market anything at you. A
+              screenshot you attach is deleted from our storage as soon as the
+              email is sent, or after a day if the message never is.
             </Typography>
           </Section>
 
@@ -294,7 +303,8 @@ const PrivacyPolicyPage: React.FC = () => {
             <Typography>
               Data is held in Google Firebase in {PRIVACY_HOSTING_REGION}. Three
               things reach outside the EU: entity extraction, described above;
-              pictures, which are stored in {IMAGE_STORAGE_REGION} under
+              pictures, including a screenshot on its way to us, which are
+              stored in {IMAGE_STORAGE_REGION} under
               Google's data processing terms for Firebase; and Google's own
               operation of the platform, which can involve support access from
               other countries.

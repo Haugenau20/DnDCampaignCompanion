@@ -1,6 +1,6 @@
 // src/shared/components/__tests__/ContactForm.test.tsx
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ContactForm from "../ContactForm";
 import { unnamedControlsIn } from "@/test-utils/accessible-names";
@@ -45,6 +45,42 @@ jest.mock("features/user-management", () => ({
   useCampaigns: () => mockCampaigns,
 }));
 
+const mockUploadScreenshot = jest.fn();
+const mockRemoveImage = jest.fn();
+
+jest.mock("core/services/firebase", () => ({
+  images: {
+    uploadScreenshot: (...args: unknown[]) => mockUploadScreenshot(...args),
+    remove: (...args: unknown[]) => mockRemoveImage(...args),
+  },
+}));
+
+jest.mock("core/utils/prepare-image", () => {
+  const actual = jest.requireActual("core/utils/prepare-image");
+  return {
+    ...actual,
+    prepareImage: jest.fn(async () => ({
+      blob: new Blob(["x"], { type: "image/webp" }),
+      width: 1600,
+      height: 900,
+      contentType: "image/webp",
+      extension: "webp",
+    })),
+  };
+});
+
+const SCREENSHOT_PATH = "support/u1/0f8fad5b-d9cb-469f-a165-70867728950e.webp";
+const PREVIEW_ALT = "The screenshot you attached";
+
+/** Attach a screenshot through the field, and wait for it to be uploaded. */
+async function attachScreenshot(user: ReturnType<typeof userEvent.setup>) {
+  await user.upload(
+    screen.getByTestId("screenshot-input"),
+    new File(["png"], "shot.png", { type: "image/png" })
+  );
+  await screen.findByAltText(PREVIEW_ALT);
+}
+
 const VALID_MESSAGE = "The delete button removed my note without asking first.";
 
 /** Fill the form to the point where it can legitimately be submitted. */
@@ -74,6 +110,10 @@ describe("ContactForm", () => {
       activeCampaign: { name: "Phandelver" },
     };
     mockSearch = "";
+    mockUploadScreenshot.mockResolvedValue(SCREENSHOT_PATH);
+    mockRemoveImage.mockResolvedValue(undefined);
+    URL.createObjectURL = jest.fn(() => "blob:preview");
+    URL.revokeObjectURL = jest.fn();
   });
 
   // -------------------------------------------------------------------------
@@ -494,6 +534,104 @@ describe("ContactForm", () => {
   // -------------------------------------------------------------------------
   // Errors
   // -------------------------------------------------------------------------
+  describe("the screenshot", () => {
+    it("is offered to a signed-in sender", () => {
+      render(<ContactForm />);
+
+      expect(screen.getByRole("button", { name: /Attach a screenshot/ })).toBeInTheDocument();
+    });
+
+    it("is not offered to a signed-out sender, who is told why", () => {
+      mockUser = null;
+      render(<ContactForm />);
+
+      expect(screen.queryByRole("button", { name: /Attach a screenshot/ })).not.toBeInTheDocument();
+      expect(screen.getByText(/Signed in, you can attach a screenshot/)).toBeInTheDocument();
+    });
+
+    it("sends the uploaded screenshot's path", async () => {
+      render(<ContactForm />);
+      await fillValidForm(user);
+      await attachScreenshot(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await waitFor(() => expect(mockSendContactEmail).toHaveBeenCalled());
+      expect(mockSendContactEmail.mock.calls[0][0].screenshotPath).toBe(SCREENSHOT_PATH);
+    });
+
+    it("sends no path when nothing is attached", async () => {
+      render(<ContactForm />);
+      await fillValidForm(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await waitFor(() => expect(mockSendContactEmail).toHaveBeenCalled());
+      expect(mockSendContactEmail.mock.calls[0][0].screenshotPath).toBeUndefined();
+    });
+
+    it("holds Send while the screenshot uploads", async () => {
+      let finish: (path: string) => void = () => undefined;
+      mockUploadScreenshot.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+      render(<ContactForm />);
+      await fillValidForm(user);
+
+      await user.upload(
+        screen.getByTestId("screenshot-input"),
+        new File(["png"], "shot.png", { type: "image/png" })
+      );
+
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: /Send message/ })).toBeDisabled()
+      );
+      await act(async () => finish(SCREENSHOT_PATH));
+      expect(screen.getByRole("button", { name: /Send message/ })).toBeEnabled();
+    });
+
+    it("is cleared once sent -- the function deleted it", async () => {
+      render(<ContactForm />);
+      await fillValidForm(user);
+      await attachScreenshot(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      await screen.findByText(/reference CC-4192/);
+      expect(screen.queryByAltText(PREVIEW_ALT)).not.toBeInTheDocument();
+      expect(mockRemoveImage).not.toHaveBeenCalled();
+    });
+
+    it("stays attached when sending fails, so a retry sends it again", async () => {
+      mockSendContactEmail.mockRejectedValueOnce({ code: "functions/internal" });
+      render(<ContactForm />);
+      await fillValidForm(user);
+      await attachScreenshot(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+      await screen.findByText(/Server error/);
+
+      expect(screen.getByAltText(PREVIEW_ALT)).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+      await waitFor(() => expect(mockSendContactEmail).toHaveBeenCalledTimes(2));
+      expect(mockSendContactEmail.mock.calls[1][0].screenshotPath).toBe(SCREENSHOT_PATH);
+    });
+
+    it("is dropped when the function says it is gone, and the sender is told", async () => {
+      mockSendContactEmail.mockRejectedValue({
+        code: "functions/not-found",
+        message: "The screenshot is no longer there. Please attach it again.",
+      });
+      render(<ContactForm />);
+      await fillValidForm(user);
+      await attachScreenshot(user);
+
+      await user.click(screen.getByRole("button", { name: /Send message/ }));
+
+      expect(await screen.findByText(/Please attach it again/)).toBeInTheDocument();
+      expect(screen.queryByAltText(PREVIEW_ALT)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Attach a screenshot/ })).toBeInTheDocument();
+    });
+  });
+
   describe("errors", () => {
     it("reports a rate limit in words the sender can act on", async () => {
       mockSendContactEmail.mockRejectedValue({

@@ -19,7 +19,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T020 | Screenshot on bug reports | M | in progress | Maintainer's focus: Storage. Backend (PR 1) done; the form field and privacy policy (PR 2) remain |
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
@@ -201,42 +200,6 @@ Select several rows, then delete or change status in one go.
   (`StoryContext.bugs.test.tsx:440-452`), so the ordering model needs answering
   before the UI does. A recursive `Chapter` inside `Chapter` also has no depth
   limit — decide whether nesting is one level or arbitrary.
-- **Source**: todo.txt, 2026-09-16
-
-### T020 — Attach a screenshot to a contact-form bug report
-**Type** feature · **Size** M · **Status** in progress · **Verified** 2026-09-25
-
-Deliberately left out of the contact page redesign (PR 2, 2026-08-30) rather than
-shipped as a disabled control that does nothing. The design mock (screenshot 5a)
-has the drop zone.
-
-- **Where**: `src/shared/components/contact/` — a new field component alongside
-  the existing `CategoryChips.tsx` and `SenderIdentity.tsx`, plus a download URL
-  in the callable payload that `firebase/functions/src/contact.ts` links from the
-  email body (`ContactFormData` is declared at `:36`).
-- **Touches**: the contact components, the callable's payload shape, the Cloud
-  Function, and a Storage path of its own. `support/{uid}/…` is the one the
-  image design reserved (`docs/superpowers/specs/2026-09-24-storage-images-design.md` §1);
-  `storage.rules.prod` denies it until a rule is added.
-- **Catch**: it is not a UI change. It needs Storage wiring, rules scoped so one
-  user cannot read another's uploads, size and MIME-type limits, cleanup of
-  orphaned uploads when a submission is abandoned, and a new failure mode on
-  submit (upload succeeded but email failed, or the reverse).
-- **Done (PR 1, backend, 2026-09-25)**: `support/{uid}/` rule in
-  `storage.rules.prod` (owner creates and deletes; nobody reads);
-  `ImageStorageService.uploadScreenshot`; `sendContactEmail` takes
-  `screenshotPath`, refuses any path not the caller's, attaches the file and
-  deletes it once sent (kept if the email fails, so a retry reuses it); the
-  daily sweep deletes screenshots over a day old. Decided: signed-in senders
-  only, attachment not link, cleanup in the existing sweep.
-- **Left (PR 2)**: the drop zone in `src/shared/components/contact/`, shown to
-  signed-in senders only; the upload-then-submit failure paths; the privacy
-  policy's screenshot row, in the same PR as the field. **Before it merges**:
-  paste the rules into the console and deploy `sendContactEmail` and
-  `sweepOrphanedImagesDaily` by hand (T070).
-- **Why it is worth doing**: for a bug report a screenshot is the single biggest
-  quality win. "Deleting a note takes me back to the list" is three exchanges of
-  questions without one.
 - **Source**: todo.txt, 2026-09-16
 
 ### T054 — Sign in with Discord
@@ -746,8 +709,9 @@ Installed globally: `firebase-tools` 13.32.0; the CLI offers 15.x.
 **Type** debt · **Size** M · **Status** needs investigation · **Verified** 2026-09-25
 
 Merging to `main` deploys Hosting only. Functions are deployed from the
-maintainer's machine, so a frontend change that needs a new function (T020) is
-not live until someone remembers to deploy it.
+maintainer's machine, so a frontend change that needs a new function (as the
+bug-report screenshot did, 2026-09-25) is not live until someone remembers to
+deploy it.
 
 - **Where**: `.github/workflows/firebase-hosting-merge.yml` runs
   `action-hosting-deploy` and nothing else; `firebase/functions/package.json`

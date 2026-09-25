@@ -73,6 +73,13 @@ describe("privacy constants", () => {
     expect(IMAGE_STORAGE_REGION).toContain("United States");
   });
 
+  it("discloses a message's screenshot: where it passes, and that it is deleted (T020)", () => {
+    const messages = PRIVACY_TABLE_ROWS.find((row) => row.id === "messages");
+    expect(messages!.what).toMatch(/screenshot/i);
+    expect(messages!.where).toContain("United States");
+    expect(messages!.howLong).toMatch(/deleted once it is sent, or after a day/);
+  });
+
   it("gives every table row a unique id", () => {
     const ids = PRIVACY_TABLE_ROWS.map((row) => row.id);
     expect(new Set(ids).size).toBe(ids.length);

@@ -13,6 +13,7 @@ import { Send, AlertCircle, Info } from "lucide-react";
 import CategoryChips from "./contact/CategoryChips";
 import SenderIdentity from "./contact/SenderIdentity";
 import ContactSuccess from "./contact/ContactSuccess";
+import ScreenshotField, { AttachedScreenshot } from "./contact/ScreenshotField";
 import {
   ContactCategoryId,
   getContactCategory,
@@ -22,6 +23,17 @@ import { useFunctionsReady } from "./contact/useFunctionsReady";
 
 /** The shortest message we will accept */
 const MIN_MESSAGE_LENGTH = 10;
+
+/**
+ * Callable errors after which the attached screenshot can't be sent as it is:
+ * it is gone (sent, or swept after a day), or no longer the sender's own. The
+ * form drops it, so the next try asks for it afresh.
+ */
+const SCREENSHOT_LOST_CODES = [
+  "functions/not-found",
+  "functions/permission-denied",
+  "functions/unauthenticated",
+];
 
 /**
  * Props for the ContactForm component
@@ -59,6 +71,8 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialMessage = "" }) => {
   const [reference, setReference] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [legacySubject, setLegacySubject] = useState<string | null>(null);
+  const [screenshot, setScreenshot] = useState<AttachedScreenshot | null>(null);
+  const [screenshotBusy, setScreenshotBusy] = useState(false);
 
   const signedInName = activeGroupUserProfile?.username ?? null;
   const signedInEmail = user?.email ?? null;
@@ -178,6 +192,8 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialMessage = "" }) => {
         subject: selectedCategory?.subjectLabel ?? legacySubject ?? undefined,
         message: message.trim(),
         reason: trimmedReason || undefined,
+        // Signed-in senders only: the field is not offered to anyone else.
+        screenshotPath: user ? screenshot?.path : undefined,
         name: showIdentityInputs ? name.trim() : signedInName ?? "",
         email: showIdentityInputs ? email.trim() : signedInEmail ?? "",
         context: {
@@ -202,7 +218,12 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialMessage = "" }) => {
       // and the success card must never render "CC-undefined".
       setReference(response.reference ?? null);
       setShowSuccess(true);
+      // The function deleted it once the email had gone.
+      setScreenshot(null);
     } catch (error: any) {
+      if (SCREENSHOT_LOST_CODES.includes(error?.code)) {
+        setScreenshot(null);
+      }
       setSubmitError(describeSubmitError(error));
       console.error("Contact form submission error:", error);
     } finally {
@@ -319,6 +340,19 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialMessage = "" }) => {
           />
         )}
 
+        {user ? (
+          <ScreenshotField
+            value={screenshot}
+            onChange={setScreenshot}
+            onBusyChange={setScreenshotBusy}
+            disabled={isSubmitting}
+          />
+        ) : (
+          <Typography variant="body-sm" color="secondary">
+            Signed in, you can attach a screenshot too.
+          </Typography>
+        )}
+
         <hr className="card-divider border-t" />
 
         <SenderIdentity
@@ -355,10 +389,11 @@ const ContactForm: React.FC<ContactFormProps> = ({ initialMessage = "" }) => {
           <Typography variant="body-sm" color="secondary">
             A copy goes to your email address.
           </Typography>
+          {/* Held while a screenshot uploads, so it can't be left behind. */}
           <Button
             type="submit"
             variant="primary"
-            disabled={isSubmitting}
+            disabled={isSubmitting || screenshotBusy}
             startIcon={isSubmitting ? undefined : <Send className="w-4 h-4" />}
             isLoading={isSubmitting}
           >
