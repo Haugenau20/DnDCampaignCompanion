@@ -841,7 +841,7 @@
   /*
     Positioned here rather than with `absolute inset-0`: utilities sit in a
     later cascade layer than these rules and win whatever the specificity, so
-    `.hero-band-split` could not move a frame whose inset came from a utility.
+    no band variant could restyle a frame whose inset came from a utility.
   */
   .hero-picture-frame {
     position: absolute;
@@ -864,58 +864,89 @@
   }
 
   /*
-    The split band (`CampaignBanner`, desktop only): the picture beside the text
-    rather than behind it. Below `lg` there is no room beside the text, so the
-    band keeps the window and scrim above.
+    The adaptive band (`CampaignBanner`): the picture across the whole band,
+    and the dimming only behind the text.
 
-    The text column is capped at `--hero-split-text`, and the picture starts
-    exactly where that column can end: `2rem` is the column's own inset (the
-    band's `px-4` plus the gutter's `sm:px-4`), and on a screen wider than the
-    `max-w-7xl` content column that column is centred, hence the second term.
-    So no text ever sits on the picture, whatever its length, and the band pair
-    keeps its contrast with no scrim at all. The picture shows at full strength
-    and fades out towards its left edge, into the band's own colour.
+    The full-band scrim is replaced by a patch of the band's own colour behind
+    `.hero-identity`, at full strength over the text box itself and fading
+    softly to nothing around it, so the rest of the picture shows untouched. Being attached to the text block, it grows and shrinks
+    with the name and description on its own.
 
-    A band with a picture is taller, so a landscape photo is not cut down to a
-    thin strip.
+    Its strength, `--hero-dim`, is set on the band by `useBandDim`: the least
+    share of the band colour that keeps the band pair at 4.5:1 over the
+    brightest part of the picture under the text. 0.9 is the fallback before
+    that is known -- above the 86% (light) / 83% (dark) a pure white picture
+    needs, so the text is readable from the first paint.
+
+    `isolation` makes the text block its own stacking context, so the patch
+    (`z-index: -1`) sits behind its text but above the picture. The band clips
+    the patch where it runs past the band's edges.
+  */
+  .hero-band-adaptive {
+    /*
+      The patch's blur radius; it reaches 3x this past the text, 4x to the
+      sides. Tight on a phone, where the text spans the band and only the top
+      edge shows, so the picture window above stays clear.
+    */
+    --hero-dim-soften: 0.75rem;
+    /* Until `useBandDim` sets the measured strength inline: the worst case. */
+    --hero-dim: 0.9;
+    overflow: hidden;
+  }
+
+  .hero-band-adaptive .hero-picture-scrim {
+    display: none;
+  }
+
+  .hero-band-adaptive .hero-identity {
+    position: relative;
+    isolation: isolate;
+  }
+
+  /*
+    A blurred rectangle rather than masked ramps: a Gaussian edge has no
+    corners and no visible start. The rectangle runs at least three blur radii
+    past the text on every side, so over the text box itself the patch is
+    still at full strength (99.9%) -- the strength `useBandDim` worked out.
+  */
+  .hero-band-adaptive .hero-identity::before {
+    content: "";
+    position: absolute;
+    inset: calc(-3 * var(--hero-dim-soften)) calc(-4 * var(--hero-dim-soften));
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--surface-band-bg);
+    opacity: var(--hero-dim);
+    filter: blur(var(--hero-dim-soften));
+  }
+
+  /*
+    On a desktop the band is taller, so a landscape photo is not cut to a thin
+    strip, and the text is centred in it with no window above. The text column
+    is capped, which keeps the dimmed patch compact.
   */
   @media (min-width: 1024px) {
-    .hero-band-split {
-      --hero-split-text: 24rem;
-      --hero-split-start: max(
-        calc(2rem + var(--hero-split-text)),
-        calc(50% - 40rem + 2rem + var(--hero-split-text))
-      );
+    .hero-band-adaptive {
+      /* Wide on a desktop, where the edge you see is the long one to the right. */
+      --hero-dim-soften: 2rem;
       min-height: 17rem;
       display: flex;
       flex-direction: column;
       justify-content: center;
     }
 
-    .hero-band-split .hero-picture-window,
-    .hero-band-split .hero-picture-scrim {
+    .hero-band-adaptive .hero-picture-window {
       display: none;
     }
 
-    .hero-band-split .hero-picture-frame {
-      left: var(--hero-split-start);
-    }
-
-    /* A mask reads only alpha; the band token is simply an opaque colour. */
-    .hero-band-split .hero-picture {
-      object-position: center;
-      -webkit-mask-image: linear-gradient(to right, transparent 0, var(--surface-band-bg) 35%);
-      mask-image: linear-gradient(to right, transparent 0, var(--surface-band-bg) 35%);
-    }
-
-    .hero-band-split .hero-identity {
-      max-width: var(--hero-split-text);
+    .hero-band-adaptive .hero-identity {
+      max-width: 24rem;
     }
   }
 
   @media (min-width: 1280px) {
-    .hero-band-split {
-      --hero-split-text: 28rem;
+    .hero-band-adaptive .hero-identity {
+      max-width: 28rem;
     }
   }
 

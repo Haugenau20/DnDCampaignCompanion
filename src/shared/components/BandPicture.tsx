@@ -31,7 +31,7 @@ interface BandPictureProps {
  * The band must be positioned and carry `.hero-band-pictured`; its content
  * goes in a positioned child, so it paints above this, and opens with a
  * `.hero-picture-window` spacer, so the text starts below the window.
- * `.hero-band-split` lays it out beside the text instead, on a desktop.
+ * `.hero-band-adaptive` replaces the scrim with a patch behind the text only.
  */
 const BandPicture: React.FC<BandPictureProps> = ({ image, alt, testId = 'band-picture' }) => (
   <div className="hero-picture-frame" data-testid={testId}>

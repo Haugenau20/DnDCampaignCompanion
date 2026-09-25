@@ -155,7 +155,9 @@ class ImageStorageService extends BaseFirebaseService {
       width: image.width,
       height: image.height,
       uploadedBy: uid,
-      uploadedAt: new Date().toISOString()
+      uploadedAt: new Date().toISOString(),
+      // Left out rather than undefined: Firestore refuses an undefined field.
+      ...(image.brightness ? { brightness: image.brightness } : {})
     };
   }
 
