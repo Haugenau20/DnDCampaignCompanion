@@ -967,6 +967,84 @@
     }
   }
 
+  /*
+    The sign-in band's plate: one picture shipped with the code, the same for
+    everyone, never uploaded or configured -- so not a `PicturedBand`, whose
+    silhouette and measured patch exist because a member's upload can be
+    anything. This picture is known: dark and empty on the left where the text
+    sits, its detail on the right. A fixed scrim is enough.
+
+    The plate and its scrim sit at `z-index: -1` inside the band's own stacking
+    context (`isolation`): above the band's background, below its text. The
+    band's colour and ruling stay underneath, so they show while the picture
+    loads and if it never does.
+  */
+  .hero-band-signin {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .hero-signin-plate,
+  .hero-signin-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .hero-signin-plate {
+    display: block;
+  }
+
+  /* The detail is on the right; keep it in frame when the band crops. */
+  .hero-signin-plate img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 70% center;
+  }
+
+  /*
+    The scrim is the band's own colour, faded by a mask rather than a literal
+    rgba, so it follows the theme. Where masks are unsupported the scrim is
+    solid band colour: the picture is hidden and the band reads as it always
+    did, never the other way round.
+
+    On a phone the band is a header above the form and its text runs its full
+    height, so the scrim never clears: lightest at the top, where the brand
+    line sits on sky, darkest at the bottom.
+  */
+  .hero-signin-scrim {
+    background-color: var(--surface-band-bg);
+    mask-image: linear-gradient(
+      180deg,
+      rgb(0 0 0 / 0.55) 0%,
+      rgb(0 0 0 / 0.7) 50%,
+      rgb(0 0 0 / 0.9) 100%
+    );
+  }
+
+  /*
+    Side by side, the text keeps to the left: strongest there, clear at the
+    right edge. The middle stop is in rem, not a share of the band, because
+    the text column is: `max-w-md` plus padding is 31rem -- all of a 24rem
+    band at 768px, two thirds of a 45rem one at 1440px. A stop at a fixed
+    share (say 0.4 at 45%, clear by 75%) leaves the paragraph over bare
+    picture on the narrow bands.
+  */
+  @media (min-width: 768px) {
+    .hero-signin-scrim {
+      mask-image: linear-gradient(
+        90deg,
+        rgb(0 0 0 / 0.85) 0%,
+        rgb(0 0 0 / 0.7) 35rem,
+        transparent 100%
+      );
+    }
+  }
+
   /* A heading on the band takes the band's ink. */
   .hero-band .typography-heading {
     color: var(--surface-band-on);

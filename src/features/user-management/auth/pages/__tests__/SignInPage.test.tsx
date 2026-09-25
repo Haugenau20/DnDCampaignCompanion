@@ -1,6 +1,6 @@
 // src/features/user-management/auth/pages/__tests__/SignInPage.test.tsx
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import SignInPage from "../SignInPage";
@@ -56,6 +56,56 @@ describe("SignInPage", () => {
   test("frames the page without naming a group it cannot read", () => {
     renderAt("/signin");
     expect(screen.getByText(/private campaign/i)).toBeInTheDocument();
+  });
+
+  // The band carries one shipped picture. It is decoration: a screen reader
+  // must not announce it, and the text on the band must not depend on it.
+  describe("the band's picture", () => {
+    const plate = () => screen.getByTestId("signin-plate");
+    const plateImage = () => plate().querySelector("img");
+
+    test("is decorative: an empty alt, hidden from assistive technology", () => {
+      renderAt("/signin");
+      const img = plateImage();
+      expect(img).not.toBeNull();
+      expect(img).toHaveAttribute("alt", "");
+      expect(img).toHaveAttribute("aria-hidden", "true");
+      // Nothing an assistive technology can reach is an image.
+      expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    });
+
+    test("is fetched first and decoded off the main thread", () => {
+      renderAt("/signin");
+      const img = plateImage();
+      expect(img).toHaveAttribute("fetchpriority", "high");
+      expect(img).toHaveAttribute("decoding", "async");
+    });
+
+    test("swaps to the portrait plate beside the form, from md up", () => {
+      renderAt("/signin");
+      const source = plate().querySelector("source");
+      expect(source).toHaveAttribute("media", "(min-width: 768px)");
+      expect(source).toHaveAttribute("srcset");
+      expect(plateImage()).toHaveAttribute("src");
+    });
+
+    // The band's own colour is the fallback. A failed picture must not leave
+    // the browser's broken-image icon on it.
+    test("disappears if it fails to load, leaving the band as it was", () => {
+      renderAt("/signin");
+      const img = plateImage()!;
+      expect(img).toBeVisible();
+      fireEvent.error(img);
+      expect(img).not.toBeVisible();
+      expect(screen.getByText(/private campaign/i)).toBeVisible();
+    });
+
+    test("is drawn in the band, not beside it", () => {
+      renderAt("/signin");
+      const band = plate().closest("aside");
+      expect(band).toHaveClass("hero-band");
+      expect(band).toHaveTextContent(/sign in to see where your party has been/i);
+    });
   });
 
   describe("naming where you were going", () => {
