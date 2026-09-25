@@ -74,32 +74,44 @@ import { httpsCallable } from 'firebase/functions';
     }
   
     /**
-     * Get all groups the current user is a member of
-     * @returns Array of group objects with IDs
+     * Get all groups the current user is a member of.
+     *
+     * The group documents are fetched concurrently: they are independent, and
+     * fetching them one at a time cost a full network round trip per group on
+     * every sign-in and reload (PERF-02).
+     *
+     * @param groupIds The user's group ids, when the caller already holds the
+     *   global profile they come from. Passing them saves re-reading that
+     *   profile -- the auth restore used to read `users/{uid}` twice in a row.
+     * @returns Array of group objects with IDs, in membership order
      */
-    public async getGroups(): Promise<Group[]> {
+    public async getGroups(groupIds?: string[]): Promise<Group[]> {
       const userId = this.getCurrentUser()?.uid;
       if (!userId) return [];
-      
-      // Get user's global profile to find group memberships
-      const userDoc = await getDoc(doc(this.db, 'users', userId));
-      if (!userDoc.exists()) return [];
-      
-      const userData = userDoc.data();
-      const groupIds = userData.groups || [];
-      
+
+      let ids = groupIds;
+      if (!ids) {
+        // Get user's global profile to find group memberships
+        const userDoc = await getDoc(doc(this.db, 'users', userId));
+        if (!userDoc.exists()) return [];
+        ids = (userDoc.data().groups || []) as string[];
+      }
+
       // Fetch each group's metadata
+      const groupDocs = await Promise.all(
+        ids.map(groupId => getDoc(doc(this.db, 'groups', groupId)))
+      );
+
       const groups: Group[] = [];
-      for (const groupId of groupIds) {
-        const groupDoc = await getDoc(doc(this.db, 'groups', groupId));
+      groupDocs.forEach((groupDoc, index) => {
         if (groupDoc.exists()) {
           groups.push({
-            id: groupId,
+            id: ids![index],
             ...groupDoc.data()
           } as Group);
         }
-      }
-      
+      });
+
       return groups;
     }
   

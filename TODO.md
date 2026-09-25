@@ -722,9 +722,10 @@ review says so itself. Six findings were re-checked on 2026-09-16 at `ebc0a28`:
 | `PERF-04` notes loaded twice, unbounded | High | **Fixed** 2026-09-24 — `NoteContext` reads once, constrained to the active campaign, and reads nothing before one is selected. New note ids are random, so nothing needs the other campaigns' notes. |
 | `PERF-08` duplicate collection owners | Medium | **Fixed** 2026-09-22 — one fetch per collection, pinned by `shared/hooks/__tests__/provider-fetch-counts.test.tsx`. |
 | `PERF-15` duplicate `NavigationProvider` | Low | **Fixed** 2026-09-24 — `index.tsx` mounts no provider of its own; `App`'s is the only one. |
+| `PERF-02` auth restore waterfall | High | **Confirmed, mostly fixed** 2026-09-25 — see T032. The restore is 3 round trips deep instead of 5 + one per group. |
 
-The **other nine are unverified against current `main`** — `PERF-02`, `03`,
-`05`, `06`, `09`, `11`, `12`, `13`, `14`. That is T033. The review's own
+The **other eight are unverified against current `main`** — `03`, `05`,
+`06`, `09`, `11`, `12`, `13`, `14`. That is T033. The review's own
 prioritized list opens with a finding that is already fixed, so do not work
 straight down it.
 
@@ -753,6 +754,18 @@ emulator.
 
 - `PERF-02` — auth restore is a serial waterfall that reads the same global and
   group profiles twice each, then fetches group documents one at a time.
+  **Confirmed and mostly fixed 2026-09-25**, after a phone took 15–30 s to
+  reach the dashboard. The restore on reload was 5 + one per group
+  round trips in a row, and each one waits on the App Check token. It is now
+  3: the profile, then the group documents together, then the group profile
+  and the campaign list together. `getGroups(ids)` reuses the profile's
+  group ids, `getCampaigns` asks for the list while its membership check is
+  in flight, `finishSignIn` writes `lastLogin` and reads the group profile
+  together, and the profile retry no longer waits after its last attempt.
+  **Still open**: the group profile is still requested twice (at the same
+  time now, and possibly coalesced by the SDK, which has not been verified),
+  there is still no single restore orchestrator, and nothing measures
+  request counts.
 - `PERF-03` — every domain provider sits above the router, so the Privacy page
   fetches chapters, NPCs, locations, rumors, quests, progress, notes and usage.
 - `PERF-05` — chapter order is encoded in the document ID, so inserting at the
@@ -770,9 +783,10 @@ emulator.
 ### T033 — Revalidate the nine unchecked performance findings
 **Type** debt · **Size** M · **Status** needs investigation · **Verified** 2026-09-16
 
-`PERF-02`, `03`, `05`, `06`, `09`, `11`, `12`, `13`, `14` have not been checked
-against current `main`. Six others were, and **three had already been fixed** by
-work that landed after the audit — including the Critical one.
+`PERF-03`, `05`, `06`, `09`, `11`, `12`, `13`, `14` have not been checked
+against current `main` (`PERF-02` was, on 2026-09-25 — see T032). Six others
+were, and **three had already been fixed** by work that landed after the audit
+— including the Critical one.
 
 - **Catch**: line numbers in the review are `b73232a` line numbers and several
   files have since moved or been deleted outright (`SearchBar.tsx`,
@@ -787,7 +801,7 @@ work that landed after the audit — including the Critical one.
   made the cycle tests hang the suite rather than fail if a guard is removed.
   That mattered more than it looked: `15-4` is the PR that makes a cycle
   *reachable*, because until *Move elsewhere* shipped nothing in the product
-  could choose a parent. **The other eight findings are still unchecked**, which
+  could choose a parent. **The other seven findings are still unchecked**, which
   is what keeps this entry open.
 - **Source**: performance review
 

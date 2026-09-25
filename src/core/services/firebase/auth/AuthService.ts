@@ -405,19 +405,25 @@ import {
       const userDoc = doc(this.db, 'users', credential.user.uid);
       const userDocSnapshot = await getDoc(userDoc);
       if (userDocSnapshot.exists()) {
-        // Update last login date in global user profile
-        await updateDoc(userDoc, {
-          lastLogin: new Date()
-        });
-
         const userData = userDocSnapshot.data();
 
-        // Set active group from user preferences
+        // The last-login write and the group-profile read are independent, so
+        // they run together rather than costing two round trips in a row
+        // before the sign-in page can move on (PERF-02).
+        const [, groupUserDoc] = await Promise.all([
+          // Update last login date in global user profile
+          updateDoc(userDoc, {
+            lastLogin: new Date()
+          }),
+          // If user has an active group, get their profile in it
+          userData.activeGroupId
+            ? this.userService.getGroupUserProfile(userData.activeGroupId, credential.user.uid)
+            : Promise.resolve(null)
+        ]);
+
+        // Set active group and campaign from user preferences
         if (userData.activeGroupId) {
           this.setActiveGroup(userData.activeGroupId);
-
-          // If user has a group profile, get active campaign ID
-          const groupUserDoc = await this.userService.getGroupUserProfile(userData.activeGroupId, credential.user.uid);
           if (groupUserDoc && groupUserDoc.activeCampaignId) {
             this.setActiveCampaign(groupUserDoc.activeCampaignId);
           }
