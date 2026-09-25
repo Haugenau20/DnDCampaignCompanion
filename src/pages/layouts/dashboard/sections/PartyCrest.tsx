@@ -47,14 +47,33 @@ const PartyCrest: React.FC<PartyCrestProps> = ({ memberCount, chapterCount }) =>
     chapterCount ? `${chapterCount} ${chapterCount === 1 ? 'chapter' : 'chapters'}` : null,
   ].filter(Boolean);
 
+  // Rounded here rather than clipped by the card: the compact control's
+  // progress and error note hangs below the picture, and the card's
+  // `overflow-hidden` would cut it off when the text under the name is short.
+  const slot = (
+    <ImageSlot
+      className="h-28 rounded-t-lg"
+      label={`${activeGroup.name} crest — none uploaded yet`}
+      image={activeGroup.crest}
+      alt={`${activeGroup.name} crest`}
+    />
+  );
+
   return (
-    <div className="rounded-lg overflow-hidden card" data-testid="party-crest">
-      <ImageSlot
-        className="h-28"
-        label={`${activeGroup.name} crest — none uploaded yet`}
-        image={activeGroup.crest}
-        alt={`${activeGroup.name} crest`}
-      />
+    <div className="rounded-lg card" data-testid="party-crest">
+      {isAdmin ? (
+        <ImageUploadControl
+          variant="compact"
+          subject="crest"
+          hasImage={Boolean(activeGroup.crest)}
+          onUpload={crest.upload}
+          onRemove={crest.remove}
+        >
+          {slot}
+        </ImageUploadControl>
+      ) : (
+        slot
+      )}
       <div className="px-5 py-4">
         <Typography variant="h4" className="text-base">
           {activeGroup.name}
@@ -63,15 +82,6 @@ const PartyCrest: React.FC<PartyCrestProps> = ({ memberCount, chapterCount }) =>
           <Typography variant="body-sm" color="muted" className="text-xs mt-1">
             {summary.join(' · ')}
           </Typography>
-        )}
-        {isAdmin && (
-          <ImageUploadControl
-            className="mt-3"
-            subject="crest"
-            hasImage={Boolean(activeGroup.crest)}
-            onUpload={crest.upload}
-            onRemove={crest.remove}
-          />
         )}
       </div>
     </div>

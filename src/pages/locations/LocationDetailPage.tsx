@@ -311,6 +311,20 @@ const LocationDetailPage: React.FC = () => {
 
   const canAct = gate.canAct;
 
+  /**
+   * The picture that heads the page. Whoever may edit gets add/replace/remove
+   * laid over its top-right corner (T068), as the NPC portrait has them.
+   */
+  const pictureSlot = location && (
+    <ImageSlot
+      className="h-40 sm:h-56"
+      label={`${location.name} — no image added`}
+      image={location.image}
+      alt={location.name}
+      loading="eager"
+    />
+  );
+
   return (
     <>
       {gate.state !== 'ready' || !location ? (
@@ -341,22 +355,18 @@ const LocationDetailPage: React.FC = () => {
             location.lastVisited ? formatNoteDate(location.lastVisited) : undefined
           )}
           image={
-            <ImageSlot
-              className="h-40 sm:h-56"
-              label={`${location.name} — no image added`}
-              image={location.image}
-              alt={location.name}
-              loading="eager"
-            />
-          }
-          imageControl={
-            canAct && (
+            canAct ? (
               <ImageUploadControl
+                variant="compact"
                 subject="picture"
                 hasImage={Boolean(location.image)}
                 onUpload={picture.upload}
                 onRemove={picture.remove}
-              />
+              >
+                {pictureSlot}
+              </ImageUploadControl>
+            ) : (
+              pictureSlot
             )
           }
           bandControl={

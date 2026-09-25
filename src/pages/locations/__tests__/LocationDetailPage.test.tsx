@@ -844,6 +844,28 @@ describe('LocationDetailPage — the picture (T021)', () => {
     expect(screen.getByRole('button', { name: 'Replace picture' })).toBeInTheDocument();
   });
 
+  it('lays add, replace and remove over the picture itself, not as a row under the band (T068)', () => {
+    mockLocations = withPicture();
+    const { container } = renderPage();
+    const picture = screen.getByTestId('entity-page-image');
+    const band = container.querySelector('.hero-band') as HTMLElement;
+
+    for (const name of ['Replace picture', 'Remove picture']) {
+      const button = screen.getByRole('button', { name });
+      expect(picture.contains(button)).toBe(true);
+      expect(band.contains(button)).toBe(false);
+      // Icons on the corner, named for assistive tech rather than labelled.
+      expect(button).toHaveTextContent(/^$/);
+    }
+  });
+
+  it('offers to add a picture from the empty slot itself (T068)', () => {
+    renderPage();
+    const add = screen.getByRole('button', { name: 'Add picture' });
+    expect(screen.getByTestId('entity-page-image').contains(add)).toBe(true);
+    expect(add).toHaveTextContent(/^$/);
+  });
+
   it('files the picture under this location in the active group and campaign', () => {
     mockLocations = withPicture();
     renderPage();

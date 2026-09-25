@@ -19,7 +19,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T068 | Hover image controls on location and crest | S | open | Maintainer's focus: images. The NPC portrait already has them |
 | high | T020 | Screenshot on bug reports | M | open | Maintainer's focus: Storage. Needs its own path (`support/{uid}/…`), rules and cleanup |
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
@@ -349,24 +348,6 @@ The maintainer wants the three entity pages streamlined in how they look.
   what the tree shows.
 - **Question before sizing**: which look wins, the band or the card? And is the
   goal one shell for all three, or a shared visual language only?
-- **Source**: todo.txt, 2026-09-24
-
-### T068 — The location picture and party crest still carry a row of image buttons
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-24
-
-The maintainer wants add/replace/remove to appear on hover in the image's
-top-right corner, not as a full-width button row. The NPC portrait does this
-now through `ImageUploadControl`'s `variant="compact"`; two images still don't.
-
-- **Where**: `pages/locations/LocationDetailPage.tsx:352` (`imageControl`, a
-  full row under the band) and `pages/layouts/dashboard/sections/PartyCrest.tsx:68`
-  (a full row under the group name).
-- **Catch**: the location page goes through `EntityPageShell`, which puts
-  `imageControl` under the band on purpose (T040: the band has no authored
-  colour pair for status and error text; `EntityPageShell.tsx:41`). The
-  compact control shows its messages on a `card` note below the picture,
-  which would sit over the band. Check that reads right before dropping the
-  shell's slot. The crest has no such catch.
 - **Source**: todo.txt, 2026-09-24
 
 ---
@@ -775,7 +756,6 @@ not live until someone remembers to deploy it.
 - **Out of scope**: rules stay manual; `firebase.json` has no rules keys on
   purpose. Running the emulator-backed functions suite belongs to T061.
 - **Source**: maintainer, 2026-09-25
-
 
 ---
 
