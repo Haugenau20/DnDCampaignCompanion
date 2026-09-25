@@ -29,6 +29,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
 | medium | T062 | Quick add's description box is two rows | S | open | Every note conversion lands text in it; real friction, small fix |
 | medium | T061 | PRs are checked by the build alone | M | open | Tests never run in CI, and merging deploys live |
+| medium | T070 | Functions are deployed by hand | M | needs investigation | Frontend and functions can drift in prod; contact secrets must move first. Service account roles unchecked |
 | low | T069 | Breadcrumb overflows at 320px | S | open | Masked today by the header, which overflows on every route |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
@@ -747,6 +748,34 @@ Installed globally: `firebase-tools` 13.32.0; the CLI offers 15.x.
   `firebase/functions`' suite (including the Storage rules suite and its
   project-id quirk) and a `start-dev.ps1` round trip after upgrading.
 - **Source**: todo.txt, 2026-09-24
+
+### T070 — Cloud Functions are deployed by hand, not by CI
+**Type** debt · **Size** M · **Status** needs investigation · **Verified** 2026-09-25
+
+Merging to `main` deploys Hosting only. Functions are deployed from the
+maintainer's machine, so a frontend change that needs a new function (T020) is
+not live until someone remembers to deploy it.
+
+- **Where**: `.github/workflows/firebase-hosting-merge.yml` runs
+  `action-hosting-deploy` and nothing else; `firebase/functions/package.json`
+  pins Node 22 and already has `build` (`tsc`), which `firebase.json`'s
+  `predeploy` runs.
+- **Catch 1 (confirmed)**: `firebase/functions/src/contact.ts:54` reads
+  `CONTACT_EMAIL`/`CONTACT_PASSWORD` from `process.env`, which only the
+  gitignored `firebase/functions/.env` supplies. A CI checkout lacks it, so the
+  first CI deploy would ship a contact form with blank Gmail credentials. Move
+  both to Secret Manager the way `entityExtraction.ts:395` declares
+  `secrets: ["OPENAI_API_KEY"]`, and deploy that once by hand first.
+- **Catch 2 (unverified)**: `FIREBASE_SERVICE_ACCOUNT_DND_CAMPAIGN_COMPANION`
+  is probably the Hosting-only account `hosting:github` creates. Check its IAM
+  roles in the console; a separate deploy account is safer than widening it.
+  `gateAccountCreation` is a blocking function, which needs Auth admin rights too.
+- **Order**: functions must deploy before Hosting in the same run (`needs:`),
+  or a new payload reaches users before the function that reads it.
+- **Out of scope**: rules stay manual; `firebase.json` has no rules keys on
+  purpose. Running the emulator-backed functions suite belongs to T061.
+- **Source**: maintainer, 2026-09-25
+
 
 ---
 
