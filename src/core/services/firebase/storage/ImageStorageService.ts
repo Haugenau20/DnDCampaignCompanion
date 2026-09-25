@@ -64,6 +64,15 @@ export function crestPrefix(groupId: string): string {
 }
 
 /**
+ * The folder a user's bug-report screenshots live in (T020). Keyed by the
+ * uploader, so the rules can let each user write only their own; nobody reads
+ * it from the app -- `sendContactEmail` attaches the file and deletes it.
+ */
+export function supportScreenshotPrefix(uid: string): string {
+  return `support/${segment(uid)}`;
+}
+
+/**
  * Whether a URL is a download URL for this app's own bucket.
  *
  * A member can write any string into a Firestore document, so an image URL is
@@ -124,30 +133,9 @@ class ImageStorageService extends BaseFirebaseService {
     image: PreparedImage,
     onProgress?: (fraction: number) => void
   ): Promise<StoredImage> {
-    const uid = this.getCurrentUser()?.uid;
-    if (!uid) {
-      throw new Error("Not authenticated");
-    }
-
+    const uid = this.requireUid();
     const path = `${prefix}/${crypto.randomUUID()}.${image.extension}`;
-    const objectRef = ref(this.storage, path);
-    const task = uploadBytesResumable(objectRef, image.blob, {
-      contentType: image.contentType,
-      cacheControl: IMMUTABLE_CACHE_CONTROL
-    });
-
-    await new Promise<void>((resolve, reject) => {
-      task.on(
-        "state_changed",
-        snapshot => {
-          if (onProgress && snapshot.totalBytes > 0) {
-            onProgress(snapshot.bytesTransferred / snapshot.totalBytes);
-          }
-        },
-        reject,
-        resolve
-      );
-    });
+    const objectRef = await this.put(path, image, onProgress, IMMUTABLE_CACHE_CONTROL);
 
     return {
       path,
@@ -162,6 +150,27 @@ class ImageStorageService extends BaseFirebaseService {
   }
 
   /**
+   * Upload a prepared screenshot for a bug report, under a new, random name in
+   * the signed-in user's own support folder.
+   *
+   * Returns the path alone: the rules let nobody read the folder, so there is
+   * no download URL to ask for. The path goes to `sendContactEmail`, which
+   * attaches the file to the email and then deletes it.
+   *
+   * @param image Output of `prepareImage`
+   * @param onProgress Called with the fraction uploaded, 0 to 1
+   * @returns The object path
+   */
+  public async uploadScreenshot(
+    image: PreparedImage,
+    onProgress?: (fraction: number) => void
+  ): Promise<string> {
+    const path = `${supportScreenshotPrefix(this.requireUid())}/${crypto.randomUUID()}.${image.extension}`;
+    await this.put(path, image, onProgress);
+    return path;
+  }
+
+  /**
    * Delete an image. An object that is already gone counts as deleted, so a
    * retried cleanup never fails on its own earlier success.
    * @param path `StoredImage.path`
@@ -173,6 +182,50 @@ class ImageStorageService extends BaseFirebaseService {
       if ((error as { code?: string }).code === "storage/object-not-found") return;
       throw error;
     }
+  }
+
+  /** The signed-in user's id; every upload needs one. */
+  private requireUid(): string {
+    const uid = this.getCurrentUser()?.uid;
+    if (!uid) {
+      throw new Error("Not authenticated");
+    }
+    return uid;
+  }
+
+  /**
+   * Write `image` to `path` and wait for the upload to finish.
+   * @param path The full object path
+   * @param image Output of `prepareImage`
+   * @param onProgress Called with the fraction uploaded, 0 to 1
+   * @param cacheControl The object's `Cache-Control`, if any
+   * @returns A reference to the written object
+   */
+  private async put(
+    path: string,
+    image: PreparedImage,
+    onProgress?: (fraction: number) => void,
+    cacheControl?: string
+  ) {
+    const objectRef = ref(this.storage, path);
+    const task = uploadBytesResumable(objectRef, image.blob, {
+      contentType: image.contentType,
+      ...(cacheControl ? { cacheControl } : {})
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      task.on(
+        "state_changed",
+        snapshot => {
+          if (onProgress && snapshot.totalBytes > 0) {
+            onProgress(snapshot.bytesTransferred / snapshot.totalBytes);
+          }
+        },
+        reject,
+        resolve
+      );
+    });
+    return objectRef;
   }
 }
 

@@ -235,6 +235,31 @@ describe("PrivacyPolicyPage — content that must be there", () => {
     });
   });
 
+  describe("screenshots on a message (T020)", () => {
+    it("says what is collected, from whom, and that it is stripped first", () => {
+      const { container } = render(<PrivacyPolicyPage />);
+      const text = container.querySelector("#what-we-collect")!.textContent;
+      expect(text).toMatch(/screenshot you attach/i);
+      expect(text).toMatch(/if you are\s+signed in/i);
+      expect(text).toMatch(/stripped the same way/i);
+    });
+
+    it("says nobody can open it from the app, and it is deleted once sent", () => {
+      const { container } = render(<PrivacyPolicyPage />);
+      expect(container.querySelector("#what-we-collect")!.textContent).toMatch(/not even you/);
+      expect(container.querySelector("#retention")!.textContent).toMatch(
+        /deleted from our storage as soon as the\s+email is sent, or after a day/
+      );
+    });
+
+    it("counts it among the pictures that leave the EU", () => {
+      const { container } = render(<PrivacyPolicyPage />);
+      expect(container.querySelector("#legal-basis")!.textContent).toMatch(
+        /pictures, including a screenshot/
+      );
+    });
+  });
+
   it("names Datatilsynet and says you need not come to us first", () => {
     const { container } = render(<PrivacyPolicyPage />);
     expect(container.textContent).toContain("Datatilsynet");

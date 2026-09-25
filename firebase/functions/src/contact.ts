@@ -2,6 +2,7 @@
 import * as functions from "firebase-functions/v2/https";
 import nodemailer from "nodemailer";
 import {rethrowHttpsError} from "./shared/httpsErrors";
+import {imageBucket} from "./shared/imageBucket";
 
 /**
  * The set of things a person can contact us about.
@@ -48,6 +49,11 @@ interface ContactFormData {
   /** The optional second field, currently only for smart-detection */
   reason?: string;
   context?: ContactContext;
+  /**
+   * Where the sender's screenshot was uploaded, from
+   * `ImageStorageService.uploadScreenshot`. Signed-in senders only.
+   */
+  screenshotPath?: string;
 }
 
 // Your personal campaign email will be set as an environment variable
@@ -177,6 +183,118 @@ const formatContextLines = (context: ContactContext | undefined): string[] => {
 };
 
 /**
+ * The name `ImageStorageService.uploadScreenshot` gives a screenshot, and the
+ * only one `storage.rules.prod` accepts under `support/{uid}/`.
+ */
+const SCREENSHOT_NAME = /^[0-9a-f-]{36}\.(webp|jpg)$/;
+
+/** What `prepareImage` produces, and so all a screenshot may be. */
+const SCREENSHOT_TYPES = ["image/webp", "image/jpeg"];
+
+/** The rules' size limit, checked again in case a file got past them. */
+const MAX_SCREENSHOT_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Check that a screenshot path, if one was sent, is one the caller uploaded.
+ *
+ * The path comes from the client, so without this anyone could have the
+ * function mail them a file from someone else's folder -- or from anywhere
+ * else in the bucket.
+ *
+ * @param {unknown} path - The `screenshotPath` the client sent
+ * @param {string | undefined} uid - The caller, if signed in
+ * @return {string | null} The path, or null when there is no screenshot
+ */
+const checkScreenshotPath = (
+  path: unknown,
+  uid: string | undefined
+): string | null => {
+  if (path === undefined || path === null || path === "") {
+    return null;
+  }
+  if (typeof path !== "string") {
+    throw new functions.HttpsError(
+      "invalid-argument",
+      "The screenshot could not be read. Please attach it again."
+    );
+  }
+  if (!uid) {
+    throw new functions.HttpsError(
+      "unauthenticated",
+      "Sign in to attach a screenshot."
+    );
+  }
+  const folder = `support/${uid}/`;
+  if (!path.startsWith(folder)) {
+    throw new functions.HttpsError(
+      "permission-denied",
+      "You can only attach a screenshot you uploaded."
+    );
+  }
+  if (!SCREENSHOT_NAME.test(path.slice(folder.length))) {
+    throw new functions.HttpsError(
+      "invalid-argument",
+      "The screenshot could not be read. Please attach it again."
+    );
+  }
+  return path;
+};
+
+/**
+ * Read a screenshot from Storage, ready to attach to the email.
+ *
+ * @param {string} path - A path `checkScreenshotPath` accepted
+ * @param {string} reference - The submission's reference, for the file name
+ * @return {Promise<object>} A nodemailer attachment
+ */
+const loadScreenshot = async (path: string, reference: string) => {
+  const file = imageBucket().file(path);
+  let contentType: string;
+  let size: number;
+  try {
+    const [metadata] = await file.getMetadata();
+    contentType = String(metadata.contentType ?? "");
+    size = Number(metadata.size);
+  } catch (error) {
+    if ((error as {code?: unknown}).code === 404) {
+      // Never uploaded, already sent, or swept after a day.
+      throw new functions.HttpsError(
+        "not-found",
+        "The screenshot is no longer there. Please attach it again."
+      );
+    }
+    throw error;
+  }
+  const acceptable =
+    SCREENSHOT_TYPES.includes(contentType) && size < MAX_SCREENSHOT_BYTES;
+  if (!acceptable) {
+    throw new functions.HttpsError(
+      "invalid-argument",
+      "The screenshot could not be read. Please attach it again."
+    );
+  }
+
+  const [content] = await file.download();
+  const extension = contentType === "image/webp" ? "webp" : "jpg";
+  const filename = `screenshot-${reference}.${extension}`;
+  return {filename, content, contentType};
+};
+
+/**
+ * Delete a screenshot once its email has gone. Best effort: a file left
+ * behind is only storage, and the daily sweep deletes it after a day.
+ *
+ * @param {string} path - The screenshot's path
+ */
+const deleteScreenshot = async (path: string): Promise<void> => {
+  try {
+    await imageBucket().file(path).delete({ignoreNotFound: true});
+  } catch (error) {
+    console.error(`Could not delete sent screenshot ${path}:`, error);
+  }
+};
+
+/**
  * Cloud function to handle contact form submissions using callable function pattern
  * This function sends emails via nodemailer and includes rate limiting protection
  */
@@ -188,8 +306,10 @@ export const sendContactEmail = functions.onCall(
   async (request: functions.CallableRequest<ContactFormData>) => {
     try {
       // Extract data from request
-      const {name, email, category, subject, message, reason, context} =
-        request.data;
+      const {
+        name, email, category, subject, message, reason, context,
+        screenshotPath,
+      } = request.data;
 
       // Validate required fields
       if (!name || !email || !message) {
@@ -222,6 +342,8 @@ export const sendContactEmail = functions.onCall(
         );
       }
 
+      const screenshot = checkScreenshotPath(screenshotPath, request.auth?.uid);
+
       // Determine user ID for rate limiting
       // Use authenticated user ID if available, otherwise use email as identifier
       const userId = request.auth?.uid || `anonymous_${sanitizedEmail}`;
@@ -241,6 +363,11 @@ export const sendContactEmail = functions.onCall(
       const emailSubject =
         `[${reference}] D&D Campaign Companion: ${subjectLabel}`;
       const contextLines = formatContextLines(context);
+      // Read after the rate limit, so a flood of calls can't each cost a
+      // Storage download.
+      const attachment = screenshot ?
+        await loadScreenshot(screenshot, reference) :
+        null;
 
       // Prepare email content with both text and HTML versions
       const mailOptions = {
@@ -260,6 +387,7 @@ Message:
 ${sanitizedMessage}
 ${sanitizedReason ? `\nWhy they need more:\n${sanitizedReason}\n` : ""}
 ${contextLines.length ? `\nAttached context:\n${contextLines.join("\n")}\n` : ""}
+${attachment ? `\nScreenshot: attached (${attachment.filename})\n` : ""}
 ---
 Sent via D&D Campaign Companion Contact Form
 User ID: ${userId}
@@ -296,6 +424,13 @@ Timestamp: ${new Date().toISOString()}
     <h3 style="color: #333;">Attached context:</h3>
     <p style="color: #6b7280; font-size: 13px;">${contextLines.join("<br>")}</p>
   </div>` : ""}
+  ${attachment ? `
+  <div style="margin: 20px 0;">
+    <h3 style="color: #333;">Screenshot:</h3>
+    <p style="color: #6b7280; font-size: 13px;">
+      Attached (${attachment.filename})
+    </p>
+  </div>` : ""}
 
   <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
   <p style="color: #6b7280; font-size: 12px;">
@@ -305,10 +440,17 @@ Timestamp: ${new Date().toISOString()}
   </p>
 </div>
         `,
+        attachments: attachment ? [attachment] : [],
       };
 
       // Send email using nodemailer
       await transporter.sendMail(mailOptions);
+
+      // Only once the email has gone: if sending failed, the file stays, so
+      // the sender can try again with the same screenshot.
+      if (screenshot) {
+        await deleteScreenshot(screenshot);
+      }
 
       // Log successful submission for monitoring
       console.log(

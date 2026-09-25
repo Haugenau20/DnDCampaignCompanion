@@ -252,6 +252,80 @@ describe("the group crest", () => {
   });
 });
 
+describe("bug-report screenshots", () => {
+  const mine = (name: string) => `support/${uid(name)}`;
+
+  it("a signed-in user can upload one to their own folder", async () => {
+    await assertSucceeds(as("frodo").ref(fresh(mine("frodo"))).put(small(), WEBP).then());
+  });
+
+  it("an account in no group can too -- a bug report needs no group", async () => {
+    await assertSucceeds(as("gollum").ref(fresh(mine("gollum"))).put(small(), WEBP).then());
+  });
+
+  it("nobody can upload to someone else's folder", async () => {
+    await assertFails(as("sauron").ref(fresh(mine("frodo"))).put(small(), WEBP).then());
+  });
+
+  it("a signed-out visitor cannot upload one", async () => {
+    await assertFails(anonymous().ref(fresh(mine("frodo"))).put(small(), WEBP).then());
+  });
+
+  it("a file of 2 MB or more is refused", async () => {
+    await assertFails(
+      as("frodo").ref(fresh(mine("frodo"))).put(new Uint8Array(2 * 1024 * 1024), WEBP).then()
+    );
+  });
+
+  it("a PNG is refused -- prepareImage never produces one", async () => {
+    await assertFails(
+      as("frodo").ref(fresh(mine("frodo"), "png")).put(small(), {contentType: "image/png"}).then()
+    );
+  });
+
+  it("a name the app would not choose is refused", async () => {
+    await assertFails(as("frodo").ref(`${mine("frodo")}/screenshot.webp`).put(small(), WEBP).then());
+  });
+
+  it("a nested folder is refused", async () => {
+    await assertFails(as("frodo").ref(fresh(`${mine("frodo")}/deeper`)).put(small(), WEBP).then());
+  });
+
+  describe("once uploaded", () => {
+    const path = () => `${mine("frodo")}/${NAME}`;
+
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (context) => {
+        await context.storage().ref(path()).put(small(), WEBP);
+      });
+    });
+
+    it("not even the uploader can get a download URL", async () => {
+      await assertFails(as("frodo").ref(path()).getDownloadURL());
+    });
+
+    it("nobody else can either", async () => {
+      await assertFails(as("gandalf").ref(path()).getDownloadURL());
+    });
+
+    it("the uploader cannot overwrite it", async () => {
+      await assertFails(as("frodo").ref(path()).put(small(), WEBP).then());
+    });
+
+    it("the uploader can delete it", async () => {
+      await assertSucceeds(as("frodo").ref(path()).delete());
+    });
+
+    it("nobody else can delete it", async () => {
+      await assertFails(as("sauron").ref(path()).delete());
+    });
+
+    it("nobody can list the folder", async () => {
+      await assertFails(as("frodo").ref(mine("frodo")).listAll());
+    });
+  });
+});
+
 describe("everything else", () => {
   it("control: a member can write where the rules allow", async () => {
     await assertSucceeds(as("frodo").ref(fresh(NPC_DIR)).put(small(), WEBP).then());

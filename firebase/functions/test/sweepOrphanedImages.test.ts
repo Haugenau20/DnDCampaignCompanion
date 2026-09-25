@@ -26,8 +26,10 @@ const FILES = {
   crest: "groups/g1/crest/current.webp",
   crestOrphan: "groups/g1/crest/replaced.webp",
   otherGroupImage: "groups/g2/campaigns/c9/npcs/n9/current.webp",
-  // Not the shape of an image this app writes: never the sweep's to judge.
-  support: "support/frodo/screenshot.png",
+  // T020: a bug-report screenshot nothing references, ever.
+  screenshot: "support/frodo/0f8fad5b-d9cb-469f-a165-70867728950e.webp",
+  // Not the shape of a file this app writes: never the sweep's to judge.
+  unknownUnderSupport: "support/frodo/drafts/notes.txt",
   unknownUnderGroup: "groups/g1/exports/backup.json",
 };
 
@@ -136,10 +138,22 @@ describe("sweeping orphaned images", () => {
     expect(await exists(FILES.crestOrphan)).toBe(true);
   });
 
-  it("leaves files that are not in the image layout alone", async () => {
+  it("deletes a bug-report screenshot left behind for a day", async () => {
     await sweepOrphanedImages(later());
 
-    expect(await exists(FILES.support)).toBe(true);
+    expect(await exists(FILES.screenshot)).toBe(false);
+  });
+
+  it("leaves a screenshot alone while it is under a day old -- its report may be on its way", async () => {
+    await sweepOrphanedImages(new Date(Date.now() + DAY / 2));
+
+    expect(await exists(FILES.screenshot)).toBe(true);
+  });
+
+  it("leaves files that are not in the image or screenshot layout alone", async () => {
+    await sweepOrphanedImages(later());
+
+    expect(await exists(FILES.unknownUnderSupport)).toBe(true);
     expect(await exists(FILES.unknownUnderGroup)).toBe(true);
   });
 
@@ -154,6 +168,7 @@ describe("sweeping orphaned images", () => {
         FILES.locationOrphan,
         FILES.bannerOrphan,
         FILES.crestOrphan,
+        FILES.screenshot,
       ].sort()
     );
     expect(result.failed).toEqual([]);

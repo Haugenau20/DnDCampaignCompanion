@@ -236,6 +236,10 @@ PR otherwise touches. Per the spec's own rule, no disabled control is shipped in
 The idea and this reasoning are recorded in `todo.txt` so the trade-off is not re-derived
 from scratch.
 
+**Amended 2026-09-25**: shipped as T020. A signed-in sender can attach one screenshot
+(`contact/ScreenshotField.tsx`); it is uploaded to `support/{uid}/`, attached to the email by
+`sendContactEmail` and deleted. See the storage images design, §3 and §7.
+
 Also out of scope: email templating beyond subject/category composition, ticketing or
 persistence of submissions, and any change to the Functions deployment setup.
 
