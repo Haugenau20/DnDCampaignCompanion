@@ -6,18 +6,20 @@ const config: Config.InitialOptions = {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   moduleNameMapper: {
+    // Handle image imports. First, because the first matching pattern wins: after
+    // the bare-path rule below, `assets/…/x.webp` would resolve to the file itself
+    // and jest would try to run a picture as JavaScript.
+    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
+      '<rootDir>/src/__mocks__/fileMock.ts',
     // Handle module aliases
     '^@/(.*)$': '<rootDir>/src/$1',
     // Resolve bare paths from src/ (mirrors tsconfig.json `baseUrl: "src"`) at runtime
     // without using `modulePaths`, which can disturb ts-jest's per-file compilation isolation.
-    '^(app|components|context|core|features|hooks|pages|services|shared|themes|types|utils|constants)/(.*)$': '<rootDir>/src/$1/$2',
+    '^(app|assets|components|context|core|features|hooks|pages|services|shared|themes|types|utils|constants)/(.*)$': '<rootDir>/src/$1/$2',
     // Handle CSS imports (with CSS modules)
     '\\.module\\.(css|sass|scss)$': 'identity-obj-proxy',
     // Handle all CSS imports (new line added)
     '\\.(css|sass|scss)$': 'identity-obj-proxy',
-    // Handle image imports
-    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
-      '<rootDir>/src/__mocks__/fileMock.ts',
   },
   coveragePathIgnorePatterns: [
     '/node_modules/',

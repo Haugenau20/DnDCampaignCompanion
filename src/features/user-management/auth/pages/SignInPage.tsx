@@ -5,6 +5,37 @@ import Typography from 'core/components/Typography';
 import SignInForm from '../components/SignInForm';
 import { safeNextPath, CAMPAIGN_HOME } from '../utils/next-path';
 import { nextLabel } from '../utils/next-label';
+import signInPortrait from 'assets/signin/signin-portrait.webp';
+import signInWide from 'assets/signin/signin-wide.webp';
+
+/** The media query for the side-by-side layout: Tailwind's `md`. */
+const SIDE_BY_SIDE_MEDIA = '(min-width: 768px)';
+
+/**
+ * The band's picture: a fixed plate shipped with the code, not a slot.
+ *
+ * Portrait beside the form, wide above it. Decorative, so it is hidden from
+ * assistive technology; it is above the fold, so it is fetched first.
+ * `fetchpriority` is spelled in lower case because React 18 does not know the
+ * camelCase prop and warns about it.
+ */
+const SignInPlate: React.FC = () => (
+  <picture className="hero-signin-plate" data-testid="signin-plate">
+    <source media={SIDE_BY_SIDE_MEDIA} srcSet={signInPortrait} />
+    <img
+      src={signInWide}
+      alt=""
+      aria-hidden="true"
+      decoding="async"
+      {...{ fetchpriority: 'high' }}
+      // A failed picture still has a box, and Chrome draws its broken-image
+      // icon in it even with an empty alt. Hide it; the band shows through.
+      onError={(event) => {
+        event.currentTarget.style.visibility = 'hidden';
+      }}
+    />
+  </picture>
+);
 
 /**
  * `/signin` -- the sign-in form, as a page that can hold a destination.
@@ -41,7 +72,12 @@ const SignInPage: React.FC = () => {
     <div className="-mx-4 -mt-4 -mb-4 min-h-[calc(100vh-4rem)] grid grid-cols-1 md:grid-cols-2">
       {/* At phone width this is a compressed header above the form, not a
           column beside it. */}
-      <aside className="hero-band px-6 py-10 md:py-16 md:px-12 flex flex-col justify-between gap-10">
+      <aside className="hero-band hero-band-signin px-6 py-10 md:py-16 md:px-12 flex flex-col justify-between gap-10">
+        {/* Out of flow, so the band's layout is unchanged; below the text by
+            `.hero-band-signin`'s stacking context. */}
+        <SignInPlate />
+        <div className="hero-signin-scrim" aria-hidden="true" />
+
         <Typography variant="body-sm" className="font-heading text-lg">
           D&amp;D Campaign Companion
         </Typography>
