@@ -351,24 +351,23 @@ describe("CampaignBanner", () => {
       const band = screen.getByTestId("campaign-banner");
       const picture = screen.getByRole("img", { name: "Curse of Strahd" });
       expect(picture).toHaveAttribute("src", banner.url);
-      // Inside the band, not above it, and under the band's own scrim.
+      // Inside the band, not above it, with the banner's own layout.
       expect(band).toContainElement(picture);
-      expect(band).toHaveClass("hero-band", "hero-band-pictured");
-      expect(band.querySelector(".hero-picture-scrim")).not.toBeNull();
+      expect(band).toHaveClass("hero-band", "hero-band-pictured", "hero-band-banner");
       // The title still renders over it.
       expect(screen.getByText("Curse of Strahd")).toBeInTheDocument();
     });
 
-    it("dims only behind the text block when there is a banner, and nothing without one", () => {
-      // The patch is `.hero-identity::before` under `.hero-band-adaptive`; what
-      // the component owns is opting in and marking the text block it sits behind.
+    it("gives the text block a silhouette and a faint patch when there is a banner, and nothing without one", () => {
+      // D10: the halo and the patch are drawn by `.hero-dim-region` under
+      // `.hero-band-adaptive`; what the component owns is marking its text.
       withCampaign({ ...makeCampaign("Curse of Strahd"), banner });
       const { rerender } = render(<CampaignBanner />);
       const band = screen.getByTestId("campaign-banner");
       expect(band).toHaveClass("hero-band-adaptive");
-      expect(band.querySelector(".hero-identity")).toContainElement(
-        screen.getByText("Curse of Strahd")
-      );
+      const identity = band.querySelector(".hero-identity");
+      expect(identity).toHaveClass("hero-dim-region");
+      expect(identity).toContainElement(screen.getByText("Curse of Strahd"));
 
       withCampaign(makeCampaign("Curse of Strahd"));
       rerender(<CampaignBanner />);
@@ -385,7 +384,9 @@ describe("CampaignBanner", () => {
       document.head.appendChild(style);
       try {
         render(<CampaignBanner />);
-        expect(screen.getByTestId("campaign-banner").style.getPropertyValue("--hero-dim")).toBe(String(MIN_DIM));
+        // Written onto the text block, which is what the patch reads.
+        const identity = screen.getByTestId("campaign-banner").querySelector(".hero-identity") as HTMLElement;
+        expect(identity.style.getPropertyValue("--hero-dim")).toBe(String(MIN_DIM));
       } finally {
         style.remove();
       }

@@ -5,10 +5,10 @@ import Typography from 'core/components/Typography';
 import { campaignBannerPrefix } from 'core/services/firebase/storage/ImageStorageService';
 import { StoredImage } from 'core/types/storedImage';
 import { useCampaigns } from 'features/user-management';
-import BandPicture, { bandPicture } from 'shared/components/BandPicture';
+import { bandPicture } from 'shared/components/BandPicture';
+import PicturedBand, { BandRegion } from 'shared/components/PicturedBand';
 import ImageUploadControl from 'shared/components/ImageUploadControl';
 import { useImageAttachment } from 'shared/hooks/useImageAttachment';
-import { useBandDim } from 'shared/hooks/useBandDim';
 import { useCampaignInfo } from '../../../layouts/common/hooks/useCampaignInfo';
 
 interface CampaignBannerProps {
@@ -30,13 +30,12 @@ interface CampaignBannerProps {
  * design: the campaign's own sigil, derived from its id exactly as every entity
  * mark is. Nothing here depends on content a user may never add.
  *
- * The campaign may carry a banner picture (`BandPicture`), drawn across the
- * whole band. Only the text block is dimmed: a soft patch of the band's own
- * colour sits behind it and fades out around it, and the rest of the picture
- * shows untouched (`.hero-band-adaptive`). The patch is as strong as the part
- * of the picture under the text needs for the band's inks to stay readable,
- * worked out from the brightness measured at upload (`useBandDim`). On a
- * phone a window at the top of the band shows the picture above the text.
+ * The campaign may carry a banner picture, drawn across the whole band by
+ * `PicturedBand`: the text block keeps a silhouette of the band colour around
+ * each glyph and a faint patch behind it, and the rest of the picture shows
+ * untouched (design D10). On a desktop the band grows taller with the text
+ * centred in it (`.hero-band-banner`); on a phone a window at the top of the
+ * band shows the picture above the text.
  * Without one the band is drawn as always, with no empty slot. Any member may add,
  * replace or remove it -- the same members who may edit the campaign document
  * (`firestore.rules.prod`) -- from icon buttons on the band's top-right corner.
@@ -63,7 +62,6 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
   });
 
   const picture = bandPicture(activeCampaign?.banner);
-  const { bandRef, textRef, dim } = useBandDim(picture);
 
   // Cancels the page container's padding so the band spans the full content
   // width and meets the chrome above it, rather than floating as a card.
@@ -115,19 +113,14 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
   ].filter(Boolean) as string[];
 
   const band = (
-    <div
-      ref={bandRef}
-      className={clsx(bandFrame, 'relative', picture && 'hero-band-pictured hero-band-adaptive')}
-      // Without a measured strength the stylesheet's own worst case applies.
-      style={dim === null ? undefined : ({ '--hero-dim': dim } as React.CSSProperties)}
-      data-testid="campaign-banner"
+    <PicturedBand
+      image={picture}
+      alt={activeCampaign?.name ?? ''}
+      className={clsx(bandFrame, 'hero-band-banner')}
+      innerClassName={bandInner}
+      testId="campaign-banner"
+      pictureTestId="campaign-banner-image"
     >
-     {picture && (
-       <BandPicture image={picture} alt={activeCampaign?.name ?? ''} testId="campaign-banner-image" />
-     )}
-     {/* Positioned, so it paints above the picture and its scrim. */}
-     <div className={clsx(bandInner, 'relative')}>
-     {picture && <div className="hero-picture-window" aria-hidden="true" />}
      <div className={bandColumn}><div className={bandGutter}>
       {/* Stacked until `sm`. Side by side, the `shrink-0` toggle claims ~180px of
           a 320px viewport and squeezes the title column to almost nothing, at
@@ -141,7 +134,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
               the band's left edge shout before the name did. The party's own
               crest lives in the aside, where it identifies the group rather
               than restating the heading. */}
-          <div ref={textRef} className="hero-identity flex flex-col gap-2 min-w-0">
+          <BandRegion className="hero-identity flex flex-col gap-2 min-w-0">
             {activeGroup?.name && (
               <Typography
                 variant="body-sm"
@@ -185,12 +178,12 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
                 ))}
               </div>
             )}
-          </div>
+          </BandRegion>
         </div>
 
       </div>
-     </div></div></div>
-    </div>
+     </div></div>
+    </PicturedBand>
   );
 
   return (

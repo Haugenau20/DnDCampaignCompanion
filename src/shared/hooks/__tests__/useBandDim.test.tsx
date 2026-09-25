@@ -1,13 +1,14 @@
 // src/shared/hooks/__tests__/useBandDim.test.tsx
 import React from 'react';
 import { act, render, screen } from '@testing-library/react';
-import { useBandDim } from '../useBandDim';
+import { useBandDim, DIM_PROPERTY } from '../useBandDim';
 import { requiredDim, MIN_DIM, Rgb, WHITE } from 'core/utils/band-dimming';
 import { StoredImage } from 'core/types/storedImage';
 
 /**
- * The band dims its picture only as much as the part under its text needs,
- * judged against the band's actual colours.
+ * Each block of text on a band is dimmed only as much as the part of the
+ * picture under it needs, judged against the band's actual colours, and the
+ * result is written onto the block as `--hero-dim`.
  */
 
 const BAND: Rgb = [38, 33, 28];
@@ -38,28 +39,41 @@ const splitGrid = {
 
 let bandColour = rgb(BAND);
 
-const Harness: React.FC<{ picture: StoredImage | null }> = ({ picture }) => {
-  const { bandRef, textRef, dim } = useBandDim(picture);
+const Harness: React.FC<{ picture: StoredImage | null; second?: boolean }> = ({ picture, second }) => {
+  const { bandRef, regionRef } = useBandDim(picture);
   return (
-    <div ref={bandRef} data-testid="band" data-dim={dim ?? 'none'} style={{ backgroundColor: bandColour, color: rgb(INK) }}>
+    <div ref={bandRef} data-testid="band" style={{ backgroundColor: bandColour, color: rgb(INK) }}>
       <img className="hero-picture" alt="" />
-      <div ref={textRef} data-text="">
+      <div ref={regionRef('name')} data-testid="text" data-text="left">
         <span className="hero-muted" style={{ color: rgb(MUTED) }}>Started 3 March</span>
       </div>
+      {second && (
+        <div ref={regionRef('controls')} data-testid="controls" data-text="right">
+          <span>Explored</span>
+        </div>
+      )}
     </div>
   );
 };
 
-const dimOf = () => screen.getByTestId('band').dataset.dim;
+/** What was written onto a block, or 'none'. */
+const dimOf = (testId = 'text') =>
+  screen.getByTestId(testId).style.getPropertyValue(DIM_PROPERTY) || 'none';
 
-/** Lay the picture over a 1000 x 250 frame and put the text at `text`. */
-function layout(text: { left: number; width: number }) {
+/**
+ * Lay the picture over a 1000 x 250 frame, the first block at `text` and a
+ * second, if any, at `right`.
+ */
+function layout(text: { left: number; width: number }, right = { left: 600, width: 300 }) {
   jest.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    const which = (this as HTMLElement).dataset?.text;
     const box = this.tagName === 'IMG'
       ? { left: 0, top: 0, width: 1000, height: 250 }
-      : (this as HTMLElement).dataset.text !== undefined
+      : which === 'left'
         ? { left: text.left, top: 50, width: text.width, height: 150 }
-        : { left: 0, top: 0, width: 0, height: 0 };
+        : which === 'right'
+          ? { left: right.left, top: 50, width: right.width, height: 150 }
+          : { left: 0, top: 0, width: 0, height: 0 };
     return { ...box, right: box.left + box.width, bottom: box.top + box.height, x: box.left, y: box.top, toJSON: () => box } as DOMRect;
   });
 }
@@ -114,6 +128,24 @@ describe('useBandDim', () => {
   it('leaves the strength to the stylesheet when the colours cannot be read', () => {
     bandColour = 'transparent';
     render(<Harness picture={image(even(0.9))} />);
+    expect(dimOf()).toBe('none');
+  });
+
+  it('measures each block against the part of the picture under it', () => {
+    layout({ left: 0, width: 400 }, { left: 600, width: 300 });
+    render(<Harness picture={image(splitGrid)} second />);
+
+    // The name is over the dark half, the controls over the bright one.
+    expect(Number(dimOf('text'))).toBe(MIN_DIM);
+    // The controls have no muted text, so only the band's own ink decides.
+    expect(Number(dimOf('controls'))).toBe(requiredDim(grey(0.95), BAND, [INK]));
+  });
+
+  it('stops dimming a block once the picture is gone', () => {
+    const { rerender } = render(<Harness picture={image(even(0.9))} />);
+    expect(dimOf()).not.toBe('none');
+
+    rerender(<Harness picture={null} />);
     expect(dimOf()).toBe('none');
   });
 

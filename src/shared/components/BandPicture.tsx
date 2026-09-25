@@ -21,17 +21,11 @@ interface BandPictureProps {
 }
 
 /**
- * A picture drawn into a `.hero-band`, behind its text.
+ * A picture drawn into a `.hero-band`, behind its text. It fills the band.
  *
- * It fills the band; a scrim in the band's own colour lets it show nearly
- * clear at the top and closes over it by the foot of `.hero-picture-window`,
- * so the text below still sits on the band surface and keeps the band pair's
- * contrast whatever was uploaded (see `.hero-picture-scrim`).
- *
- * The band must be positioned and carry `.hero-band-pictured`; its content
- * goes in a positioned child, so it paints above this, and opens with a
- * `.hero-picture-window` spacer, so the text starts below the window.
- * `.hero-band-adaptive` replaces the scrim with a patch behind the text only.
+ * Use it through `PicturedBand`, which keeps the text on it readable (a
+ * silhouette around each glyph and a faint patch behind each block of text)
+ * and positions the content above it.
  */
 const BandPicture: React.FC<BandPictureProps> = ({ image, alt, testId = 'band-picture' }) => (
   <div className="hero-picture-frame" data-testid={testId}>
@@ -42,7 +36,6 @@ const BandPicture: React.FC<BandPictureProps> = ({ image, alt, testId = 'band-pi
       decoding="async"
       className="hero-picture block w-full h-full object-cover"
     />
-    <div className="hero-picture-scrim absolute inset-0" aria-hidden="true" />
   </div>
 );
 
