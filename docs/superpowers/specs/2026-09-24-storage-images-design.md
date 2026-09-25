@@ -33,7 +33,7 @@ maintainer's test group, so nothing here has to be reworked at launch.
 | D5 | Rules are a **review copy** (`firebase/storage.rules.prod`) pasted into the console, never deployed from the repo | Same model as `firestore.rules.prod`; see T021's catch and `firebase.json`'s `//` comments. |
 | D6 | Crest: **group admins** only | Matches who may update the group document today — no Firestore rule changes. |
 | D7 | Upload only on detail pages | A create form has no entity id yet, so it would need upload-then-attach ordering for no real gain. |
-| D8 | Location image sits in the **page header**, as on the NPC page | Consistent; a later page redesign (todo.txt) only restyles the slot, because the stored image is uncropped (§8). |
+| D8 | Location image sits in the **page header**, as on the NPC page | Consistent; a later page redesign (todo.txt) only restyles the slot, because the stored image is uncropped (§8). **Amended 2026-09-25**: the picture is now drawn *inside* the band, not above it — a window at the top shows it, and a scrim in the band colour (≥90% behind any text) keeps the band pair's contrast whatever is uploaded. No picture, no placeholder: the band draws as before. See `.hero-picture-scrim` and `EntityPageShell`. |
 
 ## 3. Storage layout
 

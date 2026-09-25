@@ -813,6 +813,44 @@
     );
   }
 
+  /*
+    A band with a record's picture in it (`EntityPageShell`). The picture fills
+    the band; a window at the top shows it nearly clear, and a scrim in the
+    band's own colour closes over it by the window's foot, before any text.
+
+    The text below sits on at least 90% band colour. Measured against the worst
+    case, a pure white picture: band-on-muted needs 86% (light) / 83% (dark) to
+    keep 4.5:1, band-on 66% / 62%. So the band pair holds whatever is uploaded,
+    and no text here takes a shadow or a colour of its own.
+  */
+  .hero-band-pictured {
+    --hero-picture-window: 6rem;
+  }
+
+  @media (min-width: 640px) {
+    .hero-band-pictured {
+      --hero-picture-window: 9rem;
+    }
+  }
+
+  .hero-picture-window {
+    height: var(--hero-picture-window);
+  }
+
+  /* The window is the top of the band, so favour the top of the picture over its centre. */
+  .hero-picture {
+    object-position: center 30%;
+  }
+
+  .hero-picture-scrim {
+    background-image: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--surface-band-bg) 10%, transparent) 0,
+      color-mix(in srgb, var(--surface-band-bg) 90%, transparent) var(--hero-picture-window),
+      color-mix(in srgb, var(--surface-band-bg) 95%, transparent) 100%
+    );
+  }
+
   /* A heading on the band takes the band's ink. */
   .hero-band .typography-heading {
     color: var(--surface-band-on);

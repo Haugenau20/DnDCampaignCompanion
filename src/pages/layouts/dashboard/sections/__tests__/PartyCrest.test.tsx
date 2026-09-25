@@ -76,6 +76,24 @@ describe('PartyCrest', () => {
     expect(screen.getByRole('button', { name: 'Remove crest' })).toBeInTheDocument();
   });
 
+  it("lays an admin's controls over the crest itself, not as a row under the name (T068)", () => {
+    mockIsAdmin = true;
+    mockGroup = { ...mockGroup, crest };
+    render(<PartyCrest />);
+    const image = screen.getByRole('img', { name: 'The Fellowship crest' });
+    const name = screen.getByText('The Fellowship');
+
+    for (const label of ['Replace crest', 'Remove crest']) {
+      const button = screen.getByRole('button', { name: label });
+      // The control wraps the picture: the smallest block holding both the
+      // button and the crest does not reach down to the group's name.
+      let shared = button.parentElement;
+      while (shared && !shared.contains(image)) shared = shared.parentElement;
+      expect(shared?.contains(name)).toBe(false);
+      expect(button).toHaveTextContent(/^$/);
+    }
+  });
+
   it('files the crest under the group, and records it through setGroupCrest', async () => {
     mockIsAdmin = true;
     mockGroup = { ...mockGroup, crest };

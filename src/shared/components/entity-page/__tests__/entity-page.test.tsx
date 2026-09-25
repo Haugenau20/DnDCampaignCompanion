@@ -82,36 +82,95 @@ describe('EntityPageShell', () => {
     expect(within(band).getByRole('button', { name: 'Add a place inside' })).toBeInTheDocument();
   });
 
-  describe('the image (T021)', () => {
-    it('heads the page above the band, off the band surface', () => {
-      const { container } = renderShell({ image: <div data-testid="image">picture</div> });
-      const image = screen.getByTestId('image');
+  describe('the picture', () => {
+    const { firebaseConfig } = jest.requireActual('core/services/firebase/config/firebaseConfig');
+    const picture = {
+      path: 'groups/g/campaigns/c/locations/gondolin/p.webp',
+      url: `https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.storageBucket}/o/p.webp?alt=media&token=t`,
+      width: 1600,
+      height: 900,
+      uploadedBy: 'u1',
+      uploadedAt: '2026-09-25T12:00:00.000Z',
+    };
+    const upload = { subject: 'picture', onUpload: jest.fn(), onRemove: jest.fn() };
+
+    it('is drawn inside the band, behind the name, rather than above it', () => {
+      const { container } = renderShell({ image: picture, imageAlt: 'Gondolin' });
       const band = container.querySelector('.hero-band') as HTMLElement;
+      const img = screen.getByRole('img', { name: 'Gondolin' });
 
-      expect(band.contains(image)).toBe(false);
-      expect(image.compareDocumentPosition(band) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    });
-
-    it('puts its control on the page surface, between the band and the body', () => {
-      // Off the band for the same reason as the accent rule above: the band has
-      // no authored pair for a control's status and error text (T040).
-      const { container } = renderShell({
-        imageControl: <button type="button">Add picture</button>,
-      });
-      const control = screen.getByRole('button', { name: 'Add picture' });
-      const band = container.querySelector('.hero-band') as HTMLElement;
-
-      expect(band.contains(control)).toBe(false);
-      expect(band.compareDocumentPosition(control) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(band.contains(img)).toBe(true);
+      expect(img).toHaveAttribute('src', picture.url);
+      // Heads the page: lazy loading would only delay it.
+      expect(img).toHaveAttribute('loading', 'eager');
       expect(
-        control.compareDocumentPosition(screen.getByTestId('body')) & Node.DOCUMENT_POSITION_FOLLOWING
+        img.compareDocumentPosition(screen.getByRole('heading', { level: 1 })) &
+          Node.DOCUMENT_POSITION_FOLLOWING
       ).toBeTruthy();
     });
 
-    it('adds nothing for a page that has no image', () => {
-      renderShell();
+    it('lays a scrim in the band colour between the picture and the text', () => {
+      // Readability does not depend on what was uploaded: the text sits on the
+      // scrim, which is the band's own surface colour (see `.hero-picture-scrim`).
+      const { container } = renderShell({ image: picture, imageAlt: 'Gondolin' });
+      const scrim = container.querySelector('.hero-band .hero-picture-scrim');
+      expect(scrim).not.toBeNull();
+      expect(
+        screen.getByRole('img', { name: 'Gondolin' }).compareDocumentPosition(scrim as Node) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    });
+
+    it('draws no picture from outside the app’s own bucket', () => {
+      // A member can write any string into a document; a planted URL would log
+      // everyone who opens the page.
+      renderShell({
+        image: { ...picture, url: 'https://tracker.example/pixel.png' },
+        imageAlt: 'Gondolin',
+      });
+      expect(screen.queryByRole('img', { name: 'Gondolin' })).toBeNull();
       expect(screen.queryByTestId('entity-page-image')).toBeNull();
-      expect(screen.queryByTestId('entity-page-image-control')).toBeNull();
+    });
+
+    it('leaves the band as it is when there is no picture -- no empty slot', () => {
+      const { container } = renderShell();
+      expect(screen.queryByTestId('entity-page-image')).toBeNull();
+      expect(screen.queryByRole('img')).toBeNull();
+      expect(container.querySelector('.hero-picture-scrim')).toBeNull();
+    });
+
+    it('offers whoever may edit add, replace and remove on the band itself', () => {
+      const { container, rerender } = renderShell({ imageUpload: upload });
+      const band = container.querySelector('.hero-band') as HTMLElement;
+      const add = screen.getByRole('button', { name: 'Add picture' });
+
+      // Framed with the band, before the body: not a row under it.
+      expect(band.parentElement?.contains(add)).toBe(true);
+      expect(
+        add.compareDocumentPosition(screen.getByTestId('body')) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+
+      rerender(
+        <MemoryRouter>
+          <EntityPageShell
+            breadcrumb={[{ label: 'Gondolin' }]}
+            entityId="gondolin"
+            name="Gondolin"
+            image={picture}
+            imageAlt="Gondolin"
+            imageUpload={upload}
+          >
+            <div data-testid="body">prose and structure</div>
+          </EntityPageShell>
+        </MemoryRouter>
+      );
+      expect(screen.getByRole('button', { name: 'Replace picture' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Remove picture' })).toBeInTheDocument();
+    });
+
+    it('offers nothing to change without imageUpload', () => {
+      renderShell({ image: picture, imageAlt: 'Gondolin' });
+      expect(screen.queryByRole('button', { name: /picture/ })).toBeNull();
     });
   });
 });

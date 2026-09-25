@@ -19,7 +19,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T068 | Hover image controls on location and crest | S | open | Maintainer's focus: images. The NPC portrait already has them |
 | high | T020 | Screenshot on bug reports | M | open | Maintainer's focus: Storage. Needs its own path (`support/{uid}/…`), rules and cleanup |
 | medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
@@ -29,6 +28,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
 | medium | T062 | Quick add's description box is two rows | S | open | Every note conversion lands text in it; real friction, small fix |
 | medium | T061 | PRs are checked by the build alone | M | open | Tests never run in CI, and merging deploys live |
+| medium | T070 | Functions are deployed by hand | M | needs investigation | Frontend and functions can drift in prod; contact secrets must move first. Service account roles unchecked |
 | low | T069 | Breadcrumb overflows at 320px | S | open | Masked today by the header, which overflows on every route |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
@@ -348,24 +348,6 @@ The maintainer wants the three entity pages streamlined in how they look.
   what the tree shows.
 - **Question before sizing**: which look wins, the band or the card? And is the
   goal one shell for all three, or a shared visual language only?
-- **Source**: todo.txt, 2026-09-24
-
-### T068 — The location picture and party crest still carry a row of image buttons
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-09-24
-
-The maintainer wants add/replace/remove to appear on hover in the image's
-top-right corner, not as a full-width button row. The NPC portrait does this
-now through `ImageUploadControl`'s `variant="compact"`; two images still don't.
-
-- **Where**: `pages/locations/LocationDetailPage.tsx:352` (`imageControl`, a
-  full row under the band) and `pages/layouts/dashboard/sections/PartyCrest.tsx:68`
-  (a full row under the group name).
-- **Catch**: the location page goes through `EntityPageShell`, which puts
-  `imageControl` under the band on purpose (T040: the band has no authored
-  colour pair for status and error text; `EntityPageShell.tsx:41`). The
-  compact control shows its messages on a `card` note below the picture,
-  which would sit over the band. Check that reads right before dropping the
-  shell's slot. The crest has no such catch.
 - **Source**: todo.txt, 2026-09-24
 
 ---
@@ -747,6 +729,33 @@ Installed globally: `firebase-tools` 13.32.0; the CLI offers 15.x.
   `firebase/functions`' suite (including the Storage rules suite and its
   project-id quirk) and a `start-dev.ps1` round trip after upgrading.
 - **Source**: todo.txt, 2026-09-24
+
+### T070 — Cloud Functions are deployed by hand, not by CI
+**Type** debt · **Size** M · **Status** needs investigation · **Verified** 2026-09-25
+
+Merging to `main` deploys Hosting only. Functions are deployed from the
+maintainer's machine, so a frontend change that needs a new function (T020) is
+not live until someone remembers to deploy it.
+
+- **Where**: `.github/workflows/firebase-hosting-merge.yml` runs
+  `action-hosting-deploy` and nothing else; `firebase/functions/package.json`
+  pins Node 22 and already has `build` (`tsc`), which `firebase.json`'s
+  `predeploy` runs.
+- **Catch 1 (confirmed)**: `firebase/functions/src/contact.ts:54` reads
+  `CONTACT_EMAIL`/`CONTACT_PASSWORD` from `process.env`, which only the
+  gitignored `firebase/functions/.env` supplies. A CI checkout lacks it, so the
+  first CI deploy would ship a contact form with blank Gmail credentials. Move
+  both to Secret Manager the way `entityExtraction.ts:395` declares
+  `secrets: ["OPENAI_API_KEY"]`, and deploy that once by hand first.
+- **Catch 2 (unverified)**: `FIREBASE_SERVICE_ACCOUNT_DND_CAMPAIGN_COMPANION`
+  is probably the Hosting-only account `hosting:github` creates. Check its IAM
+  roles in the console; a separate deploy account is safer than widening it.
+  `gateAccountCreation` is a blocking function, which needs Auth admin rights too.
+- **Order**: functions must deploy before Hosting in the same run (`needs:`),
+  or a new payload reaches users before the function that reads it.
+- **Out of scope**: rules stay manual; `firebase.json` has no rules keys on
+  purpose. Running the emulator-backed functions suite belongs to T061.
+- **Source**: maintainer, 2026-09-25
 
 ---
 
