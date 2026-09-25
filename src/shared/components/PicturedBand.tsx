@@ -8,7 +8,7 @@ import { useBandDim } from 'shared/hooks/useBandDim';
 /** How far the halo grows each glyph, in CSS pixels. */
 export const SILHOUETTE_GROW_PX = 3;
 /** How much the halo's edge is softened (a Gaussian's standard deviation), in CSS pixels. */
-export const SILHOUETTE_SOFTEN_PX = 1.5;
+export const SILHOUETTE_SOFTEN_PX = 2.5;
 
 type RegionRef = (key: string) => (element: HTMLElement | null) => void;
 
@@ -21,9 +21,12 @@ const RegionContext = createContext<RegionRef | null>(null);
  * colour (`.hero-silhouette-flood` sets it from `--surface-band-bg`, so it
  * follows the theme).
  *
- * Grown 3px and softened by 1.5px, the halo is still over 97% of the band
- * colour where it meets a stroke, so every letter sits on the band itself and
- * keeps the band pair's contrast, whatever the picture does next to it.
+ * Grown 3px and softened by 2.5px -- the softness of option E, matched side
+ * by side against the comparison image -- the halo is at least about 83% band
+ * colour where it meets a stroke (a 1px stroke; wider ones get more). The
+ * region's patch lies under it, so together they give every letter more band
+ * colour than `useBandDim` measured it needs; see `.hero-dim-region` in
+ * `components.css` for the arithmetic.
  *
  * Rendered in the page rather than a stylesheet because a CSS filter can only
  * grow a shape through an SVG filter. Not `display: none`: a filter inside a
