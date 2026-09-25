@@ -827,43 +827,28 @@ describe('LocationDetailPage — the picture (T021)', () => {
   const withPicture = () =>
     TREE.map((loc: any) => (loc.id === 'gondolin' ? { ...loc, image: picture } : loc));
 
-  it('reserves an honest empty slot above the band, and offers to add a picture', () => {
+  it('draws the band as usual without a picture, and offers to add one on it', () => {
     const { container } = renderPage();
-    const slot = screen.getByRole('img', { name: 'Gondolin — no image added' });
-    expect((container.querySelector('.hero-band') as HTMLElement).contains(slot)).toBe(false);
-    expect(screen.getByRole('button', { name: 'Add picture' })).toBeInTheDocument();
+    const band = container.querySelector('.hero-band') as HTMLElement;
+    // No striped placeholder: most places never get a picture.
+    expect(screen.queryByRole('img', { name: /no image added/ })).toBeNull();
+
+    const add = screen.getByRole('button', { name: 'Add picture' });
+    expect(band.parentElement?.contains(add)).toBe(true);
+    // Icons on the corner, named for assistive tech rather than labelled (T068).
+    expect(add).toHaveTextContent(/^$/);
   });
 
-  it('shows the picture once there is one', () => {
+  it('draws the picture inside the band once there is one', () => {
     mockLocations = withPicture();
-    renderPage();
+    const { container } = renderPage();
     const img = screen.getByRole('img', { name: 'Gondolin' });
     expect(img).toHaveAttribute('src', picture.url);
-    // Heads the page: lazy loading would only delay it.
-    expect(img).toHaveAttribute('loading', 'eager');
-    expect(screen.getByRole('button', { name: 'Replace picture' })).toBeInTheDocument();
-  });
-
-  it('lays add, replace and remove over the picture itself, not as a row under the band (T068)', () => {
-    mockLocations = withPicture();
-    const { container } = renderPage();
-    const picture = screen.getByTestId('entity-page-image');
-    const band = container.querySelector('.hero-band') as HTMLElement;
+    expect((container.querySelector('.hero-band') as HTMLElement).contains(img)).toBe(true);
 
     for (const name of ['Replace picture', 'Remove picture']) {
-      const button = screen.getByRole('button', { name });
-      expect(picture.contains(button)).toBe(true);
-      expect(band.contains(button)).toBe(false);
-      // Icons on the corner, named for assistive tech rather than labelled.
-      expect(button).toHaveTextContent(/^$/);
+      expect(screen.getByRole('button', { name })).toHaveTextContent(/^$/);
     }
-  });
-
-  it('offers to add a picture from the empty slot itself (T068)', () => {
-    renderPage();
-    const add = screen.getByRole('button', { name: 'Add picture' });
-    expect(screen.getByTestId('entity-page-image').contains(add)).toBe(true);
-    expect(add).toHaveTextContent(/^$/);
   });
 
   it('files the picture under this location in the active group and campaign', () => {

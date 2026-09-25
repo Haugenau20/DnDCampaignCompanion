@@ -6,7 +6,6 @@ import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
 import Select from 'core/components/Select';
 import EntitySigil from 'core/components/EntitySigil';
-import ImageSlot from 'core/components/ImageSlot';
 import { entityImagePrefix } from 'core/services/firebase/storage/ImageStorageService';
 import {
   useLocations,
@@ -26,7 +25,6 @@ import {
 import type { Location, LocationType, LocationStatus } from 'features/campaign-entities';
 import { useUser, useGroups, useCampaigns } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
-import ImageUploadControl from 'shared/components/ImageUploadControl';
 import { useImageAttachment } from 'shared/hooks/useImageAttachment';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
 import StateLadder from 'shared/components/row-controls/StateLadder';
@@ -311,20 +309,6 @@ const LocationDetailPage: React.FC = () => {
 
   const canAct = gate.canAct;
 
-  /**
-   * The picture that heads the page. Whoever may edit gets add/replace/remove
-   * laid over its top-right corner (T068), as the NPC portrait has them.
-   */
-  const pictureSlot = location && (
-    <ImageSlot
-      className="h-40 sm:h-56"
-      label={`${location.name} — no image added`}
-      image={location.image}
-      alt={location.name}
-      loading="eager"
-    />
-  );
-
   return (
     <>
       {gate.state !== 'ready' || !location ? (
@@ -354,20 +338,12 @@ const LocationDetailPage: React.FC = () => {
             insideCount,
             location.lastVisited ? formatNoteDate(location.lastVisited) : undefined
           )}
-          image={
-            canAct ? (
-              <ImageUploadControl
-                variant="compact"
-                subject="picture"
-                hasImage={Boolean(location.image)}
-                onUpload={picture.upload}
-                onRemove={picture.remove}
-              >
-                {pictureSlot}
-              </ImageUploadControl>
-            ) : (
-              pictureSlot
-            )
+          image={location.image}
+          imageAlt={location.name}
+          imageUpload={
+            canAct
+              ? { subject: 'picture', onUpload: picture.upload, onRemove: picture.remove }
+              : undefined
           }
           bandControl={
             canAct && (

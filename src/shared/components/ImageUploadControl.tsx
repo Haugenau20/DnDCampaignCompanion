@@ -11,7 +11,7 @@ import {
 } from 'core/utils/prepare-image';
 import DeleteConfirmationDialog from './DeleteConfirmationDialog';
 
-interface ImageUploadControlProps {
+export interface ImageUploadControlProps {
   /** What the image is, lower case: "portrait", "picture", "crest". */
   subject: string;
   /** Whether an image is there now, which decides Add versus Replace/Remove. */
