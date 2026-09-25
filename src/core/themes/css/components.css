@@ -838,6 +838,17 @@
     height: var(--hero-picture-window);
   }
 
+  /*
+    Positioned here rather than with `absolute inset-0`: utilities sit in a
+    later cascade layer than these rules and win whatever the specificity, so
+    `.hero-band-split` could not move a frame whose inset came from a utility.
+  */
+  .hero-picture-frame {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
   /* The window is the top of the band, so favour the top of the picture over its centre. */
   .hero-picture {
     object-position: center 30%;
@@ -850,6 +861,62 @@
       color-mix(in srgb, var(--surface-band-bg) 90%, transparent) var(--hero-picture-window),
       color-mix(in srgb, var(--surface-band-bg) 95%, transparent) 100%
     );
+  }
+
+  /*
+    The split band (`CampaignBanner`, desktop only): the picture beside the text
+    rather than behind it. Below `lg` there is no room beside the text, so the
+    band keeps the window and scrim above.
+
+    The text column is capped at `--hero-split-text`, and the picture starts
+    exactly where that column can end: `2rem` is the column's own inset (the
+    band's `px-4` plus the gutter's `sm:px-4`), and on a screen wider than the
+    `max-w-7xl` content column that column is centred, hence the second term.
+    So no text ever sits on the picture, whatever its length, and the band pair
+    keeps its contrast with no scrim at all. The picture shows at full strength
+    and fades out towards its left edge, into the band's own colour.
+
+    A band with a picture is taller, so a landscape photo is not cut down to a
+    thin strip.
+  */
+  @media (min-width: 1024px) {
+    .hero-band-split {
+      --hero-split-text: 24rem;
+      --hero-split-start: max(
+        calc(2rem + var(--hero-split-text)),
+        calc(50% - 40rem + 2rem + var(--hero-split-text))
+      );
+      min-height: 17rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .hero-band-split .hero-picture-window,
+    .hero-band-split .hero-picture-scrim {
+      display: none;
+    }
+
+    .hero-band-split .hero-picture-frame {
+      left: var(--hero-split-start);
+    }
+
+    /* A mask reads only alpha; the band token is simply an opaque colour. */
+    .hero-band-split .hero-picture {
+      object-position: center;
+      -webkit-mask-image: linear-gradient(to right, transparent 0, var(--surface-band-bg) 35%);
+      mask-image: linear-gradient(to right, transparent 0, var(--surface-band-bg) 35%);
+    }
+
+    .hero-band-split .hero-identity {
+      max-width: var(--hero-split-text);
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .hero-band-split {
+      --hero-split-text: 28rem;
+    }
   }
 
   /* A heading on the band takes the band's ink. */

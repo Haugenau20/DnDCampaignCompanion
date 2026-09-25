@@ -29,10 +29,13 @@ interface CampaignBannerProps {
  * design: the campaign's own sigil, derived from its id exactly as every entity
  * mark is. Nothing here depends on content a user may never add.
  *
- * The campaign may carry a banner picture, drawn into the band behind the text
- * as a location's picture is (`BandPicture`): a window at the top shows it, and
- * a scrim in the band's colour closes over it before the text starts. Without
- * one the band is drawn as always, with no empty slot. Any member may add,
+ * The campaign may carry a banner picture (`BandPicture`). On a desktop it
+ * takes the band's right-hand side at full strength and fades out to the left
+ * into the band's colour, so the title and text sit beside it on the plain
+ * band rather than on top of it (`.hero-band-split`). On a phone there is no
+ * room beside the text, so it is drawn as a location's picture is: a window
+ * at the top shows it, and a scrim closes over it before the text starts.
+ * Without one the band is drawn as always, with no empty slot. Any member may add,
  * replace or remove it -- the same members who may edit the campaign document
  * (`firestore.rules.prod`) -- from icon buttons on the band's top-right corner.
  */
@@ -110,7 +113,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
 
   const band = (
     <div
-      className={clsx(bandFrame, 'relative', picture && 'hero-band-pictured')}
+      className={clsx(bandFrame, 'relative', picture && 'hero-band-pictured hero-band-split')}
       data-testid="campaign-banner"
     >
      {picture && (
@@ -132,7 +135,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
               the band's left edge shout before the name did. The party's own
               crest lives in the aside, where it identifies the group rather
               than restating the heading. */}
-          <div className="flex flex-col gap-2 min-w-0">
+          <div className="hero-identity flex flex-col gap-2 min-w-0">
             {activeGroup?.name && (
               <Typography
                 variant="body-sm"

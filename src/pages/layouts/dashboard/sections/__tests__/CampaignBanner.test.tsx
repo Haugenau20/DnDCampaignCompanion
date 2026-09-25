@@ -358,6 +358,23 @@ describe("CampaignBanner", () => {
       expect(screen.getByText("Curse of Strahd")).toBeInTheDocument();
     });
 
+    it("lays a banner out beside the text on a desktop, and a band without one as always", () => {
+      // The split itself is CSS at `lg` (`.hero-band-split`), which JSDOM does
+      // not evaluate; what the component owns is opting in, and naming the
+      // text column that the picture must start beyond.
+      withCampaign({ ...makeCampaign("Curse of Strahd"), banner });
+      const { rerender } = render(<CampaignBanner />);
+      const band = screen.getByTestId("campaign-banner");
+      expect(band).toHaveClass("hero-band-split");
+      expect(band.querySelector(".hero-identity")).toContainElement(
+        screen.getByText("Curse of Strahd")
+      );
+
+      withCampaign(makeCampaign("Curse of Strahd"));
+      rerender(<CampaignBanner />);
+      expect(screen.getByTestId("campaign-banner")).not.toHaveClass("hero-band-split");
+    });
+
     it("refuses a URL outside the app's bucket", () => {
       withCampaign({
         ...makeCampaign("Curse of Strahd"),
