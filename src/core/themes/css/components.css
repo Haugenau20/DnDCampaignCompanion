@@ -855,16 +855,26 @@
     The silhouette is what keeps it readable. Every child of a region is drawn
     through `--hero-silhouette`, an SVG filter (`BandSilhouette`) that lays a
     halo of the band colour behind each glyph -- the glyph grown 3px, its edge
-    softened by 1.5px. Where the halo meets a stroke it is over 97% band
-    colour, so every letter sits on the band itself and keeps the band pair's
-    contrast (band-on and band-on-muted both pass 4.5:1 there), whatever the
-    picture does beside it. Control outlines get the same halo.
+    softened by 2.5px, the softness option E showed. Control outlines get the
+    same halo.
 
-    Behind that, a faint patch of the band colour calms the picture's texture:
-    a blurred rectangle a little larger than the region, at a third of
+    Where the halo meets a stroke it is at least about 83% band colour (a
+    Gaussian edge 3px out with a 2.5px spread, on a 1px stroke; wider strokes
+    get more), and the patch below adds its share of what shows through. With
+    the patch at p = max(0.3, 0.66 x d), the band colour under a stroke is
+    1 - 0.17 x (1 - p), which is at least d -- the strength `useBandDim`
+    measured the text needs -- for every d up to 0.93. A pure white picture
+    needs 0.86 (light) / 0.83 (dark) and gets 0.93. So band-on and
+    band-on-muted keep 4.5:1 whatever the picture does beside a letter.
+
+    Behind that, a patch of the band colour calms the picture's texture: a
+    blurred rectangle a little larger than the region, at two thirds of
     `--hero-dim` -- the strength `useBandDim` measured the region would need
-    with no silhouette at all, written onto the region. Until it is measured,
-    the band's 0.9, the worst case.
+    with no silhouette at all, written onto the region (until it is measured,
+    the band's 0.9, the worst case) -- and never under `--hero-patch-floor`, so
+    a dark picture still gets a calm behind its text rather than none. Two
+    thirds is what option E actually showed: measured on the comparison
+    image, its patch added about 55% band colour where B's added 84%.
 
     `isolation` makes a region its own stacking context, so the patch
     (`z-index: -1`) sits behind its text but above the picture, and the band
@@ -882,8 +892,9 @@
     --hero-dim-soften: 0.75rem;
     /* Until `useBandDim` writes the measured strength on each region: the worst case. */
     --hero-dim: 0.9;
-    /* The patch's share of that strength: E in the 2026-09-25 comparison. */
-    --hero-patch-share: 0.33;
+    /* The patch's share of that strength, and its least: E in the 2026-09-25 comparison. */
+    --hero-patch-share: 0.66;
+    --hero-patch-floor: 0.3;
     /* The band's own filter, which `PicturedBand` names inline; no halo until it does. */
     --hero-silhouette: none;
     overflow: hidden;
@@ -907,7 +918,7 @@
     A blurred rectangle rather than masked ramps: a Gaussian edge has no
     corners and no visible start. The rectangle runs at least three blur radii
     past the text on every side, so over the text box itself the patch is at
-    its full (faint) strength.
+    its full strength.
   */
   .hero-band-adaptive .hero-dim-region::before {
     content: "";
@@ -916,7 +927,7 @@
     z-index: -1;
     pointer-events: none;
     background-color: var(--surface-band-bg);
-    opacity: calc(var(--hero-dim) * var(--hero-patch-share));
+    opacity: max(var(--hero-patch-floor), calc(var(--hero-dim) * var(--hero-patch-share)));
     filter: blur(var(--hero-dim-soften));
   }
 
