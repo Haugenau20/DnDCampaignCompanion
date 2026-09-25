@@ -187,6 +187,29 @@ describe('ImageStorageService.upload', () => {
     expect(Number.isNaN(Date.parse(image.uploadedAt))).toBe(false);
   });
 
+  it('stores the brightness measured at preparation with the image', async () => {
+    const { task, observer } = fakeTask();
+    mockUploadBytesResumable.mockReturnValue(task);
+    mockGetDownloadURL.mockResolvedValue('u');
+    const brightness = { cols: 1, rows: 1, cells: [0.5] };
+
+    const pending = service.upload('groups/g1/crest', { ...prepared, brightness });
+    observer.complete!();
+
+    expect((await pending).brightness).toEqual(brightness);
+  });
+
+  it('leaves the brightness out, not undefined, when there is none -- Firestore refuses undefined', async () => {
+    const { task, observer } = fakeTask();
+    mockUploadBytesResumable.mockReturnValue(task);
+    mockGetDownloadURL.mockResolvedValue('u');
+
+    const pending = service.upload('groups/g1/crest', prepared);
+    observer.complete!();
+
+    expect('brightness' in (await pending)).toBe(false);
+  });
+
   it('never reuses a name, so a replace cannot hit a cached old image', async () => {
     for (let i = 0; i < 2; i++) {
       const { task, observer } = fakeTask();

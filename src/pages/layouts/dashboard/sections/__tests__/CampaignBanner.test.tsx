@@ -2,6 +2,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import CampaignBanner from "../CampaignBanner";
+import { MIN_DIM } from "core/utils/band-dimming";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -358,21 +359,36 @@ describe("CampaignBanner", () => {
       expect(screen.getByText("Curse of Strahd")).toBeInTheDocument();
     });
 
-    it("lays a banner out beside the text on a desktop, and a band without one as always", () => {
-      // The split itself is CSS at `lg` (`.hero-band-split`), which JSDOM does
-      // not evaluate; what the component owns is opting in, and naming the
-      // text column that the picture must start beyond.
+    it("dims only behind the text block when there is a banner, and nothing without one", () => {
+      // The patch is `.hero-identity::before` under `.hero-band-adaptive`; what
+      // the component owns is opting in and marking the text block it sits behind.
       withCampaign({ ...makeCampaign("Curse of Strahd"), banner });
       const { rerender } = render(<CampaignBanner />);
       const band = screen.getByTestId("campaign-banner");
-      expect(band).toHaveClass("hero-band-split");
+      expect(band).toHaveClass("hero-band-adaptive");
       expect(band.querySelector(".hero-identity")).toContainElement(
         screen.getByText("Curse of Strahd")
       );
 
       withCampaign(makeCampaign("Curse of Strahd"));
       rerender(<CampaignBanner />);
-      expect(screen.getByTestId("campaign-banner")).not.toHaveClass("hero-band-split");
+      expect(screen.getByTestId("campaign-banner")).not.toHaveClass("hero-band-adaptive");
+    });
+
+    it("sets the dimming strength the text needs over this picture", () => {
+      // A banner measured as dark everywhere, on a band whose colours the page can read.
+      const dark = { ...banner, brightness: { cols: 1, rows: 1, cells: [0.05, 0.05, 0.05] } };
+      withCampaign({ ...makeCampaign("Curse of Strahd"), banner: dark });
+      const style = document.createElement("style");
+      style.textContent =
+        ".hero-band { background-color: rgb(38, 33, 28); color: rgb(247, 239, 230); } .hero-muted { color: rgb(178, 171, 163); }";
+      document.head.appendChild(style);
+      try {
+        render(<CampaignBanner />);
+        expect(screen.getByTestId("campaign-banner").style.getPropertyValue("--hero-dim")).toBe(String(MIN_DIM));
+      } finally {
+        style.remove();
+      }
     });
 
     it("refuses a URL outside the app's bucket", () => {

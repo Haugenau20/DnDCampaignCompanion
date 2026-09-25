@@ -34,7 +34,7 @@ maintainer's test group, so nothing here has to be reworked at launch.
 | D6 | Crest: **group admins** only | Matches who may update the group document today — no Firestore rule changes. |
 | D7 | Upload only on detail pages | A create form has no entity id yet, so it would need upload-then-attach ordering for no real gain. |
 | D8 | Location image sits in the **page header**, as on the NPC page | Consistent; a later page redesign (todo.txt) only restyles the slot, because the stored image is uncropped (§8). **Amended 2026-09-25**: the picture is now drawn *inside* the band, not above it — a window at the top shows it, and a scrim in the band colour (≥90% behind any text) keeps the band pair's contrast whatever is uploaded. No picture, no placeholder: the band draws as before. See `.hero-picture-scrim` and `EntityPageShell`. |
-| D9 | **Campaign banner** (added 2026-09-25): `Campaign.banner`, changeable by **any member**. On a phone it is drawn into the dashboard's band as D8's location picture is (`BandPicture`); from `lg` up it sits **beside** the text instead, in a taller band: full strength on the right, fading left into the band colour, starting where the capped text column ends, so no text is ever on the picture (`.hero-band-split`; chosen by the maintainer from a mock, option B) | Matches who may update the campaign document. Stored at `groups/{g}/campaigns/{c}/banner/`, inside the campaign's folder, so `deleteCampaign`'s prefix delete takes it; the rules and the orphan sweep name the path explicitly, as neither matches it through the entity pattern. |
+| D9 | **Campaign banner** (added 2026-09-25): `Campaign.banner`, changeable by **any member**. Drawn across the whole band (taller from `lg`, a window above the text on a phone). **Amended 2026-09-25**: instead of a full-band scrim, only the text block is dimmed -- a blurred patch of the band colour behind `.hero-identity` (`.hero-band-adaptive`) -- at the least strength that keeps the band pair at 4.5:1 over the brightest part of the picture under the text. That comes from `StoredImage.brightness`, a 16 x 8 grid of per-channel 95th percentiles measured in `prepareImage` at upload, where the canvas already holds the pixels (reading them back from a download URL would need bucket CORS). Images without a grid are treated as pure white: 86% (light) / 83% (dark), the old scrim's measured worst case. The group-name eyebrow is left out of the calculation: in the light theme `--color-emphasis` is 2.32:1 on the band itself, which no dimming can fix | Matches who may update the campaign document. Stored at `groups/{g}/campaigns/{c}/banner/`, inside the campaign's folder, so `deleteCampaign`'s prefix delete takes it; the rules and the orphan sweep name the path explicitly, as neither matches it through the entity pattern. |
 
 ## 3. Storage layout
 
@@ -75,6 +75,8 @@ export interface StoredImage {
 
 - `NPC.image?: StoredImage`, `Location.image?: StoredImage`, `Group.crest?: StoredImage`,
   `Campaign.banner?: StoredImage` (D9).
+- `StoredImage.brightness?: BrightnessGrid` (D9), measured on every upload; only the
+  campaign banner reads it so far.
 - Written with the existing update paths (`updateNPC`, `updateLocation`, the
   group update), so attribution and `updateDoc` merge behave as today.
 - **Render guard**: a member can write any value into Firestore. `ImageSlot`

@@ -1,4 +1,6 @@
 // src/core/utils/prepare-image.ts
+import { BrightnessGrid } from '../types/storedImage';
+import { measureBrightness } from './band-dimming';
 
 /** Largest file a user may pick, before any processing. */
 export const MAX_INPUT_BYTES = 20 * 1024 * 1024;
@@ -25,6 +27,8 @@ export interface PreparedImage {
   contentType: 'image/webp' | 'image/jpeg';
   /** File extension matching `contentType`, without the dot. */
   extension: 'webp' | 'jpg';
+  /** Per-area brightness, when the browser let the pixels be read back. */
+  brightness?: BrightnessGrid;
 }
 
 /** Why a picked file could not be turned into an upload. */
@@ -117,10 +121,12 @@ export async function prepareImage(file: File): Promise<PreparedImage> {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
+  let brightness: BrightnessGrid | undefined;
   try {
     const context = canvas.getContext('2d');
     if (!context) throw new ImagePreparationError('undecodable');
     context.drawImage(bitmap, 0, 0, width, height);
+    brightness = readBrightness(context, width, height);
   } finally {
     bitmap.close();
   }
@@ -145,5 +151,24 @@ export async function prepareImage(file: File): Promise<PreparedImage> {
     height,
     contentType,
     extension: contentType === 'image/webp' ? 'webp' : 'jpg',
+    ...(brightness ? { brightness } : {}),
   };
+}
+
+/**
+ * Measure the drawn picture, for bands that dim only as much as their text
+ * needs. An extra, never a reason to refuse the upload: a browser that won't
+ * read pixels back (some privacy modes randomise or block it) just goes
+ * without, and the band dims for the worst case instead.
+ */
+function readBrightness(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number
+): BrightnessGrid | undefined {
+  try {
+    return measureBrightness(context.getImageData(0, 0, width, height).data, width, height);
+  } catch {
+    return undefined;
+  }
 }

@@ -19,4 +19,23 @@ export interface StoredImage {
   uploadedBy: string;
   /** ISO timestamp of the upload. */
   uploadedAt: string;
+  /**
+   * How bright each part of the picture is, measured at upload (see
+   * `measureBrightness`). Lets a band dim only as much as its text needs.
+   * Absent on images uploaded before it existed, or where the browser could
+   * not read the pixels back.
+   */
+  brightness?: BrightnessGrid;
+}
+
+/**
+ * The picture divided into `cols` x `rows` cells, row by row from the top
+ * left. Each cell is three values, 0 to 1: the 95th percentile of its pixels'
+ * red, green and blue, gamma-encoded as the browser blends them -- so `cells`
+ * holds `cols * rows * 3` numbers.
+ */
+export interface BrightnessGrid {
+  cols: number;
+  rows: number;
+  cells: number[];
 }

@@ -8,6 +8,7 @@ import { useCampaigns } from 'features/user-management';
 import BandPicture, { bandPicture } from 'shared/components/BandPicture';
 import ImageUploadControl from 'shared/components/ImageUploadControl';
 import { useImageAttachment } from 'shared/hooks/useImageAttachment';
+import { useBandDim } from 'shared/hooks/useBandDim';
 import { useCampaignInfo } from '../../../layouts/common/hooks/useCampaignInfo';
 
 interface CampaignBannerProps {
@@ -29,12 +30,13 @@ interface CampaignBannerProps {
  * design: the campaign's own sigil, derived from its id exactly as every entity
  * mark is. Nothing here depends on content a user may never add.
  *
- * The campaign may carry a banner picture (`BandPicture`). On a desktop it
- * takes the band's right-hand side at full strength and fades out to the left
- * into the band's colour, so the title and text sit beside it on the plain
- * band rather than on top of it (`.hero-band-split`). On a phone there is no
- * room beside the text, so it is drawn as a location's picture is: a window
- * at the top shows it, and a scrim closes over it before the text starts.
+ * The campaign may carry a banner picture (`BandPicture`), drawn across the
+ * whole band. Only the text block is dimmed: a soft patch of the band's own
+ * colour sits behind it and fades out around it, and the rest of the picture
+ * shows untouched (`.hero-band-adaptive`). The patch is as strong as the part
+ * of the picture under the text needs for the band's inks to stay readable,
+ * worked out from the brightness measured at upload (`useBandDim`). On a
+ * phone a window at the top of the band shows the picture above the text.
  * Without one the band is drawn as always, with no empty slot. Any member may add,
  * replace or remove it -- the same members who may edit the campaign document
  * (`firestore.rules.prod`) -- from icon buttons on the band's top-right corner.
@@ -59,6 +61,9 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
     current: activeCampaign?.banner,
     save: saveBanner,
   });
+
+  const picture = bandPicture(activeCampaign?.banner);
+  const { bandRef, textRef, dim } = useBandDim(picture);
 
   // Cancels the page container's padding so the band spans the full content
   // width and meets the chrome above it, rather than floating as a card.
@@ -109,11 +114,12 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
     chapterCount ? `Chapter ${chapterCount}` : null,
   ].filter(Boolean) as string[];
 
-  const picture = bandPicture(activeCampaign?.banner);
-
   const band = (
     <div
-      className={clsx(bandFrame, 'relative', picture && 'hero-band-pictured hero-band-split')}
+      ref={bandRef}
+      className={clsx(bandFrame, 'relative', picture && 'hero-band-pictured hero-band-adaptive')}
+      // Without a measured strength the stylesheet's own worst case applies.
+      style={dim === null ? undefined : ({ '--hero-dim': dim } as React.CSSProperties)}
       data-testid="campaign-banner"
     >
      {picture && (
@@ -135,7 +141,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
               the band's left edge shout before the name did. The party's own
               crest lives in the aside, where it identifies the group rather
               than restating the heading. */}
-          <div className="hero-identity flex flex-col gap-2 min-w-0">
+          <div ref={textRef} className="hero-identity flex flex-col gap-2 min-w-0">
             {activeGroup?.name && (
               <Typography
                 variant="body-sm"

@@ -22,6 +22,12 @@ let encodeQueue: Encoded[] = [];
 const toBlobCalls: Array<{ type?: string; quality?: number }> = [];
 const drawImage = jest.fn();
 const close = jest.fn();
+/** Stands in for the canvas's pixels; null makes reading them throw. */
+let pixelData: Uint8ClampedArray | null = null;
+const getImageData = jest.fn((_x: number, _y: number, w: number, h: number) => {
+  if (!pixelData) throw new Error('The canvas has been tainted');
+  return { data: pixelData, width: w, height: h };
+});
 
 function makeFile(name: string, type: string, size = 1024): File {
   const file = new File(['x'], name, { type });
@@ -41,12 +47,14 @@ beforeEach(() => {
   toBlobCalls.length = 0;
   drawImage.mockClear();
   close.mockClear();
+  getImageData.mockClear();
+  pixelData = null;
 
   (global as any).createImageBitmap = jest.fn(async () => ({ ...bitmapSize, close }));
 
   jest
     .spyOn(HTMLCanvasElement.prototype, 'getContext')
-    .mockImplementation(() => ({ drawImage } as any));
+    .mockImplementation(() => ({ drawImage, getImageData } as any));
 
   jest
     .spyOn(HTMLCanvasElement.prototype, 'toBlob')
@@ -101,6 +109,23 @@ describe('prepareImage', () => {
     bitmapSize = { width: 800, height: 600 };
     const result = await prepareImage(makeFile('small.png', 'image/png'));
     expect(result).toMatchObject({ width: 800, height: 600 });
+  });
+
+  it('measures how bright each part of the picture is, as drawn', async () => {
+    bitmapSize = { width: 32, height: 16 };
+    pixelData = new Uint8ClampedArray(32 * 16 * 4).fill(255);
+    const prepared = await prepareImage(makeFile('a.png', 'image/png'));
+
+    expect(getImageData).toHaveBeenCalledWith(0, 0, 32, 16);
+    expect(prepared.brightness).toEqual({ cols: 16, rows: 8, cells: new Array(16 * 8 * 3).fill(1) });
+  });
+
+  it('still prepares the image when the pixels cannot be read back', async () => {
+    pixelData = null;
+    const prepared = await prepareImage(makeFile('a.png', 'image/png'));
+
+    expect(prepared.contentType).toBe('image/webp');
+    expect('brightness' in prepared).toBe(false);
   });
 
   it('releases the decoded bitmap', async () => {
