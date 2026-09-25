@@ -26,6 +26,11 @@
 //   who may update the campaign document (any member).
 // - Group admins create and delete the group crest; members may read it. That
 //   matches who may update the group document.
+// - A signed-in user creates and deletes bug-report screenshots in their own
+//   `support/{uid}/` folder (T020). Nobody reads one from the app, the
+//   uploader included: `sendContactEmail` reads it with the Admin SDK, which
+//   the rules don't govern, attaches it to the email and deletes it. The
+//   daily sweep deletes any left behind after a day.
 // - Nobody overwrites a file. Every upload is a new, random name (D3), which is
 //   what lets a download URL be cached forever.
 // - Only WebP or JPEG under 2 MB -- what `prepareImage` produces. The limit is
@@ -102,6 +107,17 @@ service firebase.storage {
       allow create: if isPreparedImage(fileName) && isGroupAdmin(groupId);
       allow update: if false;
       allow delete: if isGroupAdmin(groupId);
+    }
+
+    // No group, and no Firestore read: the folder is the uploader's own.
+    // Delete lets the form drop a screenshot the sender took back off.
+    match /support/{uid}/{fileName} {
+      allow read: if false;
+      allow create: if isSignedIn() &&
+                       request.auth.uid == uid &&
+                       isPreparedImage(fileName);
+      allow update: if false;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
     }
   }
 }

@@ -43,6 +43,7 @@ groups/{groupId}/campaigns/{campaignId}/npcs/{npcId}/{imageId}.{webp|jpg}
 groups/{groupId}/campaigns/{campaignId}/locations/{locationId}/{imageId}.{webp|jpg}
 groups/{groupId}/campaigns/{campaignId}/banner/{imageId}.{webp|jpg}
 groups/{groupId}/crest/{imageId}.{webp|jpg}
+support/{uid}/{imageId}.{webp|jpg}          (T020, added 2026-09-25)
 ```
 
 - Mirrors the Firestore paths, so a rule can take `groupId` from the path and a
@@ -188,12 +189,18 @@ policy says this in plain words.
 | Delete campaign | `deleteCampaign` also deletes the `groups/{g}/campaigns/{c}/` prefix, **before** `recursiveDelete` (the function's existing "retryable first" ordering) | Callable returns an error; retry is safe |
 | Leave/removed from group | nothing (the content stays with the group, as the policy already says) | — |
 | Delete account | nothing (same) | — |
+| Bug-report screenshot (T020) | upload to `support/{uid}/` → `sendContactEmail` checks the path is the caller's, attaches the file, sends → deletes the file (best effort) | Email fails → file kept, so a retry can reuse it. Report never sent, or delete fails → the sweep deletes it after a day |
 
 The document is always written before the old file is deleted, so a failure can
 leave an orphaned file but never a document pointing at a missing one. Orphans
 cost storage, not correctness. A daily scheduled sweep lists the objects,
 compares them with the documents, and deletes what's unreferenced after a day
-(`firebase/functions/src/imageMaintenance/sweepOrphanedImages.ts`).
+(`firebase/functions/src/imageMaintenance/sweepOrphanedImages.ts`). No
+document ever references a screenshot, so it deletes every one over a day old.
+
+Screenshots are never read from the app: the rules deny `read` under
+`support/`, even to the uploader, and `sendContactEmail` reads the file with
+the Admin SDK. So no download URL for one ever exists.
 
 ## 8. UI
 

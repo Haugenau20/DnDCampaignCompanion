@@ -51,6 +51,7 @@ import ImageStorageService, {
   entityImagePrefix,
   crestPrefix,
   campaignBannerPrefix,
+  supportScreenshotPrefix,
   isOwnBucketUrl,
   IMMUTABLE_CACHE_CONTROL,
 } from '../ImageStorageService';
@@ -113,10 +114,15 @@ describe('path helpers', () => {
     expect(crestPrefix('g1')).toBe('groups/g1/crest');
   });
 
+  it("builds a support prefix keyed by the uploader, outside every group", () => {
+    expect(supportScreenshotPrefix('u1')).toBe('support/u1');
+  });
+
   it('refuses an id that would escape its folder', () => {
     expect(() => entityImagePrefix('g1', 'c1', 'npcs', '../x')).toThrow();
     expect(() => crestPrefix('')).toThrow();
     expect(() => campaignBannerPrefix('g1', '..')).toThrow();
+    expect(() => supportScreenshotPrefix('a/b')).toThrow();
   });
 });
 
@@ -251,6 +257,67 @@ describe('ImageStorageService.upload', () => {
   it('refuses to upload when nobody is signed in', async () => {
     mockAuth.currentUser = null;
     await expect(service.upload('groups/g1/crest', prepared)).rejects.toThrow(/Not authenticated/);
+    expect(mockUploadBytesResumable).not.toHaveBeenCalled();
+  });
+});
+
+// ─── uploadScreenshot ────────────────────────────────────────────────────────
+
+describe('ImageStorageService.uploadScreenshot', () => {
+  const service = ImageStorageService.getInstance();
+
+  it("uploads under a fresh name in the signed-in user's support folder", async () => {
+    const { task, observer } = fakeTask();
+    mockUploadBytesResumable.mockReturnValue(task);
+
+    const pending = service.uploadScreenshot(prepared);
+    observer.complete!();
+    const path = await pending;
+
+    expect(path).toMatch(/^support\/uploader-1\/[0-9a-f-]{36}\.webp$/);
+    expect(mockRef).toHaveBeenCalledWith(mockStorage, path);
+    expect(mockUploadBytesResumable).toHaveBeenCalledWith({ fullPath: path }, prepared.blob, {
+      contentType: 'image/webp',
+    });
+  });
+
+  it('never asks for a download URL -- nobody may read the folder', async () => {
+    const { task, observer } = fakeTask();
+    mockUploadBytesResumable.mockReturnValue(task);
+
+    const pending = service.uploadScreenshot(prepared);
+    observer.complete!();
+    await pending;
+
+    expect(mockGetDownloadURL).not.toHaveBeenCalled();
+  });
+
+  it('reports progress as a fraction', async () => {
+    const { task, observer } = fakeTask();
+    mockUploadBytesResumable.mockReturnValue(task);
+    const onProgress = jest.fn();
+
+    const pending = service.uploadScreenshot(prepared, onProgress);
+    observer.next!({ bytesTransferred: 150, totalBytes: 200 });
+    observer.complete!();
+    await pending;
+
+    expect(onProgress).toHaveBeenCalledWith(0.75);
+  });
+
+  it('rejects when the upload fails', async () => {
+    const { task, observer } = fakeTask();
+    mockUploadBytesResumable.mockReturnValue(task);
+
+    const pending = service.uploadScreenshot(prepared);
+    observer.error!(Object.assign(new Error('denied'), { code: 'storage/unauthorized' }));
+
+    await expect(pending).rejects.toMatchObject({ code: 'storage/unauthorized' });
+  });
+
+  it('refuses to upload when nobody is signed in', async () => {
+    mockAuth.currentUser = null;
+    await expect(service.uploadScreenshot(prepared)).rejects.toThrow(/Not authenticated/);
     expect(mockUploadBytesResumable).not.toHaveBeenCalled();
   });
 });

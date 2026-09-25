@@ -12,16 +12,23 @@ const MIN_AGE_MS = 24 * 60 * 60 * 1000;
 
 /**
  * The object paths the app writes images to (see the storage images design,
- * §3). Anything else in the bucket -- `support/…` screenshots, or a path added
- * later -- is not the sweep's to judge, however unreferenced it looks.
+ * §3). Anything else in the bucket -- a path added later -- is not the sweep's
+ * to judge, however unreferenced it looks.
  */
 const IMAGE_PATH = new RegExp(
   "^groups/[^/]+/(campaigns/[^/]+/((npcs|locations)/[^/]+|banner)|crest)/[^/]+$"
 );
 
+/**
+ * Where bug-report screenshots are uploaded (T020). No document ever points at
+ * one: `sendContactEmail` deletes each once it is mailed, so one still here
+ * after a day belongs to a report that was never sent, or whose delete failed.
+ */
+const SUPPORT_PATH = /^support\/[^/]+\/[^/]+$/;
+
 /** What one sweep did, for the log and for tests. */
 export interface SweepResult {
-  /** How many files in the image layout were looked at. */
+  /** How many image and screenshot files were looked at. */
   checked: number;
   /** Paths deleted. */
   deleted: string[];
@@ -62,7 +69,24 @@ async function referencedPaths(): Promise<Set<string>> {
 }
 
 /**
- * Deletes image files that no document references and that are over a day old.
+ * Whether a file is at least a day old.
+ *
+ * @param {object} file A bucket file
+ * @param {Date} now The time the sweep treats as now
+ * @return {boolean} False when the age is unknown
+ */
+function isOldEnough(
+  file: {metadata: {timeCreated?: unknown}},
+  now: Date
+): boolean {
+  const created = Date.parse(String(file.metadata.timeCreated ?? ""));
+  // No creation time means the age is unknown: keep it.
+  return Number.isFinite(created) && now.getTime() - created >= MIN_AGE_MS;
+}
+
+/**
+ * Deletes image files that no document references and that are over a day
+ * old, and bug-report screenshots over a day old.
  *
  * Image writes are ordered so a failure can leave a file without a document,
  * never a document without its file (`shared/hooks/useImageAttachment.ts` in
@@ -80,21 +104,28 @@ export async function sweepOrphanedImages(
   now: Date = new Date()
 ): Promise<SweepResult> {
   const referenced = await referencedPaths();
-  const [files] = await imageBucket().getFiles({prefix: "groups/"});
+  const [[groupFiles], [supportFiles]] = await Promise.all([
+    imageBucket().getFiles({prefix: "groups/"}),
+    imageBucket().getFiles({prefix: "support/"}),
+  ]);
 
-  const images = files.filter((file) => IMAGE_PATH.test(file.name));
-  const orphans = images.filter((file) => {
-    if (referenced.has(file.name)) return false;
-    const created = Date.parse(String(file.metadata.timeCreated ?? ""));
-    // No creation time means the age is unknown: keep it.
-    return Number.isFinite(created) && now.getTime() - created >= MIN_AGE_MS;
-  });
+  const images = groupFiles.filter((file) => IMAGE_PATH.test(file.name));
+  const screenshots =
+    supportFiles.filter((file) => SUPPORT_PATH.test(file.name));
+  const orphans = [
+    ...images.filter((file) => !referenced.has(file.name)),
+    ...screenshots,
+  ].filter((file) => isOldEnough(file, now));
 
   const outcomes = await Promise.allSettled(
     orphans.map((file) => file.delete({ignoreNotFound: true}))
   );
 
-  const result: SweepResult = {checked: images.length, deleted: [], failed: []};
+  const result: SweepResult = {
+    checked: images.length + screenshots.length,
+    deleted: [],
+    failed: [],
+  };
   outcomes.forEach((outcome, i) => {
     const path = orphans[i].name;
     if (outcome.status === "fulfilled") {
