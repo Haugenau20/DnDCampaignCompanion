@@ -337,6 +337,50 @@ describe('CampaignService', () => {
       const result = await svc.getCampaigns('g1');
       expect(result).toEqual([]);
     });
+
+    // PERF-02: the membership check used to finish before the list was even
+    // requested -- a whole extra round trip on every sign-in and reload.
+    test('requests the campaign list without waiting for the membership check', async () => {
+      let confirmMembership!: (profile: unknown) => void;
+      mockGetGroupUserProfile.mockReturnValueOnce(
+        new Promise(resolve => { confirmMembership = resolve; })
+      );
+      mockGetDocs.mockResolvedValueOnce(
+        makeQuerySnapshot([makeDocSnapshot(true, { name: 'Campaign 1' }, 'c1')])
+      );
+
+      const result = CampaignService.getInstance().getCampaigns('g1');
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockGetDocs).toHaveBeenCalledTimes(1);
+      confirmMembership({ userId: 'campaign-user', role: 'member' });
+      expect((await result).map((c: any) => c.id)).toEqual(['c1']);
+    });
+
+    test('returns nothing to a non-member even though the list was already requested', async () => {
+      mockGetGroupUserProfile.mockResolvedValueOnce(null);
+      mockGetDocs.mockResolvedValueOnce(
+        makeQuerySnapshot([makeDocSnapshot(true, { name: 'Secret' }, 'c1')])
+      );
+
+      await expect(CampaignService.getInstance().getCampaigns('g1')).resolves.toEqual([]);
+    });
+
+    test("a non-member's refused list neither rejects nor goes unhandled", async () => {
+      const unhandled = jest.fn();
+      process.on('unhandledRejection', unhandled);
+      try {
+        mockGetGroupUserProfile.mockResolvedValueOnce(null);
+        mockGetDocs.mockRejectedValueOnce(new Error('permission-denied'));
+
+        await expect(CampaignService.getInstance().getCampaigns('g1')).resolves.toEqual([]);
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(unhandled).not.toHaveBeenCalled();
+      } finally {
+        process.off('unhandledRejection', unhandled);
+      }
+    });
   });
 
   // ─── updateCampaign ─────────────────────────────────────────────────────────

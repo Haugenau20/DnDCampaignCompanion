@@ -754,6 +754,73 @@ describe("FirebaseContext Behavioral Testing", () => {
   });
 
   // -------------------------------------------------------------------------
+  // PERF-02: the restore on every sign-in and reload was a serial waterfall
+  // that read the global profile twice and asked for campaigns only after
+  // the group profile had answered.
+  describe("Restore without the serial waterfall (PERF-02)", () => {
+    test("hands getGroups the group ids from the profile it already loaded", async () => {
+      mockGetUserProfile.mockResolvedValue(
+        makeUserProfile({ id: "u-1", groups: ["g-1", "g-2"], activeGroupId: "g-1" })
+      );
+      mockGetGroups.mockResolvedValue([makeGroup("g-1"), makeGroup("g-2")]);
+
+      renderHook(() => useFirebaseContext(), { wrapper });
+
+      await act(async () => {
+        await capturedAuthCallback!(makeUser("u-1"));
+      });
+
+      expect(mockGetGroups).toHaveBeenCalledWith(["g-1", "g-2"]);
+    });
+
+    test("asks for the campaigns before the group profile has answered", async () => {
+      let answerGroupProfile!: (profile: GroupUserProfile | null) => void;
+      mockGetUserProfile.mockResolvedValue(
+        makeUserProfile({ id: "u-1", activeGroupId: "g-1" })
+      );
+      mockGetGroups.mockResolvedValue([makeGroup("g-1")]);
+      mockGetGroupUserProfile.mockReturnValue(
+        new Promise((resolve) => { answerGroupProfile = resolve; })
+      );
+      mockGetCampaigns.mockResolvedValue([makeCampaign("c-1", "g-1")]);
+
+      const { result } = renderHook(() => useFirebaseContext(), { wrapper });
+
+      let restoring!: Promise<void>;
+      act(() => {
+        restoring = capturedAuthCallback!(makeUser("u-1"));
+      });
+      await waitFor(() => expect(mockGetGroupUserProfile).toHaveBeenCalled());
+      await waitFor(() => expect(mockGetCampaigns).toHaveBeenCalledWith("g-1"));
+
+      await act(async () => {
+        answerGroupProfile(makeGroupUserProfile({ activeCampaignId: "c-1" }));
+        await restoring;
+      });
+
+      expect(result.current.activeCampaignId).toBe("c-1");
+    });
+
+    test("uses none of the campaigns when the group profile shows no membership", async () => {
+      mockGetUserProfile.mockResolvedValue(
+        makeUserProfile({ id: "u-1", activeGroupId: "g-1" })
+      );
+      mockGetGroups.mockResolvedValue([makeGroup("g-1")]);
+      mockGetGroupUserProfile.mockResolvedValue(null);
+      mockGetCampaigns.mockResolvedValue([makeCampaign("c-1", "g-1")]);
+
+      const { result } = renderHook(() => useFirebaseContext(), { wrapper });
+
+      await act(async () => {
+        await capturedAuthCallback!(makeUser("u-1"));
+      });
+
+      expect(result.current.campaigns).toEqual([]);
+      expect(result.current.activeCampaignId).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   describe("refreshGroups", () => {
     test("should return empty array and not call getGroups when user is null", async () => {
       const { result } = renderHook(() => useFirebaseContext(), { wrapper });

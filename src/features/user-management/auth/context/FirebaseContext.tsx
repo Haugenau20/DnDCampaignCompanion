@@ -97,6 +97,16 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return;
       }
       
+      // Ask for the group's campaigns at the same time as the user's profile
+      // in it, rather than after: the two requests are independent, and
+      // waiting cost a network round trip on every sign-in and reload
+      // (PERF-02). The campaigns are only used once the profile confirms
+      // membership, so a failure is swallowed here and handled below.
+      const campaignsPromise = Promise.resolve().then(() =>
+        firebaseServices.campaign.getCampaigns(groupId)
+      );
+      campaignsPromise.catch(() => undefined);
+
       // Load user's profile in this group
       const groupProfile = await firebaseServices.user.getGroupUserProfile(groupId, authUser.uid);
 
@@ -106,7 +116,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // Now load campaigns
         setCampaignsLoading(true);
         try {
-          const groupCampaigns = await firebaseServices.campaign.getCampaigns(groupId);
+          const groupCampaigns = await campaignsPromise;
           setCampaigns(groupCampaigns);
           
           if (groupCampaigns.length > 0) {
@@ -256,9 +266,12 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           return profile;
         } else {
           console.warn(`No profile found for user ${userId}`);
-          // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, 1000));
           retryCount++;
+          // Wait before retry -- but not after the last attempt, where the
+          // wait only delayed the error by a second (PERF-02).
+          if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         }
       } catch (err) {
         console.error(`Error loading user profile (attempt ${retryCount + 1}):`, err);
@@ -274,7 +287,9 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Load groups with proper active group selection
   const loadGroups = async (userId: string, profile: UserProfile, currentUser: User) => {
     try {
-      const userGroups = await firebaseServices.group.getGroups();
+      // The profile already lists the group ids; passing them saves reading
+      // the same `users/{uid}` document a second time (PERF-02).
+      const userGroups = await firebaseServices.group.getGroups(profile.groups);
       setGroups(userGroups);
 
       if (userGroups.length > 0) {

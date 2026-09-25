@@ -112,18 +112,28 @@ import {
         return [];
       }
       
+      // The membership check and the campaign list are requested together
+      // rather than one after the other, which saves a network round trip on
+      // every sign-in and reload (PERF-02). The list is only used once the
+      // check has passed; for a non-member the rules refuse it, and that
+      // refusal is swallowed so it cannot surface as an unhandled rejection.
+      // Started inside `then` so a synchronous throw lands there too.
+      const snapshotPromise = Promise.resolve().then(() =>
+        getDocs(collection(this.db, 'groups', groupId, 'campaigns'))
+      );
+      snapshotPromise.catch(() => undefined);
+
       // Check if user is a member of this group
       const userProfileDoc = await this.userService.getGroupUserProfile(groupId, userId);
       if (!userProfileDoc) {
         console.warn(`CampaignService: User ${userId} is not a member of group ${groupId}`);
         return [];
       }
-      
+
       try {
         // Get campaigns from the group's collection
-        const campaignsCollection = collection(this.db, 'groups', groupId, 'campaigns');
-        const snapshot = await getDocs(campaignsCollection);
-        
+        const snapshot = await snapshotPromise;
+
         const campaigns = snapshot.docs.map(doc => ({
           id: doc.id,
           groupId,

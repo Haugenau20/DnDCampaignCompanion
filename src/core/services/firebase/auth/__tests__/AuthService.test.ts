@@ -578,6 +578,26 @@ describe('AuthService', () => {
       expect(svc.getActiveCampaignId()).toBe('camp-1');
     });
 
+    // PERF-02: the two used to run one after the other before the sign-in
+    // page could move on, although neither needs the other's answer.
+    test('asks for the group profile without waiting for the last-login write', async () => {
+      let finishWrite!: () => void;
+      mockUpdateDoc.mockReturnValueOnce(new Promise<void>(resolve => { finishWrite = resolve; }));
+      mockGetGroupUserProfile.mockResolvedValueOnce({ activeCampaignId: 'camp-1' });
+      mockSignInWithPopup.mockResolvedValueOnce({ user: { uid: 'uid-1' } });
+      mockGetAdditionalUserInfo.mockReturnValueOnce({ isNewUser: false });
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { activeGroupId: 'group-1' }));
+
+      const svc = AuthService.getInstance();
+      const signingIn = svc.signInWithGoogle(false);
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockGetGroupUserProfile).toHaveBeenCalledWith('group-1', 'uid-1');
+      finishWrite();
+      await signingIn;
+      expect(svc.getActiveCampaignId()).toBe('camp-1');
+    });
+
     test('writes nothing for a brand-new account, which has no profile yet', async () => {
       await signInExisting(null);
       expect(mockUpdateDoc).not.toHaveBeenCalled();

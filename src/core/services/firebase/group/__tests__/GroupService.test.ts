@@ -399,6 +399,48 @@ describe('GroupService', () => {
       const groups = await svc.getGroups();
       expect(groups).toHaveLength(1);
     });
+
+    // PERF-02: the auth restore already holds the global profile, and used to
+    // read it a second time here before fetching a single group.
+    test('reads only the named groups when given their ids, never the user profile', async () => {
+      mockGetDoc.mockImplementation((ref: { path: string; id: string }) =>
+        Promise.resolve(makeDocSnapshot(true, { name: ref.path }, ref.id))
+      );
+
+      const groups = await GroupService.getInstance().getGroups(['g1', 'g2']);
+
+      expect(groups.map((g: any) => g.id)).toEqual(['g1', 'g2']);
+      expect(mockGetDoc.mock.calls.map(([ref]) => ref.path)).toEqual(['groups/g1', 'groups/g2']);
+    });
+
+    // PERF-02: one round trip per group, one after another, on every sign-in.
+    test('requests every group document before any of them has answered', async () => {
+      const answers: Array<() => void> = [];
+      mockGetDoc.mockImplementation((ref: { id: string }) =>
+        new Promise(resolve => answers.push(() => resolve(makeDocSnapshot(true, {}, ref.id))))
+      );
+
+      const result = GroupService.getInstance().getGroups(['g1', 'g2', 'g3']);
+      await Promise.resolve();
+
+      expect(answers).toHaveLength(3);
+      answers.forEach(answer => answer());
+      await expect(result).resolves.toHaveLength(3);
+    });
+
+    test('keeps membership order when the group documents answer out of order', async () => {
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { groups: ['g1', 'g2'] }));
+      const answers: Array<() => void> = [];
+      mockGetDoc.mockImplementation((ref: { id: string }) =>
+        new Promise(resolve => answers.push(() => resolve(makeDocSnapshot(true, {}, ref.id))))
+      );
+
+      const result = GroupService.getInstance().getGroups();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      answers.slice().reverse().forEach(answer => answer());
+
+      expect((await result).map((g: any) => g.id)).toEqual(['g1', 'g2']);
+    });
   });
 
   // ─── getGroupUsers ──────────────────────────────────────────────────────────
