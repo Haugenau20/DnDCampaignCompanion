@@ -34,7 +34,13 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, tone = 'page', className
       aria-label="Breadcrumb"
       className={clsx(`flex items-center space-x-2 py-2`, className)}
     >
-      <ol className="flex items-center space-x-2">
+      {/*
+        Wraps rather than truncates: the last item is the record's own name,
+        which is the one thing on the trail a reader came to see. `gap-x-2`
+        keeps the spacing `space-x-2` gave, and unlike it survives a wrap
+        without indenting the second line (T069).
+      */}
+      <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
         <li>
           <Link
             to="/"
@@ -49,8 +55,11 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, tone = 'page', className
           const isLast = index === items.length - 1;
 
           return (
-            <li key={item.label} className="flex items-center">
-              <ChevronRight className={clsx('w-4 h-4 mx-2', quiet)} />
+            // `min-w-0` and `overflow-wrap: anywhere` let a single label
+            // longer than the screen break inside itself instead of pushing
+            // the page sideways.
+            <li key={item.label} className="flex items-center min-w-0 [overflow-wrap:anywhere]">
+              <ChevronRight className={clsx('w-4 h-4 mx-2 shrink-0', quiet)} />
               {isLast ? (
                 onBand ? (
                   // Inherits the band's ink from `.hero-band` rather than

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef, useImperativeHandle, f
 import { Note } from "../types";
 import Typography from "../../../../core/components/Typography";
 import Input from 'core/components/Input';
+import { useAutoGrow } from 'shared/hooks/useAutoGrow';
 import { useNotes } from "../context/NoteContext";
 import { deriveTitle, LEGACY_DEFAULT_TITLE } from "../utils/note-title";
 import { formatLastSaved } from "../utils/save-status";
@@ -286,12 +287,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   };
 
   // Grow the body to fit its content instead of sitting at a fixed 30 rows.
-  useEffect(() => {
-    const element = bodyRef.current;
-    if (!element) return;
-    element.style.height = "auto";
-    element.style.height = `${element.scrollHeight}px`;
-  }, [content]);
+  useAutoGrow(bodyRef, content);
 
   // Get status indicator
   const getStatusIndicator = () => {

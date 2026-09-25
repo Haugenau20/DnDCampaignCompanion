@@ -44,8 +44,11 @@ const ThemeSegmented: React.FC = () => {
             <button
               key={option.name}
               type="button"
-              role="menuitem"
-              aria-pressed={isSelected}
+              // A choice of one, so each option is a radio item that says
+              // whether it is checked. `aria-pressed` is not supported on a
+              // menu item and was never announced (T060).
+              role="menuitemradio"
+              aria-checked={isSelected}
               onClick={() => setAccountTheme(option.name)}
               className={clsx(
                 "flex-1 px-2 py-1 rounded text-sm chip",
