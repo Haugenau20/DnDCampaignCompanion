@@ -1357,7 +1357,7 @@ But three small pieces are worth pulling into the upcoming feature-first migrati
 
 **What to ignore** (do not salvage): the rewritten `NPCContext` / `QuestContext` / `StoryContext`, the stripped forms (`NPCForm`, `ChapterForm`), the hook deletions (`useNPCData`, etc.), the hybrid/legacy API compatibility shims, and `chapterGenerator.ts.backup` (committed by accident).
 
-**Status (2026-09-26): done, and the branch is deleted.** All three pieces landed: the
+**Status (2026-09-26): done; the branch is to be deleted.** All three pieces landed: the
 `SystemMetadataService` idea as `core/attribution/` (via `attribution-helper-spec.md`), `DomainData<T>`
 in `core/types/common.ts`, and the design doc as
 `docs/architecture/migration/database-field-alignment.md`. The maintainer chose to delete

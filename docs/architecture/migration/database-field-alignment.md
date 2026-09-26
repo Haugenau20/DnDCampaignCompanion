@@ -1,6 +1,6 @@
 > **Salvaged, not current.** Copied on 2026-09-26 from `docs/backlog/DatabaseAlignmentForFormContextSeparation.md`
-> on the abandoned `feature/form-context-separation` branch (last commit 2025-06-07), which was then
-> deleted (T066). Kept for its field-rename plan (`dateAdded` → `createdAt`, `dateModified` →
+> on the abandoned `feature/form-context-separation` branch (last commit 2025-06-07), so that the
+> branch can be deleted (T066). Kept for its field-rename plan (`dateAdded` → `createdAt`, `dateModified` →
 > `modifiedAt`, required `modifiedBy*`), which no one has done yet.
 >
 > Read it as an outline, not a spec. It predates the feature-first restructure: most paths below

@@ -245,8 +245,8 @@ await documentService.update(id, { ...changes, ...patch });
 
 ## Source archive
 
-The original branch was deleted on 2026-09-26 (T066) without an archive tag, by the maintainer's
-choice. What was worth keeping is on `main`: this spec, `DomainData<T>`, and the field-rename
-outline in `database-field-alignment.md`. See `docs/testing/post-test-coverage-roadmap.md`
+On 2026-09-26 the maintainer chose to delete the original branch without an archive tag (T066).
+What was worth keeping is on `main`: this spec, `DomainData<T>`, and the field-rename outline in
+`database-field-alignment.md`. See `docs/testing/post-test-coverage-roadmap.md`
 (§ "Salvage from feature/form-context-separation") for the original salvage decision this spec
 implements.
