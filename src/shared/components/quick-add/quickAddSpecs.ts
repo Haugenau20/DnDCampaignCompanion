@@ -8,10 +8,10 @@ import type { DomainData } from "core/types/common";
  * The entities quick add can create.
  *
  * The rumour is deliberately absent. `00-entity-authoring.md` §4 gives it a
- * composer row rather than a dialog, and `15-1` item 9 allows that row to wait
- * for `15-7` -- which it must here, because `RumorForm` requires a third field
- * (`sourceName`) that a two-field surface cannot supply without relaxing
- * validation, and relaxing validation is forbidden by item 1.
+ * composer row rather than a dialog, and `15-7` built that row: one field,
+ * `RumorComposer`, at the top of the rumours list. A rumour has no page for
+ * *Create & open* to land on, and asks for no second field -- a title or some
+ * content is enough, and its source is optional (T041, closed 2026-09-26).
  */
 export const quickAddEntities = ["npc", "quest", "location"] as const;
 

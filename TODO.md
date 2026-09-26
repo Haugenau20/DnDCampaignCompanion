@@ -28,7 +28,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T061 | CI does not lint or run the functions suite | M | open | Tests and type-check are gated; lint waits on T060, functions on emulators in CI |
 | medium | T070 | Functions are deployed by hand | M | needs investigation | Frontend and functions can drift in prod; contact secrets must move first. Service account roles unchecked |
 | medium | T071 | Band eyebrow is 2.3:1 in light | S | open | Fails contrast on every band page in the default theme; needs a schema call, like T040 |
-| low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
 | low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
 | low | T043 | Orphaned `importantNPCs` names | S | open | Nothing was destroyed; a judgement call about one campaign |
@@ -47,7 +46,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T065 | Firebase CLI 13 → 15 | S | open | Brings the artifact cleanup policy; re-run the emulator suites after |
 | low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
 | nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
-| nit | T066 | Two stale remote branches | S | open | One is merged; the other holds 5 unmerged 2025 commits |
 | nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
 | nit | T009 | Hero band fallback never recorded | S | open | Answered by practice; write it down |
 | nit | T010 | Two `D36`s in `colour-schema.md` | S | open | Ambiguous citations |
@@ -418,51 +416,6 @@ adds has a band header carrying a status chip.
 - **Catch**: the schema is read-only to an implementing PR, so this cannot be
   closed by the phase that found it.
 - **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13
-
-### T041 — "The required pair is unchanged" is true of one entity in four
-**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-17
-
-`00-entity-authoring.md` §1.2 says creating an entity asks for two fields and
-that "the required pair is **unchanged** from today's forms". `15-1` item 1
-sharpens that into an instruction: "do not relax it and do not add to it".
-Measured against the four create forms, the premise holds for the quest only.
-
-- **Quest** — `QuestCreateForm.tsx:122` requires `title` and `description`.
-  Two. The premise is exactly right here.
-- **Location** — `LocationCreateForm.tsx:153` requires `name`, `description`,
-  `type` and `status`, but the last two are defaulted (`poi`, `known`) and
-  never left blank, so the user supplies two. Effectively unchanged.
-- **NPC** — `NPCForm.tsx:190` requires `name`, `status` and `relationship`;
-  the last two are defaulted, so the user supplies **one**. `description` is
-  labelled "Description" with no asterisk and is not validated — yet
-  `NPC.description` is **non-optional** in `types.ts`. Form and type disagree.
-- **Rumour** — `RumorForm.tsx:194` requires `title`, `content` **and**
-  `sourceName`. Three.
-- **What 15-1 did**: built §4's table as written — two fields for the NPC, the
-  quest and the location — which *adds* a required field for the NPC against
-  item 1's letter, and matches `NPC.description`'s own type. The rumour was
-  left on its existing form under item 9's second branch, because a two-field
-  surface cannot supply `sourceName` without relaxing validation.
-- **What needs deciding**: whether the NPC's description is genuinely required
-  (the type says yes, the form says no), and what the rumour's composer row in
-  `15-7` does about `sourceName` — require it as a third field, default it, or
-  make it optional. `15-7` cannot be written until that is answered.
-- **Source**: `docs/design/plan/15-entity-authoring/handoff/15-1-quick-add.md`
-  item 1 against `00-entity-authoring.md` §1.2 and §4
-
-
-### T066 — Two stale branches on the remote
-**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-24
-
-Two old branches remain on GitHub, and neither ever had a PR.
-
-- **`feature/third-party-integrations`**: fully merged into `main`. Deleting it
-  loses nothing.
-- **`feature/form-context-separation`**: **5 commits not on `main`**, last one
-  2025-06-07 ("complete form/context separation refactoring with standardized
-  entity architecture"). The 2026 feature-first restructure almost certainly
-  superseded it. But deleting it discards those commits, which is the maintainer's call.
-- **Source**: todo.txt, 2026-09-24
 
 ---
 
