@@ -19,7 +19,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
@@ -338,27 +337,6 @@ per-*objective* history, which is further from what the data holds than a
 per-field line: nothing records who ticked a box or when. `/quests/:questId`
 states the same two facts as the location page, and its suite asserts that
 neither "ticked" nor "last session" appears in the record card.
-
-### T006 — Can a note be edited or deleted after it is written?
-**Type** decision · **Size** M · **Status** open · **Verified** 2026-09-16 · `Q13`
-
-Campaign notes have `updateNote`. **NPC notes do not** — `NPCDetailPage` appends
-and renders, with no edit or delete path. So the answer is currently "yes for one
-kind of note, no for the other", by accident rather than decision.
-
-This is a decision about the shared record, not about the page: changing a note
-someone else wrote is a question about who owns campaign history.
-
-**PR 15.4 adds a third append-only notes list**, on the location page, matching
-the NPC page rather than the campaign notes: added, never edited or removed, and
-the composer says so. `LocationNote` gained an optional `author`, as `NPCNote`
-already had, so a note written from here carries its own credit; older ones stay
-blank rather than being attributed to a guess.
-
-**PR 15.6 left it exactly there, deliberately, while making everything around it
-editable.** The NPC page now edits eleven fields in place; its notes are the one
-thing on it that still cannot be changed after it is written. That asymmetry is
-the open question, not an oversight.
 
 ### T008 — A legend swatch cannot distinguish "confirmed" from "false"
 **Type** decision · **Size** S · **Status** open · **Verified** 2026-09-16 · `Q20`

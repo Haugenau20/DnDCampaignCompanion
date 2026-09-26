@@ -551,6 +551,55 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
     expect(mockUpdateLocationNote.mock.calls[0][1].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
+  // T006: notes were append-only until the maintainer decided otherwise.
+  it('edits a note in place, keeping its date and author', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit the note from 31/05/2025' }));
+    fireEvent.change(screen.getByLabelText('Edit the note from 31/05/2025'), {
+      target: { value: 'The last of the hidden kingdoms.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+
+    await waitFor(() =>
+      expect(mockUpdateLocation).toHaveBeenCalledWith('gondolin', {
+        notes: [
+          {
+            date: '2025-05-31T19:27:30.387Z',
+            text: 'The last of the hidden kingdoms.',
+            author: 'Zendikarr',
+          },
+          { date: '2025-06-14T10:00:00.000Z', text: 'Turgon will not open the gates.' },
+        ],
+      })
+    );
+    await waitFor(() => expect(mockRefreshLocations).toHaveBeenCalled());
+  });
+
+  it('deletes a note only once the delete is confirmed', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete the note from 14/06/2025' }));
+    expect(mockUpdateLocation).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete note' }));
+    await waitFor(() =>
+      expect(mockUpdateLocation).toHaveBeenCalledWith('gondolin', {
+        notes: [
+          {
+            date: '2025-05-31T19:27:30.387Z',
+            text: 'The last of the great kingdoms.',
+            author: 'Zendikarr',
+          },
+        ],
+      })
+    );
+  });
+
+  it('no longer tells the writer that notes can never be changed', () => {
+    renderPage();
+    expect(screen.getByText('Dated today and credited to you.')).toBeInTheDocument();
+    expect(screen.queryByText(/never edited or removed/)).not.toBeInTheDocument();
+  });
+
   it('never links to /locations/edit/:id, which 15-8 retires', () => {
     const { container } = renderPage();
     expect(container.innerHTML).not.toContain('/locations/edit/');
@@ -561,6 +610,7 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
     renderPage();
     expect(screen.queryByRole('button', { name: 'Rename' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete location' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /the note from/ })).not.toBeInTheDocument();
   });
 });
 

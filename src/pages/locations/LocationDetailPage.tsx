@@ -22,7 +22,7 @@ import {
   locationMetaLine,
   KNOWLEDGE_OPTIONS,
 } from 'features/campaign-entities';
-import type { Location, LocationType, LocationStatus } from 'features/campaign-entities';
+import type { Location, LocationNote, LocationType, LocationStatus } from 'features/campaign-entities';
 import { useUser, useGroups, useCampaigns } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
 import { useImageAttachment } from 'shared/hooks/useImageAttachment';
@@ -34,7 +34,8 @@ import { useQuickAdd } from 'shared/context/QuickAddContext';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { formatNoteDate, toNoteDate } from 'shared/utils/dateFormatter';
 import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
-import { InlineEditor } from 'shared/components/inline-edit';
+import { InlineEditor, NoteHistory } from 'shared/components/inline-edit';
+import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
 import { rumorTitleText } from 'features/campaign-entities';
 
 /** The eight kinds a place can be, as the select offers them. */
@@ -274,6 +275,13 @@ const LocationDetailPage: React.FC = () => {
     });
     await refreshLocations();
   };
+
+  // Through `save`, like every other field. The stored array is searched, not
+  // the sorted copy on screen, so notes keep the order they were written in.
+  const editNote = async (note: LocationNote, text: string) =>
+    save({ notes: replaceNoteText(location?.notes ?? [], note, text) });
+  const deleteNote = async (note: LocationNote) =>
+    save({ notes: removeNote(location?.notes ?? [], note) });
 
   /**
    * A feature becomes a real place (§6.4, item 7).
@@ -750,42 +758,12 @@ const LocationDetailPage: React.FC = () => {
             count={notes.length || undefined}
           >
             {notes.length ? (
-              <div className="flex flex-col divide-y card-divider">
-                {notes.map((note, noteIndex) => (
-                  <div
-                    key={`${note.date}-${noteIndex}`}
-                    className="grid grid-cols-1 sm:grid-cols-[6.5rem_minmax(0,1fr)_auto] gap-1 sm:gap-4 py-3"
-                  >
-                    {/*
-                      Formatted, from the one shared helper (§8.1, T001). This
-                      list printed `2025-05-31T19:27:30.387Z` until now.
-                    */}
-                    <Typography
-                      variant="body-sm"
-                      color="muted"
-                      className="text-xs tabular-nums whitespace-nowrap"
-                    >
-                      {formatNoteDate(note.date)}
-                    </Typography>
-                    <Typography variant="body-sm" className="min-w-0">
-                      {note.text}
-                    </Typography>
-                    {/*
-                      A note carries its own author, which is why §8 makes it
-                      the one exception to "no per-field attribution". One
-                      written before the field existed stays blank rather than
-                      being credited to a guess.
-                    */}
-                    <Typography
-                      variant="body-sm"
-                      color="muted"
-                      className="text-xs sm:text-right whitespace-nowrap"
-                    >
-                      {note.author ?? ''}
-                    </Typography>
-                  </div>
-                ))}
-              </div>
+              <NoteHistory
+                notes={notes}
+                canEdit={canAct}
+                onEdit={editNote}
+                onDelete={deleteNote}
+              />
             ) : (
               <Typography color="muted" className="italic">
                 Nothing written from the table yet
@@ -800,7 +778,7 @@ const LocationDetailPage: React.FC = () => {
                 */}
                 <InlineEditor
                   label="Add a note"
-                  helperText="Dated today and credited to you. Notes are added, never edited or removed."
+                  helperText="Dated today and credited to you."
                   submitLabel="Add note"
                   placeholder="What happened here, and when"
                   rows={2}
