@@ -102,12 +102,6 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   const effectiveTitle = hasExplicitTitle ? title : deriveTitle(content);
   const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
 
-  // Expose methods to parent components
-  useImperativeHandle(ref, () => ({
-    getCurrentContent: () => ({ title: effectiveTitle, content }),
-    saveCurrentContent: handleManualSave
-  }), [effectiveTitle, content]);
-
   // Load note data when ID changes
   useEffect(() => {
     const noteData = getNoteById(noteId);
@@ -226,6 +220,14 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       setIsSaving(false);
     }
   }, [note, readOnly, hasExplicitTitle, title, content, saveNote, onSave]);
+
+  // Expose methods to parent components. Below `handleManualSave` because it
+  // is a dependency: the handle must be rebuilt when the save it hands out
+  // changes (another note, read-only toggled), not only when the text does.
+  useImperativeHandle(ref, () => ({
+    getCurrentContent: () => ({ title: effectiveTitle, content }),
+    saveCurrentContent: handleManualSave
+  }), [effectiveTitle, content, handleManualSave]);
 
   /**
    * Fire-and-forget wrapper around `handleManualSave` for the Ctrl+S

@@ -2,7 +2,6 @@
 
 import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from '../userGenerator';
-import type { SagaData } from 'features/storytelling';
 
 // Create a saga for a specific campaign
 export const createSaga = async (

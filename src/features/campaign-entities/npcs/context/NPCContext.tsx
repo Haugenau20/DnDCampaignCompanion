@@ -16,7 +16,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Use the NPCData hook for basic CRUD operations
   const { npcs, loading, error, refreshNPCs, hasRequiredContext } = useNPCData();
   const { user } = useAuth();
-  const { userProfile, activeGroupUserProfile } = useUser();
+  const { userProfile } = useUser();
   
   // Additional Firebase hook for specific updates. Its `error` is renamed on
   // destructure (`writeError`) because the read instance above already binds
@@ -87,7 +87,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     await updateData(npcId, updatedNPC);
     refreshNPCs(); // Refresh to get updated data
-  }, [getNPCById, updateData, refreshNPCs, hasRequiredContext, user, userProfile, activeGroupUserProfile]);
+  }, [getNPCById, updateData, refreshNPCs, hasRequiredContext, user, userProfile]);
 
   // Update NPC relationship
   const updateNPCRelationship = useCallback(async (npcId: string, relationship: NPCRelationship) => {
@@ -110,7 +110,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     await updateData(npcId, updatedNPC);
     refreshNPCs(); // Refresh to get updated data
-  }, [getNPCById, updateData, refreshNPCs, hasRequiredContext, user, userProfile, activeGroupUserProfile]);
+  }, [getNPCById, updateData, refreshNPCs, hasRequiredContext, user, userProfile]);
 
   // Ids issued during this session but not yet reflected in `npcs` (loaded
   // state). Two NPCs can be created back-to-back within a single `act()` /
@@ -147,7 +147,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await addData(newNPC, id);
     await refreshNPCs();
     return id;
-  }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, getNPCById, addData, refreshNPCs]);
+  }, [hasRequiredContext, user, userProfile, getNPCById, addData, refreshNPCs]);
 
   // Update an existing NPC
   const updateNPC = useCallback(async (npc: NPC): Promise<void> => {
@@ -170,7 +170,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     await updateData(npc.id, updatedNPC);
     await refreshNPCs();
-  }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, getNPCById, updateData, refreshNPCs]);
+  }, [hasRequiredContext, user, userProfile, getNPCById, updateData, refreshNPCs]);
 
   // Delete an NPC
   const deleteNPC = useCallback(async (npcId: string): Promise<void> => {

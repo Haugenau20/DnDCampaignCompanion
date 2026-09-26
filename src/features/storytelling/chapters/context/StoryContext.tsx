@@ -515,7 +515,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('Failed to update chapter order:', error);
       throw error;
     }
-  }, [updateData, refreshChapters, chapters, getChapterById, user, deleteData, hasRequiredContext]);
+  }, [updateData, refreshChapters, chapters, getChapterById, user, activeGroupUserProfile, deleteData, hasRequiredContext]);
 
   // Safer method for creating a new chapter with proper ordering
   const createChapter = useCallback(async (chapterData: DomainData<Chapter>) => {

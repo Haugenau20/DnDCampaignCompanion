@@ -25,7 +25,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     autoFetch: false
   });
   const { user } = useAuth();
-  const { userProfile, activeGroupUserProfile } = useUser();
+  const { userProfile } = useUser();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
 

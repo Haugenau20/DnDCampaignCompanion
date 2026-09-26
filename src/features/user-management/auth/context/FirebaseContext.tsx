@@ -43,7 +43,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [groupsLoading, setGroupsLoading] = useState(false);
-  const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loading = authLoading || profileLoading || groupsLoading;
@@ -114,7 +113,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setActiveGroupUserProfile(groupProfile);
         
         // Now load campaigns
-        setCampaignsLoading(true);
         try {
           const groupCampaigns = await campaignsPromise;
           setCampaigns(groupCampaigns);
@@ -145,8 +143,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         } catch (err) {
           console.error(`Error loading campaigns for group ${groupId}:`, err);
-        } finally {
-          setCampaignsLoading(false);
         }
       } else {
         console.warn(`No group profile found for user ${authUser.uid} in group ${groupId}`);
@@ -397,6 +393,11 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
 
     return () => unsubscribe();
+    // Subscribes once, on mount, on purpose. `loadGroups` is a new function
+    // every render; listing it would tear down and re-register the auth
+    // listener on each one. It reads only its arguments, state setters and
+    // services, so the first render's copy behaves the same as any later one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Context value

@@ -295,7 +295,6 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
       expandedLocations,
       matchesWithDescendants,
       toggleExpansion,
-      navigateToPage,
       highlightedLocationId,
       summaryFor,
     ]

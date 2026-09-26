@@ -24,7 +24,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
 | medium | T056 | Sign-in errors carry a reportable ref | S | blocked | On hold for an app-wide error-numbering system, which the maintainer wants first |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
-| medium | T061 | CI does not lint or run the functions suite | M | open | Tests and type-check are gated; lint waits on T060, functions on emulators in CI |
+| medium | T061 | CI does not run the functions suite | M | open | Tests, type-check and lint are gated; the functions suite needs emulators in CI |
 | medium | T070 | Functions are deployed by hand | M | needs investigation | Frontend and functions can drift in prod; contact secrets must move first. Service account roles unchecked |
 | medium | T071 | Band eyebrow is 2.3:1 in light | S | open | Fails contrast on every band page in the default theme; needs a schema call, like T040 |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
@@ -40,7 +40,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T040 | No accent pair for the band | S | open | Interim `.band-chip` works; schema-owner decision |
 | low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
 | low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; the fix is leaving CRA, which needs a plan |
-| low | T060 | 35 build lint warnings | M | open | Each wants a look, not an autofix; blocks a lint gate in T061 |
 | low | T063 | Entity pages look like three products | L | needs scoping | NPC page doesn't use the shell; pick the look first |
 | low | T065 | Firebase CLI 13 → 15 | S | open | Brings the artifact cleanup policy; re-run the emulator suites after |
 | low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
@@ -577,37 +576,23 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
   `CLAUDE.md`. Needs its own plan. It may also answer T030's bundle question.
 - **Source**: todo.txt, 2026-09-24
 
-### T060 — The build prints 35 lint warnings
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-25
-
-`npm run build` compiles "with warnings": 35 in 20 files, all pre-existing.
-
-- **Measured** (2026-09-25): 19 `react-hooks/exhaustive-deps` and 16
-  `@typescript-eslint/no-unused-vars`. The one accessibility warning, the theme
-  menu's `aria-pressed` on a `menuitem`, is fixed; an unused variable merged
-  since the first count keeps the total at 35.
-- **Catch**: an `exhaustive-deps` "fix" can change when an effect runs. Each one
-  wants a look, not a blanket autofix. And CRA turns warnings into errors when
-  `CI=true`, which matters for T061.
-- **Source**: todo.txt, 2026-09-24
-
-### T061 — CI does not lint or run the functions suite
+### T061 — CI does not run the functions suite
 **Type** debt · **Size** M · **Status** open · **Verified** 2026-09-26
 
-`.github/workflows/test.yml` runs the type-check and `npm run test:ci` (jest,
-80% coverage floor) on every PR and before the merge-to-main deploy, which
-waits on it. Two gates are still missing.
+`.github/workflows/test.yml` runs the type-check, `npm run lint` (app code,
+zero warnings) and `npm run test:ci` (jest, 80% coverage floor) on every PR
+and before the merge-to-main deploy, which waits on it. One gate is missing.
 
-- **Lint**: red on day one until T060 is done. CRA turns warnings into errors
-  when `CI=true`, so the gate is `npx eslint` with `--max-warnings 0`, or the
-  build run with `CI=true`.
 - **`firebase/functions`' suite**: needs the emulators, which
   `firebase emulators:exec --config firebase.emulators.json` can run in CI
   (Java and `firebase-tools` in the runner; mind T065's CLI version).
 - **Not in the repo**: the `test` check blocks a merge only once branch
   protection on `main` lists it as required. That is a GitHub setting.
-- **Source**: todo.txt, 2026-09-24; the jest and type-check gates landed
-  2026-09-26
+- **Lint scope**: test files are excluded. They carry ~1,000 `react-app/jest`
+  problems (mostly `testing-library/*`) that nothing has ever enforced; the
+  build never lints them either. Bringing them in is its own job.
+- **Source**: todo.txt, 2026-09-24; the jest, type-check and lint gates
+  landed 2026-09-26
 
 ### T065 — The Firebase CLI is two major versions behind
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-24

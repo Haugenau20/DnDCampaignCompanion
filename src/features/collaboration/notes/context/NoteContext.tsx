@@ -1,6 +1,6 @@
 // src/features/collaboration/notes/context/NoteContext.tsx - Complete Fixed Version
 import React, { createContext, useContext, useCallback, useState, useEffect } from "react";
-import { Note, NoteContextValue, ExtractedEntity, EntityType } from "../types";
+import { Note, NoteContextValue, EntityType } from "../types";
 import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns, useUser } from "features/user-management";
 import { useRumors } from "features/campaign-entities";
@@ -30,7 +30,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
    * has to sit above `NoteProvider`, which it already does in `app/App.tsx`.
    */
   const { addRumor } = useRumors();
-  const { userProfile, activeGroupUserProfile } = useUser();
+  const { activeGroupUserProfile } = useUser();
   // Single shared source of truth for "still resolving vs. genuinely no
   // selection" (bug #1413) -- see the hook's doc comment. Folded into
   // `isLoading` below so `NotesList`'s existing loading-before-"no campaign"
@@ -201,7 +201,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
           : n
       )
     );
-  }, [user, activeGroupId, documentService, getNoteById, activeGroupUserProfile]);
+  }, [user, activeGroupId, documentService, getNoteById]);
 
   /**
    * Update a note (now calls saveNote internally for saved notes, updates locally for unsaved)
@@ -289,7 +289,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     // Prepare initial data for the create form based on entity type
     let initialData: any = {};
     const provenance = `Created from note: ${note.title || note.id}`;
-    let description = provenance; // Declare once
 
     /**
      * The note's own sentence about this entity, kept rather than dropped.

@@ -1,6 +1,5 @@
 // src/utils/__dev__/generators/userGenerator.ts
 
-import { User } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 
