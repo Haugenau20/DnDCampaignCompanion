@@ -6,7 +6,12 @@ on:
     branches:
       - main
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  # Merging deploys live, so a red suite must stop the deploy, not just report.
   build_and_deploy:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
