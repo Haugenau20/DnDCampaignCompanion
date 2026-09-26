@@ -76,6 +76,7 @@ the errors name files from whichever branch you visited.
 - `npm test` — jest. **The suite is expected to be fully green; any red is a regression.**
 - `npm run test:coverage` — CI floor is a uniform **80%** (`jest.config.ts`)
 - `npm run test:behavioral` — behavioural suites only; `npm run test:html` — HTML report
+- `npm run lint` — ESLint on app code (test files excluded), **zero warnings allowed**; CI runs it
 - Single file, fast: `npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="<pattern>"`
 
 **Baseline**: 0 failed / 2 skipped / 5629 passed / 5631 total across 284 suites (2026-09-26,
@@ -151,8 +152,9 @@ match `firestore.rules.prod` without reading them back.
 
 ## Verifying a Change Before Proposing a Merge
 
-Merging to `main` deploys live. CI (`.github/workflows/test.yml`) runs steps 1 and 2 on every PR
-and before the deploy, which waits on them; step 3 runs only as the PR preview's Docker build.
+Merging to `main` deploys live. CI (`.github/workflows/test.yml`) runs steps 1 and 2, plus
+`npm run lint`, on every PR and before the deploy, which waits on them; step 3 runs only as the PR
+preview's Docker build.
 
 1. `npx tsc --noEmit` — type errors block the deploy
 2. `npm test` — must be fully green

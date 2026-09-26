@@ -1,12 +1,12 @@
 # .github/workflows/test.yml
 #
 # The checks a merge is supposed to keep green: the type-check (which, unlike
-# the build, also covers the test files) and the jest suite with its 80%
-# coverage floor. Called by both hosting workflows, so a PR and the
-# merge-to-main deploy run exactly the same gate.
+# the build, also covers the test files), lint on the app code with zero
+# warnings allowed, and the jest suite with its 80% coverage floor. Called by
+# both hosting workflows, so a PR and the merge-to-main deploy run exactly the
+# same gate.
 #
-# Not here yet: lint (the build's 35 warnings, T060) and the functions suite,
-# which needs the emulators.
+# Not here yet: the functions suite, which needs the emulators (T061).
 
 name: Test
 on:
@@ -31,6 +31,11 @@ jobs:
 
       - name: Type-check
         run: npx tsc --noEmit
+
+      # App code only. Test files break ~1,000 `react-app/jest` rules nobody has
+      # enforced, and the build never lints them either.
+      - name: Lint
+        run: npm run lint
 
       - name: Test
         run: npm run test:ci

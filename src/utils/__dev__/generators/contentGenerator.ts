@@ -1,6 +1,5 @@
 // src/utils/__dev__/generators/contentGenerator.ts
 
-import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from './userGenerator';
 import { createChapters } from './contentGenerators/chapterGenerator';
 import { createNPCs } from './contentGenerators/npcGenerator';

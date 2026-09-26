@@ -15,7 +15,6 @@ import { useLocation } from 'react-router-dom';
 import ContextSwitcher from 'shared/components/context-switcher/ContextSwitcher';
 import UserMenu from 'shared/components/user-menu/UserMenu';
 import Button from 'core/components/Button';
-import Dialog from 'core/components/Dialog';
 import Navigation from './Navigation';
 
 /**

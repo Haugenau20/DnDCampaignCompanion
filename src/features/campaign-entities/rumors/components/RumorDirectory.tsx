@@ -38,7 +38,6 @@ import {
   RosterSkeleton,
   RosterEmpty,
   RosterStatus,
-  type RosterStatusTone,
 } from 'core/components/Roster';
 
 interface RumorDirectoryProps {
@@ -192,7 +191,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   const { addRumor, deleteRumor, updateRumor, updateRumorStatus } = useRumors();
   const { npcs } = useNPCs();
   const { locations } = useLocations();
-  const { navigateToPage, createPath, getCurrentQueryParams } = useNavigation();
+  const { navigateToPage, getCurrentQueryParams } = useNavigation();
   const { highlight: highlightId } = getCurrentQueryParams();
 
   /**

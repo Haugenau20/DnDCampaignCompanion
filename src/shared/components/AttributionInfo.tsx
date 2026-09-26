@@ -35,7 +35,6 @@ const AttributionInfo: React.FC<AttributionInfoProps> = ({
   
   // State to store username/character mapping
   const [usernameMap, setUsernameMap] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
   
   // Fetch usernames when component mounts - only as fallback
   useEffect(() => {
@@ -54,7 +53,6 @@ const AttributionInfo: React.FC<AttributionInfoProps> = ({
       }
       
       if (uidsToLookup.length > 0) {
-        setLoading(true);
         try {
           const userMapping = await fetchAttributionUsernames(
             activeGroupId, 
@@ -65,8 +63,6 @@ const AttributionInfo: React.FC<AttributionInfoProps> = ({
           setUsernameMap(userMapping);
         } catch (err) {
           console.error('Error fetching attribution usernames:', err);
-        } finally {
-          setLoading(false);
         }
       }
     };
