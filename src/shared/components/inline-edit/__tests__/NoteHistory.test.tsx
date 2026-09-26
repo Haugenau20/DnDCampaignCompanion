@@ -57,6 +57,29 @@ describe("NoteHistory", () => {
     expect(screen.getAllByRole("button", { name: /^Delete the note from / })).toHaveLength(2);
   });
 
+  it("tells apart two notes from the same day by their text", () => {
+    const sameDay = [
+      { date: "2025-05-31", text: "Rode to Isengard." },
+      { date: "2025-05-31", text: "Found the palantír." },
+    ];
+    renderHistory({ notes: sameDay });
+    const [first, second] = screen.getAllByRole("button", { name: "Edit the note from 31/05/2025" });
+    expect(first).toHaveAccessibleDescription("Rode to Isengard.");
+    expect(second).toHaveAccessibleDescription("Found the palantír.");
+    const [, secondDelete] = screen.getAllByRole("button", { name: "Delete the note from 31/05/2025" });
+    expect(secondDelete).toHaveAccessibleDescription("Found the palantír.");
+  });
+
+  it("labels the editor differently from the other rows' Edit buttons", () => {
+    const sameDay = [
+      { date: "2025-05-31", text: "Rode to Isengard." },
+      { date: "2025-05-31", text: "Found the palantír." },
+    ];
+    renderHistory({ notes: sameDay });
+    fireEvent.click(screen.getAllByRole("button", { name: "Edit the note from 31/05/2025" })[0]);
+    expect(screen.getByLabelText("Note from 31/05/2025")).toHaveValue("Rode to Isengard.");
+  });
+
   describe("editing", () => {
     it("opens an editor holding the note's current text", () => {
       renderHistory();

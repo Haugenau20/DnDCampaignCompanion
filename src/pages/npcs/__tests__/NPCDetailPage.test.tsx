@@ -1175,7 +1175,7 @@ describe("NPCDetailPage", () => {
     it("edits a note's text, keeping its date, author and stored position", async () => {
       renderPage();
       fireEvent.click(editMay());
-      fireEvent.change(screen.getByLabelText("Edit the note from 31/05/2025"), {
+      fireEvent.change(screen.getByLabelText("Note from 31/05/2025"), {
         target: { value: "Rode to Orthanc." },
       });
       fireEvent.click(screen.getByText("Save note"));
@@ -1205,7 +1205,7 @@ describe("NPCDetailPage", () => {
       mockUpdateNPC.mockRejectedValueOnce(new Error("Write refused"));
       renderPage();
       fireEvent.click(editMay());
-      const field = screen.getByLabelText("Edit the note from 31/05/2025");
+      const field = screen.getByLabelText("Note from 31/05/2025");
       fireEvent.change(field, { target: { value: "Rode to Orthanc." } });
       fireEvent.click(screen.getByText("Save note"));
 

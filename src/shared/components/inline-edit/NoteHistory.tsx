@@ -1,5 +1,5 @@
 // src/shared/components/inline-edit/NoteHistory.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
@@ -51,6 +51,7 @@ export function NoteHistory<T extends EntityNote>({
   const [deleting, setDeleting] = useState<T | null>(null);
   const [returnFocus, setReturnFocus] = useState<number | null>(null);
   const editButtons = useRef(new Map<number, HTMLButtonElement>());
+  const idPrefix = useId();
 
   // The Edit button is unmounted while its editor is open, so focus goes back
   // only once it exists again -- the same reason `InlineEditor` leaves focus
@@ -72,12 +73,16 @@ export function NoteHistory<T extends EntityNote>({
       <div className={`flex flex-col divide-y card-divider ${className}`}>
         {notes.map((note, index) => {
           const when = formatNoteDate(note.date);
+          // Several notes from one session share a date, so the date alone
+          // cannot tell two rows' buttons apart. Each button is also described
+          // by its note's own text.
+          const textId = `${idPrefix}-note-${index}`;
 
           if (editing === index) {
             return (
               <div key={`${note.date}-${index}`} className={rowClassName}>
                 <InlineEditor
-                  label={`Edit the note from ${when}`}
+                  label={`Note from ${when}`}
                   initialValue={note.text}
                   submitLabel="Save note"
                   rows={2}
@@ -104,9 +109,9 @@ export function NoteHistory<T extends EntityNote>({
               >
                 {when}
               </Typography>
-              <Typography variant="body-sm" className="min-w-0">
-                {note.text}
-              </Typography>
+              <div id={textId} className="min-w-0">
+                <Typography variant="body-sm">{note.text}</Typography>
+              </div>
               <div className="flex flex-col gap-1 sm:items-end">
                 {/* A note written before the author field existed has none,
                     and stays blank rather than being credited to a guess. */}
@@ -126,9 +131,10 @@ export function NoteHistory<T extends EntityNote>({
                       }}
                       variant="ghost"
                       size="sm"
-                      // Every row has one; the date is what tells them apart
-                      // to a screen reader.
+                      // 44px on a phone, as the row controls elsewhere are.
+                      className="min-h-[44px] sm:min-h-[32px]"
                       aria-label={`Edit the note from ${when}`}
+                      aria-describedby={textId}
                       onClick={() => setEditing(index)}
                       startIcon={<Pencil className="w-3.5 h-3.5" />}
                     >
@@ -137,7 +143,9 @@ export function NoteHistory<T extends EntityNote>({
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="delete-button min-h-[44px] sm:min-h-[32px]"
                       aria-label={`Delete the note from ${when}`}
+                      aria-describedby={textId}
                       onClick={() => setDeleting(note)}
                       startIcon={<Trash2 className="w-3.5 h-3.5" />}
                     >
