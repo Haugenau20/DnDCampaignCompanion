@@ -555,7 +555,7 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
   it('edits a note in place, keeping its date and author', async () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Edit the note from 31/05/2025' }));
-    fireEvent.change(screen.getByLabelText('Edit the note from 31/05/2025'), {
+    fireEvent.change(screen.getByLabelText('Note from 31/05/2025'), {
       target: { value: 'The last of the hidden kingdoms.' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
