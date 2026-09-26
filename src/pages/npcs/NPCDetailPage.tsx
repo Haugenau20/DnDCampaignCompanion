@@ -13,7 +13,7 @@ import {
   useLocations,
   resolveLocationName,
 } from 'features/campaign-entities';
-import type { NPC, NPCRelationship, NPCStatus } from 'features/campaign-entities';
+import type { NPC, NPCNote, NPCRelationship, NPCStatus } from 'features/campaign-entities';
 import { useUser, useGroups, useCampaigns } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
 import ImageUploadControl from 'shared/components/ImageUploadControl';
@@ -22,13 +22,14 @@ import {
   entityImagePrefix,
   isOwnBucketUrl,
 } from 'core/services/firebase/storage/ImageStorageService';
-import { formatNoteDate, toNoteDate } from 'shared/utils/dateFormatter';
+import { toNoteDate } from 'shared/utils/dateFormatter';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import { usePageGate, GatedContent } from 'shared/components/gated';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
-import { InlineEditor } from 'shared/components/inline-edit';
+import { InlineEditor, NoteHistory } from 'shared/components/inline-edit';
+import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
 import { FieldPrompt } from 'shared/components/entity-page';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
 import type { AttachKind } from 'shared/components/attach-tray/attachCandidates';
@@ -613,6 +614,15 @@ const NPCDetailPage: React.FC = () => {
     await refreshNPCs();
   };
 
+  /**
+   * Both go through `save`, so the page re-reads what was written. The stored
+   * array is found in, not the sorted copy on screen: order is kept as written.
+   */
+  const editNote = async (note: NPCNote, text: string) =>
+    save({ notes: replaceNoteText(npc?.notes ?? [], note, text) });
+  const deleteNote = async (note: NPCNote) =>
+    save({ notes: removeNote(npc?.notes ?? [], note) });
+
   const handleDelete = async () => {
     if (!npc) return;
     await deleteNPC(npc.id);
@@ -1133,35 +1143,15 @@ const NPCDetailPage: React.FC = () => {
                 </div>
 
                 {notes.length > 0 ? (
-                  <div className="flex flex-col divide-y card-divider px-6">
-                    {notes.map((note, index) => (
-                      <div
-                        key={`${note.date}-${index}`}
-                        className="grid grid-cols-1 sm:grid-cols-[6.5rem_minmax(0,1fr)_auto] gap-1 sm:gap-4 py-3.5"
-                      >
-                        <Typography
-                          variant="body-sm"
-                          color="muted"
-                          className="text-xs tabular-nums whitespace-nowrap"
-                        >
-                          {formatNoteDate(note.date)}
-                        </Typography>
-                        <Typography variant="body-sm" className="min-w-0">
-                          {note.text}
-                        </Typography>
-                        {/* A note written before the author field existed has
-                            none, and stays blank rather than being credited to
-                            a guess. */}
-                        <Typography
-                          variant="body-sm"
-                          color="muted"
-                          className="text-xs sm:text-right whitespace-nowrap"
-                        >
-                          {note.author ?? ''}
-                        </Typography>
-                      </div>
-                    ))}
-                  </div>
+                  <NoteHistory
+                    notes={notes}
+                    canEdit={gate.canAct}
+                    onEdit={editNote}
+                    onDelete={deleteNote}
+                    onSaved={() => setSavedField('note')}
+                    className="px-6"
+                    rowClassName="py-3.5"
+                  />
                 ) : (
                   <div className="px-6 pb-4">
                     <Typography color="muted" className="italic">
@@ -1177,7 +1167,7 @@ const NPCDetailPage: React.FC = () => {
                         have to summon is a composer you forget exists. */}
                     <InlineEditor
                       label="Add a note"
-                      helperText="Dated today and credited to you. Notes are added, never edited or removed."
+                      helperText="Dated today and credited to you."
                       submitLabel="Add note"
                       placeholder="What happened, and when"
                       rows={2}

@@ -787,7 +787,9 @@ describe("NPCDetailPage", () => {
       renderPage();
       expect(screen.queryByTestId("delete-dialog")).not.toBeInTheDocument();
 
-      fireEvent.click(screen.getByText("Delete"));
+      // By exact accessible name: each note row now has a "Delete" too, named
+      // "Delete the note from <date>".
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
       expect(screen.getByTestId("delete-dialog")).toHaveTextContent("Gandalf");
       expect(mockDeleteNPC).not.toHaveBeenCalled();
 
@@ -1150,10 +1152,71 @@ describe("NPCDetailPage", () => {
       expect(composer()).toHaveValue("Met the Balrog.");
     });
 
-    it("offers no editing or deletion of an existing note", () => {
+  });
+
+  // -------------------------------------------------------------------------
+  // Notes can be fixed and removed (T006). Until then they were append-only,
+  // and the composer said so; the maintainer decided otherwise on 2026-09-26.
+  // -------------------------------------------------------------------------
+  describe("changing a note", () => {
+    // Shown oldest first, so the 31 May note is the second row -- while it is
+    // the *first* one stored. The write must follow the stored order.
+    const editMay = () =>
+      screen.getByRole("button", { name: "Edit the note from 31/05/2025" });
+    const deleteApril = () =>
+      screen.getByRole("button", { name: "Delete the note from 02/04/2025" });
+
+    it("no longer tells the writer that notes can never be changed", () => {
       renderPage();
-      expect(screen.queryByText("Edit note")).not.toBeInTheDocument();
-      expect(screen.queryByText("Delete note")).not.toBeInTheDocument();
+      expect(screen.getByText("Dated today and credited to you.")).toBeInTheDocument();
+      expect(screen.queryByText(/never edited or removed/)).not.toBeInTheDocument();
+    });
+
+    it("edits a note's text, keeping its date, author and stored position", async () => {
+      renderPage();
+      fireEvent.click(editMay());
+      fireEvent.change(screen.getByLabelText("Note from 31/05/2025"), {
+        target: { value: "Rode to Orthanc." },
+      });
+      fireEvent.click(screen.getByText("Save note"));
+
+      await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
+      expect(mockUpdateNPC.mock.calls[0][0].notes).toEqual([
+        { date: "2025-05-31", text: "Rode to Orthanc.", author: "Zendikarr" },
+        { date: "2025-04-02", text: "An older note, no author recorded." },
+      ]);
+      await waitFor(() => expect(mockRefreshNPCs).toHaveBeenCalled());
+    });
+
+    it("deletes a note only once the delete is confirmed", async () => {
+      renderPage();
+      fireEvent.click(deleteApril());
+      expect(mockUpdateNPC).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByText("Confirm delete"));
+      await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
+      expect(mockUpdateNPC.mock.calls[0][0].notes).toEqual([
+        { date: "2025-05-31", text: "Rode to Isengard.", author: "Zendikarr" },
+      ]);
+      expect(mockDeleteNPC).not.toHaveBeenCalled();
+    });
+
+    it("keeps the typed text and says why when the edit is refused", async () => {
+      mockUpdateNPC.mockRejectedValueOnce(new Error("Write refused"));
+      renderPage();
+      fireEvent.click(editMay());
+      const field = screen.getByLabelText("Note from 31/05/2025");
+      fireEvent.change(field, { target: { value: "Rode to Orthanc." } });
+      fireEvent.click(screen.getByText("Save note"));
+
+      expect(await screen.findByText("Write refused")).toBeInTheDocument();
+      expect(field).toHaveValue("Rode to Orthanc.");
+    });
+
+    it("offers neither to a visitor who cannot edit the page", () => {
+      mockUser = null;
+      renderPage();
+      expect(screen.queryByRole("button", { name: /the note from/ })).not.toBeInTheDocument();
     });
   });
 
