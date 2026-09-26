@@ -1,0 +1,36 @@
+# .github/workflows/test.yml
+#
+# The checks a merge is supposed to keep green: the type-check (which, unlike
+# the build, also covers the test files) and the jest suite with its 80%
+# coverage floor. Called by both hosting workflows, so a PR and the
+# merge-to-main deploy run exactly the same gate.
+#
+# Not here yet: lint (the build's 35 warnings, T060) and the functions suite,
+# which needs the emulators.
+
+name: Test
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # --legacy-peer-deps: CRA's peer ranges no longer resolve (T059); the
+      # production Dockerfile installs the same way.
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm run test:ci

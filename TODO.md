@@ -25,7 +25,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
 | medium | T056 | Sign-in errors carry a reportable ref | S | blocked | On hold for an app-wide error-numbering system, which the maintainer wants first |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
-| medium | T061 | PRs are checked by the build alone | M | open | Tests never run in CI, and merging deploys live |
+| medium | T061 | CI does not lint or run the functions suite | M | open | Tests and type-check are gated; lint waits on T060, functions on emulators in CI |
 | medium | T070 | Functions are deployed by hand | M | needs investigation | Frontend and functions can drift in prod; contact secrets must move first. Service account roles unchecked |
 | medium | T071 | Band eyebrow is 2.3:1 in light | S | open | Fails contrast on every band page in the default theme; needs a schema call, like T040 |
 | low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
@@ -660,21 +660,23 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
   `CI=true`, which matters for T061.
 - **Source**: todo.txt, 2026-09-24
 
-### T061 — Pull requests are checked by the build alone
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-24
+### T061 — CI does not lint or run the functions suite
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-26
 
-The PR workflow builds the app in Docker and deploys a preview. That is the
-only gate. Tests, lint and the functions suite never run in CI.
+`.github/workflows/test.yml` runs the type-check and `npm run test:ci` (jest,
+80% coverage floor) on every PR and before the merge-to-main deploy, which
+waits on it. Two gates are still missing.
 
-- **Where**: `.github/workflows/firebase-hosting-pull-request.yml`: one job,
-  `build_and_preview` (the build does type-check, via CRA).
-- **What is missing**: `npm test` (the ~5,500-test suite a merge is supposed to
-  keep green), lint, and `firebase/functions`' suite. The functions suite
-  needs the emulators, which `firebase emulators:exec` can run in CI.
-- **Catch**: a lint gate is red on day one until T060 is done. And a failing
-  test does not block the merge-to-main deploy today, so this is what turns
-  "must be green" into something enforced.
-- **Source**: todo.txt, 2026-09-24
+- **Lint**: red on day one until T060 is done. CRA turns warnings into errors
+  when `CI=true`, so the gate is `npx eslint` with `--max-warnings 0`, or the
+  build run with `CI=true`.
+- **`firebase/functions`' suite**: needs the emulators, which
+  `firebase emulators:exec --config firebase.emulators.json` can run in CI
+  (Java and `firebase-tools` in the runner; mind T065's CLI version).
+- **Not in the repo**: the `test` check blocks a merge only once branch
+  protection on `main` lists it as required. That is a GitHub setting.
+- **Source**: todo.txt, 2026-09-24; the jest and type-check gates landed
+  2026-09-26
 
 ### T065 — The Firebase CLI is two major versions behind
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-24
