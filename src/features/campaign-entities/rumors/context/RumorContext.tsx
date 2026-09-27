@@ -83,7 +83,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     await updateData(rumorId, updatedRumor);
     refreshRumors();
-  }, [user, userProfile, getRumorById, updateData, refreshRumors]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData, refreshRumors]);
 
   // Update rumor note
   const updateRumorNote = useCallback(async (rumorId: string, note: DomainData<RumorNote> & IdentifiableContent) => {
@@ -112,7 +112,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     await updateData(rumorId, updatedRumor);
     refreshRumors();
-  }, [user, userProfile, getRumorById, updateData, refreshRumors]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData, refreshRumors]);
 
   // Ids issued during this session but not yet reflected in `rumors` (loaded
   // state). Two rumors can be created back-to-back within a single `act()` /
@@ -157,7 +157,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await addData(newRumor, id);
     refreshRumors();
     return id;
-  }, [user, userProfile, addData, refreshRumors, isRumorIdTaken]);
+  }, [user, userProfile, activeGroupUserProfile, addData, refreshRumors, isRumorIdTaken]);
 
   // Update existing rumor
   const updateRumor = useCallback(async (rumor: Rumor) => {
@@ -174,7 +174,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     await updateData(rumor.id, updatedRumor);
     refreshRumors();
-  }, [user, userProfile, updateData, refreshRumors]);
+  }, [user, userProfile, activeGroupUserProfile, updateData, refreshRumors]);
 
   // Delete rumor
   const deleteRumor = useCallback(async (rumorId: string) => {
@@ -280,7 +280,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     refreshRumors();
     return id;
-  }, [user, userProfile, getRumorById, addData, updateData, refreshRumors, isRumorIdTaken]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, addData, updateData, refreshRumors, isRumorIdTaken]);
 
   // Convert rumors to quest
   const convertToQuest = useCallback(async (rumorIds: string[], questData: any) => {
@@ -337,7 +337,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     refreshRumors();
     return questId;
-  }, [user, userProfile, getRumorById, updateData, refreshRumors]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData, createDocument, refreshRumors]);
 
   const value: RumorContextValue = {
     rumors,

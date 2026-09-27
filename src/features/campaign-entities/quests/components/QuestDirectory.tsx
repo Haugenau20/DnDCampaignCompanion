@@ -103,7 +103,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
   const { updateQuest, updateQuestObjective } = useQuests();
   const { getNPCById } = useNPCs();
   const { locations } = useLocations();
-  const { navigateToPage, createPath, getCurrentQueryParams } = useNavigation();
+  const { navigateToPage, getCurrentQueryParams } = useNavigation();
   // T014: one hook, four consumers. This directory used to set a prop and do
   // nothing else, so a highlighted quest could sit off screen entirely.
   const { highlightedId: highlightedQuestId } = useHighlightTarget({

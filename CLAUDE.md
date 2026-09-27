@@ -76,10 +76,11 @@ the errors name files from whichever branch you visited.
 - `npm test` — jest. **The suite is expected to be fully green; any red is a regression.**
 - `npm run test:coverage` — CI floor is a uniform **80%** (`jest.config.ts`)
 - `npm run test:behavioral` — behavioural suites only; `npm run test:html` — HTML report
+- `npm run lint` — ESLint on app code (test files excluded), **zero warnings allowed**; CI runs it
 - Single file, fast: `npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="<pattern>"`
 
-**Baseline**: 0 failed / 2 skipped / 5354 passed / 5356 total across 267 suites (2026-09-24,
-`fix/notes-story-refetch-gate`). The 2 skips are #901's, closed as testability-only.
+**Baseline**: 0 failed / 2 skipped / 5629 passed / 5631 total across 284 suites (2026-09-26,
+`main` at `3c42ec8`, via `npm run test:ci`). The 2 skips are #901's, closed as testability-only.
 - **Measure a new baseline; never carry one forward.** Past figures went stale by up to 25 suites
   because they were taken on branches that later merged. If your run disagrees, run the suites you
   touched alone and reconcile the delta before assuming a regression.
@@ -151,7 +152,14 @@ match `firestore.rules.prod` without reading them back.
 
 ## Verifying a Change Before Proposing a Merge
 
-Merging to `main` deploys live.
+Merging to `main` deploys live. CI (`.github/workflows/test.yml`) runs steps 1 and 2, plus
+`npm run lint`, on every PR and before the deploy, which waits on them; step 3 runs only as the PR
+preview's Docker build.
+
+**Never watch CI or PRs after pushing** — the maintainer's standing rule (2026-09-27). Do not
+subscribe to PR activity, poll check runs, `/loop`, schedule check-ins (`send_later`, routines,
+cron), or wait on CI in any other way. Run the gates below locally, push, report, and stop; the
+maintainer watches CI and asks when something needs doing.
 
 1. `npx tsc --noEmit` — type errors block the deploy
 2. `npm test` — must be fully green

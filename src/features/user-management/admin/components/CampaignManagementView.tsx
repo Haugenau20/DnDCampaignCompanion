@@ -104,7 +104,9 @@ const CampaignManagementView: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [activeGroupId]);
+    // `getCampaigns` is memoised with no dependencies, so listing it re-runs
+    // nothing; it only stops the effect claiming it can never change.
+  }, [activeGroupId, getCampaigns]);
 
   // Handle campaign creation
   const handleCreateCampaign = async (e: React.FormEvent) => {

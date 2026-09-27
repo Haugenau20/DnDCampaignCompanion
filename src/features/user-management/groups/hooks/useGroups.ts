@@ -13,7 +13,6 @@ export function useGroups() {
     setError,
     refreshGroups,
     switchGroup: switchGroupContext,
-    loading: firebaseLoading
   } = useFirebaseContext();
 
   // Track a more accurate loading state

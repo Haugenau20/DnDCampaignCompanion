@@ -19,7 +19,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { locations: initialLocations, loading, error, refreshLocations, hasRequiredContext } = useLocationData();
   const [locations, setLocations] = useState<Location[]>(initialLocations);
   const { user } = useAuth();
-  const { userProfile, activeGroupUserProfile } = useUser();
+  const { userProfile } = useUser();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
   // `autoFetch: false` because nothing renders off this instance's `data`:
@@ -339,7 +339,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     dispatchLocationChangedEvent();
 
     return locationId;
-  }, [user, activeGroupId, activeCampaignId, activeGroupUserProfile, getLocationById, addData, dispatchLocationChangedEvent]);
+  }, [user, activeGroupId, activeCampaignId, getLocationById, addData, dispatchLocationChangedEvent]);
 
   const value: LocationContextValue = {
     locations,

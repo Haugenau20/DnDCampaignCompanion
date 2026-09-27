@@ -19,16 +19,14 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T006 | Can a note be edited or deleted? | M | open | NPC/location notes can't fix a typo; inconsistent by accident |
 | medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
 | medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
 | medium | T056 | Sign-in errors carry a reportable ref | S | blocked | On hold for an app-wide error-numbering system, which the maintainer wants first |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
-| medium | T061 | PRs are checked by the build alone | M | open | Tests never run in CI, and merging deploys live |
+| medium | T061 | CI does not run the functions suite | M | open | Tests, type-check and lint are gated; the functions suite needs emulators in CI |
 | medium | T070 | Functions are deployed by hand | M | needs investigation | Frontend and functions can drift in prod; contact secrets must move first. Service account roles unchecked |
 | medium | T071 | Band eyebrow is 2.3:1 in light | S | open | Fails contrast on every band page in the default theme; needs a schema call, like T040 |
-| low | T041 | Required-field pairs disagree across forms | S | open | NPC form and type disagree on `description`; no user harm yet |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
 | low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
 | low | T043 | Orphaned `importantNPCs` names | S | open | Nothing was destroyed; a judgement call about one campaign |
@@ -42,12 +40,10 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T040 | No accent pair for the band | S | open | Interim `.band-chip` works; schema-owner decision |
 | low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
 | low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; the fix is leaving CRA, which needs a plan |
-| low | T060 | 35 build lint warnings | M | open | Each wants a look, not an autofix; blocks a lint gate in T061 |
 | low | T063 | Entity pages look like three products | L | needs scoping | NPC page doesn't use the shell; pick the look first |
 | low | T065 | Firebase CLI 13 → 15 | S | open | Brings the artifact cleanup policy; re-run the emulator suites after |
 | low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
 | nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
-| nit | T066 | Two stale remote branches | S | open | One is merged; the other holds 5 unmerged 2025 commits |
 | nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
 | nit | T009 | Hero band fallback never recorded | S | open | Answered by practice; write it down |
 | nit | T010 | Two `D36`s in `colour-schema.md` | S | open | Ambiguous citations |
@@ -341,27 +337,6 @@ per-field line: nothing records who ticked a box or when. `/quests/:questId`
 states the same two facts as the location page, and its suite asserts that
 neither "ticked" nor "last session" appears in the record card.
 
-### T006 — Can a note be edited or deleted after it is written?
-**Type** decision · **Size** M · **Status** open · **Verified** 2026-09-16 · `Q13`
-
-Campaign notes have `updateNote`. **NPC notes do not** — `NPCDetailPage` appends
-and renders, with no edit or delete path. So the answer is currently "yes for one
-kind of note, no for the other", by accident rather than decision.
-
-This is a decision about the shared record, not about the page: changing a note
-someone else wrote is a question about who owns campaign history.
-
-**PR 15.4 adds a third append-only notes list**, on the location page, matching
-the NPC page rather than the campaign notes: added, never edited or removed, and
-the composer says so. `LocationNote` gained an optional `author`, as `NPCNote`
-already had, so a note written from here carries its own credit; older ones stay
-blank rather than being attributed to a guess.
-
-**PR 15.6 left it exactly there, deliberately, while making everything around it
-editable.** The NPC page now edits eleven fields in place; its notes are the one
-thing on it that still cannot be changed after it is written. That asymmetry is
-the open question, not an oversight.
-
 ### T008 — A legend swatch cannot distinguish "confirmed" from "false"
 **Type** decision · **Size** S · **Status** open · **Verified** 2026-09-16 · `Q20`
 
@@ -418,51 +393,6 @@ adds has a band header carrying a status chip.
 - **Catch**: the schema is read-only to an implementing PR, so this cannot be
   closed by the phase that found it.
 - **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13
-
-### T041 — "The required pair is unchanged" is true of one entity in four
-**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-17
-
-`00-entity-authoring.md` §1.2 says creating an entity asks for two fields and
-that "the required pair is **unchanged** from today's forms". `15-1` item 1
-sharpens that into an instruction: "do not relax it and do not add to it".
-Measured against the four create forms, the premise holds for the quest only.
-
-- **Quest** — `QuestCreateForm.tsx:122` requires `title` and `description`.
-  Two. The premise is exactly right here.
-- **Location** — `LocationCreateForm.tsx:153` requires `name`, `description`,
-  `type` and `status`, but the last two are defaulted (`poi`, `known`) and
-  never left blank, so the user supplies two. Effectively unchanged.
-- **NPC** — `NPCForm.tsx:190` requires `name`, `status` and `relationship`;
-  the last two are defaulted, so the user supplies **one**. `description` is
-  labelled "Description" with no asterisk and is not validated — yet
-  `NPC.description` is **non-optional** in `types.ts`. Form and type disagree.
-- **Rumour** — `RumorForm.tsx:194` requires `title`, `content` **and**
-  `sourceName`. Three.
-- **What 15-1 did**: built §4's table as written — two fields for the NPC, the
-  quest and the location — which *adds* a required field for the NPC against
-  item 1's letter, and matches `NPC.description`'s own type. The rumour was
-  left on its existing form under item 9's second branch, because a two-field
-  surface cannot supply `sourceName` without relaxing validation.
-- **What needs deciding**: whether the NPC's description is genuinely required
-  (the type says yes, the form says no), and what the rumour's composer row in
-  `15-7` does about `sourceName` — require it as a third field, default it, or
-  make it optional. `15-7` cannot be written until that is answered.
-- **Source**: `docs/design/plan/15-entity-authoring/handoff/15-1-quick-add.md`
-  item 1 against `00-entity-authoring.md` §1.2 and §4
-
-
-### T066 — Two stale branches on the remote
-**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-24
-
-Two old branches remain on GitHub, and neither ever had a PR.
-
-- **`feature/third-party-integrations`**: fully merged into `main`. Deleting it
-  loses nothing.
-- **`feature/form-context-separation`**: **5 commits not on `main`**, last one
-  2025-06-07 ("complete form/context separation refactoring with standardized
-  entity architecture"). The 2026 feature-first restructure almost certainly
-  superseded it. But deleting it discards those commits, which is the maintainer's call.
-- **Source**: todo.txt, 2026-09-24
 
 ---
 
@@ -646,35 +576,23 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
   `CLAUDE.md`. Needs its own plan. It may also answer T030's bundle question.
 - **Source**: todo.txt, 2026-09-24
 
-### T060 — The build prints 35 lint warnings
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-25
+### T061 — CI does not run the functions suite
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-26
 
-`npm run build` compiles "with warnings": 35 in 20 files, all pre-existing.
+`.github/workflows/test.yml` runs the type-check, `npm run lint` (app code,
+zero warnings) and `npm run test:ci` (jest, 80% coverage floor) on every PR
+and before the merge-to-main deploy, which waits on it. One gate is missing.
 
-- **Measured** (2026-09-25): 19 `react-hooks/exhaustive-deps` and 16
-  `@typescript-eslint/no-unused-vars`. The one accessibility warning, the theme
-  menu's `aria-pressed` on a `menuitem`, is fixed; an unused variable merged
-  since the first count keeps the total at 35.
-- **Catch**: an `exhaustive-deps` "fix" can change when an effect runs. Each one
-  wants a look, not a blanket autofix. And CRA turns warnings into errors when
-  `CI=true`, which matters for T061.
-- **Source**: todo.txt, 2026-09-24
-
-### T061 — Pull requests are checked by the build alone
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-24
-
-The PR workflow builds the app in Docker and deploys a preview. That is the
-only gate. Tests, lint and the functions suite never run in CI.
-
-- **Where**: `.github/workflows/firebase-hosting-pull-request.yml`: one job,
-  `build_and_preview` (the build does type-check, via CRA).
-- **What is missing**: `npm test` (the ~5,500-test suite a merge is supposed to
-  keep green), lint, and `firebase/functions`' suite. The functions suite
-  needs the emulators, which `firebase emulators:exec` can run in CI.
-- **Catch**: a lint gate is red on day one until T060 is done. And a failing
-  test does not block the merge-to-main deploy today, so this is what turns
-  "must be green" into something enforced.
-- **Source**: todo.txt, 2026-09-24
+- **`firebase/functions`' suite**: needs the emulators, which
+  `firebase emulators:exec --config firebase.emulators.json` can run in CI
+  (Java and `firebase-tools` in the runner; mind T065's CLI version).
+- **Not in the repo**: the `test` check blocks a merge only once branch
+  protection on `main` lists it as required. That is a GitHub setting.
+- **Lint scope**: test files are excluded. They carry ~1,000 `react-app/jest`
+  problems (mostly `testing-library/*`) that nothing has ever enforced; the
+  build never lints them either. Bringing them in is its own job.
+- **Source**: todo.txt, 2026-09-24; the jest, type-check and lint gates
+  landed 2026-09-26
 
 ### T065 — The Firebase CLI is two major versions behind
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-24

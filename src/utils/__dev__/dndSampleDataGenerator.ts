@@ -1,8 +1,8 @@
 // src/utils/__dev__/dndSampleDataGenerator.ts
 
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, setDoc, connectFirestoreEmulator } from 'firebase/firestore';
-import { getAuth, connectAuthEmulator, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import * as dotenv from 'dotenv';
 import { 
   createSampleUsers, 

@@ -1357,18 +1357,11 @@ But three small pieces are worth pulling into the upcoming feature-first migrati
 
 **What to ignore** (do not salvage): the rewritten `NPCContext` / `QuestContext` / `StoryContext`, the stripped forms (`NPCForm`, `ChapterForm`), the hook deletions (`useNPCData`, etc.), the hybrid/legacy API compatibility shims, and `chapterGenerator.ts.backup` (committed by accident).
 
-**Recommended preservation steps** (run before deleting the branch on origin):
-
-```bash
-# Tag the archived branch so its history is preserved
-git tag archive/form-context-separation origin/feature/form-context-separation
-git push origin archive/form-context-separation
-
-# Then the remote branch is safe to delete (only run when ready):
-# git push origin --delete feature/form-context-separation
-```
-
-The actual salvage work should happen **during the migration** — specifically when the new feature directory that needs `SystemMetadataService` is being created. Don't pull these files into the current structure first; they belong in the new structure.
+**Status (2026-09-26): done; the branch is to be deleted.** All three pieces landed: the
+`SystemMetadataService` idea as `core/attribution/` (via `attribution-helper-spec.md`), `DomainData<T>`
+in `core/types/common.ts`, and the design doc as
+`docs/architecture/migration/database-field-alignment.md`. The maintainer chose to delete
+`feature/form-context-separation` without the archive tag this section once recommended (T066).
 
 ---
 

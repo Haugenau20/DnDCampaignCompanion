@@ -101,17 +101,17 @@ useEffect(() => {
   loadUsernames();
 }, [activeGroupId, quests, rumors, npcs, locations, chapters]);
   
-  /**
-   * Helper function to determine the actor name with priority order
-   * @param item Content item with potential actor fields
-   * @returns The actor name based on priority order
-   */
-  const determineActor = (item: any): string => {
-    return determineAttributionActor(item, usernameMap);
-  };
-  
   // Create combined recent activity from all content types
   const activities = React.useMemo(() => {
+    /**
+     * Helper function to determine the actor name with priority order.
+     * Inside the memo so the memo's own `usernameMap` dependency covers it.
+     * @param item Content item with potential actor fields
+     * @returns The actor name based on priority order
+     */
+    const determineActor = (item: any): string =>
+      determineAttributionActor(item, usernameMap);
+
     const allActivities: Activity[] = [];
     
     // Add chapters
@@ -191,7 +191,7 @@ useEffect(() => {
     
     // Sort by timestamp (newest first)
     return allActivities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [chapters, quests, rumors, npcs, locations, usernameMap]); // Added usernameMap as dependency
+  }, [chapters, quests, rumors, npcs, locations, usernameMap]);
   
   // Use common layout data hook to process and prepare data
   const layoutData = useLayoutData({

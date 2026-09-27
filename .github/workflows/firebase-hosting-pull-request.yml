@@ -7,6 +7,10 @@ permissions:
   contents: read
   pull-requests: write
 jobs:
+  # Runs for every PR, forks included: it needs no secrets.
+  test:
+    uses: ./.github/workflows/test.yml
+
   build_and_preview:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest

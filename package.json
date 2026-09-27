@@ -27,6 +27,7 @@
     "predeploy": "npm run build",
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "lint": "eslint --max-warnings 0 --ext .ts,.tsx src --ignore-pattern \"**/__tests__/**\" --ignore-pattern \"**/*.test.ts\" --ignore-pattern \"**/*.test.tsx\" --ignore-pattern \"src/test-utils/**\" --ignore-pattern \"src/__mocks__/**\" --ignore-pattern src/setupTests.ts",
     "test": "jest",
     "deploy": "npm run build && firebase deploy",
     "test:watch": "jest --watch",

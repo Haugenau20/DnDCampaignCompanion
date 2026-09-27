@@ -1,5 +1,5 @@
 // src/features/collaboration/notes/components/NoteReferences.tsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { EntityType } from "../types";
 import Typography from "../../../../core/components/Typography";
 import Card from "../../../../core/components/Card";
