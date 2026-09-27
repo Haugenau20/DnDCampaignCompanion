@@ -156,6 +156,11 @@ Merging to `main` deploys live. CI (`.github/workflows/test.yml`) runs steps 1 a
 `npm run lint`, on every PR and before the deploy, which waits on them; step 3 runs only as the PR
 preview's Docker build.
 
+**Never watch CI or PRs after pushing** — the maintainer's standing rule (2026-09-27). Do not
+subscribe to PR activity, poll check runs, `/loop`, schedule check-ins (`send_later`, routines,
+cron), or wait on CI in any other way. Run the gates below locally, push, report, and stop; the
+maintainer watches CI and asks when something needs doing.
+
 1. `npx tsc --noEmit` — type errors block the deploy
 2. `npm test` — must be fully green
 3. **`npm run build` — required, not implied by the two above.** webpack honours tsconfig `baseUrl`
