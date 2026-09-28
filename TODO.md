@@ -19,8 +19,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T033 | Revalidate nine perf findings | M | needs investigation | Gate for T032; the review is known to be partly stale |
-| medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; wait for T033 |
+| medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; its findings re-confirmed 2026-09-28 |
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
 | medium | T056 | Sign-in errors carry a reportable ref | S | blocked | On hold for an app-wide error-numbering system, which the maintainer wants first |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
@@ -40,6 +39,8 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T063 | Entity pages look like three products | L | needs scoping | NPC page doesn't use the shell; pick the look first |
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
+| low | T072 | Note autosaves can overlap | S | open | `PERF-14`; duplicate writes, no loss measured |
+| low | T073 | Reading progress rewrites one growing document | M | needs scoping | `PERF-12`; waits on whether progress is per player |
 | nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
 | nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
 
@@ -607,7 +608,9 @@ and a suggested budget. The entries below **track** what is still open; they do
 not restate it. Read the review before acting on any of them.
 
 **It audits commit `b73232a` (2026-08-30) and `main` has moved since.** The
-review says so itself. Six findings were re-checked on 2026-09-16 at `ebc0a28`:
+review says so itself. Every finding has now been re-checked against the tree,
+located by symbol: six on 2026-09-16 at `ebc0a28`, `PERF-02` on 2026-09-25,
+`PERF-11` during Phase 15, and the last seven on 2026-09-28 at `ed477e6`.
 
 | Finding | Severity | Re-checked 2026-09-16 |
 |---|---|---|
@@ -618,11 +621,19 @@ review says so itself. Six findings were re-checked on 2026-09-16 at `ebc0a28`:
 | `PERF-08` duplicate collection owners | Medium | **Fixed** 2026-09-22 — one fetch per collection, pinned by `shared/hooks/__tests__/provider-fetch-counts.test.tsx`. |
 | `PERF-15` duplicate `NavigationProvider` | Low | **Fixed** 2026-09-24 — `index.tsx` mounts no provider of its own; `App`'s is the only one. |
 | `PERF-02` auth restore waterfall | High | **Confirmed, mostly fixed** 2026-09-25 — see T032. The restore is 3 round trips deep instead of 5 + one per group. |
+| `PERF-11` location walk loops on a cycle | Medium | **Fixed** in Phase 15. `15-3` put the walk behind a visited set and a depth cap (`shared/hooks/useHighlightTarget`); `15-4` routed every other walk over the tree through `locations/utils/location-tree.ts`, with the same guards, and made the cycle tests hang the suite if a guard is removed. |
+| `PERF-03` every provider above the router | High | **Confirmed** 2026-09-28 — see T032. `App.tsx` still wraps `<Routes>` in the NPC, Location, Story, Rumor, Quest, Note, Usage and Search providers. `UsageProvider` calls `getUsageStatus` once per signed-in uid on every route, though only `NotePage`'s `UsageMeter` and `CampaignLinksPanel` read it. `SearchProvider` no longer fetches (it indexes the providers' copies since `PERF-08`), but it keeps all six collections subscribed. T030's lazy routes split the code, not the data. |
+| `PERF-05` chapter order costs O(N) serial round trips | High | **Confirmed** 2026-09-28 — see T032. In `StoryContext`, `createChapter`, `deleteChapter`, `reorderChapters` and `updateChapter`'s order-change path still shift each chapter with `setDocument` → verifying `getDocument` → delete inside an awaited `for` loop. `updateChapter` still awaits `refreshChapters()` before the write. `DocumentService.batchOperations` has one caller, `useFirestore`, and none of these paths. |
+| `PERF-06` writes re-read attribution and reload collections | High | **Confirmed** 2026-09-28 — see T032. `DocumentService.getCreationAttribution` / `getModificationAttribution` still `getDoc` the group profile on every attributed write. The NPC, Quest and Rumor contexts refetch their collection after every mutation, and `LocationContext` refetches from the event it dispatches. `RumorBatchActions` still awaits one update or delete per selected id, and the rumour combine/convert flows loop the same way. The page-level double refresh moved: `QuestEditPage` is gone, and `QuestDetailPage`'s `save` calls `updateQuest` (which refreshes) and then `refreshQuests()`. `NPCsPage` passes `refreshNPCs` as `NPCDirectory`'s `onNPCUpdate`, which runs after `updateNPCRelationship` has already refreshed. |
+| `PERF-09` Home refetches attribution profiles | Medium | **Confirmed** 2026-09-28 — see T032. `HomePage` (still `/`) re-runs its effect whenever quests, rumours, NPCs, locations or chapters change. It collects every `createdBy`/`modifiedBy` uid and `fetchAttributionUsernames` reads each group profile afresh: there is no cache across runs, and uids whose items already carry the `*Username`/`*CharacterName` fields that `determineAttributionActor` prefers are fetched anyway. |
+| `PERF-12` progress rewrites a growing document | Medium | **Confirmed, partly mitigated** 2026-09-28 — T073. |
+| `PERF-13` profile/admin mutations reload held data | Medium | **Confirmed** 2026-09-28 — see T032. Each `useUser` update awaits `refreshUserProfile`, which re-reads the global profile and re-runs `setActiveGroupContext` (group profile and campaign list, in parallel since `PERF-02`). The cited `CampaignManagementView` is no longer mounted, but the live `/admin/campaigns` (`AdminCampaignsPage`) repeats it. It loads `getCampaigns` on mount even when the context holds the list. After create, update or delete, which `useCampaigns` already follows with `refreshCampaigns`, it calls `reload()` again. |
+| `PERF-14` note autosaves can overlap | Low | **Confirmed** 2026-09-28 — T072. |
 
-The **other eight are unverified against current `main`** — `03`, `05`,
-`06`, `09`, `11`, `12`, `13`, `14`. That is T033. The review's own
-prioritized list opens with a finding that is already fixed, so do not work
-straight down it.
+Seven of fifteen are fixed; the other eight hold. The review's own prioritized
+list opens with a finding that is already fixed, so do not work straight down
+it. Re-check a finding by symbol before acting on its line links: they are
+`b73232a` line numbers, and several files have moved or been deleted.
 
 ### T032 — Performance remediation programme
 **Type** debt · **Size** L · **Status** needs scoping · **Verified** 2026-09-16 ·
@@ -652,7 +663,11 @@ emulator.
   front of the 32-chapter sample costs ~**102** serialized Firestore operations.
 - `PERF-06` — attributed writes re-read the group profile, and most contexts then
   reload the entire collection.
-- **Catch**: all four are **unrevalidated** — do T033 first. They also want a
+- **Also in scope**: `PERF-09` (Home's attribution reads) and `PERF-13`
+  (profile and campaign-admin reloads) are the same two defects, attribution
+  read per use and a refetch after a known write, and want the same cache.
+- **Catch**: all four were **re-confirmed** 2026-09-28 against `ed477e6`
+  (the table above names today's sites). They also want a
   shared answer (one restore orchestrator, one query cache, one owner per
   collection), so picking them off individually will produce four partial
   designs. The review's §"Suggested performance budgets" is the acceptance
@@ -660,30 +675,40 @@ emulator.
   primitives that already exist, including `DocumentService.batchOperations`.
 - **Source**: performance review
 
-### T033 — Revalidate the nine unchecked performance findings
-**Type** debt · **Size** M · **Status** needs investigation · **Verified** 2026-09-16
+### T072 — Note autosaves can overlap
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-28 · `PERF-14`
 
-`PERF-03`, `05`, `06`, `09`, `11`, `12`, `13`, `14` have not been checked
-against current `main` (`PERF-02` was, on 2026-09-25 — see T032). Six others
-were, and **three had already been fixed** by work that landed after the audit
-— including the Critical one.
+`NoteEditor.performAutosave` is shared by the 2 s idle debounce, the 30 s
+dirty-note interval and manual save. `isSaving` is render state, not an
+in-flight guard, so a save that starts while another is awaiting sends a second
+write, and each attributed write re-reads the group profile (`PERF-06`).
 
-- **Catch**: line numbers in the review are `b73232a` line numbers and several
-  files have since moved or been deleted outright (`SearchBar.tsx`,
-  `ContextSwitcher.tsx`). The review links some findings as GitHub permalinks at
-  that revision for exactly this reason. Locate by symbol, not by line.
-- **`PERF-11` is confirmed and closed.** It held: the walk was a
-  `while (current?.parentId)` around repeated `locations.find` with no visited
-  set. `15-3` moved it into `shared/hooks/useHighlightTarget` behind a visited
-  set and a depth cap; `15-4` put every other walk over the location tree —
-  render, breadcrumb, descendant exclusion, delete ordering, filter recursion —
-  behind `locations/utils/location-tree.ts`, which carries the same guards, and
-  made the cycle tests hang the suite rather than fail if a guard is removed.
-  That mattered more than it looked: `15-4` is the PR that makes a cycle
-  *reachable*, because until *Move elsewhere* shipped nothing in the product
-  could choose a parent. **The other seven findings are still unchecked**, which
-  is what keeps this entry open.
-- **Source**: performance review
+- **Where**: `features/collaboration/notes/components/NoteEditor.tsx`,
+  `performAutosave`, `scheduleAutosave` and the interval effect below them.
+- **Catch**: for a note not yet saved (`isUnsaved`), both overlapping calls
+  choose `saveNote`, the path that creates the document. What a second
+  create does was not measured. Check it before sizing the fix, which is
+  otherwise a promise ref that coalesces saves.
+- **Source**: T033, from the performance review
+
+### T073 — Reading progress rewrites one growing document
+**Type** debt · **Size** M · **Status** needs scoping · **Verified** 2026-09-28 · `PERF-12`
+
+`ChapterReader` still throttles to 1,500 ms. Every emission still
+`setDocument`s the whole `story-progress/current-progress` document, with every
+chapter's entry in its `chapterProgress` map (`StoryContext.persistProgress`,
+reached from `updateChapterProgress`, `updateCurrentChapter` and
+`markChapterComplete`). Since the review, `applyProgress` composes each write
+from a ref, so a write no longer drops another's change in memory. The writes
+are still fire-and-forget, uncoalesced, and grow with the chapter count.
+
+- **Question before sizing**: the document lives at
+  `groups/{g}/campaigns/{c}/story-progress/current-progress`, one per
+  campaign, and every member writes it. So one player's position replaces
+  another's. Bug #018 calls it "shared reading progress", so this may be
+  intended. If progress should be per player, the split (a document per uid,
+  or per chapter) is also this finding's fix.
+- **Source**: T033, from the performance review
 
 ---
 
@@ -732,6 +757,13 @@ The maintainer wants the repo cleaned up, doc files especially.
   steps TODO.md shows were done since). T039 is one symptom of the same drift.
 - **Scripts**: `scripts/copyFeatureFiles.ps1` lists pre-restructure paths;
   `scripts/manage-environment.ps1` is Docker-based and unused.
+- **Components nothing renders** (found by T033, 2026-09-28):
+  `admin/components/CampaignManagementView.tsx` (525 lines, replaced by
+  `AdminCampaignsPage` in Phase 14) is imported only by its own test.
+  `FloatingUsageIndicator` (349 lines) is still exported from the
+  collaboration barrel, but `Layout.tsx` says it renders nowhere, and nothing
+  does. Both keep their classes alive in `css-class-manifest.test.ts`, which
+  counts any source file as a consumer.
 - **Catch**: `docker/` is *not* dead. `CLAUDE.md` calls it unused, but CI builds
   the frontend with `docker/Dockerfile.frontend.prod`. And many docs are phase
   handoffs that code comments cite by name, so deleting one breaks references.
