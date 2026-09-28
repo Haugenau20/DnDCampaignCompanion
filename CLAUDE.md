@@ -177,6 +177,12 @@ maintainer watches CI and asks when something needs doing.
    is safe only in `__tests__/` and `test-utils/`. A new top-level `src/` directory must also be
    added to the resolver allow-list in `jest.config.ts`.
 
+**`package.json` declares `"sideEffects": ["*.css"]`**: webpack may drop any other module in `src/`
+whose exports nobody uses, which is how the feature barrels stop dragging every page into `main.js`
+(T030). A module imported only for what it does on load (`import "./x"`) is silently dropped by
+webpack, in the dev server and the build alike, while jest still runs it, so no test can catch
+it. Add such a file to the list. Route pages load through `app/lazyPage.ts`; a page added to `App.tsx` should too.
+
 **Four resolvers disagree; no single gate catches all of them:**
 
 | Resolver | `baseUrl` | `paths` (`@/…`) |

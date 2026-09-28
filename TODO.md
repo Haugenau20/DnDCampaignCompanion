@@ -28,7 +28,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
 | medium | T071 | Band eyebrow is 2.3:1 in light | S | open | Fails contrast on every band page in the default theme; needs a schema call, like T040 |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
-| low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
+| low | T030 | Entry bundle has no size ceiling | S | open | The split landed; nothing stops it regressing |
 | low | T043 | Orphaned `importantNPCs` names | S | open | Nothing was destroyed; a judgement call about one campaign |
 | low | T042 | Theme class as data has no gate | S | open | Latent pattern; bitten once, now partly gated |
 | low | T037 | A group cannot be deleted | L | open | Leave exists; deletion is rare and large |
@@ -677,7 +677,7 @@ review says so itself. Six findings were re-checked on 2026-09-16 at `ebc0a28`:
 |---|---|---|
 | `PERF-01` search never terminates on whitespace | Critical | **Fixed.** All three split sites are now `split(/\s+/).filter(Boolean)`, and `findWordMatches` (`SearchService.ts:294`) guards `if (!word) return []`. `SearchBar.tsx` is gone, replaced by `shared/components/command-palette/`. The regression test that did not ship with the fix landed as T031 (2026-09-23), pinning each guard separately. |
 | `PERF-07` context switch refreshes then reloads | High | **Fixed.** The only `window.location.reload()` left in `src/` is `ErrorBoundary.tsx:62`. |
-| `PERF-10` all routes + full Lodash in one bundle | Medium | **Half fixed.** Zero `lodash` imports remain in `src/`. Route splitting is still open — see T030. |
+| `PERF-10` all routes + full Lodash in one bundle | Medium | **Fixed** 2026-09-28. Zero `lodash` imports remain in `src/`, and routes load on first visit: `main.js` 341 → 264 kB gzip. A size ceiling is still open — see T030. |
 | `PERF-04` notes loaded twice, unbounded | High | **Fixed** 2026-09-24 — `NoteContext` reads once, constrained to the active campaign, and reads nothing before one is selected. New note ids are random, so nothing needs the other campaigns' notes. |
 | `PERF-08` duplicate collection owners | Medium | **Fixed** 2026-09-22 — one fetch per collection, pinned by `shared/hooks/__tests__/provider-fetch-counts.test.tsx`. |
 | `PERF-15` duplicate `NavigationProvider` | Low | **Fixed** 2026-09-24 — `index.tsx` mounts no provider of its own; `App`'s is the only one. |
@@ -688,22 +688,22 @@ The **other eight are unverified against current `main`** — `03`, `05`,
 prioritized list opens with a finding that is already fixed, so do not work
 straight down it.
 
-### T030 — One eager bundle ships every route
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-16 · `PERF-10`
+### T030 — Nothing stops the entry bundle growing back
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-28 · `PERF-10`
 
-- **Where**: `src/app/App.tsx` statically imports all 9 page modules; no
-  `React.lazy` or `Suspense` anywhere in it. At audit the optimized build emitted
-  a single 1,138,710-byte JS file (**308.17 kB gzip**) with no route chunks.
-- **Touches**: `App.tsx`, and a bundle-size ceiling in CI.
-- **Catch**: the Lodash half of this finding is already closed — no `lodash`
-  import remains in `src/` — so re-measure before quoting the 308 kB figure.
-- **The import cycles are gone, and gated.** The review flagged six; by
-  2026-09-28 there were nine, in three knots: the dashboard layouts importing
-  `Activity` back from `HomePage`, `BackToCampaign` in `shared/` reading
-  `user-management`'s barrel while `AdminLayout` rendered it, and the attach
-  tray (rendered by `campaign-entities`) reaching the quick-add dialog, which
-  imports that feature and `collaboration`. All three were cut on 2026-09-28,
-  and `npm run lint` now runs `import/no-cycle`, so a new one fails CI.
+The split itself is done. Every route but `/` and the not-found page loads on
+first visit (`app/lazyPage.ts`), and `package.json` declares `sideEffects` so
+webpack can drop what a feature barrel re-exports and nobody uses. On
+2026-09-28 that took `main.js` from **341.47 kB to 264.23 kB gzip**. The route
+split alone was worth 16 kB; the rest was pages the barrels had been dragging in.
+
+- **Still open**: a ceiling in CI. One stray import from an eager module into
+  a page, or a new module that needs its import-time side effects, and the
+  bytes come back with every gate green.
+- **Touches**: `.github/workflows/test.yml`, and a script that reads the build
+  output.
+- **Catch**: the build is not in `test.yml` today (it runs only as the PR
+  preview's Docker build), so the check brings a build step with it.
 - **Source**: performance review
 
 ### T032 — Performance remediation programme
