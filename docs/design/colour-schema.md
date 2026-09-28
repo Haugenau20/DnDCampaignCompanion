@@ -261,7 +261,7 @@ label scale that is correct and stays. An earlier revision of this document
 carried a much stronger rule — that red must never render as text at all — and
 built a filled-chip model across every directory row to enforce it. That was an
 over-reading of a preference about the *accent*, it inflated the token tree by
-roughly forty leaves, and it is reverted (D35, D36).
+roughly forty leaves, and it is reverted (D35, D44).
 
 The rule that was always doing the real work is narrower: **the accent is never
 red** (§2). Given that, a light red in a status label is simply what a dark
@@ -743,7 +743,7 @@ Carry these into `../plan/03-drift-log.md` as they are implemented.
   0.09 is the most chroma an indigo can carry while all three light-mode rungs
   stay in gamut; 245° desaturates its darkest rung above roughly 0.07, and teal
   and cyan clip harder. Five leaves change per mode. This supersedes "v6 is
-  additive over v2" for this case: that rule existed to keep a multi-PR stack
+  additive over v2" (D44) for this case: that rule existed to keep a multi-PR stack
   coherent while Phase 12 was in flight, and Phase 12 is merged. It does **not**
   fix the adjacency — the rungs differ only in lightness, by design, so the
   bars separate their bands with a hairline instead.
@@ -751,12 +751,25 @@ Carry these into `../plan/03-drift-log.md` as they are implemented.
   was edited to include the feedback and disposition scales after `12-2` had
   merged without them, leaving two PRs consuming names nothing had built. Work
   added to a phase after its PR merges gets a new PR — here `12-2b`.
-- **D36 — v6 is additive over v2.** The merged implementation is the floor: no
+- **D44 — v6 is additive over v2.** The merged implementation is the floor: no
   value v2 shipped may change, and a correction arrives as a new token, not a
   renamed or re-solved one. An earlier draft of v6 renamed `accent.base` to
   `accent.ink`/`edge`/`fill` and re-solved several inks against their own
   washes; both would have broken `role-map.ts` and the fixture test on `main`
   for no design gain.
+  Numbered D36 until 2026-09-28, when it was found sharing that number with
+  "The fixture reproduces the generator's algorithm" above. Every citation
+  that meant this record, here and in `12-2b-late-scales.md`, now says D44.
+- **D45 — A band with no picture is the plain band.** The hero band's empty
+  fallback (drift-log `Q4`) is the band pair itself: `surface.band.bg`, with
+  the faint ruling `.hero-band` draws in `surface.band.hover`. It is not a
+  sunken surface or an image-slot placeholder. `ImageSlot`'s sunken fill is
+  the empty state for a picture that has its own frame (a portrait, a
+  crest). A band keeps its ground whether or not a picture fills it, because
+  the text on it is solved against that ground. The same token names it in
+  both themes, and like every pair it resolves to a different value in each.
+  Recorded from practice: `PicturedBand` adds its picture classes only when
+  there is a picture, so a band without one is exactly `.hero-band`.
 - **D31 — No alias layer.** Legacy names resolve as derivations at generation
   time and are deleted with their consumers in `12-3a`/`12-3b`; none survives as a
   compatibility shim. `color.primary/secondary/accent` and
@@ -910,6 +923,6 @@ exactly as it is. It is a *primitive path* inside the generator, not a token in
 the theme tree — which is why `accent.ink`/`edge`/`fill` can be added as tree
 tokens without touching it. An earlier draft of this document mistook the two
 and proposed renaming the primitive; that would have broken the merged
-generator for no design gain (D36).
+generator for no design gain (D44).
 
 **Still to do:** `12-2b`, then `12-3a`, `12-3b`, `12-5`, `12-6`.

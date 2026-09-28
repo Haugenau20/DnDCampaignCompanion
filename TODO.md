@@ -42,9 +42,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
 | nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
 | nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
-| nit | T009 | Hero band fallback never recorded | S | open | Answered by practice; write it down |
-| nit | T010 | Two `D36`s in `colour-schema.md` | S | open | Ambiguous citations |
-| nit | T011 | Stale phase counts in `colour-schema.json` | S | open | Needs the maintainer's semantics |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -341,13 +338,6 @@ all already said — and which means the two adjacent same-hue bar segments this
 question is about are now genuinely on screen. **Verified in Chrome**: the
 disproved chip computes `valence-0 cue-negated`, with no red anywhere on a
 rumour.
-
-### T009 — The hero band's empty fallback surface was never recorded
-**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-16 · `Q4`
-
-Answered by practice — `.image-slot` sits on `--surface-sunken-bg`, the same in
-both themes — but never written down as a decision. Low stakes; listed so the
-question isn't re-opened from scratch.
 
 ### T040 — No accent pair is authored for the band surface
 **Type** decision · **Size** S · **Status** open · **Verified** 2026-09-17
@@ -699,26 +689,8 @@ were, and **three had already been fixed** by work that landed after the audit
 
 ## Documentation debt
 
-All three need a hand allowed to edit the schema files and the read-only
+T039 needs a hand allowed to edit the schema files and the read-only
 history, which no implementing change may touch.
-
-### T010 — `colour-schema.md` has two decisions numbered `D36`
-**Type** docs · **Size** S · **Status** open · **Verified** 2026-09-16 · `R67`
-
-`docs/design/colour-schema.md` §8 has **two** entries numbered `D36` ("The
-fixture reproduces the generator's algorithm, to the byte" and "v6 is additive
-over v2"). They are unrelated, and `D36` is cited from four places, so every
-citation is ambiguous. Not renumbered, because that means editing a read-only
-handoff.
-
-### T011 — `colour-schema.json` carries stale phase counts
-**Type** docs · **Size** S · **Status** open · **Verified** 2026-09-16 · `R68`
-
-`docs/design/colour-schema.json` still carries
-`inCodeAfter: {"12-1 + 12-2": 109}` and `pendingIn: {"12-2b": 26}`. Every PR in
-Phase 12 is merged, so nothing is pending and the in-code count is 123. Left
-alone because the intended semantics of those fields are the maintainer's, and
-guessing is how a source of truth grows a second, wrong voice.
 
 ### T039 — Documents still tell an agent to write to the retired drift log
 **Type** docs · **Size** M · **Status** open · **Verified** 2026-09-17
@@ -742,7 +714,9 @@ because almost all of them are read-only to an implementing change.
   phase plans are on the read-only list too. The handoff was right about its
   three-file scope and wrong about the reach of its gate.
 - **Touches**: the schema files and the read-only history. Needs the
-  maintainer's hand, like `T010` and `T011`. The cheapest honest fix may be a
+  maintainer's hand, as `T010` and `T011` did (closed 2026-09-28 with the
+  maintainer's go-ahead: D36's twin renumbered to D44, the stale rollout
+  counts deleted). The cheapest honest fix may be a
   single line in each tracker's header rather than 54 edits.
 - **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13
 

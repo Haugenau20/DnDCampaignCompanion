@@ -3,12 +3,6 @@
   "version": 10,
   "warning": "GENERATED FIXTURE. Never edited by an implementation agent, and never edited to make a test pass. Regenerate from the contract in docs/design/colour-schema.md §4, the role map in §5.4 and the scales in §5.5. v7's knowledge values were revised by hand against an explicit instruction (D40); the maths behind them is independently checked against Chromium's colour pipeline in src/core/themes/__tests__/oklch-oracle.test.ts, which is what keeps this file a check on the generator rather than a copy of it.",
   "basedOn": "v9, deleting the knowledge ladder. Its three consumers -- locations, rumours and NPC presence -- all moved to the valence ramp, so the scale had none left. Its first rung survives as disposition.unknown at the same hue, chroma and lightness, so no value on screen changes; rungs 1 and 2 and knowledge.wash are gone. No other value changes.",
-  "inCodeAfter": {
-    "12-1 + 12-2": 109
-  },
-  "pendingIn": {
-    "12-2b": 26
-  },
   "leafCount": 139,
   "colourCount": 127,
   "hue": {
