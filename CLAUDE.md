@@ -106,7 +106,13 @@ When triaging a red test, first establish that it actually executed the code it 
 `cd firebase/functions && npm test` runs jest against the **running emulators** (start them with
 `start-dev.ps1` first; a `globalSetup` fails fast if they are down). Each suite uses its own `demo-`
 project id, so dev data is untouched (one exception, below). Not in CI (no emulator there). Tests live in
-`firebase/functions/test/`:
+`firebase/functions/test/`.
+
+**With no emulators running** (a cloud session, or CI): `npm --prefix firebase ci`, then
+`npm --prefix firebase run test:functions`. It starts the emulators with the repo's pinned CLI, runs
+the suite, and stops them; it needs Java. The pin (`firebase/package.json`) is **15.22.4 on purpose**:
+from 15.23.0 the CLI ignores `NO_PROXY`, so behind a proxy the Storage rules suite fails 11 tests.
+The reason is recorded in that file.
 
 - **Callables** — invoked with `fn.run({data, auth})` against emulator Firestore. Covered:
   `redeemInvitation`, `setMemberRole`, the sign-up gate (`reserveSignUp`, and `gateAccountCreation`

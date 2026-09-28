@@ -2,7 +2,9 @@
 //
 // Tests for the Cloud Functions and for `firestore.rules.prod`. Both run
 // against the Firestore and Auth EMULATORS -- start them first, with
-// `.\scripts\start-dev.ps1 -Action start` from the repo root.
+// `.\scripts\start-dev.ps1 -Action start` from the repo root. Or let
+// `npm --prefix firebase run test:functions` start and stop them around the
+// run, with the repo's pinned CLI.
 //
 // Every suite works under its own `demo-` project id. The emulator keeps each
 // project's data apart, and a `demo-` id can never name a real project, so

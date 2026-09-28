@@ -41,7 +41,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
 | low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; the fix is leaving CRA, which needs a plan |
 | low | T063 | Entity pages look like three products | L | needs scoping | NPC page doesn't use the shell; pick the look first |
-| low | T065 | Firebase CLI 13 → 15 | S | open | Brings the artifact cleanup policy; re-run the emulator suites after |
+| low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
 | nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
 | nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
@@ -594,19 +594,27 @@ and before the merge-to-main deploy, which waits on it. One gate is missing.
 - **Source**: todo.txt, 2026-09-24; the jest, type-check and lint gates
   landed 2026-09-26
 
-### T065 — The Firebase CLI is two major versions behind
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-24
+### T065 — The maintainer's global Firebase CLI is still 13.x
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-28
 
-Installed globally: `firebase-tools` 13.32.0; the CLI offers 15.x.
+The repo now pins `firebase-tools` **15.22.4** in `firebase/package.json`, and
+`firebase/functions`' suite passes on it: 11/11 suites, 194/194 tests, the same
+as on 13.32.0 (2026-09-28). An emulator export written by 13.32.0 imports under
+15.22.4 with its Firestore documents and Auth users intact. What is left
+happens on the maintainer's machine, which `start-dev.ps1` runs against
+the **global** CLI:
 
-- **Why now**: the 2026-09-24 functions deploy ended with "Unhandled error
-  cleaning up build images. This could result in a small monthly bill". The
-  newer CLI's `firebase functions:artifacts:setpolicy` sets a cleanup policy
-  for that.
-- **Catch**: two majors can change emulator behaviour this repo leans on. Re-run
-  `firebase/functions`' suite (including the Storage rules suite and its
-  project-id quirk) and a `start-dev.ps1` round trip after upgrading.
-- **Source**: todo.txt, 2026-09-24
+- `npm i -g firebase-tools@15.22.4`, then one `start-dev.ps1` start/stop round
+  trip. The PowerShell script itself was not run; only the import/export it
+  performs was.
+- **Why not latest**: from 15.23.0 the CLI's HTTP client sends every request
+  through `HTTPS_PROXY`, `127.0.0.1` included, and ignores `NO_PROXY`. Behind a
+  proxy the Storage emulator's `firestore.get()` then reaches the proxy instead
+  of the Firestore emulator (403), and the Storage rules suite fails 11 tests.
+  Still so on 15.31.0. Bisected 2026-09-28: 15.22.4 good, 15.23.0 bad. No proxy
+  (a normal desktop, a GitHub runner) is unaffected, but cloud agent sessions
+  set one. Re-run `npm --prefix firebase run test:functions` behind a proxy before bumping.
+- **Source**: todo.txt, 2026-09-24; pinned 2026-09-28
 
 ### T070 — Cloud Functions are deployed by hand, not by CI
 **Type** debt · **Size** M · **Status** needs investigation · **Verified** 2026-09-25
