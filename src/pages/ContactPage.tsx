@@ -2,6 +2,7 @@
 import React from "react";
 import Typography from "core/components/Typography";
 import Card from "core/components/Card";
+import { useCampaigns } from "features/user-management";
 import BackToCampaign from "shared/components/BackToCampaign";
 import ContactForm from "shared/components/ContactForm";
 import PageShell from "shared/components/page-shell/PageShell";
@@ -27,12 +28,14 @@ import { Clock } from "lucide-react";
  * `SenderIdentity`'s recessed block a card to be recessed from.
  */
 const ContactPage: React.FC = () => {
+  const { activeCampaign } = useCampaigns();
+
   return (
     <PageShell
       title="Get in touch"
       subtitle="Bugs, ideas and account questions all land in the same inbox — it's a two-person project, so pick a category and we'll know what we're looking at."
       maxWidth="max-w-[660px]"
-      breadcrumb={<BackToCampaign className="mb-4" />}
+      breadcrumb={<BackToCampaign className="mb-4" campaignName={activeCampaign?.name} />}
     >
       <div className="space-y-6">
         {/* The response expectation, stated where it cannot be missed */}

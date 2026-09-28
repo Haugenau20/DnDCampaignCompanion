@@ -227,6 +227,12 @@ src/
 that feature's `index.ts`. **Inside a domain, import siblings directly — never your own barrel**
 (that creates cycles such as `index.ts` → `AdminPanel.tsx` → `index.ts`).
 
+**`npm run lint` refuses import cycles** (`import/no-cycle`, on the lint script only, so the dev
+server and build don't pay its ~20 s). The usual way into one is a `shared/` module importing a
+feature's barrel while that feature renders it: pass the value in as a prop, or split the part the
+feature needs into a file that imports no feature (`QuickAddContext` vs `QuickAddProvider`).
+`import type` is exempt, since it never reaches the bundle.
+
 Filenames mislead about where code belongs (e.g. `UsageContext` sounds shared but depends on entity
 extraction). Open the file and check its imports before deciding a boundary.
 

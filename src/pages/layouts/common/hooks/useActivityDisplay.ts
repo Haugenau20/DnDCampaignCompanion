@@ -1,6 +1,6 @@
 // components/features/layouts/common/hooks/useActivityDisplay.ts
 import { useMemo } from 'react';
-import { Activity } from 'pages/HomePage';
+import type { Activity } from 'pages/layouts/common/types';
 import { getRelativeTime } from 'shared/utils/dateFormatter';
 import { getContentTypeLabel } from '../utils/contentTypeUtils';
 import { useNavigation } from 'shared/context/NavigationContext';

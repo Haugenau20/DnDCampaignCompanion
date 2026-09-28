@@ -696,11 +696,14 @@ straight down it.
   a single 1,138,710-byte JS file (**308.17 kB gzip**) with no route chunks.
 - **Touches**: `App.tsx`, and a bundle-size ceiling in CI.
 - **Catch**: the Lodash half of this finding is already closed — no `lodash`
-  import remains in `src/` — so re-measure before quoting the 308 kB figure. The
-  review also flagged six circular dependency chains (barrel cycles between
-  campaign/collaboration features, and layout helpers importing back from
-  `HomePage`) that make reliable splitting harder; expect to untangle those
-  first. No delay was ever attributed to the cycles themselves.
+  import remains in `src/` — so re-measure before quoting the 308 kB figure.
+- **The import cycles are gone, and gated.** The review flagged six; by
+  2026-09-28 there were nine, in three knots: the dashboard layouts importing
+  `Activity` back from `HomePage`, `BackToCampaign` in `shared/` reading
+  `user-management`'s barrel while `AdminLayout` rendered it, and the attach
+  tray (rendered by `campaign-entities`) reaching the quick-add dialog, which
+  imports that feature and `collaboration`. All three were cut on 2026-09-28,
+  and `npm run lint` now runs `import/no-cycle`, so a new one fails CI.
 - **Source**: performance review
 
 ### T032 — Performance remediation programme

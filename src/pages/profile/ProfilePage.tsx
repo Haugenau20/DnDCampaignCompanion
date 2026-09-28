@@ -2,6 +2,7 @@
 import React from "react";
 import {
   useGroups,
+  useCampaigns,
   AccountCard,
   GroupMembershipCard,
   CharactersCard,
@@ -40,13 +41,14 @@ import { usePageGate, GatedContent } from "shared/components/gated";
  */
 const ProfilePage: React.FC = () => {
   const { activeGroup } = useGroups();
+  const { activeCampaign } = useCampaigns();
   const gate = usePageGate("profile");
 
   return (
     <PageShell
       title="Your profile"
       maxWidth="max-w-3xl"
-      breadcrumb={<BackToCampaign className="mb-4" />}
+      breadcrumb={<BackToCampaign className="mb-4" campaignName={activeCampaign?.name} />}
     >
       <GatedContent gate={gate}>
         <div className="space-y-4">

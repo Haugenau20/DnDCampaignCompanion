@@ -3,12 +3,17 @@ import React from "react";
 import { ArrowLeft } from "lucide-react";
 import Button from "core/components/Button";
 import { useNavigation } from "shared/hooks/useNavigation";
-import { useCampaigns } from "features/user-management";
 
 /** Props for {@link BackToCampaign}. */
 export interface BackToCampaignProps {
   /** Extra classes, usually the caller's own bottom margin. */
   className?: string;
+  /**
+   * The active campaign's name, or nothing when there is none. The caller
+   * reads it from `useCampaigns`; see the component's note for why this does
+   * not.
+   */
+  campaignName?: string | null;
 }
 
 /**
@@ -27,14 +32,16 @@ export interface BackToCampaignProps {
  *
  * On `Button variant="link"` rather than the raw class pair, so it inherits
  * the primitive's focus ring and disabled handling like every other control.
+ *
+ * It is told the campaign's name rather than reading `useCampaigns` itself.
+ * `AdminLayout`, inside `user-management`, renders it, so a `shared/`
+ * component importing that feature's barrel closed an import cycle, which
+ * `lint`'s `import/no-cycle` refuses (T030).
  */
-const BackToCampaign: React.FC<BackToCampaignProps> = ({ className }) => {
+const BackToCampaign: React.FC<BackToCampaignProps> = ({ className, campaignName }) => {
   const { navigateToPage } = useNavigation();
-  const { activeCampaign } = useCampaigns();
 
-  const label = activeCampaign?.name
-    ? `Back to ${activeCampaign.name}`
-    : "Back to the campaign";
+  const label = campaignName ? `Back to ${campaignName}` : "Back to the campaign";
 
   return (
     <Button

@@ -1,6 +1,6 @@
 // components/features/layouts/common/hooks/useLayoutData.ts
 import { useMemo, useState, useEffect } from 'react';
-import { Activity } from 'pages/HomePage';
+import type { Activity } from 'pages/layouts/common/types';
 import type { Chapter } from 'features/storytelling';
 import type { Quest } from 'features/campaign-entities';
 import { Rumor } from 'features/campaign-entities';

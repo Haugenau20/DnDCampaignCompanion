@@ -60,7 +60,7 @@ const AdminLayout: React.FC = () => {
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, activeGroup, getAllUsers, loading: groupsLoading } = useGroups();
-  const { campaigns } = useCampaigns();
+  const { campaigns, activeCampaign } = useCampaigns();
 
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
@@ -133,7 +133,7 @@ const AdminLayout: React.FC = () => {
       <PageShell
         title="No group selected"
         maxWidth="max-w-3xl"
-        breadcrumb={<BackToCampaign className="mb-4" />}
+        breadcrumb={<BackToCampaign className="mb-4" campaignName={activeCampaign?.name} />}
       >
         <Typography color="secondary">
           Administration belongs to a group. Choose one from the group switcher
@@ -150,7 +150,7 @@ const AdminLayout: React.FC = () => {
       <PageShell
         title="You are not an admin of this group"
         maxWidth="max-w-3xl"
-        breadcrumb={<BackToCampaign className="mb-4" />}
+        breadcrumb={<BackToCampaign className="mb-4" campaignName={activeCampaign?.name} />}
       >
         <Typography color="secondary">
           {`Only admins can manage ${activeGroup.name}. Ask one of them if you need something changed.`}
@@ -238,7 +238,7 @@ const AdminLayout: React.FC = () => {
                     `Button variant="link"` sets no height of its own, which
                     leaves a 24px tap target on a phone. */}
                 <div className="shrink-0">
-                  <BackToCampaign className="min-h-[2.75rem]" />
+                  <BackToCampaign className="min-h-[2.75rem]" campaignName={activeCampaign?.name} />
                 </div>
               </div>
             </div>

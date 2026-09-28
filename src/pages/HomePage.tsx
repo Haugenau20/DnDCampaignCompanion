@@ -17,17 +17,9 @@ import DashboardLayout from 'pages/layouts/dashboard/DashboardLayout';
 import useLayoutData from 'pages/layouts/common/hooks/useLayoutData';
 import CampaignBanner from 'pages/layouts/dashboard/sections/CampaignBanner';
 import { rumorTitleText } from 'features/campaign-entities';
+import type { Activity } from 'pages/layouts/common/types';
 
-// Combined activity type from all content types
-export interface Activity {
-  id: string;
-  type: 'chapter' | 'npc' | 'quest' | 'rumor' | 'location';
-  title: string;
-  description?: string;
-  actor: string;
-  timestamp: Date;
-  link: string;
-}
+export type { Activity };
 
 /**
  * HomePage component serving as the container for the dashboard layout.

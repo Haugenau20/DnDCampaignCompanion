@@ -20,7 +20,7 @@ import {
 } from 'features/user-management';
 import { QuestProvider } from 'features/campaign-entities';
 import { NoteProvider, UsageProvider } from 'features/collaboration';
-import { QuickAddProvider } from 'shared/context/QuickAddContext';
+import { QuickAddProvider } from 'shared/context/QuickAddProvider';
 import ErrorBoundary from 'shared/components/ErrorBoundary';
 import Layout from 'app/layout/Layout';
 
