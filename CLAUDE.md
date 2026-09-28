@@ -105,8 +105,8 @@ When triaging a red test, first establish that it actually executed the code it 
 ### `firebase/functions` has its own suite — root `npm test` does not run it
 `cd firebase/functions && npm test` runs jest against the **running emulators** (start them with
 `start-dev.ps1` first; a `globalSetup` fails fast if they are down). Each suite uses its own `demo-`
-project id, so dev data is untouched (one exception, below). Not in CI (no emulator there). Tests live in
-`firebase/functions/test/`.
+project id, so dev data is untouched (one exception, below). CI runs it too, as the `functions` job in
+`test.yml`, so it gates every PR and the deploy. Tests live in `firebase/functions/test/`.
 
 **With no emulators running** (a cloud session, or CI): `npm --prefix firebase ci`, then
 `npm --prefix firebase run test:functions`. It starts the emulators with the repo's pinned CLI, runs
@@ -159,8 +159,9 @@ match `firestore.rules.prod` without reading them back.
 ## Verifying a Change Before Proposing a Merge
 
 Merging to `main` deploys live. CI (`.github/workflows/test.yml`) runs steps 1 and 2, plus
-`npm run lint`, on every PR and before the deploy, which waits on them; step 3 runs only as the PR
-preview's Docker build.
+`npm run lint` and the `firebase/functions` suite, on every PR and before the deploy, which waits on
+them; step 3 runs only as the PR preview's Docker build. Changed a function? Run
+`npm --prefix firebase run test:functions` too.
 
 **Never watch CI or PRs after pushing** — the maintainer's standing rule (2026-09-27). Do not
 subscribe to PR activity, poll check runs, `/loop`, schedule check-ins (`send_later`, routines,

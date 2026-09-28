@@ -10,7 +10,8 @@
 // project's data apart, and a `demo-` id can never name a real project, so
 // these suites cannot touch the dev data the app is using.
 //
-// Not part of the root `npm test`, and not run in CI: CI has no emulator.
+// Not part of the root `npm test`. CI runs it as the `functions` job in
+// .github/workflows/test.yml, through `npm --prefix firebase run test:functions`.
 module.exports = {
   testEnvironment: "node",
   roots: ["<rootDir>/test"],

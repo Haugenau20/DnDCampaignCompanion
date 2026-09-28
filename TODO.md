@@ -24,7 +24,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
 | medium | T056 | Sign-in errors carry a reportable ref | S | blocked | On hold for an app-wide error-numbering system, which the maintainer wants first |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
-| medium | T061 | CI does not run the functions suite | M | open | Tests, type-check and lint are gated; the functions suite needs emulators in CI |
+| medium | T061 | `test` check not required; test files unlinted | M | open | Every suite is gated in CI now, but branch protection must list the check, and test-file lint was never enforced |
 | medium | T070 | Functions are deployed by hand | M | needs investigation | Frontend and functions can drift in prod; contact secrets must move first. Service account roles unchecked |
 | medium | T071 | Band eyebrow is 2.3:1 in light | S | open | Fails contrast on every band page in the default theme; needs a schema call, like T040 |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
@@ -576,23 +576,23 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
   `CLAUDE.md`. Needs its own plan. It may also answer T030's bundle question.
 - **Source**: todo.txt, 2026-09-24
 
-### T061 — CI does not run the functions suite
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-26
+### T061 — The `test` check does not yet block a merge, and test files are unlinted
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-28
 
 `.github/workflows/test.yml` runs the type-check, `npm run lint` (app code,
-zero warnings) and `npm run test:ci` (jest, 80% coverage floor) on every PR
-and before the merge-to-main deploy, which waits on it. One gate is missing.
+zero warnings), `npm run test:ci` (jest, 80% coverage floor) and, since
+2026-09-28, `firebase/functions`' build and emulator-backed suite (the
+`functions` job, through `npm --prefix firebase run test:functions`) on every
+PR and before the merge-to-main deploy, which waits on all of it. Two things remain.
 
-- **`firebase/functions`' suite**: needs the emulators, which
-  `firebase emulators:exec --config firebase.emulators.json` can run in CI
-  (Java and `firebase-tools` in the runner; mind T065's CLI version).
 - **Not in the repo**: the `test` check blocks a merge only once branch
   protection on `main` lists it as required. That is a GitHub setting.
 - **Lint scope**: test files are excluded. They carry ~1,000 `react-app/jest`
   problems (mostly `testing-library/*`) that nothing has ever enforced; the
   build never lints them either. Bringing them in is its own job.
+  `firebase/functions`' own lint (~2,000 problems, mostly CRLF) is not a gate either.
 - **Source**: todo.txt, 2026-09-24; the jest, type-check and lint gates
-  landed 2026-09-26
+  landed 2026-09-26, the functions suite 2026-09-28
 
 ### T065 — The maintainer's global Firebase CLI is still 13.x
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-28
@@ -641,7 +641,7 @@ deploy it.
 - **Order**: functions must deploy before Hosting in the same run (`needs:`),
   or a new payload reaches users before the function that reads it.
 - **Out of scope**: rules stay manual; `firebase.json` has no rules keys on
-  purpose. Running the emulator-backed functions suite belongs to T061.
+  purpose. The emulator-backed functions suite already gates the deploy (`test.yml`).
 - **Source**: maintainer, 2026-09-25
 
 ---
