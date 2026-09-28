@@ -50,3 +50,6 @@ coverage
 # Keep them locally while a pass is in flight -- never commit them.
 chapter-dateModified-audit-*.json
 chapter-dateModified-journal-*.ndjson
+
+# Firebase CLI pinned for the repo (T065)
+/firebase/node_modules/

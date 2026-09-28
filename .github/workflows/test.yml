@@ -6,7 +6,9 @@
 # both hosting workflows, so a PR and the merge-to-main deploy run exactly the
 # same gate.
 #
-# Not here yet: the functions suite, which needs the emulators (T061).
+# `functions` runs firebase/functions' own suite against the emulators, which
+# `firebase emulators:exec` starts and stops around it with the repo's pinned
+# CLI (firebase/package.json). Both jobs must pass for a caller's `needs: test`.
 
 name: Test
 on:
@@ -39,3 +41,43 @@ jobs:
 
       - name: Test
         run: npm run test:ci
+
+  functions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            firebase/package-lock.json
+            firebase/functions/package-lock.json
+
+      # The Firestore and Storage-rules emulators are Java.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # The emulator jars are downloaded on first start; they change only with the CLI.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('firebase/package-lock.json') }}
+
+      - name: Install the Firebase CLI
+        run: npm ci --prefix firebase
+
+      - name: Install function dependencies
+        run: npm ci --prefix firebase/functions
+
+      # What `firebase deploy`'s predeploy runs. The suite type-checks only the
+      # files its tests import; this covers the rest.
+      - name: Build functions
+        run: npm --prefix firebase/functions run build
+
+      - name: Functions suite
+        run: npm --prefix firebase run test:functions

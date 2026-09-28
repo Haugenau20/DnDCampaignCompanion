@@ -24,8 +24,8 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
 | medium | T056 | Sign-in errors carry a reportable ref | S | blocked | On hold for an app-wide error-numbering system, which the maintainer wants first |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
-| medium | T061 | CI does not run the functions suite | M | open | Tests, type-check and lint are gated; the functions suite needs emulators in CI |
-| medium | T070 | Functions are deployed by hand | M | needs investigation | Frontend and functions can drift in prod; contact secrets must move first. Service account roles unchecked |
+| medium | T061 | `test` check not required; test files unlinted | M | open | Every suite is gated in CI now, but branch protection must list the check, and test-file lint was never enforced |
+| medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
 | medium | T071 | Band eyebrow is 2.3:1 in light | S | open | Fails contrast on every band page in the default theme; needs a schema call, like T040 |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
 | low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
@@ -41,7 +41,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
 | low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; the fix is leaving CRA, which needs a plan |
 | low | T063 | Entity pages look like three products | L | needs scoping | NPC page doesn't use the shell; pick the look first |
-| low | T065 | Firebase CLI 13 → 15 | S | open | Brings the artifact cleanup policy; re-run the emulator suites after |
+| low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
 | nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
 | nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
@@ -576,65 +576,88 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
   `CLAUDE.md`. Needs its own plan. It may also answer T030's bundle question.
 - **Source**: todo.txt, 2026-09-24
 
-### T061 — CI does not run the functions suite
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-26
+### T061 — The `test` check does not yet block a merge, and test files are unlinted
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-28
 
 `.github/workflows/test.yml` runs the type-check, `npm run lint` (app code,
-zero warnings) and `npm run test:ci` (jest, 80% coverage floor) on every PR
-and before the merge-to-main deploy, which waits on it. One gate is missing.
+zero warnings), `npm run test:ci` (jest, 80% coverage floor) and, since
+2026-09-28, `firebase/functions`' build and emulator-backed suite (the
+`functions` job, through `npm --prefix firebase run test:functions`) on every
+PR and before the merge-to-main deploy, which waits on all of it. Two things remain.
 
-- **`firebase/functions`' suite**: needs the emulators, which
-  `firebase emulators:exec --config firebase.emulators.json` can run in CI
-  (Java and `firebase-tools` in the runner; mind T065's CLI version).
 - **Not in the repo**: the `test` check blocks a merge only once branch
   protection on `main` lists it as required. That is a GitHub setting.
 - **Lint scope**: test files are excluded. They carry ~1,000 `react-app/jest`
   problems (mostly `testing-library/*`) that nothing has ever enforced; the
   build never lints them either. Bringing them in is its own job.
+  `firebase/functions`' own lint (~2,000 problems, mostly CRLF) is not a gate either.
 - **Source**: todo.txt, 2026-09-24; the jest, type-check and lint gates
-  landed 2026-09-26
+  landed 2026-09-26, the functions suite 2026-09-28
 
-### T065 — The Firebase CLI is two major versions behind
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-24
+### T065 — The maintainer's global Firebase CLI is still 13.x
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-28
 
-Installed globally: `firebase-tools` 13.32.0; the CLI offers 15.x.
+The repo now pins `firebase-tools` **15.22.4** in `firebase/package.json`, and
+`firebase/functions`' suite passes on it: 11/11 suites, 194/194 tests, the same
+as on 13.32.0 (2026-09-28). An emulator export written by 13.32.0 imports under
+15.22.4 with its Firestore documents and Auth users intact. What is left
+happens on the maintainer's machine, which `start-dev.ps1` runs against
+the **global** CLI:
 
-- **Why now**: the 2026-09-24 functions deploy ended with "Unhandled error
-  cleaning up build images. This could result in a small monthly bill". The
-  newer CLI's `firebase functions:artifacts:setpolicy` sets a cleanup policy
-  for that.
-- **Catch**: two majors can change emulator behaviour this repo leans on. Re-run
-  `firebase/functions`' suite (including the Storage rules suite and its
-  project-id quirk) and a `start-dev.ps1` round trip after upgrading.
-- **Source**: todo.txt, 2026-09-24
+- `npm i -g firebase-tools@15.22.4`, then one `start-dev.ps1` start/stop round
+  trip. The PowerShell script itself was not run; only the import/export it
+  performs was.
+- **Why not latest**: from 15.23.0 the CLI's HTTP client sends every request
+  through `HTTPS_PROXY`, `127.0.0.1` included, and ignores `NO_PROXY`. Behind a
+  proxy the Storage emulator's `firestore.get()` then reaches the proxy instead
+  of the Firestore emulator (403), and the Storage rules suite fails 11 tests.
+  Still so on 15.31.0. Bisected 2026-09-28: 15.22.4 good, 15.23.0 bad. No proxy
+  (a normal desktop, a GitHub runner) is unaffected, but cloud agent sessions
+  set one. Re-run `npm --prefix firebase run test:functions` behind a proxy before bumping.
+- **Source**: todo.txt, 2026-09-24; pinned 2026-09-28
 
-### T070 — Cloud Functions are deployed by hand, not by CI
-**Type** debt · **Size** M · **Status** needs investigation · **Verified** 2026-09-25
+### T070 — CI deploys the functions, but only once the maintainer sets it up
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-09-28
 
-Merging to `main` deploys Hosting only. Functions are deployed from the
-maintainer's machine, so a frontend change that needs a new function (as the
-bug-report screenshot did, 2026-09-25) is not live until someone remembers to
-deploy it.
+`firebase-hosting-merge.yml` now deploys the functions on every merge to
+`main`: a `deploy_functions` job after the tests and **before** Hosting
+(`needs:`), so a new page never reaches users before the function it calls.
+It runs the repo's pinned CLI with `--only functions --non-interactive`, under
+its own service account, read from the GitHub secret
+`FIREBASE_FUNCTIONS_DEPLOY_SA`. Until that secret exists the job fails and
+**holds back every Hosting deploy too**, so do the steps below before merging it.
 
-- **Where**: `.github/workflows/firebase-hosting-merge.yml` runs
-  `action-hosting-deploy` and nothing else; `firebase/functions/package.json`
-  pins Node 22 and already has `build` (`tsc`), which `firebase.json`'s
-  `predeploy` runs.
-- **Catch 1 (confirmed)**: `firebase/functions/src/contact.ts:54` reads
-  `CONTACT_EMAIL`/`CONTACT_PASSWORD` from `process.env`, which only the
-  gitignored `firebase/functions/.env` supplies. A CI checkout lacks it, so the
-  first CI deploy would ship a contact form with blank Gmail credentials. Move
-  both to Secret Manager the way `entityExtraction.ts:395` declares
-  `secrets: ["OPENAI_API_KEY"]`, and deploy that once by hand first.
-- **Catch 2 (unverified)**: `FIREBASE_SERVICE_ACCOUNT_DND_CAMPAIGN_COMPANION`
-  is probably the Hosting-only account `hosting:github` creates. Check its IAM
-  roles in the console; a separate deploy account is safer than widening it.
-  `gateAccountCreation` is a blocking function, which needs Auth admin rights too.
-- **Order**: functions must deploy before Hosting in the same run (`needs:`),
-  or a new payload reaches users before the function that reads it.
+- **Blocked on the maintainer**, all doable in a browser:
+  1. **Cleanup policy, once.** A non-interactive deploy fails, after
+     deploying, when `europe-west1` has no Artifact Registry cleanup policy
+     (the 2026-09-24 hand deploy warned there was none). In Cloud Shell:
+     `npx firebase-tools@15.22.4 login --no-localhost`, then
+     `npx firebase-tools@15.22.4 functions:artifacts:setpolicy --project dnd-campaign-companion --location europe-west1`.
+  2. **A deploy service account**, in IAM & Admin → Service Accounts, with:
+     Cloud Functions Admin, Cloud Run Admin (the callables' public invoker),
+     Service Account User, Cloud Scheduler Admin (`sweepOrphanedImagesDaily`),
+     Secret Manager Viewer (`OPENAI_API_KEY`, `CONTACT_*`), Firebase
+     Authentication Admin (the `gateAccountCreation` blocking trigger),
+     Firebase Viewer, Service Usage Consumer and Artifact Registry Reader.
+     Put together from the CLI's calls and third-party guides, **not measured**:
+     the first run's error names any missing permission. The Hosting account
+     (`FIREBASE_SERVICE_ACCOUNT_DND_CAMPAIGN_COMPANION`) is not widened;
+     its documented roles cover Hosting only.
+  3. **A JSON key** for it, pasted into GitHub → Settings → Secrets and
+     variables → Actions as `FIREBASE_FUNCTIONS_DEPLOY_SA`.
+  4. **Merge while able to watch the first run.** It deploys whatever `main`
+     holds that was never deployed by hand.
+- **Contact secrets: already done.** This entry said `contact.ts` read
+  `CONTACT_EMAIL`/`CONTACT_PASSWORD` from the gitignored `.env` alone. It has
+  declared both as Secret Manager secrets since 2026-09-10, and they are set
+  (maintainer, 2026-09-28). No function reads anything else from `.env`, so a
+  CI checkout deploys the same configuration a hand deploy does.
+- **When it fails**: production has a function the source no longer exports
+  (the non-interactive deploy refuses to delete it; delete it by hand), or the
+  cleanup policy is gone. Changed trigger types are skipped with a warning.
 - **Out of scope**: rules stay manual; `firebase.json` has no rules keys on
-  purpose. Running the emulator-backed functions suite belongs to T061.
-- **Source**: maintainer, 2026-09-25
+  purpose. PR previews share production's functions and deploy none.
+- **Source**: maintainer, 2026-09-25; the deploy job 2026-09-28
 
 ---
 
