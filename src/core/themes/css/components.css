@@ -1054,9 +1054,16 @@
     color: var(--surface-band-on-muted);
   }
 
-  /* The eyebrow names its own role rather than borrowing the band's muted ink, because the two finishes disagree about it: one lifts it to a second accent */
+  /*
+    The eyebrow is band text, so it takes the band's muted ink (T071). It used
+    `--color-emphasis`, which is the *page's* muted ink: solved against the
+    page, not the band, it measured 2.3:1 on the light band. The reason given
+    for that -- two finishes that disagreed about the eyebrow -- went with the
+    finishes. Sharing `.hero-muted`'s ink also puts it under `useBandDim`'s
+    measurement on a pictured band, which it was never part of before.
+  */
   .hero-eyebrow {
-    color: var(--color-emphasis);
+    color: var(--surface-band-on-muted);
   }
 
   .hero-dot {

@@ -26,7 +26,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
 | medium | T061 | `test` check not required; test files unlinted | M | open | Every suite is gated in CI now, but branch protection must list the check, and test-file lint was never enforced |
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
-| medium | T071 | Band eyebrow is 2.3:1 in light | S | open | Fails contrast on every band page in the default theme; needs a schema call, like T040 |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
 | low | T043 | Orphaned `importantNPCs` names | S | open | Nothing was destroyed; a judgement call about one campaign |
 | low | T037 | A group cannot be deleted | L | open | Leave exists; deletion is rare and large |
@@ -127,24 +126,8 @@ documents agreed with each other and none of them agreed with the product.
 
 ## Bugs
 
-### T071 — The band's eyebrow fails contrast in the light theme
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-09-25
-
-The small uppercase label above a band's heading ("PRIVATE CAMPAIGN" on
-`/signin`) measures **2.32:1** in light, on the plain band with no picture:
-light `--color-emphasis` `#605953` on band `#26211C`. Dark is 7.34:1. Light is
-the default theme, so most readers see the failing one.
-
-- **Where**: `.hero-eyebrow` in `core/themes/css/components.css` takes
-  `var(--color-emphasis)`, which `core/themes/derive/role-map.ts:36` derives
-  from `surface.page.onMuted` -- a page ink, solved against the page, not the band.
-- **Touches**: every `hero-eyebrow` -- `SignInPage.tsx`, `JoinPage.tsx`,
-  `AdminLayout.tsx`, `CampaignBanner.tsx`.
-- **Catch**: the rule's own comment says the eyebrow deliberately does not
-  borrow the band's muted ink, and the schema is read-only to an implementing
-  PR, so the fix is a schema-owner call. Same family as T040.
-- **Source**: measured per pixel in Chromium on a production build while
-  adding the sign-in picture, 2026-09-25.
+None open here. Bugs the behavioural suites find live in
+`docs/testing/bug-tracking/README.md`.
 
 ---
 
