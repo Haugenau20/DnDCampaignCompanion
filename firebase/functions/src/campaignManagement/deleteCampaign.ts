@@ -18,9 +18,9 @@ interface DeleteCampaignData {
  *    is deleted, and the client SDK cannot enumerate subcollections at all,
  *    so a client-side cascade would need a hardcoded (and driftable) list of
  *    them.
- *  - Notes belonging to the campaign live outside the campaign subtree
- *    entirely (groups/{groupId}/users/{uid}/notes, keyed by a campaignId
- *    FIELD), and production Firestore rules are path-scoped, so a
+ *  - Notes and reading progress belonging to the campaign live outside the
+ *    campaign subtree entirely (groups/{groupId}/users/{uid}/notes, keyed by
+ *    a campaignId FIELD, and .../story-progress/{campaignId}), and production Firestore rules are path-scoped, so a
  *    collectionGroup query for them would be denied even from the client.
  */
 export const deleteCampaign = functions.onCall(
@@ -79,10 +79,11 @@ export const deleteCampaign = functions.onCall(
         throw new functions.HttpsError("not-found", "Campaign not found.");
       }
 
-      // 1. Notes are NOT under the campaign document -- they live at
-      // groups/{groupId}/users/{uid}/notes with a campaignId FIELD -- so a
-      // recursive delete of the campaign never reaches them. Walk each group
-      // member's profile: delete their notes for this campaign, and clear
+      // 1. Notes and reading progress are NOT under the campaign document --
+      // they live at groups/{groupId}/users/{uid}/notes (with a campaignId
+      // FIELD) and .../story-progress/{campaignId} -- so a recursive delete of
+      // the campaign never reaches them. Walk each group member's profile:
+      // delete their notes and progress for this campaign, and clear
       // activeCampaignId on any profile that still points at it.
       //
       // ORDERING IS DELIBERATE: this runs BEFORE recursiveDelete. Neither step
@@ -118,6 +119,11 @@ export const deleteCampaign = functions.onCall(
         notesSnapshot.docs.forEach((noteDoc) => {
           writer.delete(noteDoc.ref);
         });
+
+        // Each member's reading progress for this campaign (T073), which
+        // sits beside their notes, keyed by the campaign's id. Deleting a
+        // document that does not exist succeeds, so no read is needed.
+        writer.delete(userDoc.ref.collection("story-progress").doc(campaignId));
       }
 
       // Rejects if any queued write exhausted its retries.

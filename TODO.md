@@ -40,7 +40,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
 | low | T072 | Note autosaves can overlap | S | open | `PERF-14`; duplicate writes, no loss measured |
-| low | T073 | Reading progress rewrites one growing document | M | needs scoping | `PERF-12`; waits on whether progress is per player |
+| low | T073 | Reading progress rewrites one growing document | S | open | `PERF-12`; per player since 2026-09-28, so each document grows with one reader's chapters only |
 | nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
 | nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
 
@@ -626,7 +626,7 @@ located by symbol: six on 2026-09-16 at `ebc0a28`, `PERF-02` on 2026-09-25,
 | `PERF-05` chapter order costs O(N) serial round trips | High | **Confirmed** 2026-09-28 — see T032. In `StoryContext`, `createChapter`, `deleteChapter`, `reorderChapters` and `updateChapter`'s order-change path still shift each chapter with `setDocument` → verifying `getDocument` → delete inside an awaited `for` loop. `updateChapter` still awaits `refreshChapters()` before the write. `DocumentService.batchOperations` has one caller, `useFirestore`, and none of these paths. |
 | `PERF-06` writes re-read attribution and reload collections | High | **Confirmed** 2026-09-28 — see T032. `DocumentService.getCreationAttribution` / `getModificationAttribution` still `getDoc` the group profile on every attributed write. The NPC, Quest and Rumor contexts refetch their collection after every mutation, and `LocationContext` refetches from the event it dispatches. `RumorBatchActions` still awaits one update or delete per selected id, and the rumour combine/convert flows loop the same way. The page-level double refresh moved: `QuestEditPage` is gone, and `QuestDetailPage`'s `save` calls `updateQuest` (which refreshes) and then `refreshQuests()`. `NPCsPage` passes `refreshNPCs` as `NPCDirectory`'s `onNPCUpdate`, which runs after `updateNPCRelationship` has already refreshed. |
 | `PERF-09` Home refetches attribution profiles | Medium | **Confirmed** 2026-09-28 — see T032. `HomePage` (still `/`) re-runs its effect whenever quests, rumours, NPCs, locations or chapters change. It collects every `createdBy`/`modifiedBy` uid and `fetchAttributionUsernames` reads each group profile afresh: there is no cache across runs, and uids whose items already carry the `*Username`/`*CharacterName` fields that `determineAttributionActor` prefers are fetched anyway. |
-| `PERF-12` progress rewrites a growing document | Medium | **Confirmed, partly mitigated** 2026-09-28 — T073. |
+| `PERF-12` progress rewrites a growing document | Medium | **Confirmed, partly mitigated** 2026-09-28 — T073. Progress is now one document per reader per campaign, not one per campaign. |
 | `PERF-13` profile/admin mutations reload held data | Medium | **Confirmed** 2026-09-28 — see T032. Each `useUser` update awaits `refreshUserProfile`, which re-reads the global profile and re-runs `setActiveGroupContext` (group profile and campaign list, in parallel since `PERF-02`). The cited `CampaignManagementView` is no longer mounted, but the live `/admin/campaigns` (`AdminCampaignsPage`) repeats it. It loads `getCampaigns` on mount even when the context holds the list. After create, update or delete, which `useCampaigns` already follows with `refreshCampaigns`, it calls `reload()` again. |
 | `PERF-14` note autosaves can overlap | Low | **Confirmed** 2026-09-28 — T072. |
 
@@ -692,22 +692,28 @@ write, and each attributed write re-reads the group profile (`PERF-06`).
 - **Source**: T033, from the performance review
 
 ### T073 — Reading progress rewrites one growing document
-**Type** debt · **Size** M · **Status** needs scoping · **Verified** 2026-09-28 · `PERF-12`
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-28 · `PERF-12`
 
-`ChapterReader` still throttles to 1,500 ms. Every emission still
-`setDocument`s the whole `story-progress/current-progress` document, with every
-chapter's entry in its `chapterProgress` map (`StoryContext.persistProgress`,
-reached from `updateChapterProgress`, `updateCurrentChapter` and
-`markChapterComplete`). Since the review, `applyProgress` composes each write
-from a ref, so a write no longer drops another's change in memory. The writes
-are still fire-and-forget, uncoalesced, and grow with the chapter count.
+`ChapterReader` throttles to 1,500 ms, and every emission `setDocument`s the
+reader's whole progress document, with every chapter's entry in its
+`chapterProgress` map (`StoryContext.persistProgress`). `applyProgress`
+composes each write from a ref, so no change is lost in memory, but the writes
+are uncoalesced and grow with the chapter count.
 
-- **Question before sizing**: the document lives at
-  `groups/{g}/campaigns/{c}/story-progress/current-progress`, one per
-  campaign, and every member writes it. So one player's position replaces
-  another's. Bug #018 calls it "shared reading progress", so this may be
-  intended. If progress should be per player, the split (a document per uid,
-  or per chapter) is also this finding's fix.
+- **Where**: since 2026-09-28 the document is
+  `groups/{g}/users/{uid}/story-progress/{campaignId}`, one per reader per
+  campaign, behind an owner-only rule. It used to be one
+  `campaigns/{c}/story-progress/current-progress` that every member overwrote.
+- **Left behind by that move**: the old `current-progress` documents are no
+  longer read or written. They go when their campaign is deleted, or can be
+  deleted by hand. `utils/__dev__/normalizeChapterDateModified.ts` still walks
+  the old path, which is harmless now that nothing lives there.
+- **Fix direction**: write only the changed chapter's entry (a field-path
+  `updateDoc`), or a document per chapter.
+- **Same fix closes a race**: a progress write that fires before the first
+  read of the document resolves replaces the stored document with only what
+  this visit has done. Patching one field instead of replacing the whole
+  document cannot wipe the others. Not observed; read from the code.
 - **Source**: T033, from the performance review
 
 ---

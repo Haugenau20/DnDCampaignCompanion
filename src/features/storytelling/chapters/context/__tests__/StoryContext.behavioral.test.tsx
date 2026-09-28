@@ -26,10 +26,17 @@ const mockUseChapterData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
 // Mock the Firebase context hooks
+// No reader in these suites has saved progress.
+const mockStoryFirestore = { getDocument: async () => null };
+
 jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
   useCampaigns: () => mockUseCampaigns(),
+  // StoryContext reads the reader's own progress document (T073). One object,
+  // so `getDocument` is as stable as the real hook's `useCallback`.
+  useGroups: () => ({ activeGroupId: 'group-1' }),
+  useFirestore: () => mockStoryFirestore,
 }));
 
 // Mock the data hooks

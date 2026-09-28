@@ -4,7 +4,7 @@ import { Chapter, ChapterProgress, StoryProgress } from '../types';
 import { DomainData } from 'core/types/common';
 import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
-import { useAuth, useUser, useCampaigns } from 'features/user-management';
+import { useAuth, useUser, useCampaigns, useGroups, useFirestore } from 'features/user-management';
 import firebaseServices from 'core/services/firebase';
 import { buildModificationAttribution } from 'core/attribution';
 
@@ -93,31 +93,31 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     deleteData
   } = useFirebaseData<Chapter>({ collection: 'chapters', autoFetch: false });
   
-  // Create a separate instance for story progress. Only the read side is used:
-  // writes go through `persistProgress` below, because this hook's `updateData`
-  // cannot create the document it needs to write to.
-  //
-  // `autoFetch: false` for the same reason as the five `use*Data` hooks: the
-  // explicit `refreshProgress()` effect below is the context-aware fetch --
-  // gated on `hasRequiredContext` and re-run on campaign change -- and the
-  // doc comment on that effect already explains why the generic mount fetch
-  // this disables is not just redundant but actively wrong here (it used to
-  // fire before the campaign context was ready, log "No active group
-  // selected", and return nothing). Its AUTH_STATE_CHANGED_EVENT listener is
-  // also safe to drop: on sign-out `hasRequiredContext` goes false, so the
-  // explicit effect below simply skips fetching rather than needing a
-  // separate clear, and on the next sign-in `activeCampaignId` changing
-  // re-triggers it -- there is no "stale data wins" branch here the way
-  // there was in the five hooks, since the effect populating `storedProgress`
-  // below only ever fills it in from a match, never clears it from absence.
-  const {
-    data: progressData = [],
-    getData: refreshProgress
-  } = useFirebaseData<StoryProgress>({ collection: 'story-progress', autoFetch: false });
-
   const { user } = useAuth();
   const { activeGroupUserProfile } = useUser();
   const { activeCampaignId } = useCampaigns();
+  const { activeGroupId } = useGroups();
+  const { getDocument } = useFirestore();
+
+  /**
+   * Where this reader's progress for the active campaign lives, or null until
+   * the reader, group and campaign are all known.
+   *
+   * Reading progress belongs to one player (T073). It used to be a single
+   * `campaigns/{c}/story-progress/current-progress` document that every member
+   * of the campaign wrote, so each player's place in the story replaced the
+   * last one's. It now sits beside that player's private notes, one document
+   * per campaign, which gives it the notes' owner-only rule and means deleting
+   * an account or leaving a group removes it with the rest of the subtree.
+   */
+  const progressLocation = user?.uid && activeGroupId && activeCampaignId
+    ? {
+        collection: `groups/${activeGroupId}/users/${user.uid}/story-progress`,
+        id: activeCampaignId,
+      }
+    : null;
+  const progressCollection = progressLocation?.collection ?? null;
+  const progressId = progressLocation?.id ?? null;
 
   // Real, held-in-state reading progress. `defaultProgress` remains only the
   // initial/fallback value for a first-time reader who has no persisted document.
@@ -128,8 +128,8 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
    * builds from.
    *
    * `updateChapterProgress` and `updateCurrentChapter` both replace the WHOLE
-   * `current-progress` document, and finishing a chapter fires both in the same
-   * tick — `onPageChange(page, true)` marks it complete, then `onNextChapter()`
+   * progress document, and finishing a chapter fires both in the same tick —
+   * `onPageChange(page, true)` marks it complete, then `onNextChapter()`
    * navigates, which sets the new current chapter. Building each from the
    * `storedProgress` closure meant the second one read the pre-update value and
    * overwrote the first: completing a chapter recorded `currentChapter` and then
@@ -141,49 +141,32 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const progressRef = useRef<StoryProgress>(defaultProgress);
 
   /**
-   * Re-fetch the progress document once the group and campaign are known.
+   * Read this reader's progress whenever the reader, group or campaign changes.
    *
-   * `useFirebaseData` fetches on mount and then only on an auth-state event, and
-   * its `getData` identity is stable because `useFirestore`'s `getCollection` is
-   * a `useCallback` with an empty dependency array. On a page load the mount
-   * fetch therefore runs while the campaign context is still restoring — it logs
-   * "No active group selected for collection: story-progress" and returns
-   * nothing — and nothing ever asks again. `progressData` stayed `[]` for the
-   * life of the page, so reading progress was never read BACK even once it was
-   * being written correctly.
+   * Progress is reset to the default first, so a campaign or account switch
+   * never leaves the previous one's position on screen while the read is in
+   * flight, or when the new one has no document yet. A read that resolves
+   * after the location has moved on is dropped for the same reason.
    *
-   * The entity contexts avoid this by going through their own `use*Data()` hooks,
-   * which watch the context; this one uses `useFirebaseData` directly and so has
-   * to ask again itself.
-   *
-   * It must also ask again when the CAMPAIGN changes. Reading progress lives at
-   * groups/{g}/campaigns/{c}/story-progress, so it is per campaign -- but
-   * `hasRequiredContext` is true both before and after a switch, so keying on
-   * that alone left the previous campaign's position on screen. Every entity
-   * hook already keys on `activeCampaignId`; this one was the exception, and it
-   * only stopped mattering because switching used to reload the page.
+   * One document by id, rather than the collection: the collection is this
+   * reader's alone, but there is no reason to read other campaigns' progress.
    */
   useEffect(() => {
-    if (hasRequiredContext) {
-      refreshProgress();
-    }
-  }, [hasRequiredContext, activeCampaignId, refreshProgress]);
+    progressRef.current = defaultProgress;
+    setStoredProgress(defaultProgress);
+    if (!progressCollection || !progressId) return;
 
-  // Populate storedProgress from the persisted 'current-progress' document once
-  // useFirebaseData's own on-mount fetch resolves. Guarded so it only ever writes
-  // state when a persisted document is actually found -- an empty/absent collection
-  // (first-time reader) leaves storedProgress at its defaultProgress initial value,
-  // and this never fires on every render because progressData's identity is stable
-  // between fetches (it only changes when the underlying hook's fetch resolves).
-  useEffect(() => {
-    const persisted = progressData.find(
-      (doc) => (doc as StoryProgress & { id?: string }).id === 'current-progress'
-    );
-    if (persisted) {
-      progressRef.current = persisted;
-      setStoredProgress(persisted);
-    }
-  }, [progressData]);
+    let current = true;
+    getDocument<StoryProgress>(progressCollection, progressId).then((persisted) => {
+      if (current && persisted) {
+        progressRef.current = persisted;
+        setStoredProgress(persisted);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [progressCollection, progressId, getDocument]);
 
   // Generate a consistent ID for a chapter based on its order
   const generateChapterId = (order: number) => {
@@ -208,31 +191,24 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [chapters]);
 
   /**
-   * Write the whole progress document, creating it if it does not exist yet.
+   * Write this reader's whole progress document, creating it if it does not
+   * exist yet.
    *
-   * Both callers below replace the entire `current-progress` document rather
-   * than patching fields, so an upsert is the correct verb — and it is the only
-   * one that works. `useFirebaseData`'s `updateData` is an *update*, which
-   * Firestore rejects on a missing document, and nothing anywhere creates this
-   * document: it is not seeded by the sample-data generator and there is no
-   * create path in the app. Every campaign therefore started with no progress
-   * document, so the first write failed with
+   * An upsert is the only verb that works here: nothing creates the document
+   * ahead of time, so an *update* is rejected with NOT_FOUND on a first write.
+   * That is how reading progress once never persisted for any campaign.
    *
-   *   NOT_FOUND: no entity to update: .../story-progress/current-progress
-   *
-   * and the callers' `catch` logged it and moved on. Reading progress has never
-   * persisted for any campaign — which is why the 2026-07-29 data audit found
-   * zero story-progress documents and read it as "no data to migrate".
-   *
-   * `setDocument` upserts, so the first write creates and later ones replace.
+   * Without a reader, group and campaign there is nowhere to write, and the
+   * in-memory progress stands alone until there is.
    */
   const persistProgress = useCallback(async (updatedProgress: StoryProgress) => {
+    if (!progressCollection || !progressId) return;
     await firebaseServices.document.setDocument(
-      'story-progress',
-      'current-progress',
+      progressCollection,
+      progressId,
       updatedProgress
     );
-  }, []);
+  }, [progressCollection, progressId]);
 
   /**
    * Apply a change to reading progress: derive the next document from the ref
