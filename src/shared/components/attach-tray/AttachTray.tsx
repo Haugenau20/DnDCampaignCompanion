@@ -7,7 +7,7 @@ import Input from "core/components/Input";
 import Typography from "core/components/Typography";
 import { EntitySigil } from "core/components/EntitySigil";
 import { useQuickAdd } from "shared/context/QuickAddContext";
-import { isQuickAddEntity } from "shared/components/quick-add/quickAddSpecs";
+import { isQuickAddEntity } from "shared/components/quick-add/quickAddEntity";
 import {
   ATTACH_KIND_EMPTY_LABELS,
   ATTACH_KIND_NEW_LABELS,

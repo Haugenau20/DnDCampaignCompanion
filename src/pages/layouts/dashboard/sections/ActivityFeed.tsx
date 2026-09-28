@@ -5,7 +5,7 @@ import Card from 'core/components/Card';
 import { RosterFilterPills, type RosterFilterOption } from 'core/components/Roster';
 import EntitySigil from 'core/components/EntitySigil';
 import clsx from 'clsx';
-import { Activity } from 'pages/HomePage';
+import type { Activity } from 'pages/layouts/common/types';
 import { useActivityDisplay } from '../../../layouts/common/hooks/useActivityDisplay';
 import { getContentIcon } from '../../../layouts/common/utils/contentTypeUtils';
 import EmptyState from '../../../layouts/common/components/EmptyState';

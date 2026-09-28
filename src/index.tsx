@@ -77,8 +77,14 @@ root.render(
         No NavigationProvider here: App mounts the one every consumer reads.
         Firebase Hosting rewrites every path to index.html, so a deep link
         reaches the router directly and unknown paths meet NotFoundPage.
+
+        `v7_startTransition` runs every navigation as a React transition. The
+        route pages load on first visit (T030); inside a transition React keeps
+        the current page up until the next one's chunk has arrived, instead of
+        swapping in the route fallback and back. It is React Router 7's
+        default, so this is the behaviour an upgrade would bring anyway.
       */}
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true }}>
         <App />
       </BrowserRouter>
     </ThemeProvider>

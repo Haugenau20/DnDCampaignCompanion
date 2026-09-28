@@ -159,9 +159,9 @@ match `firestore.rules.prod` without reading them back.
 ## Verifying a Change Before Proposing a Merge
 
 Merging to `main` deploys live: the Cloud Functions first, then Hosting (`firebase-hosting-merge.yml`;
-its setup is T070). Rules are never deployed by CI. CI (`.github/workflows/test.yml`) runs steps 1 and 2, plus
-`npm run lint` and the `firebase/functions` suite, on every PR and before the deploy, which waits on
-them; step 3 runs only as the PR preview's Docker build. Changed a function? Run
+its setup is T070). Rules are never deployed by CI. CI (`.github/workflows/test.yml`) runs all three steps,
+plus `npm run lint`, the `firebase/functions` suite and `npm run check:bundle`, on every PR and
+before the deploy, which waits on them. Changed a function? Run
 `npm --prefix firebase run test:functions` too.
 
 **Never watch CI or PRs after pushing** — the maintainer's standing rule (2026-09-27). Do not
@@ -176,6 +176,16 @@ maintainer watches CI and asks when something needs doing.
    `Module not found`. Use bare `baseUrl` imports (`core/types/common`) in anything that ships; `@/`
    is safe only in `__tests__/` and `test-utils/`. A new top-level `src/` directory must also be
    added to the resolver allow-list in `jest.config.ts`.
+4. **`npm run check:bundle`** after the build: `main.js` must stay under the ceiling in
+   `scripts/check-bundle-size.js` (T030). Over it usually means an eager module (a provider, the
+   layout, a barrel's public API) now imports something only one page needs. Raising the ceiling
+   is allowed; say in the PR what grew and why it belongs in the entry bundle.
+
+**`package.json` declares `"sideEffects": ["*.css"]`**: webpack may drop any other module in `src/`
+whose exports nobody uses, which is how the feature barrels stop dragging every page into `main.js`
+(T030). A module imported only for what it does on load (`import "./x"`) is silently dropped by
+webpack, in the dev server and the build alike, while jest still runs it, so no test can catch
+it. Add such a file to the list. Route pages load through `app/lazyPage.ts`; a page added to `App.tsx` should too.
 
 **Four resolvers disagree; no single gate catches all of them:**
 
@@ -226,6 +236,12 @@ src/
 **The invariant: never import another feature's internals** — every cross-feature edge goes through
 that feature's `index.ts`. **Inside a domain, import siblings directly — never your own barrel**
 (that creates cycles such as `index.ts` → `AdminPanel.tsx` → `index.ts`).
+
+**`npm run lint` refuses import cycles** (`import/no-cycle`, on the lint script only, so the dev
+server and build don't pay its ~20 s). The usual way into one is a `shared/` module importing a
+feature's barrel while that feature renders it: pass the value in as a prop, or split the part the
+feature needs into a file that imports no feature (`QuickAddContext` vs `QuickAddProvider`).
+`import type` is exempt, since it never reaches the bundle.
 
 Filenames mislead about where code belongs (e.g. `UsageContext` sounds shared but depends on entity
 extraction). Open the file and check its imports before deciding a boundary.

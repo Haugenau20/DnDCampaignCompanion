@@ -3,7 +3,8 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { QuickAddProvider, useQuickAdd } from "../QuickAddContext";
+import { QuickAddProvider } from "../QuickAddProvider";
+import { useQuickAdd } from "../QuickAddContext";
 
 // The form is stubbed: this suite is about which surface is open and what it
 // is handed, not about the fields inside it.

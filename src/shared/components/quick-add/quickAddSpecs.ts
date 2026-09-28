@@ -3,19 +3,12 @@ import type { NPC } from "features/campaign-entities";
 import type { Location, Quest } from "features/campaign-entities";
 import { normaliseObjectives } from "features/campaign-entities";
 import type { DomainData } from "core/types/common";
+import type { QuickAddCarry, QuickAddEntity } from "./quickAddEntity";
 
-/**
- * The entities quick add can create.
- *
- * The rumour is deliberately absent. `00-entity-authoring.md` §4 gives it a
- * composer row rather than a dialog, and `15-7` built that row: one field,
- * `RumorComposer`, at the top of the rumours list. A rumour has no page for
- * *Create & open* to land on, and asks for no second field -- a title or some
- * content is enough, and its source is optional (T041, closed 2026-09-26).
- */
-export const quickAddEntities = ["npc", "quest", "location"] as const;
-
-export type QuickAddEntity = (typeof quickAddEntities)[number];
+// The vocabulary lives in `quickAddEntity.ts`, which imports no feature; it is
+// re-exported so this stays the one place a consumer of the specs looks.
+export { quickAddEntities, isQuickAddEntity } from "./quickAddEntity";
+export type { QuickAddCarry, QuickAddEntity } from "./quickAddEntity";
 
 /** The two typed fields, plus the one pre-set value the phase allows. */
 export interface QuickAddValues {
@@ -49,18 +42,6 @@ export interface QuickAddErrors {
   name?: string;
   line?: string;
 }
-
-/**
- * Fields carried through from note conversion but never shown.
- *
- * The AI extraction supplies an NPC's race and occupation, a quest's
- * objectives and relations, a location's type. `15-1` says to pre-fill the two
- * fields and leave note conversion's wiring alone -- so the rest rides along
- * untouched rather than being dropped on the floor, which would silently throw
- * away the extraction's work. Nothing here can override a typed field or a
- * status default; see `buildDocument`.
- */
-export type QuickAddCarry = Record<string, unknown>;
 
 export interface QuickAddSpec {
   entity: QuickAddEntity;
@@ -286,11 +267,6 @@ export function validateQuickAdd(
   if (!values.name.trim()) errors.name = spec.messages.name;
   if (!values.line.trim()) errors.line = spec.messages.line;
   return errors;
-}
-
-/** Type guard for a path segment or menu id that may name a quick-add entity. */
-export function isQuickAddEntity(value: string): value is QuickAddEntity {
-  return (quickAddEntities as readonly string[]).includes(value);
 }
 
 /** Which key on a note-conversion payload holds each of the two fields. */

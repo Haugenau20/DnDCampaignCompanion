@@ -28,7 +28,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
 | medium | T071 | Band eyebrow is 2.3:1 in light | S | open | Fails contrast on every band page in the default theme; needs a schema call, like T040 |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
-| low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
 | low | T043 | Orphaned `importantNPCs` names | S | open | Nothing was destroyed; a judgement call about one campaign |
 | low | T042 | Theme class as data has no gate | S | open | Latent pattern; bitten once, now partly gated |
 | low | T037 | A group cannot be deleted | L | open | Leave exists; deletion is rare and large |
@@ -573,7 +572,8 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
   (`npm install --legacy-peer-deps`, not `npm ci`, so the lockfile is not enforced).
 - **Catch**: the real fix is leaving CRA (e.g. Vite), which touches the build,
   env-var names (`REACT_APP_*`), jest config and the four-resolvers table in
-  `CLAUDE.md`. Needs its own plan. It may also answer T030's bundle question.
+  `CLAUDE.md`. Needs its own plan. `scripts/check-bundle-size.js` expects CRA's
+  `build/static/js/main.*.js`; a new bundler must keep it measuring the entry.
 - **Source**: todo.txt, 2026-09-24
 
 ### T061 — The `test` check does not yet block a merge, and test files are unlinted
@@ -582,8 +582,10 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
 `.github/workflows/test.yml` runs the type-check, `npm run lint` (app code,
 zero warnings), `npm run test:ci` (jest, 80% coverage floor) and, since
 2026-09-28, `firebase/functions`' build and emulator-backed suite (the
-`functions` job, through `npm --prefix firebase run test:functions`) on every
-PR and before the merge-to-main deploy, which waits on all of it. Two things remain.
+`functions` job, through `npm --prefix firebase run test:functions`) and, since
+the same day, the production build and its entry-bundle ceiling (the `bundle`
+job) on every PR and before the merge-to-main deploy, which waits on all of
+it. Two things remain.
 
 - **Not in the repo**: the `test` check blocks a merge only once branch
   protection on `main` lists it as required. That is a GitHub setting.
@@ -677,7 +679,7 @@ review says so itself. Six findings were re-checked on 2026-09-16 at `ebc0a28`:
 |---|---|---|
 | `PERF-01` search never terminates on whitespace | Critical | **Fixed.** All three split sites are now `split(/\s+/).filter(Boolean)`, and `findWordMatches` (`SearchService.ts:294`) guards `if (!word) return []`. `SearchBar.tsx` is gone, replaced by `shared/components/command-palette/`. The regression test that did not ship with the fix landed as T031 (2026-09-23), pinning each guard separately. |
 | `PERF-07` context switch refreshes then reloads | High | **Fixed.** The only `window.location.reload()` left in `src/` is `ErrorBoundary.tsx:62`. |
-| `PERF-10` all routes + full Lodash in one bundle | Medium | **Half fixed.** Zero `lodash` imports remain in `src/`. Route splitting is still open — see T030. |
+| `PERF-10` all routes + full Lodash in one bundle | Medium | **Fixed** 2026-09-28 (T030). Zero `lodash` imports remain in `src/`, routes load on first visit (`main.js` 341 → 264 kB gzip), and `npm run check:bundle` holds `main.js` under a ceiling in CI. |
 | `PERF-04` notes loaded twice, unbounded | High | **Fixed** 2026-09-24 — `NoteContext` reads once, constrained to the active campaign, and reads nothing before one is selected. New note ids are random, so nothing needs the other campaigns' notes. |
 | `PERF-08` duplicate collection owners | Medium | **Fixed** 2026-09-22 — one fetch per collection, pinned by `shared/hooks/__tests__/provider-fetch-counts.test.tsx`. |
 | `PERF-15` duplicate `NavigationProvider` | Low | **Fixed** 2026-09-24 — `index.tsx` mounts no provider of its own; `App`'s is the only one. |
@@ -687,21 +689,6 @@ The **other eight are unverified against current `main`** — `03`, `05`,
 `06`, `09`, `11`, `12`, `13`, `14`. That is T033. The review's own
 prioritized list opens with a finding that is already fixed, so do not work
 straight down it.
-
-### T030 — One eager bundle ships every route
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-16 · `PERF-10`
-
-- **Where**: `src/app/App.tsx` statically imports all 9 page modules; no
-  `React.lazy` or `Suspense` anywhere in it. At audit the optimized build emitted
-  a single 1,138,710-byte JS file (**308.17 kB gzip**) with no route chunks.
-- **Touches**: `App.tsx`, and a bundle-size ceiling in CI.
-- **Catch**: the Lodash half of this finding is already closed — no `lodash`
-  import remains in `src/` — so re-measure before quoting the 308 kB figure. The
-  review also flagged six circular dependency chains (barrel cycles between
-  campaign/collaboration features, and layout helpers importing back from
-  `HomePage`) that make reliable splitting harder; expect to untangle those
-  first. No delay was ever attributed to the cycles themselves.
-- **Source**: performance review
 
 ### T032 — Performance remediation programme
 **Type** debt · **Size** L · **Status** needs scoping · **Verified** 2026-09-16 ·

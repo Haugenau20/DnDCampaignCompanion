@@ -8,7 +8,13 @@
 #
 # `functions` runs firebase/functions' own suite against the emulators, which
 # `firebase emulators:exec` starts and stops around it with the repo's pinned
-# CLI (firebase/package.json). Both jobs must pass for a caller's `needs: test`.
+# CLI (firebase/package.json).
+#
+# `bundle` runs the production build, which no other job does: it is the only
+# resolver that ignores tsconfig `paths`, so an `@/` import passes the type-check
+# and jest and fails here. It then holds the entry bundle under its ceiling
+# (scripts/check-bundle-size.js, T030). All three jobs must pass for a caller's
+# `needs: test`.
 
 name: Test
 on:
@@ -81,3 +87,28 @@ jobs:
 
       - name: Functions suite
         run: npm --prefix firebase run test:functions
+
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      # `CI: false` as the shipping build has it: that one runs in Docker
+      # (docker/Dockerfile.frontend.prod), where CI is unset, and under CI=true
+      # react-scripts fails on any warning. A PR must not fail a build that the
+      # deploy would pass; lint already holds app code to zero warnings.
+      - name: Build
+        run: npm run build
+        env:
+          CI: false
+
+      - name: Entry bundle size
+        run: npm run check:bundle
