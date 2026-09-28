@@ -5,13 +5,57 @@ on:
   push:
     branches:
       - main
+# Two merges in quick succession must not deploy over each other.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 jobs:
   test:
     uses: ./.github/workflows/test.yml
 
+  # Functions first: a new page must never reach users before the function it
+  # calls. Unchanged functions are skipped by the CLI, so most runs are quick.
+  # Deploys with its own service account (FIREBASE_FUNCTIONS_DEPLOY_SA), not the
+  # Hosting one. Firestore and Storage rules stay manual: firebase.json has no
+  # rules keys, so `--only functions` cannot touch them.
+  #
+  # Fails, and so holds back Hosting, when: prod has a function that the source
+  # no longer exports (delete it by hand: `firebase functions:delete`), or the
+  # region has no Artifact Registry cleanup policy (set it once with
+  # `firebase functions:artifacts:setpolicy --location europe-west1`).
+  deploy_functions:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            firebase/package-lock.json
+            firebase/functions/package-lock.json
+
+      - name: Install the Firebase CLI
+        run: npm ci --prefix firebase
+
+      # firebase.json's predeploy builds the functions, which needs these.
+      - name: Install function dependencies
+        run: npm ci --prefix firebase/functions
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_FUNCTIONS_DEPLOY_SA }}
+
+      - name: Deploy functions
+        working-directory: firebase
+        run: npx firebase deploy --only functions --project dnd-campaign-companion --non-interactive
+
   # Merging deploys live, so a red suite must stop the deploy, not just report.
   build_and_deploy:
-    needs: test
+    needs: [test, deploy_functions]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

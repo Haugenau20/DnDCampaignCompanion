@@ -158,7 +158,8 @@ match `firestore.rules.prod` without reading them back.
 
 ## Verifying a Change Before Proposing a Merge
 
-Merging to `main` deploys live. CI (`.github/workflows/test.yml`) runs steps 1 and 2, plus
+Merging to `main` deploys live: the Cloud Functions first, then Hosting (`firebase-hosting-merge.yml`;
+its setup is T070). Rules are never deployed by CI. CI (`.github/workflows/test.yml`) runs steps 1 and 2, plus
 `npm run lint` and the `firebase/functions` suite, on every PR and before the deploy, which waits on
 them; step 3 runs only as the PR preview's Docker build. Changed a function? Run
 `npm --prefix firebase run test:functions` too.

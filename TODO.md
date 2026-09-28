@@ -25,7 +25,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T056 | Sign-in errors carry a reportable ref | S | blocked | On hold for an app-wide error-numbering system, which the maintainer wants first |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
 | medium | T061 | `test` check not required; test files unlinted | M | open | Every suite is gated in CI now, but branch protection must list the check, and test-file lint was never enforced |
-| medium | T070 | Functions are deployed by hand | M | needs investigation | Frontend and functions can drift in prod; contact secrets must move first. Service account roles unchecked |
+| medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
 | medium | T071 | Band eyebrow is 2.3:1 in light | S | open | Fails contrast on every band page in the default theme; needs a schema call, like T040 |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
 | low | T030 | One eager bundle | M | open | Load-time win, but cycles need untangling first |
@@ -616,33 +616,48 @@ the **global** CLI:
   set one. Re-run `npm --prefix firebase run test:functions` behind a proxy before bumping.
 - **Source**: todo.txt, 2026-09-24; pinned 2026-09-28
 
-### T070 — Cloud Functions are deployed by hand, not by CI
-**Type** debt · **Size** M · **Status** needs investigation · **Verified** 2026-09-25
+### T070 — CI deploys the functions, but only once the maintainer sets it up
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-09-28
 
-Merging to `main` deploys Hosting only. Functions are deployed from the
-maintainer's machine, so a frontend change that needs a new function (as the
-bug-report screenshot did, 2026-09-25) is not live until someone remembers to
-deploy it.
+`firebase-hosting-merge.yml` now deploys the functions on every merge to
+`main`: a `deploy_functions` job after the tests and **before** Hosting
+(`needs:`), so a new page never reaches users before the function it calls.
+It runs the repo's pinned CLI with `--only functions --non-interactive`, under
+its own service account, read from the GitHub secret
+`FIREBASE_FUNCTIONS_DEPLOY_SA`. Until that secret exists the job fails and
+**holds back every Hosting deploy too**, so do the steps below before merging it.
 
-- **Where**: `.github/workflows/firebase-hosting-merge.yml` runs
-  `action-hosting-deploy` and nothing else; `firebase/functions/package.json`
-  pins Node 22 and already has `build` (`tsc`), which `firebase.json`'s
-  `predeploy` runs.
-- **Catch 1 (confirmed)**: `firebase/functions/src/contact.ts:54` reads
-  `CONTACT_EMAIL`/`CONTACT_PASSWORD` from `process.env`, which only the
-  gitignored `firebase/functions/.env` supplies. A CI checkout lacks it, so the
-  first CI deploy would ship a contact form with blank Gmail credentials. Move
-  both to Secret Manager the way `entityExtraction.ts:395` declares
-  `secrets: ["OPENAI_API_KEY"]`, and deploy that once by hand first.
-- **Catch 2 (unverified)**: `FIREBASE_SERVICE_ACCOUNT_DND_CAMPAIGN_COMPANION`
-  is probably the Hosting-only account `hosting:github` creates. Check its IAM
-  roles in the console; a separate deploy account is safer than widening it.
-  `gateAccountCreation` is a blocking function, which needs Auth admin rights too.
-- **Order**: functions must deploy before Hosting in the same run (`needs:`),
-  or a new payload reaches users before the function that reads it.
+- **Blocked on the maintainer**, all doable in a browser:
+  1. **Cleanup policy, once.** A non-interactive deploy fails, after
+     deploying, when `europe-west1` has no Artifact Registry cleanup policy
+     (the 2026-09-24 hand deploy warned there was none). In Cloud Shell:
+     `npx firebase-tools@15.22.4 login --no-localhost`, then
+     `npx firebase-tools@15.22.4 functions:artifacts:setpolicy --project dnd-campaign-companion --location europe-west1`.
+  2. **A deploy service account**, in IAM & Admin → Service Accounts, with:
+     Cloud Functions Admin, Cloud Run Admin (the callables' public invoker),
+     Service Account User, Cloud Scheduler Admin (`sweepOrphanedImagesDaily`),
+     Secret Manager Viewer (`OPENAI_API_KEY`, `CONTACT_*`), Firebase
+     Authentication Admin (the `gateAccountCreation` blocking trigger),
+     Firebase Viewer, Service Usage Consumer and Artifact Registry Reader.
+     Put together from the CLI's calls and third-party guides, **not measured**:
+     the first run's error names any missing permission. The Hosting account
+     (`FIREBASE_SERVICE_ACCOUNT_DND_CAMPAIGN_COMPANION`) is not widened;
+     its documented roles cover Hosting only.
+  3. **A JSON key** for it, pasted into GitHub → Settings → Secrets and
+     variables → Actions as `FIREBASE_FUNCTIONS_DEPLOY_SA`.
+  4. **Merge while able to watch the first run.** It deploys whatever `main`
+     holds that was never deployed by hand.
+- **Contact secrets: already done.** This entry said `contact.ts` read
+  `CONTACT_EMAIL`/`CONTACT_PASSWORD` from the gitignored `.env` alone. It has
+  declared both as Secret Manager secrets since 2026-09-10, and they are set
+  (maintainer, 2026-09-28). No function reads anything else from `.env`, so a
+  CI checkout deploys the same configuration a hand deploy does.
+- **When it fails**: production has a function the source no longer exports
+  (the non-interactive deploy refuses to delete it; delete it by hand), or the
+  cleanup policy is gone. Changed trigger types are skipped with a warning.
 - **Out of scope**: rules stay manual; `firebase.json` has no rules keys on
-  purpose. The emulator-backed functions suite already gates the deploy (`test.yml`).
-- **Source**: maintainer, 2026-09-25
+  purpose. PR previews share production's functions and deploy none.
+- **Source**: maintainer, 2026-09-25; the deploy job 2026-09-28
 
 ---
 
