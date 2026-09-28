@@ -29,7 +29,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T071 | Band eyebrow is 2.3:1 in light | S | open | Fails contrast on every band page in the default theme; needs a schema call, like T040 |
 | low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
 | low | T043 | Orphaned `importantNPCs` names | S | open | Nothing was destroyed; a judgement call about one campaign |
-| low | T042 | Theme class as data has no gate | S | open | Latent pattern; bitten once, now partly gated |
 | low | T037 | A group cannot be deleted | L | open | Leave exists; deletion is rare and large |
 | low | T017 | Batch actions for other entities | L | open | Convenience; must follow T032's write-amplification fix |
 | low | T018 | Sub-chapters | L | open | New feature; #017 ordering question comes first |
@@ -396,44 +395,6 @@ adds has a band header carrying a status chip.
 ---
 
 ## Tech debt and platform
-
-### T042 — A theme class passed as *data* has no manifest coverage
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-18
-
-`StateLadder` took a `selectedClassName` prop naming the theme class its
-selected chip should wear. Every option that used it named a class **no
-stylesheet defines**: `knowledge-0/1/2` on the location and rumour ladders,
-`outcome-completed` / `outcome-failed` on the quest one. Five dead names,
-shipped in `15-3`, and every gate green.
-
-- **Why nothing caught it**: `css-class-manifest.test.ts` walks
-  defined-but-unapplied, and says in its own header that it deliberately does
-  not walk the reverse — over the whole tree that direction would report every
-  Tailwind utility in the product. A class name reaching a component as a
-  *string prop* is therefore invisible to both directions.
-- **Why it looked right**: `chip-toggle-selected` was doing all the work, so the
-  ladders rendered correctly and the extra class was inert. It could not have
-  worked in any case: `.chip-toggle-selected` sets `color` and is declared later
-  in `components.css` than `.valence-*`, so at equal specificity it wins.
-- **Fixed for now by deletion**: `15-4` removed the prop rather than correcting
-  the spelling — the visual reference draws every selected ladder chip as the
-  same chip, because a ladder is a control and the selected chip says "this is
-  the current one", not what the state means. The gap stays open because the
-  *pattern* will recur: `RosterStatus`'s `tone`, `Button`'s `variant` and
-  `EntitySigil`'s palette are all class families selected by data.
-- **Touches**: `core/themes/__tests__/css-class-manifest.test.ts` — a narrow
-  consumed-but-undefined check over a closed vocabulary (props whose values are
-  known to be theme classes) is the shape that works; a general scan is not.
-- **One instance is now gated, and finding it proved the point.** `15-6` wrote
-  `ladder-classes.test.ts` — the file `location-presentation.ts` had *claimed
-  since 15-4 merged* already existed. It did not. The gate's first run found
-  `NPCDirectory` still passing `selectedClassName`: an options array declared as
-  a `const` is a wider type than the prop it is passed to, so TypeScript's
-  excess-property check never runs on it, and the dead key survived every build.
-- **Still open** for the general case: `RosterStatus`'s `tone`, `Button`'s
-  `variant` and `EntitySigil`'s palette are the same pattern with no gate.
-- **Source**: found in `15-4` while wiring the location page's band control; a
-  live instance found in `15-6`.
 
 ### T043 — `importantNPCs` may hold names no NPC record carries
 **Type** decision · **Size** S · **Status** open · **Verified** 2026-09-18
