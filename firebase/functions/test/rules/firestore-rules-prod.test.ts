@@ -179,3 +179,25 @@ describe("what members still do from the client", () => {
     await assertSucceeds(as("gandalf").doc(`groups/${G}/registrationTokens/tok`).update({notes: "For Sam"}));
   });
 });
+
+describe("reading progress (T073)", () => {
+  const progress = (uid: string) => `groups/${G}/users/${uid}/story-progress/c1`;
+  const place = {currentChapter: "chapter-02", lastRead: new Date(), chapterProgress: {}};
+
+  it("a member saves and reads back their own place in a campaign", async () => {
+    await assertSucceeds(as("frodo").doc(progress("frodo")).set(place));
+    await assertSucceeds(as("frodo").doc(progress("frodo")).get());
+  });
+
+  it("another member cannot read or overwrite it", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc(progress("frodo")).set(place)
+    );
+    await assertFails(as("gandalf").doc(progress("frodo")).get());
+    await assertFails(as("gandalf").doc(progress("frodo")).set(place));
+  });
+
+  it("nor can a stranger write one into the group", async () => {
+    await assertFails(as("sauron").doc(progress("sauron")).set(place));
+  });
+});

@@ -12,8 +12,13 @@ import { StoryProvider, useStory } from '../StoryContext';
  * wrote to Firestore but discarded the result, so nothing ever accumulated in
  * memory: `getReadingProgress()` always returned 0 and
  * `storyProgress.currentChapter` was always ''. Progress now lives in
- * component state, seeded from the persisted `current-progress` document
- * exposed by `useFirebaseData`'s `data`.
+ * component state, seeded from the reader's persisted progress document.
+ *
+ * T073: that document is per player. It used to be one
+ * `campaigns/{c}/story-progress/current-progress` document every member wrote,
+ * so one player's place in the story replaced another's. It is now
+ * `groups/{g}/users/{uid}/story-progress/{campaignId}`, read by id through
+ * `useFirestore().getDocument` and written with `setDocument`.
  *
  * IMPORTANT: `StoryContext.bugs.test.tsx` and `StoryContext.behavioral.test.tsx`
  * both mock `useFirebaseData` with `useFirebaseData: () => mockUseFirebaseData()`
@@ -22,9 +27,8 @@ import { StoryProvider, useStory } from '../StoryContext';
  * 'story-progress') return the exact same object, and that object never
  * includes a `data` array. That is precisely why those suites kept passing
  * throughout the bug's lifetime: the read-back effect in StoryContext never
- * had anything to read. This file forwards the options argument so the two
- * `useFirebaseData` call sites can be told apart by `collection`, which is
- * required to exercise the read-back path at all.
+ * had anything to read. This file drives the read-back through its own
+ * `getDocument` mock, keyed by path and id, so it exercises the real read.
  */
 
 // Mock Firebase dependencies
@@ -33,27 +37,25 @@ const mockUseUser = jest.fn();
 const mockUseCampaigns = jest.fn();
 const mockUseChapterData = jest.fn();
 const mockUseFirebaseData = jest.fn();
+const mockGetDocument = jest.fn();
 
 jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
   useCampaigns: () => mockUseCampaigns(),
+  useGroups: () => ({ activeGroupId: 'group-1' }),
+  useFirestore: () => ({ getDocument: mockGetDocument }),
 }));
 
 jest.mock('features/storytelling/chapters/hooks/useChapterData', () => ({
   useChapterData: () => mockUseChapterData(),
 }));
 
-// Unlike the other StoryContext suites, this mock forwards its `options`
-// argument through to `mockUseFirebaseData` so the implementation set up in
-// `beforeEach` below can distinguish the 'chapters' call site from the
-// 'story-progress' call site by `options.collection`.
 jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: (options: { collection: string }) => mockUseFirebaseData(options),
 }));
 
-// Mock Firebase services (StoryContext imports this at module scope even
-// though these two functions under test never call into it directly)
+// Progress writes go through `firebaseServices.document.setDocument`.
 jest.mock('core/services/firebase', () => ({
   __esModule: true,
   default: {
@@ -71,6 +73,10 @@ jest.mock('core/utils/user-utils', () => ({
 }));
 
 const { getUserName, getActiveCharacterName } = require('core/utils/user-utils');
+const mockFirebaseServices = require('core/services/firebase').default;
+
+/** Where a reader's progress for a campaign lives. */
+const progressPath = (uid: string) => `groups/group-1/users/${uid}/story-progress`;
 
 const StoryTestComponent = ({ onContextChange }: { onContextChange: (context: any) => void }) => {
   const storyContext = useStory();
@@ -86,31 +92,26 @@ describe('StoryContext Reading Progress (bug #018)', () => {
   let storyContext: any;
   let mockUpdateData: jest.Mock;
   let mockDeleteData: jest.Mock;
-  let mockUpdateProgressData: jest.Mock;
   let mockRefreshChapters: jest.Mock;
-  // Backing store for the 'story-progress' collection's `data` array -- set
-  // per-test (before render) to control what the persisted-document read-back
-  // effect finds.
-  let progressCollectionData: any[];
-  // Stable identity across every render, matching the real useFirebaseData
-  // contract (its getData is a useCallback with an empty dependency array).
-  // A fresh jest.fn() per render would make a call-count assertion measure
-  // render churn rather than the effect's actual dependency behaviour.
-  let mockRefreshProgress: jest.Mock;
+  // Persisted progress documents, keyed `${collection}/${id}` -- set per-test
+  // (before render) to control what the read-back finds.
+  let persistedProgress: Record<string, any>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     storyContext = null;
-    progressCollectionData = [];
+    persistedProgress = {};
+    mockGetDocument.mockImplementation(async (collection: string, id: string) =>
+      persistedProgress[`${collection}/${id}`] ?? null
+    );
+    mockFirebaseServices.document.setDocument.mockResolvedValue(undefined);
 
     getUserName.mockReturnValue('Test User');
     getActiveCharacterName.mockReturnValue('Test Character');
 
     mockUpdateData = jest.fn().mockResolvedValue(undefined);
     mockDeleteData = jest.fn().mockResolvedValue(undefined);
-    mockUpdateProgressData = jest.fn().mockResolvedValue(undefined);
     mockRefreshChapters = jest.fn();
-    mockRefreshProgress = jest.fn().mockResolvedValue([]);
 
     mockUseAuth.mockReturnValue({
       user: { uid: 'test-user' },
@@ -140,23 +141,11 @@ describe('StoryContext Reading Progress (bug #018)', () => {
       hasRequiredContext: true,
     });
 
-    // Distinguish the two useFirebaseData call sites in StoryContext by
-    // `collection`, so the 'story-progress' instance can supply a `data`
-    // array (which the other suites' shared mock never does).
-    mockUseFirebaseData.mockImplementation((options: { collection: string }) => {
-      if (options.collection === 'story-progress') {
-        return {
-          data: progressCollectionData,
-          updateData: mockUpdateProgressData,
-          getData: mockRefreshProgress,
-        };
-      }
-      return {
-        updateData: mockUpdateData,
-        deleteData: mockDeleteData,
-        getData: jest.fn().mockResolvedValue([]),
-      };
-    });
+    mockUseFirebaseData.mockImplementation(() => ({
+      updateData: mockUpdateData,
+      deleteData: mockDeleteData,
+      getData: jest.fn().mockResolvedValue([]),
+    }));
   });
 
   const renderStoryContext = () => {
@@ -247,10 +236,9 @@ describe('StoryContext Reading Progress (bug #018)', () => {
     );
   });
 
-  test('seeds storyProgress from a persisted current-progress document supplied by useFirebaseData (bug #018)', async () => {
-    progressCollectionData = [
-      {
-        id: 'current-progress',
+  test("seeds storyProgress from the reader's own persisted progress document (bug #018)", async () => {
+    persistedProgress = {
+      [`${progressPath('test-user')}/campaign-1`]: {
         currentChapter: 'chapter-03',
         lastRead: new Date('2025-01-01T00:00:00.000Z'),
         chapterProgress: {
@@ -262,7 +250,7 @@ describe('StoryContext Reading Progress (bug #018)', () => {
           },
         },
       },
-    ];
+    };
 
     renderStoryContext();
 
@@ -408,18 +396,118 @@ describe('StoryContext Reading Progress (bug #018)', () => {
   });
 
   describe("campaign switching", () => {
-    test("refetches reading progress when the active campaign changes", async () => {
-      // Reading progress is per campaign. Its effect keyed only on
-      // hasRequiredContext, which stays true across a switch, so the previous
-      // campaign's position survived into the new one.
+    test("reads the new campaign's progress when the active campaign changes", async () => {
       const { rerender } = renderStoryProvider({ activeCampaignId: "campaign-1" });
 
-      await waitFor(() => expect(mockRefreshProgress).toHaveBeenCalledTimes(1));
+      await waitFor(() =>
+        expect(mockGetDocument).toHaveBeenCalledWith(progressPath("test-user"), "campaign-1")
+      );
 
-      mockRefreshProgress.mockClear();
+      mockGetDocument.mockClear();
       rerender({ activeCampaignId: "campaign-2" });
 
-      await waitFor(() => expect(mockRefreshProgress).toHaveBeenCalledTimes(1));
+      await waitFor(() =>
+        expect(mockGetDocument).toHaveBeenCalledWith(progressPath("test-user"), "campaign-2")
+      );
+    });
+
+    test("does not carry the previous campaign's position into one with no progress", async () => {
+      persistedProgress = {
+        [`${progressPath("test-user")}/campaign-1`]: {
+          currentChapter: "chapter-05",
+          lastRead: new Date("2025-01-01T00:00:00.000Z"),
+          chapterProgress: {},
+        },
+      };
+      const { rerender } = renderStoryProvider({ activeCampaignId: "campaign-1" });
+      await waitFor(() => expect(storyContext.storyProgress.currentChapter).toBe("chapter-05"));
+
+      rerender({ activeCampaignId: "campaign-2" });
+
+      await waitFor(() => expect(storyContext.storyProgress.currentChapter).toBe(""));
+    });
+  });
+
+  describe("progress belongs to one player (T073)", () => {
+    test("is written to the reader's own document, not a campaign-wide one", async () => {
+      renderStoryContext();
+      await waitFor(() => expect(storyContext).toBeDefined());
+
+      await act(async () => {
+        await storyContext.updateCurrentChapter("chapter-02");
+      });
+
+      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
+        progressPath("test-user"),
+        "campaign-1",
+        expect.objectContaining({ currentChapter: "chapter-02" })
+      );
+      for (const [collection, id] of mockFirebaseServices.document.setDocument.mock.calls) {
+        expect(collection).not.toBe("story-progress");
+        expect(id).not.toBe("current-progress");
+      }
+    });
+
+    test("two players in one campaign read and write separate documents", async () => {
+      // The defect: both players shared one document, so the second reader's
+      // position replaced the first's.
+      persistedProgress = {
+        [`${progressPath("player-a")}/campaign-1`]: {
+          currentChapter: "chapter-07",
+          lastRead: new Date("2025-01-01T00:00:00.000Z"),
+          chapterProgress: {},
+        },
+      };
+
+      mockUseAuth.mockReturnValue({ user: { uid: "player-b" } });
+      renderStoryContext();
+      await waitFor(() =>
+        expect(mockGetDocument).toHaveBeenCalledWith(progressPath("player-b"), "campaign-1")
+      );
+
+      // Player A's place is not player B's.
+      await act(async () => {});
+      expect(storyContext.storyProgress.currentChapter).toBe("");
+
+      await act(async () => {
+        await storyContext.updateCurrentChapter("chapter-01");
+      });
+
+      const written = mockFirebaseServices.document.setDocument.mock.calls.map(
+        ([collection]: [string]) => collection
+      );
+      expect(written).toEqual([progressPath("player-b")]);
+    });
+
+    test("writes nothing while there is no signed-in reader", async () => {
+      mockUseAuth.mockReturnValue({ user: null });
+      renderStoryContext();
+      await waitFor(() => expect(storyContext).toBeDefined());
+
+      await act(async () => {
+        await storyContext.updateCurrentChapter("chapter-01");
+      });
+
+      expect(mockFirebaseServices.document.setDocument).not.toHaveBeenCalled();
+      expect(mockGetDocument).not.toHaveBeenCalled();
+    });
+
+    test("drops a read that resolves after the campaign has changed", async () => {
+      let resolveFirst: (value: unknown) => void = () => {};
+      mockGetDocument.mockImplementationOnce(
+        () => new Promise((resolve) => { resolveFirst = resolve; })
+      );
+      const { rerender } = renderStoryProvider({ activeCampaignId: "campaign-1" });
+      await waitFor(() => expect(mockGetDocument).toHaveBeenCalledTimes(1));
+
+      rerender({ activeCampaignId: "campaign-2" });
+      await waitFor(() => expect(mockGetDocument).toHaveBeenCalledTimes(2));
+
+      await act(async () => {
+        resolveFirst({ currentChapter: "chapter-09", lastRead: new Date(), chapterProgress: {} });
+      });
+
+      expect(storyContext.storyProgress.currentChapter).toBe("");
     });
   });
 });

@@ -21,14 +21,13 @@
  * BUMP THIS BY HAND whenever the wording changes, and add a PRIVACY_CHANGELOG
  * line saying what changed. Never derive it from Date.now().
  */
-export const PRIVACY_LAST_UPDATED = "2026-09-25";
+export const PRIVACY_LAST_UPDATED = "2026-09-28";
 
 /** What changed in the revision named by PRIVACY_LAST_UPDATED, newest first. */
 export const PRIVACY_CHANGELOG: readonly string[] = [
-  "A campaign can have a banner picture on its dashboard. Anyone in the group can add, replace or remove it.",
-  "It is stored and shared exactly as the other pictures are: in the United States, shrunk and stripped of its hidden details before upload, and visible to your group.",
-  "Signed in, you can attach a screenshot to a message you send us. It is shrunk and stripped of its hidden details, passes through Google Cloud Storage in the United States, and is deleted as soon as the email is sent, or after a day if the message never is.",
-];
+  "Your place in each campaign's story (the chapter you are on, how far you have read and what you have finished) is now kept for you alone. It used to be one record per campaign, shared by everyone in it.",
+  "Nobody else in your group can see it, and it is deleted when you leave the group, delete your account, or the campaign is deleted.",
+]
 
 /**
  * Who is responsible for the data, and how to reach them.

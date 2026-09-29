@@ -7,10 +7,11 @@ import * as admin from "firebase-admin";
  *
  * A plain `batch.delete()` on the group-user document leaves its
  * subcollections behind: Firestore has no cascade, and orphaned documents
- * stay readable by anything holding their path. The only per-user
- * subcollection today is `notes`, which holds private notes -- so the plain
- * delete was silently retaining the most personal data in the product after
- * a user asked for it to be gone.
+ * stay readable by anything holding their path. The per-user subcollections
+ * today are `notes`, which holds private notes, and `story-progress`, each
+ * reader's place in each campaign's story (T073) -- so the plain delete was
+ * silently retaining the most personal data in the product after a user asked
+ * for it to be gone.
  *
  * `recursiveDelete` walks the whole subtree, so it stays correct if another
  * per-user subcollection is added later. It cannot participate in a

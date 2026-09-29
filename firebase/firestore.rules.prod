@@ -261,6 +261,17 @@ service cloud.firestore {
         match /notes/{noteId} {
           allow read, write: if isSignedIn() && request.auth.uid == userId;
         }
+
+        // A reader's place in each campaign's story, one document per campaign
+        // (T073). Private for the same reason notes are: it records what one
+        // player has read. It used to be one campaign-wide document every
+        // member overwrote. Writing also requires membership, which the notes
+        // rule does not: an owner-only check alone would let an account with
+        // no invitation write into any group's subtree under its own uid.
+        match /story-progress/{campaignId} {
+          allow read: if isSignedIn() && request.auth.uid == userId;
+          allow write: if isSignedIn() && request.auth.uid == userId && isGroupMember(groupId);
+        }
       }
 
       // Username reservations in group

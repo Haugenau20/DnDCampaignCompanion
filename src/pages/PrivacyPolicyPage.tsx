@@ -177,6 +177,12 @@ const PrivacyPolicyPage: React.FC = () => {
               store what you type into it.
             </Typography>
             <Typography>
+              Your place in each campaign's story: the chapter you are on, how
+              far into each chapter you have read, and which ones you have
+              finished, so the app can take you back there. It is kept for you
+              alone, one record per campaign.
+            </Typography>
+            <Typography>
               Pictures you add to an NPC, a place, your campaign's banner or
               your party's crest. Before a photo leaves your device it is shrunk
               and re-saved, which removes its hidden details — the camera it came
@@ -191,8 +197,9 @@ const PrivacyPolicyPage: React.FC = () => {
               and delete it straight after.
             </Typography>
             <Typography>
-              We do not record which pages you visit or what you click. Session
-              activity is detected only to decide whether you are still there.
+              Apart from your place in the story, we do not record which pages
+              you visit or what you click. Session activity is detected only to
+              decide whether you are still there.
             </Typography>
           </Section>
 
@@ -200,13 +207,15 @@ const PrivacyPolicyPage: React.FC = () => {
             <Typography>
               Everything you write in a campaign is visible to the other members
               of that group, credited to the character you were posting as. Your
-              private notes are not — they are yours until you share them.
+              private notes are not — they are yours until you share them — and
+              nor is your place in the story, which nobody else in the group
+              can see.
             </Typography>
             <Typography>
               If you leave a group, or delete your account, the chapters,
               quests, NPCs and locations you wrote stay with the group for the
-              rest of the table; your name, your characters and your private
-              notes are deleted.
+              rest of the table; your name, your characters, your private notes
+              and your place in the story are deleted.
             </Typography>
             <Typography>
               Pictures are shown to the members of the group they belong to.
@@ -277,8 +286,8 @@ const PrivacyPolicyPage: React.FC = () => {
               Your account and everything in it stays until you delete it. There
               is a <strong>Delete account</strong> button in the danger zone of
               your profile page; it removes your account, your profile in every
-              group you belong to, your usernames and your private notes, and it
-              cannot be undone. You do not need to email anyone to make that
+              group you belong to, your usernames, your private notes and your
+              place in every story, and it cannot be undone. You do not need to email anyone to make that
               happen.
             </Typography>
             <Typography>

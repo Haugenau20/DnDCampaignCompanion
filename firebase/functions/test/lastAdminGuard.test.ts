@@ -83,3 +83,28 @@ describe("deleting your account", () => {
     expect((await db.doc("users/frodo").get()).exists).toBe(false);
   });
 });
+
+describe("a member's reading progress (T073)", () => {
+  // Progress sits beside private notes, so it goes with the member's subtree
+  // on both ways out. Pinned because nothing else says so.
+  const progress = (uid: string) =>
+    db.doc(`groups/${GROUP}/users/${uid}/story-progress/c1`);
+
+  it("is deleted when they leave the group", async () => {
+    await seed({gandalf: "admin", frodo: "member"});
+    await progress("frodo").set({currentChapter: "chapter-01", chapterProgress: {}});
+
+    await leave("frodo");
+
+    expect((await progress("frodo").get()).exists).toBe(false);
+  });
+
+  it("is deleted with their account", async () => {
+    await seed({gandalf: "admin", frodo: "member"});
+    await progress("frodo").set({currentChapter: "chapter-01", chapterProgress: {}});
+
+    await deleteAccount("frodo");
+
+    expect((await progress("frodo").get()).exists).toBe(false);
+  });
+});

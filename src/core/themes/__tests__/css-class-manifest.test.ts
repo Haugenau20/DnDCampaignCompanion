@@ -18,11 +18,9 @@
 // - That a class which *is* applied is applied to the right element. This is a
 //   reachability check, not a correctness one.
 // - That a class assembled from a template is spelled correctly. `PREFIXES`
-//   below exempts one pattern by prefix, so `.button-outlien` would pass. A
-//   prefix exemption is the same trade `FOREIGN_PREFIXES` makes in the token
-//   manifest: it buys coverage of the ordinary case at the price of the
-//   assembled one. Narrowing it means duplicating each consumer's union type
-//   here, where it would drift.
+//   below exempts one pattern by prefix, so `.button-outlien` would pass here.
+//   `class-vocabularies.test.ts` closes that case: it reads `ButtonVariant`
+//   from `Button.tsx` itself, so the union is checked without being restated.
 // - Anything about `src/styles/globals.css`. Its four classes are Tailwind-
 //   shaped utilities rather than design-system surfaces, and they are applied
 //   the same way from anywhere. Out of scope deliberately, not by oversight.

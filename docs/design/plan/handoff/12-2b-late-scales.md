@@ -69,7 +69,7 @@ revertible. Late work gets a late PR (D39).
   `accent.base`, `outcome.failedInk` and `knowledge.0`; the new tree tokens
   sit *alongside* those, they do not replace them. An earlier draft of the
   schema renamed them and would have broken the generator for no design gain
-  (D36).
+  (D44).
 - Do not add `feedback.info`. Warning and progress both take the accent by
   design.
 - Do not add a `presence.*` scale. Presence is not a colour job (D27);
@@ -91,4 +91,4 @@ revertible. Late work gets a late PR (D39).
 
 Schema §5.5 (the scales and the pairing rule), §7b (what is built), §11 (state
 against `main`). Token model §5 (additive before destructive), §6 (ordered
-collections, enums), §7 (no aliases). Record D32, D33, D36 and D39.
+collections, enums), §7 (no aliases). Record D32, D33, D44 and D39.

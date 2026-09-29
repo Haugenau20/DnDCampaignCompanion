@@ -82,3 +82,30 @@ describe("deleting a campaign", () => {
     expect(await exists(FILES.lookalikeCampaign)).toBe(true);
   });
 });
+
+describe("members' reading progress (T073)", () => {
+  const progress = (uid: string, campaignId: string) =>
+    db.doc(`groups/${GROUP}/users/${uid}/story-progress/${campaignId}`);
+
+  beforeEach(async () => {
+    const place = {currentChapter: "chapter-01", chapterProgress: {}};
+    await Promise.all([
+      progress("gandalf", "c1").set(place),
+      progress("frodo", "c1").set(place),
+      progress("frodo", "c2").set(place),
+    ]);
+  });
+
+  it("goes with the campaign, for every member", async () => {
+    await remove("gandalf");
+
+    expect((await progress("gandalf", "c1").get()).exists).toBe(false);
+    expect((await progress("frodo", "c1").get()).exists).toBe(false);
+  });
+
+  it("stays for every other campaign", async () => {
+    await remove("gandalf");
+
+    expect((await progress("frodo", "c2").get()).exists).toBe(true);
+  });
+});

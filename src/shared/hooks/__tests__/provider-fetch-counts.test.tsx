@@ -61,6 +61,7 @@ describe("provider fetch counts", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetCollection.mockResolvedValue([]);
+    mockGetDocument.mockResolvedValue(null);
   });
 
   test.each([
@@ -82,7 +83,7 @@ describe("provider fetch counts", () => {
     expect(fetchCountFor(collection)).toBe(1);
   });
 
-  test("StoryProvider fetches chapters once, and story-progress once", async () => {
+  test("StoryProvider fetches chapters once, and the reader's progress once", async () => {
     render(
       <StoryProvider>
         <div>child</div>
@@ -94,9 +95,12 @@ describe("provider fetch counts", () => {
     });
 
     expect(fetchCountFor("chapters")).toBe(1);
-    // The story-progress instance is NOT write-only -- it reads its own `data`
-    // as `progressData`. It must keep fetching. This assertion is the reason
-    // the opt-out is per-call-site rather than a change of default.
-    expect(fetchCountFor("story-progress")).toBe(1);
+    // Reading progress is the reader's own document (T073), read by id rather
+    // than through a collection instance -- and still read exactly once.
+    await waitFor(() => expect(mockGetDocument).toHaveBeenCalled());
+    expect(mockGetDocument.mock.calls).toEqual([
+      ["groups/group-1/users/user-1/story-progress", "campaign-1"],
+    ]);
+    expect(fetchCountFor("story-progress")).toBe(0);
   });
 });
