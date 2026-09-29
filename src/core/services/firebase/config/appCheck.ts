@@ -8,7 +8,7 @@ import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
  * Every app instance that talks to production needs its own: App Check is
  * enforced on Authentication, so an app without it has every sign-in refused
  * (`auth/firebase-app-check-token-is-invalid`). That is why this is shared --
- * the default app and the throwaway one in `openDeviceApproval` must be set up
+ * the default app and the throwaway one in `approveDeviceSignIn` must be set up
  * the same way.
  *
  * Callers skip it against the emulators (bug #1411).

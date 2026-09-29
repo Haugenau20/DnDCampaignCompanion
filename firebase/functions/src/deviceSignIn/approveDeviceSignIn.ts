@@ -7,32 +7,33 @@ import {
   DEVICE_SIGN_INS,
   DeviceSignInRequest,
   EXPIRED_MESSAGE,
-  MAX_CODE_ATTEMPTS,
   isLive,
+  newCode,
 } from "./deviceSignIn";
 
 interface ApproveDeviceSignInData {
   requestId: string;
-  code: string;
 }
 
 /** What the transaction decided; errors are thrown after it commits. */
 type Outcome =
-  | {kind: "approved"}
+  | {kind: "approved"; code: string}
   | {kind: "expired"}
-  | {kind: "wrongAccount"}
-  | {kind: "wrongCode"; attemptsLeft: number};
+  | {kind: "wrongAccount"};
 
 /**
- * Approves a request, so the device that opened it can sign in as the caller.
+ * Approves a request, and returns the code the device that opened it must
+ * type to sign in as the caller.
  *
- * Called by the device the magic link was opened on, signed in -- just for
- * this call -- by that link. Signing in with the link proves the caller owns
- * the address; the code proves they can see the device that asked.
+ * Called by the page the magic link was opened on, signed in -- just for this
+ * call -- by that link. Signing in with the link proves the caller owns the
+ * address, which is why the code is made here and handed only to them: the
+ * device that opened the request knows its id, so nothing short of the link
+ * may reveal the code.
  *
- * A wrong code costs an attempt, and the last attempt spends the request. The
- * count has to be written *and* the call refused, so the transaction only
- * decides, and the refusal is thrown once it has committed.
+ * Asking again for a request the caller already approved returns the same
+ * code, so a page that asks twice does not strand the first answer. The link
+ * can only be used once, so that is the one page that asked.
  */
 export const approveDeviceSignIn = functions.onCall(
   {
@@ -45,12 +46,11 @@ export const approveDeviceSignIn = functions.onCall(
         "Sign in with the link before approving."
       );
     }
-    const {requestId, code} = request.data ?? {};
-    if (typeof requestId !== "string" || !requestId ||
-        typeof code !== "string" || !code) {
+    const {requestId} = request.data ?? {};
+    if (typeof requestId !== "string" || !requestId) {
       throw new functions.HttpsError(
         "invalid-argument",
-        "Enter the code shown on the other device."
+        "This sign-in request is incomplete."
       );
     }
     const callerEmail = request.auth.token.email;
@@ -65,26 +65,18 @@ export const approveDeviceSignIn = functions.onCall(
         const snapshot = await tx.get(ref);
         if (!snapshot.exists) return {kind: "expired"};
         const stored = snapshot.data() as DeviceSignInRequest;
-        if (stored.status !== "pending" || !isLive(stored, new Date())) {
-          return {kind: "expired"};
-        }
+        if (!isLive(stored, new Date())) return {kind: "expired"};
         if (typeof callerEmail !== "string" ||
             normalizeEmail(callerEmail) !== stored.email) {
           return {kind: "wrongAccount"};
         }
-        if (code.trim() !== stored.code) {
-          const attempts = stored.attempts + 1;
-          tx.update(ref, {
-            attempts,
-            ...(attempts >= MAX_CODE_ATTEMPTS ? {status: "spent"} : {}),
-          });
-          return {
-            kind: "wrongCode",
-            attemptsLeft: MAX_CODE_ATTEMPTS - attempts,
-          };
+        if (stored.status === "approved" && stored.uid === uid && stored.code) {
+          return {kind: "approved", code: stored.code};
         }
-        tx.update(ref, {status: "approved", uid});
-        return {kind: "approved"};
+        if (stored.status !== "pending") return {kind: "expired"};
+        const code = newCode();
+        tx.update(ref, {status: "approved", uid, code});
+        return {kind: "approved", code};
       });
     } catch (error) {
       rethrowHttpsError(
@@ -97,7 +89,7 @@ export const approveDeviceSignIn = functions.onCall(
 
     switch (outcome.kind) {
     case "approved":
-      return {success: true};
+      return {code: outcome.code};
     case "expired":
       throw new functions.HttpsError("failed-precondition", EXPIRED_MESSAGE);
     case "wrongAccount":
@@ -105,16 +97,6 @@ export const approveDeviceSignIn = functions.onCall(
         "permission-denied",
         "This link was sent to a different address from the one the other " +
           "device asked for."
-      );
-    case "wrongCode":
-      throw new functions.HttpsError(
-        outcome.attemptsLeft > 0 ? "invalid-argument" : "failed-precondition",
-        outcome.attemptsLeft > 0 ?
-          "That code does not match the one on the other device. " +
-            `${outcome.attemptsLeft} ${
-              outcome.attemptsLeft === 1 ? "try" : "tries"} left.` :
-          "That code does not match either, so this request is closed. " +
-            "Ask for a new link on the other device."
       );
     }
   }

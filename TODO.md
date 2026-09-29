@@ -240,12 +240,16 @@ not wanted yet.** Reverse today's cross-device flow: the email carries a
 in. The phone then only reads the email and never signs in or runs site code.
 The same email can keep the magic link for signing in on the device that opens it.
 
-- **Where**: today the laptop shows a 4-digit code (`SignInForm.tsx:159`) and
-  the phone approves it (`EmailLinkPage.tsx`, `core/services/firebase/auth/deviceApproval.ts`,
-  the `*DeviceSignIn` callables in `firebase/functions/src/deviceSignIn/`,
-  polled by `auth/hooks/useDeviceSignInWait.ts`). Most of that would go. Two
-  callables replace it: one to send a code (store only a hash, expiry, attempt
-  count; limit requests per address) and one to check it and return a custom token.
+- **Where**: since 2026-09-29 the flow already runs in this direction, without
+  a sending domain: opening the link on the phone shows a 6-digit code
+  (`EmailLinkPage.tsx`, which approves through a throwaway sign-in in
+  `core/services/firebase/auth/deviceApproval.ts`), and the laptop takes it in
+  six boxes (`SignInForm.tsx`, `CodeInput.tsx`) and trades it for a custom token
+  (`claimDeviceSignIn`). What is left for this item is putting the code in the
+  email itself, so the phone never opens the site: a callable that sends the
+  mail, and `claimDeviceSignIn` checking a code made at start instead of at
+  approval (keep only a hash, since it would then exist before anyone proved
+  the inbox).
 - **Blocker**: Firebase's own sign-in email cannot carry a custom code, so the
   function must send the mail itself. The plan is **Resend** (free tier 3,000/month,
   100/day), which needs a domain you own. `dnd-campaign-companion.web.app`

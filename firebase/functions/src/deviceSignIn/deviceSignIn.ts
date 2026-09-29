@@ -4,14 +4,17 @@
 //
 // The flow: a device asks for a magic link and, alongside it, opens a request
 // here (`startDeviceSignIn`). The link carries the request's id. When the link
-// is opened on a *different* device -- a phone, where the inbox is -- that
-// device can approve the request instead of signing itself in
-// (`approveDeviceSignIn`), and the device that asked collects a one-time
-// sign-in token for the approved account (`claimDeviceSignIn`).
+// is opened anywhere other than the browser that asked -- a phone, where the
+// inbox is -- that page approves the request instead of signing itself in
+// (`approveDeviceSignIn`) and shows the code the approval returns. The reader
+// types that code on the device that asked, which trades it, with a secret
+// only it holds, for a one-time sign-in token (`claimDeviceSignIn`).
 //
-// The approving device must type a code that only the asking device shows.
-// Without it, anyone could open a request on their own machine, send a genuine
-// magic link to someone else's address, and hope the owner taps "approve".
+// The code exists only once the link has been used. Whoever opens a request
+// learns its id and holds its secret, so the link is the only proof of the
+// inbox: without it, anyone could type someone else's address and read the
+// code back. Only the approving page -- signed in, for that call alone, by the
+// link -- is ever given it.
 
 import {createHash, randomBytes, randomInt} from "crypto";
 import {Timestamp} from "firebase-admin/firestore";
@@ -29,7 +32,10 @@ export const REQUEST_LIFETIME_MS = 15 * 60 * 1000;
  */
 export const MAX_OPEN_REQUESTS = 5;
 
-/** Wrong codes a request survives. The last one spends it. */
+/**
+ * Wrong codes a request survives. The last one spends it. With six digits,
+ * a device guessing has 3 in a million per link its owner opens.
+ */
 export const MAX_CODE_ATTEMPTS = 3;
 
 /** Where a request is in its life. */
@@ -41,8 +47,11 @@ export interface DeviceSignInRequest {
   email: string;
   /** sha256 of the secret only the asking device holds. */
   secretHash: string;
-  /** The code the asking device shows and the approving device types. */
-  code: string;
+  /**
+   * The code the approving device shows and the asking device types. Set by
+   * `approveDeviceSignIn`; there is none while the request is pending.
+   */
+  code?: string;
   attempts: number;
   status: RequestStatus;
   /** The approved account; set by `approveDeviceSignIn`. */
@@ -53,7 +62,8 @@ export interface DeviceSignInRequest {
 
 /** Said whenever a request cannot be used any more, whatever the reason. */
 export const EXPIRED_MESSAGE =
-  "This sign-in request has expired. Ask for a new link on the other device.";
+  "This sign-in request has expired. Ask for a new link on the device you " +
+  "are signing in on.";
 
 /**
  * A fresh request id. 128 random bits: it travels in the link, so it must not
@@ -75,12 +85,12 @@ export function newSecret(): string {
 }
 
 /**
- * A fresh 4-digit code, zero-padded.
+ * A fresh 6-digit code, zero-padded.
  *
- * @return {string} e.g. "0471"
+ * @return {string} e.g. "048213"
  */
 export function newCode(): string {
-  return randomInt(0, 10000).toString().padStart(4, "0");
+  return randomInt(0, 1000000).toString().padStart(6, "0");
 }
 
 /**

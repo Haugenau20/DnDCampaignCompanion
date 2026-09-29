@@ -11,7 +11,6 @@ import {
   REQUEST_LIFETIME_MS,
   hashSecret,
   isLive,
-  newCode,
   newRequestId,
   newSecret,
 } from "./deviceSignIn";
@@ -26,8 +25,9 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Opens a request to sign this device in from another one.
  *
  * Called anonymously by the sign-in page, just before it sends a magic link to
- * `email`. Returns the request's id (which goes into the link), a secret the
- * caller keeps to collect the sign-in with, and the code it shows its reader.
+ * `email`. Returns the request's id (which goes into the link) and a secret
+ * the caller keeps to collect the sign-in with. There is no code yet: that is
+ * made when the link is opened (`approveDeviceSignIn`).
  *
  * Says nothing about whether `email` has an account -- the answer is the same
  * either way, so this cannot be used to probe for addresses. A request for an
@@ -79,11 +79,9 @@ export const startDeviceSignIn = functions.onCall(
 
       const requestId = newRequestId();
       const secret = newSecret();
-      const code = newCode();
       const stored: DeviceSignInRequest = {
         email: address,
         secretHash: hashSecret(secret),
-        code,
         attempts: 0,
         status: "pending",
         createdAt: Timestamp.fromDate(now),
@@ -91,7 +89,7 @@ export const startDeviceSignIn = functions.onCall(
       };
       await db.collection(DEVICE_SIGN_INS).doc(requestId).set(stored);
 
-      return {requestId, secret, code, expiresAt: stored.expiresAt.toMillis()};
+      return {requestId, secret, expiresAt: stored.expiresAt.toMillis()};
     } catch (error) {
       rethrowHttpsError(
         error,

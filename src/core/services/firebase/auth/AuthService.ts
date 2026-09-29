@@ -34,18 +34,17 @@ import {
 
   /**
    * A request to sign this device in from another one, as `startDeviceSignIn`
-   * opened it. `secret` never leaves this device; `code` is shown to the
-   * reader, who types it on the device that approves.
+   * opened it. `secret` is sent only with the code the reader types here,
+   * which the device that opens the link shows.
    */
   export interface DeviceSignInRequest {
     requestId: string;
     secret: string;
-    code: string;
     /** Epoch millis after which the request can no longer be used. */
     expiresAt: number;
   }
 
-  /** What polling a request reports. */
+  /** What trading a code for a sign-in reports. */
   export type DeviceSignInClaim =
     | { status: 'pending' }
     | { status: 'expired' }
@@ -288,13 +287,22 @@ import {
     }
 
     /**
-     * Ask whether another device has approved the request yet, and collect the
-     * sign-in token when it has. The token is handed over once only.
+     * Trade the code the device that opened the link shows for a sign-in
+     * token. The token is handed over once only. Answers `pending` while the
+     * link has not been opened; rejects on a wrong code, saying how many tries
+     * are left.
      * @param request The request `startDeviceSignIn` opened
+     * @param code The code the reader typed
      */
-    public async claimDeviceSignIn(request: Pick<DeviceSignInRequest, 'requestId' | 'secret'>): Promise<DeviceSignInClaim> {
-      const claim = httpsCallable<{ requestId: string; secret: string }, DeviceSignInClaim>(this.functions, 'claimDeviceSignIn');
-      return (await claim({ requestId: request.requestId, secret: request.secret })).data;
+    public async claimDeviceSignIn(
+      request: Pick<DeviceSignInRequest, 'requestId' | 'secret'>,
+      code: string
+    ): Promise<DeviceSignInClaim> {
+      const claim = httpsCallable<{ requestId: string; secret: string; code: string }, DeviceSignInClaim>(
+        this.functions,
+        'claimDeviceSignIn'
+      );
+      return (await claim({ requestId: request.requestId, secret: request.secret, code })).data;
     }
 
     /**

@@ -8,7 +8,7 @@ import {
   signOut,
   Auth
 } from 'firebase/auth';
-import { getFunctions, connectFunctionsEmulator, httpsCallable, Functions } from 'firebase/functions';
+import { getFunctions, connectFunctionsEmulator, httpsCallable } from 'firebase/functions';
 import {
   firebaseConfig,
   useEmulators,
@@ -17,20 +17,9 @@ import {
 } from '../config/firebaseConfig';
 import { attachAppCheck } from '../config/appCheck';
 
-/** A throwaway sign-in that can approve another device's request. */
-export interface DeviceApproval {
-  /**
-   * Approve `requestId` with the code the other device shows. Rejects with
-   * the function's own message on a wrong code, and may be called again.
-   */
-  approve(requestId: string, code: string): Promise<void>;
-  /** Sign the throwaway out and delete it. Safe to call more than once. */
-  close(): Promise<void>;
-}
-
 /**
- * Sign in with a magic link on a throwaway Firebase instance, to approve
- * another device's sign-in request without signing *this* device in.
+ * Sign in with a magic link on a throwaway Firebase instance, approve another
+ * device's sign-in request, and return the code that device must type.
  *
  * Approving needs proof that the reader owns the address, and the only proof
  * on hand is the magic link -- which Firebase consumes by signing in. Doing
@@ -39,30 +28,18 @@ export interface DeviceApproval {
  *
  * So it happens on a second, named Firebase app in this same page and project,
  * whose sign-in is held in memory only: nothing reaches this browser's
- * storage, and the app's own session is never touched.
- *
- * The link can be used once, so the throwaway stays open until `close` -- a
- * mistyped code can be retried without a new link.
+ * storage, the app's own session is never touched, and the throwaway is
+ * signed out and deleted before this returns, whatever happened.
  *
  * @param email The address the link was sent to
  * @param link The magic link, as opened
+ * @param requestId The request the link carries
+ * @returns The code to type on the device that asked
  */
-export async function openDeviceApproval(email: string, link: string): Promise<DeviceApproval> {
-  // A unique name, so an earlier one that was never closed is no clash.
+export async function approveDeviceSignIn(email: string, link: string, requestId: string): Promise<string> {
+  // A unique name, so an earlier one still closing is no clash.
   const app: FirebaseApp = initializeApp(firebaseConfig, `device-approval-${Date.now()}`);
-  let closed = false;
   let auth: Auth | undefined;
-  let functions: Functions | undefined;
-
-  const close = async () => {
-    if (closed) return;
-    closed = true;
-    try {
-      if (auth) await signOut(auth);
-    } finally {
-      await deleteApp(app);
-    }
-  };
 
   try {
     // Before Auth: it attaches the app's App Check token to every request,
@@ -70,21 +47,19 @@ export async function openDeviceApproval(email: string, link: string): Promise<D
     // Check does not cover this one.
     if (!useEmulators) attachAppCheck(app);
     auth = initializeAuth(app, { persistence: inMemoryPersistence });
-    functions = getFunctions(app, 'europe-west1');
+    const functions = getFunctions(app, 'europe-west1');
     if (useEmulators) {
       connectAuthEmulator(auth, `http://${emulatorHost}:${emulatorPorts.auth}`, { disableWarnings: true });
       connectFunctionsEmulator(functions, emulatorHost, parseInt(emulatorPorts.functions));
     }
     await signInWithEmailLink(auth, email, link);
-  } catch (error) {
-    await close();
-    throw error;
+    const approve = httpsCallable<{ requestId: string }, { code: string }>(functions, 'approveDeviceSignIn');
+    return (await approve({ requestId })).data.code;
+  } finally {
+    try {
+      if (auth) await signOut(auth);
+    } finally {
+      await deleteApp(app);
+    }
   }
-
-  return {
-    approve: async (requestId, code) => {
-      await httpsCallable(functions as Functions, 'approveDeviceSignIn')({ requestId, code });
-    },
-    close
-  };
 }

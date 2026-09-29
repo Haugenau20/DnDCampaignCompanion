@@ -1,5 +1,5 @@
 // src/core/services/firebase/auth/__tests__/deviceApproval.test.ts
-import { openDeviceApproval } from '../deviceApproval';
+import { approveDeviceSignIn } from '../deviceApproval';
 
 const mockThrowawayApp = { name: 'throwaway' };
 const mockThrowawayAuth = { kind: 'throwaway-auth' };
@@ -45,14 +45,14 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUseEmulators = false;
   mockSignInWithEmailLink.mockResolvedValue({ user: { uid: 'frodo' } });
-  mockCallable.mockResolvedValue({ data: { success: true } });
+  mockCallable.mockResolvedValue({ data: { code: '482913' } });
 });
 
-describe('openDeviceApproval', () => {
+describe('approveDeviceSignIn', () => {
   // The whole point: the app's own Firebase instance is never used, so this
   // device is not signed in and whoever was signed in here stays so.
   test('signs in on a separate, named app held in memory only', async () => {
-    await openDeviceApproval('frodo@shire.dev', 'http://app/auth/link?oobCode=x');
+    await approveDeviceSignIn('frodo@shire.dev', 'http://app/auth/link?oobCode=x', 'req-1');
 
     expect(mockInitializeApp).toHaveBeenCalledWith(
       expect.anything(),
@@ -70,7 +70,7 @@ describe('openDeviceApproval', () => {
   // does not cover a second app: without its own, every sign-in here was
   // refused with auth/firebase-app-check-token-is-invalid.
   test('attaches App Check to the throwaway app before signing in', async () => {
-    await openDeviceApproval('frodo@shire.dev', 'link');
+    await approveDeviceSignIn('frodo@shire.dev', 'link', 'req-1');
 
     expect(mockAttachAppCheck).toHaveBeenCalledWith(mockThrowawayApp);
     expect(mockAttachAppCheck.mock.invocationCallOrder[0])
@@ -79,36 +79,23 @@ describe('openDeviceApproval', () => {
 
   test('skips App Check against the emulators (bug #1411)', async () => {
     mockUseEmulators = true;
-    await openDeviceApproval('frodo@shire.dev', 'link');
+    await approveDeviceSignIn('frodo@shire.dev', 'link', 'req-1');
 
     expect(mockAttachAppCheck).not.toHaveBeenCalled();
     expect(mockSignInWithEmailLink).toHaveBeenCalled();
   });
 
-  test('approves through the throwaway app\'s own functions', async () => {
-    const approval = await openDeviceApproval('frodo@shire.dev', 'link');
-    await approval.approve('req-1', '0471');
+  test('approves through the throwaway app\'s own functions, after signing in, and returns the code', async () => {
+    await expect(approveDeviceSignIn('frodo@shire.dev', 'link', 'req-1')).resolves.toBe('482913');
 
     expect(mockHttpsCallable).toHaveBeenCalledWith(mockThrowawayFunctions, 'approveDeviceSignIn');
-    expect(mockCallable).toHaveBeenCalledWith({ requestId: 'req-1', code: '0471' });
+    expect(mockCallable).toHaveBeenCalledWith({ requestId: 'req-1' });
+    expect(mockSignInWithEmailLink.mock.invocationCallOrder[0])
+      .toBeLessThan(mockCallable.mock.invocationCallOrder[0]);
   });
 
-  // The link can be used once; a mistyped code must not cost it.
-  test('can approve again after a refusal, on the same sign-in', async () => {
-    mockCallable.mockRejectedValueOnce(new Error('That code does not match'));
-    const approval = await openDeviceApproval('frodo@shire.dev', 'link');
-
-    await expect(approval.approve('req-1', '0000')).rejects.toThrow('does not match');
-    await approval.approve('req-1', '0471');
-
-    expect(mockSignInWithEmailLink).toHaveBeenCalledTimes(1);
-    expect(mockCallable).toHaveBeenCalledTimes(2);
-  });
-
-  test('close signs the throwaway out and deletes it, once', async () => {
-    const approval = await openDeviceApproval('frodo@shire.dev', 'link');
-    await approval.close();
-    await approval.close();
+  test('signs the throwaway out and deletes it once done', async () => {
+    await approveDeviceSignIn('frodo@shire.dev', 'link', 'req-1');
 
     expect(mockSignOut).toHaveBeenCalledTimes(1);
     expect(mockSignOut).toHaveBeenCalledWith(mockThrowawayAuth);
@@ -116,11 +103,21 @@ describe('openDeviceApproval', () => {
     expect(mockDeleteApp).toHaveBeenCalledWith(mockThrowawayApp);
   });
 
-  test('deletes the throwaway and rethrows when the link is refused', async () => {
+  test('deletes the throwaway and rethrows when the link is refused, approving nothing', async () => {
     const refusal = Object.assign(new Error('expired'), { code: 'auth/expired-action-code' });
     mockSignInWithEmailLink.mockRejectedValueOnce(refusal);
 
-    await expect(openDeviceApproval('frodo@shire.dev', 'link')).rejects.toBe(refusal);
+    await expect(approveDeviceSignIn('frodo@shire.dev', 'link', 'req-1')).rejects.toBe(refusal);
+    expect(mockCallable).not.toHaveBeenCalled();
+    expect(mockDeleteApp).toHaveBeenCalledWith(mockThrowawayApp);
+  });
+
+  test('signs out, deletes the throwaway and rethrows when the approval is refused', async () => {
+    const refusal = Object.assign(new Error('This sign-in request has expired.'), { code: 'functions/failed-precondition' });
+    mockCallable.mockRejectedValueOnce(refusal);
+
+    await expect(approveDeviceSignIn('frodo@shire.dev', 'link', 'req-1')).rejects.toBe(refusal);
+    expect(mockSignOut).toHaveBeenCalledWith(mockThrowawayAuth);
     expect(mockDeleteApp).toHaveBeenCalledWith(mockThrowawayApp);
   });
 });

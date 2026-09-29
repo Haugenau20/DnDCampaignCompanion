@@ -12,7 +12,7 @@
 // lives: asking for a link never says whether the address has an account.
 
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import SignInForm from '../SignInForm';
@@ -248,18 +248,21 @@ describe('SignInForm — names and accents', () => {
   });
 });
 
-describe('SignInForm — signing in from another device', () => {
+describe('SignInForm — signing in with the code the link shows', () => {
   const mockStartDeviceSignIn = jest.fn();
   const mockClaimDeviceSignIn = jest.fn();
   const mockSignInWithDeviceToken = jest.fn();
-  const REQUEST = { requestId: 'req-1', secret: 'sec', code: '0471', expiresAt: Date.now() + 15 * 60 * 1000 };
+  const REQUEST = { requestId: 'req-1', secret: 'sec', expiresAt: Date.now() + 15 * 60 * 1000 };
+
+  /** A refusal shaped like one from a callable. */
+  const callableError = (code: string, message: string) =>
+    Object.assign(new Error(message), { code: `functions/${code}` });
 
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.useFakeTimers();
     mockSendSignInLink.mockResolvedValue(undefined);
-    mockStartDeviceSignIn.mockResolvedValue({ ...REQUEST, expiresAt: Date.now() + 15 * 60 * 1000 });
-    mockClaimDeviceSignIn.mockResolvedValue({ status: 'pending' });
+    mockStartDeviceSignIn.mockResolvedValue(REQUEST);
+    mockClaimDeviceSignIn.mockResolvedValue({ status: 'approved', token: 'tok' });
     mockSignInWithDeviceToken.mockResolvedValue({ user: { uid: 'u1' }, isNewUser: false });
     setupMocks({
       startDeviceSignIn: mockStartDeviceSignIn,
@@ -268,26 +271,17 @@ describe('SignInForm — signing in from another device', () => {
     });
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   /** Ask for a link, and wait for the "Check your inbox" screen. */
   async function sendLink(props: { onSuccess?: () => void; next?: string | null } = {}, remember = false) {
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     renderForm(props);
-    await user.type(emailInput(), 'frodo@shire.dev');
-    if (remember) await user.click(screen.getByRole('checkbox'));
-    await user.click(linkButton());
+    await userEvent.type(emailInput(), 'frodo@shire.dev');
+    if (remember) await userEvent.click(screen.getByRole('checkbox'));
+    await userEvent.click(linkButton());
     await screen.findByTestId('sign-in-link-sent');
   }
 
-  /** Let one poll run, and whatever it resolves. */
-  async function nextPoll() {
-    await act(async () => {
-      jest.advanceTimersByTime(3000);
-    });
-  }
+  const digits = () => screen.getAllByRole('textbox', { name: /digit \d of 6/i });
+  const signInButton = () => screen.getByRole('button', { name: /^sign in$/i });
 
   test('puts the request in the link it sends', async () => {
     await sendLink({ next: '/quests' });
@@ -297,14 +291,15 @@ describe('SignInForm — signing in from another device', () => {
     expect(url.searchParams.get('next')).toBe('/quests');
   });
 
-  test('shows the code to type on the other device', async () => {
+  test('asks for the 6-digit code the link shows, in six boxes', async () => {
     await sendLink();
-    expect(screen.getByTestId('device-sign-in')).toHaveTextContent('0471');
-    expect(screen.getByText(/sign in on the other device/i)).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /code from the link/i })).toBeInTheDocument();
+    expect(digits()).toHaveLength(6);
+    expect(screen.getByTestId('sign-in-link-sent')).toHaveTextContent(/type the code it shows here/i);
   });
 
   // Signing in on the device that opens the link must never depend on this.
-  test('still sends a plain link when the request cannot be opened', async () => {
+  test('still sends a plain link, and asks for no code, when the request cannot be opened', async () => {
     mockStartDeviceSignIn.mockRejectedValueOnce(new Error('Too many sign-in requests.'));
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     await sendLink();
@@ -315,64 +310,104 @@ describe('SignInForm — signing in from another device', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  test('keeps waiting while the request is pending', async () => {
+  test('signs in as soon as the sixth digit is typed, keeping the 30-day choice', async () => {
     const onSuccess = jest.fn();
-    await sendLink({ onSuccess });
-    await nextPoll();
-    await nextPoll();
-    expect(mockClaimDeviceSignIn).toHaveBeenCalledTimes(2);
-    expect(mockSignInWithDeviceToken).not.toHaveBeenCalled();
-    expect(onSuccess).not.toHaveBeenCalled();
+    await sendLink({ onSuccess }, true);
+    await userEvent.type(digits()[0], '482913');
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(mockClaimDeviceSignIn).toHaveBeenCalledTimes(1);
+    expect(mockClaimDeviceSignIn).toHaveBeenCalledWith(REQUEST, '482913');
+    expect(mockSignInWithDeviceToken).toHaveBeenCalledWith('tok', true);
   });
 
-  test('signs this device in once approved, keeping the 30-day choice', async () => {
+  test('takes a pasted code', async () => {
     const onSuccess = jest.fn();
-    mockClaimDeviceSignIn.mockResolvedValueOnce({ status: 'approved', token: 'tok' });
-    await sendLink({ onSuccess }, true);
-    await nextPoll();
+    await sendLink({ onSuccess });
+    await userEvent.click(digits()[0]);
+    await userEvent.paste('482913');
+
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-    expect(mockSignInWithDeviceToken).toHaveBeenCalledWith('tok', true);
-    await nextPoll();
-    expect(mockClaimDeviceSignIn).toHaveBeenCalledTimes(1);
+    expect(mockClaimDeviceSignIn).toHaveBeenCalledWith(REQUEST, '482913');
+  });
+
+  test('does not offer to sign in before all six digits are there', async () => {
+    await sendLink();
+    await userEvent.type(digits()[0], '4829');
+    expect(signInButton()).toBeDisabled();
+    expect(mockClaimDeviceSignIn).not.toHaveBeenCalled();
+  });
+
+  test('a wrong code says so, clears the boxes, and can be typed again', async () => {
+    const onSuccess = jest.fn();
+    mockClaimDeviceSignIn.mockRejectedValueOnce(
+      callableError('invalid-argument', 'That code does not match. 2 tries left.')
+    );
+    await sendLink({ onSuccess });
+    await userEvent.type(digits()[0], '000000');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/2 tries left/);
+    digits().forEach((box) => expect(box).toHaveValue(''));
+    expect(onSuccess).not.toHaveBeenCalled();
+
+    await userEvent.type(digits()[0], '482913');
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+  });
+
+  test('says the code is no longer usable once the last try is spent', async () => {
+    mockClaimDeviceSignIn.mockRejectedValueOnce(
+      callableError('failed-precondition', 'That code does not match either, so this request is closed. Send a new link.')
+    );
+    await sendLink();
+    await userEvent.type(digits()[0], '000000');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/request is closed/);
+    expect(screen.getByTestId('device-sign-in')).toHaveTextContent(/can no longer be used/i);
+    expect(screen.queryByRole('group', { name: /code from the link/i })).not.toBeInTheDocument();
+  });
+
+  test('says the code is no longer usable when the request has expired', async () => {
+    mockClaimDeviceSignIn.mockResolvedValueOnce({ status: 'expired' });
+    await sendLink();
+    await userEvent.type(digits()[0], '482913');
+
+    expect(await screen.findByText(/can no longer be used/i)).toBeInTheDocument();
+    expect(mockSignInWithDeviceToken).not.toHaveBeenCalled();
+  });
+
+  test('explains a code typed before the link was opened', async () => {
+    mockClaimDeviceSignIn.mockResolvedValueOnce({ status: 'pending' });
+    await sendLink();
+    await userEvent.type(digits()[0], '482913');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/open the link in the email first/i);
+    expect(mockSignInWithDeviceToken).not.toHaveBeenCalled();
   });
 
   test('says so when the sign-in with the token fails', async () => {
     const onSuccess = jest.fn();
-    mockClaimDeviceSignIn.mockResolvedValueOnce({ status: 'approved', token: 'tok' });
     mockSignInWithDeviceToken.mockRejectedValueOnce(
       Object.assign(new Error('offline'), { code: 'auth/network-request-failed' })
     );
     await sendLink({ onSuccess });
-    await nextPoll();
+    await userEvent.type(digits()[0], '482913');
+
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not reach the server/i);
     expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  test('stops, and says the code expired, when the request expires', async () => {
-    mockClaimDeviceSignIn.mockResolvedValueOnce({ status: 'expired' });
+  test('forgets the request when the reader goes back to use a different email', async () => {
     await sendLink();
-    await nextPoll();
-    expect(screen.getByTestId('device-sign-in')).toHaveTextContent(/expired/i);
-    expect(screen.getByTestId('device-sign-in')).not.toHaveTextContent('0471');
-    await nextPoll();
-    expect(mockClaimDeviceSignIn).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole('button', { name: /use a different email/i }));
+    expect(screen.queryByTestId('device-sign-in')).not.toBeInTheDocument();
+    expect(emailInput()).toBeInTheDocument();
   });
 
-  test('carries on after a failed poll', async () => {
-    mockClaimDeviceSignIn.mockRejectedValueOnce(new Error('offline'));
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    await sendLink();
-    await nextPoll();
-    await nextPoll();
-    expect(mockClaimDeviceSignIn).toHaveBeenCalledTimes(2);
-    errorSpy.mockRestore();
-  });
-
-  test('stops waiting when the reader goes back to use a different email', async () => {
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    await sendLink();
-    await user.click(screen.getByRole('button', { name: /use a different email/i }));
-    await nextPoll();
-    expect(mockClaimDeviceSignIn).not.toHaveBeenCalled();
+  test('every control on the code screen has an accessible name', async () => {
+    const { container } = renderForm();
+    await userEvent.type(emailInput(), 'frodo@shire.dev');
+    await userEvent.click(linkButton());
+    await screen.findByTestId('sign-in-link-sent');
+    expect(unnamedControlsIn(container)).toEqual([]);
   });
 });

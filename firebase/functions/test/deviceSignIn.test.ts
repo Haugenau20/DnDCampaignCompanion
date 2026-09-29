@@ -20,13 +20,13 @@ const EMAIL = "frodo@shire.dev";
 interface Started {
   requestId: string;
   secret: string;
-  code: string;
+  code?: string;
 }
 
 const start = (email: string = EMAIL) =>
   call(startDeviceSignIn, {email}) as Promise<Started>;
 const approve = (data: object, uid?: string, email?: string) =>
-  call(approveDeviceSignIn, data, uid, email);
+  call(approveDeviceSignIn, data, uid, email) as Promise<{code: string}>;
 const lookUp = (data: object) =>
   call(lookUpDeviceSignIn, data) as Promise<{email: string}>;
 const claim = (data: object) =>
@@ -39,7 +39,15 @@ async function account(email: string = EMAIL): Promise<string> {
 }
 
 /** A code that is certainly not `code`. */
-const wrong = (code: string) => (code === "0000" ? "1111" : "0000");
+const wrong = (code: string) => (code === "000000" ? "111111" : "000000");
+
+/** Open a request and approve it as its owner, as the phone would. */
+async function approved(): Promise<Started & {code: string; uid: string}> {
+  const uid = await account();
+  const started = await start();
+  const {code} = await approve({requestId: started.requestId}, uid, EMAIL);
+  return {...started, code, uid};
+}
 
 const requestDoc = (id: string) => db.collection(DEVICE_SIGN_INS).doc(id).get();
 
@@ -48,11 +56,17 @@ beforeEach(() => clearProject(PROJECT));
 describe("startDeviceSignIn", () => {
   it("opens a pending request for the normalised address", async () => {
     const started = await start("  Frodo@Shire.dev ");
-    expect(started.code).toMatch(/^\d{4}$/);
     const stored = (await requestDoc(started.requestId)).data();
     expect(stored?.email).toBe(EMAIL);
     expect(stored?.status).toBe("pending");
-    expect(stored?.code).toBe(started.code);
+  });
+
+  // Whoever opens a request may not be the address's owner, so the code must
+  // not exist until the link is used.
+  it("makes no code yet, and returns none", async () => {
+    const started = await start();
+    expect(started.code).toBeUndefined();
+    expect((await requestDoc(started.requestId)).data()?.code).toBeUndefined();
   });
 
   it("stores only a hash of the secret", async () => {
@@ -81,9 +95,7 @@ describe("startDeviceSignIn", () => {
   });
 
   it("does not count used requests against the limit", async () => {
-    const uid = await account();
-    const first = await start();
-    await approve({requestId: first.requestId, code: first.code}, uid, EMAIL);
+    await approved();
     for (let i = 1; i < MAX_OPEN_REQUESTS; i++) await start();
     await expect(start()).resolves.toBeTruthy();
   });
@@ -102,73 +114,75 @@ describe("startDeviceSignIn", () => {
 });
 
 describe("approveDeviceSignIn", () => {
-  it("approves a request for the caller's own address with the right code", async () => {
+  it("approves a request for the caller's own address, and returns a 6-digit code", async () => {
     const uid = await account();
-    const {requestId, code} = await start();
-    await expect(approve({requestId, code}, uid, EMAIL)).resolves.toEqual({success: true});
+    const {requestId} = await start();
+    const {code} = await approve({requestId}, uid, EMAIL);
+    expect(code).toMatch(/^\d{6}$/);
     const stored = (await requestDoc(requestId)).data();
     expect(stored?.status).toBe("approved");
     expect(stored?.uid).toBe(uid);
+    expect(stored?.code).toBe(code);
   });
 
   it("matches the address regardless of case", async () => {
     const uid = await account();
-    const {requestId, code} = await start();
-    await expect(approve({requestId, code}, uid, "FRODO@shire.dev")).resolves.toEqual({success: true});
+    const {requestId} = await start();
+    await expect(approve({requestId}, uid, "FRODO@shire.dev")).resolves.toHaveProperty("code");
   });
 
-  it("refuses an anonymous caller", async () => {
-    const {requestId, code} = await start();
-    await expectHttpsError(approve({requestId, code}), "unauthenticated");
+  // A page that asks twice (a re-render) must not strand the first answer.
+  it("gives the same code when its approver asks again", async () => {
+    const {requestId, code, uid} = await approved();
+    await expect(approve({requestId}, uid, EMAIL)).resolves.toEqual({code});
   });
 
-  it("refuses an account with another address, even with the right code", async () => {
+  // The device that opened the request knows its id: the id alone must never
+  // be enough to read the code.
+  it("refuses an anonymous caller, and makes no code", async () => {
+    const {requestId} = await start();
+    await expectHttpsError(approve({requestId}), "unauthenticated");
+    expect((await requestDoc(requestId)).data()?.code).toBeUndefined();
+  });
+
+  it("refuses an account with another address, and makes no code", async () => {
     const uid = await account("sauron@mordor.dev");
-    const {requestId, code} = await start();
-    await expectHttpsError(approve({requestId, code}, uid, "sauron@mordor.dev"), "permission-denied");
-    expect((await requestDoc(requestId)).data()?.status).toBe("pending");
-  });
-
-  it("counts a wrong code and says how many tries are left", async () => {
-    const uid = await account();
-    const {requestId, code} = await start();
-    const error = await expectHttpsError(approve({requestId, code: wrong(code)}, uid, EMAIL), "invalid-argument");
-    expect(error.message).toContain(`${MAX_CODE_ATTEMPTS - 1} tries left`);
+    const {requestId} = await start();
+    await expectHttpsError(approve({requestId}, uid, "sauron@mordor.dev"), "permission-denied");
     const stored = (await requestDoc(requestId)).data();
-    expect(stored?.attempts).toBe(1);
     expect(stored?.status).toBe("pending");
+    expect(stored?.code).toBeUndefined();
   });
 
-  it(`closes the request after ${MAX_CODE_ATTEMPTS} wrong codes -- even the right one fails after`, async () => {
-    const uid = await account();
-    const {requestId, code} = await start();
-    for (let i = 1; i < MAX_CODE_ATTEMPTS; i++) {
-      await expectHttpsError(approve({requestId, code: wrong(code)}, uid, EMAIL), "invalid-argument");
-    }
-    await expectHttpsError(approve({requestId, code: wrong(code)}, uid, EMAIL), "failed-precondition");
-    expect((await requestDoc(requestId)).data()?.status).toBe("spent");
-    await expectHttpsError(approve({requestId, code}, uid, EMAIL), "failed-precondition");
+  it("does not tell another account the code of an approved request", async () => {
+    const {requestId} = await approved();
+    const other = await account("sauron@mordor.dev");
+    await expectHttpsError(approve({requestId}, other, "sauron@mordor.dev"), "permission-denied");
   });
 
   it("refuses an expired request", async () => {
     const uid = await account();
-    const {requestId, code} = await start();
+    const {requestId} = await start();
     await db.collection(DEVICE_SIGN_INS).doc(requestId).update({
       expiresAt: Timestamp.fromMillis(Date.now() - 1000),
     });
-    await expectHttpsError(approve({requestId, code}, uid, EMAIL), "failed-precondition");
+    await expectHttpsError(approve({requestId}, uid, EMAIL), "failed-precondition");
   });
 
   it("refuses a request that does not exist", async () => {
     const uid = await account();
-    await expectHttpsError(approve({requestId: "nope", code: "1234"}, uid, EMAIL), "failed-precondition");
+    await expectHttpsError(approve({requestId: "nope"}, uid, EMAIL), "failed-precondition");
   });
 
-  it("refuses approving twice", async () => {
+  it("refuses a request already signed in with", async () => {
+    const {requestId, secret, code, uid} = await approved();
+    await claim({requestId, secret, code});
+    await expectHttpsError(approve({requestId}, uid, EMAIL), "failed-precondition");
+  });
+
+  it("refuses a missing id", async () => {
     const uid = await account();
-    const {requestId, code} = await start();
-    await approve({requestId, code}, uid, EMAIL);
-    await expectHttpsError(approve({requestId, code}, uid, EMAIL), "failed-precondition");
+    await expectHttpsError(approve({}, uid, EMAIL), "invalid-argument");
   });
 });
 
@@ -180,10 +194,10 @@ describe("lookUpDeviceSignIn", () => {
   });
 
   it("gives away nothing else about the request", async () => {
-    const {requestId, code, secret} = await start();
+    const {requestId, secret} = await start();
     const answer = JSON.stringify(await lookUp({requestId}));
-    expect(answer).not.toContain(code);
     expect(answer).not.toContain(secret);
+    expect(Object.keys(JSON.parse(answer))).toEqual(["email"]);
   });
 
   it("refuses a request that does not exist", async () => {
@@ -199,9 +213,7 @@ describe("lookUpDeviceSignIn", () => {
   });
 
   it("refuses a request that is no longer pending", async () => {
-    const uid = await account();
-    const {requestId, code} = await start();
-    await approve({requestId, code}, uid, EMAIL);
+    const {requestId} = await approved();
     await expectHttpsError(lookUp({requestId}), "failed-precondition");
   });
 
@@ -211,62 +223,77 @@ describe("lookUpDeviceSignIn", () => {
 });
 
 describe("claimDeviceSignIn", () => {
-  it("answers pending until the request is approved", async () => {
+  it("answers pending until the link has been opened, whatever the code", async () => {
     const {requestId, secret} = await start();
-    await expect(claim({requestId, secret})).resolves.toEqual({status: "pending"});
+    await expect(claim({requestId, secret, code: "123456"})).resolves.toEqual({status: "pending"});
+    expect((await requestDoc(requestId)).data()?.attempts).toBe(0);
   });
 
-  it("hands over a sign-in token for the approved account, once", async () => {
-    const uid = await account();
-    const {requestId, secret, code} = await start();
-    await approve({requestId, code}, uid, EMAIL);
+  it("hands over a sign-in token for the approved account with the right code, once", async () => {
+    const {requestId, secret, code, uid} = await approved();
 
-    const claimed = await claim({requestId, secret});
+    const claimed = await claim({requestId, secret, code});
     expect(claimed.status).toBe("approved");
     // The emulator's custom tokens are unsigned JWTs; the uid is in the payload.
     const payload = JSON.parse(Buffer.from(String(claimed.token).split(".")[1], "base64url").toString());
     expect(payload.uid).toBe(uid);
 
-    await expect(claim({requestId, secret})).resolves.toEqual({status: "expired"});
+    await expect(claim({requestId, secret, code})).resolves.toEqual({status: "expired"});
     expect((await requestDoc(requestId)).data()?.status).toBe("claimed");
   });
 
-  it("refuses the wrong secret, and leaves the request collectable", async () => {
-    const uid = await account();
-    const {requestId, secret, code} = await start();
-    await approve({requestId, code}, uid, EMAIL);
-    await expectHttpsError(claim({requestId, secret: "stolen"}), "permission-denied");
-    expect((await claim({requestId, secret})).status).toBe("approved");
+  it("ignores spaces around the code", async () => {
+    const {requestId, secret, code} = await approved();
+    expect((await claim({requestId, secret, code: ` ${code} `})).status).toBe("approved");
+  });
+
+  it("refuses the wrong secret, even with the right code, and leaves the request collectable", async () => {
+    const {requestId, secret, code} = await approved();
+    await expectHttpsError(claim({requestId, secret: "stolen", code}), "permission-denied");
+    expect((await requestDoc(requestId)).data()?.attempts).toBe(0);
+    expect((await claim({requestId, secret, code})).status).toBe("approved");
+  });
+
+  it("counts a wrong code and says how many tries are left", async () => {
+    const {requestId, secret, code} = await approved();
+    const error = await expectHttpsError(claim({requestId, secret, code: wrong(code)}), "invalid-argument");
+    expect(error.message).toContain(`${MAX_CODE_ATTEMPTS - 1} tries left`);
+    const stored = (await requestDoc(requestId)).data();
+    expect(stored?.attempts).toBe(1);
+    expect(stored?.status).toBe("approved");
+  });
+
+  it(`closes the request after ${MAX_CODE_ATTEMPTS} wrong codes -- even the right one fails after`, async () => {
+    const {requestId, secret, code} = await approved();
+    for (let i = 1; i < MAX_CODE_ATTEMPTS; i++) {
+      await expectHttpsError(claim({requestId, secret, code: wrong(code)}), "invalid-argument");
+    }
+    await expectHttpsError(claim({requestId, secret, code: wrong(code)}), "failed-precondition");
+    expect((await requestDoc(requestId)).data()?.status).toBe("spent");
+    await expect(claim({requestId, secret, code})).resolves.toEqual({status: "expired"});
+  });
+
+  it("refuses a missing code", async () => {
+    const {requestId, secret} = await approved();
+    await expectHttpsError(claim({requestId, secret}), "invalid-argument");
+    await expectHttpsError(claim({requestId, secret, code: " "}), "invalid-argument");
   });
 
   it("answers expired for an expired approved request", async () => {
-    const uid = await account();
-    const {requestId, secret, code} = await start();
-    await approve({requestId, code}, uid, EMAIL);
+    const {requestId, secret, code} = await approved();
     await db.collection(DEVICE_SIGN_INS).doc(requestId).update({
       expiresAt: Timestamp.fromMillis(Date.now() - 1000),
     });
-    await expect(claim({requestId, secret})).resolves.toEqual({status: "expired"});
-  });
-
-  it("answers expired for a request closed by wrong codes", async () => {
-    const uid = await account();
-    const {requestId, secret, code} = await start();
-    for (let i = 0; i < MAX_CODE_ATTEMPTS; i++) {
-      await approve({requestId, code: wrong(code)}, uid, EMAIL).catch(() => undefined);
-    }
-    await expect(claim({requestId, secret})).resolves.toEqual({status: "expired"});
+    await expect(claim({requestId, secret, code})).resolves.toEqual({status: "expired"});
   });
 
   it("answers expired for a request that does not exist", async () => {
-    await expect(claim({requestId: "nope", secret: "x"})).resolves.toEqual({status: "expired"});
+    await expect(claim({requestId: "nope", secret: "x", code: "123456"})).resolves.toEqual({status: "expired"});
   });
 
   it("issues nothing for an account deleted since it approved", async () => {
-    const uid = await account();
-    const {requestId, secret, code} = await start();
-    await approve({requestId, code}, uid, EMAIL);
+    const {requestId, secret, code, uid} = await approved();
     await admin.auth().deleteUser(uid);
-    await expect(claim({requestId, secret})).resolves.toEqual({status: "expired"});
+    await expect(claim({requestId, secret, code})).resolves.toEqual({status: "expired"});
   });
 });

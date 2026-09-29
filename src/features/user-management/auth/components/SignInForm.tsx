@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useDeviceSignInWait } from '../hooks/useDeviceSignInWait';
 import type { DeviceSignInRequest } from 'core/services/firebase/auth/AuthService';
 import Typography from 'core/components/Typography';
 import Input from 'core/components/Input';
@@ -14,6 +13,7 @@ import {
 } from 'core/services/firebase/auth/signInErrors';
 import { signInLinkUrl } from '../utils/email-link';
 import DevEmailLinkShortcut from './DevEmailLinkShortcut';
+import CodeInput from './CodeInput';
 
 interface SignInFormProps {
   /**
@@ -30,6 +30,18 @@ interface SignInFormProps {
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** How many digits the code the link shows has. */
+const CODE_LENGTH = 6;
+
+/**
+ * The error code a refusal carries, if any.
+ * @param err Whatever was thrown
+ */
+const errorCode = (err: unknown): string | undefined => {
+  const code = (err as { code?: unknown })?.code;
+  return typeof code === 'string' ? code : undefined;
+};
+
 /**
  * The sign-in form. Passwordless: a magic link by email, or Google.
  *
@@ -45,11 +57,10 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * opened, and that page explains it.
  *
  * Every link also opens a request for *this* device to be signed in from the
- * one the link is opened on -- usually a phone, where the inbox is. The
- * "Check your inbox" screen shows the code to type there, and signs this
- * device in by itself once it is approved. If the request cannot be opened,
- * the link is sent without it: signing in on the device that opens the link
- * must never depend on it.
+ * one the link is opened on -- usually a phone, where the inbox is. Opened
+ * there, the link shows a 6-digit code, and the "Check your inbox" screen
+ * takes it. If the request cannot be opened, the link is sent without it:
+ * signing in on the device that opens the link must never depend on it.
  */
 const SignInForm: React.FC<SignInFormProps> = ({ onSuccess, next }) => {
   const [email, setEmail] = useState('');
@@ -58,21 +69,17 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess, next }) => {
   const [pending, setPending] = useState<'link' | 'google' | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [deviceRequest, setDeviceRequest] = useState<DeviceSignInRequest | null>(null);
-  const [signingInHere, setSigningInHere] = useState(false);
+  const [code, setCode] = useState('');
+  const [claiming, setClaiming] = useState(false);
+  const [deviceExpired, setDeviceExpired] = useState(false);
 
-  const { sendSignInLink, signInWithGoogle, startDeviceSignIn, signInWithDeviceToken } = useAuth();
-
-  const deviceWait = useDeviceSignInWait(deviceRequest, async (token) => {
-    setSigningInHere(true);
-    setError(null);
-    try {
-      await signInWithDeviceToken(token, rememberMe);
-      onSuccess?.();
-    } catch (err) {
-      setError(describeSignInError(err));
-      setSigningInHere(false);
-    }
-  });
+  const {
+    sendSignInLink,
+    signInWithGoogle,
+    startDeviceSignIn,
+    claimDeviceSignIn,
+    signInWithDeviceToken
+  } = useAuth();
 
   const emailValid = EMAIL.test(email.trim());
   const busy = pending !== null;
@@ -103,6 +110,43 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess, next }) => {
     } finally {
       setPending(null);
     }
+  };
+
+  /**
+   * Trade the code the link showed for a sign-in on this device.
+   * @param typed The full code
+   */
+  const submitCode = async (typed: string) => {
+    if (!deviceRequest || claiming || typed.length !== CODE_LENGTH) return;
+    setClaiming(true);
+    setError(null);
+
+    try {
+      const result = await claimDeviceSignIn(deviceRequest, typed);
+      if (result.status === 'approved') {
+        await signInWithDeviceToken(result.token, rememberMe);
+        onSuccess?.();
+        return;
+      }
+      setCode('');
+      if (result.status === 'expired') {
+        setDeviceExpired(true);
+      } else {
+        setError('That code is not ready yet. Open the link in the email first — it shows the code.');
+      }
+    } catch (err) {
+      setCode('');
+      setError(describeSignInError(err));
+      // The last wrong code closes the request; anything else may be retried.
+      if (errorCode(err) === 'functions/failed-precondition') setDeviceExpired(true);
+    } finally {
+      setClaiming(false);
+    }
+  };
+
+  const handleCodeChange = (typed: string) => {
+    setCode(typed);
+    if (typed.length === CODE_LENGTH) submitCode(typed);
   };
 
   const handleGoogle = async () => {
@@ -136,36 +180,44 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess, next }) => {
         >
           <Typography className="font-medium">Check your inbox</Typography>
           <Typography variant="body-sm">
-            We sent a sign-in link to <strong>{sentTo}</strong>. Open it on
-            this device and you are in — no password needed.
+            We sent a sign-in link to <strong>{sentTo}</strong>.{' '}
+            {deviceRequest
+              ? 'Open it on any device — your phone is fine — and type the code it shows here.'
+              : 'Open it on this device and you are in — no password needed.'}
           </Typography>
         </div>
         {deviceRequest && (
-          <div className="card rounded-lg px-4 py-4 space-y-2" data-testid="device-sign-in">
-            {deviceWait === 'expired' ? (
+          <form
+            className="card rounded-lg px-4 py-4 space-y-4"
+            data-testid="device-sign-in"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitCode(code);
+            }}
+          >
+            {deviceExpired ? (
               <Typography variant="body-sm" color="secondary">
-                The code for signing in from another device has expired. Opening
-                the link on this device still works, or send a new one.
+                This code can no longer be used. Send a new link to try again.
               </Typography>
             ) : (
               <>
-                <Typography variant="body-sm">
-                  Opening the email on another device, like your phone? Choose{' '}
-                  <strong>Sign in on the other device</strong> there and enter
-                  this code:
-                </Typography>
-                <Typography
-                  className="font-heading text-3xl tracking-[0.4em] text-center py-1"
-                  aria-label={`Code ${deviceRequest.code.split('').join(' ')}`}
+                <CodeInput
+                  label="Code from the link"
+                  value={code}
+                  onChange={handleCodeChange}
+                  length={CODE_LENGTH}
+                />
+                <Button
+                  type="submit"
+                  disabled={claiming || code.length !== CODE_LENGTH}
+                  isLoading={claiming}
+                  className="w-full min-h-[2.75rem]"
                 >
-                  {deviceRequest.code}
-                </Typography>
-                <Typography variant="body-sm" color="secondary" role="status">
-                  {signingInHere ? 'Approved — signing you in…' : 'This page signs you in by itself once you have.'}
-                </Typography>
+                  {claiming ? 'Signing you in…' : 'Sign in'}
+                </Button>
               </>
             )}
-          </div>
+          </form>
         )}
         {error && (
           <div
@@ -183,6 +235,8 @@ const SignInForm: React.FC<SignInFormProps> = ({ onSuccess, next }) => {
             onClick={() => {
               setSentTo(null);
               setDeviceRequest(null);
+              setCode('');
+              setDeviceExpired(false);
               setError(null);
             }}
           >
