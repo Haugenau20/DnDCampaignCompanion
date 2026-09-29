@@ -472,7 +472,7 @@ describe('AuthService', () => {
 
   describe('signing in from another device', () => {
     test('startDeviceSignIn opens a request through the callable', async () => {
-      const request = { requestId: 'r1', secret: 's', code: '0471', expiresAt: 1 };
+      const request = { requestId: 'r1', secret: 's', expiresAt: 1 };
       mockCallable.mockResolvedValueOnce({ data: request });
       const svc = AuthService.getInstance();
 
@@ -481,15 +481,15 @@ describe('AuthService', () => {
       expect(mockCallable).toHaveBeenCalledWith({ email: 'a@b.com' });
     });
 
-    test('claimDeviceSignIn sends the id and secret, never the code', async () => {
-      mockCallable.mockResolvedValueOnce({ data: { status: 'pending' } });
+    test('claimDeviceSignIn sends the id, the secret and the typed code, and nothing else', async () => {
+      mockCallable.mockResolvedValueOnce({ data: { status: 'approved', token: 'tok' } });
       const svc = AuthService.getInstance();
 
       await expect(
-        svc.claimDeviceSignIn({ requestId: 'r1', secret: 's', code: '0471', expiresAt: 1 } as any)
-      ).resolves.toEqual({ status: 'pending' });
+        svc.claimDeviceSignIn({ requestId: 'r1', secret: 's', expiresAt: 1 } as any, '482913')
+      ).resolves.toEqual({ status: 'approved', token: 'tok' });
       expect(mockHttpsCallable).toHaveBeenCalledWith(expect.anything(), 'claimDeviceSignIn');
-      expect(mockCallable).toHaveBeenCalledWith({ requestId: 'r1', secret: 's' });
+      expect(mockCallable).toHaveBeenCalledWith({ requestId: 'r1', secret: 's', code: '482913' });
     });
 
     test('lookUpDeviceSignIn asks the callable for the address of the request', async () => {

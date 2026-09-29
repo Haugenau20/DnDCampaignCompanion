@@ -21,14 +21,15 @@ interface LookUpDeviceSignInData {
  * needs the address to use the link, and the request already holds it; asking
  * here keeps it out of the link's URL.
  *
- * This reveals nothing new. The id is 128 random bits that travel only inside
- * the email sent to that same address, so whoever has the id can already read
- * that inbox -- and use the link itself. It answers only for a request that can
- * still be approved, so an old link reveals nothing.
+ * This reveals nothing new. The id is 128 random bits known only to the device
+ * that opened the request, which typed the address itself, and to whoever reads
+ * the email sent to that same address. It answers only for a request that can
+ * still be approved, so an old link reveals nothing. It never reveals the code:
+ * that takes the link itself (`approveDeviceSignIn`).
  *
- * Only the approving path may use the answer. Signing *this* device in must
- * still ask for the address: it is Firebase's guard against being sent someone
- * else's link and landing in their account.
+ * Only the approving path may use the answer. Signing *this* device in with
+ * the link must still ask for the address: it is Firebase's guard against being
+ * sent someone else's link and landing in their account.
  */
 export const lookUpDeviceSignIn = functions.onCall(
   {

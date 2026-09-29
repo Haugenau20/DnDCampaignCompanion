@@ -2,8 +2,7 @@
 import { useState, useCallback } from 'react';
 import { useFirebaseContext } from '../context/FirebaseContext';
 import firebaseServices from 'core/services/firebase';
-import { openDeviceApproval } from 'core/services/firebase/auth/deviceApproval';
-import type { DeviceApproval } from 'core/services/firebase/auth/deviceApproval';
+import { approveDeviceSignIn as approveWithLink } from 'core/services/firebase/auth/deviceApproval';
 import type {
   DeviceSignInClaim,
   DeviceSignInRequest,
@@ -87,11 +86,12 @@ export function useAuth() {
   }, []);
 
   /**
-   * Whether another device has approved the request, with the sign-in token once it has.
+   * Trade the code the device that opened the link shows for a sign-in token.
    * @param request The request `startDeviceSignIn` opened
+   * @param code The code the reader typed
    */
-  const claimDeviceSignIn = useCallback((request: DeviceSignInRequest): Promise<DeviceSignInClaim> => {
-    return firebaseServices.auth.claimDeviceSignIn(request);
+  const claimDeviceSignIn = useCallback((request: DeviceSignInRequest, code: string): Promise<DeviceSignInClaim> => {
+    return firebaseServices.auth.claimDeviceSignIn(request, code);
   }, []);
 
   /**
@@ -126,9 +126,11 @@ export function useAuth() {
    * Use a magic link to approve another device, without signing this one in.
    * @param email The address the link was sent to
    * @param link The link as opened
+   * @param requestId The request the link carries
+   * @returns The code to type on the other device
    */
-  const startDeviceApproval = useCallback((email: string, link: string): Promise<DeviceApproval> => {
-    return openDeviceApproval(email, link);
+  const approveDeviceSignIn = useCallback((email: string, link: string, requestId: string): Promise<string> => {
+    return approveWithLink(email, link, requestId);
   }, []);
 
   /** Attach Google to the signed-in account. */
@@ -201,7 +203,7 @@ export function useAuth() {
     claimDeviceSignIn,
     lookUpDeviceSignIn,
     signInWithDeviceToken,
-    startDeviceApproval,
+    approveDeviceSignIn,
     linkGoogle,
     getSignInMethods,
     getPendingEmailSignIn,
