@@ -359,6 +359,66 @@ describe('NoteContext Behavioral Tests', () => {
       expect(capturedContext.notes[0].isUnsaved).toBe(false);
     });
 
+    // T072: the editor queues a save behind one in flight, and the queued save
+    // runs with the context it was handed -- possibly from before the first
+    // save's state update committed, where the note still reads isUnsaved.
+    // Creating it again either throws "already exists" (the save is lost) or,
+    // had both checks passed, lands a second create over the first.
+    test('a save made from a context captured before the create committed updates, not re-creates', async () => {
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
+      await act(async () => {
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
+      });
+
+      const stale = capturedContext;
+      await act(async () => {
+        await stale.saveNote(createdId, { content: 'first' });
+        await stale.saveNote(createdId, { content: 'second' });
+      });
+
+      expect(mockDocumentService.createDocument).toHaveBeenCalledTimes(1);
+      expect(mockDocumentService.updateDocumentWithAttribution).toHaveBeenCalledWith(
+        'groups/test-group/users/test-user/notes',
+        createdId,
+        expect.objectContaining({ content: 'second' })
+      );
+    });
+
+    test('an update made from a context captured before the create committed still writes', async () => {
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
+      await act(async () => {
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
+      });
+
+      const stale = capturedContext;
+      await act(async () => {
+        await stale.saveNote(createdId, { content: 'first' });
+        await stale.updateNote(createdId, { content: 'second' });
+      });
+
+      expect(mockDocumentService.updateDocumentWithAttribution).toHaveBeenCalledWith(
+        'groups/test-group/users/test-user/notes',
+        createdId,
+        expect.objectContaining({ content: 'second' })
+      );
+    });
+
     test('should update existing saved note in Firebase', async () => {
       // Start with a saved note
       let capturedContext: any;

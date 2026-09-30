@@ -39,7 +39,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T063 | Entity pages look like three products | L | needs scoping | NPC page doesn't use the shell; pick the look first |
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
-| low | T072 | Note autosaves can overlap | S | open | `PERF-14`; duplicate writes, no loss measured |
 | low | T073 | Reading progress rewrites one growing document | S | open | `PERF-12`; per player since 2026-09-28, so each document grows with one reader's chapters only |
 | nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
 | nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
@@ -632,9 +631,9 @@ located by symbol: six on 2026-09-16 at `ebc0a28`, `PERF-02` on 2026-09-25,
 | `PERF-09` Home refetches attribution profiles | Medium | **Confirmed** 2026-09-28 — see T032. `HomePage` (still `/`) re-runs its effect whenever quests, rumours, NPCs, locations or chapters change. It collects every `createdBy`/`modifiedBy` uid and `fetchAttributionUsernames` reads each group profile afresh: there is no cache across runs, and uids whose items already carry the `*Username`/`*CharacterName` fields that `determineAttributionActor` prefers are fetched anyway. |
 | `PERF-12` progress rewrites a growing document | Medium | **Confirmed, partly mitigated** 2026-09-28 — T073. Progress is now one document per reader per campaign, not one per campaign. |
 | `PERF-13` profile/admin mutations reload held data | Medium | **Confirmed** 2026-09-28 — see T032. Each `useUser` update awaits `refreshUserProfile`, which re-reads the global profile and re-runs `setActiveGroupContext` (group profile and campaign list, in parallel since `PERF-02`). The cited `CampaignManagementView` is no longer mounted, but the live `/admin/campaigns` (`AdminCampaignsPage`) repeats it. It loads `getCampaigns` on mount even when the context holds the list. After create, update or delete, which `useCampaigns` already follows with `refreshCampaigns`, it calls `reload()` again. |
-| `PERF-14` note autosaves can overlap | Low | **Confirmed** 2026-09-28 — T072. |
+| `PERF-14` note autosaves can overlap | Low | **Fixed** 2026-09-30. `NoteEditor` holds one save in flight; a save due during it waits, and every request made while it waits joins one follow-up that writes the newest text. Overlap was worse than duplicate writes: the older text could land last after the newer save marked the note clean, and a new note's second create was refused as "already exists". `NoteContext` now records a create the moment it resolves, so a save from a context captured before then updates instead. |
 
-Seven of fifteen are fixed; the other eight hold. The review's own prioritized
+Eight of fifteen are fixed; the other seven hold. The review's own prioritized
 list opens with a finding that is already fixed, so do not work straight down
 it. Re-check a finding by symbol before acting on its line links: they are
 `b73232a` line numbers, and several files have moved or been deleted.
@@ -678,22 +677,6 @@ emulator.
   criteria to write tests against; its §"Positive observations" names the
   primitives that already exist, including `DocumentService.batchOperations`.
 - **Source**: performance review
-
-### T072 — Note autosaves can overlap
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-28 · `PERF-14`
-
-`NoteEditor.performAutosave` is shared by the 2 s idle debounce, the 30 s
-dirty-note interval and manual save. `isSaving` is render state, not an
-in-flight guard, so a save that starts while another is awaiting sends a second
-write, and each attributed write re-reads the group profile (`PERF-06`).
-
-- **Where**: `features/collaboration/notes/components/NoteEditor.tsx`,
-  `performAutosave`, `scheduleAutosave` and the interval effect below them.
-- **Catch**: for a note not yet saved (`isUnsaved`), both overlapping calls
-  choose `saveNote`, the path that creates the document. What a second
-  create does was not measured. Check it before sizing the fix, which is
-  otherwise a promise ref that coalesces saves.
-- **Source**: T033, from the performance review
 
 ### T073 — Reading progress rewrites one growing document
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-28 · `PERF-12`

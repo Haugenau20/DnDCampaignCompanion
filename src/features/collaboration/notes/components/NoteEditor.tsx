@@ -155,12 +155,16 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   }, []);
 
   /**
-   * The shared autosave write: always saves both fields together so a
-   * content-only edit still persists a title derived from the new content,
-   * and a title-only edit doesn't clobber content. Used by both the idle
-   * debounce and the dirty-note interval below.
+   * The one write behind every save: always both fields together, so a
+   * content-only edit still persists a title derived from the new content, and
+   * a title-only edit doesn't clobber content. Reads the fields from refs, so a
+   * save that waited behind another writes what is on screen when it runs.
+   *
+   * `viaSave` forces `saveNote` (Ctrl+S, and the pre-extraction save); an
+   * autosave of an already-saved note goes through `updateNote`. Rejects on
+   * failure -- see {@link performAutosave} and {@link handleManualSave}.
    */
-  const performAutosave = useCallback(async () => {
+  const writeLatest = useCallback(async (viaSave: boolean) => {
     if (!note || readOnly) return;
 
     const nextTitle = titleToPersist(hasExplicitTitleRef.current, titleRef.current);
@@ -177,26 +181,74 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       // creates the document, so autosave must use it for a new note (C1).
       // Once the note is saved once, updateNote correctly routes further
       // edits through saveNote internally.
-      const persist = isNewNote ? saveNote : updateNote;
+      const persist = viaSave || isNewNote ? saveNote : updateNote;
       await persist(note.id, { title: nextTitle, content: nextContent });
 
-      if (isNewNote) {
-        // Reflect the now-created document locally so the footer's
-        // "Not saved to server" state clears without waiting on a reload.
-        setNote(prev => (prev ? { ...prev, isUnsaved: false } : prev));
-      }
+      // Reflect a now-created document locally so the footer's "Not saved to
+      // server" state clears without waiting on a reload.
+      setNote(prev => (prev?.isUnsaved ? { ...prev, isUnsaved: false } : prev));
       setLastSaved(new Date());
       // Typing during the round-trip made newer text than was saved; that is
       // still unsaved, and its own debounce (or the interval) will save it.
       markCleanIfUnchanged(nextTitle, nextContent);
 
       onSave?.();
-    } catch (error) {
-      console.error("Failed to save note:", error);
     } finally {
       setIsSaving(false);
     }
   }, [note, readOnly, getNoteById, updateNote, saveNote, onSave, markCleanIfUnchanged]);
+
+  /*
+    Saves never overlap (T072). Two writes in flight can land in either order
+    -- the older text last, after the newer one already marked the note clean
+    -- and two creates of a new note race createDocument's existence check.
+    A save requested while one is in flight waits for it; every request made
+    during that wait joins the same single follow-up, which then writes the
+    newest text. The follow-up calls the LATEST writeLatest, not the one from
+    the render that queued it.
+  */
+  const writeLatestRef = useRef(writeLatest);
+  useEffect(() => { writeLatestRef.current = writeLatest; }, [writeLatest]);
+  const inFlightSaveRef = useRef<Promise<void> | null>(null);
+  const queuedSaveRef = useRef<{ promise: Promise<void>; viaSave: boolean } | null>(null);
+
+  const runSave = useCallback((viaSave: boolean): Promise<void> => {
+    const start = (useSave: boolean): Promise<void> => {
+      const tracked: Promise<void> = writeLatestRef.current(useSave).finally(() => {
+        if (inFlightSaveRef.current === tracked) inFlightSaveRef.current = null;
+      });
+      inFlightSaveRef.current = tracked;
+      return tracked;
+    };
+
+    const inFlight = inFlightSaveRef.current;
+    if (!inFlight) return start(viaSave);
+
+    const queued = queuedSaveRef.current;
+    if (queued) {
+      // A Ctrl+S joining a queued autosave still saves through saveNote.
+      queued.viaSave = queued.viaSave || viaSave;
+      return queued.promise;
+    }
+    const slot = { promise: Promise.resolve(), viaSave };
+    slot.promise = inFlight
+      .catch(() => undefined)
+      .then(() => {
+        queuedSaveRef.current = null;
+        return start(slot.viaSave);
+      });
+    queuedSaveRef.current = slot;
+    return slot.promise;
+  }, []);
+
+  /** An autosave: the idle debounce and the dirty-note interval. */
+  const performAutosave = useCallback(async () => {
+    try {
+      await runSave(false);
+    } catch (error) {
+      console.error("Failed to save note:", error);
+    }
+  }, [runSave]);
 
   const scheduleAutosave = useCallback(() => {
     clearDebounceTimer();
@@ -217,37 +269,19 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     return () => window.clearInterval(id);
   }, [readOnly, hasUnsavedChanges, note, performAutosave]);
 
-  // Manual save function for Ctrl+S and save button
+  /**
+   * Manual save for Ctrl+S and the imperative `saveCurrentContent`. Always
+   * through saveNote; re-throws so calling components can handle the error.
+   */
   const handleManualSave = useCallback(async () => {
     if (!note || readOnly) return;
-
-    const nextTitle = titleToPersist(hasExplicitTitle, title);
-
     try {
-      setIsSaving(true);
-
-      // Always save to Firebase on manual save
-      await saveNote(note.id, {
-        title: nextTitle,
-        content
-      });
-
-      // saveNote creates the document if the note was new. The load effect
-      // no longer reloads on every save, so clear the footer's
-      // "Not saved to server" here, as the autosave path does.
-      setNote(prev => (prev ? { ...prev, isUnsaved: false } : prev));
-      setLastSaved(new Date());
-      markCleanIfUnchanged(nextTitle, content);
-
-      // Notify parent of save
-      onSave?.();
+      await runSave(true);
     } catch (error) {
       console.error("Failed to manually save note:", error);
-      throw error; // Re-throw so calling components can handle the error
-    } finally {
-      setIsSaving(false);
+      throw error;
     }
-  }, [note, readOnly, hasExplicitTitle, title, content, saveNote, onSave, markCleanIfUnchanged]);
+  }, [note, readOnly, runSave]);
 
   // Expose methods to parent components. Below `handleManualSave` because it
   // is a dependency: the handle must be rebuilt when the save it hands out

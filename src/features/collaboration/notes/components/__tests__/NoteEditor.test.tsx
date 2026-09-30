@@ -979,4 +979,106 @@ describe('NoteEditor', () => {
       expect(screen.queryByText('Not saved to server')).not.toBeInTheDocument();
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // T072: the 2 s debounce, the 30 s interval and Ctrl+S all save through the
+  // same path, and nothing stopped one from starting while another was
+  // awaiting. Two writes in flight can land in either order -- the older text
+  // last, with the newer save having already marked the note clean -- and
+  // two creates of a new note race `createDocument`'s existence check.
+  // ---------------------------------------------------------------------------
+  describe('saves never overlap', () => {
+    /** A stand-in for NoteProvider that holds every save until released. */
+    function renderWithHeldSaves(initial: Note) {
+      const calls: Array<{ via: string; updates: Partial<Note>; release: () => void }> = [];
+      let ctx: Record<string, unknown> = {};
+      (useNotes as jest.Mock).mockImplementation(() => ctx);
+
+      const Harness: React.FC = () => {
+        const [notes, setNotes] = React.useState<Note[]>([initial]);
+        const getNoteById = React.useCallback(
+          (id: string) => notes.find(n => n.id === id),
+          [notes]
+        );
+        const held = (via: string) => (id: string, updates: Partial<Note>) =>
+          new Promise<void>(resolve => {
+            calls.push({
+              via,
+              updates,
+              release: () => {
+                setNotes(prev => prev.map(n => (n.id === id ? { ...n, ...updates, isUnsaved: false } : n)));
+                resolve();
+              },
+            });
+          });
+        ctx = { getNoteById, updateNote: held('updateNote'), saveNote: held('saveNote') };
+        return <NoteEditor noteId={initial.id} />;
+      };
+
+      render(<Harness />);
+      return {
+        calls,
+        release: async (index: number) => {
+          await act(async () => {
+            calls[index].release();
+          });
+        },
+      };
+    }
+
+    const type = (value: string) =>
+      fireEvent.change(screen.getByLabelText('Note content'), { target: { value } });
+    const idle = () => act(() => { jest.advanceTimersByTime(2500); });
+
+    test('an autosave due while another is in flight waits for it', async () => {
+      const { calls, release } = renderWithHeldSaves(makeNote({ content: 'a' }));
+
+      type('ab'); idle();
+      type('abc'); idle();
+      expect(calls).toHaveLength(1);
+
+      await release(0);
+      expect(calls).toHaveLength(2);
+      expect(calls[1].updates.content).toBe('abc');
+    });
+
+    test('several saves due during one in flight become one save of the newest text', async () => {
+      const { calls, release } = renderWithHeldSaves(makeNote({ content: 'a' }));
+
+      type('ab'); idle();
+      type('abc'); idle();
+      type('abcd'); idle();
+      act(() => { jest.advanceTimersByTime(30000); });
+
+      await release(0);
+      await act(async () => { jest.advanceTimersByTime(0); });
+      expect(calls).toHaveLength(2);
+      expect(calls[1].updates.content).toBe('abcd');
+    });
+
+    test('Ctrl+S during an in-flight autosave waits for it, then saves', async () => {
+      const { calls, release } = renderWithHeldSaves(makeNote({ content: 'a' }));
+
+      type('ab'); idle();
+      type('abc');
+      fireEvent.keyDown(document, { key: 's', ctrlKey: true });
+      expect(calls).toHaveLength(1);
+
+      await release(0);
+      expect(calls).toHaveLength(2);
+      expect(calls[1].updates.content).toBe('abc');
+    });
+
+    test('once all saves are through, the note reads as saved', async () => {
+      const { calls, release } = renderWithHeldSaves(makeNote({ content: 'a' }));
+
+      type('ab'); idle();
+      type('abc'); idle();
+      await release(0);
+      await release(1);
+
+      expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
+      expect(calls).toHaveLength(2);
+    });
+  });
 });
