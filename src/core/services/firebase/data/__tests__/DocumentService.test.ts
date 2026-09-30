@@ -278,6 +278,16 @@ describe('DocumentService', () => {
       // The collision guard added to createDocument must not apply here.
       expect(mockGetDoc).not.toHaveBeenCalled();
     });
+
+    test('merges into the document instead of replacing it when asked to', async () => {
+      mockSetDoc.mockResolvedValue(undefined);
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+
+      await svc.setDocument('progress', 'p1', { a: 1 }, { merge: true });
+
+      expect(mockSetDoc).toHaveBeenCalledWith(expect.anything(), { a: 1 }, { merge: true });
+    });
   });
 
   // ─── updateDocument ─────────────────────────────────────────────────────────
