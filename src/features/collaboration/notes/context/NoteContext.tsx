@@ -1,5 +1,5 @@
 // src/features/collaboration/notes/context/NoteContext.tsx - Complete Fixed Version
-import React, { createContext, useContext, useCallback, useState, useEffect } from "react";
+import React, { createContext, useContext, useCallback, useState, useEffect, useRef } from "react";
 import { Note, NoteContextValue, EntityType } from "../types";
 import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns, useUser } from "features/user-management";
@@ -106,6 +106,23 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [user?.uid, activeGroupId, activeCampaignId]);
 
   /**
+   * Ids of notes whose document this provider has created, recorded the moment
+   * the create resolves. `notes` only catches up on the next render, so a save
+   * made from a context captured before then still sees `isUnsaved` -- and the
+   * editor queues saves behind one in flight, so that is the normal case for a
+   * new note's second save (T072). Without this, the second save creates the
+   * document again (refused as "already exists") or `updateNote` keeps the
+   * edit in memory only.
+   */
+  const createdIdsRef = useRef<Set<string>>(new Set());
+
+  /** Whether the note has no Firestore document yet. */
+  const isNotYetCreated = useCallback(
+    (note: Note) => !!note.isUnsaved && !createdIdsRef.current.has(note.id),
+    []
+  );
+
+  /**
    * Get a note by its ID
    */
   const getNoteById = useCallback((id: string) => {
@@ -181,12 +198,13 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
 
-    if (note.isUnsaved) {
+    if (isNotYetCreated(note)) {
       // First save - create document (exclude isUnsaved field entirely)
       const noteToSave = { ...note, ...updatedFields };
       delete noteToSave.isUnsaved; // Remove before saving
 
       await documentService.createDocument(notesCollection, noteToSave, noteId);
+      createdIdsRef.current.add(noteId);
     } else {
       // Update existing document (don't send isUnsaved field). Attribution
       // is now stamped by DocumentService itself, not hand-rolled here.
@@ -201,7 +219,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
           : n
       )
     );
-  }, [user, activeGroupId, documentService, getNoteById]);
+  }, [user, activeGroupId, documentService, getNoteById, isNotYetCreated]);
 
   /**
    * Update a note (now calls saveNote internally for saved notes, updates locally for unsaved)
@@ -210,7 +228,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     const note = getNoteById(noteId);
     if (!note) throw new Error("Note not found");
     
-    if (note.isUnsaved) {
+    if (isNotYetCreated(note)) {
       // Just update local state for unsaved notes (don't save to Firebase yet)
       const now = new Date().toISOString();
       const updatedLocalFields = {
@@ -231,7 +249,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       // Save immediately for existing notes (this will remove isUnsaved if present)
       await saveNote(noteId, updates);
     }
-  }, [getNoteById, saveNote]);
+  }, [getNoteById, saveNote, isNotYetCreated]);
   
   /**
    * Mark an entity as converted in the note

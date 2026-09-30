@@ -76,6 +76,20 @@ const defaultProgress: StoryProgress = {
   chapterProgress: {}
 };
 
+/** What one progress change touches: top-level fields, and chapter entries. */
+type ProgressPatch = Partial<Omit<StoryProgress, 'chapterProgress'>> & {
+  chapterProgress?: Record<string, ChapterProgress>;
+};
+
+/** `patch` laid over `base`, merging chapter entries rather than replacing the map. */
+function mergeProgress<T extends ProgressPatch>(base: T, patch: ProgressPatch): T {
+  return {
+    ...base,
+    ...patch,
+    chapterProgress: { ...base.chapterProgress, ...patch.chapterProgress },
+  };
+}
+
 export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use existing hooks for data
   const { 
@@ -141,6 +155,13 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const progressRef = useRef<StoryProgress>(defaultProgress);
 
   /**
+   * Every change made since the location's progress was last read, so a read
+   * that resolves after the reader has already moved on keeps what they did:
+   * the stored progress, with this visit's changes on top.
+   */
+  const unreadChangesRef = useRef<ProgressPatch>({});
+
+  /**
    * Read this reader's progress whenever the reader, group or campaign changes.
    *
    * Progress is reset to the default first, so a campaign or account switch
@@ -153,14 +174,19 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
    */
   useEffect(() => {
     progressRef.current = defaultProgress;
+    unreadChangesRef.current = {};
     setStoredProgress(defaultProgress);
     if (!progressCollection || !progressId) return;
 
     let current = true;
     getDocument<StoryProgress>(progressCollection, progressId).then((persisted) => {
       if (current && persisted) {
-        progressRef.current = persisted;
-        setStoredProgress(persisted);
+        const merged = mergeProgress(
+          { ...persisted, chapterProgress: persisted.chapterProgress ?? {} },
+          unreadChangesRef.current
+        );
+        progressRef.current = merged;
+        setStoredProgress(merged);
       }
     });
     return () => {
@@ -191,41 +217,46 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [chapters]);
 
   /**
-   * Write this reader's whole progress document, creating it if it does not
-   * exist yet.
+   * Write one change into this reader's progress document, creating the
+   * document if it does not exist yet.
    *
-   * An upsert is the only verb that works here: nothing creates the document
-   * ahead of time, so an *update* is rejected with NOT_FOUND on a first write.
-   * That is how reading progress once never persisted for any campaign.
+   * A merging upsert, for two reasons. Nothing creates the document ahead of
+   * time, so an *update* is rejected with NOT_FOUND on a first write -- that is
+   * how reading progress once never persisted for any campaign. And only the
+   * fields that changed go out (T073): replacing the whole document grew every
+   * write with the number of chapters read, and a write fired before the first
+   * read resolved replaced what was stored with only this visit's progress.
    *
    * Without a reader, group and campaign there is nowhere to write, and the
    * in-memory progress stands alone until there is.
    */
-  const persistProgress = useCallback(async (updatedProgress: StoryProgress) => {
+  const persistProgress = useCallback(async (patch: ProgressPatch) => {
     if (!progressCollection || !progressId) return;
     await firebaseServices.document.setDocument(
       progressCollection,
       progressId,
-      updatedProgress
+      patch,
+      { merge: true }
     );
   }, [progressCollection, progressId]);
 
   /**
-   * Apply a change to reading progress: derive the next document from the ref
-   * (never from a render closure), publish it synchronously so a mutation later
-   * in the same tick composes on top of it, then persist.
+   * Apply a change to reading progress: derive it from the ref (never from a
+   * render closure), publish the result synchronously so a change later in the
+   * same tick composes on top of it, then persist the change alone.
    *
    * The ref is advanced BEFORE the await deliberately. Both mutations are
-   * fire-and-forget from ambient call sites, so if the write loses a race or
-   * fails outright the in-memory value still reflects what the reader did, and
-   * the next write carries it.
+   * fire-and-forget from ambient call sites, so if the write fails outright
+   * the in-memory value still reflects what the reader did.
    */
   const applyProgress = useCallback(
-    async (mutate: (previous: StoryProgress) => StoryProgress) => {
-      const next = mutate(progressRef.current);
+    async (change: (previous: StoryProgress) => ProgressPatch) => {
+      const patch = change(progressRef.current);
+      const next = mergeProgress(progressRef.current, patch);
       progressRef.current = next;
+      unreadChangesRef.current = mergeProgress(unreadChangesRef.current, patch);
       setStoredProgress(next);
-      await persistProgress(next);
+      await persistProgress(patch);
     },
     [persistProgress]
   );
@@ -249,10 +280,9 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // the body honours the Partial<ChapterProgress> the signature advertises.
         const existing = previous.chapterProgress[chapterId];
 
+        // This chapter's entry alone; applyProgress merges it into the rest.
         return {
-          ...previous,
           chapterProgress: {
-            ...previous.chapterProgress,
             [chapterId]: {
               chapterId,
               // Precedence, per field: what the caller explicitly supplied wins,
@@ -293,8 +323,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
       
-      await applyProgress(previous => ({
-        ...previous,
+      await applyProgress(() => ({
         currentChapter: chapterId,
         lastRead: new Date()
       }));

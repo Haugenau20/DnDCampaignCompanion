@@ -215,15 +215,24 @@ class DocumentService extends BaseFirebaseService {
   /**
    * Create or update a document without attribution metadata
    * Use createDocument or updateDocumentWithAttribution for automatic attribution
+   *
+   * @param options `{ merge: true }` writes only the fields in `data`, nested
+   *   maps included, creating the document if it does not exist -- an upsert
+   *   of a patch, where `updateDocument` would fail with NOT_FOUND.
    */
   public async setDocument<T extends Record<string, any>>(
     collectionName: string,
     documentId: string,
-    data: T
+    data: T,
+    options?: { merge: boolean }
   ): Promise<void> {
     const collectionRef = this.getCollectionRef(collectionName);
     const docRef = doc(collectionRef, documentId);
-    await setDoc(docRef, data as DocumentData);
+    if (options) {
+      await setDoc(docRef, data as DocumentData, options);
+    } else {
+      await setDoc(docRef, data as DocumentData);
+    }
   }
 
   /**

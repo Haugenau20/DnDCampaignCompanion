@@ -437,10 +437,13 @@ describe('StoryContext Reading Progress (bug #018)', () => {
         await storyContext.updateCurrentChapter("chapter-02");
       });
 
+      // The fourth argument is the merge that makes each write a patch
+      // ("writes only what changed", below); this test is about where.
       expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
         progressPath("test-user"),
         "campaign-1",
-        expect.objectContaining({ currentChapter: "chapter-02" })
+        expect.objectContaining({ currentChapter: "chapter-02" }),
+        { merge: true }
       );
       for (const [collection, id] of mockFirebaseServices.document.setDocument.mock.calls) {
         expect(collection).not.toBe("story-progress");
@@ -508,6 +511,93 @@ describe('StoryContext Reading Progress (bug #018)', () => {
       });
 
       expect(storyContext.storyProgress.currentChapter).toBe("");
+    });
+  });
+
+  // T073: every emission used to rewrite the reader's WHOLE progress document,
+  // one entry per chapter read, so the write grew with the story. And a write
+  // fired before the first read resolved replaced the stored document with
+  // only what this visit had done.
+  describe("writes only what changed (T073)", () => {
+    const writes = () =>
+      mockFirebaseServices.document.setDocument.mock.calls.filter(
+        ([collection]: [string]) => collection === progressPath("test-user")
+      );
+
+    test("a chapter's progress writes that chapter's entry alone, merged into the document", async () => {
+      persistedProgress = {
+        [`${progressPath("test-user")}/campaign-1`]: {
+          currentChapter: "chapter-01",
+          lastRead: new Date("2025-01-01T00:00:00.000Z"),
+          chapterProgress: {
+            "chapter-01": { chapterId: "chapter-01", lastPosition: 100, isComplete: true, lastRead: new Date() },
+          },
+        },
+      };
+      renderStoryContext();
+      await waitFor(() => expect(storyContext.storyProgress.currentChapter).toBe("chapter-01"));
+
+      await act(async () => {
+        await storyContext.updateChapterProgress("chapter-02", { lastPosition: 30 });
+      });
+
+      const [[, id, data, options]] = writes();
+      expect(id).toBe("campaign-1");
+      expect(options).toEqual({ merge: true });
+      expect(Object.keys(data.chapterProgress)).toEqual(["chapter-02"]);
+      expect(data).not.toHaveProperty("currentChapter");
+    });
+
+    test("moving to another chapter writes the current chapter, not every chapter's entry", async () => {
+      renderStoryContext();
+      await waitFor(() => expect(storyContext).toBeDefined());
+
+      await act(async () => {
+        await storyContext.updateCurrentChapter("chapter-04");
+      });
+
+      const [[, , data, options]] = writes();
+      expect(options).toEqual({ merge: true });
+      expect(data.currentChapter).toBe("chapter-04");
+      expect(data).not.toHaveProperty("chapterProgress");
+    });
+
+    test("progress made before the first read resolves neither wipes the stored document nor is lost", async () => {
+      let resolveRead: (value: unknown) => void = () => {};
+      mockGetDocument.mockImplementationOnce(
+        () => new Promise((resolve) => { resolveRead = resolve; })
+      );
+      renderStoryContext();
+      await waitFor(() => expect(mockGetDocument).toHaveBeenCalledTimes(1));
+
+      await act(async () => {
+        await storyContext.updateChapterProgress("chapter-02", { lastPosition: 30 });
+      });
+
+      // Stored side: only this chapter's entry went out, so the rest survives.
+      const [[, , data, options]] = writes();
+      expect(options).toEqual({ merge: true });
+      expect(Object.keys(data.chapterProgress)).toEqual(["chapter-02"]);
+      expect(data).not.toHaveProperty("currentChapter");
+
+      await act(async () => {
+        resolveRead({
+          currentChapter: "chapter-03",
+          lastRead: new Date("2025-01-01T00:00:00.000Z"),
+          chapterProgress: {
+            "chapter-01": { chapterId: "chapter-01", lastPosition: 100, isComplete: true, lastRead: new Date() },
+          },
+        });
+      });
+
+      // In memory: the stored progress, with this visit's on top.
+      expect(storyContext.storyProgress.currentChapter).toBe("chapter-03");
+      expect(storyContext.storyProgress.chapterProgress["chapter-01"]).toEqual(
+        expect.objectContaining({ isComplete: true })
+      );
+      expect(storyContext.storyProgress.chapterProgress["chapter-02"]).toEqual(
+        expect.objectContaining({ lastPosition: 30 })
+      );
     });
   });
 });
