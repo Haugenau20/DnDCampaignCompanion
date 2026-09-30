@@ -883,4 +883,100 @@ describe('NoteEditor', () => {
       expect(screen.queryByRole('button', { name: /quote/i })).not.toBeInTheDocument();
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Typing while an autosave is in flight. The real NoteProvider writes the
+  // saved fields into its `notes` state when the write resolves, which hands
+  // out a NEW `getNoteById`. The editor's load effect depended on it, so it
+  // re-ran and reset the fields to the snapshot that was saved -- throwing
+  // away whatever was typed during the round-trip and moving the caret to the
+  // end. The mocks above keep one `getNoteById` for the whole test, which is
+  // why none of them saw it; this harness behaves like the provider.
+  // ---------------------------------------------------------------------------
+  describe('typing during an in-flight save', () => {
+    /** A stand-in for NoteProvider: notes in React state, a fresh
+     *  `getNoteById` whenever they change, and a save the test resolves. */
+    function renderWithProvider(initial: Note) {
+      let resolveSave: (() => void) | null = null;
+      let ctx: Record<string, unknown> = {};
+      (useNotes as jest.Mock).mockImplementation(() => ctx);
+
+      const Harness: React.FC = () => {
+        const [notes, setNotes] = React.useState<Note[]>([initial]);
+        const getNoteById = React.useCallback(
+          (id: string) => notes.find(n => n.id === id),
+          [notes]
+        );
+        const persist = React.useCallback(
+          (id: string, updates: Partial<Note>) =>
+            new Promise<void>(resolve => {
+              resolveSave = () => {
+                setNotes(prev => prev.map(n => (n.id === id ? { ...n, ...updates, isUnsaved: false } : n)));
+                resolve();
+              };
+            }),
+          []
+        );
+        ctx = { getNoteById, updateNote: persist, saveNote: persist };
+        return <NoteEditor noteId={initial.id} />;
+      };
+
+      render(<Harness />);
+      return {
+        finishSave: async () => {
+          await act(async () => {
+            resolveSave?.();
+          });
+        },
+      };
+    }
+
+    test('keeps text typed while the save was on its way to the server', async () => {
+      const { finishSave } = renderWithProvider(makeNote({ content: 'The innkeeper' }));
+      const body = screen.getByLabelText('Note content') as HTMLTextAreaElement;
+
+      fireEvent.change(body, { target: { value: 'The innkeeper lied' } });
+      act(() => { jest.advanceTimersByTime(2500); });
+
+      // The save of "The innkeeper lied" is in flight; the player keeps writing.
+      fireEvent.change(body, { target: { value: 'The innkeeper lied about the cellar' } });
+      await finishSave();
+
+      expect(body.value).toBe('The innkeeper lied about the cellar');
+    });
+
+    test('keeps a title typed while the save was on its way to the server', async () => {
+      const { finishSave } = renderWithProvider(makeNote({ title: '', content: 'body' }));
+      const title = screen.getByLabelText('Note title') as HTMLInputElement;
+
+      fireEvent.change(title, { target: { value: 'Stonehill' } });
+      act(() => { jest.advanceTimersByTime(2500); });
+
+      fireEvent.change(title, { target: { value: 'Stonehill Inn' } });
+      await finishSave();
+
+      expect(title.value).toBe('Stonehill Inn');
+    });
+
+    test('still reads "Unsaved changes" when the save finished behind newer text', async () => {
+      const { finishSave } = renderWithProvider(makeNote({ content: 'a' }));
+      const body = screen.getByLabelText('Note content');
+
+      fireEvent.change(body, { target: { value: 'ab' } });
+      act(() => { jest.advanceTimersByTime(2500); });
+      fireEvent.change(body, { target: { value: 'abc' } });
+      await finishSave();
+
+      expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+    });
+
+    test('a brand-new note saved by Ctrl+S stops reading "Not saved to server"', async () => {
+      const { finishSave } = renderWithProvider(makeNote({ isUnsaved: true, title: '', content: 'x' }));
+
+      fireEvent.keyDown(document, { key: 's', ctrlKey: true });
+      await finishSave();
+
+      expect(screen.queryByText('Not saved to server')).not.toBeInTheDocument();
+    });
+  });
 });
