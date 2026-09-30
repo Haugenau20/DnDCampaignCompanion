@@ -93,6 +93,8 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   const contentRef = useRef(content);
   const hasExplicitTitleRef = useRef(hasExplicitTitle);
   const debounceTimerRef = useRef<number | null>(null);
+  /** The id whose data is in the fields. See the load effect. */
+  const loadedNoteIdRef = useRef<string | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { titleRef.current = title; }, [title]);
@@ -102,11 +104,20 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   const effectiveTitle = hasExplicitTitle ? title : deriveTitle(content);
   const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
 
-  // Load note data when ID changes
+  /*
+    Load note data once per note id. `getNoteById` is a dependency only so a
+    note that arrives after mount is still picked up: the provider hands out a
+    new one every time its `notes` change -- including when a save of THIS
+    note resolves. Reloading then reset the fields to the snapshot that was
+    saved, discarding whatever was typed during the round-trip and throwing
+    the caret to the end: the editor "jumped" while you wrote.
+  */
   useEffect(() => {
+    if (loadedNoteIdRef.current === noteId) return;
     const noteData = getNoteById(noteId);
     setNote(noteData);
     if (noteData) {
+      loadedNoteIdRef.current = noteId;
       setTitle(noteData.title || "");
       setContent(noteData.content || "");
       setHasUnsavedChanges(!!noteData.isUnsaved);
@@ -131,6 +142,17 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
 
   // Clear any pending debounce timer on unmount.
   useEffect(() => clearDebounceTimer, [clearDebounceTimer]);
+
+  /**
+   * Mark the note clean after a save -- unless the fields moved on while it
+   * was in flight, in which case what is on screen is still unsaved.
+   */
+  const markCleanIfUnchanged = useCallback((savedTitle: string, savedContent: string) => {
+    const titleNow = titleToPersist(hasExplicitTitleRef.current, titleRef.current);
+    if (titleNow === savedTitle && contentRef.current === savedContent) {
+      setHasUnsavedChanges(false);
+    }
+  }, []);
 
   /**
    * The shared autosave write: always saves both fields together so a
@@ -164,7 +186,9 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
         setNote(prev => (prev ? { ...prev, isUnsaved: false } : prev));
       }
       setLastSaved(new Date());
-      setHasUnsavedChanges(false);
+      // Typing during the round-trip made newer text than was saved; that is
+      // still unsaved, and its own debounce (or the interval) will save it.
+      markCleanIfUnchanged(nextTitle, nextContent);
 
       onSave?.();
     } catch (error) {
@@ -172,7 +196,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     } finally {
       setIsSaving(false);
     }
-  }, [note, readOnly, getNoteById, updateNote, saveNote, onSave]);
+  }, [note, readOnly, getNoteById, updateNote, saveNote, onSave, markCleanIfUnchanged]);
 
   const scheduleAutosave = useCallback(() => {
     clearDebounceTimer();
@@ -208,8 +232,12 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
         content
       });
 
+      // saveNote creates the document if the note was new. The load effect
+      // no longer reloads on every save, so clear the footer's
+      // "Not saved to server" here, as the autosave path does.
+      setNote(prev => (prev ? { ...prev, isUnsaved: false } : prev));
       setLastSaved(new Date());
-      setHasUnsavedChanges(false);
+      markCleanIfUnchanged(nextTitle, content);
 
       // Notify parent of save
       onSave?.();
@@ -219,7 +247,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     } finally {
       setIsSaving(false);
     }
-  }, [note, readOnly, hasExplicitTitle, title, content, saveNote, onSave]);
+  }, [note, readOnly, hasExplicitTitle, title, content, saveNote, onSave, markCleanIfUnchanged]);
 
   // Expose methods to parent components. Below `handleManualSave` because it
   // is a dependency: the handle must be rebuilt when the save it hands out
