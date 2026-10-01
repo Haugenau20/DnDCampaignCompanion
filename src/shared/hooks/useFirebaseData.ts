@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useFirestore } from 'features/user-management';
 import { AUTH_STATE_CHANGED_EVENT } from 'features/user-management';
 import { DomainData } from 'core/types/common';
+import { DocumentAlreadyExistsError } from 'core/services/firebase/data/DocumentAlreadyExistsError';
 
 interface UseFirebaseDataOptions<T> {
   collection: string;
@@ -141,7 +142,13 @@ export function useFirebaseData<T extends Record<string, any>>(
       setData(prevData => [...prevData, { ...newData, id } as unknown as T]);
       return id;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to add data';
+      // A taken id is the one failure whose own message is addressed to
+      // developers (it names service methods). `error` is rendered to players
+      // by the contexts, so publish the player-safe wording; the throw below is
+      // unchanged so callers can still recognise it and pick another id (#1402).
+      const errorMessage = err instanceof DocumentAlreadyExistsError
+        ? err.userMessage
+        : err instanceof Error ? err.message : 'Failed to add data';
       setError(errorMessage);
       throw err;
     } finally {

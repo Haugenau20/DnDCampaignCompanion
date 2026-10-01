@@ -1,4 +1,5 @@
 // src/core/utils/entity-id.ts
+import { DocumentAlreadyExistsError } from '../services/firebase/data/DocumentAlreadyExistsError';
 
 /**
  * Slug-based, collision-safe document id generation shared by the four
@@ -105,4 +106,83 @@ export function generateUniqueEntityId(
   // Exhausted the bounded search (extremely unlikely in practice). Fall back
   // to a random id rather than returning a colliding one.
   return crypto.randomUUID();
+}
+
+/**
+ * How many ids {@link createWithUniqueEntityId} will try before giving up.
+ * Each refusal advances the suffix by one, so this is also how many ids in a
+ * row another session would have to have taken to defeat it.
+ */
+export const MAX_CREATE_ATTEMPTS = 10;
+
+/**
+ * Inputs for {@link createWithUniqueEntityId}.
+ */
+export interface CreateWithUniqueEntityIdOptions {
+  /** The raw entity name or title the id is derived from. */
+  name: string;
+  /**
+   * Ids this client has already claimed or been refused, kept across calls
+   * (a `useRef` in the contexts). Two creates can overlap before either has
+   * round-tripped through loaded state, so the id is claimed here *before* the
+   * write -- and left here if the write is refused, so it is never picked again.
+   */
+  issuedIds: Set<string>;
+  /** Whether an id is already used by an entity in this client's loaded state. */
+  isLoaded: (id: string) => boolean;
+  /** Performs the write for one candidate id; must throw on a refused create. */
+  write: (id: string) => Promise<unknown>;
+  /** Overrides {@link MAX_CREATE_ATTEMPTS}. */
+  maxAttempts?: number;
+}
+
+/**
+ * Create an entity under a slug-derived id, surviving a collision with a
+ * document this client has never seen (bug #1402).
+ *
+ * {@link generateUniqueEntityId} can only disambiguate against what this client
+ * knows. A document another session wrote since the last refresh is invisible
+ * to it, so the clean slug is chosen and `DocumentService.createDocument`'s
+ * existence guard -- correctly -- refuses. That refusal is information: the id
+ * is taken. It stays in `issuedIds`, the next derivation skips it, and the write
+ * is tried again under the next free id (`gandalf-2`, ...). The player sees none
+ * of it.
+ *
+ * Deliberately not an async `isTaken` that asks the server about every
+ * candidate: that would add a round trip to every create to cover a rare
+ * race, and would still race. This costs nothing unless a collision happens.
+ *
+ * Only {@link DocumentAlreadyExistsError} is retried; any other failure is
+ * rethrown untouched. The loop is bounded by `maxAttempts`, and when it is
+ * exhausted the thrown error carries the guard's player-safe wording, not its
+ * developer message.
+ *
+ * @returns The id the entity was finally written under.
+ * @throws The write's own error if it is not a taken-id refusal; otherwise an
+ *   `Error` with a player-safe message once the attempts run out.
+ */
+export async function createWithUniqueEntityId(
+  options: CreateWithUniqueEntityIdOptions
+): Promise<string> {
+  const { name, issuedIds, isLoaded, write, maxAttempts = MAX_CREATE_ATTEMPTS } = options;
+  const isTaken = (candidateId: string) => issuedIds.has(candidateId) || isLoaded(candidateId);
+
+  let lastRefusal: DocumentAlreadyExistsError | undefined;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const id = generateUniqueEntityId(name, isTaken);
+    issuedIds.add(id);
+    try {
+      await write(id);
+      return id;
+    } catch (err) {
+      if (!(err instanceof DocumentAlreadyExistsError)) {
+        throw err;
+      }
+      lastRefusal = err;
+    }
+  }
+
+  throw new Error(
+    lastRefusal?.userMessage ?? "Could not find a free name for this entry. Please try again."
+  );
 }

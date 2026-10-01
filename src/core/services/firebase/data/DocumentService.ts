@@ -18,6 +18,7 @@ import {
 import BaseFirebaseService from '../core/BaseFirebaseService';
 import { ContentAttribution } from '../../../types/common';
 import { buildCreationAttribution, buildModificationAttribution } from '../../../attribution';
+import { DocumentAlreadyExistsError } from './DocumentAlreadyExistsError';
 
 /**
  * DocumentService provides generic CRUD operations for Firestore documents
@@ -187,11 +188,9 @@ class DocumentService extends BaseFirebaseService {
       // collision fails fast without requiring a valid user profile.
       const existingSnap = await getDoc(doc(collectionRef, docId));
       if (existingSnap.exists()) {
-        throw new Error(
-          `Cannot create document: a document with id "${docId}" already exists in collection "${collectionName}". ` +
-          `createDocument never overwrites an existing document - use updateDocumentWithAttribution to modify it, ` +
-          `or setDocument if this is a deliberate re-key.`
-        );
+        // A typed error (same developer message as before) so callers that
+        // derived the id from a name can pick the next free one (#1402).
+        throw new DocumentAlreadyExistsError(collectionName, docId);
       }
     }
 
