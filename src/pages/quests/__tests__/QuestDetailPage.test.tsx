@@ -11,7 +11,7 @@
 // naming what else loses a link.
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import QuestDetailPage from '../QuestDetailPage';
 
@@ -762,5 +762,26 @@ describe('states other than ready', () => {
     mockUser = null;
     renderPage();
     expect(screen.queryByRole('heading', { level: 1, name: 'Reclaim Erebor' })).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// One read per write (PERF-06)
+// ---------------------------------------------------------------------------
+describe('refreshing after a write', () => {
+  // `updateQuest` is the provider's, and the provider awaits its own refresh
+  // before resolving. Refreshing again from the page read the whole quests
+  // collection twice for one edit.
+  it('leaves the refresh after a save to the provider', async () => {
+    renderPage();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove Smaug from Reclaim Erebor' })
+    );
+    await waitFor(() => expect(mockUpdateQuest).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(mockRefreshQuests).not.toHaveBeenCalled();
   });
 });

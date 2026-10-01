@@ -43,7 +43,11 @@ const updateCampaign = jest.fn().mockResolvedValue(undefined);
 const deleteCampaign = jest.fn().mockResolvedValue(undefined);
 let getCampaigns = jest.fn();
 
-function setup({ campaigns = CAMPAIGNS, activeCampaignId = "c1" } = {}) {
+function setup({
+  campaigns = CAMPAIGNS,
+  activeCampaignId = "c1",
+  loading = false,
+} = {}) {
   getCampaigns = jest.fn().mockResolvedValue(campaigns);
   useGroups.mockReturnValue({
     activeGroupId: "g1",
@@ -51,6 +55,7 @@ function setup({ campaigns = CAMPAIGNS, activeCampaignId = "c1" } = {}) {
   });
   useCampaigns.mockReturnValue({
     campaigns,
+    loading,
     activeCampaignId,
     createCampaign,
     updateCampaign,
@@ -232,6 +237,84 @@ describe("AdminCampaignsPage", () => {
       );
       await settle();
       expect(deleteCampaign).toHaveBeenCalledWith("c2");
+    });
+  });
+
+  // PERF-13. `useCampaigns` already follows each write with `refreshCampaigns`
+  // and the context's list is complete once it has stopped loading, so the
+  // page has nothing to fetch of its own.
+  describe("reading campaigns once", () => {
+    async function saveAnEdit() {
+      const row = within(list())
+        .getAllByRole("listitem")
+        .find((r) => r.textContent?.includes("Curse of Strahd"))!;
+      await userEvent.click(within(row).getByRole("button", { name: "Edit" }));
+      const dialog = await screen.findByRole("dialog");
+      const field = within(dialog).getByLabelText(/^Name/);
+      await userEvent.clear(field);
+      await userEvent.type(field, "Curse of Strahd Reloaded");
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Save changes" })
+      );
+      await settle();
+    }
+
+    test("does not fetch on mount when the context holds the list", async () => {
+      setup();
+      await settle();
+      expect(getCampaigns).not.toHaveBeenCalled();
+    });
+
+    test("does not fetch on mount for a group whose list is genuinely empty", async () => {
+      setup({ campaigns: [] });
+      await settle();
+      expect(getCampaigns).not.toHaveBeenCalled();
+      expect(screen.getByText(/has no campaigns yet/i)).toBeInTheDocument();
+    });
+
+    test("shows the loading state, not the empty state, until the context has loaded", async () => {
+      setup({ campaigns: [], loading: true });
+      await settle();
+      expect(screen.getByRole("status")).toHaveTextContent("Loading campaigns");
+      expect(screen.queryByText(/has no campaigns yet/i)).not.toBeInTheDocument();
+    });
+
+    test("does not fetch again after an update", async () => {
+      setup();
+      await settle();
+      await saveAnEdit();
+      expect(updateCampaign).toHaveBeenCalledTimes(1);
+      expect(getCampaigns).not.toHaveBeenCalled();
+    });
+
+    test("does not fetch again after a create", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getAllByRole("button", { name: "New campaign" })[0]
+      );
+      const dialog = await screen.findByRole("dialog");
+      await userEvent.type(within(dialog).getByLabelText(/^Name/), "Dragonlance");
+      await userEvent.click(within(dialog).getByRole("button", { name: /create|save/i }));
+      await settle();
+      expect(createCampaign).toHaveBeenCalledTimes(1);
+      expect(getCampaigns).not.toHaveBeenCalled();
+    });
+
+    test("does not fetch again after a delete", async () => {
+      setup();
+      await settle();
+      const row = within(list())
+        .getAllByRole("listitem")
+        .find((r) => r.textContent?.includes("Curse of Strahd"))!;
+      await userEvent.click(within(row).getByRole("button", { name: "Delete" }));
+      const dialog = await screen.findByRole("dialog");
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Delete campaign" })
+      );
+      await settle();
+      expect(deleteCampaign).toHaveBeenCalledTimes(1);
+      expect(getCampaigns).not.toHaveBeenCalled();
     });
   });
 });

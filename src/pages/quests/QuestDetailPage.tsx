@@ -284,13 +284,14 @@ const QuestDetailPage: React.FC = () => {
 
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  // Every write re-reads this page's own store rather than patching state
-  // locally: if another player changed the same record first, the refetch is
-  // where that becomes visible.
+  // Every write re-reads the collection rather than patching state locally: if
+  // another player changed the same record first, the refetch is where that
+  // becomes visible. `updateQuest` already does that read and awaits it
+  // (`QuestContext`), so asking again here fetched the whole collection twice
+  // for one edit (PERF-06).
   const save = async (patch: Partial<Quest>) => {
     if (!quest) return;
     await updateQuest({ ...quest, ...patch });
-    await refreshQuests();
   };
 
   /** Append one line to a prep list. */

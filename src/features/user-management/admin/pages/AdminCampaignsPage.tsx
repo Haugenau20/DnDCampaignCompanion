@@ -1,5 +1,5 @@
 // src/features/user-management/admin/pages/AdminCampaignsPage.tsx
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import Typography from 'core/components/Typography';
 import Input from 'core/components/Input';
@@ -42,46 +42,28 @@ const AdminCampaignsPage: React.FC = () => {
   const { activeGroupId, activeGroup } = useGroups();
   const {
     campaigns,
+    loading,
     activeCampaignId,
     createCampaign,
     updateCampaign,
     deleteCampaign,
-    getCampaigns,
   } = useCampaigns();
 
   // Members come from the band's single fetch, only to put a name to
   // `createdBy`. A uid is not metadata anybody can read.
   const { members } = useAdminOutlet();
 
-  const [rows, setRows] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Campaign | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Campaign | null>(null);
 
-  const reload = useCallback(async () => {
-    if (!activeGroupId) return;
-    setLoading(true);
-    try {
-      setRows(await getCampaigns(activeGroupId));
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load campaigns');
-    } finally {
-      setLoading(false);
-    }
-  }, [activeGroupId, getCampaigns]);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
-
-  // The context's list is authoritative once it has one; the local fetch is
-  // what fills the gap on a cold load of this route.
-  const source = campaigns.length > 0 ? campaigns : rows;
+  // The context's list is the only list. `useCampaigns` refreshes it after
+  // every create, update and delete, and `loading` stays true until the first
+  // restore has fetched it, so this page needs no fetch of its own: a second
+  // copy here only ever repeated the read the hook had just made (PERF-13).
+  const source = campaigns;
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -107,14 +89,12 @@ const AdminCampaignsPage: React.FC = () => {
     } else {
       await createCampaign(activeGroupId, values.name, values.description);
     }
-    await reload();
   };
 
   const handleConfirmDelete = async () => {
     if (!pendingDelete) return;
     await deleteCampaign(pendingDelete.id);
     setPendingDelete(null);
-    await reload();
   };
 
   const groupName = activeGroup?.name ?? 'this group';
@@ -145,15 +125,6 @@ const AdminCampaignsPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 pb-10 space-y-4">
-      {error && (
-        <div
-          role="alert"
-          className="rounded-md border px-4 py-3 feedback-banner feedback-banner-error"
-        >
-          <Typography>{error}</Typography>
-        </div>
-      )}
-
       <section className="card rounded-lg" aria-labelledby="campaigns-heading">
         <div className="px-4 sm:px-6 pt-5 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
