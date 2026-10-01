@@ -5,7 +5,7 @@ import { DomainData } from 'core/types/common';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
-import { generateUniqueEntityId } from 'core/utils/entity-id';
+import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { moveObjective } from '../utils/quest-presentation';
 import { Location } from '../../locations/types';
@@ -231,17 +231,10 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Group and campaign context must be set to add quests');
     }
 
-    // Generate ID from title, disambiguating only on collision
-    const isTaken = (candidateId: string) =>
-      issuedIds.current.has(candidateId) || Boolean(getQuestById(candidateId));
-
-    const id = generateUniqueEntityId(questData.title, isTaken);
-    issuedIds.current.add(id);
-
     // Not a complete Quest -- attribution is stamped by DocumentService.createDocument,
     // not supplied here. See DomainData's doc comment in core/types/common.ts.
-    const newQuest = {
-      id,
+    const buildQuest = (candidateId: string) => ({
+      id: candidateId,
       ...questData,
       // Ensure arrays are properly initialized
       objectives: questData.objectives || [],
@@ -250,10 +243,17 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       keyLocations: questData.keyLocations || [],
       complications: questData.complications || [],
       rewards: questData.rewards || []
-    };
-    
-    // Add the document with the explicit ID
-    await addData(newQuest, id);
+    });
+
+    // Generate the ID from the title, disambiguating on collision -- including
+    // with a quest another session wrote since our last refresh (#1402).
+    const id = await createWithUniqueEntityId({
+      name: questData.title,
+      issuedIds: issuedIds.current,
+      isLoaded: (candidateId) => Boolean(getQuestById(candidateId)),
+      write: (candidateId) => addData(buildQuest(candidateId), candidateId)
+    });
+
     await refreshQuests();
     return id;
   }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, addData, refreshQuests]);

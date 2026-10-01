@@ -6,7 +6,7 @@ disambiguation, trips `createDocument`'s write-layer guard, and surfaces a messa
 "use `updateDocumentWithAttribution`".
 
 ## Status
-🔍 DISCOVERED — 2026-07-29. **Proven against the running Firestore emulator.** No data is lost.
+✅ FIXED (2026-10-01). Discovered 2026-07-29 and **proven against the running Firestore emulator**; no data was ever lost. Fixed by retrying the create under the next free id (see Resolution).
 
 ## Category
 UI
@@ -90,3 +90,47 @@ honest shape.
 
 Priority note: this is the most likely *trigger* for #1400 and #1401 in real use, but it is the least
 severe of the three on its own, because the write-layer guard means no data is at risk.
+
+## Resolution (2026-10-01)
+
+A create that the existence guard refuses is now retried under the next free id, so the second
+player in the Reproduction table gets `gandalf-2` and sees nothing. The guard in
+`DocumentService.createDocument` is untouched in behaviour: it still refuses, and still never
+overwrites.
+
+- **`DocumentAlreadyExistsError`** (`core/services/firebase/data/`) — `createDocument` now throws
+  this typed `Error` instead of a bare one. `message` is the same developer text as before;
+  `userMessage` is the only wording a player is shown, and names no service method.
+- **`createWithUniqueEntityId`** (`core/utils/entity-id.ts`) — the one shared mechanism. It derives
+  the id with `generateUniqueEntityId`, claims it in the caller's `issuedIds` *before* writing, and
+  on a `DocumentAlreadyExistsError` leaves it there, so the next derivation skips it and the write
+  is tried again (`gandalf` refused → `gandalf-2`). Any other failure is rethrown untouched.
+  Bounded at `MAX_CREATE_ATTEMPTS` (10); on exhaustion it throws an `Error` carrying `userMessage`.
+- **Callers** — `addNPC`, `addQuest`, `createLocation`, `addRumor`, `combineRumors`, and
+  `convertToQuest` (which writes to `quests` with its own `issuedQuestIds`). All six derive an id
+  from a name; `convertToQuest` had the same exposure in a different id-space.
+- **`useFirebaseData.addData`** publishes `userMessage` as its `error` for this one failure, since
+  the contexts render that string. The throw is unchanged.
+
+**Why not refresh first, as the Recommended Fix suggested.** The refused id is itself the fresh
+fact: recording it is enough to reach `gandalf-2`, with no extra read, and the create paths already
+refresh after a successful write so the other session's entity appears in the list. An id-by-id
+async `isTaken` was still rejected for the reason given above.
+
+**Notes were checked and are not affected.** [#1422](./1422-note-id-allocated-from-campaign-filtered-list.md)'s
+sequential `note-N` ids no longer exist: since PERF-04 (2026-09-24) `generateNoteId` is
+`note-<time><random>`, so two sessions do not derive the same id, and the `NoteContext` create path
+needed no change. Chapters use `generateChapterId(order)`, an order-keyed scheme rather than a
+name slug, and are a separate question.
+
+### Verification
+
+- **Control**: with the contexts as they were, the new `*.cross-session.test.tsx` suites (NPC,
+  Quest, Location, Rumor) fail 12 of 13 tests — the surfaced error is the guard's own text, quoted
+  in the Reproduction section. The one that passes pins "an unrelated failure is not retried".
+  With `DocumentService.createDocument` and `useFirebaseData.addData` reverted to their prior code,
+  the typed-error test and the player-safe-error test fail; restored, they pass.
+- `entity-id.test.ts` covers the helper directly: next free id, several taken in a row, remembered
+  refusals, overlapping creates, no retry of other failures, and the bound.
+- Not re-run against the live emulator: the contexts' tests use a fake server that refuses held ids
+  the way the guard does.

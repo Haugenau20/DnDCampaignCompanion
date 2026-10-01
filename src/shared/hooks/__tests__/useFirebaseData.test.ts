@@ -2,6 +2,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useFirebaseData } from '../useFirebaseData';
 import { AUTH_STATE_CHANGED_EVENT } from '@/features/user-management';
+import { DocumentAlreadyExistsError } from 'core/services/firebase/data/DocumentAlreadyExistsError';
 
 // ---------------------------------------------------------------------------
 // Mock the firebase context hook
@@ -303,6 +304,33 @@ describe('useFirebaseData', () => {
       expect(caughtError).not.toBeNull();
       expect((caughtError as unknown as Error).message).toBe('Write failed');
       expect(result.current.error).toBe('Write failed');
+    });
+
+    test('should expose the player-safe message, not the developer one, when the id is already taken (#1402)', async () => {
+      mockGetCollection.mockResolvedValue([]);
+      const taken = new DocumentAlreadyExistsError('items', 'taken-id');
+      mockCreateDocument.mockRejectedValue(taken);
+
+      const { result } = renderHook(() =>
+        useFirebaseData<TestItem>({ collection: 'items' })
+      );
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let caughtError: unknown = null;
+      await act(async () => {
+        try {
+          await result.current.addData({ id: 'taken-id', name: 'Test' }, 'taken-id');
+        } catch (e) {
+          caughtError = e;
+        }
+      });
+
+      // The throw is unchanged, so callers can still recognise it...
+      expect(caughtError).toBe(taken);
+      // ...but what the hook publishes for rendering names no internal method.
+      expect(result.current.error).toBe(taken.userMessage);
+      expect(result.current.error).not.toContain('updateDocumentWithAttribution');
     });
 
     test('should use crypto.randomUUID when no documentId and no idField', async () => {

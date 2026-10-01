@@ -5,7 +5,7 @@ import { DomainData } from 'core/types/common';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser } from 'features/user-management';
-import { generateUniqueEntityId } from 'core/utils/entity-id';
+import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { discardImage } from 'shared/hooks/useImageAttachment';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { Location } from '../../locations/types';
@@ -131,20 +131,18 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('User must be authenticated to add an NPC');
     }
 
-    const isTaken = (candidateId: string) =>
-      issuedIds.current.has(candidateId) || Boolean(getNPCById(candidateId));
-
-    const id = generateUniqueEntityId(npcData.name, isTaken);
-    issuedIds.current.add(id);
-
     // Not a complete NPC -- attribution is stamped by DocumentService.createDocument,
     // not supplied here. See DomainData's doc comment in core/types/common.ts.
-    const newNPC = {
-      ...npcData,
-      id
-    };
+    //
+    // The id is derived inside createWithUniqueEntityId, which also takes the
+    // next free one if another session has since written the same slug (#1402).
+    const id = await createWithUniqueEntityId({
+      name: npcData.name,
+      issuedIds: issuedIds.current,
+      isLoaded: (candidateId) => Boolean(getNPCById(candidateId)),
+      write: (candidateId) => addData({ ...npcData, id: candidateId }, candidateId)
+    });
 
-    await addData(newNPC, id);
     await refreshNPCs();
     return id;
   }, [hasRequiredContext, user, userProfile, getNPCById, addData, refreshNPCs]);

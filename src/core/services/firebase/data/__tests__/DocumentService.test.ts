@@ -113,6 +113,10 @@ function expectIso8601String(value: unknown) {
 
 describe('DocumentService', () => {
   let DocumentService: typeof import('../DocumentService').default;
+  // Re-required with the service: the module registry is reset per test, so a
+  // top-level import would be a different class from the one the service throws.
+  type TakenError = import('../DocumentAlreadyExistsError').DocumentAlreadyExistsError;
+  let DocumentAlreadyExistsError: typeof import('../DocumentAlreadyExistsError').DocumentAlreadyExistsError;
   const AUTH_MOCK = { currentUser: { uid: 'user-doc-test' } };
 
   beforeEach(() => {
@@ -171,6 +175,7 @@ describe('DocumentService', () => {
     mockBatchCommit.mockResolvedValue(undefined);
 
     DocumentService = require('../DocumentService').default;
+    DocumentAlreadyExistsError = require('../DocumentAlreadyExistsError').DocumentAlreadyExistsError;
   });
 
   // ─── getInstance ────────────────────────────────────────────────────────────
@@ -599,6 +604,28 @@ describe('DocumentService', () => {
       expect(caughtError!.message).toContain('npcs');
       expect(mockSetDoc).not.toHaveBeenCalled();
       expect(mockGetDoc).toHaveBeenCalledTimes(1);
+    });
+
+    test('should throw a typed DocumentAlreadyExistsError, so callers can tell a taken id from any other failure (#1402)', async () => {
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, { name: 'Existing NPC' }, 'taken-id')
+      );
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+
+      const caught = await svc
+        .createDocument('npcs', { name: 'Gandalf' }, 'taken-id')
+        .then(() => null, (e: unknown) => e);
+
+      expect(caught).toBeInstanceOf(DocumentAlreadyExistsError);
+      expect((caught as TakenError).documentId).toBe('taken-id');
+      expect((caught as TakenError).collectionName).toBe('npcs');
+      // The player-facing text must not leak the developer guidance.
+      expect((caught as TakenError).userMessage).not.toMatch(
+        /updateDocumentWithAttribution|setDocument|createDocument/
+      );
+      expect(mockSetDoc).not.toHaveBeenCalled();
     });
 
     test('should leave the auto-generated-id path unaffected: no existence check runs when id is omitted', async () => {

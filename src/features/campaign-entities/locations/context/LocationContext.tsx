@@ -7,7 +7,7 @@ import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { toNoteDate } from 'shared/utils/dateFormatter';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
-import { generateUniqueEntityId } from 'core/utils/entity-id';
+import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { discardImage } from 'shared/hooks/useImageAttachment';
 
 // Custom event for location changes (deletion, update, etc.)
@@ -313,13 +313,6 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('User must be authenticated and group/campaign context must be set to create a location');
     }
 
-    // Generate a location ID from the name, disambiguating only on collision
-    const isTaken = (candidateId: string) =>
-      issuedIds.current.has(candidateId) || Boolean(getLocationById(candidateId));
-
-    const locationId = generateUniqueEntityId(locationData.name, isTaken);
-    issuedIds.current.add(locationId);
-
     // `addData` itself no longer needs a full Location (see DomainData in
     // core/types/common.ts), but this same object is also appended directly to
     // this context's own `locations` state below, which IS what renders --
@@ -327,12 +320,21 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // requires the full BaseContent attribution fields, which this optimistic
     // entry genuinely does not have until the next refresh, so the cast stays
     // load-bearing here (pre-existing behaviour, not introduced by this change).
-    const newLocation = {
+    const buildLocation = (candidateId: string) => ({
       ...locationData,
-      id: locationId
-    } as Location;
+      id: candidateId
+    } as Location);
 
-    await addData(newLocation, locationId);
+    // Generate a location ID from the name, disambiguating on collision --
+    // including with a location another session wrote since our last refresh
+    // (#1402).
+    const locationId = await createWithUniqueEntityId({
+      name: locationData.name,
+      issuedIds: issuedIds.current,
+      isLoaded: (candidateId) => Boolean(getLocationById(candidateId)),
+      write: (candidateId) => addData(buildLocation(candidateId), candidateId)
+    });
+    const newLocation = buildLocation(locationId);
 
     setLocations(prevLocations => [...prevLocations, newLocation]);
 

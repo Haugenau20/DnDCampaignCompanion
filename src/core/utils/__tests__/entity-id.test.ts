@@ -1,6 +1,7 @@
 // src/core/utils/__tests__/entity-id.test.ts
 
-import { slugifyEntityName, generateUniqueEntityId } from '../entity-id';
+import { slugifyEntityName, generateUniqueEntityId, createWithUniqueEntityId } from '../entity-id';
+import { DocumentAlreadyExistsError } from '../../services/firebase/data/DocumentAlreadyExistsError';
 
 describe('entity-id', () => {
   describe('slugifyEntityName', () => {
@@ -116,6 +117,99 @@ describe('entity-id', () => {
       const isTaken = () => true;
       const id = generateUniqueEntityId('Always Taken', isTaken);
       expect(id).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+  });
+
+  // Bug #1402: `isTaken` only knows this client's state, so an id another
+  // session already wrote slips through. The write layer refuses it; the
+  // creator must then take the next free id rather than surface the refusal.
+  describe('createWithUniqueEntityId', () => {
+    /** A fake server: refuses ids it already holds, like createDocument's guard. */
+    const makeServer = (initial: string[] = []) => {
+      const held = new Set(initial);
+      const write = jest.fn(async (id: string) => {
+        // Yield first, as a real network write would.
+        await Promise.resolve();
+        if (held.has(id)) throw new DocumentAlreadyExistsError('npcs', id);
+        held.add(id);
+      });
+      return { held, write };
+    };
+
+    const create = (
+      name: string,
+      server: ReturnType<typeof makeServer>,
+      issuedIds = new Set<string>(),
+      isLoaded: (id: string) => boolean = () => false
+    ) => createWithUniqueEntityId({ name, issuedIds, isLoaded, write: server.write });
+
+    test('writes the clean slug once when nothing else holds it', async () => {
+      const server = makeServer();
+      await expect(create('Gandalf', server)).resolves.toBe('gandalf');
+      expect(server.write).toHaveBeenCalledTimes(1);
+    });
+
+    test('takes the next free id when another session already holds the slug', async () => {
+      const server = makeServer(['gandalf']);
+      await expect(create('Gandalf', server)).resolves.toBe('gandalf-2');
+      expect(server.write.mock.calls.map(c => c[0])).toEqual(['gandalf', 'gandalf-2']);
+    });
+
+    test('keeps going past several ids another session holds', async () => {
+      const server = makeServer(['gandalf', 'gandalf-2', 'gandalf-3']);
+      await expect(create('gandalf', server)).resolves.toBe('gandalf-4');
+    });
+
+    test('remembers a refused id, so the next create skips it without another round trip', async () => {
+      const server = makeServer(['gandalf']);
+      const issued = new Set<string>();
+      await create('Gandalf', server, issued);
+      server.write.mockClear();
+      await expect(create('Gandalf', server, issued)).resolves.toBe('gandalf-3');
+      expect(server.write.mock.calls.map(c => c[0])).toEqual(['gandalf-3']);
+    });
+
+    test('claims the id before writing, so two overlapping creates cannot pick the same one', async () => {
+      const server = makeServer();
+      const issued = new Set<string>();
+      const [a, b] = await Promise.all([
+        create('Gandalf', server, issued),
+        create('Gandalf', server, issued),
+      ]);
+      expect([a, b].sort()).toEqual(['gandalf', 'gandalf-2']);
+    });
+
+    test('still honours locally loaded entities', async () => {
+      const server = makeServer();
+      await expect(
+        create('Gandalf', server, new Set(), id => id === 'gandalf')
+      ).resolves.toBe('gandalf-2');
+    });
+
+    test('does not retry a failure that is not a taken id', async () => {
+      const write = jest.fn().mockRejectedValue(new Error('permission-denied'));
+      await expect(
+        createWithUniqueEntityId({ name: 'Gandalf', issuedIds: new Set(), isLoaded: () => false, write })
+      ).rejects.toThrow('permission-denied');
+      expect(write).toHaveBeenCalledTimes(1);
+    });
+
+    test('is bounded, and its final failure names no internal service method', async () => {
+      const write = jest.fn(async (id: string) => {
+        throw new DocumentAlreadyExistsError('npcs', id);
+      });
+      const caught = await createWithUniqueEntityId({
+        name: 'Gandalf',
+        issuedIds: new Set(),
+        isLoaded: () => false,
+        write,
+        maxAttempts: 4,
+      }).then(() => null, (e: unknown) => e as Error);
+
+      expect(write).toHaveBeenCalledTimes(4);
+      expect(caught).toBeInstanceOf(Error);
+      expect(caught!.message).not.toMatch(/updateDocumentWithAttribution|setDocument|createDocument/);
+      expect(caught!.message.length).toBeGreaterThan(0);
     });
   });
 });
