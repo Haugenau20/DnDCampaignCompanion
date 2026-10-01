@@ -413,13 +413,13 @@ before planning the rebuild.
 | Groups cannot be created — Firestore transactions require all reads before all writes | **Likely fixed 2026-09-23, for a different reason than filed.** The transaction moved to a `createGroup` Cloud Function long ago, but the client called it through a bare `getFunctions()`, i.e. `us-central1`, where nothing is deployed. Now on the service's `europe-west1` instance, pinned by a test. Still wants one live run in production. |
 | Campaigns cannot be deleted | **Likely fixed 2026-09-23.** The confirm dialog was wired, but `CampaignService.deleteCampaign` had the same bare-`getFunctions()` region defect as group creation. Fixed the same way; wants one live run in production. |
 | Neither campaigns nor groups can be edited | **Fixed.** `CampaignManagementView.tsx:33,64-74` has an edit dialog; groups gained `GroupService.updateGroup` and an Edit control on `/admin/group` (T036, 2026-09-23). |
-| Groups view shows only the current group | **Holds.** `GroupManagementView.tsx:33` does `groups.find(g => g.id === activeGroupId)` and renders that one, though `useGroups()` supplies the full list. |
+| Groups view shows only the current group | **Holds, and is now the design.** `GroupManagementView` stopped being mounted in Phase 14 and was deleted (2026-10-01). `/admin/group` (`AdminGroupPage.tsx:41`) renders one group, `groups.find(g => g.id === activeGroupId) ?? activeGroup`, though `useGroups()` supplies the full list; the user's other groups are listed in the context switcher (`useGroupSummaries`), not here. Nothing is broken; it is a decision to confirm, not a defect to fix. |
 | Groups cannot be edited or deleted | **Half fixed.** Editing landed as T036 (2026-09-23). Deletion still has no service method or Cloud Function — T037. |
 | Creation of groups and campaigns works? | **Untested.** Needs the emulator and a real run; nothing in the tree settles it. |
 
-- **Touches**: `src/features/user-management/admin/components/` (`AdminPanel`,
-  `GroupManagementView`, `CampaignManagementView`, `UserManagementView`,
-  `TokenManagementView`) and `GroupService`.
+- **Touches**: `src/features/user-management/admin/` (`AdminPanel`,
+  `UserManagementView`, `TokenManagementView`; `GroupManagementView` and
+  `CampaignManagementView` were deleted 2026-10-01) and `GroupService`.
 - **Catch**: **the panel is already a route** — `/admin/{people,campaigns,group}`,
   decided in `docs/design/plan/00-surface-routing.md` and built in Phase 14,
   with `10-1`'s 3-second loading timeout carried across verbatim. Re-measure this item's six
@@ -724,13 +724,6 @@ The maintainer wants the repo cleaned up, doc files especially.
   steps TODO.md shows were done since). T039 is one symptom of the same drift.
 - **Scripts**: `scripts/copyFeatureFiles.ps1` lists pre-restructure paths;
   `scripts/manage-environment.ps1` is Docker-based and unused.
-- **Components nothing renders** (found by T033, 2026-09-28):
-  `admin/components/CampaignManagementView.tsx` (525 lines, replaced by
-  `AdminCampaignsPage` in Phase 14) is imported only by its own test.
-  `FloatingUsageIndicator` (349 lines) is still exported from the
-  collaboration barrel, but `Layout.tsx` says it renders nowhere, and nothing
-  does. Both keep their classes alive in `css-class-manifest.test.ts`, which
-  counts any source file as a consumer.
 - **Catch**: `docker/` is *not* dead. `CLAUDE.md` calls it unused, but CI builds
   the frontend with `docker/Dockerfile.frontend.prod`. And many docs are phase
   handoffs that code comments cite by name, so deleting one breaks references.

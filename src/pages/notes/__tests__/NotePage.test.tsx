@@ -95,11 +95,8 @@ jest.mock("core/services/firebase/data/DocumentService", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
-// NoteEditor, CampaignLinksPanel, UsageMeter, useNotes and
-// FloatingUsageIndicator all come from the collaboration domain barrel now,
-// so they are mocked together in a single factory. FloatingUsageIndicator
-// stays mocked (and asserted absent) even though NotePage no longer renders
-// it -- the component itself is untouched and still exported.
+// NoteEditor, CampaignLinksPanel, UsageMeter and useNotes all come from the
+// collaboration domain barrel, so they are mocked together in a single factory.
 jest.mock("features/collaboration", () => {
   const React = require("react");
   const NoteEditorMock = React.forwardRef((props: any, _ref: any) => (
@@ -139,14 +136,11 @@ jest.mock("features/collaboration", () => {
 
   const UsageMeterMock = () => <div data-testid="usage-meter" />;
 
-  const FloatingUsageIndicatorMock = () => <div data-testid="floating-usage-indicator" />;
-
   return {
     __esModule: true,
     NoteEditor: NoteEditorMock,
     CampaignLinksPanel: CampaignLinksPanelMock,
     UsageMeter: UsageMeterMock,
-    FloatingUsageIndicator: FloatingUsageIndicatorMock,
     useNotes: () => ({
       deleteNote: mockDeleteNote,
       archiveNote: mockArchiveNote,
@@ -443,11 +437,6 @@ describe("NotePage", () => {
     test("should render the labelled usage meter", () => {
       renderPage();
       expect(screen.getByTestId("usage-meter")).toBeInTheDocument();
-    });
-
-    test("should NOT render the floating usage indicator", () => {
-      renderPage();
-      expect(screen.queryByTestId("floating-usage-indicator")).not.toBeInTheDocument();
     });
 
     test("should archive from the editor top bar", async () => {
