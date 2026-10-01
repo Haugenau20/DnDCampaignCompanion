@@ -1,7 +1,7 @@
 // src/app/layout/__tests__/Layout.test.tsx
 // Behavioral tests for the Layout component.
-// Layout composes Header, Navigation, Footer, FloatingUsageIndicator, and
-// GlobalActionButton — mock all sub-components to keep tests focused.
+// Layout composes Header, Navigation, Footer, and GlobalActionButton — mock
+// all sub-components to keep tests focused.
 
 import React from "react";
 import { render, screen } from "@testing-library/react";
@@ -23,11 +23,6 @@ jest.mock("../Navigation", () => ({
 jest.mock("../Footer", () => ({
   __esModule: true,
   default: () => <footer data-testid="footer" />,
-}));
-
-jest.mock("features/collaboration", () => ({
-  __esModule: true,
-  FloatingUsageIndicator: () => <div data-testid="floating-usage" />,
 }));
 
 jest.mock("shared/components/GlobalActionButton", () => ({
@@ -74,21 +69,6 @@ describe("Layout", () => {
         </Layout>
       );
       expect(screen.getByTestId("footer")).toBeInTheDocument();
-    });
-
-    // FloatingUsageIndicator's last render site was here. It self-gated to
-    // /notes/* routes but Layout wraps every route, so it appeared on every
-    // note page even after NotePage stopped rendering it directly (it was
-    // superseded there by UsageMeter in the note rail). Layout no longer
-    // renders it at all -- a deliberate decision, not an oversight. The
-    // component, its barrel export, and its own test suite are untouched.
-    test("should not render the FloatingUsageIndicator", () => {
-      render(
-        <Layout>
-          <p>Content</p>
-        </Layout>
-      );
-      expect(screen.queryByTestId("floating-usage")).not.toBeInTheDocument();
     });
 
     test("should render the GlobalActionButton", () => {

@@ -1,7 +1,7 @@
 # Bug #1420 — `LocationCard.tsx` is dead code kept alive by the barrel
 
 ## Status
-🔍 DISCOVERED — 2026-08-01. Confirmed by grep; deliberately left unfixed.
+✅ FIXED — found 2026-08-01, re-measured 2026-10-01: already deleted from `main`. See *Resolution* at the foot.
 
 ## Category
 Maintainability
@@ -46,3 +46,13 @@ Check for siblings while there: `LocationCombobox`, `NPCCard`, `NPCLegend` and `
 barrel-exported too, and at least `RumorCard` is still referenced. Do not assume — grep each one, and
 remember the lesson recorded in CLAUDE.md that `grep "^export"` misses indented exports in this
 codebase.
+
+## Resolution
+2026-10-01. While deleting the other components nothing renders, `LocationCard` was re-checked and
+turned out to be gone already: `LocationCard.tsx`, `__tests__/LocationCard.test.tsx` and the barrel
+export at `campaign-entities/index.ts` no longer exist on `main`, and `grep -rnw LocationCard src`
+returns nothing. No change was needed. Which commit removed it cannot be named: this clone's history is
+grafted (five root commits, the oldest dated 2026-09-01), and none of the surviving commits that
+touch `src` mention the file.
+
+The sibling check this file asked for was not repeated.
