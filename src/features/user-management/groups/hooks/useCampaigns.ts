@@ -6,6 +6,7 @@ import { Campaign } from 'core/types/user';
 
 export function useCampaigns() {
   const {
+    loading,
     campaigns,
     activeGroupId,
     activeCampaignId,
@@ -144,6 +145,12 @@ export function useCampaigns() {
   }, [activeGroupId, setError, refreshCampaigns]);
 
   return {
+    /**
+     * Whether the context is still restoring the user, their groups and the
+     * active group's campaigns. While true, an empty `campaigns` means "not
+     * here yet", not "none"; once false it is the group's complete list.
+     */
+    loading,
     campaigns,
     activeCampaignId,
     activeCampaign,

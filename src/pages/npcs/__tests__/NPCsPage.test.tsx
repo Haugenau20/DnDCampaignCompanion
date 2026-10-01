@@ -74,6 +74,9 @@ jest.mock("features/campaign-entities", () => ({
       <button data-testid="npc-directory-update" onClick={() => props.onNPCUpdate?.()}>
         update
       </button>
+      <button data-testid="npc-directory-delete" onClick={() => props.onNPCDelete?.("npc-1")}>
+        delete
+      </button>
     </div>
   ),
 }));
@@ -272,16 +275,33 @@ describe("NPCsPage", () => {
       expect(screen.getByTestId("npc-directory-count")).toHaveTextContent("2");
     });
 
-    test("a directory write refreshes the provider's copy", () => {
+    // REWRITTEN (PERF-06). This test used to assert the opposite: that the
+    // page passed the provider's `refreshNPCs` as `onNPCUpdate`, so every
+    // stance change fetched the collection twice. The requirement behind it
+    // (T046) is that the page renders the PROVIDER's copy, which is pinned by
+    // "renders the provider's NPCs" above and by the fetch-count suite in
+    // `redundant-refreshes.test.tsx`; `updateNPCRelationship` is what refreshes
+    // that copy, so a second refresh from the page only repeats the read.
+    test("a directory update does not trigger a second refresh", () => {
       const refreshNPCs = jest.fn();
       mockNPCData = { ...mockNPCData, npcs: [], refreshNPCs };
 
       renderPage();
       screen.getByTestId("npc-directory-update").click();
 
-      // The page must hand the directory the PROVIDER's refresh. Handing it a
-      // private one is what made the stance ladder show a stale word.
-      expect(refreshNPCs).toHaveBeenCalled();
+      expect(refreshNPCs).not.toHaveBeenCalled();
+    });
+
+    test("a directory delete still refreshes the provider's copy", () => {
+      // The directory's Delete button never calls the provider's `deleteNPC`,
+      // so nothing else refreshes after it.
+      const refreshNPCs = jest.fn();
+      mockNPCData = { ...mockNPCData, npcs: [], refreshNPCs };
+
+      renderPage();
+      screen.getByTestId("npc-directory-delete").click();
+
+      expect(refreshNPCs).toHaveBeenCalledTimes(1);
     });
   });
 });
