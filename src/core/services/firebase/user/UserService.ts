@@ -80,12 +80,11 @@ import {
      * @returns Group-specific user profile or null if not found
      */
     public async getGroupUserProfile(groupId: string, userId: string): Promise<GroupUserProfile | null> {
-      const docRef = doc(this.db, 'groups', groupId, 'users', userId);
-      const docSnapshot = await getDoc(docRef);
-      
-      if (docSnapshot.exists()) {
+      const profile = await this.readGroupProfile(groupId, userId);
+
+      if (profile) {
         return {
-          ...docSnapshot.data(),
+          ...profile,
           userId
         } as GroupUserProfile;
       }
@@ -102,6 +101,7 @@ import {
     public async updateGroupUserProfile(groupId: string, userId: string, updates: Partial<GroupUserProfile>): Promise<void> {
       const docRef = doc(this.db, 'groups', groupId, 'users', userId);
       await updateDoc(docRef, updates);
+      this.forgetGroupProfile(groupId, userId);
     }
   
     /**
@@ -214,7 +214,8 @@ import {
         const oldUsernameDocRef = doc(this.db, 'groups', groupId, 'usernames', currentUsernameLower);
         transaction.delete(oldUsernameDocRef);
       });
-    }
+      this.forgetGroupProfile(groupId, userId);
+}
   
     /**
      * Find a user by username in a group

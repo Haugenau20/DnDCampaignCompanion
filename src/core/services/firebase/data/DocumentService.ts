@@ -101,15 +101,12 @@ class DocumentService extends BaseFirebaseService {
         throw new Error('No active group selected');
       }
 
-      // Get user profile to find username and active character
-      const userProfileRef = doc(this.db, 'groups', activeGroupId, 'users', userId);
-      const userProfileDoc = await getDoc(userProfileRef);
-      
-      if (!userProfileDoc.exists()) {
+      // The user's username and active character, cached across writes
+      const userProfile = await this.cachedGroupProfile(activeGroupId, userId);
+
+      if (!userProfile) {
         throw new Error('User profile not found');
       }
-
-      const userProfile = userProfileDoc.data();
 
       return buildCreationAttribution({ uid: userId, activeGroupUserProfile: userProfile });
     } catch (error) {
@@ -136,15 +133,12 @@ class DocumentService extends BaseFirebaseService {
         throw new Error('No active group selected');
       }
 
-      // Get user profile to find username and active character
-      const userProfileRef = doc(this.db, 'groups', activeGroupId, 'users', userId);
-      const userProfileDoc = await getDoc(userProfileRef);
-      
-      if (!userProfileDoc.exists()) {
+      // The user's username and active character, cached across writes
+      const userProfile = await this.cachedGroupProfile(activeGroupId, userId);
+
+      if (!userProfile) {
         throw new Error('User profile not found');
       }
-
-      const userProfile = userProfileDoc.data();
 
       return buildModificationAttribution({ uid: userId, activeGroupUserProfile: userProfile });
     } catch (error) {
