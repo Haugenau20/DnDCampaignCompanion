@@ -891,6 +891,36 @@ describe('RumorDirectory', () => {
         (disproved.closest('[class*="cue-negated"]') ?? disproved).className
       ).toContain('cue-negated');
     });
+
+    test('is striped in the summary bar and its legend, where confirmed is plain', () => {
+      // Same hue as confirmed, so without the stripe the two bands merge
+      // into one and the swatches match. The stripe is the bar's strike.
+      const { container } = render(<RumorDirectory rumors={[rc, r2, r3]} />);
+      const swatch = (name: string) =>
+        screen.getByRole('button', { name }).querySelector('[aria-hidden="true"]') as HTMLElement;
+      // Bands appear in the legend's order: confirmed, unconfirmed, disproved.
+      const [confirmedBand, unconfirmedBand, disprovedBand] = Array.from(
+        container.querySelectorAll('.roster-band')
+      );
+
+      expect(disprovedBand.className).toContain('cue-negated-band');
+      expect(swatch('1 disproved').className).toContain('cue-negated-band');
+      expect(confirmedBand.className).not.toContain('cue-negated-band');
+      expect(swatch('1 confirmed').className).not.toContain('cue-negated-band');
+      expect(unconfirmedBand.className).not.toContain('cue-negated-band');
+      // Still the same rung: the stripe is added to the hue, not swapped for it.
+      expect(disprovedBand.className).toContain('bg-valence-0');
+    });
+
+    test('an empty disproved swatch is not striped', () => {
+      // A status with no rumours greys its swatch out; a stripe on that grey
+      // would claim something it has nothing to say about.
+      render(<RumorDirectory rumors={[rc]} />);
+      const swatch = screen
+        .getByRole('button', { name: '0 disproved' })
+        .querySelector('[aria-hidden="true"]') as HTMLElement;
+      expect(swatch.className).not.toContain('cue-negated-band');
+    });
   });
 
   // -------------------------------------------------------------------------

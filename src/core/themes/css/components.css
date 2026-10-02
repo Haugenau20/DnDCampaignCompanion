@@ -759,9 +759,37 @@
     text-decoration-thickness: 1px;
   }
 
+  /*
+    The same cue on a summary bar's band, where there is no text to strike.
+
+    A disproved rumour shares `valence-0` with a confirmed one, so in the
+    rumour bar the two segments sit side by side in one hue and read as a
+    single band, and their legend swatches are identical. The stripe tells
+    them apart without a new hue: hue keeps meaning "fully known", the stripe
+    carries "negated".
+
+    It runs at 135deg, the mirror of `cue.failure`'s 45deg, so the one
+    texture that means "failed" still means only that. Cut in the track's own
+    colour at the same 3px as the failure hatch, for the same reasons. Off
+    with the strike, through the same enum: one cue, two shapes.
+  */
+  .cue-negated-band {
+    background-image: repeating-linear-gradient(
+      135deg,
+      var(--surface-sunken-bg) 0,
+      var(--surface-sunken-bg) 3px,
+      transparent 3px,
+      transparent 6px
+    );
+  }
+
   @container style(--cue-negation: none) {
     .cue-negated {
       text-decoration: none;
+    }
+
+    .cue-negated-band {
+      background-image: none;
     }
   }
 

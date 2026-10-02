@@ -56,6 +56,26 @@ describe("cue.negation -- the strike", () => {
   });
 });
 
+describe("cue.negation on a band -- the stripe", () => {
+  test("a negated band is striped in the track's colour, naming no hue", () => {
+    const body = ruleBody(".cue-negated-band");
+    expect({
+      stripe: /background-image:\s*repeating-linear-gradient\(\s*135deg/.test(body),
+      trackColour: /var\(--surface-sunken-bg\)/.test(body),
+      // The band keeps its own fill; the cue only lays a texture over it.
+      setsNoFill: !/background-color/.test(body),
+    }).toEqual({ stripe: true, trackColour: true, setsNoFill: true });
+  });
+
+  test("the strike's enum turns the stripe off too", () => {
+    const opener = "@container style(--cue-negation: none) {";
+    const at = source.indexOf(opener);
+    const block = source.slice(at, source.indexOf("\n  }", at));
+    expect(block).toContain(".cue-negated-band {");
+    expect(block).toMatch(/\.cue-negated-band \{\s*background-image: none/);
+  });
+});
+
 describe("the enum is the only way to turn a cue off", () => {
   // Token model section 6: ornament is an enum, not a code path, so changing a
   // cue is a value change rather than an edit to a component.

@@ -99,8 +99,8 @@ const SOURCE_FILTERS: RosterFilterOption[] = [
  * They were here, and one of them was wrong in a way nothing could see: the
  * comment above the tone map said confirmed and disproved "sit on the same
  * rung", and the map under it gave disproved `valence-3` -- the red a failed
- * quest wears. `15-7` moved them out and made the code match what the comment,
- * the colour schema and T008 all already said.
+ * quest wears. `15-7` moved them out and made the code match what the comment
+ * and the colour schema already said.
  */
 
 const RumorDirectory: React.FC<RumorDirectoryProps> = ({

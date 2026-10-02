@@ -66,8 +66,8 @@ export const RUMOR_STATUS_OPTIONS: Array<{ value: RumorStatus; label: string }> 
  *
  * **Confirmed and disproved share the ladder's top rung**: both are fully
  * known, and what separates them is the strike cue (`negated`), not the hue.
- * That is colour schema §3's worked example, `R64`'s decision, and what T008
- * is filed against -- and until `15-7` the code did the opposite, painting a
+ * That is colour schema §3's worked example and `R64`'s decision -- and
+ * until `15-7` the code did the opposite, painting a
  * disproved rumour `valence-3`, the same red a failed quest wears. A party
  * that goes and disproves something has done the work; saying so in red claims
  * it went wrong.
@@ -78,10 +78,16 @@ export const RUMOR_STATUS_TONE: Record<RumorStatus, RosterStatusTone> = {
   unconfirmed: 'valence-1',
 };
 
-/** The bar's segment fill, from the same mapping, for the same reason. */
+/**
+ * The bar's segment fill, from the same mapping, for the same reason.
+ *
+ * `false` shares confirmed's hue and adds `cue-negated-band`, the bar's form
+ * of the rows' strike: without it the two segments merge into one band and
+ * their legend swatches are identical. The legend uses this class too.
+ */
 export const RUMOR_STATUS_FILL: Record<RumorStatus, string> = {
   confirmed: 'bg-valence-0',
-  false: 'bg-valence-0',
+  false: 'bg-valence-0 cue-negated-band',
   unconfirmed: 'bg-valence-1',
 };
 

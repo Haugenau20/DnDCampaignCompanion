@@ -35,7 +35,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T067 | Repo carries files nobody reads | M | open | Scoped 2026-10-02: delete uncited docs and dead code; TODO.md becomes "start here" |
 | low | T075 | Header crowded, text truncates | M | needs scoping | Name, logo and the <380px overflow; waits on T076 |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
-| nit | T008 | Hatch the rumour bar's false segment | S | open | Decided 2026-10-02; only the stacked bar is ambiguous |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -107,8 +106,8 @@ passed as data. That file did not exist; `15-6` wrote it, and its first run
 found a live instance the comment had been covering for. Claims about coverage
 are checkable — check them.
 
-**The tracker can describe an intention as if it were the code.** T008 said
-confirmed and disproved rumours "sit on the same ramp stop — correct", and the
+**The tracker can describe an intention as if it were the code.** The entry for
+the rumour bar's hatch said confirmed and disproved rumours "sit on the same ramp stop — correct", and the
 code had them two stops apart, with the disproved rumour in the red a failed
 quest wears. The comment above the map said the right thing too. Three
 documents agreed with each other and none of them agreed with the product.
@@ -263,27 +262,6 @@ the same foundation.
   light card can carry accent controls. Verify in a browser, both themes, at
   phone width.
 - **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02
-
-### T008 — Hatch the "false" segment of the rumour summary bar
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-02 · `Q20`
-
-Confirmed and disproved rumours share `valence-0`, because both are fully known;
-in a row the strike cue (`cue-negated`) tells them apart. In the **stacked
-summary bar** above the directory, two adjacent same-hue segments merge into
-one band, and the legend swatch for "false" is identical to "confirmed".
-
-**Decided (maintainer, 2026-10-02): hatch the "false" segment and its legend
-swatch** — same hue, a diagonal stripe pattern on top. The bar's equivalent of
-the rows' strike: hue keeps meaning "fully known", the pattern carries "disproved".
-
-- **Where**: `RUMOR_STATUS_FILL` in
-  `features/campaign-entities/rumors/utils/rumor-presentation.ts` gives both
-  statuses `bg-valence-0`; the hatch is an addition for `false`, not a new hue.
-- **Catch**: no hardcoded colours — build the stripes from the valence token
-  (e.g. a `repeating-linear-gradient` over `currentColor`/a theme variable) and
-  check both themes. A test should assert the false segment and swatch carry
-  the hatch and confirmed's do not. Verify in a browser; jsdom has no CSS.
-- **Source**: drift log `Q20`; decided 2026-10-02
 
 ### T074 — Default pictures where none has been uploaded
 **Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-02
