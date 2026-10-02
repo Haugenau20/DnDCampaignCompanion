@@ -1,4 +1,5 @@
 // src/core/services/firebase/auth/signInErrors.ts
+import { refForCode, withRef } from '../../../errors/errorRegistry';
 
 /**
  * Markers the `gateAccountCreation` blocking function puts in a refusal.
@@ -85,11 +86,37 @@ export function describeSignInError(
       break;
   }
 
-  // Our own callables (`reserveSignUp`, `redeemInvitation`) and services word
-  // their errors for the reader already; Firebase's own do not.
+  return describeUnexplained(error);
+}
+
+/** What the player is told for a failure there is no better sentence for. */
+const SIGN_IN_FAILED = 'Something went wrong signing you in. Please try again.';
+
+/**
+ * The failures `describeSignInError` has no sentence of its own for.
+ *
+ * Our own words pass through: a callable's deliberate `HttpsError`
+ * (`functions/failed-precondition` and the like, from `reserveSignUp` or
+ * `redeemInvitation`), and a plain `Error` our services throw for the reader.
+ * A callable's server fault, any other Firebase code, and anything that is not
+ * a plain `Error` get the generic sentence and a reference from the registry,
+ * never Firebase's own text. Told apart by code, not by message.
+ *
+ * @param error Whatever was thrown
+ */
+function describeUnexplained(error: unknown): string {
   const code = codeOf(error);
-  if (error instanceof Error && (!code || code.startsWith('functions/'))) {
+
+  if (code) {
+    const ref = refForCode('AUTH', code);
+    if (ref) return withRef(SIGN_IN_FAILED, ref);
+    if (code.startsWith('functions/') && error instanceof Error) return error.message;
+    return withRef(SIGN_IN_FAILED, 'AUTH-99');
+  }
+
+  // Exactly `Error`: a `TypeError` or the like is a bug, not a message.
+  if (error instanceof Error && error.constructor === Error && error.message) {
     return error.message;
   }
-  return 'Something went wrong signing you in. Please try again.';
+  return withRef(SIGN_IN_FAILED, 'AUTH-98');
 }

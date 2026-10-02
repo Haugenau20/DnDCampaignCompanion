@@ -21,7 +21,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 |---|---|---|---|---|---|
 | medium | T076 | May the site use "D&D"? | M | needs investigation | Public site, no trademark notice anywhere; T075's rename waits on it |
 | medium | T032 | Performance remediation programme | L | in progress | 2.5–7.6 s to ready is the biggest felt slowness; plan drafted 2026-10-02, phases 1–2 landed, the rest waits on its review |
-| medium | T056 | App-wide error registry; sign-in first | M | open | Shape decided 2026-10-02: `AREA-NN` codes in one `core/` registry |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | List, reader and form; overlapping text, drawer won't touch-scroll |
 | medium | T061 | `test` check not required; test files unlinted | M | open | Every suite is gated in CI now, but branch protection must list the check; test-file lint to be ratcheted (decided 2026-10-02) |
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
@@ -206,34 +205,6 @@ Let a user who wants it add a second step to sign-in.
   Check first that Firebase MFA applies to email-link sign-in at all -- it was
   not confirmed during T022.
 - **Source**: maintainer, 2026-09-23
-
-### T056 — An app-wide error registry, with sign-in as its first consumer
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-09-24
-
-**Decided (maintainer, 2026-10-02): an area-coded registry.** One module in
-`core/` maps each known failure to a stable code, `AREA-NN` (`AUTH-03`,
-`NOTE-12`, …). A user sees "Something went wrong (Ref: AUTH-03)", never raw
-Firebase text; the maintainer looks the code up in the registry. No logging
-backend, no per-incident ids. Codes are never reused or renumbered once shipped.
-Raw `functions/*` messages and code-less Errors get a code too (see *Catch*).
-
-An unrecognised sign-in failure shows only "Something went wrong signing you
-in. Please try again.", so a user report cannot be traced. Append a short
-reference, e.g. "(Ref: S14)", mapped from the Firebase error code, so the
-maintainer can look it up. No raw Firebase text or debug output facing users.
-PR #117's App Check failure (`auth/firebase-app-check-token-is-invalid`) hid
-behind the generic line and could not be read on iOS Safari.
-
-- **Where**: `core/services/firebase/auth/signInErrors.ts:94`, the fallback in
-  `describeSignInError`. The ref table belongs there too. Callers: `SignInForm`,
-  `EmailLinkPage`, `JoinAsNewUser`, `AccountCard`, all of which just show the string.
-- **Catch**: the same function also **passes raw messages through**
-  (`signInErrors.ts:91-93`): any `functions/*` error and any Error without a code
-  returns `error.message`. An uncaught server fault therefore shows the bare
-  word "internal". Per the decision, those get a code instead — but a callable
-  that throws a deliberate, user-facing `HttpsError` message (e.g. the invite
-  gate's) must keep showing it, so tell the two apart by code, not by prefix.
-- **Source**: maintainer, 2026-09-24 (PR #117 follow-up); shape decided 2026-10-02
 
 ### T057 — Sign in with a code from the email, instead of approving from the phone
 **Type** feature · **Size** M · **Status** blocked · **Verified** 2026-09-24

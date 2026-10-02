@@ -77,9 +77,11 @@ describe('describeSignInError', () => {
     );
   });
 
-  test('falls back to a generic sentence for an unrecognised Firebase error', () => {
-    expect(describeSignInError(withCode('auth/operation-not-allowed', 'internal detail'))).toBe(
-      'Something went wrong signing you in. Please try again.'
-    );
+  // The generic sentence now carries a reference the maintainer can
+  // look up, and still never Firebase's own text.
+  test('falls back to a generic sentence with a reference for an unexplained Firebase error', () => {
+    const shown = describeSignInError(withCode('auth/operation-not-allowed', 'internal detail'));
+    expect(shown).toBe('Something went wrong signing you in. Please try again. (Ref: AUTH-03)');
+    expect(shown).not.toContain('internal detail');
   });
 });
