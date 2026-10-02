@@ -92,8 +92,7 @@
   │    beside relatedNPCIds, which is why the same person appeared twice on a
   │    quest card. Nothing removes it from stored documents -- every write is an
   │    updateDoc, which merges field by field -- so documents written before
-  │    that still carry it, unread. See T043 and
-  │    src/utils/__dev__/auditQuestImportantNPCs.ts.)
+  │    that still carry it, unread. Not migrated, by decision (2026-10-02).)
   ├─ complications?: string[] (optional)
   ├─ rewards?: string[] (optional)
   ├─ location?: string (optional)

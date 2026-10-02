@@ -54,7 +54,7 @@ export interface EntityPageShellProps {
    * Add/replace/remove for `image`, for whoever may edit; omitted for everyone
    * else. Laid over the band's top-right corner as a compact
    * `ImageUploadControl` (T068). Its status and error note hangs below the
-   * band as a `card`, so none of it is text on the band (T040).
+   * band as a `card`, so none of it is text on the band (D125).
    */
   imageUpload?: Pick<ImageUploadControlProps, 'subject' | 'onUpload' | 'onRemove'>;
   className?: string;
@@ -70,9 +70,9 @@ export interface EntityPageShellProps {
  *
  * **The band carries no accent.** `colour-schema.md` §5.2 solves `accent.*`
  * against page, card and sunken and not against the band; light `accent.ink`
- * #8D4F00 on band #26211C measures ~1.9:1. The gap is T040 and an implementing
- * PR may not close it, so everything on the band takes the band's own pair --
- * see `.band-chip` in `components.css`. Nothing here names a colour.
+ * #8D4F00 on band #26211C measures ~1.9:1, and `colour-schema.md` D125 rules
+ * that none is authored for it. So everything on the band takes the band's
+ * own pair -- see `.band-chip` in `components.css`. Nothing here names a colour.
  *
  * The body collapses to one column in DOM order, so a phone reads prose and
  * structure first and relations second. That order is the point: on a phone the

@@ -19,28 +19,27 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T032 | Performance remediation programme | L | needs scoping | 2.5–7.6 s to ready is the biggest felt slowness; its findings re-confirmed 2026-09-28 |
-| medium | T025 | Admin panel re-check | L | needs investigation | Group creation and campaign deletion were likely broken by a region bug, fixed 2026-09-23; confirm live |
-| medium | T056 | Sign-in errors carry a reportable ref | S | blocked | On hold for an app-wide error-numbering system, which the maintainer wants first |
-| medium | T026 | Mobile layout on story pages | M | needs investigation | User-reported, unscoped; scope before sizing |
-| medium | T061 | `test` check not required; test files unlinted | M | open | Every suite is gated in CI now, but branch protection must list the check, and test-file lint was never enforced |
+| medium | T077 | Home highlighted on every page but Home | S | open | Visible on every route; the nav's highlight is inverted for `/` |
+| medium | T076 | May the site use "D&D"? | M | needs investigation | Public site, no trademark notice anywhere; T075's rename waits on it |
+| medium | T032 | Performance remediation programme | L | open | 2.5–7.6 s to ready is the biggest felt slowness; direction decided 2026-10-02 (Firestore listeners), needs a plan |
+| medium | T056 | App-wide error registry; sign-in first | M | open | Shape decided 2026-10-02: `AREA-NN` codes in one `core/` registry |
+| medium | T026 | Mobile layout on story pages | M | needs investigation | List, reader and form; overlapping text, drawer won't touch-scroll |
+| medium | T061 | `test` check not required; test files unlinted | M | open | Every suite is gated in CI now, but branch protection must list the check; test-file lint to be ratcheted (decided 2026-10-02) |
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
-| low | T005 | Real edit history? | M | open | Nothing promises a timeline; answer before anything does |
-| low | T043 | Orphaned `importantNPCs` names | S | open | Nothing was destroyed; a judgement call about one campaign |
-| low | T037 | A group cannot be deleted | L | open | Leave exists; deletion is rare and large |
+| medium | T037 | A group cannot be deleted | L | open | Decided 2026-10-02 to build it, plan first: members' data cannot be removed until it exists |
 | low | T017 | Batch actions for other entities | L | open | Convenience; must follow T032's write-amplification fix |
-| low | T018 | Sub-chapters | L | open | New feature; #017 ordering question comes first |
-| low | T054 | Sign in with Discord | L | needs scoping | Where tabletop players already are; Firebase has no built-in provider |
+| low | T018 | Remove unused sub-chapters field | S | open | Decided 2026-10-02 not to build it; dead field, plus a #017 tracker update |
+| low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
-| low | T055 | Opt-in second factor | M | needs scoping | Nobody asked yet; prefer an authenticator app over SMS, which bills per text |
-| low | T040 | No accent pair for the band | S | open | Interim `.band-chip` works; schema-owner decision |
-| low | T039 | Docs point at the retired drift log | M | open | Misleads agents; maybe one header line per tracker |
-| low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; the fix is leaving CRA, which needs a plan |
-| low | T063 | Entity pages look like three products | L | needs scoping | NPC page doesn't use the shell; pick the look first |
+| low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
+| low | T039 | Docs point at the retired drift log | S | open | Decided 2026-10-02: fix colour-schema's 3 instructions, one note for the rest |
+| low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; decided 2026-10-02 to move to Vite, plan first |
+| low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
-| low | T067 | Repo carries files nobody reads | M | needs scoping | 208 docs; archive or delete? |
-| nit | T008 | Legend can't tell confirmed from false | S | open | Only the stacked bar is ambiguous |
-| nit | T038 | Rumour dialogs' nested scroll | S | open | Right call recorded; symptom only |
+| low | T067 | Repo carries files nobody reads | M | open | Scoped 2026-10-02: delete uncited docs and dead code; TODO.md becomes "start here" |
+| low | T075 | Header crowded, text truncates | M | needs scoping | Name, logo and the <380px overflow; waits on T076 |
+| low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
+| nit | T008 | Hatch the rumour bar's false segment | S | open | Decided 2026-10-02; only the stacked bar is ambiguous |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -122,8 +121,26 @@ documents agreed with each other and none of them agreed with the product.
 
 ## Bugs
 
-None open here. Bugs the behavioural suites find live in
-`docs/testing/bug-tracking/README.md`.
+Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
+
+### T077 — Home is highlighted in the header on every page except Home
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-02
+
+On any other page the nav lights up both Home and that page's own item; on
+Home itself, Home is **not** lit. The highlight is inverted for `/`.
+
+- **Where**: `Navigation.tsx:108` and `:162` call `shouldHighlightPath(item.path)`
+  without `exact`, so `/` goes through `isParentPath`
+  (`shared/utils/navigation.ts:36`): `if (parentPath === '/') return
+  currentPath !== '/'`. Home is the only item with `path: '/'`
+  (`Navigation.tsx:19`).
+- **Catch**: `isParentPath` is doing what its own test pins
+  (`navigation.test.ts:55-58`, "'/' is parent only for non-root paths") — that
+  is a coherent rule for a path utility; the defect is the nav using it for
+  `/`. `GlobalActionButton.tsx:117` also calls it, but no action has
+  `sectionPath: '/'`. The nav's own tests stub `shouldHighlightPath` with an
+  exact match (`Navigation.test.tsx:26`), which is why none of them caught it.
+- **Source**: todo.txt, 2026-10-02
 
 ---
 
@@ -159,29 +176,31 @@ Select several rows, then delete or change status in one go.
   sequenced rather than run in parallel.
 - **Source**: todo.txt, 2026-09-16
 
-### T018 — Sub-chapters
-**Type** feature · **Size** L · **Status** open · **Verified** 2026-09-16
+### T018 — Remove the unused sub-chapters field
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-02
 
-- **Where**: the data model already has them —
-  `src/features/storytelling/chapters/types.ts:15` declares
-  `subChapters?: Chapter[]`, and the sample-data generator populates them
-  (`src/utils/__dev__/generators/contentGenerators/chapterGenerator.ts:57`).
-- **Touches**: everything that reads a chapter — `ChapterList`, `ChapterRail`,
-  `ChapterReader`, `ChapterForm`, and the ordering logic in `StoryContext`.
-- **Catch**: "partly implemented" means **the type and the generator only**. No
-  production component renders, edits or orders a sub-chapter — the field is
-  written by the generator and read by nothing. And bug **#017** in the tracker
-  already says complex chapter reordering may lose `subChapters` and summary data
-  (`StoryContext.bugs.test.tsx:440-452`), so the ordering model needs answering
-  before the UI does. A recursive `Chapter` inside `Chapter` also has no depth
-  limit — decide whether nesting is one level or arbitrary.
-- **Source**: todo.txt, 2026-09-16
+**Decided (maintainer, 2026-10-02): sub-chapters will not be built.** The field
+exists only in the type and the sample generator; no component renders, edits
+or orders one. Delete it rather than carry a half-feature.
+
+- **Where**: `subChapters?: Chapter[]` in
+  `src/features/storytelling/chapters/types.ts:15`, and its population in
+  `src/utils/__dev__/generators/contentGenerators/chapterGenerator.ts:57`.
+- **Catch**: bug **#017**'s test (`StoryContext.bugs.test.tsx:402,447-459`)
+  uses `subChapters` in a fixture and asserts reordering preserves it, alongside
+  summary data. Do not edit the test to pass: update #017 in
+  `docs/testing/bug-tracking/README.md` so it is about summary data only, and
+  change the test with that record, not ahead of it. Stored chapters may still
+  carry the field; `updateDoc` merges, so it is left alone, not destroyed.
+- **Source**: todo.txt, 2026-09-16; decided 2026-10-02
 
 ### T054 — Sign in with Discord
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-23
 
 Discord is where tabletop groups already talk, and the tools they use (D&D
 Beyond, Roll20, Foundry) sign in with it.
+
+**Kept for later, not now** (maintainer, 2026-10-02). Do not scope it until asked.
 
 - **Where**: next to Google in `core/services/firebase/auth/AuthService.ts`.
 - **Catch**: Firebase has no Discord provider, and Discord's OAuth2 is not
@@ -198,6 +217,8 @@ Beyond, Roll20, Foundry) sign in with it.
 
 Let a user who wants it add a second step to sign-in.
 
+**Kept for later, not now** (maintainer, 2026-10-02). Do not scope it until asked.
+
 - **Where**: Identity Platform (already enabled) supports TOTP authenticator
   apps and SMS. Enrolment would sit on the profile's `AccountCard`.
 - **Catch**: **prefer TOTP.** SMS is billed per message sent, and a public SMS
@@ -206,12 +227,15 @@ Let a user who wants it add a second step to sign-in.
   not confirmed during T022.
 - **Source**: maintainer, 2026-09-23
 
-### T056 — Sign-in errors carry a reference code a user can report
-**Type** feature · **Size** S · **Status** blocked · **Verified** 2026-09-24
+### T056 — An app-wide error registry, with sign-in as its first consumer
+**Type** feature · **Size** M · **Status** open · **Verified** 2026-09-24
 
-**On hold — the maintainer wants a general error-numbering system for the whole
-application, not one for sign-in alone** (2026-09-24). Design that first; this
-entry then becomes its first consumer rather than a sign-in-only ref table.
+**Decided (maintainer, 2026-10-02): an area-coded registry.** One module in
+`core/` maps each known failure to a stable code, `AREA-NN` (`AUTH-03`,
+`NOTE-12`, …). A user sees "Something went wrong (Ref: AUTH-03)", never raw
+Firebase text; the maintainer looks the code up in the registry. No logging
+backend, no per-incident ids. Codes are never reused or renumbered once shipped.
+Raw `functions/*` messages and code-less Errors get a code too (see *Catch*).
 
 An unrecognised sign-in failure shows only "Something went wrong signing you
 in. Please try again.", so a user report cannot be traced. Append a short
@@ -226,8 +250,10 @@ behind the generic line and could not be read on iOS Safari.
 - **Catch**: the same function also **passes raw messages through**
   (`signInErrors.ts:91-93`): any `functions/*` error and any Error without a code
   returns `error.message`. An uncaught server fault therefore shows the bare
-  word "internal". Decide whether those also get a ref instead.
-- **Source**: maintainer, 2026-09-24 (PR #117 follow-up)
+  word "internal". Per the decision, those get a code instead — but a callable
+  that throws a deliberate, user-facing `HttpsError` message (e.g. the invite
+  gate's) must keep showing it, so tell the two apart by code, not by prefix.
+- **Source**: maintainer, 2026-09-24 (PR #117 follow-up); shape decided 2026-10-02
 
 ### T057 — Sign in with a code from the email, instead of approving from the phone
 **Type** feature · **Size** M · **Status** blocked · **Verified** 2026-09-24
@@ -273,167 +299,147 @@ The same email can keep the magic link for signing in on the device that opens i
 - **Source**: maintainer, 2026-09-24
 
 ### T063 — The NPC, location and quest pages look like three products
-**Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-24
+**Type** feature · **Size** L · **Status** open · **Verified** 2026-10-02
 
-The maintainer wants the three entity pages streamlined in how they look.
+**Decided (maintainer, 2026-10-02): the location and quest pages move toward
+the NPC page** — its light card, its general layout and its way of editing.
+What matters most is **one design language across the three**: the content
+(person, place, quest) differs, the look and feel is recognisably built on
+the same foundation.
 
-- **Measured**: the location and quest pages share `EntityPageShell` (a dark
-  band header, a two-column body); the NPC page does not use it at all. It has
-  its own identity card, with a tall portrait beside the name rather than a
-  band across the top (`pages/npcs/NPCDetailPage.tsx:665`). Places are wide
-  and people are tall, so the two need not share one image shape.
-  The shell's own doc comment says `15-6` consumed it unchanged. That is not
-  what the tree shows.
-- **Question before sizing**: which look wins, the band or the card? And is the
-  goal one shell for all three, or a shared visual language only?
-- **Source**: todo.txt, 2026-09-24
+- **Hard constraint**: a location's picture **stays wide**, as it is today.
+  People are tall and places are wide; the NPC's tall portrait beside the name
+  stays too. One foundation, two image shapes. Quests have no picture today.
+- **Measured**: locations and quests share `EntityPageShell` (a dark,
+  full-bleed band header over a two-column body), which draws the location
+  picture across the band. The NPC page does not use the shell: it opens with
+  its own light identity `card` (sigil or 3:4 portrait beside the name, then a
+  fact grid) beside a 20rem sidebar (`pages/npcs/NPCDetailPage.tsx:667`). All
+  three already edit in place with `InlineEditor`, so "way of editing" is about
+  how the NPC page arranges and reveals its editors, not a new mechanism —
+  compare them before assuming a gap.
+- **Approach**: one shared shell built from the NPC page's card, not three
+  pages each copying it — grow `EntityPageShell` into that (or replace it),
+  with the image shape as an option. The NPC page should end up on the same
+  shell as the other two, which is what Phase 15 meant it to be.
+- **Open for the plan**: where the wide location picture sits once there is no
+  band (across the top of the identity card is the obvious reading). Show the
+  maintainer that before building.
+- **Catch**: this reverses Phase 15's band header on two pages. Tests that pin
+  the band (`entity-page.test.tsx`, the location and quest page suites) change
+  because the requirement changed — say so in the PR, test by test. D125 ("the
+  band carries no accent") stays true but stops mattering on these pages; a
+  light card can carry accent controls. Verify in a browser, both themes, at
+  phone width.
+- **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02
+
+### T008 — Hatch the "false" segment of the rumour summary bar
+**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-02 · `Q20`
+
+Confirmed and disproved rumours share `valence-0`, because both are fully known;
+in a row the strike cue (`cue-negated`) tells them apart. In the **stacked
+summary bar** above the directory, two adjacent same-hue segments merge into
+one band, and the legend swatch for "false" is identical to "confirmed".
+
+**Decided (maintainer, 2026-10-02): hatch the "false" segment and its legend
+swatch** — same hue, a diagonal stripe pattern on top. The bar's equivalent of
+the rows' strike: hue keeps meaning "fully known", the pattern carries "disproved".
+
+- **Where**: `RUMOR_STATUS_FILL` in
+  `features/campaign-entities/rumors/utils/rumor-presentation.ts` gives both
+  statuses `bg-valence-0`; the hatch is an addition for `false`, not a new hue.
+- **Catch**: no hardcoded colours — build the stripes from the valence token
+  (e.g. a `repeating-linear-gradient` over `currentColor`/a theme variable) and
+  check both themes. A test should assert the false segment and swatch carry
+  the hatch and confirmed's do not. Verify in a browser; jsdom has no CSS.
+- **Source**: drift log `Q20`; decided 2026-10-02
+
+### T074 — Default pictures where none has been uploaded
+**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-02
+
+The maintainer would like default imagery for the dashboard banner and the
+party crest — maybe several, one picked at random when the campaign or group
+is created — and asks the same of NPCs and locations.
+
+- **Where**: the banner `CampaignBanner.tsx` (no picture → plain band plus the
+  campaign's sigil), the crest `PartyCrest.tsx` (no crest → a hatched panel),
+  NPCs (`NPCDetailPage.tsx`, sigil instead of a portrait) and locations
+  (`EntityPageShell`, plain band). Images today are uploads to Storage only;
+  the repo ships no image assets (`public/` holds `index.html` and
+  `manifest.json`).
+- **Catch**: every one of those empty states is **deliberate design**, written
+  down where it lives: "the empty state is the design rather than a
+  placeholder" (`PartyCrest.tsx:21-24`, `CampaignBanner.tsx:28-31`), and
+  `colour-schema.md` D45 ("a band with no picture is the plain band"). This
+  reverses those, so it is a design decision first. Then: where the pictures
+  come from and under what licence, and the bundle (`check:bundle`) if they
+  ship in the app. "Chosen at creation" leaves every existing campaign, group,
+  NPC and location without one unless they are backfilled.
+- **Related**: T063 — its goal is that the three entity pages look alike *with
+  no photo*. Decide this one first, or decide them together.
+- **Questions before sizing**: which surfaces get defaults; whether a default
+  is stored on the record or shown only when nothing is uploaded; where the
+  art comes from.
+- **Source**: todo.txt, 2026-10-02 (two inbox lines, merged)
+
+### T075 — The header is crowded, and text in it truncates
+**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-02
+
+The maintainer finds the header busy, with some text cut off, and suggests
+starting with the site name: replace "D&D Campaign Companion" with a logo or
+shorter wording.
+
+- **Where**: `src/app/layout/Header.tsx:89-100` — one row carries the name, the
+  context switcher, the inline nav, search and the account menu. The full name
+  shows from the `title` breakpoint (1200px, `tailwind.config`) up, "D&D
+  Companion" below it. The campaign/group name in the context switcher
+  truncates by design at `max-w-[9rem] md:max-w-[14rem]`
+  (`ContextTrigger.tsx:51`). Which truncation the maintainer means was **not**
+  confirmed — that needs the running app.
+- **Folded in**: the header overflows horizontally below ~380px on every route
+  (logo and account block both at `min-width: auto`). `CLAUDE.md` called that
+  "tracked in `TODO.md`", but no entry held it until this one.
+- **Catch**: renaming waits on T076 — if "D&D" has to go, the name changes
+  anyway, and that also decides whether a logo carries it.
+- **Source**: todo.txt, 2026-10-02
 
 ---
 
 ## Decisions needed
 
-### T005 — Does an entity keep real edit history?
-**Type** decision · **Size** M · **Status** open · **Verified** 2026-09-16 · `Q12`
+### T076 — May the site use "D&D" in its name and on its pages?
+**Type** decision · **Size** M · **Status** needs investigation · **Verified** 2026-10-02
 
-`ContentAttribution` (`src/core/types/common.ts:7`) stores created-by and
-last-modified-by and **nothing in between**. The "timeline of edits" that Phase 7
-was scoped around cannot exist without a data change. Answer before anything in
-the UI promises a timeline.
+"D&D" and "Dungeons & Dragons" are Wizards of the Coast trademarks. Whether a
+free, invite-only fan tool may carry them in its name, and on what terms (e.g.
+WotC's Fan Content Policy and its required notice), has not been looked into.
+**Nothing here is legal advice, and no policy text was read for this entry.**
 
-**PR 15.4 held the line and recorded where.** `/locations/:locationId` states two
-facts in its record card and nothing else. The visual reference (`S5`) prints
-"DungeonMaster · 31 May · click to edit" under the description; that line is
-deliberately not built, and a test asserts its absence so it cannot arrive by
-accident. When this is answered, the per-section blocks on that page are where
-it goes.
-
-**PR 15.6 held it a third time**, on the page the other two copy: no per-field
-credit under any of the seven editors it added, and no line saying who last
-changed a fact. The record card states the same two points it always has.
-
-**PR 15.5 held it again, against a sharper temptation.** `S3` draws
-"gandlaf ticked *Find the secret door* · last session" on the quest page —
-per-*objective* history, which is further from what the data holds than a
-per-field line: nothing records who ticked a box or when. `/quests/:questId`
-states the same two facts as the location page, and its suite asserts that
-neither "ticked" nor "last session" appears in the record card.
-
-### T008 — A legend swatch cannot distinguish "confirmed" from "false"
-**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-16 · `Q20`
-
-Confirmed and disproved rumours sit on the same ramp stop — correct, because both
-are fully known, and what separates them is the strike cue rather than the hue.
-That reads fine in a row. In the **stacked summary bar** above the directory, two
-adjacent segments of the same hue merge into one band, and a reader filtering by
-"false" sees a legend swatch identical to "confirmed".
-
-The open question is whether a bar segment is a different kind of surface from a
-label — one where adjacency itself carries meaning — and therefore owes a rule
-the rows do not. (T004 asked the neighbouring question of `NPCLegend`, and was
-answered by retiring it, so this bar is now the only legend-like surface left.)
-
-**PR 15.7 made the premise true.** Until then this entry described an intent the
-code did not implement: the row map and the bar both put disproved on
-`valence-3`, the red a failed quest wears, while the comment above the map said
-confirmed and disproved shared a rung. `15-7` moved both onto `valence-0` and
-kept the strike as the separator, which is what the schema, `R64` and this entry
-all already said — and which means the two adjacent same-hue bar segments this
-question is about are now genuinely on screen. **Verified in Chrome**: the
-disproved chip computes `valence-0 cue-negated`, with no red anywhere on a
-rumour.
-
-### T040 — No accent pair is authored for the band surface
-**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-17
-
-`docs/design/colour-schema.md` §5.2 solves `accent.*` against `page`, `card`
-and `sunken`. It does not solve it against the band, and every page Phase 15
-adds has a band header carrying a status chip.
-
-- **Where**: light `accent.ink` `#8D4F00` on band `#26211C` measures ~1.9:1 —
-  below any usable threshold, and there is no authored pair to reach for.
-- **Touches**: four surfaces in Phase 15 (`/locations/:locationId`,
-  `/quests/:questId`, and the two directories that share the header), which is
-  why it wants answering at the source rather than per page.
-- **Interim, now implemented (PR 15.4)**: `.band-chip` / `.band-chip-selected`
-  in `components.css` draw a band control from the band's own pair and nothing
-  else. The selected state consumes `--surface-band-selected`, which was emitted
-  and unconsumed — the token manifest's note read "the band has no selectable
-  element yet", and the entity page's knowledge ladder is that element. No value
-  was invented, and `StateLadder` takes a `tone="band"` rather than each page
-  spelling it out.
-- **Still open**: an accent *pair* for the band. A band chip cannot be an accent
-  chip, so a band can carry no primary action drawn the way every other primary
-  action is drawn.
-- **Catch**: the schema is read-only to an implementing PR, so this cannot be
-  closed by the phase that found it.
-- **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13
+- **Where the name is used** (measured): `Header.tsx:98-99`, `Footer.tsx:38`,
+  `SignInPage.tsx:82`, `JoinPage.tsx:98`, `CampaignBanner.tsx:98`,
+  `public/index.html:9,12`, `public/manifest.json:2-3`. The repo carries **no**
+  trademark notice or disclaimer anywhere.
+- **Catch**: the Firebase project id and live URL are
+  `dnd-campaign-companion(.web.app)`. A project id cannot be renamed; a new
+  Hosting site name (another `*.web.app`) or a custom domain can be added.
+  Docs, scripts and `CLAUDE.md` name the project id throughout.
+- **Answer first**: read the current policy, then decide — keep the name with
+  the required notice, or rename. T075 waits on it.
+- **Source**: todo.txt, 2026-10-02
 
 ---
 
 ## Tech debt and platform
 
-### T043 — `importantNPCs` may hold names no NPC record carries
-**Type** decision · **Size** S · **Status** open · **Verified** 2026-09-18
-
-`15.5` deleted `Quest.importantNPCs` (`D15.7`): two fields for one relationship,
-both rendered, which is why the same person appeared twice on a quest card.
-`relatedNPCIds` survives, and it is the only one of the two that can be resolved
-to a record, a page and an occupation.
-
-**Nothing stored was destroyed.** Every write goes through `updateDoc`, which
-merges field by field, so a document that carries `importantNPCs` still carries
-it — the app has simply stopped reading and writing it.
-
-**What could not be answered from here**: whether the maintainer's real campaign
-holds names in that field which `relatedNPCIds` does not already say. Production
-Firestore is not reachable from a development session. In the sample data it is
-measurable, and the answer is: 48 names across 20 quests, 45 of them already
-said by `relatedNPCIds`; the remaining 3 ("Master of Lake-town", "Mandos", "Tom
-Bombadil") name people who **have no NPC record at all**, so there is no id to
-migrate them into — they are prep notes about somebody who was never entered.
-
-- **How to answer it**:
-  `npx ts-node ./src/utils/__dev__/auditQuestImportantNPCs.ts` — read-only,
-  signs in as a real user, prints per quest which names are covered, which match
-  an NPC record (migratable by attaching that person), and which match nobody.
-- **The decision**: for a name matching no record, attaching is impossible
-  without first creating the NPC. Whether those lines are worth keeping at all
-  is a judgement about a campaign, not a data repair, which is why the script
-  has no `migrate` mode.
-- **Source**: PR 15.5, from its handoff's instruction to check before deleting
-
-### T025 — Admin panel needs a do-over, and its bug list needs re-checking
-**Type** debt · **Size** L · **Status** needs investigation · **Verified** 2026-09-16
-
-Filed as six claims. Three are stale, two hold, one is untested — check each
-before planning the rebuild.
-
-| Claim | Finding, 2026-09-16 |
-|---|---|
-| Groups cannot be created — Firestore transactions require all reads before all writes | **Likely fixed 2026-09-23, for a different reason than filed.** The transaction moved to a `createGroup` Cloud Function long ago, but the client called it through a bare `getFunctions()`, i.e. `us-central1`, where nothing is deployed. Now on the service's `europe-west1` instance, pinned by a test. Still wants one live run in production. |
-| Campaigns cannot be deleted | **Likely fixed 2026-09-23.** The confirm dialog was wired, but `CampaignService.deleteCampaign` had the same bare-`getFunctions()` region defect as group creation. Fixed the same way; wants one live run in production. |
-| Neither campaigns nor groups can be edited | **Fixed.** `CampaignManagementView.tsx:33,64-74` has an edit dialog; groups gained `GroupService.updateGroup` and an Edit control on `/admin/group` (T036, 2026-09-23). |
-| Groups view shows only the current group | **Holds, and is now the design.** `GroupManagementView` stopped being mounted in Phase 14 and was deleted (2026-10-01). `/admin/group` (`AdminGroupPage.tsx:41`) renders one group, `groups.find(g => g.id === activeGroupId) ?? activeGroup`, though `useGroups()` supplies the full list; the user's other groups are listed in the context switcher (`useGroupSummaries`), not here. Nothing is broken; it is a decision to confirm, not a defect to fix. |
-| Groups cannot be edited or deleted | **Half fixed.** Editing landed as T036 (2026-09-23). Deletion still has no service method or Cloud Function — T037. |
-| Creation of groups and campaigns works? | **Untested.** Needs the emulator and a real run; nothing in the tree settles it. |
-
-- **Touches**: `src/features/user-management/admin/` (`AdminPanel`,
-  `UserManagementView`, `TokenManagementView`; `GroupManagementView` and
-  `CampaignManagementView` were deleted 2026-10-01) and `GroupService`.
-- **Catch**: **the panel is already a route** — `/admin/{people,campaigns,group}`,
-  decided in `docs/design/plan/00-surface-routing.md` and built in Phase 14,
-  with `10-1`'s 3-second loading timeout carried across verbatim. Re-measure this item's six
-  claims against that work before planning anything: the components named above
-  under *Touches* (`AdminPanel`, `UserManagementView`, `TokenManagementView`) do
-  not survive the phase. Of the "groups cannot be edited or deleted" claims,
-  editing is done (T036) and deletion is tracked as T037.
-- **Source**: todo.txt, 2026-09-16
-
 ### T026 — Mobile layout on the story pages
 **Type** debt · **Size** M · **Status** needs investigation · **Verified** 2026-09-16
 
-Reported as "mobile layout issues on certain pages, story all around". Not
-reproducible from the tree alone — it needs rendering.
+Reported as "mobile layout issues on certain pages, story all around".
+**Narrowed by the maintainer (2026-10-02): most of it** — the chapter list, the
+reader and the chapter form all. Symptoms named: text overlapping text, text
+not fitting, and the chapter drawer in the reader **cannot be scrolled with a
+finger** when picking a chapter. Fix these on their own, not as part of a
+reader redesign (maintainer, 2026-10-02).
 
 - **How to check**: per `CLAUDE.md`, a maximized Chrome window silently ignores
   resize below its minimum width. Render the app in a **320px-wide iframe**
@@ -447,17 +453,29 @@ reproducible from the tree alone — it needs rendering.
 - **One candidate found**: `src/pages/story/ChaptersPage.tsx:174` — a filter
   input at `input flex-1 min-w-[200px]` sharing a row with sibling controls. It
   cannot shrink below 200px, so a narrow row either wraps or pushes. Unconfirmed
-  visually. The chapter rail is `hidden lg:flex` and the reader is capped at
-  `max-w-[68ch]`, so neither of those is likely at fault.
-- **Catch**: scope it before fixing. "Story all around" could be one shared
-  container or four separate pages, and the answer changes whether this is an S
-  or an L.
+  visually.
+- **The drawer**: below `lg` the rail is a drawer, opened from the "Chapters"
+  button in `src/pages/story/StoryPage.tsx:182` and rendered by
+  `features/storytelling/stories/components/ChapterRail.tsx`. Touch scrolling
+  failing there smells of a scroll lock on the body or an `overflow` missing
+  on the drawer's list — check it on a real phone or touch emulation, not a
+  resized desktop window.
+- **Catch**: three pages, several symptoms. Render each at 320 and 375px and
+  list what breaks before sizing; the answer decides whether this stays M.
 - **Source**: todo.txt, 2026-09-16
 
 ---
 
 ### T037 — A group cannot be deleted
 **Type** debt · **Size** L · **Status** open · **Verified** 2026-09-16
+
+**Decided (maintainer, 2026-10-02): group deletion will be built** — it is a
+plan to write, not something to start without one. The maintainer's reason is
+data retention: as long as a group cannot be deleted, the app keeps its
+members' data with no way to remove it. The plan should say what is deleted
+and what is kept (e.g. a member's own profile when they belong to another
+group), and check what account deletion (`deleteUser`) already leaves behind,
+since the two answer the same question.
 
 No service method, no Cloud Function. Not a small one either: deleting a group
 means cascading through its campaigns (each with its own subcollections), its
@@ -472,30 +490,6 @@ member's notes for every campaign in it.
   which is implemented (`removeUserFromGroup`).
 - **Source**: Phase 14.3, while building `/admin/group`
 
-### T038 — The two rumour dialogs each hold a nested scroll region
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-16
-
-`CombineRumorsDialog.tsx:128` and `ConvertToQuestDialog.tsx:184` both render
-`max-h-40 overflow-y-auto` inside the panel — a second scroll region, which the
-dialog rule in `docs/design/plan/00-surface-routing.md` §1 names as a sign that
-a surface wants to be a page.
-
-**Both stay dialogs, and that is the right call for now**: each acts on the
-entries selected on the page behind it, which answers question 1 of the rule
-decisively. Neither has a URL worth returning to, and neither has tabs or a
-table. A list that can outgrow its panel is weaker evidence than those, so
-Phase 14.5 logged them as candidates rather than converting them, exactly as its
-handoff instructed.
-
-- **What to look at**: the scroll region exists because the selected-rumour list
-  is unbounded. Capping the selection, or paginating the list, would remove the
-  symptom without moving the surface.
-- **15.5 left the dialog alone and changed only what it leads to.** Converting
-  rumours into a quest now lands on that quest's page, and the rumour's own
-  "View quest" link opens it too. That was the missing half of the conversion:
-  the quest was created and then nothing in the product referred to it.
-- **Source**: Phase 14.5, from its own instruction to check rather than assume
-
 ### T059 — Create React App's peer dependencies no longer resolve
 **Type** debt · **Size** L · **Status** open · **Verified** 2026-09-24
 
@@ -507,9 +501,10 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
   against `^29.7.0`. CRA itself is no longer maintained, so no upgrade of it fixes this.
 - **Where**: `package.json:21`; CI installs in `docker/Dockerfile.frontend.prod:8`
   (`npm install --legacy-peer-deps`, not `npm ci`, so the lockfile is not enforced).
-- **Catch**: the real fix is leaving CRA (e.g. Vite), which touches the build,
-  env-var names (`REACT_APP_*`), jest config and the four-resolvers table in
-  `CLAUDE.md`. Needs its own plan. `scripts/check-bundle-size.js` expects CRA's
+- **Decided (maintainer, 2026-10-02): move to Vite**, planned before any code.
+  It touches the build, env-var names (`REACT_APP_*` → `VITE_*`), jest config
+  (stay on jest, or move to Vitest — the plan decides) and the four-resolvers
+  table in `CLAUDE.md`, which Vite can collapse by honouring `@/` paths. `scripts/check-bundle-size.js` expects CRA's
   `build/static/js/main.*.js`; a new bundler must keep it measuring the entry.
 - **Source**: todo.txt, 2026-09-24
 
@@ -526,9 +521,12 @@ it. Two things remain.
 
 - **Not in the repo**: the `test` check blocks a merge only once branch
   protection on `main` lists it as required. That is a GitHub setting.
-- **Lint scope**: test files are excluded. They carry ~1,000 `react-app/jest`
-  problems (mostly `testing-library/*`) that nothing has ever enforced; the
-  build never lints them either. Bringing them in is its own job.
+- **Lint scope — decided (maintainer, 2026-10-02): ratchet it.** Test files
+  are excluded today and carry ~1,000 `react-app/jest` problems (mostly
+  `testing-library/*`) that nothing has ever enforced. Lint them in CI against
+  a committed baseline count that may only go down; files get fixed as they
+  are touched. A count that rises fails the job, and a count that falls should
+  lower the baseline in the same PR.
   `firebase/functions`' own lint (~2,000 problems, mostly CRLF) is not a gate either.
 - **Source**: todo.txt, 2026-09-24; the jest, type-check and lint gates
   landed 2026-09-26, the functions suite 2026-09-28
@@ -638,7 +636,7 @@ it. Re-check a finding by symbol before acting on its line links: they are
 `b73232a` line numbers, and several files have moved or been deleted.
 
 ### T032 — Performance remediation programme
-**Type** debt · **Size** L · **Status** needs scoping · **Verified** 2026-09-16 ·
+**Type** debt · **Size** L · **Status** open · **Verified** 2026-09-16 ·
 `PERF-02` `PERF-03` `PERF-05` `PERF-06`
 
 The four architectural findings are one workstream, not four tickets. Together
@@ -675,45 +673,57 @@ emulator.
   designs. The review's §"Suggested performance budgets" is the acceptance
   criteria to write tests against; its §"Positive observations" names the
   primitives that already exist, including `DocumentService.batchOperations`.
+- **Direction — decided (maintainer, 2026-10-02): Firestore listeners.** The
+  plan replaces fetch-then-refetch with `onSnapshot` per collection, mounted by
+  the routes that need it rather than above the router (`PERF-03`). The SDK's
+  latency compensation shows a write locally at once, so the refetch after a
+  known write goes away (`PERF-06`, `PERF-13`), and its cache does the caching.
+  Attribution profiles get one small in-memory cache (`PERF-06`, `PERF-09`). No
+  new dependency. The plan must still answer `PERF-05` (chapter order in the
+  document id) and the restore orchestrator (`PERF-02`) on their own terms.
 - **Source**: performance review
 
 ---
 
 ## Documentation debt
 
-T039 needs a hand allowed to edit the schema files and the read-only
-history, which no implementing change may touch.
-
 ### T039 — Documents still tell an agent to write to the retired drift log
-**Type** docs · **Size** M · **Status** open · **Verified** 2026-09-17
+**Type** docs · **Size** S · **Status** open · **Verified** 2026-09-17
 
 `docs/design/plan/03-drift-log.md` is closed and carries a note saying so
-(PR 15.0). The documents that point at it were not all correctable by that PR,
+(PR 15.0). Documents that point at it were not all correctable by that PR,
 because almost all of them are read-only to an implementing change.
 
-- **Where**: `docs/design/colour-schema.md` has three live references — §8's
+**Decided (maintainer, 2026-10-02): fix the three live instructions, and add one
+note for the rest.** The maintainer approves editing `colour-schema.md` for this.
+
+- **Fix**: `docs/design/colour-schema.md`'s three live references — §8's
   "Carry these into `../plan/03-drift-log.md` as they are implemented", §9's
   "Write the gap down in `../plan/03-drift-log.md` as a question", and §9's
-  read-only table, which still lists `plan/03-drift-log.md` as
-  "**Yes — append only.** This is where findings go."
-- **And**: 29 files under `docs/design/plan/` carry 54 further references —
-  5 phase plans (`00-transition-plan.md`, `00-surface-routing.md`,
-  `02-acceptance-criteria.md`, `04-rollout.md`, `06-colour-schema-rollout.md`)
-  and 24 merged handoffs from Phases 6–14. Measured 2026-09-17.
-- **Catch**: PR 15.0's own gate asks that every remaining hit under
-  `docs/design/plan/` be a citation rather than an instruction. That gate
-  cannot pass as written — a merged handoff is never edited by anyone, and the
-  phase plans are on the read-only list too. The handoff was right about its
-  three-file scope and wrong about the reach of its gate.
-- **Touches**: the schema files and the read-only history. Needs the
-  maintainer's hand, as `T010` and `T011` did (closed 2026-09-28 with the
-  maintainer's go-ahead: D36's twin renumbered to D44, the stale rollout
-  counts deleted). The cheapest honest fix may be a
-  single line in each tracker's header rather than 54 edits.
-- **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13
+  read-only table row listing `plan/03-drift-log.md` as "**Yes — append only.**
+  This is where findings go." Point each at `TODO.md`.
+- **Note**: one line at the top of `docs/design/plan/` (its index or a short
+  README) saying the drift log is closed and new findings go to `TODO.md`.
+- **Leave alone**: the 54 references in 29 plan and handoff files (measured
+  2026-09-17). They are history and stay as citations. PR 15.0's gate that
+  every hit be a citation is retired with this decision.
+- **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13;
+  decided 2026-10-02
 
 ### T067 — The repository carries files nobody reads
-**Type** docs · **Size** M · **Status** needs scoping · **Verified** 2026-09-24
+**Type** docs · **Size** M · **Status** open · **Verified** 2026-09-24
+
+**Decided (maintainer, 2026-10-02)**:
+1. **Delete what nothing cites; keep what is cited, where it is.** A doc that
+   no code comment or live doc references is deleted (git history keeps it). A
+   cited handoff stays at its current path, so no reference breaks. Nothing is
+   moved to `docs/archive/`.
+2. **Dead scripts go too**: `scripts/copyFeatureFiles.ps1`, which lists
+   pre-restructure paths. (The dead admin views and `FloatingUsageIndicator`
+   were already deleted, 2026-10-01.)
+3. **`TODO.md` is the one "start here" file.** Point `CLAUDE.md` at it, fold
+   anything still live in `post-test-coverage-roadmap.md` into it, and delete
+   the roadmap (after checking what cites it).
 
 The maintainer wants the repo cleaned up, doc files especially.
 
@@ -727,9 +737,7 @@ The maintainer wants the repo cleaned up, doc files especially.
 - **Catch**: `docker/` is *not* dead. `CLAUDE.md` calls it unused, but CI builds
   the frontend with `docker/Dockerfile.frontend.prod`. And many docs are phase
   handoffs that code comments cite by name, so deleting one breaks references.
-- **Question before sizing**: archive (move under `docs/archive/`) or delete?
-  And is `TODO.md` the one "start here" file from now on?
-- **Source**: todo.txt, 2026-09-24
+- **Source**: todo.txt, 2026-09-24; scoped 2026-10-02
 
 ---
 

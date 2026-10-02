@@ -38,8 +38,8 @@ export interface Quest extends BaseContent {
    *
    * Documents written before that keep whatever `importantNPCs` they carry --
    * every write goes through `updateDoc`, which merges field by field and
-   * never removes one. `src/utils/__dev__/auditQuestImportantNPCs.ts` reports
-   * any name in it that this list does not already name.
+   * never removes one. Nothing reads it, and nothing migrates it: names this
+   * list does not already carry were judged not worth keeping (2026-10-02).
    */
   relatedNPCIds?: string[];
   complications?: string[];

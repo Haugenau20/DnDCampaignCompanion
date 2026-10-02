@@ -1076,8 +1076,8 @@
     `chip-toggle` cannot be used here: its selected state reaches for
     `--accent-ink`, and `colour-schema.md` §5.2 solves `accent.*` against page,
     card and sunken only. Light `accent.ink` #8D4F00 on band #26211C measures
-    ~1.9:1 -- there is no authored pair to reach for, the gap is T040, and
-    `handoff/15-4-location-page.md` forbids inventing one. So a band chip takes
+    ~1.9:1 -- and the band carries no accent, by rule (`colour-schema.md`
+    D125). So a band chip takes
     the neutral band treatment the visual reference shows, from the band's own
     pair and nothing else.
 

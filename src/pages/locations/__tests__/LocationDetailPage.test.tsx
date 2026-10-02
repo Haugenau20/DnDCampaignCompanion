@@ -688,7 +688,7 @@ describe('LocationDetailPage — what the record may claim (§8)', () => {
   it('puts no per-field credit under the description, whatever the reference shows', () => {
     // The visual reference prints "DungeonMaster · 31 May · click to edit" under
     // the description. `ContentAttribution` holds created-by and
-    // last-modified-by and nothing in between (T005), so that line would be
+    // last-modified-by and nothing in between, so that line would be
     // inventing a history the data does not carry.
     renderPage();
     const section = screen.getByText('What this place is').closest('section') as HTMLElement;
