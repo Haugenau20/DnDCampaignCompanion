@@ -62,15 +62,24 @@ Finding ids (`PERF-nn`) refer to
 What it buys beyond the round trips: another player's edits appear without a
 reload, which is most of what "shared campaign data" means.
 
-### Phase 2 — Attribution profile cache (`PERF-06`, `PERF-09`, `PERF-14`) · implemented
+### Phase 2 — Attribution profile cache (`PERF-06`, `PERF-02`) · implemented
 
-- `DocumentService` keeps the last-read group profile per `(groupId, uid)`
-  and reuses it for creation and modification attribution.
+- The Firebase services share the last-read group profile per
+  `(groupId, uid)` (`BaseFirebaseService`), and `DocumentService` reuses it
+  for creation and modification attribution.
+- `UserService.getGroupUserProfile` still always reads, because sign-in's
+  restore acts on the profile's `activeCampaignId`. Its reads seed the cache,
+  so the first write of a session costs nothing, and two identical reads in
+  flight at once share one request (`PERF-02`'s leftover duplicate).
 - Any write to that profile through `UserService` (character switch, username
   change, profile edit) invalidates the entry, as does sign-out. A cached entry
-  also expires after a few minutes, so a profile changed from another device
+  also expires after five minutes, so a profile changed from another device
   is picked up without a reload.
 - **Budget**: N attributed writes in a session cost one profile read, not N.
+- **Not done**: `PERF-09`. Home's `fetchAttributionUsernames` reads through
+  `getGroupUserProfile`, which always reads. It should use the cache, but
+  `attribution-utils.test.ts` pins that exact call, so changing it changes
+  those assertions. That is left for the review.
 
 ### Phase 3 — Notes listener · next, small
 
