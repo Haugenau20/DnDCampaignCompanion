@@ -638,7 +638,9 @@ smuggled in alongside a destructive migration.
 
 ## 8. Decisions this schema records
 
-Carry these into `../plan/03-drift-log.md` as they are implemented.
+Track any of these still to be implemented in `../../TODO.md`, the project's
+one tracker. (`../plan/03-drift-log.md`, which used to collect them, closed on
+2026-09-16; it still holds the reasoning behind each `D` number.)
 
 - **D23 — Torchlight Forge chosen** over three alternatives (archival
   verdigris, indigo instrument, arcane violet). Warm limestone and iron with a
@@ -804,7 +806,7 @@ It will be wrong sometimes; version 1 of this document was wrong by 52 leaves.
 The procedure is the same in every case:
 
 1. **Stop.** Do not patch around it, and do not extend the schema to cover it.
-2. **Write the gap down** in `../plan/03-drift-log.md` as a question: what the
+2. **Write the gap down** in `../../TODO.md` as a question: what the
    token needs, which primitive seems closest, and why the schema does not
    answer it.
 3. **Raise it** and wait for a corrected schema. Both files are regenerated
@@ -822,11 +824,12 @@ nothing catches it.
 | `design/colour-schema.md` | **No.** Never. |
 | `design/colour-schema.json` | **No.** Never. |
 | `design/design-language.md` | **No.** Principles are not an implementation concern. |
-| `plan/01-token-model.md` | No — propose in the drift log. |
-| `plan/06-colour-schema-rollout.md` | No — propose in the drift log. |
+| `plan/01-token-model.md` | No — propose it in `TODO.md`. |
+| `plan/06-colour-schema-rollout.md` | No — propose it in `TODO.md`. |
 | `plan/handoff/12-*.md` | No. A handoff that is wrong is reported, not rewritten. |
 | A handoff whose PR has **merged** | Never — by anyone. It is a historical record. New work gets a new PR. |
-| `plan/03-drift-log.md` | **Yes — append only.** This is where findings go. |
+| `TODO.md` (repository root) | **Yes.** This is where findings go. |
+| `plan/03-drift-log.md` | **No.** Closed 2026-09-16; it is a historical record. |
 
 ## 10. Learnings worth keeping
 

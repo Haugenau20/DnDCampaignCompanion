@@ -29,7 +29,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
-| low | T039 | Docs point at the retired drift log | S | open | Decided 2026-10-02: fix colour-schema's 3 instructions, one note for the rest |
 | low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; decided 2026-10-02 to move to Vite, plan first |
 | low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
@@ -604,29 +603,6 @@ plan's phases:
 
 ## Documentation debt
 
-### T039 — Documents still tell an agent to write to the retired drift log
-**Type** docs · **Size** S · **Status** open · **Verified** 2026-09-17
-
-`docs/design/plan/03-drift-log.md` is closed and carries a note saying so
-(PR 15.0). Documents that point at it were not all correctable by that PR,
-because almost all of them are read-only to an implementing change.
-
-**Decided (maintainer, 2026-10-02): fix the three live instructions, and add one
-note for the rest.** The maintainer approves editing `colour-schema.md` for this.
-
-- **Fix**: `docs/design/colour-schema.md`'s three live references — §8's
-  "Carry these into `../plan/03-drift-log.md` as they are implemented", §9's
-  "Write the gap down in `../plan/03-drift-log.md` as a question", and §9's
-  read-only table row listing `plan/03-drift-log.md` as "**Yes — append only.**
-  This is where findings go." Point each at `TODO.md`.
-- **Note**: one line at the top of `docs/design/plan/` (its index or a short
-  README) saying the drift log is closed and new findings go to `TODO.md`.
-- **Leave alone**: the 54 references in 29 plan and handoff files (measured
-  2026-09-17). They are history and stay as citations. PR 15.0's gate that
-  every hit be a citation is retired with this decision.
-- **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13;
-  decided 2026-10-02
-
 ### T067 — The repository carries files nobody reads
 **Type** docs · **Size** M · **Status** open · **Verified** 2026-09-24
 
@@ -648,7 +624,7 @@ The maintainer wants the repo cleaned up, doc files especially.
   `superpowers/` 21, and a few each in `architecture/`, `project/` and `performance/`.
   `CLAUDE.md` still names `docs/testing/post-test-coverage-roadmap.md` as
   "start here", and it was last updated 2026-08-28 (it still warns about deploy
-  steps TODO.md shows were done since). T039 is one symptom of the same drift.
+  steps TODO.md shows were done since).
 - **Scripts**: `scripts/copyFeatureFiles.ps1` lists pre-restructure paths;
   `scripts/manage-environment.ps1` is Docker-based and unused.
 - **Catch**: `docker/` is *not* dead. `CLAUDE.md` calls it unused, but CI builds
