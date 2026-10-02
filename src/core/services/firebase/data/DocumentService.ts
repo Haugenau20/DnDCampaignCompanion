@@ -13,7 +13,9 @@ import {
   DocumentData,
   WithFieldValue,
   DocumentReference,
-  writeBatch
+  writeBatch,
+  onSnapshot,
+  Unsubscribe
 } from 'firebase/firestore';
 import BaseFirebaseService from '../core/BaseFirebaseService';
 import { ContentAttribution } from '../../../types/common';
@@ -346,6 +348,43 @@ class DocumentService extends BaseFirebaseService {
       console.error(`Error getting collection ${collectionName}:`, error);
       return [];
     }
+  }
+
+  /**
+   * Listen to every document in a collection (T032).
+   *
+   * Takes an explicit collection path rather than a bare name: a listener
+   * outlives the moment it was opened, so it must not resolve its group and
+   * campaign from this service's mutable active ids. The caller builds the
+   * path from the same state it renders.
+   *
+   * The first call to `onNext` carries the whole collection; later calls
+   * follow every change, including this client's own writes, which arrive
+   * before the write's promise resolves (latency compensation).
+   *
+   * @param collectionPath Full collection path, e.g. `groups/g/campaigns/c/npcs`
+   * @param onNext Receives the collection's documents on every change
+   * @param onError Receives a listener failure; the listener is closed after it
+   * @param constraints Query constraints to apply
+   * @returns Function that closes the listener
+   */
+  public subscribeToCollection<T>(
+    collectionPath: string,
+    onNext: (documents: T[]) => void,
+    onError: (error: Error) => void,
+    constraints: QueryConstraint[] = []
+  ): Unsubscribe {
+    const q = query(collection(this.db, collectionPath), ...constraints);
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        onNext(snapshot.docs.map(document => ({
+          id: document.id,
+          ...document.data()
+        } as T)));
+      },
+      onError
+    );
   }
 
   /**

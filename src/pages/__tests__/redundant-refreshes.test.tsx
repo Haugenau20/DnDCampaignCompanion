@@ -3,18 +3,24 @@ import { render, screen, fireEvent, waitFor, within, act } from "@testing-librar
 import { MemoryRouter } from "react-router-dom";
 
 /**
- * One collection read per write (PERF-06).
+ * No collection read after a write (PERF-06, T032).
  *
  * The page suites mock the providers, so they can only say that a page did not
  * call a mocked `refresh`. This one mounts the real providers over a counted
  * Firestore and asserts what reaches it: one stance change or one quest edit
- * is one write and one re-read of the collection, not two.
+ * is one write, and the change reaches the page through the listener that is
+ * already open -- no re-read of the collection and no second listener.
+ *
+ * The fake listeners below re-emit a collection whenever a write touches it,
+ * which is what the SDK's latency compensation does before the write's promise
+ * resolves.
  *
  * It does not mock `useFirebaseData`, for the reason
  * `shared/hooks/__tests__/provider-fetch-counts.test.tsx` gives.
  */
 
 const mockGetCollection = jest.fn();
+const mockSubscribeToCollection = jest.fn();
 const mockCreateDocument = jest.fn();
 const mockUpdateDocumentWithAttribution = jest.fn();
 const mockDeleteDocument = jest.fn();
@@ -25,6 +31,7 @@ const mockGetDocument = jest.fn();
 // call would re-run them forever.
 const mockFirestore = {
   getCollection: mockGetCollection,
+  subscribeToCollection: mockSubscribeToCollection,
   createDocument: mockCreateDocument,
   updateDocumentWithAttribution: mockUpdateDocumentWithAttribution,
   deleteDocument: mockDeleteDocument,
@@ -130,6 +137,20 @@ const QUEST_DOC = {
 const fetchCountFor = (collection: string) =>
   mockGetCollection.mock.calls.filter((call) => call[0] === collection).length;
 
+/** How many listeners were opened on the given collection. */
+const listenerCountFor = (collection: string) =>
+  mockSubscribeToCollection.mock.calls.filter((call) => call[0].endsWith(`/${collection}`)).length;
+
+/** The fake database: collection name to its documents. */
+let store: Record<string, Array<Record<string, any>>>;
+/** Open listeners, by collection name. */
+let listeners: Record<string, Array<(documents: unknown[]) => void>>;
+
+/** Delivers a collection's current documents to everyone listening to it. */
+const emit = (collection: string) => {
+  (listeners[collection] ?? []).forEach((onNext) => onNext([...(store[collection] ?? [])]));
+};
+
 /** Let the write and the refresh that follows it settle. */
 const settle = () =>
   act(async () => {
@@ -148,19 +169,30 @@ const Providers: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </MemoryRouter>
 );
 
-describe("one collection read per write", () => {
+describe("no collection read after a write", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetCollection.mockImplementation(async (collection: string) => {
-      if (collection === "npcs") return [NPC_DOC];
-      if (collection === "quests") return [QUEST_DOC];
-      return [];
+    store = { npcs: [NPC_DOC], quests: [QUEST_DOC] };
+    listeners = {};
+    mockGetCollection.mockImplementation(async (collection: string) => store[collection] ?? []);
+    mockSubscribeToCollection.mockImplementation((path: string, onNext: (d: unknown[]) => void) => {
+      const collection = path.split("/").pop() as string;
+      (listeners[collection] ??= []).push(onNext);
+      Promise.resolve().then(() => onNext([...(store[collection] ?? [])]));
+      return () => {
+        listeners[collection] = listeners[collection].filter((l) => l !== onNext);
+      };
     });
     mockGetDocument.mockResolvedValue(null);
-    mockUpdateDocumentWithAttribution.mockResolvedValue(undefined);
+    mockUpdateDocumentWithAttribution.mockImplementation(
+      async (collection: string, id: string, data: Record<string, any>) => {
+        store[collection] = (store[collection] ?? []).map((d) => (d.id === id ? { ...d, ...data } : d));
+        emit(collection);
+      }
+    );
   });
 
-  test("a stance change on /npcs re-reads the NPCs once", async () => {
+  test("a stance change on /npcs re-reads nothing and still shows", async () => {
     render(
       <Providers>
         <NPCsPage />
@@ -176,10 +208,15 @@ describe("one collection read per write", () => {
     await settle();
 
     expect(mockUpdateDocumentWithAttribution).toHaveBeenCalledTimes(1);
-    expect(fetchCountFor("npcs") - before).toBe(1);
+    expect(fetchCountFor("npcs") - before).toBe(0);
+    expect(listenerCountFor("npcs")).toBe(1);
+    expect(
+      within(screen.getByRole("group", { name: "Stance of Aldric" }))
+        .getByRole("button", { name: "Hostile" })
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
-  test("saving a quest field re-reads the quests once", async () => {
+  test("saving a quest field re-reads nothing and still shows", async () => {
     render(
       <Providers>
         <QuestDetailPage />
@@ -197,6 +234,8 @@ describe("one collection read per write", () => {
     await settle();
 
     expect(mockUpdateDocumentWithAttribution).toHaveBeenCalledTimes(1);
-    expect(fetchCountFor("quests") - before).toBe(1);
+    expect(fetchCountFor("quests") - before).toBe(0);
+    expect(listenerCountFor("quests")).toBe(1);
+    expect(await screen.findByText("Ask Balin")).toBeInTheDocument();
   });
 });

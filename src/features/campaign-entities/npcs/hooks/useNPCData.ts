@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { NPC } from '../types';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { campaignCollectionPath } from 'core/services/firebase/data/campaignCollectionPath';
 import { useAuth, useGroups, useCampaigns } from 'features/user-management';
 import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
 
@@ -11,17 +12,16 @@ import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus'
  */
 export const useNPCData = () => {
   const [npcs, setNpcs] = useState<NPC[]>([]);
-  // `autoFetch: false` because this hook drives its own fetching below, and
-  // does it with context the generic hook lacks -- gated on group and campaign,
-  // sorted, and cleared when either changes. The generic mount fetch fired
-  // regardless and was simply a second read of the same collection.
-  const { getData, loading, error, data } = useFirebaseData<NPC>({
-    collection: 'npcs',
-    autoFetch: false
-  });
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
+  // A listener on the active campaign's collection (T032), or none while
+  // signed out or unscoped. The list follows every change, a player's own
+  // writes included, so the refresh each write ends with reads nothing.
+  const { getData, loading, error, data } = useFirebaseData<NPC>({
+    collection: 'npcs',
+    subscribeTo: campaignCollectionPath(Boolean(user), activeGroupId, activeCampaignId, 'npcs')
+  });
   const { isResolving, hasRequiredContext, missingContext } = useCampaignContextStatus();
 
   /**
@@ -71,8 +71,7 @@ export const useNPCData = () => {
   //
   // Signed out, or no group/campaign selected, is checked FIRST and returns:
   // `data` may still hold the previous user's or previous campaign's records,
-  // since the generic hook no longer clears it on sign-out (autoFetch: false
-  // above also drops its AUTH_STATE_CHANGED_EVENT listener), and stale
+  // until the listener above has closed and emptied it a render later, and stale
   // records must never outrank "you are signed out".
   useEffect(() => {
     if (!user || !activeGroupId || !activeCampaignId) {

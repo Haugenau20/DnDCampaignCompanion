@@ -150,9 +150,26 @@ export function useFirestore() {
     }
   }, [setError]);
 
+  // Listen to a collection by its full path. No error state is set here: a
+  // listener's failure belongs to the one consumer that opened it.
+  const subscribeToCollection = useCallback(<T>(
+    collectionPath: string,
+    onNext: (documents: T[]) => void,
+    onError: (error: Error) => void,
+    constraints: QueryConstraint[] = []
+  ) => {
+    return firebaseServices.document.subscribeToCollection<T>(
+      collectionPath,
+      onNext,
+      onError,
+      constraints
+    );
+  }, []);
+
   return {
     getDocument,
     getCollection,
+    subscribeToCollection,
     setDocument,
     updateDocument,
     createDocument,

@@ -2,7 +2,11 @@ import React from "react";
 import { render, waitFor } from "@testing-library/react";
 
 /**
- * One fetch per collection, per provider.
+ * One listener per collection, per provider, and no fetch at all.
+ *
+ * Since T032 the read hooks listen (`onSnapshot`) instead of fetching, so the
+ * budget is stricter than it was: mounting a provider opens exactly one
+ * listener on its campaign's collection and performs no collection read.
  *
  * Each entity context mounts two `useFirebaseData` instances: one for reads,
  * one for writes (the write instance's `error` is bound separately as
@@ -16,6 +20,7 @@ import { render, waitFor } from "@testing-library/react";
  */
 
 const mockGetCollection = jest.fn();
+const mockSubscribeToCollection = jest.fn();
 const mockCreateDocument = jest.fn();
 const mockUpdateDocumentWithAttribution = jest.fn();
 const mockDeleteDocument = jest.fn();
@@ -25,6 +30,7 @@ jest.mock("@/features/user-management", () => ({
   AUTH_STATE_CHANGED_EVENT: "auth-state-changed",
   useFirestore: () => ({
     getCollection: mockGetCollection,
+    subscribeToCollection: mockSubscribeToCollection,
     createDocument: mockCreateDocument,
     updateDocumentWithAttribution: mockUpdateDocumentWithAttribution,
     deleteDocument: mockDeleteDocument,
@@ -57,11 +63,19 @@ import { StoryProvider } from "@/features/storytelling/chapters/context/StoryCon
 const fetchCountFor = (collection: string) =>
   mockGetCollection.mock.calls.filter(call => call[0] === collection).length;
 
+/** The paths of every listener opened. */
+const listenedPaths = () => mockSubscribeToCollection.mock.calls.map(call => call[0]);
+
 describe("provider fetch counts", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetCollection.mockResolvedValue([]);
     mockGetDocument.mockResolvedValue(null);
+    // An empty collection, delivered as Firestore does: asynchronously.
+    mockSubscribeToCollection.mockImplementation((_path, onNext) => {
+      Promise.resolve().then(() => onNext([]));
+      return jest.fn();
+    });
   });
 
   test.each([
@@ -69,7 +83,7 @@ describe("provider fetch counts", () => {
     ["quests", QuestProvider],
     ["locations", LocationProvider],
     ["rumors", RumorProvider],
-  ])("%s is fetched once when its provider mounts", async (collection, Provider) => {
+  ])("%s gets one listener and no fetch when its provider mounts", async (collection, Provider) => {
     render(
       <Provider>
         <div>child</div>
@@ -77,13 +91,13 @@ describe("provider fetch counts", () => {
     );
 
     await waitFor(() => {
-      expect(fetchCountFor(collection)).toBeGreaterThan(0);
+      expect(listenedPaths()).toEqual([`groups/group-1/campaigns/campaign-1/${collection}`]);
     });
 
-    expect(fetchCountFor(collection)).toBe(1);
+    expect(fetchCountFor(collection)).toBe(0);
   });
 
-  test("StoryProvider fetches chapters once, and the reader's progress once", async () => {
+  test("StoryProvider listens to chapters once, and reads the reader's progress once", async () => {
     render(
       <StoryProvider>
         <div>child</div>
@@ -91,10 +105,10 @@ describe("provider fetch counts", () => {
     );
 
     await waitFor(() => {
-      expect(fetchCountFor("chapters")).toBeGreaterThan(0);
+      expect(listenedPaths()).toEqual(["groups/group-1/campaigns/campaign-1/chapters"]);
     });
 
-    expect(fetchCountFor("chapters")).toBe(1);
+    expect(fetchCountFor("chapters")).toBe(0);
     // Reading progress is the reader's own document (T073), read by id rather
     // than through a collection instance -- and still read exactly once.
     await waitFor(() => expect(mockGetDocument).toHaveBeenCalled());
