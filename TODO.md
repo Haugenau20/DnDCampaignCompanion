@@ -19,7 +19,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T077 | Home highlighted on every page but Home | S | open | Visible on every route; the nav's highlight is inverted for `/` |
 | medium | T076 | May the site use "D&D"? | M | needs investigation | Public site, no trademark notice anywhere; T075's rename waits on it |
 | medium | T032 | Performance remediation programme | L | open | 2.5–7.6 s to ready is the biggest felt slowness; direction decided 2026-10-02 (Firestore listeners), needs a plan |
 | medium | T056 | App-wide error registry; sign-in first | M | open | Shape decided 2026-10-02: `AREA-NN` codes in one `core/` registry |
@@ -122,25 +121,6 @@ documents agreed with each other and none of them agreed with the product.
 ## Bugs
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
-
-### T077 — Home is highlighted in the header on every page except Home
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-02
-
-On any other page the nav lights up both Home and that page's own item; on
-Home itself, Home is **not** lit. The highlight is inverted for `/`.
-
-- **Where**: `Navigation.tsx:108` and `:162` call `shouldHighlightPath(item.path)`
-  without `exact`, so `/` goes through `isParentPath`
-  (`shared/utils/navigation.ts:36`): `if (parentPath === '/') return
-  currentPath !== '/'`. Home is the only item with `path: '/'`
-  (`Navigation.tsx:19`).
-- **Catch**: `isParentPath` is doing what its own test pins
-  (`navigation.test.ts:55-58`, "'/' is parent only for non-root paths") — that
-  is a coherent rule for a path utility; the defect is the nav using it for
-  `/`. `GlobalActionButton.tsx:117` also calls it, but no action has
-  `sectionPath: '/'`. The nav's own tests stub `shouldHighlightPath` with an
-  exact match (`Navigation.test.tsx:26`), which is why none of them caught it.
-- **Source**: todo.txt, 2026-10-02
 
 ---
 
