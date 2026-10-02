@@ -702,7 +702,7 @@ describe('the record card', () => {
     const record = section('Written here');
     expect(within(record).getByTestId('attribution-info')).toBeInTheDocument();
     // `S3` draws "gandlaf ticked 'Find the secret door' · last session" under
-    // the two attribution lines. There is no such data (§8, T005), so the
+    // the two attribution lines. There is no such data (§8), so the
     // record card holds the two facts and nothing else.
     expect(within(record).queryByText(/ticked/)).not.toBeInTheDocument();
     expect(screen.queryByText(/last session/)).not.toBeInTheDocument();

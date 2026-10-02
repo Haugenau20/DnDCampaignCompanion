@@ -770,6 +770,13 @@ Carry these into `../plan/03-drift-log.md` as they are implemented.
   both themes, and like every pair it resolves to a different value in each.
   Recorded from practice: `PicturedBand` adds its picture classes only when
   there is a picture, so a band without one is exactly `.hero-band`.
+- **D125 — The band carries no accent.** §5.2 solves `accent.*` against page,
+  card and sunken; light `accent.ink` `#8D4F00` on band `#26211C` measures
+  ~1.9:1. No accent pair is authored for the band, and none will be: a band
+  draws its controls from its own pair (`.band-chip`, `.band-chip-selected`,
+  consuming `--surface-band-selected`), and a primary action belongs in the
+  body, not on the band. Decided by the maintainer, 2026-10-02; this was the
+  interim since PR 15.4.
 - **D31 — No alias layer.** Legacy names resolve as derivations at generation
   time and are deleted with their consumers in `12-3a`/`12-3b`; none survives as a
   compatibility shim. `color.primary/secondary/accent` and

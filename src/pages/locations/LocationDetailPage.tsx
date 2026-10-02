@@ -94,7 +94,7 @@ const LocationNotFound: React.FC<{ onBack: () => void }> = ({ onBack }) => (
  *
  * - No per-field attribution. The reference prints "DungeonMaster · 31 May"
  *   under the description; `ContentAttribution` holds created-by and
- *   last-modified-by and **nothing in between** (§8, T005), so a line under one
+ *   last-modified-by and **nothing in between** (§8), so a line under one
  *   field would be inventing a history the data does not carry.
  * - No gallery. One picture heads the page (T021); anything more is a
  *   different feature.
@@ -563,7 +563,7 @@ const LocationDetailPage: React.FC = () => {
                 {/*
                   Created and last-modified are the only two points
                   `ContentAttribution` holds. Two facts, stated -- not a
-                  timeline (§8, T005).
+                  timeline (§8).
                 */}
                 <AttributionInfo item={location} />
 

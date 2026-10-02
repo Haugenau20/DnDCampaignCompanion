@@ -47,7 +47,7 @@ export interface StateLadderProps<V extends string> {
    * `page` is the ordinary case. `band` is an entity page's header, where the
    * selected chip cannot use `chip-toggle-selected`: that reaches for
    * `--accent-ink`, which the colour schema solves against page, card and
-   * sunken and **not** against the band (~1.9:1, T040). On the band the chip
+   * sunken and **not** against the band (~1.9:1, D125). On the band the chip
    * takes the band's own neutral pair, which is what the reference shows.
    */
   tone?: "page" | "band";

@@ -234,7 +234,7 @@ describe("every variable a theme defines is either consumed or declared unused",
     // unconsumed because "the band has no selectable element yet"; the entity
     // page's band carries a knowledge ladder, and `.band-chip-selected` is that
     // element. The hole would have been the defect, and the pair being whole is
-    // what meant no colour had to be invented for it (T040).
+    // what meant no colour had to be invented for it (D125).
     "--surface-page-border":
       "A complete pair, one member unused. Surface pairs are emitted whole -- " +
       "bg, on, onMuted, border, hover, selected -- so that a surface cannot be " +

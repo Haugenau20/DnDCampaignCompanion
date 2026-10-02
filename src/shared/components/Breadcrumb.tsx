@@ -19,7 +19,7 @@ interface BreadcrumbProps {
    * solved against the page: `typography-secondary` on the band measures far
    * below any usable threshold. On the band the trail takes the band's own
    * muted ink and its current item simply inherits the band's ink, so no
-   * colour is named here and none is invented (T040).
+   * colour is named here and none is invented (D125).
    */
   tone?: 'page' | 'band';
   className?: string;

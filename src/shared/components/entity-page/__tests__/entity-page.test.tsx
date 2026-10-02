@@ -46,8 +46,8 @@ describe('EntityPageShell', () => {
 
   it('draws the band from the band surface, naming no colour of its own', () => {
     // `colour-schema.md` §5.2 solves `accent.*` against page, card and sunken
-    // and not against the band (~1.9:1, T040). An implementing PR may not close
-    // that gap, so nothing here may reach for an accent.
+    // and not against the band (~1.9:1), and D125 rules that the band carries
+    // no accent, so nothing here may reach for one.
     const { container } = renderShell();
     const band = container.querySelector('.hero-band') as HTMLElement;
     expect(band).toBeTruthy();

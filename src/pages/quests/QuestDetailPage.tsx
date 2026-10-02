@@ -106,7 +106,7 @@ const QuestNotFound: React.FC<{ onBack: () => void }> = ({ onBack }) => (
  *
  * - No per-objective history. The reference prints "gandlaf ticked *Find the
  *   secret door* · last session"; `ContentAttribution` holds created-by and
- *   last-modified-by and **nothing in between** (§8, T005). A line like that
+ *   last-modified-by and **nothing in between** (§8). A line like that
  *   would be inventing a history the data does not carry.
  * - No per-field credit under the description, for the same reason.
  * - No second NPC list. `importantNPCs` is deleted (`D15.7`) -- two fields for
@@ -588,7 +588,7 @@ const QuestDetailPage: React.FC = () => {
                 {/*
                   Created and last-modified are the only two points
                   `ContentAttribution` holds. Two facts, stated -- not a
-                  timeline, and never per objective (§8, T005).
+                  timeline, and never per objective (§8).
                 */}
                 <AttributionInfo item={quest} />
 
