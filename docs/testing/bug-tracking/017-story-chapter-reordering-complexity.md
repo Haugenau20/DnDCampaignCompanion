@@ -10,6 +10,17 @@ written, because the reasoning that identified the block is the most useful part
 **Discovery Date**: June 15, 2025
 **Discovery Method**: Behavioral Testing
 
+## Update — 2026-10-02: sub-chapters removed
+
+The maintainer decided on 2026-10-02 that sub-chapters will not be built, and the
+unused `subChapters` field was removed from `Chapter`. The reorder test this record cites,
+`'should handle complex multi-chapter reordering without data loss'`, is therefore about
+**summary data only**: its fixture no longer carries `subChapters`, and it asserts that a reorder
+keeps `summary` (and the title and new order). What it proves is unchanged — `{...c}` carries a
+chapter's other fields to its new position. Older chapter documents may still hold a stored
+`subChapters` array; writes merge, so it is left in place rather than destroyed. Mentions of
+`subChapters` further down are the original report, kept as written.
+
 ## Resolution — 2026-07-28
 
 **Landed**, with the fix exactly as designed below: write and verify every chapter at its new

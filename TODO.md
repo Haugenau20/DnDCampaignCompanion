@@ -26,7 +26,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
 | medium | T037 | A group cannot be deleted | L | open | Decided 2026-10-02 to build it, plan first: members' data cannot be removed until it exists |
 | low | T017 | Batch actions for other entities | L | open | Convenience; must follow T032's write-amplification fix |
-| low | T018 | Remove unused sub-chapters field | S | open | Decided 2026-10-02 not to build it; dead field, plus a #017 tracker update |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
@@ -154,24 +153,6 @@ Select several rows, then delete or change status in one go.
   recovery — then generalise. That is T032's territory, so the two should be
   sequenced rather than run in parallel.
 - **Source**: todo.txt, 2026-09-16
-
-### T018 — Remove the unused sub-chapters field
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-02
-
-**Decided (maintainer, 2026-10-02): sub-chapters will not be built.** The field
-exists only in the type and the sample generator; no component renders, edits
-or orders one. Delete it rather than carry a half-feature.
-
-- **Where**: `subChapters?: Chapter[]` in
-  `src/features/storytelling/chapters/types.ts:15`, and its population in
-  `src/utils/__dev__/generators/contentGenerators/chapterGenerator.ts:57`.
-- **Catch**: bug **#017**'s test (`StoryContext.bugs.test.tsx:402,447-459`)
-  uses `subChapters` in a fixture and asserts reordering preserves it, alongside
-  summary data. Do not edit the test to pass: update #017 in
-  `docs/testing/bug-tracking/README.md` so it is about summary data only, and
-  change the test with that record, not ahead of it. Stored chapters may still
-  carry the field; `updateDoc` merges, so it is left alone, not destroyed.
-- **Source**: todo.txt, 2026-09-16; decided 2026-10-02
 
 ### T054 — Sign in with Discord
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-23

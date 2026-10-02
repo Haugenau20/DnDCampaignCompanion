@@ -11,8 +11,6 @@ export interface Chapter extends BaseContent {
   content: string;
   /** Chapter order number (for sequencing) */
   order: number;
-  /** Optional sub-chapters or sections */
-  subChapters?: Chapter[];
   /** Optional chapter summary */
   summary?: string;
 }
