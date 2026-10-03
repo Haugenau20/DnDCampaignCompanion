@@ -1,0 +1,92 @@
+[
+  {
+    "name": "typecheck",
+    "command": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "--noEmit"
+    ],
+    "env_overrides": {},
+    "exit_code": 0,
+    "duration_seconds": 10.87,
+    "log": "/tmp/code-review-baseline/typecheck.log"
+  },
+  {
+    "name": "lint-app",
+    "command": [
+      "npm",
+      "run",
+      "lint"
+    ],
+    "env_overrides": {},
+    "exit_code": 0,
+    "duration_seconds": 12.33,
+    "log": "/tmp/code-review-baseline/lint-app.log"
+  },
+  {
+    "name": "lint-tests",
+    "command": [
+      "npm",
+      "run",
+      "lint:tests"
+    ],
+    "env_overrides": {},
+    "exit_code": 0,
+    "duration_seconds": 10.12,
+    "log": "/tmp/code-review-baseline/lint-tests.log"
+  },
+  {
+    "name": "frontend-tests",
+    "command": [
+      "npm",
+      "run",
+      "test:ci",
+      "--",
+      "--maxWorkers=2"
+    ],
+    "env_overrides": {},
+    "exit_code": 0,
+    "duration_seconds": 110.47,
+    "log": "/tmp/code-review-baseline/frontend-tests.log"
+  },
+  {
+    "name": "frontend-build",
+    "command": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "env_overrides": {
+      "CI": "false"
+    },
+    "exit_code": 0,
+    "duration_seconds": 20.61,
+    "log": "/tmp/code-review-baseline/frontend-build.log"
+  },
+  {
+    "name": "bundle-check",
+    "command": [
+      "npm",
+      "run",
+      "check:bundle"
+    ],
+    "env_overrides": {},
+    "exit_code": 0,
+    "duration_seconds": 0.16,
+    "log": "/tmp/code-review-baseline/bundle-check.log"
+  },
+  {
+    "name": "functions-build",
+    "command": [
+      "npm",
+      "--prefix",
+      "firebase/functions",
+      "run",
+      "build"
+    ],
+    "env_overrides": {},
+    "exit_code": 0,
+    "duration_seconds": 5.55,
+    "log": "/tmp/code-review-baseline/functions-build.log"
+  }
+]

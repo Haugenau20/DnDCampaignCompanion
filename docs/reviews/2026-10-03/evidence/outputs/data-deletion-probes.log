@@ -1,0 +1,12 @@
+(node:4140) MetadataLookupWarning: received unexpected error = Request failed with status code 403 code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+campaign failure: {"result":{"success":true,"message":"Campaign deleted successfully"},"noteRetained":true,"campaignExists":false,"failures":[{"method":"update","code":7},{"method":"delete","code":7},{"method":"delete","code":7}],"retryCode":"not-found"}
+Error removing user from group: Error: review failure after subtree deletion
+    at batch.commit (/tmp/data-integrity-deletion-emulator.cjs:75:39)
+    at /workspace/DnDCampaignCompanion/firebase/functions/src/userManagement/removeUserFromGroup.ts:137:21
+    at async waitForActual (node:assert:644:5)
+    at async Function.rejects (node:assert:767:25)
+    at async usernameRecoveryFailure (/tmp/data-integrity-deletion-emulator.cjs:78:8)
+    at async /tmp/data-integrity-deletion-emulator.cjs:88:50
+username retry failure: {"retried":{"success":true,"message":"Successfully left group"},"groups":[],"reservationRetained":true}
+ALL DELETION PROBES COMPLETED

@@ -11,11 +11,16 @@ docs/
 ├── design/                  # The design language, the colour schema, and each design phase's plan and handoffs
 ├── images/                  # Screenshots the root README shows
 ├── performance/             # The 2026-08-30 performance review, its evidence and first findings
+├── reviews/                 # Repository review plans, specialist reports, and consolidated outcomes
 ├── superpowers/             # Plans and design specs for features built since 2026-09
 └── testing/                 # Testing lessons, the Phase 4 triage, and the bug tracker
 ```
 
 ## Conventions
+
+The first repository review is recorded in
+[`reviews/2026-10-03/pass-1-summary.md`](reviews/2026-10-03/pass-1-summary.md); its
+[record index](reviews/2026-10-03/README.md) links the reports and evidence.
 
 - Most of these are records of a decision or a phase, cited by name from code comments. Status
   banners reflect the state when written and may be stale; the code is the source of truth.
