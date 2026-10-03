@@ -19,7 +19,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T076 | May the site use "D&D"? | M | needs investigation | Public site, no trademark notice anywhere; T075's rename waits on it |
+| medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T061 | `test` check not required | S | blocked | Every suite is gated in CI now, but a merge waits on none of it until branch protection lists the check |
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
@@ -32,7 +32,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
-| low | T075 | Header crowded, text truncates | M | needs scoping | Name, logo and the <380px overflow; waits on T076 |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
@@ -286,13 +285,46 @@ is created — and asks the same of NPCs and locations.
   art comes from.
 - **Source**: todo.txt, 2026-10-02 (two inbox lines, merged)
 
-### T075 — The header is crowded, and text in it truncates
-**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-02
+### T075 — Rename the site, and uncrowd the header
+**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-03
 
-The maintainer finds the header busy, with some text cut off, and suggests
-starting with the site name: replace "D&D Campaign Companion" with a logo or
-shorter wording.
+**Decided (maintainer, 2026-10-03): the name drops "D&D", and the site
+mentions D&D nowhere**, not even in a tagline or a disclaimer. The maintainer
+picks the new name; this item ships it, together with a logo or shorter wording
+for the crowded header the maintainer reported (busy, some text cut off).
 
+- **Why** (WotC's own terms, read 2026-10-03; not legal advice): "Dungeons &
+  Dragons" and "D&D" are Wizards of the Coast trademarks. The Fan Content Policy
+  (updated 2017-11-15) grants none: "You may not incorporate any Wizards of the
+  Coast logos and trademarks in your Fan Content without our prior, written
+  consent." Its required notice covers WotC *content*, not the name. Nor could
+  the site qualify: it "can't require … email registration to access", and this
+  one is invite-only behind sign-in. SRD 5.2 (CC-BY-4.0) permits only "compatible
+  with fifth edition" / "5E compatible" and licenses no trademark. The product
+  uses no WotC content otherwise (the shipped code has no setting names or rules
+  terms; Faerûn, Waterdeep and Neverwinter appear only in test fixtures), so once
+  the name goes, no notice is needed.
+- **Name to replace** (measured 2026-10-03): `Header.tsx:98-99`, `Footer.tsx:38`
+  (as "© {year} D&D Campaign Companion"), `SignInPage.tsx:82`, `JoinPage.tsx:98`,
+  `CampaignBanner.tsx:98`, `public/index.html:9,12`, `public/manifest.json:2-3`,
+  the contact mail's subject and body (`firebase/functions/src/contact.ts:364,392,437`,
+  seen only by the maintainer) and the tests that pin those strings
+  (`Header`, `Footer`, `CampaignBanner`; the requirement changed, so say so in
+  the PR). `README.md` (the name, and "for Dungeons & Dragons players"),
+  `AGENTS.md` and `CLAUDE.md`'s opening line say D&D too: the repo is public.
+- **Can stay**: `entityExtraction.ts:454,499` say D&D only in the prompt sent
+  to OpenAI, which nobody sees. The "Dungeons" location filter
+  (`LocationDirectory.tsx:54`) is the plain word, not the mark.
+- **Outside the repo**: the public GitHub repo is `DnDCampaignCompanion`, described as
+  "Dungeons and Dragons Campain Companion for the Players." Changing the
+  description is free; renaming the repo changes its URL (GitHub redirects the old one). The
+  Firebase console's public-facing app name (in sign-in emails and on Google's
+  consent screen) was **not** read.
+- **Stays for now**: the project id and live URL `dnd-campaign-companion(.web.app)`.
+  A project id cannot be renamed. A new Hosting site or a custom domain can be added
+  later, but that means the auth authorised domains, the magic link's `continueUrl`
+  and existing bookmarks, and `CLAUDE.md`, docs and scripts, which name the
+  project id throughout. That would be its own item.
 - **Where**: `src/app/layout/Header.tsx:89-100` — one row carries the name, the
   context switcher, the inline nav, search and the account menu. The full name
   shows from the `title` breakpoint (1200px, `tailwind.config`) up, "D&D
@@ -303,33 +335,10 @@ shorter wording.
 - **Folded in**: the header overflows horizontally below ~380px on every route
   (logo and account block both at `min-width: auto`). `CLAUDE.md` called that
   "tracked in `TODO.md`", but no entry held it until this one.
-- **Catch**: renaming waits on T076 — if "D&D" has to go, the name changes
-  anyway, and that also decides whether a logo carries it.
-- **Source**: todo.txt, 2026-10-02
-
----
-
-## Decisions needed
-
-### T076 — May the site use "D&D" in its name and on its pages?
-**Type** decision · **Size** M · **Status** needs investigation · **Verified** 2026-10-02
-
-"D&D" and "Dungeons & Dragons" are Wizards of the Coast trademarks. Whether a
-free, invite-only fan tool may carry them in its name, and on what terms (e.g.
-WotC's Fan Content Policy and its required notice), has not been looked into.
-**Nothing here is legal advice, and no policy text was read for this entry.**
-
-- **Where the name is used** (measured): `Header.tsx:98-99`, `Footer.tsx:38`,
-  `SignInPage.tsx:82`, `JoinPage.tsx:98`, `CampaignBanner.tsx:98`,
-  `public/index.html:9,12`, `public/manifest.json:2-3`. The repo carries **no**
-  trademark notice or disclaimer anywhere.
-- **Catch**: the Firebase project id and live URL are
-  `dnd-campaign-companion(.web.app)`. A project id cannot be renamed; a new
-  Hosting site name (another `*.web.app`) or a custom domain can be added.
-  Docs, scripts and `CLAUDE.md` name the project id throughout.
-- **Answer first**: read the current policy, then decide — keep the name with
-  the required notice, or rename. T075 waits on it.
-- **Source**: todo.txt, 2026-10-02
+- **Answer first**: the new name, from the maintainer. It decides whether a
+  logo carries it and how much room the header gets back.
+- **Source**: todo.txt, 2026-10-02; the trademark question was looked into and
+  decided 2026-10-03
 
 ---
 
