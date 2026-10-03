@@ -9,14 +9,23 @@ import { toNoteDate } from 'shared/utils/dateFormatter';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { discardImage } from 'shared/hooks/useImageAttachment';
+import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
 const LocationContext = createContext<LocationContextValue | undefined>(undefined);
+
+/**
+ * Who is reading this provider's list right now (T032, `PERF-03`): the
+ * listener is open only while some component that called `useLocations()` is
+ * mounted, and for a while after. See `useListenerDemand`.
+ */
+const { DemandProvider: LocationDemandProvider, useDemand: useLocationDemand } = createListenerDemandContext();
 
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // The list follows a Firestore listener (T032), which delivers this
   // client's own writes before their promises resolve -- so nothing below
   // patches it after a write, or asks for a re-read.
-  const { locations, loading, error, refreshLocations, hasRequiredContext } = useLocationData();
+  const demand = useListenerDemand();
+  const { locations, loading, error, refreshLocations, hasRequiredContext } = useLocationData({ enabled: demand.wanted });
   const { user } = useAuth();
   const { userProfile } = useUser();
   const { activeGroupId } = useGroups();
@@ -277,13 +286,16 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   return (
-    <LocationContext.Provider value={value}>
-      {children}
-    </LocationContext.Provider>
+    <LocationDemandProvider value={demand.retain}>
+      <LocationContext.Provider value={value}>
+        {children}
+      </LocationContext.Provider>
+    </LocationDemandProvider>
   );
 };
 
-export const useLocations = () => {
+export const useLocations = (options: ListReaderOptions = {}) => {
+  useLocationDemand(options.subscribe ?? true);
   const context = useContext(LocationContext);
   if (context === undefined) {
     throw new Error('useLocations must be used within a LocationProvider');

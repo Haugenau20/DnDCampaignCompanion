@@ -9,12 +9,21 @@ import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { discardImage } from 'shared/hooks/useImageAttachment';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { Location } from '../../locations/types';
+import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
 const NPCContext = createContext<NPCContextValue | undefined>(undefined);
 
+/**
+ * Who is reading this provider's list right now (T032, `PERF-03`): the
+ * listener is open only while some component that called `useNPCs()` is
+ * mounted, and for a while after. See `useListenerDemand`.
+ */
+const { DemandProvider: NPCDemandProvider, useDemand: useNPCDemand } = createListenerDemandContext();
+
 export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use the NPCData hook for basic CRUD operations
-  const { npcs, loading, error, refreshNPCs, hasRequiredContext } = useNPCData();
+  const demand = useListenerDemand();
+  const { npcs, loading, error, refreshNPCs, hasRequiredContext } = useNPCData({ enabled: demand.wanted });
   const { user } = useAuth();
   const { userProfile } = useUser();
   
@@ -212,13 +221,16 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   return (
-    <NPCContext.Provider value={value}>
-      {children}
-    </NPCContext.Provider>
+    <NPCDemandProvider value={demand.retain}>
+      <NPCContext.Provider value={value}>
+        {children}
+      </NPCContext.Provider>
+    </NPCDemandProvider>
   );
 };
 
-export const useNPCs = () => {
+export const useNPCs = (options: ListReaderOptions = {}) => {
+  useNPCDemand(options.subscribe ?? true);
   const context = useContext(NPCContext);
   if (context === undefined) {
     throw new Error('useNPCs must be used within an NPCProvider');

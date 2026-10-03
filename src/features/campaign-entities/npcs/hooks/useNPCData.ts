@@ -9,11 +9,13 @@ const byName = (npcs: NPC[]): NPC[] =>
 /**
  * The active campaign's NPCs, kept current by a Firestore listener (T032).
  * See `useCampaignCollection` for how the list, `loading` and the refresh behave.
+ * @param options.enabled Whether anything reads the list right now; see
+ *   `useListenerDemand`. Defaults to `true`.
  * @returns The NPCs, loading and error state, a retry, and the campaign context status
  */
-export const useNPCData = () => {
+export const useNPCData = ({ enabled = true }: { enabled?: boolean } = {}) => {
   const { items, loading, error, refresh, hasRequiredContext, missingContext } =
-    useCampaignCollection<NPC>('npcs', byName);
+    useCampaignCollection<NPC>('npcs', byName, enabled);
 
   return {
     npcs: items,

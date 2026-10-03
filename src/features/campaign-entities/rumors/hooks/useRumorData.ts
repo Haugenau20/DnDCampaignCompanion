@@ -8,11 +8,13 @@ const asStored = (rumors: Rumor[]): Rumor[] => rumors;
 /**
  * The active campaign's rumors, kept current by a Firestore listener (T032).
  * See `useCampaignCollection` for how the list, `loading` and the refresh behave.
+ * @param options.enabled Whether anything reads the list right now; see
+ *   `useListenerDemand`. Defaults to `true`.
  * @returns The rumors, loading and error state, a retry, and the campaign context status
  */
-export const useRumorData = () => {
+export const useRumorData = ({ enabled = true }: { enabled?: boolean } = {}) => {
   const { items, loading, error, refresh, hasRequiredContext, missingContext } =
-    useCampaignCollection<Rumor>('rumors', asStored);
+    useCampaignCollection<Rumor>('rumors', asStored, enabled);
 
   return {
     rumors: items,

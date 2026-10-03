@@ -9,13 +9,22 @@ import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { moveObjective } from '../utils/quest-presentation';
 import { Location } from '../../locations/types';
+import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
 // Create the context but DON'T export it (to match NPCContext pattern)
 const QuestContext = createContext<QuestContextValue | undefined>(undefined);
 
+/**
+ * Who is reading this provider's list right now (T032, `PERF-03`): the
+ * listener is open only while some component that called `useQuests()` is
+ * mounted, and for a while after. See `useListenerDemand`.
+ */
+const { DemandProvider: QuestDemandProvider, useDemand: useQuestDemand } = createListenerDemandContext();
+
 export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use the useQuestData hook to handle data fetching
-  const { quests, loading, error, getQuestById, refreshQuests: fetchQuests, hasRequiredContext } = useQuestData();
+  const demand = useListenerDemand();
+  const { quests, loading, error, getQuestById, refreshQuests: fetchQuests, hasRequiredContext } = useQuestData({ enabled: demand.wanted });
   // `autoFetch: false` because nothing renders off this instance's `data`:
   // the list comes from `useQuestData()` above. Its `error` is bound as
   // `writeError` so write failures are not conflated with read failures
@@ -372,14 +381,17 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   return (
-    <QuestContext.Provider value={value}>
-      {children}
-    </QuestContext.Provider>
+    <QuestDemandProvider value={demand.retain}>
+      <QuestContext.Provider value={value}>
+        {children}
+      </QuestContext.Provider>
+    </QuestDemandProvider>
   );
 };
 
 // Export the hook directly from the context file
-export const useQuests = () => {
+export const useQuests = (options: ListReaderOptions = {}) => {
+  useQuestDemand(options.subscribe ?? true);
   const context = useContext(QuestContext);
   if (context === undefined) {
     throw new Error('useQuests must be used within a QuestProvider');

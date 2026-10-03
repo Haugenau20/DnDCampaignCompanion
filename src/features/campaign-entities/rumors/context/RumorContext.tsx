@@ -8,11 +8,20 @@ import { useAuth, useUser, useFirestore } from 'features/user-management';
 import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { rumorParagraph } from '../utils/rumor-title';
+import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 
+/**
+ * Who is reading this provider's list right now (T032, `PERF-03`): the
+ * listener is open only while some component that called `useRumors()` is
+ * mounted, and for a while after. See `useListenerDemand`.
+ */
+const { DemandProvider: RumorDemandProvider, useDemand: useRumorDemand } = createListenerDemandContext();
+
 export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { rumors, loading, error } = useRumorData();
+  const demand = useListenerDemand();
+  const { rumors, loading, error } = useRumorData({ enabled: demand.wanted });
   // This second `useFirebaseData` instance is the one whose writes (addData/updateData/
   // deleteData) can actually fail; its `error` is renamed on destructure (`writeError`)
   // because the read instance above already binds the name `error`. Previously this
@@ -370,13 +379,16 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   return (
-    <RumorContext.Provider value={value}>
-      {children}
-    </RumorContext.Provider>
+    <RumorDemandProvider value={demand.retain}>
+      <RumorContext.Provider value={value}>
+        {children}
+      </RumorContext.Provider>
+    </RumorDemandProvider>
   );
 };
 
-export const useRumors = () => {
+export const useRumors = (options: ListReaderOptions = {}) => {
+  useRumorDemand(options.subscribe ?? true);
   const context = useContext(RumorContext);
   if (context === undefined) {
     throw new Error('useRumors must be used within a RumorProvider');

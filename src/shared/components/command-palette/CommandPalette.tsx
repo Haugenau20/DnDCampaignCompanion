@@ -47,7 +47,9 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
     isIndexReady,
     onSearch,
     onClearSearch,
-  } = useSearch();
+    // Closed, the palette is still mounted in the header on every route; the
+    // collections it searches are read only while it is open (PERF-03).
+  } = useSearch({ active: isOpen });
   const { navigateToPage, createPath } = useNavigation();
   const { activeCampaign } = useCampaigns();
   const createActions = useCreateActions();

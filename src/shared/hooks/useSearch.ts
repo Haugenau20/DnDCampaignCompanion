@@ -1,6 +1,7 @@
 // hooks/useSearch.ts
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearch as useSearchContext } from '../context/SearchContext';
+import { useRetainListener } from './useListenerDemand';
 
 /**
  * Options for configuring search behavior
@@ -10,6 +11,12 @@ interface UseSearchOptions {
   debounceMs?: number;
   /** Minimum query length to trigger search */
   minQueryLength?: number;
+  /**
+   * Whether the search is open and needs its index (T032, `PERF-03`). The
+   * collections are only read while some caller passes `true`. Defaults to
+   * `true`.
+   */
+  active?: boolean;
 }
 
 /**
@@ -46,8 +53,10 @@ export const useSearch = (userOptions: UseSearchOptions = {}) => {
     clearSearch,
     results,
     isSearching,
-    isIndexReady
+    isIndexReady,
+    retainIndex
   } = useSearchContext();
+  useRetainListener(retainIndex, userOptions.active ?? true);
 
   // State for debounced query
   const [debouncedQuery, setDebouncedQuery] = useState(query);

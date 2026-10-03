@@ -14,6 +14,7 @@ import { useRumors } from 'features/campaign-entities';
 import { useNotes } from 'features/collaboration';
 import type { Note } from 'features/collaboration';
 import { rumorTitleText } from 'features/campaign-entities';
+import { useListenerDemand, RetainListener } from 'shared/hooks/useListenerDemand';
 
 interface SearchContextData {
   query: string;
@@ -23,6 +24,12 @@ interface SearchContextData {
   isIndexReady: boolean;
   handleSearch: (query: string) => Promise<void>;
   clearSearch: () => void;
+  /**
+   * Hold the collections open for searching while the caller is mounted
+   * (T032, `PERF-03`). The header search is on every route, so the index is
+   * built only once someone opens it, not on every page load.
+   */
+  retainIndex: RetainListener;
 }
 
 const SearchContext = createContext<SearchContextData | undefined>(undefined);
@@ -134,12 +141,19 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // mounted inside all six (App.tsx), so building private loaders here only
   // produced a second fetch of each collection -- and an index that went stale
   // after a write, because the providers' copies were not the ones indexed.
-  const { chapters } = useStory();
-  const { npcs } = useNPCs();
-  const { locations } = useLocations();
-  const { quests } = useQuests();
-  const { rumors } = useRumors();
-  const { notes } = useNotes();
+  //
+  // They are only read while the search is open (`PERF-03`): mounting this
+  // provider on every route must not open six listeners on every route. No
+  // linger here -- each provider keeps its own listener open for a while
+  // after, so reopening the search soon after is free.
+  const searching = useListenerDemand(0);
+  const reading = { subscribe: searching.wanted };
+  const { chapters } = useStory(reading);
+  const { npcs } = useNPCs(reading);
+  const { locations } = useLocations(reading);
+  const { quests } = useQuests(reading);
+  const { rumors } = useRumors(reading);
+  const { notes } = useNotes(reading);
 
   // Initialize SearchService with options
   const searchService = useMemo(() => new SearchService({
@@ -226,8 +240,9 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     isSearching,
     isIndexReady,
     handleSearch,
-    clearSearch
-  }), [query, results, isSearching, isIndexReady, handleSearch, clearSearch]);
+    clearSearch,
+    retainIndex: searching.retain
+  }), [query, results, isSearching, isIndexReady, handleSearch, clearSearch, searching.retain]);
 
   return (
     <SearchContext.Provider value={value}>

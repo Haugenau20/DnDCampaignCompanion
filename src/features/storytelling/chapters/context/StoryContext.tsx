@@ -7,6 +7,7 @@ import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useCampaigns, useGroups, useFirestore } from 'features/user-management';
 import firebaseServices from 'core/services/firebase';
 import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
+import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
 interface StoryContextState {
   chapters: Chapter[];
@@ -118,6 +119,13 @@ interface StoryContextValue extends StoryContextState {
 const StoryContext = createContext<StoryContextValue | undefined>(undefined);
 
 /**
+ * Who is reading this provider's list right now (T032, `PERF-03`): the
+ * listener is open only while some component that called `useStory()` is
+ * mounted, and for a while after. See `useListenerDemand`.
+ */
+const { DemandProvider: StoryDemandProvider, useDemand: useStoryDemand } = createListenerDemandContext();
+
+/**
  * Default story progress state
  */
 const defaultProgress: StoryProgress = {
@@ -142,12 +150,13 @@ function mergeProgress<T extends ProgressPatch>(base: T, patch: ProgressPatch): 
 
 export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use existing hooks for data
+  const demand = useListenerDemand();
   const { 
     chapters, 
     loading: chaptersLoading, 
     error: chaptersError, 
     hasRequiredContext
-  } = useChapterData();
+  } = useChapterData({ enabled: demand.wanted });
   
   // `autoFetch: false` because nothing renders off this instance's `data`:
   // chapters come from `useChapterData()` above.
@@ -207,25 +216,40 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
    */
   const unreadChangesRef = useRef<ProgressPatch>({});
 
+  /** The progress location the read below has been started for, if any. */
+  const progressReadFor = useRef<string | null>(null);
+  const progressKey = progressCollection && progressId ? `${progressCollection}/${progressId}` : null;
+
+  /*
+    Progress is reset to the default whenever the reader, group or campaign
+    changes, so a campaign or account switch never leaves the previous one's
+    position on screen while the read is in flight, or when the new one has
+    no document yet.
+  */
+  useEffect(() => {
+    progressRef.current = defaultProgress;
+    unreadChangesRef.current = {};
+    progressReadFor.current = null;
+    setStoredProgress(defaultProgress);
+  }, [progressKey]);
+
   /**
-   * Read this reader's progress whenever the reader, group or campaign changes.
-   *
-   * Progress is reset to the default first, so a campaign or account switch
-   * never leaves the previous one's position on screen while the read is in
-   * flight, or when the new one has no document yet. A read that resolves
-   * after the location has moved on is dropped for the same reason.
+   * Read this reader's progress once per location, the first time anything
+   * reads the story (`PERF-03`: not on every route). A read that resolves
+   * after the location has moved on is dropped.
    *
    * One document by id, rather than the collection: the collection is this
    * reader's alone, but there is no reason to read other campaigns' progress.
    */
   useEffect(() => {
-    progressRef.current = defaultProgress;
-    unreadChangesRef.current = {};
-    setStoredProgress(defaultProgress);
-    if (!progressCollection || !progressId) return;
+    if (!demand.wanted || !progressCollection || !progressId || !progressKey) return;
+    if (progressReadFor.current === progressKey) return;
+    progressReadFor.current = progressKey;
 
     let current = true;
+    let settled = false;
     getDocument<StoryProgress>(progressCollection, progressId).then((persisted) => {
+      settled = true;
       if (current && persisted) {
         const merged = mergeProgress(
           { ...persisted, chapterProgress: persisted.chapterProgress ?? {} },
@@ -237,8 +261,10 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
     return () => {
       current = false;
+      // Abandoned before it answered: let the next run read again.
+      if (!settled && progressReadFor.current === progressKey) progressReadFor.current = null;
     };
-  }, [progressCollection, progressId, getDocument]);
+  }, [demand.wanted, progressCollection, progressId, progressKey, getDocument]);
 
 // Get chapter by ID
   const getChapterById = useCallback((id: string) => {
@@ -591,9 +617,11 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   return (
-    <StoryContext.Provider value={value}>
-      {children}
-    </StoryContext.Provider>
+    <StoryDemandProvider value={demand.retain}>
+      <StoryContext.Provider value={value}>
+        {children}
+      </StoryContext.Provider>
+    </StoryDemandProvider>
   );
 };
 
@@ -601,7 +629,8 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
  * Hook to use story context
  * @throws {Error} If used outside of StoryProvider
  */
-export const useStory = () => {
+export const useStory = (options: ListReaderOptions = {}) => {
+  useStoryDemand(options.subscribe ?? true);
   const context = useContext(StoryContext);
   if (context === undefined) {
     throw new Error('useStory must be used within a StoryProvider');

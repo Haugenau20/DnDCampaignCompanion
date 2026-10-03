@@ -20,15 +20,19 @@ import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus'
  * @param arrange Turns a snapshot into the list consumers see (sorting,
  *   repairing legacy fields). Must not mutate its input, and should be a
  *   module-level function so the list keeps its identity between snapshots.
+ * @param enabled Whether anything reads the list right now (`PERF-03`). While
+ *   false no listener is open, and the list counts as not loaded yet.
  */
 export function useCampaignCollection<T extends Record<string, any>>(
   collection: string,
-  arrange: (documents: T[]) => T[]
+  arrange: (documents: T[]) => T[],
+  enabled = true
 ) {
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
-  const path = campaignCollectionPath(Boolean(user), activeGroupId, activeCampaignId, collection);
+  const scopePath = campaignCollectionPath(Boolean(user), activeGroupId, activeCampaignId, collection);
+  const path = enabled ? scopePath : null;
   const { data, loading, error, retry } = useFirebaseData<T>({ collection, subscribeTo: path });
   const { isResolving, hasRequiredContext, missingContext } = useCampaignContextStatus();
 
@@ -61,9 +65,10 @@ export function useCampaignCollection<T extends Record<string, any>>(
       why this can't just be `useGroups().loading`. That half is
       unconditional: while auth and the campaign are still restoring, the list
       is empty for a reason the reader has no way to distinguish from "none
-      recorded".
+      recorded". So is a campaign whose listener is not open yet: the
+      component that reads it opens it on mount, one render after this.
     */
-    loading: (Boolean(loading) && items.length === 0) || isResolving,
+    loading: (scopePath !== null && (path === null || Boolean(loading)) && items.length === 0) || isResolving,
     error,
     refresh,
     hasRequiredContext,

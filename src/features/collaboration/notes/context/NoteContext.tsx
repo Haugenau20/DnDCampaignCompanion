@@ -8,9 +8,17 @@ import { useCampaignContextStatus } from "shared/hooks/useCampaignContextStatus"
 import { buildCreationAttribution } from "core/attribution";
 import { useNavigate } from 'react-router-dom';
 import { where } from "firebase/firestore";
+import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from "shared/hooks/useListenerDemand";
 
 // Create the context with initial undefined value
 const NoteContext = createContext<NoteContextValue | undefined>(undefined);
+
+/**
+ * Who is reading this provider's list right now (T032, `PERF-03`): the
+ * listener is open only while some component that called `useNotes()` is
+ * mounted, and for a while after. See `useListenerDemand`.
+ */
+const { DemandProvider: NoteDemandProvider, useDemand: useNoteDemand } = createListenerDemandContext();
 
 /**
  * Provider component for note-related state and functionality
@@ -31,6 +39,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
    */
   const [drafts, setDrafts] = useState<Note[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const demand = useListenerDemand();
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
@@ -39,7 +48,10 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
    * rumour has no create page to hand that job to. `RumorProvider` therefore
    * has to sit above `NoteProvider`, which it already does in `app/App.tsx`.
    */
-  const { addRumor } = useRumors();
+  //
+  // Write-only use, so it does not hold the rumour listener open (`PERF-03`):
+  // this provider is mounted on every route.
+  const { addRumor } = useRumors({ subscribe: false });
   const { activeGroupUserProfile } = useUser();
   // Single shared source of truth for "still resolving vs. genuinely no
   // selection" (bug #1413) -- see the hook's doc comment. Folded into
@@ -57,9 +69,11 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   const notesCollection = user?.uid && activeGroupId
     ? `groups/${activeGroupId}/users/${user.uid}/notes`
     : null;
-  const subscriptionKey = notesCollection && activeCampaignId
+  const scopeKey = notesCollection && activeCampaignId
     ? `${notesCollection}?campaignId=${activeCampaignId}`
     : null;
+  // Open only while something reads the notes (`PERF-03`).
+  const subscriptionKey = demand.wanted ? scopeKey : null;
 
   /*
     One listener on the active campaign's notes (T032). It delivers this
@@ -96,10 +110,11 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
 
   /** Saved notes and drafts together, most recently updated first. */
   const notes = useMemo(() => {
-    if (!subscriptionKey) {
+    if (!scopeKey) {
       return [];
     }
-    const saved = stored?.key === subscriptionKey
+    // Drafts stay even while no listener is open; saved notes need one.
+    const saved = subscriptionKey && stored?.key === subscriptionKey
       // The query already did this; kept so a note from another campaign can
       // never reach the list whatever the read layer returns.
       ? stored.notes
@@ -111,10 +126,13 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     return [...drafts.filter(draft => !savedIds.has(draft.id)), ...saved].sort((a, b) =>
       new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
-  }, [subscriptionKey, stored, drafts, activeCampaignId]);
+  }, [scopeKey, subscriptionKey, stored, drafts, activeCampaignId]);
 
-  /** Nothing delivered yet for the current subscription. */
-  const loading = subscriptionKey !== null && stored?.key !== subscriptionKey;
+  /**
+   * Nothing delivered yet for the current campaign -- including while no
+   * listener is open, which the component that reads the notes fixes on mount.
+   */
+  const loading = scopeKey !== null && stored?.key !== subscriptionKey;
 
   /**
    * Ids of notes whose document this provider has created, recorded the moment
@@ -513,9 +531,11 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   };
   
   return (
-    <NoteContext.Provider value={value}>
-      {children}
-    </NoteContext.Provider>
+    <NoteDemandProvider value={demand.retain}>
+      <NoteContext.Provider value={value}>
+        {children}
+      </NoteContext.Provider>
+    </NoteDemandProvider>
   );
 };
 
@@ -523,7 +543,8 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
  * Custom hook to use the note context
  * @throws Error if used outside of NoteProvider
  */
-export const useNotes = (): NoteContextValue => {
+export const useNotes = (options: ListReaderOptions = {}): NoteContextValue => {
+  useNoteDemand(options.subscribe ?? true);
   const context = useContext(NoteContext);
   if (context === undefined) {
     throw new Error("useNotes must be used within a NoteProvider");
