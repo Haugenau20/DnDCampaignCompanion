@@ -46,7 +46,7 @@ jobs:
         run: npm run lint
 
       # The test files `npm run lint` skips, held to a per-file baseline that
-      # may only go down (scripts/check-test-lint.js, T061).
+      # may only go down (scripts/check-test-lint.js).
       - name: Lint test files
         run: npm run lint:tests
 

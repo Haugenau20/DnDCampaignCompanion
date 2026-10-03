@@ -21,8 +21,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 |---|---|---|---|---|---|
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T061 | `test` check not required | S | blocked | Every suite is gated in CI now, but a merge waits on none of it until branch protection lists the check |
-| medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
 | medium | T037 | A group cannot be deleted | L | open | Decided 2026-10-02 to build it, plan first: members' data cannot be removed until it exists |
 | low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
@@ -408,23 +406,6 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
   `build/static/js/main.*.js`; a new bundler must keep it measuring the entry.
 - **Source**: todo.txt, 2026-09-24
 
-### T061 — The `test` check does not yet block a merge
-**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-03
-
-`.github/workflows/test.yml` runs the type-check, `npm run lint` (app code,
-zero warnings), `npm run lint:tests` (the test files, against a per-file
-baseline that may only go down), `npm run test:ci` (jest, 80% coverage floor),
-`firebase/functions`' build and emulator-backed suite (the `functions` job),
-and the production build with its entry-bundle ceiling (the `bundle` job), on
-every PR and before the merge-to-main deploy, which waits on all of it.
-
-- **Blocked on the maintainer**: a PR can still be merged with any of those
-  red. The checks block a merge only once branch protection on `main` lists
-  them as required. That is a GitHub setting, not something the repo can hold.
-- `firebase/functions`' own lint (~2,000 problems, mostly CRLF) is not a gate.
-- **Source**: todo.txt, 2026-09-24; the jest, type-check and lint gates
-  landed 2026-09-26, the functions suite 2026-09-28, test-file lint 2026-10-03
-
 ### T065 — The maintainer's global Firebase CLI is still 13.x
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-28
 
@@ -446,49 +427,6 @@ the **global** CLI:
   (a normal desktop, a GitHub runner) is unaffected, but cloud agent sessions
   set one. Re-run `npm --prefix firebase run test:functions` behind a proxy before bumping.
 - **Source**: todo.txt, 2026-09-24; pinned 2026-09-28
-
-### T070 — CI deploys the functions, but only once the maintainer sets it up
-**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-09-28
-
-`firebase-hosting-merge.yml` now deploys the functions on every merge to
-`main`: a `deploy_functions` job after the tests and **before** Hosting
-(`needs:`), so a new page never reaches users before the function it calls.
-It runs the repo's pinned CLI with `--only functions --non-interactive`, under
-its own service account, read from the GitHub secret
-`FIREBASE_FUNCTIONS_DEPLOY_SA`. Until that secret exists the job fails and
-**holds back every Hosting deploy too**, so do the steps below before merging it.
-
-- **Blocked on the maintainer**, all doable in a browser:
-  1. **Cleanup policy, once.** A non-interactive deploy fails, after
-     deploying, when `europe-west1` has no Artifact Registry cleanup policy
-     (the 2026-09-24 hand deploy warned there was none). In Cloud Shell:
-     `npx firebase-tools@15.22.4 login --no-localhost`, then
-     `npx firebase-tools@15.22.4 functions:artifacts:setpolicy --project dnd-campaign-companion --location europe-west1`.
-  2. **A deploy service account**, in IAM & Admin → Service Accounts, with:
-     Cloud Functions Admin, Cloud Run Admin (the callables' public invoker),
-     Service Account User, Cloud Scheduler Admin (`sweepOrphanedImagesDaily`),
-     Secret Manager Viewer (`OPENAI_API_KEY`, `CONTACT_*`), Firebase
-     Authentication Admin (the `gateAccountCreation` blocking trigger),
-     Firebase Viewer, Service Usage Consumer and Artifact Registry Reader.
-     Put together from the CLI's calls and third-party guides, **not measured**:
-     the first run's error names any missing permission. The Hosting account
-     (`FIREBASE_SERVICE_ACCOUNT_DND_CAMPAIGN_COMPANION`) is not widened;
-     its documented roles cover Hosting only.
-  3. **A JSON key** for it, pasted into GitHub → Settings → Secrets and
-     variables → Actions as `FIREBASE_FUNCTIONS_DEPLOY_SA`.
-  4. **Merge while able to watch the first run.** It deploys whatever `main`
-     holds that was never deployed by hand.
-- **Contact secrets: already done.** This entry said `contact.ts` read
-  `CONTACT_EMAIL`/`CONTACT_PASSWORD` from the gitignored `.env` alone. It has
-  declared both as Secret Manager secrets since 2026-09-10, and they are set
-  (maintainer, 2026-09-28). No function reads anything else from `.env`, so a
-  CI checkout deploys the same configuration a hand deploy does.
-- **When it fails**: production has a function the source no longer exports
-  (the non-interactive deploy refuses to delete it; delete it by hand), or the
-  cleanup policy is gone. Changed trigger types are skipped with a warning.
-- **Out of scope**: rules stay manual; `firebase.json` has no rules keys on
-  purpose. PR previews share production's functions and deploy none.
-- **Source**: maintainer, 2026-09-25; the deploy job 2026-09-28
 
 ### T079 — Do old documents still lack `locationId`?
 **Type** debt · **Size** S · **Status** needs investigation · **Verified** 2026-10-03

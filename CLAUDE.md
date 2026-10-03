@@ -160,10 +160,14 @@ match `firestore.rules.prod` without reading them back.
 ## Verifying a Change Before Proposing a Merge
 
 Merging to `main` deploys live: the Cloud Functions first, then Hosting (`firebase-hosting-merge.yml`;
-its setup is T070). Rules are never deployed by CI. CI (`.github/workflows/test.yml`) runs all three steps,
+the functions deploy under the `FIREBASE_FUNCTIONS_DEPLOY_SA` secret, and a failed functions deploy
+holds Hosting back). That deploy is non-interactive, so it fails when production still has a function
+the source no longer exports — delete it by hand — or when `europe-west1` loses its Artifact Registry
+cleanup policy. Rules are never deployed by CI. CI (`.github/workflows/test.yml`) runs all three steps,
 plus `npm run lint`, `npm run lint:tests`, the `firebase/functions` suite and `npm run check:bundle`, on every PR and
-before the deploy, which waits on them. Changed a function? Run
-`npm --prefix firebase run test:functions` too.
+before the deploy, which waits on them. A ruleset on `main` requires `test / test`, `test / functions`
+and `test / bundle`, so a red PR cannot merge; a new job in `test.yml` gates nothing until the
+maintainer adds it there. Changed a function? Run `npm --prefix firebase run test:functions` too.
 
 **Never watch CI or PRs after pushing** — the maintainer's standing rule (2026-09-27). Do not
 subscribe to PR activity, poll check runs, `/loop`, schedule check-ins (`send_later`, routines,
