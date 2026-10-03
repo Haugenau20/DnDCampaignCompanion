@@ -51,15 +51,8 @@ export interface BuildCandidatesOptions {
 const titleCase = (value: string): string =>
   value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
 
-/**
- * Rumour status in the product's own words.
- *
- * `false` is the stored value; "Disproved" is what it is called everywhere a
- * reader sees it, because it describes what the party did rather than a data
- * value (§10).
- */
-const rumorStatusLabel = (status: string): string =>
-  status === "false" ? "Disproved" : titleCase(status);
+/** Rumour status as a reader sees it: "Unconfirmed", "Confirmed" or "False". */
+const rumorStatusLabel = (status: string): string => titleCase(status);
 
 /** Join the parts of a disambiguating line, dropping the empty ones. */
 const line = (...parts: Array<string | undefined | null>): string =>

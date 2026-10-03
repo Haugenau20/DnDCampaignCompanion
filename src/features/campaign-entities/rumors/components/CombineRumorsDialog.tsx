@@ -195,7 +195,7 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
             >
               <option value="unconfirmed">Unconfirmed</option>
               <option value="confirmed">Confirmed</option>
-              <option value="false">Disproved</option>
+              <option value="false">False</option>
             </Select>
           </div>
         </div>

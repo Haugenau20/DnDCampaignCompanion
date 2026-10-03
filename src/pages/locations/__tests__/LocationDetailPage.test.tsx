@@ -705,12 +705,13 @@ describe('LocationDetailPage — what points here', () => {
     expect(screen.getByText('rumour, unconfirmed')).toBeInTheDocument();
   });
 
-  it('says "disproved" rather than "false", because it describes what the party did', () => {
+  it('says "false" for a false rumour, not "disproved" (maintainer, 2026-10-03)', () => {
     mockRumors = [
       { id: 'r-1', title: 'A hidden city', status: 'false', relatedLocations: ['gondolin'] },
     ];
     renderPage();
-    expect(screen.getByText('rumour, disproved')).toBeInTheDocument();
+    expect(screen.getByText('rumour, false')).toBeInTheDocument();
+    expect(screen.queryByText('rumour, disproved')).not.toBeInTheDocument();
   });
 
   it('shows an NPC whose own record says they are here but who is not listed here', () => {

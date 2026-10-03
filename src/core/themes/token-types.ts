@@ -135,7 +135,7 @@ export interface ValenceStop {
  * colours rather than each getting its own spacing.
  *
  * Which three is a judgement about the domain. Quests and rumours run to the
- * red end, because a quest can fail and a rumour can be disproved. Locations
+ * red end, because a quest can fail and a rumour can be false. Locations
  * stop at 2: a place you have only heard of is the least of the three, and
  * that is not the same as a bad outcome.
  *

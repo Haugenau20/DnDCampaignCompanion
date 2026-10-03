@@ -574,18 +574,20 @@ describe('RosterStatus', () => {
     expect(render1('unsure', 'Unknown stance')).not.toBe(best[0]);
   });
 
-  test('a confirmed and a disproven rumour sit on the same rung', () => {
-    // Both are fully known. What separates them is the strike cue 12-5 adds,
-    // not the hue -- rendering `false` in the red of a lost quest states that
-    // a disproven rumour is a defeat, when it is a resolved one and usually
-    // good news for the party.
+  test('a confirmed and a false rumour do not share a rung', () => {
+    // A false rumour wears the red of a failed quest (maintainer, 2026-10-03),
+    // so the two must render apart, and false must match a failed quest.
     const { container: confirmed } = render(
-      <RosterStatus tone="valence-3">Confirmed</RosterStatus>
+      <RosterStatus tone="valence-0">Confirmed</RosterStatus>
     );
-    const { container: disproven } = render(
+    const { container: falseRumour } = render(
       <RosterStatus tone="valence-3">False</RosterStatus>
     );
-    expect(toneClass(confirmed)).toBe(toneClass(disproven));
+    const { container: failedQuest } = render(
+      <RosterStatus tone="valence-3">Failed</RosterStatus>
+    );
+    expect(toneClass(confirmed)).not.toBe(toneClass(falseRumour));
+    expect(toneClass(falseRumour)).toBe(toneClass(failedQuest));
   });
 
   test('every tone resolves to a class from the scale it names', () => {

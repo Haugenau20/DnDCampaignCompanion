@@ -103,9 +103,10 @@ The failure this replaces was live in the application. Locations are tracked as
 known, explored and visited — a ladder of how much the party has learned — and
 they were painted with the quest outcome scale, so "visited" rendered green
 and the progress bar ran red to green as though exploring a place were a win
-condition. Rumours marked false rendered in the same red as a failed quest,
-which states that a disproven rumour is a failure; it is a *resolved* one, and
-a good outcome for the party.
+condition. (Rumours marked false were in the same red as a failed quest, and
+this section once argued that was wrong too. The maintainer decided the other
+way on 2026-10-03: a false rumour wears `valence.3`, struck through, as the
+table below says.)
 
 That bug had a root cause in the token names. `status.completed` existed, was
 green, and was available to borrow. So the scales are now named after meaning:
@@ -711,7 +712,7 @@ one tracker. (`../plan/03-drift-log.md`, which used to collect them, closed on
   with a word, a failed bar is hatched, and a negated one is struck.
   Which three a three-state scale takes is a judgement about its domain, not
   about the ramp: quests and rumours run to the red because a quest can fail
-  and a rumour can be disproved, while **locations stop at stop 2**, since a
+  and a rumour can turn out false, while **locations stop at stop 2**, since a
   place merely heard of is only the least of three degrees of familiarity and
   painting it as a failure would repeat, quietly, the bug this phase opened by
   fixing.

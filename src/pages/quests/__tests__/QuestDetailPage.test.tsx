@@ -465,11 +465,11 @@ describe('what points here', () => {
     expect(within(points).getByText('Session 14 notes')).toBeInTheDocument();
   });
 
-  it('says "disproved" rather than "false" (§10)', () => {
+  it('says "false" for a false rumour, not "disproved" (maintainer, 2026-10-03)', () => {
     mockRumors = [{ ...mockRumors[0], status: 'false' }];
     renderPage();
     expect(
-      within(section('What points here')).getByText(/rumour, disproved/)
+      within(section('What points here')).getByText(/rumour, false/)
     ).toBeInTheDocument();
     mockRumors = [
       { id: 'r-1', title: "Signs of Smaug's activity", status: 'confirmed', convertedToQuestId: 'reclaim-erebor' },

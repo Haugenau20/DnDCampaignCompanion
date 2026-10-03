@@ -46,7 +46,7 @@ export const HUE = {
    *
    * Which three a three-state scale takes is a judgement about the domain, not
    * about the ramp: quests and rumours end at the red because a quest can fail
-   * and a rumour can be disproved, while locations stop at 2, since a place you
+   * and a rumour can be false, while locations stop at 2, since a place you
    * have merely heard of is the least of the three and not a bad outcome.
    *
    * Hue runs evenly from `succeeded` (143) to `failed` (22) the short way --

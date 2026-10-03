@@ -209,8 +209,7 @@ const LocationDetailPage: React.FC = () => {
           key: `rumor-${rumor.id}`,
           id: rumor.id,
           name: rumorTitleText(rumor),
-          // "Disproved", never "False" (§10): it describes what the party did.
-          detail: `rumour, ${rumor.status === 'false' ? 'disproved' : rumor.status}`,
+          detail: `rumour, ${rumor.status}`,
           href: `/rumors?highlight=${rumor.id}`,
         })
       );

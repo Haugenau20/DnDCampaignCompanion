@@ -83,12 +83,12 @@ describe("attachCandidates", () => {
       expect(entry.line).toBe("Active");
     });
 
-    it("gives a rumour its status, and says Disproved rather than False", () => {
+    it("gives a rumour its status, and says False rather than Disproved", () => {
       const entries = buildCandidates(
         ["rumor"],
         sources({ rumor: [rumor({ status: "false" }), rumor({ id: "r2", status: "confirmed" })] })
       );
-      expect(entries.find((e) => e.id === "orcs-massing")!.line).toBe("Disproved");
+      expect(entries.find((e) => e.id === "orcs-massing")!.line).toBe("False");
       expect(entries.find((e) => e.id === "r2")!.line).toBe("Confirmed");
     });
 

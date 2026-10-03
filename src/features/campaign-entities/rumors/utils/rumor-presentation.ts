@@ -6,10 +6,7 @@ import { RumorStatus, SourceType } from '../types';
  * How a rumour says what it is, in one place.
  *
  * Shared by the row, the composer and the summary bar so the three cannot
- * disagree about what `false` is called or which rung it sits on. They did:
- * the directory's own comment said confirmed and disproved "sit on the same
- * rung", while the map beneath it put disproved on the ramp's red -- and the
- * word rendered was "False".
+ * disagree about what `false` is called or which rung it sits on.
  */
 
 /**
@@ -37,20 +34,18 @@ export const normalizeRumorStatus = (status?: RumorStatus | string | null): Rumo
   status === 'confirmed' || status === 'false' ? status : 'unconfirmed';
 
 /**
- * **"Disproved", never "False"** (§10, item 6).
+ * The status as a reader sees it: "Unconfirmed", "Confirmed" or "False".
  *
- * `false` is the stored value. What a reader sees describes what the party
- * did: they went and found out it was not true, which is a *result*, not a
- * data value and not a failure.
+ * "False" is the stored value's own word. It replaced "Disproved" on
+ * 2026-10-03, by the maintainer's decision, along with the red below.
  */
 export const formatRumorStatus = (status?: RumorStatus | string | null): string => {
   const known = normalizeRumorStatus(status);
-  if (known === 'false') return 'Disproved';
   return known.charAt(0).toUpperCase() + known.slice(1);
 };
 
 /**
- * The rumour ladder: unconfirmed -> confirmed -> disproved. Never a verdict.
+ * The rumour ladder: unconfirmed -> confirmed -> false.
  *
  * No `selectedClassName`: `15-4` removed that prop, and `ladder-classes.test.ts`
  * (written in `15-6`) now fails if one grows back.
@@ -58,36 +53,32 @@ export const formatRumorStatus = (status?: RumorStatus | string | null): string 
 export const RUMOR_STATUS_OPTIONS: Array<{ value: RumorStatus; label: string }> = [
   { value: 'unconfirmed', label: 'Unconfirmed' },
   { value: 'confirmed', label: 'Confirmed' },
-  { value: 'false', label: 'Disproved' },
+  { value: 'false', label: 'False' },
 ];
 
 /**
- * A rumour is knowledge, not an outcome.
+ * Where each status sits on the valence ramp.
  *
- * **Confirmed and disproved share the ladder's top rung**: both are fully
- * known, and what separates them is the strike cue (`negated`), not the hue.
- * That is colour schema §3's worked example and `R64`'s decision -- and
- * until `15-7` the code did the opposite, painting a
- * disproved rumour `valence-3`, the same red a failed quest wears. A party
- * that goes and disproves something has done the work; saying so in red claims
- * it went wrong.
+ * **A false rumour wears `valence-3`, the red of a failed quest** (maintainer,
+ * 2026-10-03). Finding out a rumour is untrue is not necessarily bad news for
+ * the party, but red is how the app says "this did not hold", and it keeps
+ * false visibly apart from confirmed in a row and in the summary bar alike.
+ * The row also strikes the word through (`negated`), so the two do not rest
+ * on hue alone.
+ *
+ * This reverses colour schema §3's earlier worked example and `R64`, which
+ * put confirmed and false on the same rung.
  */
 export const RUMOR_STATUS_TONE: Record<RumorStatus, RosterStatusTone> = {
   confirmed: 'valence-0',
-  false: 'valence-0',
+  false: 'valence-3',
   unconfirmed: 'valence-1',
 };
 
-/**
- * The bar's segment fill, from the same mapping, for the same reason.
- *
- * `false` shares confirmed's hue and adds `cue-negated-band`, the bar's form
- * of the rows' strike: without it the two segments merge into one band and
- * their legend swatches are identical. The legend uses this class too.
- */
+/** The bar's segment fill, from the same mapping, for the same reason. */
 export const RUMOR_STATUS_FILL: Record<RumorStatus, string> = {
   confirmed: 'bg-valence-0',
-  false: 'bg-valence-0 cue-negated-band',
+  false: 'bg-valence-3',
   unconfirmed: 'bg-valence-1',
 };
 

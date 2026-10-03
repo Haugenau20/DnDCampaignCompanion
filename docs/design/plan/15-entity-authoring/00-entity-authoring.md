@@ -78,7 +78,7 @@ demoted to a link target for one dialog.
 It is the one entity nothing points at. A quest is pointed at by rumours
 (conversion), NPCs, locations and notes; a location is a hierarchy node; an
 NPC is referenced everywhere. A rumour points outward and is then resolved —
-confirmed, disproved, or converted into a quest. Its two real operations
+confirmed, found false, or converted into a quest. Its two real operations
 already act on a *selection in the list*
 (`RumorBatchActions.tsx`, `CombineRumorsDialog`, `ConvertToQuestDialog`), which
 is where the entity lives.
@@ -325,11 +325,12 @@ behavioural change and it is T014's to record.
 
 ## 10. Copy
 
-- **"Disproved", never "False."** It describes what the party did. A disproved
-  rumour is a good outcome and a fully-known one.
+- **"False"** for a rumour found untrue, in the red of a failed quest and
+  struck through. *Changed by the maintainer on 2026-10-03*: until then this
+  rule read "'Disproved', never 'False'", and kept a false rumour off the red.
 - **Knowledge is a ladder, not a verdict** — known / explored / visited for
-  locations, unconfirmed / confirmed / disproved for rumours. Never outcome
-  red or green. A child location may be more known than its parent; that is
+  locations, unconfirmed / confirmed / false for rumours. A location is never
+  painted as an outcome. A child location may be more known than its parent; that is
   legal and is not a warning.
 - **Deceased is presence, not valence** — muted ink and a strike through the
   name. Stance (friendly / neutral / hostile / unknown) is the only valenced
