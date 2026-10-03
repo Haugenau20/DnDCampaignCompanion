@@ -29,7 +29,9 @@ import { useRumors } from '../context/RumorContext';
  * nothing.
  */
 export function useCreateRumor(): { createAndOpen: () => Promise<void> } {
-  const { addRumor } = useRumors();
+  // Write-only, and mounted on every route through the header's create
+  // actions: it must not hold the rumour listener open (T032, PERF-03).
+  const { addRumor } = useRumors({ subscribe: false });
   const { navigateToPage, createPath } = useNavigation();
 
   const createAndOpen = useCallback(async () => {

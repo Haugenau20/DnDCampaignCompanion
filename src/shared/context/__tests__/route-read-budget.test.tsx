@@ -65,6 +65,10 @@ jest.mock("core/services/firebase/data/DocumentService", () => ({
   default: { getInstance: () => mockDocumentService },
 }));
 
+jest.mock("shared/context/NavigationContext", () => ({
+  useNavigation: () => ({ navigateToPage: jest.fn(), createPath: (path: string) => path }),
+}));
+
 jest.mock("features/collaboration/entity-extraction/services/EntityExtractionService", () => ({
   __esModule: true,
   default: {
@@ -84,6 +88,8 @@ import { NoteProvider } from "@/features/collaboration/notes/context/NoteContext
 import { UsageProvider } from "@/features/collaboration/entity-extraction/context/UsageContext";
 import { SearchProvider } from "@/shared/context/SearchContext";
 import { useSearch } from "@/shared/hooks/useSearch";
+import { useCreateNote } from "@/features/collaboration/notes/hooks/useCreateNote";
+import { useCreateRumor } from "@/features/campaign-entities/rumors/hooks/useCreateRumor";
 
 /** The data providers, nested as `App.tsx` nests them. */
 const Providers: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -112,6 +118,17 @@ const HeaderSearch: React.FC<{ open: boolean }> = ({ open }) => {
   return null;
 };
 
+/**
+ * The header's create actions (`useCreateActions`), on every route. They only
+ * write -- found in Chrome holding the notes and rumour listeners open on the
+ * privacy page.
+ */
+const HeaderCreateActions: React.FC = () => {
+  useCreateNote();
+  useCreateRumor();
+  return null;
+};
+
 /** Let mount effects and first snapshots settle. */
 const settle = () =>
   act(async () => {
@@ -133,6 +150,7 @@ test("a page that reads no campaign data opens no listener and calls no usage fu
   render(
     <Providers>
       <HeaderSearch open={false} />
+      <HeaderCreateActions />
       <main>Privacy</main>
     </Providers>
   );
