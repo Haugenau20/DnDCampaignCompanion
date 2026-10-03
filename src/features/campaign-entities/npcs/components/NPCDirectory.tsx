@@ -8,9 +8,11 @@ import Typography from '../../../../core/components/Typography';
 import { Plus } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
 import useHighlightTarget from 'shared/hooks/useHighlightTarget';
+import useSelection from 'shared/hooks/useSelection';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
+import NPCBatchActions from './NPCBatchActions';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -127,6 +129,8 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   const { updateNPCRelationship, deleteNPC } = useNPCs();
   /** The NPC whose Delete was pressed, awaiting confirmation. */
   const [confirmingDelete, setConfirmingDelete] = useState<NPC | null>(null);
+  /** Selection mode for the batch actions (T017). */
+  const selection = useSelection();
   const { navigateToPage, createPath } = useNavigation();
 
   const { getCurrentQueryParams } = useNavigation();
@@ -268,7 +272,20 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
           onChange={setRelationshipFilter}
           label="Filter by relationship"
         />
+
+        <Button
+          variant={selection.active ? 'primary' : 'outline'}
+          size="sm"
+          onClick={selection.toggleActive}
+        >
+          {selection.active ? 'Exit Selection' : 'Select NPCs'}
+        </Button>
       </RosterFilterBar>
+
+      {/* Batch actions -- only in selection mode, once something is ticked */}
+      {selection.active && (
+        <NPCBatchActions selected={selection.selected} onComplete={selection.clear} />
+      )}
 
       {/* NPC roster by location */}
       {groups.length > 0 ? (
@@ -298,6 +315,17 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                     expanded={isExpanded}
                     toggleLabel={npc.name}
                     onToggle={() => setExpandedNpcId(isExpanded ? null : npc.id)}
+                    selected={selection.selected.has(npc.id)}
+                    leadingControl={
+                      selection.active ? (
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${npc.name}`}
+                          checked={selection.selected.has(npc.id)}
+                          onChange={(e) => selection.setSelected(npc.id, e.target.checked)}
+                        />
+                      ) : undefined
+                    }
                     expandedContent={
                       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-7 pt-4">
                         <div className="flex flex-col gap-4">

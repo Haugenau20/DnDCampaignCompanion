@@ -1,7 +1,7 @@
 // src/features/campaign-entities/rumors/components/RumorBatchActions.tsx
 import React, { useState } from 'react';
 import Button from '../../../../core/components/Button';
-import Typography from '../../../../core/components/Typography';
+import { RosterBatchBar } from 'core/components/Roster';
 import { RumorStatus } from '../types';
 import { useRumors } from '../context/RumorContext';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
@@ -12,8 +12,7 @@ import {
   XCircle, 
   Layers, 
   MessageSquare, 
-  Trash,
-  AlertCircle
+  Trash
 } from 'lucide-react';
 import CombineRumorsDialog from './CombineRumorsDialog';
 import ConvertToQuestDialog from './ConvertToQuestDialog';
@@ -168,81 +167,67 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-secondary">
-        <Typography variant="body-sm" className="font-medium">
-          {selectedRumors.size} rumors selected
-        </Typography>
+      <RosterBatchBar label={`${selectedRumors.size} rumors selected`} error={actionError}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleBatchStatusUpdate('confirmed')}
+          startIcon={<CheckCircle size={16} className="feedback-success" />}
+          disabled={isProcessing}
+        >
+          Mark Confirmed
+        </Button>
         
-        <div className="flex flex-wrap gap-2 ml-auto">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleBatchStatusUpdate('confirmed')}
-            startIcon={<CheckCircle size={16} className="feedback-success" />}
-            disabled={isProcessing}
-          >
-            Mark Confirmed
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleBatchStatusUpdate('unconfirmed')}
-            startIcon={<HelpCircle size={16} className="feedback-warning" />}
-            disabled={isProcessing}
-          >
-            Mark Unconfirmed
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleBatchStatusUpdate('false')}
-            startIcon={<XCircle size={16} className="feedback-error" />}
-            disabled={isProcessing}
-          >
-            Mark False
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowCombineDialog(true)}
-            startIcon={<Layers size={16} />}
-            disabled={selectedRumors.size < 2 || isProcessing}
-          >
-            Combine
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowConvertDialog(true)}
-            startIcon={<MessageSquare size={16} />}
-            disabled={isProcessing}
-          >
-            Convert to Quest
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleBatchDelete}
-            startIcon={<Trash size={16} className="feedback-error" />}
-            disabled={isProcessing}
-          >
-            Delete
-          </Button>
-        </div>
-      </div>
-      
-      {/* Error notification */}
-      {actionError && (
-        <div className="mt-2 p-2 rounded flex items-center gap-2 feedback-banner feedback-banner-error">
-          <AlertCircle size={18} className="feedback-error" />
-          <Typography color="error">{actionError}</Typography>
-        </div>
-      )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleBatchStatusUpdate('unconfirmed')}
+          startIcon={<HelpCircle size={16} className="feedback-warning" />}
+          disabled={isProcessing}
+        >
+          Mark Unconfirmed
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleBatchStatusUpdate('false')}
+          startIcon={<XCircle size={16} className="feedback-error" />}
+          disabled={isProcessing}
+        >
+          Mark False
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowCombineDialog(true)}
+          startIcon={<Layers size={16} />}
+          disabled={selectedRumors.size < 2 || isProcessing}
+        >
+          Combine
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowConvertDialog(true)}
+          startIcon={<MessageSquare size={16} />}
+          disabled={isProcessing}
+        >
+          Convert to Quest
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleBatchDelete}
+          startIcon={<Trash size={16} className="feedback-error" />}
+          disabled={isProcessing}
+        >
+          Delete
+        </Button>
+      </RosterBatchBar>
 
       {/* Render portals for dialogs */}
       {portalElements}

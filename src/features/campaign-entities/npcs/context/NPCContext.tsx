@@ -1,11 +1,13 @@
 // src/features/campaign-entities/npcs/context/NPCContext.tsx
 import React, { createContext, useContext, useCallback, useRef } from 'react';
-import { NPC, NPCContextValue, NPCRelationship, NPCNote } from '../types';
+import { NPC, NPCContextValue, NPCRelationship, NPCNote, NPCStatus } from '../types';
 import { DomainData } from 'core/types/common';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
+import { buildModificationAttribution } from 'core/attribution';
+import { commitEntityWrites } from '../../shared/commitEntityWrites';
 import { discardImage } from 'shared/hooks/useImageAttachment';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { Location } from '../../locations/types';
@@ -25,7 +27,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const demand = useListenerDemand();
   const { npcs, loading, error, refreshNPCs, hasRequiredContext } = useNPCData({ enabled: demand.wanted });
   const { user } = useAuth();
-  const { userProfile } = useUser();
+  const { userProfile, activeGroupUserProfile } = useUser();
   
   // Additional Firebase hook for specific updates. Its `error` is renamed on
   // destructure (`writeError`) because the read instance above already binds
@@ -191,6 +193,50 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (image) discardImage(image.path);
   }, [hasRequiredContext, user, getNPCById, deleteData]);
 
+  /**
+   * Sets the status of several NPCs in one batch (T017): one round trip, and
+   * all or nothing, so a batch action never leaves half the selection changed.
+   */
+  const updateNPCsStatus = useCallback(async (npcIds: string[], status: NPCStatus): Promise<void> => {
+    if (!hasRequiredContext) {
+      throw new Error('Cannot update NPCs: No group or campaign selected');
+    }
+
+    if (!user || !userProfile) {
+      throw new Error('User must be authenticated to update NPCs');
+    }
+
+    if (npcIds.some(id => !getNPCById(id))) {
+      throw new Error('One or more NPCs not found');
+    }
+
+    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+    await commitEntityWrites<NPC>('npcs', 'NPCs', npcIds.map(id => ({
+      type: 'update' as const,
+      id,
+      data: { status, ...modificationAttribution }
+    })));
+  }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, getNPCById]);
+
+  /** Deletes several NPCs in one batch, then their portraits, as `deleteNPC` does for one. */
+  const deleteNPCs = useCallback(async (npcIds: string[]): Promise<void> => {
+    if (!hasRequiredContext) {
+      throw new Error('Cannot delete NPCs: No group or campaign selected');
+    }
+
+    if (!user) {
+      throw new Error('User must be authenticated to delete NPCs');
+    }
+
+    const imagePaths = npcIds.flatMap(id => {
+      const image = getNPCById(id)?.image;
+      return image ? [image.path] : [];
+    });
+    await commitEntityWrites<NPC>('npcs', 'NPCs', npcIds.map(id => ({ type: 'delete' as const, id })));
+    // After the documents: a failure can then only orphan files.
+    imagePaths.forEach(discardImage);
+  }, [hasRequiredContext, user, getNPCById]);
+
   const value: NPCContextValue = {
     npcs,
     isLoading: loading,
@@ -216,6 +262,8 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addNPC,
     updateNPC,
     deleteNPC,
+    updateNPCsStatus,
+    deleteNPCs,
     refreshNPCs,
     hasRequiredContext
   };
