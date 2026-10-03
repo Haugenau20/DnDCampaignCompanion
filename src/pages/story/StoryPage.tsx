@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChapterRail, ChapterReader, useStory } from 'features/storytelling';
 import { deriveChapterProgress } from 'features/storytelling/chapters/utils/chapter-progress';
+import { deriveChapterByline } from 'features/storytelling/chapters/utils/chapter-byline';
 import Button from '../../core/components/Button';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { usePageGate, GatedContent } from 'shared/components/gated';
@@ -19,8 +20,15 @@ import { Menu } from 'lucide-react';
  * pairs. All of that is gone deliberately; if you are about to add a position
  * indicator to this file, one already exists in `ChapterReader`.
  *
- * "Back to Chapters" is gone for the same reason: the persistent rail carries
- * an "All chapters" control, so a second one here would be a duplicate exit.
+ * "Back to Chapters" is gone for the same reason: the rail's "Chapters"
+ * heading leads back to the index, so a second way here would be a duplicate
+ * exit.
+ *
+ * Once the gate is ready the page is the reader and nothing else: no
+ * `PageShell`, whose heading would repeat the chapter title the reader
+ * already states as its `h1`, and no layout padding — the chapter list runs
+ * flush down the left edge and the reading column fills the rest, so the
+ * page reads as one surface rather than two boxes set on a background.
  *
  * Wrapped in `usePageGate`/`GatedContent` ("story", read mode) so a
  * signed-out visitor or one with no campaign selected sees the shared panel
@@ -102,6 +110,11 @@ const StoryPage: React.FC = () => {
     };
   }, [currentChapter, chapters]);
 
+  const byline = useMemo(
+    () => (currentChapter ? deriveChapterByline(currentChapter) : undefined),
+    [currentChapter]
+  );
+
   /**
    * The scroll position the reader restores to, frozen per chapter.
    *
@@ -153,64 +166,62 @@ const StoryPage: React.FC = () => {
     }
   };
 
-  // No fixed page title exists here on purpose -- the reader IS the page, so
-  // its own chapter title doubles as this page's `h1` (PageShell renders
-  // whatever string it's given as the document's h1; the reader's own
-  // heading, one level down, is an `h3`). "Chapter" is only ever seen for the
-  // instant before the redirect effect above picks a real chapter.
-  const pageTitle = currentChapter
-    ? `${currentChapter.order}. ${currentChapter.title}`
-    : 'Chapter';
+  // Every state but `ready` is the shared gated panel, under the page's
+  // name. The chapter title is not known there, and is the reader's to state.
+  if (gate.state !== 'ready') {
+    return (
+      <PageShell title="Story">
+        <GatedContent gate={gate}>{null}</GatedContent>
+      </PageShell>
+    );
+  }
 
   return (
-    <PageShell title={pageTitle}>
-      <GatedContent gate={gate}>
-        <div className="min-h-screen content">
-          <div className="flex">
-            <ChapterRail
-              items={railItems}
-              currentChapterId={currentChapter?.id}
-              onChapterSelect={handleChapterSelect}
-              onBackToIndex={() => navigateToPage('/story')}
-              isOpen={isChaptersOpen}
-              onClose={() => setChaptersOpen(false)}
-            />
+    // -m-4 undoes the layout's padding, so the rail meets the page's edge.
+    <div className="-m-4 flex lg:min-h-screen">
+      <ChapterRail
+        items={railItems}
+        currentChapterId={currentChapter?.id}
+        onChapterSelect={handleChapterSelect}
+        onBackToIndex={() => navigateToPage('/story')}
+        isOpen={isChaptersOpen}
+        onClose={() => setChaptersOpen(false)}
+      />
 
-            {/* Padded only beside the rail: below `lg` the page's own gutters
-                already frame the reader, and a phone has no width to spare. */}
-            <div className="flex-1 min-w-0 lg:p-4">
-              {/* Below `lg` the rail is a drawer, so it needs a trigger. Above it the
-                  rail is always on screen and this button would open nothing. */}
-              <div className="lg:hidden mb-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setChaptersOpen(true)}
-                  startIcon={<Menu />}
-                >
-                  Chapters
-                </Button>
-              </div>
-
-              <ChapterReader
-                content={currentChapter?.content || ''}
-                title={currentChapter ? `${currentChapter.order}. ${currentChapter.title}` : ''}
-                position={restoredPosition.current}
-                chapterNumber={chapterNumber}
-                chapterCount={chapters.length}
-                nextChapterTitle={nextChapter?.title}
-                onProgressChange={handleProgressChange}
-                onNextChapter={() => nextChapter && handleChapterSelect(nextChapter.id)}
-                onPreviousChapter={() => previousChapter && handleChapterSelect(previousChapter.id)}
-                hasNextChapter={!!nextChapter}
-                hasPreviousChapter={!!previousChapter}
-                onEdit={gate.canAct ? handleEditChapter : undefined}
-              />
-            </div>
-          </div>
+      <div className="flex-1 min-w-0 px-4 py-6 sm:px-8 lg:px-12 lg:py-12">
+        {/* Below `lg` the rail is a drawer, so it needs a trigger. Above it the
+            rail is always on screen and this button would open nothing. */}
+        <div className="lg:hidden max-w-[68ch] mx-auto mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setChaptersOpen(true)}
+            startIcon={<Menu />}
+            // Pulls the icon back to the text's edge past the ghost padding.
+            className="-ml-3"
+          >
+            Chapters
+          </Button>
         </div>
-      </GatedContent>
-    </PageShell>
+
+        <ChapterReader
+          content={currentChapter?.content || ''}
+          title={currentChapter?.title ?? ''}
+          position={restoredPosition.current}
+          chapterNumber={chapterNumber}
+          chapterCount={chapters.length}
+          byline={byline}
+          previousChapterTitle={previousChapter?.title}
+          nextChapterTitle={nextChapter?.title}
+          onProgressChange={handleProgressChange}
+          onNextChapter={() => nextChapter && handleChapterSelect(nextChapter.id)}
+          onPreviousChapter={() => previousChapter && handleChapterSelect(previousChapter.id)}
+          hasNextChapter={!!nextChapter}
+          hasPreviousChapter={!!previousChapter}
+          onEdit={gate.canAct ? handleEditChapter : undefined}
+        />
+      </div>
+    </div>
   );
 };
 

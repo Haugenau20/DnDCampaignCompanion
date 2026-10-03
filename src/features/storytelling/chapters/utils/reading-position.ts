@@ -64,6 +64,50 @@ export function positionToScrollTop(
   return Math.round((clampPercent(percent) / 100) * scrollableRange);
 }
 
+/**
+ * The reading percentage for prose that scrolls with the page rather than
+ * inside a box of its own.
+ *
+ * The prose block stands in for the old scroll container: 0 while its top
+ * edge is at or below the top of the viewport, 100 once its bottom edge has
+ * come up to the bottom of the viewport. Whatever sits above the prose (the
+ * title) or below it (the chapter footer, the site footer) counts for nothing,
+ * so finishing the text finishes the chapter.
+ *
+ * @param proseTop - the prose's top edge relative to the viewport, i.e.
+ *   `getBoundingClientRect().top`; negative once it has scrolled past
+ * @param proseHeight - the prose block's rendered height
+ * @param viewportHeight - `window.innerHeight`
+ */
+export function pageScrollPercent(
+  proseTop: number,
+  proseHeight: number,
+  viewportHeight: number
+): number {
+  return scrollPercent(-proseTop, proseHeight, viewportHeight);
+}
+
+/**
+ * The window scroll offset that puts a reader back at a stored percentage —
+ * the inverse of `pageScrollPercent`.
+ *
+ * A position that resolves to the very start of the prose restores to the top
+ * of the page instead, so an unread chapter opens on its title rather than
+ * scrolled past it.
+ *
+ * @param proseDocumentTop - the prose's top edge relative to the document,
+ *   i.e. `getBoundingClientRect().top + window.scrollY`
+ */
+export function percentToPageScrollY(
+  percent: number,
+  proseDocumentTop: number,
+  proseHeight: number,
+  viewportHeight: number
+): number {
+  const offset = positionToScrollTop(percent, proseHeight, viewportHeight);
+  return offset > 0 ? Math.round(proseDocumentTop + offset) : 0;
+}
+
 /** Whether a percentage counts as having finished the chapter. */
 export function isAtCompletion(percent: number): boolean {
   return clampPercent(percent) >= COMPLETION_THRESHOLD;

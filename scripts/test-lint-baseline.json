@@ -57,7 +57,7 @@
   "src/features/storytelling/stories/components/__tests__/BookshelfView.test.tsx": 6,
   "src/features/storytelling/stories/components/__tests__/BookViewer.test.tsx": 16,
   "src/features/storytelling/stories/components/__tests__/ChapterList.test.tsx": 9,
-  "src/features/storytelling/stories/components/__tests__/ChapterRail.test.tsx": 32,
+  "src/features/storytelling/stories/components/__tests__/ChapterRail.test.tsx": 18,
   "src/features/storytelling/stories/components/__tests__/ChapterReader.test.tsx": 11,
   "src/features/user-management/admin/pages/__tests__/AdminLayout.test.tsx": 1,
   "src/features/user-management/auth/components/__tests__/DevEmailLinkShortcut.test.tsx": 1,

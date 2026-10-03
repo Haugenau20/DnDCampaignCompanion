@@ -1,16 +1,16 @@
 // src/features/storytelling/stories/components/ChapterReader.tsx
-import React, { useCallback, useLayoutEffect, useRef } from 'react';
-import { BookOpen, ChevronLeft, ChevronRight, Edit } from 'lucide-react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import Typography from 'core/components/Typography';
-import Card from 'core/components/Card';
 import Button from 'core/components/Button';
 import Markdown from 'core/components/Markdown';
 import clsx from 'clsx';
 import {
-  scrollPercent,
-  positionToScrollTop,
+  pageScrollPercent,
+  percentToPageScrollY,
   isAtCompletion,
 } from 'features/storytelling/chapters/utils/reading-position';
+import type { ChapterByline } from 'features/storytelling/chapters/utils/chapter-byline';
 
 /**
  * How often a scroll position is allowed to reach `onProgressChange`, in
@@ -25,14 +25,18 @@ const PROGRESS_THROTTLE_MS = 1500;
 export interface ChapterReaderProps {
   /** Raw chapter body. May contain literal "\n" escape sequences as well as real newlines. */
   content: string;
-  /** Display title, already numbered by the caller, e.g. "1. A Long-expected Party". */
+  /** The chapter's own title, unnumbered: the eyebrow above it carries the number. */
   title: string;
   /** Stored scroll position as a percentage 0-100, restored on mount and on chapter change. */
   position?: number;
-  /** This chapter's 1-based number, for the footer's "Chapter 1 of 39". */
+  /** This chapter's 1-based number, for the eyebrow and the footer's "Chapter 1 of 39". */
   chapterNumber: number;
   /** Total chapters in the story. */
   chapterCount: number;
+  /** Who recorded the chapter and when, and who last edited it. */
+  byline?: ChapterByline;
+  /** Title of the previous chapter, so the Previous button can name where it goes. */
+  previousChapterTitle?: string;
   /** Title of the next chapter, so the Next button can name where it goes. */
   nextChapterTitle?: string;
   onNextChapter?: () => void;
@@ -51,12 +55,19 @@ export interface ChapterReaderProps {
 
 
 /**
- * Scrolling reader for a single chapter.
+ * The reading column for a single chapter: eyebrow, title, byline, prose and
+ * the footer that moves between chapters.
  *
- * Replaces `BookViewer`'s pagination for chapter reading: the prose is one
- * continuous scrolling column instead of 250-word pages, and the reader's
- * position in the book is stated exactly once, in the footer row. `BookViewer`
- * itself is untouched and still serves `SagaPage`'s continuous saga view.
+ * The prose scrolls with the page. It used to sit in a box of its own, capped
+ * at 70vh, which on a phone meant two scrollbars, one inside the other, for
+ * every long chapter. Reading progress is therefore measured from where the
+ * prose block sits in the window (`pageScrollPercent`), not from a box's
+ * `scrollTop`.
+ *
+ * The title is rendered here, once, as the page's `h1`; the page around it
+ * adds no heading of its own. The reader's position in the book is stated
+ * once too, in the footer row. `BookViewer` is untouched and still serves
+ * `SagaPage`'s continuous saga view.
  */
 const ChapterReader: React.FC<ChapterReaderProps> = ({
   content,
@@ -64,6 +75,8 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
   position,
   chapterNumber,
   chapterCount,
+  byline,
+  previousChapterTitle,
   nextChapterTitle,
   onNextChapter,
   onPreviousChapter,
@@ -73,7 +86,8 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
   onEdit,
   className,
 }) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  /** The prose block, whose place in the window is the reading position. */
+  const proseRef = useRef<HTMLDivElement>(null);
 
   // Always call the latest callback, even from a timeout or an unmount
   // cleanup scheduled several renders ago — those closures would otherwise
@@ -95,17 +109,23 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
   const throttleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Most recent percent computed but not yet emitted — what a flush sends. */
   const pendingPercentRef = useRef<number | null>(null);
+  /**
+   * False until this chapter's prose has rendered and its position has been
+   * restored. Until then the prose block measures 0px tall, which reads as
+   * "fits on screen", i.e. 100% — so nothing may be reported from it.
+   */
+  const settledRef = useRef(false);
 
   /**
-   * Scroll handler for the prose container. Computes the scroll percentage,
+   * Window scroll handler. Computes the reading percentage,
    * then either reports it immediately, collapses it into a pending
    * trailing-edge emission, or — on first reaching completion — reports it
    * right away, bypassing the throttle (it only happens once per chapter, so
    * there is no write-storm to guard against).
    */
   const handleScroll = useCallback(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
+    const el = proseRef.current;
+    if (!el || !settledRef.current) return;
 
     if (suppressScrollEmitRef.current) {
       // This scroll event is the browser's echo of the programmatic restore
@@ -115,7 +135,11 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
       return;
     }
 
-    const percent = scrollPercent(el.scrollTop, el.scrollHeight, el.clientHeight);
+    // Prose with no height has nothing rendered in it, and would read as 100%.
+    // A short chapter's completion is the settle step's to report, not this.
+    const rect = el.getBoundingClientRect();
+    if (rect.height === 0) return;
+    const percent = pageScrollPercent(rect.top, rect.height, window.innerHeight);
     pendingPercentRef.current = percent;
 
     if (!hasEmittedCompletionRef.current && isAtCompletion(percent)) {
@@ -155,71 +179,122 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
     }
   }, []);
 
+  // The page scrolls, not a box, so the reader listens to the window.
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
   // Runs on mount and whenever the chapter changes (deliberately not on every
-  // `position` update — see below). Resets per-chapter emission state,
-  // restores the saved scroll position, and checks for immediate completion
-  // (a chapter shorter than the viewport reports 100% with no scroll event
-  // ever firing, so that check can't live only in `handleScroll`). The
-  // cleanup flushes any not-yet-emitted percent, so a reader who scrolls and
-  // immediately navigates away — or unmounts the reader entirely — doesn't
-  // lose their position.
+  // `position` update — see below). Resets per-chapter emission state, then,
+  // once the prose is on the page, restores the saved position and checks for
+  // immediate completion (a chapter shorter than the viewport reports 100%
+  // with no scroll event ever firing, so that check can't live only in
+  // `handleScroll`). The cleanup flushes any not-yet-emitted percent, so a
+  // reader who scrolls and immediately navigates away — or unmounts the
+  // reader entirely — doesn't lose their position.
   useLayoutEffect(() => {
     hasEmittedCompletionRef.current = false;
     suppressScrollEmitRef.current = false;
     pendingPercentRef.current = null;
     lastEmitTimeRef.current = 0;
+    settledRef.current = false;
     if (throttleTimerRef.current) {
       clearTimeout(throttleTimerRef.current);
       throttleTimerRef.current = null;
     }
 
-    const el = scrollContainerRef.current;
+    // The cleanup's flush must reach THIS chapter's handler. By the time a
+    // chapter change runs that cleanup, the ref already holds the handler
+    // rendered for the next chapter, and the last moments of scrolling in the
+    // old chapter would be written into the new one's progress.
+    const reportForThisChapter = onProgressChangeRef.current;
+
+    const el = proseRef.current;
     if (!el) return;
 
-    if (typeof position === 'number') {
-      const scrollTop = positionToScrollTop(position, el.scrollHeight, el.clientHeight);
+    /** Restore the saved position and check for completion, once per chapter. */
+    const settle = () => {
+      if (settledRef.current) return;
+      settledRef.current = true;
 
-      // Only arm the suppression when the assignment will actually move the
-      // element. Setting scrollTop to the value it already holds fires no
-      // scroll event, so an unconditionally-armed flag is never consumed — it
-      // sits waiting and swallows the reader's FIRST REAL scroll instead.
-      // That is the common case, not an edge one: an unread chapter restores
-      // to 0 and is already at 0, so opening a chapter, scrolling once and
+      // Every chapter change sets the window's scroll, even to the top: the
+      // page is one document across chapters, so without this a reader who
+      // clicked Next at the bottom of one chapter would land at the bottom of
+      // the next.
+      const before = el.getBoundingClientRect();
+      const target = percentToPageScrollY(
+        position ?? 0,
+        before.top + window.scrollY,
+        before.height,
+        window.innerHeight
+      );
+
+      // Only arm the suppression when the scroll will actually move the page.
+      // Scrolling to where the page already is fires no scroll event, so an
+      // unconditionally-armed flag is never consumed — it sits waiting and
+      // swallows the reader's FIRST REAL scroll instead. That is the common
+      // case, not an edge one: an unread chapter restores to the top and is
+      // usually already there, so opening a chapter, scrolling once and
       // navigating away used to persist nothing at all.
-      if (scrollTop !== el.scrollTop) {
+      if (target !== window.scrollY) {
         // Restoring is a read of already-stored progress, not new progress.
-        // Emitting from the scroll event this causes would write straight back
-        // the value just loaded, on every chapter open.
+        // Emitting from the scroll event this causes would write straight
+        // back the value just loaded, on every chapter open. 'instant',
+        // because a smooth scroll fires a train of events and only the first
+        // is swallowed.
         suppressScrollEmitRef.current = true;
-        el.scrollTop = scrollTop;
+        window.scrollTo({ top: target, behavior: 'instant' as ScrollBehavior });
       }
-    }
 
-    // A chapter that needs no scrolling reports 100% here and would otherwise
-    // never complete, since no scroll event will ever fire for it. But if the
-    // position we just restored *from* was already at completion, this chapter
-    // has been finished before and re-asserting it only costs a redundant
-    // write on every reopen — so the flag is set without emitting. Progress
-    // writes to this collection failed silently for a year (see StoryContext),
-    // which is reason enough not to make needless ones.
-    const percent = scrollPercent(el.scrollTop, el.scrollHeight, el.clientHeight);
-    if (isAtCompletion(percent)) {
-      const restoredAlreadyComplete =
-        typeof position === 'number' && isAtCompletion(position);
+      // A chapter that needs no scrolling reports 100% here and would
+      // otherwise never complete, since no scroll event will ever fire for
+      // it. But if the position we just restored *from* was already at
+      // completion, this chapter has been finished before and re-asserting it
+      // only costs a redundant write on every reopen — so the flag is set
+      // without emitting. Progress writes to this collection failed silently
+      // for a year (see StoryContext), which is reason enough not to make
+      // needless ones.
+      const after = el.getBoundingClientRect();
+      const percent = pageScrollPercent(after.top, after.height, window.innerHeight);
+      if (isAtCompletion(percent)) {
+        const restoredAlreadyComplete =
+          typeof position === 'number' && isAtCompletion(position);
 
-      hasEmittedCompletionRef.current = true;
-      if (!restoredAlreadyComplete) {
-        lastEmitTimeRef.current = Date.now();
-        onProgressChangeRef.current?.(percent, true);
+        hasEmittedCompletionRef.current = true;
+        if (!restoredAlreadyComplete) {
+          lastEmitTimeRef.current = Date.now();
+          reportForThisChapter?.(percent, true);
+        }
       }
+    };
+
+    // The prose renders through a lazily loaded markdown parser, so on a cold
+    // page load it is still empty here. An empty block is 0px tall, which
+    // reads as a chapter that fits on screen: settling now would restore to
+    // the top and mark the chapter read before a word of it was shown. Wait
+    // for it to take up space. Where there is no ResizeObserver (jsdom), or
+    // the prose is already laid out, settle straight away.
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver === 'undefined' || el.getBoundingClientRect().height > 0) {
+      settle();
+    } else {
+      observer = new ResizeObserver(() => {
+        if (el.getBoundingClientRect().height > 0) {
+          observer?.disconnect();
+          settle();
+        }
+      });
+      observer.observe(el);
     }
 
     return () => {
+      observer?.disconnect();
       if (throttleTimerRef.current) {
         clearTimeout(throttleTimerRef.current);
         throttleTimerRef.current = null;
         if (pendingPercentRef.current !== null) {
-          onProgressChangeRef.current?.(pendingPercentRef.current);
+          reportForThisChapter?.(pendingPercentRef.current);
           pendingPercentRef.current = null;
         }
       }
@@ -229,92 +304,132 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
 
   if (!content) {
     return (
-      <Card className={clsx('w-full max-w-4xl mx-auto p-8 text-center card', className)}>
-        <BookOpen className="w-16 h-16 mx-auto mb-4 primary" />
+      <div className={clsx('w-full max-w-[68ch] mx-auto py-16 text-center', className)}>
+        <BookOpen className="w-16 h-16 mx-auto mb-4 primary" aria-hidden="true" />
         <Typography variant="h3" className="mb-2">
           No Content Available
         </Typography>
         <Typography color="secondary">Select a chapter to begin reading</Typography>
-      </Card>
+      </div>
+    );
+  }
+
+  // "CHAPTER 4 · 12 MARCH 2025". The date is when it was recorded.
+  const eyebrow = [`Chapter ${chapterNumber}`, byline?.recordedOn].filter(Boolean).join(' · ');
+
+  // Recorded by, edited by and Edit, each separated by a middle dot.
+  const bylineParts: React.ReactNode[] = [];
+  if (byline?.recordedBy) {
+    bylineParts.push(
+      <span key="recorded">
+        Recorded by <strong className="font-semibold typography-heading">{byline.recordedBy}</strong>
+      </span>
+    );
+  }
+  if (byline?.editedBy) {
+    bylineParts.push(
+      <span key="edited">
+        edited by <strong className="font-semibold typography-heading">{byline.editedBy}</strong>
+        {byline.editedOn && `, ${byline.editedOn}`}
+      </span>
+    );
+  }
+  if (onEdit) {
+    bylineParts.push(
+      <Button key="edit" variant="link" onClick={onEdit} className="text-sm">
+        Edit
+      </Button>
     );
   }
 
   return (
-    <div className={clsx('relative w-full max-w-4xl mx-auto', className)}>
-      <Card className="card card-border p-4 sm:p-6 md:p-8">
-        {/* Below `md` the Edit button takes a line of its own: pinned in the
-            corner, it sat on top of the centred title. From `md` it is pinned,
-            and the title is inset by its width so a long one cannot run under it. */}
-        {onEdit && (
-          <div className="flex justify-end mb-2 md:mb-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onEdit}
-              startIcon={<Edit size={16} />}
-              className="md:absolute md:top-6 md:right-6"
-            >
-              Edit
-            </Button>
-          </div>
-        )}
+    <article className={clsx('w-full max-w-[68ch] mx-auto', className)}>
+      <header className="pb-6 mb-8 border-b divider">
+        <Typography
+          variant="body-sm"
+          color="secondary"
+          className="text-xs font-semibold uppercase tracking-wider mb-3"
+        >
+          {eyebrow}
+        </Typography>
 
-        <Typography variant="h3" className={clsx('mb-6 text-center', onEdit && 'md:px-24')}>
+        <Typography variant="h1" className="mb-4 leading-tight">
           {title}
         </Typography>
 
-        <div
-          ref={scrollContainerRef}
-          onScroll={handleScroll}
-          data-testid="chapter-reader-scroll"
-          className="max-h-[70vh] overflow-y-auto"
-        >
-          <div
-            className="reader-prose mx-auto max-w-[68ch]"
-            style={{ fontSize: '19px', lineHeight: 1.75 }}
-          >
-            <Markdown content={content} />
+        {bylineParts.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm typography-secondary">
+            {bylineParts.map((part, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <span aria-hidden="true">·</span>}
+                {part}
+              </React.Fragment>
+            ))}
           </div>
+        )}
+      </header>
+
+      <div
+        ref={proseRef}
+        data-testid="chapter-reader-prose"
+        className="reader-prose"
+        style={{ fontSize: '19px', lineHeight: 1.75 }}
+      >
+        <Markdown content={content} />
+      </div>
+
+      {/* Previous at the start, the position in the middle, Next at the end.
+          A neighbour that doesn't exist leaves its cell empty rather than
+          showing a dead button. On a phone the buttons drop the titles, which
+          stay in their accessible names. */}
+      <footer className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 mt-12 pt-6 border-t divider">
+        <div className="justify-self-start min-w-0">
+          {hasPreviousChapter && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onPreviousChapter}
+              startIcon={<ChevronLeft className="w-4 h-4" />}
+              aria-label={previousChapterTitle ? `Previous: ${previousChapterTitle}` : undefined}
+            >
+              {previousChapterTitle ? (
+                <>
+                  <span className="sm:hidden">Previous</span>
+                  <span className="hidden sm:inline">{previousChapterTitle}</span>
+                </>
+              ) : (
+                'Previous'
+              )}
+            </Button>
+          )}
         </div>
 
-        {/* On a phone the chapter count takes its own line under the two
-            buttons, and Next drops the chapter's title -- with both, the row
-            ran off the screen. */}
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mt-6 pt-4 border-t divider">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onPreviousChapter}
-            disabled={!hasPreviousChapter}
-            startIcon={<ChevronLeft className="w-4 h-4" />}
-          >
-            Previous
-          </Button>
+        <Typography variant="body-sm" color="secondary" className="text-center whitespace-nowrap">
+          Chapter {chapterNumber} of {chapterCount}
+        </Typography>
 
-          <Typography
-            variant="body-sm"
-            color="secondary"
-            className="order-last w-full text-center sm:order-none sm:w-auto"
-          >
-            Chapter {chapterNumber} of {chapterCount}
-          </Typography>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onNextChapter}
-            disabled={!hasNextChapter}
-            endIcon={<ChevronRight className="w-4 h-4" />}
-            // The title is hidden on a phone, not dropped: the accessible name
-            // keeps it at every width.
-            aria-label={nextChapterTitle ? `Next: ${nextChapterTitle}` : undefined}
-          >
-            Next
-            {nextChapterTitle && <span className="hidden sm:inline">: {nextChapterTitle}</span>}
-          </Button>
+        <div className="justify-self-end min-w-0">
+          {hasNextChapter && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onNextChapter}
+              endIcon={<ChevronRight className="w-4 h-4" />}
+              aria-label={nextChapterTitle ? `Next: ${nextChapterTitle}` : undefined}
+            >
+              {nextChapterTitle ? (
+                <>
+                  <span className="sm:hidden">Next</span>
+                  <span className="hidden sm:inline">{nextChapterTitle}</span>
+                </>
+              ) : (
+                'Next'
+              )}
+            </Button>
+          )}
         </div>
-      </Card>
-    </div>
+      </footer>
+    </article>
   );
 };
 

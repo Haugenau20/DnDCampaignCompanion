@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // scripts/check-test-lint.js
 //
-// Lints the test files against a committed baseline that may only go down
-// (T061). `npm run lint` covers app code with zero warnings allowed; the test
+// Lints the test files against a committed baseline that may only go down.
+// `npm run lint` covers app code with zero warnings allowed; the test
 // files it ignores carry ~1,000 problems, mostly `testing-library/*`, that
 // nothing enforced before this. Fixing them all at once is not the plan --
 // files get fixed as they are touched.
