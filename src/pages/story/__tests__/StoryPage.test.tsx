@@ -96,6 +96,9 @@ jest.mock("features/storytelling", () => ({
       data-chapter-number={String(props.chapterNumber)}
       data-chapter-count={String(props.chapterCount)}
       data-next-title={props.nextChapterTitle ?? ""}
+      data-previous-title={props.previousChapterTitle ?? ""}
+      data-recorded-by={props.byline?.recordedBy ?? ""}
+      data-edited-by={props.byline?.editedBy ?? ""}
       data-has-next={String(props.hasNextChapter)}
       data-has-prev={String(props.hasPreviousChapter)}
       data-has-edit={String(!!props.onEdit)}
@@ -246,11 +249,13 @@ describe("StoryPage", () => {
   // StoryPage-specific regression guard -- see Task 11 brief)
   // -------------------------------------------------------------------------
   describe("gated states", () => {
+    // The gated panel sits under the page's own name. A chapter title is the
+    // reader's to state, and there is no reader in these states.
     it("renders the page title while signed out", () => {
       mockUser = null;
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "1. The Beginning" })
+        screen.getByRole("heading", { level: 1, name: "Story" })
       ).toBeInTheDocument();
     });
 
@@ -335,12 +340,45 @@ describe("StoryPage", () => {
       expect(container).toBeInTheDocument();
     });
 
-    it("renders the reader with the numbered chapter title", () => {
+    // The reader's eyebrow carries the number ("Chapter 1"), so the title it
+    // is handed is the chapter's own.
+    it("renders the reader with the chapter's title, unnumbered", () => {
       renderPage();
       expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
         "data-title",
-        "1. The Beginning"
+        "The Beginning"
       );
+    });
+
+    // The title appeared twice before the redesign: once as the page heading
+    // and again inside the reader. The reader states it now, alone.
+    it("adds no heading of its own above the reader", () => {
+      renderPage();
+      expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    });
+
+    it("names the previous chapter so the reader's Previous button can label itself", () => {
+      mockChapterId = "chapter-02";
+      renderPage();
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
+        "data-previous-title",
+        "The Beginning"
+      );
+    });
+
+    it("hands the reader a byline built from the chapter's attribution", () => {
+      mockStoryContext.chapters[0] = {
+        ...mockStoryContext.chapters[0],
+        createdByUsername: "soren",
+        createdByCharacterName: "Gauthak",
+        dateAdded: "2025-03-12T18:00:00.000Z",
+        modifiedByUsername: "eowyn",
+        dateModified: "2026-10-02T09:00:00.000Z",
+      };
+      renderPage();
+      const reader = screen.getByTestId("chapter-reader");
+      expect(reader).toHaveAttribute("data-recorded-by", "Gauthak");
+      expect(reader).toHaveAttribute("data-edited-by", "eowyn");
     });
 
     it("hands the reader its position in the book for the footer", () => {

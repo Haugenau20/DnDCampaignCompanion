@@ -58,6 +58,15 @@ function threeMixedChapters() {
   return deriveChapterProgress(chapters, progress);
 }
 
+/**
+ * A chapter's row, by its accessible name. The number and title are separate
+ * spans, so the visible text is not one string to `getByText`; the name still
+ * reads "3. Chapter 3 Title".
+ */
+function row(name: string, scope: Pick<typeof screen, 'getByRole'> = screen): HTMLElement {
+  return scope.getByRole('button', { name });
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -79,9 +88,9 @@ describe('ChapterRail', () => {
           onClose={jest.fn()}
         />
       );
-      expect(screen.getByText('1. Chapter 1 Title')).toBeInTheDocument();
-      expect(screen.getByText('2. Chapter 2 Title')).toBeInTheDocument();
-      expect(screen.getByText('3. Chapter 3 Title')).toBeInTheDocument();
+      expect(row('1. Chapter 1 Title')).toBeInTheDocument();
+      expect(row('2. Chapter 2 Title')).toBeInTheDocument();
+      expect(row('3. Chapter 3 Title')).toBeInTheDocument();
     });
 
     test('clicking a row calls onChapterSelect with that chapter id', () => {
@@ -95,7 +104,7 @@ describe('ChapterRail', () => {
           onClose={jest.fn()}
         />
       );
-      fireEvent.click(screen.getByText('3. Chapter 3 Title'));
+      fireEvent.click(row('3. Chapter 3 Title'));
       expect(onChapterSelect).toHaveBeenCalledWith('ch-3');
     });
 
@@ -110,7 +119,7 @@ describe('ChapterRail', () => {
           onClose={onClose}
         />
       );
-      fireEvent.click(screen.getByText('1. Chapter 1 Title'));
+      fireEvent.click(row('1. Chapter 1 Title'));
       expect(onClose).not.toHaveBeenCalled();
     });
 
@@ -125,11 +134,8 @@ describe('ChapterRail', () => {
           onClose={jest.fn()}
         />
       );
-      const currentRow = screen.getByText('2. Chapter 2 Title').closest('button') as HTMLElement;
-      expect(currentRow).toHaveAttribute('aria-current', 'page');
-
-      const otherRow = screen.getByText('1. Chapter 1 Title').closest('button') as HTMLElement;
-      expect(otherRow).not.toHaveAttribute('aria-current');
+      expect(row('2. Chapter 2 Title')).toHaveAttribute('aria-current', 'page');
+      expect(row('1. Chapter 1 Title')).not.toHaveAttribute('aria-current');
     });
 
     test('the current chapter row has nav-item-active, others have nav-item', () => {
@@ -147,10 +153,10 @@ describe('ChapterRail', () => {
           onClose={jest.fn()}
         />
       );
-      const currentRow = screen.getByText('2. Chapter 2 Title').closest('button') as HTMLElement;
+      const currentRow = row('2. Chapter 2 Title');
       expect(currentRow.className).toMatch(/nav-item-active/);
 
-      const otherRow = screen.getByText('3. Chapter 3 Title').closest('button') as HTMLElement;
+      const otherRow = row('3. Chapter 3 Title');
       expect(otherRow.className).toMatch(/nav-item/);
       expect(otherRow.className).not.toMatch(/nav-item-active/);
     });
@@ -174,7 +180,7 @@ describe('ChapterRail', () => {
         expect(row.className).not.toMatch(/navigation-item/);
       });
       // And the surface it does declare is the sunken one.
-      const container = screen.getByText('2. Chapter 2 Title').closest('div');
+      const container = row('2. Chapter 2 Title').parentElement;
       expect(container?.className).toMatch(/nav-on-sunken/);
     });
 
@@ -182,7 +188,7 @@ describe('ChapterRail', () => {
       // Q17, settled as D90: A4 asks for `sunken`, and measurement showed the
       // rail and the reading column were rendering the *same* colour, so
       // `card` was expressing no hierarchy at all.
-      const { container } = render(
+      render(
         <ChapterRail
           items={threeMixedChapters()}
           currentChapterId="ch-2"
@@ -193,10 +199,29 @@ describe('ChapterRail', () => {
         />
       );
 
-      const rail = container.querySelector('[class*="w-[236px]"]') as HTMLElement;
+      const rail = screen.getByRole('complementary', { name: 'Chapter navigation' });
       expect(rail.className).toMatch(/card-subtle/);
-      expect(rail.className).toMatch(/sunken-border/);
       expect(rail.className).not.toMatch(/(^|\s)card($|\s)/);
+    });
+
+    test('the rail is part of the page, ruled off by one line rather than boxed', () => {
+      // The reader page reads as one surface: the rail meets the reading
+      // column at a single rule in the sunken border colour, not as a card
+      // with a border all round.
+      render(
+        <ChapterRail
+          items={threeMixedChapters()}
+          onChapterSelect={jest.fn()}
+          onBackToIndex={jest.fn()}
+          isOpen={false}
+          onClose={jest.fn()}
+        />
+      );
+
+      const rail = screen.getByRole('complementary', { name: 'Chapter navigation' });
+      expect(rail.className).toMatch(/(^|\s)border-r($|\s)/);
+      expect(rail.className).toMatch(/sunken-divider/);
+      expect(rail.className).not.toMatch(/sunken-border|rounded/);
     });
 
     test('"All chapters" calls onBackToIndex', () => {
@@ -214,7 +239,7 @@ describe('ChapterRail', () => {
       expect(onBackToIndex).toHaveBeenCalledTimes(1);
     });
 
-    test('a read chapter shows a check icon and is muted; an unread chapter shows neither', () => {
+    test('a read chapter is muted; an unread one is not', () => {
       render(
         <ChapterRail
           items={threeMixedChapters()}
@@ -224,15 +249,25 @@ describe('ChapterRail', () => {
           onClose={jest.fn()}
         />
       );
-      const readRow = screen.getByText('1. Chapter 1 Title').closest('button') as HTMLElement;
-      expect(readRow.querySelector('svg')).toBeInTheDocument();
-      expect(readRow.textContent).toContain('1. Chapter 1 Title');
-
-      const unreadRow = screen.getByText('3. Chapter 3 Title').closest('button') as HTMLElement;
-      expect(unreadRow.querySelector('svg')).not.toBeInTheDocument();
+      expect(row('1. Chapter 1 Title').className).toMatch(/typography-muted/);
+      expect(row('3. Chapter 3 Title').className).not.toMatch(/typography-muted/);
     });
 
-    test('shows "N of M read"', () => {
+    test('the open chapter keeps full ink even when it has been read', () => {
+      render(
+        <ChapterRail
+          items={threeMixedChapters()}
+          currentChapterId="ch-1"
+          onChapterSelect={jest.fn()}
+          onBackToIndex={jest.fn()}
+          isOpen={false}
+          onClose={jest.fn()}
+        />
+      );
+      expect(row('1. Chapter 1 Title').className).not.toMatch(/typography-muted/);
+    });
+
+    test('shows how many chapters there are and how many are unread', () => {
       render(
         <ChapterRail
           items={threeMixedChapters()}
@@ -242,8 +277,8 @@ describe('ChapterRail', () => {
           onClose={jest.fn()}
         />
       );
-      // One of the three fixture chapters is complete.
-      expect(screen.getByText('1 of 3 read')).toBeInTheDocument();
+      // One of the three fixture chapters is complete; "reading" is unread.
+      expect(screen.getByText('3 recorded · 2 unread')).toBeInTheDocument();
     });
 
     test('renders an empty items array without crashing', () => {
@@ -258,7 +293,54 @@ describe('ChapterRail', () => {
           />
         )
       ).not.toThrow();
-      expect(screen.getByText('0 of 0 read')).toBeInTheDocument();
+      expect(screen.getByText('0 recorded · 0 unread')).toBeInTheDocument();
+    });
+
+    // The reader scrolls with the page now. `scrollIntoView` scrolls every
+    // scrollable ancestor, the window included, so keeping the open chapter
+    // in view that way would drag the page away from the reader's restored
+    // position on every chapter change. Only the list's own box may move.
+    test('keeps the open chapter in view by scrolling the list, not the page', () => {
+      const scrollIntoView = jest.fn();
+      Element.prototype.scrollIntoView = scrollIntoView;
+      const items = deriveChapterProgress(
+        Array.from({ length: 30 }, (_, i) => makeChapter(i + 1)),
+        makeProgress({})
+      );
+      const { rerender } = render(
+        <ChapterRail
+          items={items}
+          currentChapterId="ch-1"
+          onChapterSelect={jest.fn()}
+          onBackToIndex={jest.fn()}
+          isOpen={false}
+          onClose={jest.fn()}
+        />
+      );
+
+      // jsdom does no layout: rows 40px apart in a 400px window onto the list.
+      const list = row('1. Chapter 1 Title').parentElement as HTMLElement;
+      Object.defineProperty(list, 'clientHeight', { configurable: true, value: 400 });
+      list.querySelectorAll('button').forEach((button, i) => {
+        Object.defineProperty(button, 'offsetTop', { configurable: true, value: i * 40 });
+        Object.defineProperty(button, 'offsetHeight', { configurable: true, value: 40 });
+      });
+
+      rerender(
+        <ChapterRail
+          items={items}
+          currentChapterId="ch-25"
+          onChapterSelect={jest.fn()}
+          onBackToIndex={jest.fn()}
+          isOpen={false}
+          onClose={jest.fn()}
+        />
+      );
+
+      // Row 25 spans 960-1000: the list scrolls just far enough to show it.
+      expect(list.scrollTop).toBe(600);
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
     });
   });
 
@@ -347,7 +429,7 @@ describe('ChapterRail', () => {
         />
       );
       const panel = getDrawerPanel(container);
-      fireEvent.click(within(panel).getByText('3. Chapter 3 Title'));
+      fireEvent.click(row('3. Chapter 3 Title', within(panel)));
       expect(onChapterSelect).toHaveBeenCalledWith('ch-3');
       expect(onClose).toHaveBeenCalledTimes(1);
     });

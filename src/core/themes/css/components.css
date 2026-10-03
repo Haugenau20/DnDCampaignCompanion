@@ -136,17 +136,9 @@
     background-color: var(--surface-sunken-bg);
   }
 
-  /* Colour only, the sunken counterpart to `.card-border`. A block that takes
-     `card-subtle` for its ground had no matching border token to take, so the
-     chapter rail was reaching for `card-border` and ruling a sunken block with
-     a card's hairline. */
-  .sunken-border {
-    border: var(--border-width-sm) solid var(--surface-sunken-border);
-  }
-
-  /* Colour only, for the same reason `.card-divider` exists: `.sunken-border`
-     is the `border` shorthand and sets a width on all four sides, so pairing
-     it with `border-b` draws a box rather than a rule. */
+  /* Colour only, the sunken counterpart to `.card-divider`: pair it with a
+     width utility (`border-b`, `border-r`) to rule off a block that takes
+     `card-subtle` for its ground, rather than reaching for a card's hairline. */
   .sunken-divider {
     border-color: var(--surface-sunken-border);
   }
@@ -1387,6 +1379,14 @@
   .reader-prose {
     color: var(--surface-page-on);
     font-family: var(--font-heading);
+  }
+
+  /* A chapter's title in the reader's chapter list: the campaign's serif, as
+     in the prose, with colour left to the row's `nav-item`. */
+  .chapter-rail-title {
+    font-family: var(--font-heading);
+    font-size: 1.0625rem;
+    line-height: 1.35;
   }
 
   /* ====== RENDERED MARKDOWN ====== */
