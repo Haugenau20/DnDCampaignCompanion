@@ -171,7 +171,7 @@ const ChaptersPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3 mb-4">
               <input
                 type="text"
-                className="input flex-1 min-w-[200px]"
+                className="input flex-1 min-w-[200px] px-3 py-2"
                 placeholder="Search chapter titles and summaries"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

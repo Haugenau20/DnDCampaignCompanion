@@ -205,7 +205,7 @@ const ChapterRail: React.FC<ChapterRailProps> = ({
             className="fixed inset-0 z-40 transition-opacity dialog-backdrop"
             onClick={onClose}
           />
-          <div className="fixed top-0 left-0 h-full w-80 shadow-lg z-50">
+          <div className="fixed top-0 left-0 h-full w-80 max-w-[85vw] shadow-lg z-50">
             <div className="h-full flex flex-col card-subtle sunken-border">
               <ChapterRailHeader
                 readCount={readCount}
@@ -213,7 +213,9 @@ const ChapterRail: React.FC<ChapterRailProps> = ({
                 onBackToIndex={onBackToIndex}
                 onClose={onClose}
               />
-              <div className="flex-1 overflow-y-auto p-3 content">
+              {/* overscroll-contain: reaching the end of the list must not
+                  hand the gesture on to the page behind the drawer. */}
+              <div className="flex-1 overflow-y-auto overscroll-contain p-3 content">
                 <ChapterRailList
                   items={items}
                   currentChapterId={currentChapterId}

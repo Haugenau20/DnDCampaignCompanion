@@ -234,8 +234,8 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
             </div>
           </Card.Content>
           
-          <Card.Footer className="flex justify-between">
-            <div className="flex gap-4">
+          <Card.Footer className="flex flex-wrap justify-between gap-3">
+            <div className="flex flex-wrap gap-x-4 gap-y-3">
               <Button
                 variant="outline"
                 onClick={handleCancel}

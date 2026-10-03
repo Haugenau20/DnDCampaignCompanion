@@ -185,9 +185,16 @@ const BookshelfView: React.FC<ChapterViewProps> = ({ items, onChapterSelect }) =
               fixed width exactly — and a board running out past the last book
               is what made the shelf read as half-empty rather than as a shelf
               with room on it. Hugging the books removes that signal entirely,
-              and it degrades gracefully for a partial final group of two. */}
-          <div className="flex justify-center">
-            <div className="inline-flex flex-col">
+              and it degrades gracefully for a partial final group of two.
+              Ten books are wider than a phone, so the row scrolls sideways
+              there. Centring is `mx-auto` on a `w-max` board rather than
+              `justify-center`: a centred flex row that overflows spills off
+              both edges, and the first books could not be scrolled to. The
+              scroller clips vertically too, so it reaches up into the heading's
+              margin (and a pixel out each side) to leave the lifted book and
+              its ring room. */}
+          <div className="overflow-x-auto overscroll-x-contain -mt-3 pt-3 -mx-1 px-1">
+            <div className="flex flex-col w-max mx-auto">
               {/* items-end so books of differing heights stand on the board
                   rather than floating from a shared top edge. */}
               <div className="flex items-end gap-2">

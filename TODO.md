@@ -20,7 +20,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | medium | T076 | May the site use "D&D"? | M | needs investigation | Public site, no trademark notice anywhere; T075's rename waits on it |
-| medium | T026 | Mobile layout on story pages | M | needs investigation | List, reader and form; overlapping text, drawer won't touch-scroll |
+| medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T061 | `test` check not required | S | blocked | Every suite is gated in CI now, but a merge waits on none of it until branch protection lists the check |
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
 | medium | T037 | A group cannot be deleted | L | open | Decided 2026-10-02 to build it, plan first: members' data cannot be removed until it exists |
@@ -335,38 +335,25 @@ WotC's Fan Content Policy and its required notice), has not been looked into.
 
 ## Tech debt and platform
 
-### T026 — Mobile layout on the story pages
-**Type** debt · **Size** M · **Status** needs investigation · **Verified** 2026-09-16
+### T026 — The reader's chapter drawer cannot be scrolled with a finger
+**Type** debt · **Size** S · **Status** needs investigation · **Verified** 2026-10-03
 
-Reported as "mobile layout issues on certain pages, story all around".
-**Narrowed by the maintainer (2026-10-02): most of it** — the chapter list, the
-reader and the chapter form all. Symptoms named: text overlapping text, text
-not fitting, and the chapter drawer in the reader **cannot be scrolled with a
-finger** when picking a chapter. Fix these on their own, not as part of a
-reader redesign (maintainer, 2026-10-02).
+Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
+(2026-10-03).
 
-- **How to check**: per `CLAUDE.md`, a maximized Chrome window silently ignores
-  resize below its minimum width. Render the app in a **320px-wide iframe**
-  instead, so media queries evaluate against the iframe's own viewport.
-- **Known before you start**: the header overflows horizontally below ~380px on
-  **every** route — logo and account block both sit at `min-width: auto` and
-  neither yields. If something overflows at 320px, check whether the offending
-  element is inside `header`/`footer` before blaming the story pages.
-  `AccountCard` was a confirmed instance of the same class of defect: fixed
-  2026-09-23 by stacking its rows below `sm`.
-- **One candidate found**: `src/pages/story/ChaptersPage.tsx:174` — a filter
-  input at `input flex-1 min-w-[200px]` sharing a row with sibling controls. It
-  cannot shrink below 200px, so a narrow row either wraps or pushes. Unconfirmed
-  visually.
-- **The drawer**: below `lg` the rail is a drawer, opened from the "Chapters"
-  button in `src/pages/story/StoryPage.tsx:182` and rendered by
-  `features/storytelling/stories/components/ChapterRail.tsx`. Touch scrolling
-  failing there smells of a scroll lock on the body or an `overflow` missing
-  on the drawer's list — check it on a real phone or touch emulation, not a
-  resized desktop window.
-- **Catch**: three pages, several symptoms. Render each at 320 and 375px and
-  list what breaks before sizing; the answer decides whether this stays M.
-- **Source**: todo.txt, 2026-09-16
+- **Where**: below `lg` the rail is a drawer, opened from the "Chapters" button
+  in `src/pages/story/StoryPage.tsx` and rendered by
+  `features/storytelling/stories/components/ChapterRail.tsx`.
+- **Measured in desktop Chrome, 320px iframe**: the drawer is viewport-high,
+  its list is a real scroll container (600px tall over 1,204px of rows), and
+  `elementFromPoint` finds the list's own rows across it: nothing covers it.
+  No code in `src/` registers touch handlers or sets `touch-action`. Its list
+  now has `overscroll-contain`, so reaching its end no longer scrolls the page
+  behind, which is the nearest thing to the report that could be checked.
+- **Next step**: on the phone it was seen on, note the browser, then open the
+  drawer on a chapter late in a long campaign and drag the list. A desktop
+  window cannot answer this: the browser agent has no touch input.
+- **Source**: todo.txt, 2026-09-16; narrowed 2026-10-02
 
 ---
 

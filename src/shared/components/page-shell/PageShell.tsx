@@ -74,7 +74,7 @@ const PageShell: React.FC<PageShellProps> = ({
         </Typography>
         {subtitle && <Typography color="secondary">{subtitle}</Typography>}
       </div>
-      {actions ? <div className="flex gap-2">{actions}</div> : null}
+      {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
     </header>
     {children}
   </div>
