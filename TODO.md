@@ -21,7 +21,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 |---|---|---|---|---|---|
 | medium | T076 | May the site use "D&D"? | M | needs investigation | Public site, no trademark notice anywhere; T075's rename waits on it |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | List, reader and form; overlapping text, drawer won't touch-scroll |
-| medium | T061 | `test` check not required; test files unlinted | M | open | Every suite is gated in CI now, but branch protection must list the check; test-file lint to be ratcheted (decided 2026-10-02) |
+| medium | T061 | `test` check not required | S | blocked | Every suite is gated in CI now, but a merge waits on none of it until branch protection lists the check |
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
 | medium | T037 | A group cannot be deleted | L | open | Decided 2026-10-02 to build it, plan first: members' data cannot be removed until it exists |
 | low | T017 | Batch actions for other entities | L | open | Convenience; the rumour batch actions are the pattern, one commit per action |
@@ -412,28 +412,22 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
   `build/static/js/main.*.js`; a new bundler must keep it measuring the entry.
 - **Source**: todo.txt, 2026-09-24
 
-### T061 — The `test` check does not yet block a merge, and test files are unlinted
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-28
+### T061 — The `test` check does not yet block a merge
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-03
 
 `.github/workflows/test.yml` runs the type-check, `npm run lint` (app code,
-zero warnings), `npm run test:ci` (jest, 80% coverage floor) and, since
-2026-09-28, `firebase/functions`' build and emulator-backed suite (the
-`functions` job, through `npm --prefix firebase run test:functions`) and, since
-the same day, the production build and its entry-bundle ceiling (the `bundle`
-job) on every PR and before the merge-to-main deploy, which waits on all of
-it. Two things remain.
+zero warnings), `npm run lint:tests` (the test files, against a per-file
+baseline that may only go down), `npm run test:ci` (jest, 80% coverage floor),
+`firebase/functions`' build and emulator-backed suite (the `functions` job),
+and the production build with its entry-bundle ceiling (the `bundle` job), on
+every PR and before the merge-to-main deploy, which waits on all of it.
 
-- **Not in the repo**: the `test` check blocks a merge only once branch
-  protection on `main` lists it as required. That is a GitHub setting.
-- **Lint scope — decided (maintainer, 2026-10-02): ratchet it.** Test files
-  are excluded today and carry ~1,000 `react-app/jest` problems (mostly
-  `testing-library/*`) that nothing has ever enforced. Lint them in CI against
-  a committed baseline count that may only go down; files get fixed as they
-  are touched. A count that rises fails the job, and a count that falls should
-  lower the baseline in the same PR.
-  `firebase/functions`' own lint (~2,000 problems, mostly CRLF) is not a gate either.
+- **Blocked on the maintainer**: a PR can still be merged with any of those
+  red. The checks block a merge only once branch protection on `main` lists
+  them as required. That is a GitHub setting, not something the repo can hold.
+- `firebase/functions`' own lint (~2,000 problems, mostly CRLF) is not a gate.
 - **Source**: todo.txt, 2026-09-24; the jest, type-check and lint gates
-  landed 2026-09-26, the functions suite 2026-09-28
+  landed 2026-09-26, the functions suite 2026-09-28, test-file lint 2026-10-03
 
 ### T065 — The maintainer's global Firebase CLI is still 13.x
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-28

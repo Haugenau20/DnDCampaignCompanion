@@ -77,6 +77,10 @@ the errors name files from whichever branch you visited.
 - `npm run test:coverage` — CI floor is a uniform **80%** (`jest.config.ts`)
 - `npm run test:behavioral` — behavioural suites only; `npm run test:html` — HTML report
 - `npm run lint` — ESLint on app code (test files excluded), **zero warnings allowed**; CI runs it
+- `npm run lint:tests` — ESLint on the test files against a per-file baseline
+  (`scripts/test-lint-baseline.json`) that may only go down; CI runs it. Fixed problems in a test
+  file you touched? It fails until you lower the baseline: `npm run lint:tests -- --update`, then
+  read the baseline's diff — `--update` records a rise just as readily
 - Single file, fast: `npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="<pattern>"`
 
 **Baseline**: 0 failed / 2 skipped / 5629 passed / 5631 total across 284 suites (2026-09-26,
@@ -160,7 +164,7 @@ match `firestore.rules.prod` without reading them back.
 
 Merging to `main` deploys live: the Cloud Functions first, then Hosting (`firebase-hosting-merge.yml`;
 its setup is T070). Rules are never deployed by CI. CI (`.github/workflows/test.yml`) runs all three steps,
-plus `npm run lint`, the `firebase/functions` suite and `npm run check:bundle`, on every PR and
+plus `npm run lint`, `npm run lint:tests`, the `firebase/functions` suite and `npm run check:bundle`, on every PR and
 before the deploy, which waits on them. Changed a function? Run
 `npm --prefix firebase run test:functions` too.
 
