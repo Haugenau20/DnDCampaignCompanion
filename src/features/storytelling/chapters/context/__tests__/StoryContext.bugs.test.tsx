@@ -399,7 +399,6 @@ describe('StoryContext Bug Discovery Tests', () => {
           content: 'First chapter with important data',
           order: 1,
           summary: 'Important summary 1',
-          subChapters: [{ id: 'sub-1', title: 'Sub 1', content: 'Sub content', order: 1, createdBy: 'test-user', createdByUsername: 'Test User', dateAdded: '2025-06-15T00:00:00.000Z' }],
           createdBy: 'test-user',
           createdByUsername: 'Test User',
           dateAdded: '2025-06-15T00:00:00.000Z'
@@ -444,19 +443,19 @@ describe('StoryContext Bug Discovery Tests', () => {
         await storyContext.updateChapter('chapter-03', { order: 1 });
       });
 
-      // BUG DISCOVERY: Complex reordering should preserve all chapter data including subChapters and summaries
+      // Reordering must carry the chapter's other data, such as its summary, to
+      // its new position. (Sub-chapters were removed; see #017's record.)
       expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
         'chapters',
         'chapter-02', // Original chapter 1 should move to position 2
         expect.objectContaining({
           title: 'Chapter 1',
           summary: 'Important summary 1', // BUG: Complex data might be lost
-          subChapters: expect.any(Array), // BUG: SubChapters might be lost
           order: 2
         })
       );
 
-      console.warn('BUG #017: Complex chapter reordering may lose subChapters and summary data');
+      console.warn('BUG #017: Complex chapter reordering may lose summary data');
     });
 
     test('BUG: should handle reordering failure recovery gracefully', async () => {

@@ -749,10 +749,9 @@
     `cue.negation`: a hairline rule through the label, in the label's own ink.
 
     A deceased NPC and a false rumour are both facts that are fully known and
-    negated, which is precisely what a strike says and what a red label does
-    not -- a red label says "this went wrong", and neither of them did. It is
-    also what lets a false rumour share the knowledge ladder's top rung with a
-    confirmed one without the two being indistinguishable.
+    negated, which is precisely what a strike says. A false rumour also wears
+    the red of a failed quest (maintainer, 2026-10-03); the strike keeps it
+    apart from confirmed for a reader who cannot tell the two hues apart.
   */
   .cue-negated {
     text-decoration: line-through;

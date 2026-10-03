@@ -160,13 +160,13 @@ const r3 = makeRumor({ id: 'r3', title: 'Treasure map', status: 'false', sourceT
 const rc = makeRumor({ id: 'rc', title: 'Dragon spotted', status: 'confirmed', sourceType: 'npc', sourceName: 'Aldric', location: 'Silverkeep' });
 
 /**
- * Open the Disproved group.
+ * Open the False group.
  *
- * It is the only one that starts folded (`15-9`), so a test about a disproved
- * row says so out loud rather than relying on it being on screen.
+ * It is the only one that starts folded (`15-9`), so a test about a false
+ * rumour's row says so out loud rather than relying on it being on screen.
  */
-const revealDisproved = () =>
-  fireEvent.click(screen.getByRole('button', { name: /^Disproved/ }));
+const revealFalse = () =>
+  fireEvent.click(screen.getByRole('button', { name: /^False/ }));
 
 /** The roster's search box. */
 const searchInput = () => screen.getByPlaceholderText(/search rumors/i);
@@ -249,7 +249,7 @@ describe('RumorDirectory', () => {
 
       expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: 'Confirmed' })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: 'Disproved' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'False' })).toBeInTheDocument();
 
       // The place names the fixtures carry are not headings any more.
       expect(screen.queryByRole('heading', { name: 'Silverkeep' })).not.toBeInTheDocument();
@@ -268,20 +268,20 @@ describe('RumorDirectory', () => {
       render(<RumorDirectory rumors={[r2]} />);
       expect(screen.getByRole('heading', { name: 'Unconfirmed' })).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'Confirmed' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('heading', { name: 'Disproved' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'False' })).not.toBeInTheDocument();
     });
 
     /**
-     * **Only disproved starts folded.** Confirmed was folded too at first, by
+     * **Only false starts folded.** Confirmed was folded too at first, by
      * analogy with a finished quest, and the analogy does not hold: a
      * confirmed rumour is the thing the party acts on, so folding it hid the
-     * best-earned half of the list. Disproved is still knowledge, still
+     * best-earned half of the list. False is still knowledge, still
      * counted, and one click away -- but nobody is going back to it.
      */
-    test('only disproved opens collapsed', () => {
+    test('only false opens collapsed', () => {
       render(<RumorDirectory rumors={[rc, r2, r3]} />);
 
-      expect(screen.getByRole('button', { name: /^Disproved/ })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: /^False/ })).toHaveAttribute(
         'aria-expanded',
         'false'
       );
@@ -293,8 +293,8 @@ describe('RumorDirectory', () => {
         screen.getByRole('button', { name: /Expand Dragon spotted/ })
       ).toBeInTheDocument();
 
-      revealDisproved();
-      expect(screen.getByRole('button', { name: /^Disproved/ })).toHaveAttribute(
+      revealFalse();
+      expect(screen.getByRole('button', { name: /^False/ })).toHaveAttribute(
         'aria-expanded',
         'true'
       );
@@ -501,15 +501,14 @@ describe('RumorDirectory', () => {
       render(<RumorDirectory rumors={[rc, r2, r3]} />);
       expect(screen.getByRole('button', { name: '1 confirmed' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '1 unconfirmed' })).toBeInTheDocument();
-      // "Disproved", never "false" -- even in the bar (`15-7` item 6). It
-      // describes what the party did, not the stored value.
-      expect(screen.getByRole('button', { name: '1 disproved' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: '1 false' })).not.toBeInTheDocument();
+      // "False", not "disproved" (maintainer, 2026-10-03).
+      expect(screen.getByRole('button', { name: '1 false' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '1 disproved' })).not.toBeInTheDocument();
     });
 
     test('keeps zero-value statuses visible rather than hiding them', () => {
       render(<RumorDirectory rumors={[r1]} />);
-      expect(screen.getByRole('button', { name: '0 disproved' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '0 false' })).toBeInTheDocument();
     });
 
     test('should filter by confirmed status', () => {
@@ -526,9 +525,9 @@ describe('RumorDirectory', () => {
       expect(screen.queryByText('Dragon spotted')).not.toBeInTheDocument();
     });
 
-    test('should filter by disproved status', () => {
+    test('should filter by false status', () => {
       render(<RumorDirectory rumors={[rc, r2, r3]} />);
-      fireEvent.click(screen.getByRole('button', { name: '1 disproved' }));
+      fireEvent.click(screen.getByRole('button', { name: '1 false' }));
       expect(screen.getByText('Treasure map')).toBeInTheDocument();
       expect(screen.queryByText('Dragon spotted')).not.toBeInTheDocument();
     });
@@ -830,12 +829,12 @@ describe('RumorDirectory', () => {
       );
     });
 
-    test('says "Disproved" on the ladder, never "False"', () => {
+    test('says "False" on the ladder, not "Disproved"', () => {
       render(<RumorDirectory rumors={[r2]} />);
       openRow('Missing merchant');
       const ladder = screen.getByRole('group', { name: /Status of Missing merchant/ });
-      expect(within(ladder).getByRole('button', { name: 'Disproved' })).toBeInTheDocument();
-      expect(within(ladder).queryByRole('button', { name: 'False' })).not.toBeInTheDocument();
+      expect(within(ladder).getByRole('button', { name: 'False' })).toBeInTheDocument();
+      expect(within(ladder).queryByRole('button', { name: 'Disproved' })).not.toBeInTheDocument();
     });
 
     test('attaches what a rumour points at, in place, without typing', async () => {
@@ -855,41 +854,51 @@ describe('RumorDirectory', () => {
   });
 
   // -------------------------------------------------------------------------
-  // A disproved rumour is knowledge, not a failure
+  // A false rumour wears the red of a failed quest (maintainer, 2026-10-03)
   // -------------------------------------------------------------------------
-  describe('what disproved looks like', () => {
-    test('reads "Disproved" and never "False" in the row', () => {
+  describe('what a false rumour looks like', () => {
+    test('reads "False" and never "Disproved" in the row', () => {
       render(<RumorDirectory rumors={[r3]} />);
-      revealDisproved();
-      // Scoped to the row: "Disproved" is also the group heading now.
+      revealFalse();
+      // Scoped to the row: "False" is also the group heading.
       const row = within(screen.getByRole('button', { name: /Expand Treasure map/ }));
-      expect(row.getByText('Disproved')).toBeInTheDocument();
-      expect(screen.queryByText('False')).not.toBeInTheDocument();
+      expect(row.getByText('False')).toBeInTheDocument();
+      expect(screen.queryByText('Disproved')).not.toBeInTheDocument();
     });
 
-    test('sits on the ladder\u2019s top rung with confirmed, and carries the strike instead', () => {
-      // Colour schema §3's worked example: both are fully known, and what
-      // separates them is the cue, not the hue. Until `15-7` the code put
-      // disproved on `valence-3` -- the red a failed quest wears -- while the
-      // comment above it claimed otherwise.
+    test('wears the red of a failed quest, apart from confirmed, and keeps the strike', () => {
       render(<RumorDirectory rumors={[rc, r3]} />);
-      revealDisproved();
+      revealFalse();
 
-      // Scoped to the rows: both words are also group headings now.
+      // Scoped to the rows: both words are also group headings.
       const confirmed = within(
         screen.getByRole('button', { name: /Expand Dragon spotted/ })
       ).getByText('Confirmed');
-      const disproved = within(
+      const falseStatus = within(
         screen.getByRole('button', { name: /Expand Treasure map/ })
-      ).getByText('Disproved');
+      ).getByText('False');
       const rung = (node: HTMLElement) =>
         (node.closest('[class*="valence-"]') ?? node).className.match(/valence-\d/)?.[0];
 
-      expect(rung(disproved)).toBe(rung(confirmed));
-      expect(rung(disproved)).not.toBe('valence-3');
+      expect(rung(falseStatus)).toBe('valence-3');
+      expect(rung(confirmed)).toBe('valence-0');
+      // The strike stays, so the two do not rest on hue alone.
       expect(
-        (disproved.closest('[class*="cue-negated"]') ?? disproved).className
+        (falseStatus.closest('[class*="cue-negated"]') ?? falseStatus).className
       ).toContain('cue-negated');
+    });
+
+    test('is red in the summary bar and its legend, apart from confirmed', () => {
+      const { container } = render(<RumorDirectory rumors={[rc, r2, r3]} />);
+      const swatch = (name: string) =>
+        screen.getByRole('button', { name }).querySelector('[aria-hidden="true"]') as HTMLElement;
+      // Bands appear in the legend's order: confirmed, unconfirmed, false.
+      const [confirmedBand, , falseBand] = Array.from(container.querySelectorAll('.roster-band'));
+
+      expect(falseBand.className).toContain('bg-valence-3');
+      expect(swatch('1 false').className).toContain('bg-valence-3');
+      expect(confirmedBand.className).toContain('bg-valence-0');
+      expect(swatch('1 confirmed').className).toContain('bg-valence-0');
     });
   });
 
@@ -1275,7 +1284,7 @@ describe('RumorDirectory', () => {
       // Unconfirmed is what an unrecognised status *means*: nobody knows yet.
       expect(screen.getByRole('button', { name: '2 unconfirmed' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '0 confirmed' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '0 disproved' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '0 false' })).toBeInTheDocument();
       expect(screen.getByText('rumors gathered')).toBeInTheDocument();
     });
 
@@ -1615,13 +1624,13 @@ describe('RumorDirectory — 15.3', () => {
       );
     });
 
-    it('says "Disproved", never "False"', () => {
+    it('says "False", not "Disproved"', () => {
       render(<RumorDirectory rumors={[r2]} />);
       fireEvent.click(screen.getByRole('button', { name: /Expand Missing merchant/ }));
 
       const ladder = screen.getByRole('group', { name: 'Status of Missing merchant' });
-      expect(within(ladder).getByRole('button', { name: 'Disproved' })).toBeInTheDocument();
-      expect(within(ladder).queryByRole('button', { name: 'False' })).toBeNull();
+      expect(within(ladder).getByRole('button', { name: 'False' })).toBeInTheDocument();
+      expect(within(ladder).queryByRole('button', { name: 'Disproved' })).toBeNull();
     });
 
     it('writes the stored value behind the readable label', async () => {
@@ -1629,7 +1638,7 @@ describe('RumorDirectory — 15.3', () => {
       fireEvent.click(screen.getByRole('button', { name: /Expand Missing merchant/ }));
 
       const ladder = screen.getByRole('group', { name: 'Status of Missing merchant' });
-      fireEvent.click(within(ladder).getByRole('button', { name: 'Disproved' }));
+      fireEvent.click(within(ladder).getByRole('button', { name: 'False' }));
 
       await waitFor(() => expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r2', 'false'));
     });

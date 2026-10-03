@@ -1,5 +1,9 @@
 # Phase 14 — Surface routing: admin and auth become pages
 
+> The drift log (`03-drift-log.md`) closed on 2026-09-16. New findings go to
+> `TODO.md` in the repository root; references to the log in these plans are
+> citations of its history, not places to write.
+
 Five PRs. Admin and sign-in stop being dialogs; the dialogs that remain get
 smaller. Nothing in this phase changes a colour, a font or a token.
 

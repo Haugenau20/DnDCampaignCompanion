@@ -68,8 +68,7 @@ const ROW_GRID =
 const STATUS_GROUPS: { key: RumorStatus; title: string }[] = [
   { key: 'unconfirmed', title: 'Unconfirmed' },
   { key: 'confirmed', title: 'Confirmed' },
-  // "Disproved", never "false", even as a heading (item 6).
-  { key: 'false', title: 'Disproved' },
+  { key: 'false', title: 'False' },
 ];
 
 /**
@@ -77,7 +76,7 @@ const STATUS_GROUPS: { key: RumorStatus; title: string }[] = [
  *
  * Confirmed was here too, by analogy with a finished quest, and the analogy
  * does not hold: a confirmed rumour is the thing the party *acts on*, and
- * folding it away hid the best-earned half of the list. Disproved is the only
+ * folding it away hid the best-earned half of the list. False is the only
  * one that is genuinely done with -- it is still knowledge, still counted and
  * one click away, but nobody is going back to it.
  */
@@ -93,14 +92,9 @@ const SOURCE_FILTERS: RosterFilterOption[] = [
 ];
 
 /**
- * Status, the status word, the ramp stop and the source label all now live in
- * `utils/rumor-presentation.ts`.
- *
- * They were here, and one of them was wrong in a way nothing could see: the
- * comment above the tone map said confirmed and disproved "sit on the same
- * rung", and the map under it gave disproved `valence-3` -- the red a failed
- * quest wears. `15-7` moved them out and made the code match what the comment,
- * the colour schema and T008 all already said.
+ * Status, the status word, the ramp stop and the source label all live in
+ * `utils/rumor-presentation.ts`, so the row, the composer and the summary bar
+ * cannot disagree about them.
  */
 
 const RumorDirectory: React.FC<RumorDirectoryProps> = ({
@@ -301,14 +295,11 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
     const count = (status: RumorStatus) =>
       initialRumors.filter(rumor => normalizeRumorStatus(rumor.status) === status).length;
     return [
-      // Confirmed and false share a rung: both are fully known, and a
-      // disproven rumour is a resolved one rather than a defeat. They are told
-      // apart by their labels here and by 12-5's strike in the rows -- not by
-      // hue, which is what put a false rumour in the red of a lost quest.
+      // False wears the red of a failed quest (see RUMOR_STATUS_TONE), so
+      // its band stands apart from confirmed's.
       { key: 'confirmed', label: 'confirmed', count: count('confirmed'), colorClass: RUMOR_STATUS_FILL.confirmed },
       { key: 'unconfirmed', label: 'unconfirmed', count: count('unconfirmed'), colorClass: RUMOR_STATUS_FILL.unconfirmed },
-      // "Disproved", never "false", even here (item 6).
-      { key: 'false', label: 'disproved', count: count('false'), colorClass: RUMOR_STATUS_FILL.false },
+      { key: 'false', label: 'false', count: count('false'), colorClass: RUMOR_STATUS_FILL.false },
     ];
   }, [initialRumors]);
 
@@ -650,10 +641,8 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                   </div>
 
                   {/*
-                    Fully known plus a strike, never failure red: a party
-                    that disproves a rumour has done the work (colour schema
-                    §3). `negated` is orthogonal to `tone` for exactly this
-                    reason -- the rumour has not left the ladder.
+                    A false rumour is red and struck through: the strike keeps
+                    it apart from confirmed without relying on hue alone.
                   */}
                   <RosterStatus
                     tone={RUMOR_STATUS_TONE[normalizeRumorStatus(rumor.status)]}

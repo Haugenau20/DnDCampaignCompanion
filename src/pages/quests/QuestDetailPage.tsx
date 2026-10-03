@@ -231,8 +231,7 @@ const QuestDetailPage: React.FC = () => {
           key: `rumor-${rumor.id}`,
           id: rumor.id,
           name: rumor.title,
-          // "Disproved", never "False" (§10): it describes what the party did.
-          detail: `rumour, ${rumor.status === 'false' ? 'disproved' : rumor.status} — became this quest`,
+          detail: `rumour, ${rumor.status} — became this quest`,
           href: `/rumors?highlight=${rumor.id}`,
         })
       );

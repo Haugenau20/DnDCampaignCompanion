@@ -54,26 +54,6 @@ const getLOTRChapters = (dmUid: string, formattedDate: string) => {
       title: 'A Long-expected Party',
       content: 'The chapter begins with preparations for Bilbo Baggins\'s eleventy-first (111th) birthday party. Bilbo had acquired a reputation as being a bit odd after his adventure with the dwarves, and his continued youthfulness despite his age adds to this perception. At the party, Bilbo gives a speech and then uses his magic ring to disappear, shocking the guests. He leaves the Shire permanently, leaving all his possessions, including the ring, to his nephew and heir Frodo Baggins.',
       order: 1,
-      subChapters: [
-        {
-          id: 'subchapter1-1',
-          title: 'Concerning Bilbo\'s Birthday',
-          content: 'The preparations and anticipation for Bilbo\'s grand eleventy-first birthday celebration that has the whole Shire talking.',
-          order: 1,
-          createdBy: dmUid,
-          createdByUsername: 'DungeonMaster',
-          dateAdded: formattedDate
-        },
-        {
-          id: 'subchapter1-2',
-          title: 'The Disappearance',
-          content: 'Bilbo\'s shocking departure and the confusion that follows when he uses the Ring to vanish during his speech.',
-          order: 2,
-          createdBy: dmUid,
-          createdByUsername: 'DungeonMaster',
-          dateAdded: formattedDate
-        }
-      ],
       dateModified: formattedDate,
       summary: 'Bilbo\'s birthday party and mysterious departure from the Shire.',
       createdBy: dmUid,

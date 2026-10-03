@@ -16,7 +16,6 @@
   ├─ title: string
   ├─ content: string
   ├─ order: number
-  ├─ subChapters?: Chapter[] (optional)
   ├─ lastModified?: Date (optional)
   ├─ summary?: string (optional)
 

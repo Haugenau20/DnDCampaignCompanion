@@ -1,5 +1,5 @@
 // src/shared/hooks/useFirebaseData.ts
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useFirestore } from 'features/user-management';
 import { AUTH_STATE_CHANGED_EVENT } from 'features/user-management';
 import { DomainData } from 'core/types/common';
@@ -18,13 +18,10 @@ interface UseFirebaseDataOptions<T> {
    * set of transforms, promises, loading states and React updates against data
    * no one reads. See the note on `addData` below.
    *
-   * It is also passed by every `use*Data` READ hook, for a different reason:
-   * those hooks fetch from an effect of their own, gated on the active group
-   * and campaign, sorted, and cleared when either changes. This hook's mount
-   * fetch knows none of that and fired anyway, so each collection was read
-   * twice from one instance before a write instance was even counted.
+   * The `use*Data` READ hooks do not use this option: they listen through
+   * `subscribeTo` below, which ignores it.
    *
-   * **Every production call site now passes `false`**, so the `true` default
+   * **Every production call site that fetches passes `false`**, so the `true` default
    * survives only for a future caller that wants the simple behaviour. Do not
    * read that as "the default is dead and can be inverted": inverting it would
    * make every new call site silently non-fetching, which is the failure that
@@ -38,26 +35,111 @@ interface UseFirebaseDataOptions<T> {
    * exactly that, and each of their suites pins it.
    */
   autoFetch?: boolean;
+  /**
+   * Listen to the collection instead of fetching it (T032).
+   *
+   * A full collection path (`groups/g/campaigns/c/npcs`), or `null` while
+   * there is nothing to listen to yet (signed out, no group or campaign).
+   * Leave it out entirely for the fetch behaviour described above.
+   *
+   * With it, `data` follows the listener: the whole collection on the first
+   * snapshot, then every change -- another player's, or this client's own
+   * write, which the SDK delivers before the write's promise resolves. So the
+   * refetch a provider used to make after each write is no longer a read:
+   * `getData()` answers from the latest snapshot, and only waits when the
+   * first snapshot for the current path has not arrived yet.
+   *
+   * `loading` is true until that first snapshot. Changing the path closes the
+   * old listener and opens the new one; `null` empties `data`.
+   *
+   * The write methods do not touch `data` in this mode: the listener already
+   * carries the write, and appending it as well would show it twice.
+   * `autoFetch` is ignored.
+   */
+  subscribeTo?: string | null;
 }
 
 export function useFirebaseData<T extends Record<string, any>>(
   options: UseFirebaseDataOptions<T>
 ) {
-  const { autoFetch = true } = options;
+  const subscribing = options.subscribeTo !== undefined;
+  const subscribeTo = options.subscribeTo ?? null;
+  const autoFetch = !subscribing && (options.autoFetch ?? true);
   const [data, setData] = useState<T[]>([]);
   // A write-only instance has nothing in flight on mount, so it must not claim
   // to be loading -- that flag would otherwise stay `true` for this instance's
   // entire life and lie to any future consumer.
-  const [loading, setLoading] = useState(autoFetch);
+  const [loading, setLoading] = useState(subscribing ? subscribeTo !== null : autoFetch);
   const [error, setError] = useState<string | null>(null);
   const {
     getCollection,
+    subscribeToCollection,
     createDocument,
     updateDocumentWithAttribution,
     deleteDocument
   } = useFirestore();
 
+  // Subscription mode: the latest snapshot (undefined until the current
+  // path's first one), and the `getData()` calls waiting for it.
+  const latestSnapshot = useRef<T[] | undefined>(subscribing && subscribeTo === null ? [] : undefined);
+  const snapshotWaiters = useRef<Array<(documents: T[]) => void>>([]);
+
+  /** Records a snapshot and releases every `getData()` waiting for one. */
+  const publishSnapshot = useCallback((documents: T[]) => {
+    latestSnapshot.current = documents;
+    const waiters = snapshotWaiters.current;
+    snapshotWaiters.current = [];
+    waiters.forEach(resolve => resolve(documents));
+  }, []);
+
+  useEffect(() => {
+    if (!subscribing) {
+      return;
+    }
+
+    if (subscribeTo === null) {
+      setData([]);
+      setLoading(false);
+      publishSnapshot([]);
+      return;
+    }
+
+    latestSnapshot.current = undefined;
+    setLoading(true);
+    setError(null);
+
+    const unsubscribe = subscribeToCollection<T>(
+      subscribeTo,
+      (documents) => {
+        setData(documents);
+        setLoading(false);
+        publishSnapshot(documents);
+      },
+      (err) => {
+        // Firestore closes a listener after an error, so this path is done:
+        // answer anyone waiting with nothing rather than leaving them hanging.
+        console.error(`Error listening to ${subscribeTo}:`, err.message);
+        setError(err.message || 'Failed to fetch data');
+        setData([]);
+        setLoading(false);
+        publishSnapshot([]);
+      }
+    );
+
+    return unsubscribe;
+  }, [subscribing, subscribeTo, subscribeToCollection, publishSnapshot]);
+
   const getData = useCallback(async () => {
+    if (subscribing) {
+      const latest = latestSnapshot.current;
+      if (latest !== undefined) {
+        return latest;
+      }
+      return new Promise<T[]>(resolve => {
+        snapshotWaiters.current.push(resolve);
+      });
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -72,7 +154,7 @@ export function useFirebaseData<T extends Record<string, any>>(
     } finally {
       setLoading(false);
     }
-  }, [options.collection, getCollection]);
+  }, [subscribing, options.collection, getCollection]);
 
   // Fetch data on mount -- unless this instance is write-only.
   useEffect(() => {
@@ -139,7 +221,9 @@ export function useFirebaseData<T extends Record<string, any>>(
                 (options.idField ? (newData as unknown as T)[options.idField] as string : crypto.randomUUID());
 
       await createDocument(options.collection, newData, id);
-      setData(prevData => [...prevData, { ...newData, id } as unknown as T]);
+      if (!subscribing) {
+        setData(prevData => [...prevData, { ...newData, id } as unknown as T]);
+      }
       return id;
     } catch (err) {
       // A taken id is the one failure whose own message is addressed to
@@ -154,18 +238,20 @@ export function useFirebaseData<T extends Record<string, any>>(
     } finally {
       setLoading(false);
     }
-  }, [options.collection, options.idField, createDocument]);
+  }, [subscribing, options.collection, options.idField, createDocument]);
 
   const updateData = useCallback(async (id: string, updatedData: Partial<T>) => {
     setLoading(true);
     setError(null);
     try {
       await updateDocumentWithAttribution(options.collection, id, updatedData);
-      setData(prevData =>
-        prevData.map(item =>
-          'id' in item && item.id === id ? { ...item, ...updatedData } : item
-        )
-      );
+      if (!subscribing) {
+        setData(prevData =>
+          prevData.map(item =>
+            'id' in item && item.id === id ? { ...item, ...updatedData } : item
+          )
+        );
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update data';
       setError(errorMessage);
@@ -173,14 +259,16 @@ export function useFirebaseData<T extends Record<string, any>>(
     } finally {
       setLoading(false);
     }
-  }, [options.collection, updateDocumentWithAttribution]);
+  }, [subscribing, options.collection, updateDocumentWithAttribution]);
 
   const deleteData = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
     try {
       await deleteDocument(options.collection, id);
-      setData(prevData => prevData.filter(item => 'id' in item && item.id !== id));
+      if (!subscribing) {
+        setData(prevData => prevData.filter(item => 'id' in item && item.id !== id));
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete data';
       setError(errorMessage);
@@ -188,7 +276,7 @@ export function useFirebaseData<T extends Record<string, any>>(
     } finally {
       setLoading(false);
     }
-  }, [options.collection, deleteDocument]);
+  }, [subscribing, options.collection, deleteDocument]);
 
   return {
     data,

@@ -25,7 +25,7 @@ export const formatLocationType = (type: LocationType): string => {
  * through.
  *
  * Locations take ramp stops 0, 1 and 2 and never reach the red. Every other
- * ranked scale ends there because a quest can fail, a rumour can be disproved
+ * ranked scale ends there because a quest can fail, a rumour can be false
  * and an NPC can die; a place you have merely heard of is only the least of
  * three degrees of familiarity.
  */

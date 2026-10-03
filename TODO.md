@@ -19,27 +19,22 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T077 | Home highlighted on every page but Home | S | open | Visible on every route; the nav's highlight is inverted for `/` |
 | medium | T076 | May the site use "D&D"? | M | needs investigation | Public site, no trademark notice anywhere; T075's rename waits on it |
-| medium | T032 | Performance remediation programme | L | open | 2.5–7.6 s to ready is the biggest felt slowness; direction decided 2026-10-02 (Firestore listeners), needs a plan |
-| medium | T056 | App-wide error registry; sign-in first | M | open | Shape decided 2026-10-02: `AREA-NN` codes in one `core/` registry |
+| medium | T032 | Performance remediation programme | L | in progress | 2.5–7.6 s to ready is the biggest felt slowness; plan drafted 2026-10-02, phases 1–2 landed, the rest waits on its review |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | List, reader and form; overlapping text, drawer won't touch-scroll |
 | medium | T061 | `test` check not required; test files unlinted | M | open | Every suite is gated in CI now, but branch protection must list the check; test-file lint to be ratcheted (decided 2026-10-02) |
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
 | medium | T037 | A group cannot be deleted | L | open | Decided 2026-10-02 to build it, plan first: members' data cannot be removed until it exists |
 | low | T017 | Batch actions for other entities | L | open | Convenience; must follow T032's write-amplification fix |
-| low | T018 | Remove unused sub-chapters field | S | open | Decided 2026-10-02 not to build it; dead field, plus a #017 tracker update |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
-| low | T039 | Docs point at the retired drift log | S | open | Decided 2026-10-02: fix colour-schema's 3 instructions, one note for the rest |
 | low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; decided 2026-10-02 to move to Vite, plan first |
 | low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T067 | Repo carries files nobody reads | M | open | Scoped 2026-10-02: delete uncited docs and dead code; TODO.md becomes "start here" |
 | low | T075 | Header crowded, text truncates | M | needs scoping | Name, logo and the <380px overflow; waits on T076 |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
-| nit | T008 | Hatch the rumour bar's false segment | S | open | Decided 2026-10-02; only the stacked bar is ambiguous |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -111,8 +106,8 @@ passed as data. That file did not exist; `15-6` wrote it, and its first run
 found a live instance the comment had been covering for. Claims about coverage
 are checkable — check them.
 
-**The tracker can describe an intention as if it were the code.** T008 said
-confirmed and disproved rumours "sit on the same ramp stop — correct", and the
+**The tracker can describe an intention as if it were the code.** The entry for
+the rumour bar's hatch said confirmed and disproved rumours "sit on the same ramp stop — correct", and the
 code had them two stops apart, with the disproved rumour in the red a failed
 quest wears. The comment above the map said the right thing too. Three
 documents agreed with each other and none of them agreed with the product.
@@ -122,25 +117,6 @@ documents agreed with each other and none of them agreed with the product.
 ## Bugs
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
-
-### T077 — Home is highlighted in the header on every page except Home
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-02
-
-On any other page the nav lights up both Home and that page's own item; on
-Home itself, Home is **not** lit. The highlight is inverted for `/`.
-
-- **Where**: `Navigation.tsx:108` and `:162` call `shouldHighlightPath(item.path)`
-  without `exact`, so `/` goes through `isParentPath`
-  (`shared/utils/navigation.ts:36`): `if (parentPath === '/') return
-  currentPath !== '/'`. Home is the only item with `path: '/'`
-  (`Navigation.tsx:19`).
-- **Catch**: `isParentPath` is doing what its own test pins
-  (`navigation.test.ts:55-58`, "'/' is parent only for non-root paths") — that
-  is a coherent rule for a path utility; the defect is the nav using it for
-  `/`. `GlobalActionButton.tsx:117` also calls it, but no action has
-  `sectionPath: '/'`. The nav's own tests stub `shouldHighlightPath` with an
-  exact match (`Navigation.test.tsx:26`), which is why none of them caught it.
-- **Source**: todo.txt, 2026-10-02
 
 ---
 
@@ -176,24 +152,6 @@ Select several rows, then delete or change status in one go.
   sequenced rather than run in parallel.
 - **Source**: todo.txt, 2026-09-16
 
-### T018 — Remove the unused sub-chapters field
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-02
-
-**Decided (maintainer, 2026-10-02): sub-chapters will not be built.** The field
-exists only in the type and the sample generator; no component renders, edits
-or orders one. Delete it rather than carry a half-feature.
-
-- **Where**: `subChapters?: Chapter[]` in
-  `src/features/storytelling/chapters/types.ts:15`, and its population in
-  `src/utils/__dev__/generators/contentGenerators/chapterGenerator.ts:57`.
-- **Catch**: bug **#017**'s test (`StoryContext.bugs.test.tsx:402,447-459`)
-  uses `subChapters` in a fixture and asserts reordering preserves it, alongside
-  summary data. Do not edit the test to pass: update #017 in
-  `docs/testing/bug-tracking/README.md` so it is about summary data only, and
-  change the test with that record, not ahead of it. Stored chapters may still
-  carry the field; `updateDoc` merges, so it is left alone, not destroyed.
-- **Source**: todo.txt, 2026-09-16; decided 2026-10-02
-
 ### T054 — Sign in with Discord
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-23
 
@@ -226,34 +184,6 @@ Let a user who wants it add a second step to sign-in.
   Check first that Firebase MFA applies to email-link sign-in at all -- it was
   not confirmed during T022.
 - **Source**: maintainer, 2026-09-23
-
-### T056 — An app-wide error registry, with sign-in as its first consumer
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-09-24
-
-**Decided (maintainer, 2026-10-02): an area-coded registry.** One module in
-`core/` maps each known failure to a stable code, `AREA-NN` (`AUTH-03`,
-`NOTE-12`, …). A user sees "Something went wrong (Ref: AUTH-03)", never raw
-Firebase text; the maintainer looks the code up in the registry. No logging
-backend, no per-incident ids. Codes are never reused or renumbered once shipped.
-Raw `functions/*` messages and code-less Errors get a code too (see *Catch*).
-
-An unrecognised sign-in failure shows only "Something went wrong signing you
-in. Please try again.", so a user report cannot be traced. Append a short
-reference, e.g. "(Ref: S14)", mapped from the Firebase error code, so the
-maintainer can look it up. No raw Firebase text or debug output facing users.
-PR #117's App Check failure (`auth/firebase-app-check-token-is-invalid`) hid
-behind the generic line and could not be read on iOS Safari.
-
-- **Where**: `core/services/firebase/auth/signInErrors.ts:94`, the fallback in
-  `describeSignInError`. The ref table belongs there too. Callers: `SignInForm`,
-  `EmailLinkPage`, `JoinAsNewUser`, `AccountCard`, all of which just show the string.
-- **Catch**: the same function also **passes raw messages through**
-  (`signInErrors.ts:91-93`): any `functions/*` error and any Error without a code
-  returns `error.message`. An uncaught server fault therefore shows the bare
-  word "internal". Per the decision, those get a code instead — but a callable
-  that throws a deliberate, user-facing `HttpsError` message (e.g. the invite
-  gate's) must keep showing it, so tell the two apart by code, not by prefix.
-- **Source**: maintainer, 2026-09-24 (PR #117 follow-up); shape decided 2026-10-02
 
 ### T057 — Sign in with a code from the email, instead of approving from the phone
 **Type** feature · **Size** M · **Status** blocked · **Verified** 2026-09-24
@@ -332,27 +262,6 @@ the same foundation.
   light card can carry accent controls. Verify in a browser, both themes, at
   phone width.
 - **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02
-
-### T008 — Hatch the "false" segment of the rumour summary bar
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-02 · `Q20`
-
-Confirmed and disproved rumours share `valence-0`, because both are fully known;
-in a row the strike cue (`cue-negated`) tells them apart. In the **stacked
-summary bar** above the directory, two adjacent same-hue segments merge into
-one band, and the legend swatch for "false" is identical to "confirmed".
-
-**Decided (maintainer, 2026-10-02): hatch the "false" segment and its legend
-swatch** — same hue, a diagonal stripe pattern on top. The bar's equivalent of
-the rows' strike: hue keeps meaning "fully known", the pattern carries "disproved".
-
-- **Where**: `RUMOR_STATUS_FILL` in
-  `features/campaign-entities/rumors/utils/rumor-presentation.ts` gives both
-  statuses `bg-valence-0`; the hatch is an addition for `false`, not a new hue.
-- **Catch**: no hardcoded colours — build the stripes from the valence token
-  (e.g. a `repeating-linear-gradient` over `currentColor`/a theme variable) and
-  check both themes. A test should assert the false segment and swatch carry
-  the hatch and confirmed's do not. Verify in a browser; jsdom has no CSS.
-- **Source**: drift log `Q20`; decided 2026-10-02
 
 ### T074 — Default pictures where none has been uploaded
 **Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-02
@@ -618,13 +527,13 @@ located by symbol: six on 2026-09-16 at `ebc0a28`, `PERF-02` on 2026-09-25,
 | `PERF-07` context switch refreshes then reloads | High | **Fixed.** The only `window.location.reload()` left in `src/` is `ErrorBoundary.tsx:62`. |
 | `PERF-10` all routes + full Lodash in one bundle | Medium | **Fixed** 2026-09-28 (T030). Zero `lodash` imports remain in `src/`, routes load on first visit (`main.js` 341 → 264 kB gzip), and `npm run check:bundle` holds `main.js` under a ceiling in CI. |
 | `PERF-04` notes loaded twice, unbounded | High | **Fixed** 2026-09-24 — `NoteContext` reads once, constrained to the active campaign, and reads nothing before one is selected. New note ids are random, so nothing needs the other campaigns' notes. |
-| `PERF-08` duplicate collection owners | Medium | **Fixed** 2026-09-22 — one fetch per collection, pinned by `shared/hooks/__tests__/provider-fetch-counts.test.tsx`. |
+| `PERF-08` duplicate collection owners | Medium | **Fixed** 2026-09-22 — one owner per collection; since 2026-10-02 one listener and no fetch, pinned by `shared/hooks/__tests__/provider-fetch-counts.test.tsx`. |
 | `PERF-15` duplicate `NavigationProvider` | Low | **Fixed** 2026-09-24 — `index.tsx` mounts no provider of its own; `App`'s is the only one. |
-| `PERF-02` auth restore waterfall | High | **Confirmed, mostly fixed** 2026-09-25 — see T032. The restore is 3 round trips deep instead of 5 + one per group. |
+| `PERF-02` auth restore waterfall | High | **Confirmed, mostly fixed** 2026-09-25 — see T032. The restore is 3 round trips deep instead of 5 + one per group, and since 2026-10-02 two identical group-profile reads in flight share one request. |
 | `PERF-11` location walk loops on a cycle | Medium | **Fixed** in Phase 15. `15-3` put the walk behind a visited set and a depth cap (`shared/hooks/useHighlightTarget`); `15-4` routed every other walk over the tree through `locations/utils/location-tree.ts`, with the same guards, and made the cycle tests hang the suite if a guard is removed. |
 | `PERF-03` every provider above the router | High | **Confirmed** 2026-09-28 — see T032. `App.tsx` still wraps `<Routes>` in the NPC, Location, Story, Rumor, Quest, Note, Usage and Search providers. `UsageProvider` calls `getUsageStatus` once per signed-in uid on every route, though only `NotePage`'s `UsageMeter` and `CampaignLinksPanel` read it. `SearchProvider` no longer fetches (it indexes the providers' copies since `PERF-08`), but it keeps all six collections subscribed. T030's lazy routes split the code, not the data. |
 | `PERF-05` chapter order costs O(N) serial round trips | High | **Confirmed** 2026-09-28 — see T032. In `StoryContext`, `createChapter`, `deleteChapter`, `reorderChapters` and `updateChapter`'s order-change path still shift each chapter with `setDocument` → verifying `getDocument` → delete inside an awaited `for` loop. `updateChapter` still awaits `refreshChapters()` before the write. `DocumentService.batchOperations` has one caller, `useFirestore`, and none of these paths. |
-| `PERF-06` writes re-read attribution and reload collections | High | **Confirmed** 2026-09-28 — see T032. `DocumentService.getCreationAttribution` / `getModificationAttribution` still `getDoc` the group profile on every attributed write. The NPC, Quest and Rumor contexts refetch their collection after every mutation, and `LocationContext` refetches from the event it dispatches. `RumorBatchActions` still awaits one update or delete per selected id, and the rumour combine/convert flows loop the same way. The page-level double refreshes are gone: `QuestDetailPage`'s `save` no longer follows `updateQuest` with `refreshQuests()`, and `NPCsPage` no longer passes `refreshNPCs` as `NPCDirectory`'s `onNPCUpdate` (the stance ladder's `updateNPCRelationship` already refreshes). `NPCsPage` still passes it as `onNPCDelete`, because the directory's Delete button never calls the provider's `deleteNPC`, so it removes the row locally and the refresh is all that follows |
+| `PERF-06` writes re-read attribution and reload collections | High | **Mostly fixed** 2026-10-02 — see T032. The five entity collections are listeners, so the refresh each context makes after a write reads nothing (`pages/__tests__/redundant-refreshes.test.tsx`), and attribution reuses a group profile read in the last five minutes. **Left**: `RumorBatchActions` still awaits one update or delete per selected id, and the rumour combine/convert flows loop the same way — each wants one batch. |
 | `PERF-09` Home refetches attribution profiles | Medium | **Confirmed** 2026-09-28 — see T032. `HomePage` (still `/`) re-runs its effect whenever quests, rumours, NPCs, locations or chapters change. It collects every `createdBy`/`modifiedBy` uid and `fetchAttributionUsernames` reads each group profile afresh: there is no cache across runs, and uids whose items already carry the `*Username`/`*CharacterName` fields that `determineAttributionActor` prefers are fetched anyway. |
 | `PERF-12` progress rewrites a growing document | Medium | **Fixed** 2026-09-30. Progress is one document per reader per campaign (2026-09-28), and each write is now a merging `setDocument` of only what changed: one chapter's entry, or the current chapter. A read that resolves after the reader has already made progress keeps it. |
 | `PERF-13` profile/admin mutations reload held data | Medium | **Confirmed** 2026-09-28 — see T032. Each `useUser` update awaits `refreshUserProfile`, which re-reads the global profile and re-runs `setActiveGroupContext` (group profile and campaign list, in parallel since `PERF-02`). The cited `CampaignManagementView` is no longer mounted, and the live `/admin/campaigns` (`AdminCampaignsPage`) no longer loads `getCampaigns` itself or reloads after a write: it renders the context's list, which `useCampaigns` refreshes after each create, update and delete, and shows the skeleton while the context is loading (`useCampaigns().loading`). What is left is the `useUser` half above |
@@ -636,79 +545,41 @@ it. Re-check a finding by symbol before acting on its line links: they are
 `b73232a` line numbers, and several files have moved or been deleted.
 
 ### T032 — Performance remediation programme
-**Type** debt · **Size** L · **Status** open · **Verified** 2026-09-16 ·
+**Type** debt · **Size** L · **Status** in progress · **Verified** 2026-10-02 ·
 `PERF-02` `PERF-03` `PERF-05` `PERF-06`
 
-The four architectural findings are one workstream, not four tickets. Together
-they are why an entity page took 2.5–7.6 seconds to become ready against a local
-emulator.
+The plan is [`docs/performance/t032-plan.md`](docs/performance/t032-plan.md),
+drafted 2026-10-02 and **not yet reviewed by the maintainer**. Its phases 1–2
+landed with it: the five entity collections are Firestore listeners (no
+collection read after a write, and another player's edits appear without a
+reload), and attribution reuses a cached group profile. What is left, by the
+plan's phases:
 
-- `PERF-02` — auth restore is a serial waterfall that reads the same global and
-  group profiles twice each, then fetches group documents one at a time.
-  **Confirmed and mostly fixed 2026-09-25**, after a phone took 15–30 s to
-  reach the dashboard. The restore on reload was 5 + one per group
-  round trips in a row, and each one waits on the App Check token. It is now
-  3: the profile, then the group documents together, then the group profile
-  and the campaign list together. `getGroups(ids)` reuses the profile's
-  group ids, `getCampaigns` asks for the list while its membership check is
-  in flight, `finishSignIn` writes `lastLogin` and reads the group profile
-  together, and the profile retry no longer waits after its last attempt.
-  **Still open**: the group profile is still requested twice (at the same
-  time now, and possibly coalesced by the SDK, which has not been verified),
-  there is still no single restore orchestrator, and nothing measures
-  request counts.
-- `PERF-03` — every domain provider sits above the router, so the Privacy page
-  fetches chapters, NPCs, locations, rumors, quests, progress, notes and usage.
-- `PERF-05` — chapter order is encoded in the document ID, so inserting at the
-  front of the 32-chapter sample costs ~**102** serialized Firestore operations.
-- `PERF-06` — attributed writes re-read the group profile, and most contexts then
-  reload the entire collection.
-- **Also in scope**: `PERF-09` (Home's attribution reads) and `PERF-13`
-  (profile reloads; the campaign-admin page's are gone) are the same two defects, attribution
-  read per use and a refetch after a known write, and want the same cache.
-- **Catch**: all four were **re-confirmed** 2026-09-28 against `ed477e6`
-  (the table above names today's sites). They also want a
-  shared answer (one restore orchestrator, one query cache, one owner per
-  collection), so picking them off individually will produce four partial
-  designs. The review's §"Suggested performance budgets" is the acceptance
-  criteria to write tests against; its §"Positive observations" names the
-  primitives that already exist, including `DocumentService.batchOperations`.
-- **Direction — decided (maintainer, 2026-10-02): Firestore listeners.** The
-  plan replaces fetch-then-refetch with `onSnapshot` per collection, mounted by
-  the routes that need it rather than above the router (`PERF-03`). The SDK's
-  latency compensation shows a write locally at once, so the refetch after a
-  known write goes away (`PERF-06`, `PERF-13`), and its cache does the caching.
-  Attribution profiles get one small in-memory cache (`PERF-06`, `PERF-09`). No
-  new dependency. The plan must still answer `PERF-05` (chapter order in the
-  document id) and the restore orchestrator (`PERF-02`) on their own terms.
+- **Phase 3** — notes move to the same listener.
+- **Phase 4, needs a decision** — the `refresh*()` calls after writes are now
+  free but still read like round trips. About 20 assertions pin "a refresh
+  follows a write"; removing the calls means rewriting those to the listener
+  requirement, which is the maintainer's call.
+- **Phase 5, `PERF-03`** — every provider still sits above the router and
+  listens on every signed-in route. Subscriptions should open only while
+  something reads the list; `SearchContext` only once the search opens;
+  `UsageProvider`'s callable only where the meter renders.
+- **Phase 6, `PERF-05`** — chapter order is still the document id, and
+  inserting at the front of 32 chapters is still ~**102** serial operations.
+  First one `writeBatch` per structural change; then, if the maintainer
+  accepts a data migration, stable ids plus an `order` field.
+- **Phase 7, `PERF-02`** — no test measures restore's request count yet; write
+  it, then decide whether a restore orchestrator is still worth building.
+- **Also left**: the rumour batch and combine/convert loops (`PERF-06`, see the
+  table); `PERF-09`, Home's `fetchAttributionUsernames`, still reads each
+  profile through `getGroupUserProfile`, which always reads — it should use the
+  cache, but `attribution-utils.test.ts` pins that exact call; and `PERF-13`,
+  each `useUser` update still awaits `refreshUserProfile`.
 - **Source**: performance review
 
 ---
 
 ## Documentation debt
-
-### T039 — Documents still tell an agent to write to the retired drift log
-**Type** docs · **Size** S · **Status** open · **Verified** 2026-09-17
-
-`docs/design/plan/03-drift-log.md` is closed and carries a note saying so
-(PR 15.0). Documents that point at it were not all correctable by that PR,
-because almost all of them are read-only to an implementing change.
-
-**Decided (maintainer, 2026-10-02): fix the three live instructions, and add one
-note for the rest.** The maintainer approves editing `colour-schema.md` for this.
-
-- **Fix**: `docs/design/colour-schema.md`'s three live references — §8's
-  "Carry these into `../plan/03-drift-log.md` as they are implemented", §9's
-  "Write the gap down in `../plan/03-drift-log.md` as a question", and §9's
-  read-only table row listing `plan/03-drift-log.md` as "**Yes — append only.**
-  This is where findings go." Point each at `TODO.md`.
-- **Note**: one line at the top of `docs/design/plan/` (its index or a short
-  README) saying the drift log is closed and new findings go to `TODO.md`.
-- **Leave alone**: the 54 references in 29 plan and handoff files (measured
-  2026-09-17). They are history and stay as citations. PR 15.0's gate that
-  every hit be a citation is retired with this decision.
-- **Source**: `docs/design/plan/15-entity-authoring/00-entity-authoring.md` §13;
-  decided 2026-10-02
 
 ### T067 — The repository carries files nobody reads
 **Type** docs · **Size** M · **Status** open · **Verified** 2026-09-24
@@ -731,7 +602,7 @@ The maintainer wants the repo cleaned up, doc files especially.
   `superpowers/` 21, and a few each in `architecture/`, `project/` and `performance/`.
   `CLAUDE.md` still names `docs/testing/post-test-coverage-roadmap.md` as
   "start here", and it was last updated 2026-08-28 (it still warns about deploy
-  steps TODO.md shows were done since). T039 is one symptom of the same drift.
+  steps TODO.md shows were done since).
 - **Scripts**: `scripts/copyFeatureFiles.ps1` lists pre-restructure paths;
   `scripts/manage-environment.ps1` is Docker-based and unused.
 - **Catch**: `docker/` is *not* dead. `CLAUDE.md` calls it unused, but CI builds

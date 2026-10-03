@@ -448,10 +448,11 @@ import {
       // Clear the session info from local storage
       localStorage.removeItem('sessionInfo');
       
-      // Clear group/campaign context
+      // Clear group/campaign context, and the profiles read under it
       this.setActiveGroup(null);
       this.setActiveCampaign(null);
-      
+      this.forgetGroupProfile();
+
       // Sign out from Firebase Auth
       await firebaseSignOut(this.auth);
     }

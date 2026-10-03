@@ -68,6 +68,13 @@ export interface NavigationProps {
 const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
   const { shouldHighlightPath, navigateToPage } = useNavigation();
 
+  /**
+   * Whether `path` is the section the user is in. Home must match exactly:
+   * as a prefix, `/` is the parent of every other route, so it would light
+   * up everywhere but on Home itself.
+   */
+  const isCurrentSection = (path: string) => shouldHighlightPath(path, path === '/');
+
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const moreContainerRef = useRef<HTMLDivElement>(null);
   const morePanelRef = useRef<HTMLDivElement>(null);
@@ -105,7 +112,7 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
               what `overflow-x-auto` was already asking for. */}
           <div className="flex items-center gap-1 overflow-x-auto">
             {navItems.map((item) => {
-              const isActive = shouldHighlightPath(item.path);
+              const isActive = isCurrentSection(item.path);
 
               return (
                 <Button
@@ -159,7 +166,7 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
    * button markup or the active-state logic.
    */
   const renderNavButton = (item: NavItem, extraClassName?: string) => {
-    const isActive = shouldHighlightPath(item.path);
+    const isActive = isCurrentSection(item.path);
 
     return (
       <button

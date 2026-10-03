@@ -182,7 +182,7 @@ the source; §5.4 exists because of it. That is the loop working.
 - ~~Locations, rumours and NPCs carry no valenced hue.~~ **Reversed after the
   phase, by the maintainer: D119 and D120.** All four directories now rank on
   one shared valence ramp. Quests and rumours run to the red end, because a
-  quest can fail and a rumour can be disproved; locations stop at stop 2, since
+  quest can fail and a rumour can turn out false; locations stop at stop 2, since
   a place merely heard of is the least of three degrees of familiarity and not
   a bad outcome. Struck rather than deleted — this line was the point of the
   phase when it was written, and what replaced it is a narrower claim, not an

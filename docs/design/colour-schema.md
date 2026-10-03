@@ -103,9 +103,10 @@ The failure this replaces was live in the application. Locations are tracked as
 known, explored and visited — a ladder of how much the party has learned — and
 they were painted with the quest outcome scale, so "visited" rendered green
 and the progress bar ran red to green as though exploring a place were a win
-condition. Rumours marked false rendered in the same red as a failed quest,
-which states that a disproven rumour is a failure; it is a *resolved* one, and
-a good outcome for the party.
+condition. (Rumours marked false were in the same red as a failed quest, and
+this section once argued that was wrong too. The maintainer decided the other
+way on 2026-10-03: a false rumour wears `valence.3`, struck through, as the
+table below says.)
 
 That bug had a root cause in the token names. `status.completed` existed, was
 green, and was available to borrow. So the scales are now named after meaning:
@@ -638,7 +639,9 @@ smuggled in alongside a destructive migration.
 
 ## 8. Decisions this schema records
 
-Carry these into `../plan/03-drift-log.md` as they are implemented.
+Track any of these still to be implemented in `../../TODO.md`, the project's
+one tracker. (`../plan/03-drift-log.md`, which used to collect them, closed on
+2026-09-16; it still holds the reasoning behind each `D` number.)
 
 - **D23 — Torchlight Forge chosen** over three alternatives (archival
   verdigris, indigo instrument, arcane violet). Warm limestone and iron with a
@@ -709,7 +712,7 @@ Carry these into `../plan/03-drift-log.md` as they are implemented.
   with a word, a failed bar is hatched, and a negated one is struck.
   Which three a three-state scale takes is a judgement about its domain, not
   about the ramp: quests and rumours run to the red because a quest can fail
-  and a rumour can be disproved, while **locations stop at stop 2**, since a
+  and a rumour can turn out false, while **locations stop at stop 2**, since a
   place merely heard of is only the least of three degrees of familiarity and
   painting it as a failure would repeat, quietly, the bug this phase opened by
   fixing.
@@ -804,7 +807,7 @@ It will be wrong sometimes; version 1 of this document was wrong by 52 leaves.
 The procedure is the same in every case:
 
 1. **Stop.** Do not patch around it, and do not extend the schema to cover it.
-2. **Write the gap down** in `../plan/03-drift-log.md` as a question: what the
+2. **Write the gap down** in `../../TODO.md` as a question: what the
    token needs, which primitive seems closest, and why the schema does not
    answer it.
 3. **Raise it** and wait for a corrected schema. Both files are regenerated
@@ -822,11 +825,12 @@ nothing catches it.
 | `design/colour-schema.md` | **No.** Never. |
 | `design/colour-schema.json` | **No.** Never. |
 | `design/design-language.md` | **No.** Principles are not an implementation concern. |
-| `plan/01-token-model.md` | No — propose in the drift log. |
-| `plan/06-colour-schema-rollout.md` | No — propose in the drift log. |
+| `plan/01-token-model.md` | No — propose it in `TODO.md`. |
+| `plan/06-colour-schema-rollout.md` | No — propose it in `TODO.md`. |
 | `plan/handoff/12-*.md` | No. A handoff that is wrong is reported, not rewritten. |
 | A handoff whose PR has **merged** | Never — by anyone. It is a historical record. New work gets a new PR. |
-| `plan/03-drift-log.md` | **Yes — append only.** This is where findings go. |
+| `TODO.md` (repository root) | **Yes.** This is where findings go. |
+| `plan/03-drift-log.md` | **No.** Closed 2026-09-16; it is a historical record. |
 
 ## 10. Learnings worth keeping
 
