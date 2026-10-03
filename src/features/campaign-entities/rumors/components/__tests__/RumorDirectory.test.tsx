@@ -92,6 +92,7 @@ const mockDeleteRumor = jest.fn().mockResolvedValue(undefined);
 const mockAddRumor = jest.fn().mockResolvedValue('new-rumor');
 const mockUpdateRumor = jest.fn().mockResolvedValue(undefined);
 const mockUpdateRumorStatus = jest.fn().mockResolvedValue(undefined);
+const mockUpdateRumorsStatus = jest.fn().mockResolvedValue(undefined);
 const mockCombineRumors = jest.fn().mockResolvedValue('new-rumor-id');
 const mockConvertToQuest = jest.fn().mockResolvedValue('quest-id');
 
@@ -116,6 +117,8 @@ function setupMocks(
     updateRumor: mockUpdateRumor,
     deleteRumor: mockDeleteRumor,
     updateRumorStatus: mockUpdateRumorStatus,
+    // The batch bar writes the whole selection at once (T032, PERF-06).
+    updateRumorsStatus: mockUpdateRumorsStatus,
     combineRumors: mockCombineRumors,
     convertToQuest: mockConvertToQuest,
   });
@@ -985,13 +988,13 @@ describe('RumorDirectory', () => {
       expect(screen.getByRole('button', { name: /^combine$/i })).toBeInTheDocument();
     });
 
-    test('running a batch status update calls updateRumorStatus and clears the selection on completion', async () => {
+    test('running a batch status update writes the selection once and clears the selection on completion', async () => {
       render(<RumorDirectory rumors={[r1, r2]} />);
       fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
       fireEvent.click(screen.getByRole('checkbox', { name: 'Select Dragon spotted' }));
 
       fireEvent.click(screen.getByRole('button', { name: /mark confirmed/i }));
-      expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r1', 'confirmed');
+      expect(mockUpdateRumorsStatus).toHaveBeenCalledWith(['r1'], 'confirmed');
 
       // onComplete exits selection mode and clears the selection, so the
       // checkboxes and the batch bar both disappear.

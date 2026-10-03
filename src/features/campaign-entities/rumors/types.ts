@@ -74,6 +74,10 @@ export interface RumorContextValue extends RumorContextState {
   addRumor: (rumor: DomainData<Rumor>) => Promise<string>;
   updateRumor: (rumor: Rumor) => Promise<void>;
   deleteRumor: (rumorId: string) => Promise<void>;
+  /** Set the status of several rumours in one atomic write (T032, `PERF-06`). */
+  updateRumorsStatus: (rumorIds: string[], status: RumorStatus) => Promise<void>;
+  /** Delete several rumours in one atomic write (T032, `PERF-06`). */
+  deleteRumors: (rumorIds: string[]) => Promise<void>;
   combineRumors: (rumorIds: string[], newRumor: Partial<Rumor>) => Promise<string>;
   convertToQuest: (rumorIds: string[], questData: any) => Promise<string>;
 }

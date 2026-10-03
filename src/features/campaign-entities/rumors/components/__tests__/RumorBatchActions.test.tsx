@@ -110,8 +110,9 @@ beforeEach(() => {
   mockConvertToQuest.mockResolvedValue('new-quest-id');
   (useRumors as jest.Mock).mockReturnValue({
     rumors: [makeRumor('r1'), makeRumor('r2'), makeRumor('r3')],
-    updateRumorStatus: mockUpdateRumorStatus,
-    deleteRumor: mockDeleteRumor,
+    // The batch actions write the whole selection at once (T032, PERF-06).
+    updateRumorsStatus: mockUpdateRumorStatus,
+    deleteRumors: mockDeleteRumor,
     combineRumors: mockCombineRumors,
     convertToQuest: mockConvertToQuest,
   });
@@ -155,7 +156,7 @@ describe('RumorBatchActions', () => {
   });
 
   describe('batch status updates', () => {
-    test('should call updateRumorStatus for each selected rumor when Mark Confirmed clicked', async () => {
+    test('should update every selected rumor in one call when Mark Confirmed clicked', async () => {
       const onComplete = jest.fn();
       render(
         <RumorBatchActions
@@ -165,10 +166,9 @@ describe('RumorBatchActions', () => {
       );
       fireEvent.click(screen.getByText('Mark Confirmed'));
       await waitFor(() => {
-        expect(mockUpdateRumorStatus).toHaveBeenCalledTimes(2);
+        expect(mockUpdateRumorStatus).toHaveBeenCalledTimes(1);
       });
-      expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r1', 'confirmed');
-      expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r2', 'confirmed');
+      expect(mockUpdateRumorStatus).toHaveBeenCalledWith(['r1', 'r2'], 'confirmed');
       expect(onComplete).toHaveBeenCalledTimes(1);
     });
 
@@ -176,7 +176,7 @@ describe('RumorBatchActions', () => {
       render(<RumorBatchActions selectedRumors={new Set(['r1'])} />);
       fireEvent.click(screen.getByText('Mark Unconfirmed'));
       await waitFor(() => {
-        expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r1', 'unconfirmed');
+        expect(mockUpdateRumorStatus).toHaveBeenCalledWith(['r1'], 'unconfirmed');
       });
     });
 
@@ -184,7 +184,7 @@ describe('RumorBatchActions', () => {
       render(<RumorBatchActions selectedRumors={new Set(['r1'])} />);
       fireEvent.click(screen.getByText('Mark False'));
       await waitFor(() => {
-        expect(mockUpdateRumorStatus).toHaveBeenCalledWith('r1', 'false');
+        expect(mockUpdateRumorStatus).toHaveBeenCalledWith(['r1'], 'false');
       });
     });
 
@@ -302,7 +302,7 @@ describe('RumorBatchActions', () => {
       expect(screen.queryByTestId('delete-dialog')).not.toBeInTheDocument();
     });
 
-    test('should call deleteRumor for each selected on confirm', async () => {
+    test('should delete every selected rumor in one call on confirm', async () => {
       const onComplete = jest.fn();
       render(
         <RumorBatchActions
@@ -313,10 +313,9 @@ describe('RumorBatchActions', () => {
       fireEvent.click(screen.getByText('Delete'));
       fireEvent.click(screen.getByText('confirm-delete'));
       await waitFor(() => {
-        expect(mockDeleteRumor).toHaveBeenCalledTimes(2);
+        expect(mockDeleteRumor).toHaveBeenCalledTimes(1);
       });
-      expect(mockDeleteRumor).toHaveBeenCalledWith('r1');
-      expect(mockDeleteRumor).toHaveBeenCalledWith('r2');
+      expect(mockDeleteRumor).toHaveBeenCalledWith(['r1', 'r2']);
       expect(onComplete).toHaveBeenCalledTimes(1);
     });
 

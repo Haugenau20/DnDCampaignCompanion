@@ -31,7 +31,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
   selectedRumors,
   onComplete
 }) => {
-  const { rumors, updateRumorStatus, deleteRumor, combineRumors, convertToQuest } = useRumors();
+  const { rumors, updateRumorsStatus, deleteRumors, combineRumors, convertToQuest } = useRumors();
   const { navigateToPage } = useNavigation();
   
   // Dialog state
@@ -51,9 +51,8 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
       setIsProcessing(true);
       setActionError(null);
       
-      for (const rumorId of selectedRumors) {
-        await updateRumorStatus(rumorId, status);
-      }
+      // One write for the whole selection (T032, PERF-06).
+      await updateRumorsStatus(selectedRumorIds, status);
       
       onComplete?.();
     } catch (err) {
@@ -75,9 +74,8 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
       setIsProcessing(true);
       setActionError(null);
       
-      for (const rumorId of selectedRumors) {
-        await deleteRumor(rumorId);
-      }
+      // One write for the whole selection (T032, PERF-06).
+      await deleteRumors(selectedRumorIds);
       
       setShowDeleteConfirmation(false);
       onComplete?.();

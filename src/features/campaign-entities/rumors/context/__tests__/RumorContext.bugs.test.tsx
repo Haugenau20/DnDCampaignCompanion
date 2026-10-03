@@ -19,6 +19,8 @@ import { Rumor, RumorStatus, RumorNote, SourceType } from '../../types';
 const mockUseAuth = jest.fn();
 const mockUseUser = jest.fn();
 const mockUseFirestore = jest.fn();
+/** One commit for every multi-rumour write (T032, PERF-06). */
+const mockBatchOperations = jest.fn().mockResolvedValue(undefined);
 const mockUseRumorData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
@@ -89,7 +91,7 @@ describe('RumorContext Bug Discovery Tests', () => {
       },
     });
 
-    mockUseFirestore.mockReturnValue({
+    mockUseFirestore.mockReturnValue({ batchOperations: mockBatchOperations,
       setDocument: mockSetDocument,
       createDocument: mockCreateDocument,
     });
@@ -573,17 +575,22 @@ describe('RumorContext Bug Discovery Tests', () => {
       expect(mockSetDocument).not.toHaveBeenCalled();
 
       // Should update rumor with conversion tracking
-      expect(mockUpdateData).toHaveBeenCalledWith(
-        'rumor-to-convert',
+      // Since T032 (PERF-06) the converted rumours are marked in one batch.
+      expect(mockBatchOperations).toHaveBeenCalledWith([
         expect.objectContaining({
-          convertedToQuestId: 'investigate-dragon-rumors',
-          notes: expect.arrayContaining([
-            expect.objectContaining({
-              content: 'Converted to quest: investigate-dragon-rumors'
-            })
-          ])
+          type: 'update',
+          collection: 'rumors',
+          id: 'rumor-to-convert',
+          data: expect.objectContaining({
+            convertedToQuestId: 'investigate-dragon-rumors',
+            notes: expect.arrayContaining([
+              expect.objectContaining({
+                content: 'Converted to quest: investigate-dragon-rumors'
+              })
+            ])
+          })
         })
-      );
+      ]);
 
       console.warn('BUG #014: Quest conversion may have user attribution issues');
     });
