@@ -3,6 +3,7 @@ import React from 'react';
 import { render, act, waitFor } from '@testing-library/react';
 import { NoteProvider, useNotes } from '../NoteContext';
 import { Note, ExtractedEntity, EntityType, NoteStatus } from '../../types';
+import { createFakeCollectionListener } from '@/test-utils/fake-collection-listener';
 
 // Mock Firebase dependencies (NOT the context being tested)
 const mockUseAuth = jest.fn();
@@ -32,9 +33,17 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate
 }));
 
+/*
+  The notes listener (T032). Its first snapshot comes from
+  `notesListener.firstSnapshot`, which a test resolves, rejects or holds the
+  way it once configured `getCollection`; the write fakes installed below
+  deliver every write to the open listener, as the SDK does.
+*/
+const notesListener = createFakeCollectionListener<Note>();
+
 // Mock DocumentService
 const mockDocumentService = {
-  getCollection: jest.fn(),
+  subscribeToCollection: notesListener.subscribe,
   createDocument: jest.fn(),
   updateDocument: jest.fn(),
   updateDocumentWithAttribution: jest.fn(),
@@ -100,8 +109,11 @@ describe('NoteContext Bug Tests', () => {
       }
     });
 
-    // Default empty collection
-    mockDocumentService.getCollection.mockResolvedValue([]);
+    // Default empty collection, and writes that reach the listener.
+    notesListener.reset();
+    mockDocumentService.createDocument.mockImplementation(notesListener.create);
+    mockDocumentService.updateDocumentWithAttribution.mockImplementation(notesListener.update);
+    mockDocumentService.deleteDocument.mockImplementation(notesListener.remove);
   });
 
   describe('User Attribution Requirements', () => {
@@ -243,7 +255,7 @@ describe('NoteContext Bug Tests', () => {
           modifiedByCharacterName: 'Test Character'
         }
       ];
-      mockDocumentService.getCollection.mockResolvedValue(existingNotes);
+      notesListener.firstSnapshot.mockResolvedValue(existingNotes);
 
       let capturedContext: any;
       render(
@@ -288,7 +300,7 @@ describe('NoteContext Bug Tests', () => {
           modifiedByCharacterName: null
         }
       ];
-      mockDocumentService.getCollection.mockResolvedValue(existingNotes);
+      notesListener.firstSnapshot.mockResolvedValue(existingNotes);
 
       let capturedContext: any;
       render(
@@ -347,7 +359,7 @@ describe('NoteContext Bug Tests', () => {
 
       // Both notes belong to another campaign, so the active campaign renders
       // an EMPTY list -- while note-1 and note-2 are nonetheless taken.
-      mockDocumentService.getCollection.mockResolvedValue([
+      notesListener.firstSnapshot.mockResolvedValue([
         noteInCampaign('note-1', 'other-campaign'),
         noteInCampaign('note-2', 'other-campaign')
       ]);
@@ -382,7 +394,7 @@ describe('NoteContext Bug Tests', () => {
       getUserName.mockReturnValue('Test User');
       getActiveCharacterName.mockReturnValue('Test Character');
 
-      mockDocumentService.getCollection.mockResolvedValue([
+      notesListener.firstSnapshot.mockResolvedValue([
         noteInCampaign('note-1', 'other-campaign')
       ]);
 
@@ -774,7 +786,7 @@ describe('NoteContext Bug Tests', () => {
   // later had to retract (#013, #014, #300, #021, #022).
   describe('Error Handling and State Management', () => {
     test('should reveal error handling in fetch operations', async () => {
-      mockDocumentService.getCollection.mockRejectedValue(new Error('Firebase connection failed'));
+      notesListener.firstSnapshot.mockRejectedValue(new Error('Firebase connection failed'));
 
       let capturedContext: any;
       render(

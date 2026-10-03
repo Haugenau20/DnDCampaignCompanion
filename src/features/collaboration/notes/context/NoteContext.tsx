@@ -1,5 +1,5 @@
 // src/features/collaboration/notes/context/NoteContext.tsx - Complete Fixed Version
-import React, { createContext, useContext, useCallback, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { Note, NoteContextValue, EntityType } from "../types";
 import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns, useUser } from "features/user-management";
@@ -18,8 +18,18 @@ const NoteContext = createContext<NoteContextValue | undefined>(undefined);
 export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({ 
   children 
 }) => {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
+  /**
+   * The active campaign's saved notes, as the listener last delivered them,
+   * tagged with the subscription they came from so a switch never shows the
+   * previous campaign's notes. `null` until the first snapshot.
+   */
+  const [stored, setStored] = useState<{ key: string; notes: Note[] } | null>(null);
+  /**
+   * Notes created here but not saved yet (`isUnsaved`). They exist only in
+   * this provider until their first save creates the document; from then on
+   * the listener's copy is the note.
+   */
+  const [drafts, setDrafts] = useState<Note[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
@@ -40,70 +50,71 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   const documentService = DocumentService.getInstance();
   const navigate = useNavigate();
 
-  /**
-   * Fetch notes from Firestore for the current user filtered by active campaign
-   */
-  const fetchNotes = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // No campaign, no notes -- and no read. The group resolves before the
-      // campaign does, so fetching on the group alone used to read the whole
-      // collection once for nothing and then again when the campaign arrived
-      // (T029).
-      if (!user?.uid || !activeGroupId || !activeCampaignId) {
-        setNotes([]);
-        return [];
-      }
-
-      // Notes live flat at groups/{groupId}/users/{userId}/notes, joined to a
-      // campaign by `campaignId`. Constrain the read to the active campaign so
-      // its cost follows that campaign, not every campaign the user has played.
-      const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
-      const fetchedData = await documentService.getCollection<Note>(
-        notesCollection,
-        [where("campaignId", "==", activeCampaignId)]
-      );
-
-      // The query already did this; kept so a note from another campaign can
-      // never reach the list whatever the read layer returns.
-      const filteredNotes = fetchedData.filter(note => note.campaignId === activeCampaignId);
-      
-      // Sort notes by updatedAt timestamp descending (most recent first)
-      const sortedNotes = filteredNotes.sort((a, b) => 
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      );
-      
-      setNotes(sortedNotes);
-      return sortedNotes;
-    } catch (err) {
-      console.error("Error fetching notes:", err);
-      setError("Failed to fetch notes");
-      setNotes([]);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.uid, activeGroupId, activeCampaignId, documentService]);
-
-  // Load notes when dependencies change
-  useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
+  // Notes live flat at groups/{groupId}/users/{userId}/notes, joined to a
+  // campaign by `campaignId`. No campaign, no listener: the group resolves
+  // before the campaign does, and listening on the group alone would read
+  // every campaign's notes for nothing (T029).
+  const notesCollection = user?.uid && activeGroupId
+    ? `groups/${activeGroupId}/users/${user.uid}/notes`
+    : null;
+  const subscriptionKey = notesCollection && activeCampaignId
+    ? `${notesCollection}?campaignId=${activeCampaignId}`
+    : null;
 
   /*
-    Switching campaign (or group, or user) must not leave the previous one's
-    notes on screen while the new ones load. `isLoading` below stops counting
-    once there is something to show, so the list is emptied the moment the
-    context it belongs to changes -- otherwise the window between the switch
-    and the fetch resolving would show one campaign's notes under another
-    campaign's name.
-
+    One listener on the active campaign's notes (T032). It delivers this
+    client's own saves and deletes before their promises resolve, and edits
+    made on another device, so nothing here re-reads the collection after a
+    write. Constrained to the campaign, so its cost follows that campaign, not
+    every campaign the user has played.
   */
   useEffect(() => {
-    setNotes([]);
+    if (!notesCollection || !activeCampaignId || !subscriptionKey) {
+      return;
+    }
+    setError(null);
+    return documentService.subscribeToCollection<Note>(
+      notesCollection,
+      (documents) => setStored({ key: subscriptionKey, notes: documents }),
+      (err) => {
+        console.error("Error listening to notes:", err);
+        setError("Failed to fetch notes");
+        setStored({ key: subscriptionKey, notes: [] });
+      },
+      [where("campaignId", "==", activeCampaignId)]
+    );
+  }, [notesCollection, activeCampaignId, subscriptionKey, documentService]);
+
+  /*
+    Switching campaign (or group, or user) drops the drafts made under the
+    previous one. Saved notes need no clearing: `notes` below only uses a
+    snapshot from the current subscription.
+  */
+  useEffect(() => {
+    setDrafts([]);
   }, [user?.uid, activeGroupId, activeCampaignId]);
+
+  /** Saved notes and drafts together, most recently updated first. */
+  const notes = useMemo(() => {
+    if (!subscriptionKey) {
+      return [];
+    }
+    const saved = stored?.key === subscriptionKey
+      // The query already did this; kept so a note from another campaign can
+      // never reach the list whatever the read layer returns.
+      ? stored.notes
+        .filter(note => note.campaignId === activeCampaignId)
+        // Everything the listener delivers has a document, by definition.
+        .map(note => ({ ...note, isUnsaved: false }))
+      : [];
+    const savedIds = new Set(saved.map(note => note.id));
+    return [...drafts.filter(draft => !savedIds.has(draft.id)), ...saved].sort((a, b) =>
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  }, [subscriptionKey, stored, drafts, activeCampaignId]);
+
+  /** Nothing delivered yet for the current subscription. */
+  const loading = subscriptionKey !== null && stored?.key !== subscriptionKey;
 
   /**
    * Ids of notes whose document this provider has created, recorded the moment
@@ -172,7 +183,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     };
     
     // Add to local state immediately for instant feedback
-    setNotes(prevNotes => [newNote, ...prevNotes]);
+    setDrafts(prevDrafts => [newNote, ...prevDrafts]);
 
     return noteId;
   }, [user, activeGroupId, activeCampaignId, generateNoteId, activeGroupUserProfile]);
@@ -181,7 +192,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
    * Save a note to Firebase (handles both new and existing notes)
    */
   const saveNote = useCallback(async (noteId: string, updates: Partial<Note> = {}) => {
-    if (!user?.uid || !activeGroupId) {
+    if (!notesCollection) {
       throw new Error("User not authenticated or no active group");
     }
 
@@ -196,8 +207,6 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       // Don't include isUnsaved in updates - we'll handle it separately
     };
 
-    const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
-
     if (isNotYetCreated(note)) {
       // First save - create document (exclude isUnsaved field entirely)
       const noteToSave = { ...note, ...updatedFields };
@@ -205,21 +214,15 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
 
       await documentService.createDocument(notesCollection, noteToSave, noteId);
       createdIdsRef.current.add(noteId);
+      // The listener already holds the created document; the draft is done.
+      setDrafts(prevDrafts => prevDrafts.filter(draft => draft.id !== noteId));
     } else {
       // Update existing document (don't send isUnsaved field). Attribution
-      // is now stamped by DocumentService itself, not hand-rolled here.
+      // is now stamped by DocumentService itself, not hand-rolled here. The
+      // listener carries the change back; nothing is patched locally.
       await documentService.updateDocumentWithAttribution(notesCollection, noteId, updatedFields);
     }
-    
-    // Update local state (remove isUnsaved flag)
-    setNotes(prevNotes => 
-      prevNotes.map(n => 
-        n.id === noteId 
-          ? { ...n, ...updatedFields, isUnsaved: false } 
-          : n
-      )
-    );
-  }, [user, activeGroupId, documentService, getNoteById, isNotYetCreated]);
+  }, [notesCollection, documentService, getNoteById, isNotYetCreated]);
 
   /**
    * Update a note (now calls saveNote internally for saved notes, updates locally for unsaved)
@@ -238,11 +241,11 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
         // Keep isUnsaved: true for local notes
       };
       
-      setNotes(prevNotes => 
-        prevNotes.map(n => 
-          n.id === noteId 
-            ? { ...n, ...updatedLocalFields }
-            : n
+      setDrafts(prevDrafts =>
+        prevDrafts.map(draft =>
+          draft.id === noteId
+            ? { ...draft, ...updatedLocalFields }
+            : draft
         )
       );
     } else {
@@ -478,29 +481,26 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
    * Delete a note
    */
   const deleteNote = useCallback(async (noteId: string) => {
-    if (!user?.uid || !activeGroupId) {
+    if (!notesCollection) {
       throw new Error("User not authenticated or no active group");
     }
 
-    // Delete document at the correct path
-    const notesCollection = `groups/${activeGroupId}/users/${user.uid}/notes`;
+    // A draft has no document to delete.
+    setDrafts(prevDrafts => prevDrafts.filter(draft => draft.id !== noteId));
     await documentService.deleteDocument(notesCollection, noteId);
-
-    // Refresh notes list
-    await fetchNotes();
-  }, [user?.uid, activeGroupId, documentService, fetchNotes]);
+  }, [notesCollection, documentService]);
   
   // Create context value
   const value: NoteContextValue = {
     notes,
     /*
-      `isLoading` means "there is nothing to show yet", never "a fetch is in
-      flight" (T044). Deleting a note ends in a refetch, and `NotesPage` and
-      `NotePage` gate on this value, so passing the raw flag swapped the page
-      for its skeleton on every delete. `useQuestData` carries the full
-      reasoning. The `isResolving` half (bug #1413) stays unconditional.
+      `isLoading` means "there is nothing to show yet", never "a read is in
+      flight" (T044): `NotesPage` and `NotePage` gate on it, and the raw flag
+      once swapped the page for its skeleton on every delete. See
+      `useCampaignCollection` for the full reasoning. The `isResolving` half
+      (bug #1413) stays unconditional.
     */
-    isLoading: (Boolean(loading) && notes.length === 0) || isResolving,
+    isLoading: (loading && notes.length === 0) || isResolving,
     error,
     getNoteById,
     createNote,
