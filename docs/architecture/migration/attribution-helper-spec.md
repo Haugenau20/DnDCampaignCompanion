@@ -15,7 +15,7 @@
 This spec turns the one salvageable idea from the abandoned `feature/form-context-separation`
 branch into a concrete, low-risk task, scoped to fit the feature-first migration already in
 flight. It implements the long-standing backlog item in
-`docs/architecture/migration/FormContextStandard.txt`.
+`docs/architecture/migration/FormContextStandard.txt` (deleted; `git show 06fc957:docs/architecture/migration/FormContextStandard.txt`).
 
 ---
 
@@ -247,6 +247,6 @@ await documentService.update(id, { ...changes, ...patch });
 
 On 2026-09-26 the maintainer chose to delete the original branch without an archive tag (T066).
 What was worth keeping is on `main`: this spec, `DomainData<T>`, and the field-rename outline in
-`database-field-alignment.md`. See `docs/testing/post-test-coverage-roadmap.md`
+`database-field-alignment.md`. See `docs/testing/post-test-coverage-roadmap.md` (deleted; `git show 06fc957:docs/testing/post-test-coverage-roadmap.md`)
 (§ "Salvage from feature/form-context-separation") for the original salvage decision this spec
 implements.

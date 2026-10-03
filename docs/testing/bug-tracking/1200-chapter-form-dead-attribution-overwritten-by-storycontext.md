@@ -89,7 +89,7 @@ Delete the attribution fields from both payloads in `ChapterForm` — `createdBy
 
 This requires a type check: `Omit<Chapter, 'id'>` on the create path may demand the attribution fields
 be present. If so, the create call should take a domain-only input type (the `DomainData<T>` split
-sketched in `docs/testing/post-test-coverage-roadmap.md`), or `StoryContext.createChapter` should
+sketched in `docs/testing/post-test-coverage-roadmap.md` (deleted; `git show 06fc957:docs/testing/post-test-coverage-roadmap.md`)), or `StoryContext.createChapter` should
 accept a narrower parameter type. Do not paper over it by keeping the dead fields.
 
 Deliberately **not** fixed as part of attribution-consolidation Wave A: that effort centralizes the

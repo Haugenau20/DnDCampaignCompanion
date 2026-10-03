@@ -17,6 +17,7 @@ import RumorRowEditor, {
 import { readDrafts, writeDrafts } from '../utils/draft-storage';
 import { useNavigation } from 'shared/hooks/useNavigation';
 import useHighlightTarget from 'shared/hooks/useHighlightTarget';
+import useSelection from 'shared/hooks/useSelection';
 import type { AttachKind } from 'shared/components/attach-tray/attachCandidates';
 import { Scroll } from 'lucide-react';
 import {
@@ -105,8 +106,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   const [statusFilter, setStatusFilter] = useState<RumorStatus | 'all'>('all');
   const [sourceFilter, setSourceFilter] = useState<SourceType | 'all'>('all');
   const [expandedRumorId, setExpandedRumorId] = useState<string | null>(null);
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedRumors, setSelectedRumors] = useState<Set<string>>(new Set());
+  const selection = useSelection();
   /** The rumour the composer just made, so its row opens with the caret in it. */
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
@@ -456,34 +456,6 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
     });
   };
 
-  // Handle rumor selection for batch actions
-  const handleSelectRumor = (rumorId: string, selected: boolean) => {
-    setSelectedRumors(prev => {
-      const newSet = new Set(prev);
-      if (selected) {
-        newSet.add(rumorId);
-      } else {
-        newSet.delete(rumorId);
-      }
-      return newSet;
-    });
-  };
-
-  // Handle batch selection toggle
-  const toggleSelectionMode = () => {
-    setSelectionMode(!selectionMode);
-    if (selectionMode) {
-      // Clear selections when exiting selection mode
-      setSelectedRumors(new Set());
-    }
-  };
-
-  // Handle batch actions completion
-  const handleBatchActionsComplete = () => {
-    setSelectionMode(false);
-    setSelectedRumors(new Set());
-  };
-
   if (isLoading) {
     return <RosterSkeleton label="Loading rumors" />;
   }
@@ -513,19 +485,19 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
         />
 
         <Button
-          variant={selectionMode ? 'primary' : 'outline'}
+          variant={selection.active ? 'primary' : 'outline'}
           size="sm"
-          onClick={toggleSelectionMode}
+          onClick={selection.toggleActive}
         >
-          {selectionMode ? 'Exit Selection' : 'Select Rumors'}
+          {selection.active ? 'Exit Selection' : 'Select Rumors'}
         </Button>
       </RosterFilterBar>
 
       {/* Batch actions bar — only visible in selection mode, once something is selected */}
-      {selectionMode && (
+      {selection.active && (
         <RumorBatchActions
-          selectedRumors={selectedRumors}
-          onComplete={handleBatchActionsComplete}
+          selectedRumors={selection.selected}
+          onComplete={selection.clear}
         />
       )}
 
@@ -539,7 +511,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
         middle of choosing which ones to combine is not a thing anyone is
         doing.
       */}
-      {!selectionMode && <RumorComposer onAdd={handleAdd} />}
+      {!selection.active && <RumorComposer onAdd={handleAdd} />}
 
       {/* Rumor roster by status */}
       {groupedRumors.length > 0 ? (
@@ -568,14 +540,14 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                   expanded={isExpanded}
                   toggleLabel={name}
                   onToggle={() => openRow(isExpanded ? null : rumor.id)}
-                  selected={selectedRumors.has(rumor.id)}
+                  selected={selection.selected.has(rumor.id)}
                   leadingControl={
-                    selectionMode ? (
+                    selection.active ? (
                       <input
                         type="checkbox"
                         aria-label={`Select ${name}`}
-                        checked={selectedRumors.has(rumor.id)}
-                        onChange={(e) => handleSelectRumor(rumor.id, e.target.checked)}
+                        checked={selection.selected.has(rumor.id)}
+                        onChange={(e) => selection.setSelected(rumor.id, e.target.checked)}
                       />
                     ) : undefined
                   }

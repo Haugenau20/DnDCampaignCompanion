@@ -75,6 +75,10 @@ export interface QuestContextValue extends QuestContextState {
   addQuest: (quest: DomainData<Quest>) => Promise<string>;
   updateQuest: (quest: Quest) => Promise<void>;
   deleteQuest: (questId: string) => Promise<void>;
+  /** Sets the status of several quests, committed as one batch. */
+  updateQuestsStatus: (questIds: string[], status: QuestStatus) => Promise<void>;
+  /** Deletes several quests, committed as one batch. */
+  deleteQuests: (questIds: string[]) => Promise<void>;
   markQuestCompleted: (questId: string, dateCompleted?: string) => Promise<void>;
   markQuestFailed: (questId: string) => Promise<void>;
   /**

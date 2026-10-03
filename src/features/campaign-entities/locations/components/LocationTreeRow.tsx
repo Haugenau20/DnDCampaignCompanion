@@ -33,6 +33,13 @@ export interface LocationTreeRowProps {
   summary?: React.ReactNode;
   /** The rows for what is inside, rendered after the summary. */
   children?: React.ReactNode;
+  /**
+   * A control before the twisty -- the batch actions' checkbox (T017). The
+   * same slot `RosterRow` has, so a selected place looks like a selected NPC.
+   */
+  leadingControl?: React.ReactNode;
+  /** Ticked in selection mode. */
+  selected?: boolean;
 }
 
 /**
@@ -72,6 +79,8 @@ export const LocationTreeRow: React.FC<LocationTreeRowProps> = ({
   questCount,
   summary,
   children,
+  leadingControl,
+  selected = false,
 }) => {
   const inside = [
     insideCount ? `${insideCount} inside` : undefined,
@@ -91,13 +100,17 @@ export const LocationTreeRow: React.FC<LocationTreeRowProps> = ({
       )}
     >
       <div
-        className="flex items-center gap-2 pr-3 min-h-[44px]"
+        // The tint goes on this line, not the wrapper: the wrapper also holds
+        // the rows inside this place, which are not selected with it.
+        className={clsx('flex items-center gap-2 pr-3 min-h-[44px]', selected && 'roster-row-selected')}
         // Logical indent continues past the cap; the visual one stops, so a
         // place nine levels down still has a name column to read (§6.1).
         style={{ paddingLeft: Math.min(depth, MAX_VISUAL_DEPTH) * INDENT_PX }}
       >
         {/* The rail. A hairline, not a box. */}
         <div className={clsx('self-stretch', depth > 0 && 'border-l card-border')} />
+
+        {leadingControl && <div className="flex items-center shrink-0">{leadingControl}</div>}
 
         {/*
           On every row, since every row opens. Whether anything is *inside*

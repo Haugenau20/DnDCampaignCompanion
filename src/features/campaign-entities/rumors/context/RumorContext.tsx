@@ -9,9 +9,7 @@ import { buildCreationAttribution, buildModificationAttribution } from 'core/att
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { rumorParagraph } from '../utils/rumor-title';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
-
-/** Firestore commits at most 500 writes in one batch. */
-const MAX_BATCH_WRITES = 500;
+import { MAX_BATCH_WRITES } from '../../shared/commitEntityWrites';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 

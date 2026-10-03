@@ -93,6 +93,10 @@ export interface NPCContextValue extends NPCContextState {
   addNPC: (npc: DomainData<NPC>) => Promise<string>;
   updateNPC: (npc: NPC) => Promise<void>;
   deleteNPC: (npcId: string) => Promise<void>;
+  /** Sets the status of several NPCs, committed as one batch. */
+  updateNPCsStatus: (npcIds: string[], status: NPCStatus) => Promise<void>;
+  /** Deletes several NPCs, committed as one batch. */
+  deleteNPCs: (npcIds: string[]) => Promise<void>;
   /**
    * Retry after a failed load: reopens the NPC listener if Firestore closed it
    * after an error (T032). Writes never need it -- the listener already

@@ -3,7 +3,7 @@
 *Started 2026-07-27 on `triage/phase4-bug-triage`, branched from `main` at `7cf0f02` (the merge of
 PR #19, which landed the Phase 3e `shared/`/`core/` pass).*
 
-Phase 4's brief, from `post-test-coverage-roadmap.md`, is to walk the open tracker: *"Many will look
+Phase 4's brief, from `post-test-coverage-roadmap.md` (deleted; `git show 06fc957:docs/testing/post-test-coverage-roadmap.md`), is to walk the open tracker: *"Many will look
 different (or be moot) under the new structure — re-file, close as obsolete, or fix, whichever
 fits."* This document records what that walk actually found, and the evidence for each verdict.
 

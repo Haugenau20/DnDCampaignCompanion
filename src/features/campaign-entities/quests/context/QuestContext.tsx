@@ -6,6 +6,8 @@ import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
+import { buildModificationAttribution } from 'core/attribution';
+import { commitEntityWrites } from '../../shared/commitEntityWrites';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { moveObjective } from '../utils/quest-presentation';
 import { Location } from '../../locations/types';
@@ -34,7 +36,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     autoFetch: false
   });
   const { user } = useAuth();
-  const { userProfile } = useUser();
+  const { userProfile, activeGroupUserProfile } = useUser();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
 
@@ -295,6 +297,49 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await deleteData(questId);
   }, [user, activeGroupId, activeCampaignId, deleteData]);
 
+  /**
+   * Sets the status of several quests in one batch (T017): one round trip, and
+   * all or nothing. Completing stamps `dateCompleted`, as `updateQuestStatus`
+   * does for one.
+   */
+  const updateQuestsStatus = useCallback(async (questIds: string[], status: QuestStatus) => {
+    if (!user || !userProfile) {
+      throw new Error('User must be authenticated to update quest status');
+    }
+
+    if (!activeGroupId || !activeCampaignId) {
+      throw new Error('Group and campaign context must be set to update quest status');
+    }
+
+    if (questIds.some(id => !getQuestById(id))) {
+      throw new Error('One or more quests not found');
+    }
+
+    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+    await commitEntityWrites<Quest>('quests', 'quests', questIds.map(id => ({
+      type: 'update' as const,
+      id,
+      data: {
+        status,
+        ...(status === 'completed' && { dateCompleted: modificationAttribution.dateModified }),
+        ...modificationAttribution
+      }
+    })));
+  }, [user, userProfile, activeGroupUserProfile, activeGroupId, activeCampaignId, getQuestById]);
+
+  /** Deletes several quests in one batch. */
+  const deleteQuests = useCallback(async (questIds: string[]) => {
+    if (!user) {
+      throw new Error('User must be authenticated to delete quests');
+    }
+
+    if (!activeGroupId || !activeCampaignId) {
+      throw new Error('Group and campaign context must be set to delete quests');
+    }
+
+    await commitEntityWrites<Quest>('quests', 'quests', questIds.map(id => ({ type: 'delete' as const, id })));
+  }, [user, activeGroupId, activeCampaignId]);
+
   // Mark quest as completed
   const markQuestCompleted = useCallback(async (questId: string, dateCompleted?: string) => {
     if (!user || !userProfile) {
@@ -374,6 +419,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     addQuest,
     updateQuest,
     deleteQuest,
+    updateQuestsStatus,
+    deleteQuests,
     markQuestCompleted,
     markQuestFailed,
     refreshQuests,

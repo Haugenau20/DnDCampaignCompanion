@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { NPC, NPCRelationship } from '../types';
+import { NPC, NPCRelationship, NPCStatus } from '../types';
 import { useLocations } from '../../locations/context/LocationContext';
 import { useNPCs } from '../context/NPCContext';
 import { resolveLocationName } from '../../locations/utils/location-display';
@@ -8,9 +8,11 @@ import Typography from '../../../../core/components/Typography';
 import { Plus } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
 import useHighlightTarget from 'shared/hooks/useHighlightTarget';
+import useSelection from 'shared/hooks/useSelection';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
+import EntityBatchActions, { type BatchStatusOption } from '../../shared/EntityBatchActions';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -111,6 +113,18 @@ const STANCE_OPTIONS: Array<{
   { value: 'unknown', label: 'Unknown' },
 ];
 
+/**
+ * The batch actions' statuses, best to worst as the status bar orders them.
+ * Plain words with no icon or hue: presence carries none here (`STATUS_TONE`),
+ * and a death is not an error.
+ */
+const BATCH_STATUSES: Array<BatchStatusOption<NPCStatus>> = [
+  { value: 'alive', label: 'Mark Alive' },
+  { value: 'unknown', label: 'Mark Unknown' },
+  { value: 'missing', label: 'Mark Missing' },
+  { value: 'deceased', label: 'Mark Deceased' },
+];
+
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   npcs: initialNpcs,
   isLoading = false,
@@ -124,9 +138,11 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all');
   const [expandedNpcId, setExpandedNpcId] = useState<string | null>(null);
   const { locations } = useLocations();
-  const { updateNPCRelationship, deleteNPC } = useNPCs();
+  const { updateNPCRelationship, deleteNPC, updateNPCsStatus, deleteNPCs } = useNPCs();
   /** The NPC whose Delete was pressed, awaiting confirmation. */
   const [confirmingDelete, setConfirmingDelete] = useState<NPC | null>(null);
+  /** Selection mode for the batch actions (T017). */
+  const selection = useSelection();
   const { navigateToPage, createPath } = useNavigation();
 
   const { getCurrentQueryParams } = useNavigation();
@@ -268,7 +284,28 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
           onChange={setRelationshipFilter}
           label="Filter by relationship"
         />
+
+        <Button
+          variant={selection.active ? 'primary' : 'outline'}
+          size="sm"
+          onClick={selection.toggleActive}
+        >
+          {selection.active ? 'Exit Selection' : 'Select NPCs'}
+        </Button>
       </RosterFilterBar>
+
+      {/* Batch actions -- only in selection mode, once something is ticked */}
+      {selection.active && (
+        <EntityBatchActions
+          selected={selection.selected}
+          noun={{ one: 'NPC', many: 'NPCs' }}
+          statuses={BATCH_STATUSES}
+          onStatus={updateNPCsStatus}
+          onDelete={deleteNPCs}
+          deleteConsequence="Their pages, notes and portraits go with them."
+          onComplete={selection.clear}
+        />
+      )}
 
       {/* NPC roster by location */}
       {groups.length > 0 ? (
@@ -298,6 +335,17 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                     expanded={isExpanded}
                     toggleLabel={npc.name}
                     onToggle={() => setExpandedNpcId(isExpanded ? null : npc.id)}
+                    selected={selection.selected.has(npc.id)}
+                    leadingControl={
+                      selection.active ? (
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${npc.name}`}
+                          checked={selection.selected.has(npc.id)}
+                          onChange={(e) => selection.setSelected(npc.id, e.target.checked)}
+                        />
+                      ) : undefined
+                    }
                     expandedContent={
                       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-7 pt-4">
                         <div className="flex flex-col gap-4">

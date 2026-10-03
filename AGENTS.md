@@ -92,13 +92,10 @@ lazy stand-ins, so importing the module is side-effect free and the
 belt-and-braces rather than load-bearing.
 
 **Key Documents** (note: `docs/backlog/` no longer exists — these moved):
-- `docs/testing/post-test-coverage-roadmap.md` — **start here**; the live status and execution order
-- `docs/architecture/migration/hybrid-feature-first-restructuring-strategy.md` — the original plan (not updated with progress)
-- `docs/architecture/migration/codebase-restructuring-analysis.md` - Architecture analysis and recommendations
+- `TODO.md` — **start here**; the backlog, its priorities and what is blocked on whom
 - `docs/architecture/migration/attribution-consolidation-findings.md` — a worked example of an audit whose predictions were wrong, and why
 - `docs/testing/bug-tracking/README.md` — live bug tracker
 - `docs/architecture/migration/deep-dive-feature-enhancements.md` - Advanced feature roadmap
-- `docs/architecture/migration/third-party-integration-analysis.md` - Integration opportunities
 
 ## Build Commands
 
@@ -111,11 +108,6 @@ belt-and-braces rather than load-bearing.
 - Stop / restart / status: `.\scripts\start-dev.ps1 -Action stop|restart|status` (`stop` exports
   emulator data to `firebase/emulator-data` first, and `start` re-imports it if present)
 - Generate sample data: `.\scripts\manage-dev-data.ps1 -Action generate`
-
-**`manage-environment.ps1` and `docker/docker-compose.*.yml` are Docker-based and appear to be
-unused.** This file previously documented them as *the* way to run the project, which cost real time
-during the 2026-07-28 session: a dev-server compile error was diagnosed against a container that was
-never running. Do not reach for them without checking with the maintainer first.
 
 #### If the dev server reports errors that `tsc` and `npm run build` do not
 
@@ -257,7 +249,7 @@ what the audit actually checked, and it held: zero cross-domain internals import
 the tree.
 
 ### Migration Status
-- **Phase**: Restructuring is **complete** (all four domains + the `shared`/`core` pass, Phase 3e). Post-migration bug triage (Phase 4) is **largely complete** — 54 of 61 tracker rows resolved as of 2026-07-28. See `docs/testing/post-test-coverage-roadmap.md` for what remains.
+- **Phase**: Restructuring is **complete** (all four domains + the `shared`/`core` pass, Phase 3e). Post-migration bug triage (Phase 4) is **largely complete** — 54 of 61 tracker rows resolved as of 2026-07-28. See `TODO.md` for what remains.
 - **Order**: user-management → storytelling → campaign-entities → collaboration. Deliberately sequential; each domain must be green before the next starts. Within collaboration, `notes` had to precede `entity-extraction` for the same reason — extraction imports notes' types and helpers.
 - **Per-domain exit criteria**: all tests pass except the documented bug markers, coverage on the migrated domain does not drop, no new bugs introduced by the move itself, and a `migration/<domain>-complete` tag on `main` at merge.
 - **Risk Level**: Low-Medium (incremental, with a behavioural test suite as the safety net)
@@ -304,7 +296,7 @@ real defect.
 4. **Data Integrity**: Referential consistency, concurrent modifications, error handling
 5. **Performance Testing**: Large dataset handling, search functionality, load times
 
-### Testing Priorities (See `docs/testing/methodology/test-design-strategy.md`)
+### Testing Priorities
 - **Priority 1**: Campaign entity CRUD operations and relationships
 - **Priority 2**: Note-taking and AI entity extraction workflows  
 - **Priority 3**: User management and group system functionality
@@ -344,7 +336,7 @@ real defect.
 - **Semantic Search**: AI-powered content discovery and plot consistency analysis
 - **Advanced Filtering**: Cross-entity search with relevance ranking
 
-#### Third-Party Integrations (See `docs/architecture/migration/third-party-integration-analysis.md`)
+#### Third-Party Integrations
 - **D&D 5e SRD API**: Official spells, monsters, equipment integration
 - **Discord API**: Campaign coordination via webhooks and bot commands  
 - **Enhanced AI Services**: Multiple AI models for diverse content generation

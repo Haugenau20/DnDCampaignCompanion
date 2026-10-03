@@ -241,20 +241,25 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
 
   return (
     <div className={clsx('relative w-full max-w-4xl mx-auto', className)}>
-      <Card className="card card-border p-6 md:p-8">
+      <Card className="card card-border p-4 sm:p-6 md:p-8">
+        {/* Below `md` the Edit button takes a line of its own: pinned in the
+            corner, it sat on top of the centred title. From `md` it is pinned,
+            and the title is inset by its width so a long one cannot run under it. */}
         {onEdit && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onEdit}
-            startIcon={<Edit size={16} />}
-            className="absolute top-4 right-4 md:top-6 md:right-6"
-          >
-            Edit
-          </Button>
+          <div className="flex justify-end mb-2 md:mb-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onEdit}
+              startIcon={<Edit size={16} />}
+              className="md:absolute md:top-6 md:right-6"
+            >
+              Edit
+            </Button>
+          </div>
         )}
 
-        <Typography variant="h3" className="mb-6 text-center">
+        <Typography variant="h3" className={clsx('mb-6 text-center', onEdit && 'md:px-24')}>
           {title}
         </Typography>
 
@@ -272,7 +277,10 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4 mt-6 pt-4 border-t divider">
+        {/* On a phone the chapter count takes its own line under the two
+            buttons, and Next drops the chapter's title -- with both, the row
+            ran off the screen. */}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mt-6 pt-4 border-t divider">
           <Button
             variant="ghost"
             size="sm"
@@ -283,7 +291,11 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
             Previous
           </Button>
 
-          <Typography variant="body-sm" color="secondary">
+          <Typography
+            variant="body-sm"
+            color="secondary"
+            className="order-last w-full text-center sm:order-none sm:w-auto"
+          >
             Chapter {chapterNumber} of {chapterCount}
           </Typography>
 
@@ -293,8 +305,12 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
             onClick={onNextChapter}
             disabled={!hasNextChapter}
             endIcon={<ChevronRight className="w-4 h-4" />}
+            // The title is hidden on a phone, not dropped: the accessible name
+            // keeps it at every width.
+            aria-label={nextChapterTitle ? `Next: ${nextChapterTitle}` : undefined}
           >
-            {nextChapterTitle ? `Next: ${nextChapterTitle}` : 'Next'}
+            Next
+            {nextChapterTitle && <span className="hidden sm:inline">: {nextChapterTitle}</span>}
           </Button>
         </div>
       </Card>

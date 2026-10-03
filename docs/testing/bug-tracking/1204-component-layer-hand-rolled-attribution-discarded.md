@@ -71,7 +71,7 @@ contexts already supply correct attribution on every path.
 This will require a type adjustment: several of these payloads are annotated with types that require
 the attribution fields (for example `Omit<Quest, 'id'>`), which is *why* the fields were added in the
 first place. The clean fix is a domain-data type that excludes system metadata — the `DomainData<T>` /
-`Entity<T>` split sketched in `docs/testing/post-test-coverage-roadmap.md` — so the compiler stops
+`Entity<T>` split sketched in `docs/testing/post-test-coverage-roadmap.md` (deleted; `git show 06fc957:docs/testing/post-test-coverage-roadmap.md`) — so the compiler stops
 demanding attribution from the presentation layer. Do not work around it by keeping the dead fields.
 
 Deliberately not fixed in Wave A, whose scope was limited to centralizing the mapping function

@@ -20,18 +20,18 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | medium | T076 | May the site use "D&D"? | M | needs investigation | Public site, no trademark notice anywhere; T075's rename waits on it |
-| medium | T026 | Mobile layout on story pages | M | needs investigation | List, reader and form; overlapping text, drawer won't touch-scroll |
-| medium | T061 | `test` check not required; test files unlinted | M | open | Every suite is gated in CI now, but branch protection must list the check; test-file lint to be ratcheted (decided 2026-10-02) |
+| medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
+| medium | T061 | `test` check not required | S | blocked | Every suite is gated in CI now, but a merge waits on none of it until branch protection lists the check |
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
 | medium | T037 | A group cannot be deleted | L | open | Decided 2026-10-02 to build it, plan first: members' data cannot be removed until it exists |
-| low | T017 | Batch actions for other entities | L | open | Convenience; the rumour batch actions are the pattern, one commit per action |
+| low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; decided 2026-10-02 to move to Vite, plan first |
 | low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
-| low | T067 | Repo carries files nobody reads | M | open | Scoped 2026-10-02: delete uncited docs and dead code; TODO.md becomes "start here" |
+| low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T075 | Header crowded, text truncates | M | needs scoping | Name, logo and the <380px overflow; waits on T076 |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 
@@ -121,30 +121,30 @@ Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
 ## Features and enhancements
 
-### T017 — Batch actions for stories, quests, NPCs and locations
-**Type** feature · **Size** L · **Status** open · **Verified** 2026-09-16
+### T017 — Batch delete for locations, and batch actions for chapters
+**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-03
 
-Select several rows, then delete or change status in one go.
+Rumours, NPCs and quests can be selected and then deleted or given a status in
+one go; locations can be given a status but not deleted; the chapter list has
+neither.
 
-- **Where**: rumors already have this, working, and it is the pattern to copy:
-  `src/features/campaign-entities/rumors/components/RumorBatchActions.tsx`
-  (delete, status change, combine, convert-to-quest) driven by selection state in
-  `RumorDirectory.tsx:85-86` (`selectionMode`, `selectedRumors: Set<string>`),
-  toggled at `:226` and rendered at `:281`.
-- **Touches**: the three other entity directories, the storytelling chapter list,
-  and whatever shared selection primitive comes out of generalising the rumor one.
-  `RumorBatchActions.test.tsx` is the test pattern to copy too.
-- **Catch**: the rumor implementation is rumor-shaped — its actions include
-  combine and convert-to-quest, which have no analogue elsewhere. Pull out the
-  selection mechanics (mode toggle, `Set` of ids, the action bar shell) and leave
-  the actions per-entity, rather than generalising the whole component. `RosterGroup`
-  already grew an opt-in `collapsible` / `defaultCollapsed` pair for the quest
-  directory — **grow that primitive again, do not fork it**.
-- **Each action is one write.** `RumorContext`'s `updateRumorsStatus` and
-  `deleteRumors` commit the whole selection as one batch (`batchOperations`),
-  and the list follows through its listener with no re-read. Give each entity
-  the same pair rather than looping its single-record methods: a loop is a
-  round trip per row, and a failure partway leaves half the selection changed.
+- **Locations -- decide first**: deleting one place asks what becomes of what
+  is inside it (`LocationChildStrategy`: delete the subtree, or move the
+  children up to the grandparent). A selection can mix parents, children and
+  unrelated places, so it needs one answer for all of them, and the
+  confirmation has to say how many places that removes in total. One batch is
+  atomic, so the descendants-first ordering `deleteLocation` keeps for its
+  sequential writes stops mattering. Delete pictures after the documents.
+- **The pattern to copy**: `shared/hooks/useSelection` (mode and ticked ids),
+  `campaign-entities/shared/EntityBatchActions.tsx` (the bar: statuses, an
+  optional Delete and its confirmation), and a batched pair on the context that
+  writes through `campaign-entities/shared/commitEntityWrites.ts`, as
+  `QuestContext`'s `updateQuestsStatus` and `deleteQuests` do. Stamp
+  modification attribution yourself: a batch writes its data as given.
+  `QuestDirectory.batch.test.tsx` is the test pattern.
+- **Chapters are different**: the list is `ChapterList.tsx`, not a roster, and
+  chapters have no status. Deleting several also has to keep the remaining
+  chapters' `order` contiguous, which `StoryContext.deleteChapter` does for one.
 - **Source**: todo.txt, 2026-09-16
 
 ### T054 — Sign in with Discord
@@ -335,38 +335,25 @@ WotC's Fan Content Policy and its required notice), has not been looked into.
 
 ## Tech debt and platform
 
-### T026 — Mobile layout on the story pages
-**Type** debt · **Size** M · **Status** needs investigation · **Verified** 2026-09-16
+### T026 — The reader's chapter drawer cannot be scrolled with a finger
+**Type** debt · **Size** S · **Status** needs investigation · **Verified** 2026-10-03
 
-Reported as "mobile layout issues on certain pages, story all around".
-**Narrowed by the maintainer (2026-10-02): most of it** — the chapter list, the
-reader and the chapter form all. Symptoms named: text overlapping text, text
-not fitting, and the chapter drawer in the reader **cannot be scrolled with a
-finger** when picking a chapter. Fix these on their own, not as part of a
-reader redesign (maintainer, 2026-10-02).
+Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
+(2026-10-03).
 
-- **How to check**: per `CLAUDE.md`, a maximized Chrome window silently ignores
-  resize below its minimum width. Render the app in a **320px-wide iframe**
-  instead, so media queries evaluate against the iframe's own viewport.
-- **Known before you start**: the header overflows horizontally below ~380px on
-  **every** route — logo and account block both sit at `min-width: auto` and
-  neither yields. If something overflows at 320px, check whether the offending
-  element is inside `header`/`footer` before blaming the story pages.
-  `AccountCard` was a confirmed instance of the same class of defect: fixed
-  2026-09-23 by stacking its rows below `sm`.
-- **One candidate found**: `src/pages/story/ChaptersPage.tsx:174` — a filter
-  input at `input flex-1 min-w-[200px]` sharing a row with sibling controls. It
-  cannot shrink below 200px, so a narrow row either wraps or pushes. Unconfirmed
-  visually.
-- **The drawer**: below `lg` the rail is a drawer, opened from the "Chapters"
-  button in `src/pages/story/StoryPage.tsx:182` and rendered by
-  `features/storytelling/stories/components/ChapterRail.tsx`. Touch scrolling
-  failing there smells of a scroll lock on the body or an `overflow` missing
-  on the drawer's list — check it on a real phone or touch emulation, not a
-  resized desktop window.
-- **Catch**: three pages, several symptoms. Render each at 320 and 375px and
-  list what breaks before sizing; the answer decides whether this stays M.
-- **Source**: todo.txt, 2026-09-16
+- **Where**: below `lg` the rail is a drawer, opened from the "Chapters" button
+  in `src/pages/story/StoryPage.tsx` and rendered by
+  `features/storytelling/stories/components/ChapterRail.tsx`.
+- **Measured in desktop Chrome, 320px iframe**: the drawer is viewport-high,
+  its list is a real scroll container (600px tall over 1,204px of rows), and
+  `elementFromPoint` finds the list's own rows across it: nothing covers it.
+  No code in `src/` registers touch handlers or sets `touch-action`. Its list
+  now has `overscroll-contain`, so reaching its end no longer scrolls the page
+  behind, which is the nearest thing to the report that could be checked.
+- **Next step**: on the phone it was seen on, note the browser, then open the
+  drawer on a chapter late in a long campaign and drag the list. A desktop
+  window cannot answer this: the browser agent has no touch input.
+- **Source**: todo.txt, 2026-09-16; narrowed 2026-10-02
 
 ---
 
@@ -412,28 +399,22 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
   `build/static/js/main.*.js`; a new bundler must keep it measuring the entry.
 - **Source**: todo.txt, 2026-09-24
 
-### T061 — The `test` check does not yet block a merge, and test files are unlinted
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-09-28
+### T061 — The `test` check does not yet block a merge
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-03
 
 `.github/workflows/test.yml` runs the type-check, `npm run lint` (app code,
-zero warnings), `npm run test:ci` (jest, 80% coverage floor) and, since
-2026-09-28, `firebase/functions`' build and emulator-backed suite (the
-`functions` job, through `npm --prefix firebase run test:functions`) and, since
-the same day, the production build and its entry-bundle ceiling (the `bundle`
-job) on every PR and before the merge-to-main deploy, which waits on all of
-it. Two things remain.
+zero warnings), `npm run lint:tests` (the test files, against a per-file
+baseline that may only go down), `npm run test:ci` (jest, 80% coverage floor),
+`firebase/functions`' build and emulator-backed suite (the `functions` job),
+and the production build with its entry-bundle ceiling (the `bundle` job), on
+every PR and before the merge-to-main deploy, which waits on all of it.
 
-- **Not in the repo**: the `test` check blocks a merge only once branch
-  protection on `main` lists it as required. That is a GitHub setting.
-- **Lint scope — decided (maintainer, 2026-10-02): ratchet it.** Test files
-  are excluded today and carry ~1,000 `react-app/jest` problems (mostly
-  `testing-library/*`) that nothing has ever enforced. Lint them in CI against
-  a committed baseline count that may only go down; files get fixed as they
-  are touched. A count that rises fails the job, and a count that falls should
-  lower the baseline in the same PR.
-  `firebase/functions`' own lint (~2,000 problems, mostly CRLF) is not a gate either.
+- **Blocked on the maintainer**: a PR can still be merged with any of those
+  red. The checks block a merge only once branch protection on `main` lists
+  them as required. That is a GitHub setting, not something the repo can hold.
+- `firebase/functions`' own lint (~2,000 problems, mostly CRLF) is not a gate.
 - **Source**: todo.txt, 2026-09-24; the jest, type-check and lint gates
-  landed 2026-09-26, the functions suite 2026-09-28
+  landed 2026-09-26, the functions suite 2026-09-28, test-file lint 2026-10-03
 
 ### T065 — The maintainer's global Firebase CLI is still 13.x
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-09-28
@@ -500,38 +481,24 @@ its own service account, read from the GitHub secret
   purpose. PR previews share production's functions and deploy none.
 - **Source**: maintainer, 2026-09-25; the deploy job 2026-09-28
 
----
+### T079 — Do old documents still lack `locationId`?
+**Type** debt · **Size** S · **Status** needs investigation · **Verified** 2026-10-03
 
-## Documentation debt
+NPCs and quests refer to a location by `locationId`. Documents written
+before that field existed carry only the free-text `location`, and still
+resolve through a legacy fallback (`resolveLocationName` and
+`referencesLocation` in `locations/utils/location-display.ts`). The field
+shipped without a migration (`d6d9847`): such a document gains an id the next
+time anyone edits it.
 
-### T067 — The repository carries files nobody reads
-**Type** docs · **Size** M · **Status** open · **Verified** 2026-09-24
-
-**Decided (maintainer, 2026-10-02)**:
-1. **Delete what nothing cites; keep what is cited, where it is.** A doc that
-   no code comment or live doc references is deleted (git history keeps it). A
-   cited handoff stays at its current path, so no reference breaks. Nothing is
-   moved to `docs/archive/`.
-2. **Dead scripts go too**: `scripts/copyFeatureFiles.ps1`, which lists
-   pre-restructure paths. (The dead admin views and `FloatingUsageIndicator`
-   were already deleted, 2026-10-01.)
-3. **`TODO.md` is the one "start here" file.** Point `CLAUDE.md` at it, fold
-   anything still live in `post-test-coverage-roadmap.md` into it, and delete
-   the roadmap (after checking what cites it).
-
-The maintainer wants the repo cleaned up, doc files especially.
-
-- **Measured**: 208 Markdown files under `docs/`: `testing/` 109, `design/` 59,
-  `superpowers/` 21, and a few each in `architecture/`, `project/` and `performance/`.
-  `CLAUDE.md` still names `docs/testing/post-test-coverage-roadmap.md` as
-  "start here", and it was last updated 2026-08-28 (it still warns about deploy
-  steps TODO.md shows were done since).
-- **Scripts**: `scripts/copyFeatureFiles.ps1` lists pre-restructure paths;
-  `scripts/manage-environment.ps1` is Docker-based and unused.
-- **Catch**: `docker/` is *not* dead. `CLAUDE.md` calls it unused, but CI builds
-  the frontend with `docker/Dockerfile.frontend.prod`. And many docs are phase
-  handoffs that code comments cite by name, so deleting one breaks references.
-- **Source**: todo.txt, 2026-09-24; scoped 2026-10-02
+- **Answer first**: how many documents **in production** still have no
+  `locationId`. Not the emulator: its imported data can be arbitrarily old.
+  `src/utils/__dev__/normalizeChapterDateModified.ts` is a working template
+  for an audit / migrate / revert pass.
+- **Then**: none left, and the fallback can go; some left, and either backfill
+  them or keep the fallback on purpose.
+- **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
+  was deleted
 
 ---
 

@@ -176,7 +176,9 @@ const StoryPage: React.FC = () => {
               onClose={() => setChaptersOpen(false)}
             />
 
-            <div className="flex-1 min-w-0 p-4">
+            {/* Padded only beside the rail: below `lg` the page's own gutters
+                already frame the reader, and a phone has no width to spare. */}
+            <div className="flex-1 min-w-0 lg:p-4">
               {/* Below `lg` the rail is a drawer, so it needs a trigger. Above it the
                   rail is always on screen and this button would open nothing. */}
               <div className="lg:hidden mb-4">

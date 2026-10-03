@@ -58,6 +58,11 @@ function spellCount(count: number): string {
  * background, larger title, inline progress bar) so the reader can find
  * where they left off at a glance; already-read chapters are muted so the
  * unread and in-progress rows are what actually draw the eye.
+ *
+ * On a phone the row has no room for all four columns: the title would be
+ * squeezed to a word per line. Below `sm` the read-state column goes (the
+ * action's label already says it -- Reread, Resume, Read) and the actions wrap
+ * onto a line of their own under the title.
  */
 const ChapterRowView: React.FC<{
   item: ChapterWithProgress;
@@ -71,21 +76,21 @@ const ChapterRowView: React.FC<{
   return (
     <div
       className={clsx(
-        'flex items-center gap-3 py-3 px-2 border-b card-border last:border-b-0',
+        'flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 py-3 px-2 border-b card-border last:border-b-0',
         'selectable-item cursor-pointer transition-colors',
         isCurrent && 'border-l-4 border-l-accent bg-accent'
       )}
       onClick={() => onChapterSelect(chapter.id)}
     >
       {/* Chapter number */}
-      <div className="w-11 shrink-0">
+      <div className="w-8 sm:w-11 shrink-0">
         <Typography variant="body-sm" color="secondary" centered>
           {chapter.order}
         </Typography>
       </div>
 
       {/* Title (+ summary, + inline progress when this is the current chapter) */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 basis-[calc(100%-2.75rem)] sm:basis-0">
         <Typography
           variant={isCurrent ? 'h4' : 'body'}
           className={clsx(isMuted && 'typography-muted')}
@@ -113,7 +118,7 @@ const ChapterRowView: React.FC<{
       </div>
 
       {/* Read state */}
-      <div className="w-24 shrink-0 flex items-center gap-1">
+      <div className="w-24 shrink-0 hidden sm:flex items-center gap-1">
         {state === 'read' && (
           <>
             <Check className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
@@ -129,7 +134,7 @@ const ChapterRowView: React.FC<{
           real <button> so it stays keyboard-reachable. stopPropagation keeps
           a click here from also firing the row's own onClick. */}
       <div
-        className="shrink-0 flex items-center gap-1"
+        className="shrink-0 flex items-center gap-1 ml-auto sm:ml-0"
         onClick={(event) => event.stopPropagation()}
       >
         <Button variant="ghost" size="sm" onClick={() => onChapterSelect(chapter.id)}>

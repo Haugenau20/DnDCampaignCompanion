@@ -1,37 +1,27 @@
 # Testing Documentation
 
 Entry point for testing-related documentation. For known bugs, see [`bug-tracking/README.md`](bug-tracking/README.md).
+What is left to do lives in [`../../TODO.md`](../../TODO.md).
 
 ## Layout
 
 ```
 testing/
-├── methodology/   # How we test: strategy, lessons learned, behavioral approach
-├── results/       # Outcome reports from completed testing phases
-├── summaries/     # Per-context testing summaries
-└── bug-tracking/  # Bug catalogue (legend + table) and individual bug reports
+├── methodology/                # Behavioural testing: lessons learned, patterns, anti-patterns
+├── phase4-triage-findings.md   # Phase 4's walk of the bug tracker (narrative)
+├── phase4-audit-worksheet.md   # The same, per bug, with quoted code
+└── bug-tracking/               # Bug catalogue (legend + table) and individual bug reports
 ```
 
 ## Where to start
 
-- **What to work on next (post-coverage)** → [`post-test-coverage-roadmap.md`](post-test-coverage-roadmap.md)
 - **Writing new tests** → [`methodology/testing-lessons-learned.md`](methodology/testing-lessons-learned.md)
-- **Pre-restructuring testing strategy** → [`methodology/testing-before-restructuring-guide.md`](methodology/testing-before-restructuring-guide.md)
-- **Test design patterns** → [`methodology/test-design-strategy.md`](methodology/test-design-strategy.md)
 - **Known bugs** → [`bug-tracking/README.md`](bug-tracking/README.md)
 
 ## Subdirectories
 
 ### `methodology/`
 - **`testing-lessons-learned.md`** — Behavioral testing methodology, patterns, anti-patterns, session-by-session lessons.
-- **`testing-before-restructuring-guide.md`** — Strategy for building test coverage before architectural restructuring.
-- **`test-design-strategy.md`** — Test design patterns and approaches.
-
-### `results/`
-Outcome reports for specific testing phases (e.g. Quest behavioral testing). Frozen at time of writing — treat as historical records, not status.
-
-### `summaries/`
-Per-context testing summaries (e.g. NoteContext). Frozen at time of writing.
 
 ### `bug-tracking/`
 Bug catalogue with status legend, categories, and a table of every filed bug. Also contains per-context behavioral testing summaries (NPC, Quest, Location, Rumor, Story) and a cross-context patterns analysis. See its own README for the full table.
@@ -46,7 +36,7 @@ npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="ComponentName\.tes
 npx jest --coverage --testTimeout=15000 --maxWorkers=2
 ```
 
-Tests live alongside the code they cover, in `__tests__/` subdirectories. Behavioral context tests are at `src/context/__tests__/behavioral/`.
+Tests live alongside the code they cover, in `__tests__/` subdirectories.
 
 ## Conventions
 

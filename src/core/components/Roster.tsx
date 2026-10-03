@@ -2,7 +2,7 @@
 import React from 'react';
 import Typography from './Typography';
 import Input from './Input';
-import { ChevronDown, ChevronRight, Search } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import clsx from 'clsx';
 import EntitySigil from './EntitySigil';
 
@@ -320,6 +320,44 @@ export const RosterFilterBar: React.FC<RosterFilterBarProps> = ({
     </div>
     {children}
   </div>
+);
+
+// ---------------------------------------------------------------------------
+// Batch bar
+// ---------------------------------------------------------------------------
+
+export interface RosterBatchBarProps {
+  /** What is selected, already worded: "3 rumors selected". */
+  label: React.ReactNode;
+  /** The actions, one small button each. Which actions exist is the directory's business. */
+  children: React.ReactNode;
+  /** Why the last action failed, shown under the bar; nothing when it did not. */
+  error?: string | null;
+}
+
+/**
+ * The bar a directory shows in selection mode, with the actions that apply to
+ * every ticked row (T017). Only the shell is shared: the rumour directory's
+ * actions include combine and convert-to-quest, which no other entity has, so
+ * each directory passes its own buttons. Selection state is
+ * `shared/hooks/useSelection`; the rows' checkboxes are `RosterRow`'s
+ * `leadingControl` and `selected`.
+ */
+export const RosterBatchBar: React.FC<RosterBatchBarProps> = ({ label, children, error }) => (
+  <>
+    <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-secondary">
+      <Typography variant="body-sm" className="font-medium">
+        {label}
+      </Typography>
+      <div className="flex flex-wrap gap-2 ml-auto">{children}</div>
+    </div>
+    {error && (
+      <div className="mt-2 p-2 rounded flex items-center gap-2 feedback-banner feedback-banner-error">
+        <AlertCircle size={18} className="feedback-error" />
+        <Typography color="error">{error}</Typography>
+      </div>
+    )}
+  </>
 );
 
 // ---------------------------------------------------------------------------

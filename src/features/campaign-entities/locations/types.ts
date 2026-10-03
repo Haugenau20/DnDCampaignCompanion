@@ -111,6 +111,8 @@ export interface LocationContextValue extends LocationContextState {
   updateLocation: (locationId: string, updatedLocation: Partial<Location>) => Promise<void>;
   updateLocationNote: (locationId: string, note: LocationNote) => Promise<void>;
   updateLocationStatus: (locationId: string, status: LocationStatus) => Promise<void>;
+  /** Sets the status of several locations, committed as one batch. */
+  updateLocationsStatus: (locationIds: string[], status: LocationStatus) => Promise<void>;
   /**
    * Move a location under a new parent, or to the top level with `undefined`.
    *
