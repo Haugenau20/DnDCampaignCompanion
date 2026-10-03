@@ -6,7 +6,7 @@ import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useAuth, useUser, useCampaigns, useGroups, useFirestore } from 'features/user-management';
 import firebaseServices from 'core/services/firebase';
-import { buildModificationAttribution } from 'core/attribution';
+import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
 
 interface StoryContextState {
   chapters: Chapter[];
@@ -38,6 +38,56 @@ interface StoryContextState {
  * are here because a sweep flagged "3 warn-and-return vs 4 throw in one file",
  * that is the finding, and this comment is the answer.
  */
+/**
+ * A chapter's identity and its place in the story are separate (T032,
+ * `PERF-05`). The id never changes once written; the place is the `order`
+ * field. Chapters written before this kept ids that encode their first
+ * position (`chapter-03`) -- those ids stay as they are, and simply stop
+ * meaning anything about order.
+ *
+ * That makes every structural change (insert, delete, move, renumber) a set
+ * of `order` updates committed as **one batch**: atomic, so no half-shifted
+ * story can be left behind, and one round trip instead of the old
+ * write-verify-delete per chapter (~102 serial operations to insert at the
+ * front of 32 chapters).
+ */
+type ChapterWrite = {
+  type: 'set' | 'update' | 'delete';
+  collection: 'chapters';
+  id: string;
+  data?: Record<string, unknown>;
+};
+
+/** Firestore commits at most 500 writes in one batch. */
+export const MAX_CHAPTER_WRITES = 500;
+
+/** Commits a structural change atomically, or refuses it whole. */
+const commitChapterWrites = async (writes: ChapterWrite[]): Promise<void> => {
+  if (writes.length === 0) return;
+  if (writes.length > MAX_CHAPTER_WRITES) {
+    throw new Error(
+      `This change would rewrite ${writes.length} chapters at once; one change can rewrite at most ${MAX_CHAPTER_WRITES}.`
+    );
+  }
+  await firebaseServices.document.batchOperations(writes);
+};
+
+/** Moves one chapter to a new place, changing nothing else about it. */
+const moveTo = (chapter: Chapter, order: number): ChapterWrite => ({
+  type: 'update',
+  collection: 'chapters',
+  id: chapter.id,
+  data: { order },
+});
+
+/**
+ * A new chapter's id: `chapter-` and a random suffix, the same shape notes use
+ * (T029). It never encodes order, and it cannot collide with an older
+ * `chapter-NN` id.
+ */
+const generateChapterId = (): string =>
+  `chapter-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
 interface StoryContextValue extends StoryContextState {
   /** Get a specific chapter by ID */
   getChapterById: (id: string) => Chapter | undefined;
@@ -101,10 +151,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   
   // `autoFetch: false` because nothing renders off this instance's `data`:
   // chapters come from `useChapterData()` above.
-  const {
-    updateData,
-    deleteData
-  } = useFirebaseData<Chapter>({ collection: 'chapters', autoFetch: false });
+  const { updateData } = useFirebaseData<Chapter>({ collection: 'chapters', autoFetch: false });
   
   const { user } = useAuth();
   const { activeGroupUserProfile } = useUser();
@@ -193,12 +240,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [progressCollection, progressId, getDocument]);
 
-  // Generate a consistent ID for a chapter based on its order
-  const generateChapterId = (order: number) => {
-    return `chapter-${order.toString().padStart(2, '0')}`;
-  };
-
-  // Get chapter by ID
+// Get chapter by ID
   const getChapterById = useCallback((id: string) => {
     return chapters.find(chapter => chapter.id === id);
   }, [chapters]);
@@ -362,159 +404,69 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       : 0;
   }, [storedProgress, chapters.length]);
 
-  // Update an existing chapter using the safe methodology
+  /**
+   * Update a chapter. A change of `order` moves it, and shifts every chapter
+   * between its old and new place by one to make room -- all in one batch.
+   */
   const updateChapter = useCallback(async (chapterId: string, updates: Partial<Chapter>) => {
     if (!user) {
       throw new Error('You must be signed in to update chapters');
     }
-  
+
     if (!hasRequiredContext) {
       throw new Error('No active group or campaign selected');
     }
-    
-    try {
-      // Get the chapter to update
-      const chapter = getChapterById(chapterId);
-      if (!chapter) {
-        throw new Error('Chapter not found');
-      }
-      
-      // First, handle the simple case - no order change
-      if (updates.order === undefined || updates.order === chapter.order) {
-        await updateData(chapterId, {
-          ...updates,
-          ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile })
-        });
-        return;
-      }
-      
-      const oldOrder = chapter.order;
-      const newOrder = updates.order;
-      
-      console.log(`Reordering chapter ${chapterId} from ${oldOrder} to ${newOrder}`);
-      
-      // Simple validation
-      if (newOrder < 1) {
-        throw new Error('Chapter order must be at least 1');
-      }
-      
-      // Determine which chapters will be affected
-      const min = Math.min(oldOrder, newOrder);
-      const max = Math.max(oldOrder, newOrder);
-      
-      const affectedChapters = chapters.filter(c => 
-        c.order >= min && c.order <= max
-      );
-      
-      console.log(`Affected chapters: ${affectedChapters.map(c => `${c.id} (${c.order})`).join(', ')}`);
-      
-      // Create a mapping of what each chapter's new order should be
-      const newOrderMap = new Map();
-      
-      // Start by assigning each affected chapter its current order
-      affectedChapters.forEach(c => {
-        newOrderMap.set(c.id, c.order);
-      });
-      
-      // Apply the reordering logic based on direction
-      if (oldOrder < newOrder) {
-        // Moving down (e.g., 32 -> 34): chapters in between shift down by 1
-        affectedChapters.forEach(c => {
-          if (c.id !== chapterId && c.order > oldOrder && c.order <= newOrder) {
-            newOrderMap.set(c.id, c.order - 1);
-          }
-        });
-      } else {
-        // Moving up (e.g., 34 -> 32): chapters in between shift up by 1
-        affectedChapters.forEach(c => {
-          if (c.id !== chapterId && c.order >= newOrder && c.order < oldOrder) {
-            newOrderMap.set(c.id, c.order + 1);
-          }
-        });
-      }
-      
-      // Set the moving chapter's new order
-      newOrderMap.set(chapterId, newOrder);
 
-      // Compute the modification attribution once for the chapter being moved
-      const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
-
-      // Create array of chapters with their new orders
-      const updatedChapters = affectedChapters.map(c => ({
-        ...c,
-        id: generateChapterId(newOrderMap.get(c.id)),
-        order: newOrderMap.get(c.id),
-        ...(c.id === chapterId ? modificationAttribution : {}),
-        // Add any other updates for the target chapter
-        ...(c.id === chapterId ? updates : {})
-      }));
-      
-      console.log(`New chapter order plan: ${updatedChapters.map(c => `${c.id} (${c.order})`).join(', ')}`);
-      
-      // Bug #017 fix: this used to delete every affected chapter BEFORE creating
-      // any of the replacements. If the create loop failed partway, the chapters
-      // already deleted above had no replacement and there was no rollback --
-      // permanent data loss. createChapter/deleteChapter/reorderChapters avoid
-      // this by creating-and-verifying the new position before deleting the old
-      // one; we match that here, adapted for one structural difference: a
-      // reorder permutes chapter IDs within the affected range (every "old" id
-      // in this batch is also one of the "new" ids, just carrying a different
-      // chapter's content) rather than freeing some ids and minting brand-new
-      // ones the way the chain shifts in createChapter/deleteChapter do. That
-      // means the naive per-chapter "create new position, then immediately
-      // delete this chapter's own old id" isn't safe here: the "old id" being
-      // vacated by one chapter's move is frequently the exact id another
-      // chapter in this same batch is about to be written to, so deleting it
-      // immediately can destroy a slot that hasn't received its replacement
-      // data yet if the batch fails on a later iteration. Instead:
-      //   1. Write and verify every chapter at its new position first. Nothing
-      //      is deleted while writes are still in flight, so if setDocument or
-      //      the verification throws partway through, this function rejects
-      //      before any deletion happens -- every pre-reorder chapter still has
-      //      a document (either its original one, or the correct new one).
-      //   2. Only afterwards, delete old documents whose id was NOT reused as
-      //      another chapter's new position in this batch. In practice a
-      //      reorder is a closed permutation of the same id range, so this
-      //      second loop is usually a no-op; it exists as a defensive cleanup
-      //      for ids that genuinely fall out of the affected range.
-      for (const updatedChapter of updatedChapters) {
-        console.log(`Creating chapter ${updatedChapter.id} (order ${updatedChapter.order})`);
-        // Re-key: this rewrites an EXISTING chapter under a new id (the id encodes
-        // order), spreading `...c` above so its original created* fields ride along
-        // untouched; modification attribution was already applied above only to the
-        // chapter the user actually moved. Do NOT switch this to createDocument —
-        // that stamps fresh creation attribution from whoever triggered the reorder,
-        // overwriting the true original author/date (this is exactly bug #1203).
-        await firebaseServices.document.setDocument('chapters', updatedChapter.id, updatedChapter);
-
-        // Verify it exists before this function ever considers deleting an old
-        // document, matching the create-and-verify-before-delete pattern used by
-        // createChapter/deleteChapter/reorderChapters.
-        const newExists = await firebaseServices.document.getDocument('chapters', updatedChapter.id);
-        if (!newExists) {
-          throw new Error(`Failed to move chapter to ${updatedChapter.id}`);
-        }
-      }
-
-      // Every replacement write above succeeded, so it is now safe to remove
-      // old documents -- but only the ones that were not themselves reused as
-      // another chapter's new position in this same batch.
-      const newChapterIds = new Set(updatedChapters.map(c => c.id));
-      for (const chapter of affectedChapters) {
-        if (!newChapterIds.has(chapter.id)) {
-          console.log(`Deleting vacated chapter ${chapter.id}`);
-          await deleteData(chapter.id);
-        }
-      }
-
-      console.log('Chapter order change completed successfully');
-    } catch (error) {
-      console.error('Failed to update chapter order:', error);
-      throw error;
+    const chapter = getChapterById(chapterId);
+    if (!chapter) {
+      throw new Error('Chapter not found');
     }
-  }, [updateData, chapters, getChapterById, user, activeGroupUserProfile, deleteData, hasRequiredContext]);
 
-  // Safer method for creating a new chapter with proper ordering
+    // The id is the document's, never a field to change.
+    const fields: Partial<Chapter> = { ...updates };
+    delete fields.id;
+
+    if (fields.order === undefined || fields.order === chapter.order) {
+      await updateData(chapterId, {
+        ...fields,
+        ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile })
+      });
+      return;
+    }
+
+    const oldOrder = chapter.order;
+    const newOrder = fields.order;
+    if (newOrder < 1) {
+      throw new Error('Chapter order must be at least 1');
+    }
+
+    // Moving later pulls the chapters it passes back by one; moving earlier
+    // pushes them on by one. Only `order` changes on them, so their created*
+    // and modified* fields stay exactly as their authors left them (#1203).
+    const passed = chapters.filter(c => c.id !== chapterId && (oldOrder < newOrder
+      ? c.order > oldOrder && c.order <= newOrder
+      : c.order >= newOrder && c.order < oldOrder));
+    const shift = oldOrder < newOrder ? -1 : 1;
+
+    await commitChapterWrites([
+      ...passed.map(c => moveTo(c, c.order + shift)),
+      {
+        type: 'update',
+        collection: 'chapters',
+        id: chapterId,
+        data: {
+          ...fields,
+          ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile })
+        }
+      }
+    ]);
+  }, [updateData, chapters, getChapterById, user, activeGroupUserProfile, hasRequiredContext]);
+
+  /**
+   * Create a chapter at `chapterData.order`, or after the last one. Inserting
+   * before existing chapters moves each of them on by one, in the same batch
+   * that writes the new chapter.
+   */
   const createChapter = useCallback(async (chapterData: DomainData<Chapter>) => {
     if (!user) {
       throw new Error('You must be signed in to create chapters');
@@ -524,90 +476,39 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('No active group or campaign selected');
     }
 
-    try {
-      const newOrder = chapterData.order ?? (chapters.length > 0
-        ? Math.max(...chapters.map(c => c.order)) + 1
-        : 1);
+    const newOrder = chapterData.order ?? (chapters.length > 0
+      ? Math.max(...chapters.map(c => c.order)) + 1
+      : 1);
 
-      // Simple validation - keep in sync with the identical guard in updateChapter
-      if (newOrder < 1) {
-        throw new Error('Chapter order must be at least 1');
-      }
-
-      console.log(`Creating new chapter with order ${newOrder}`);
-      
-      // If inserting into the middle, we need to shift chapters
-      const chaptersToShift = chapters
-        .filter(c => c.order >= newOrder)
-        .sort((a, b) => b.order - a.order); // Process in descending order
-      
-      // Shift existing chapters up to make room
-      for (const chapterToShift of chaptersToShift) {
-        const shiftedOrder = chapterToShift.order + 1;
-        const oldId = chapterToShift.id;
-        const newId = generateChapterId(shiftedOrder);
-        
-        console.log(`Shifting: ${oldId} (${chapterToShift.order}) -> ${newId} (${shiftedOrder})`);
-        
-        // Create the chapter at its new position
-        const updatedChapter = {
-          ...chapterToShift,
-          id: newId,
-          order: shiftedOrder
-        };
-
-        // Re-key: this is an EXISTING chapter being shifted to make room for the
-        // new one, not a new creation. `...chapterToShift` carries its original
-        // created*/modified* fields forward unchanged. Do NOT switch this to
-        // createDocument — that would stamp fresh creation attribution from
-        // whoever is creating the new chapter, overwriting this shifted chapter's
-        // true original author/date (bug #1203).
-        await firebaseServices.document.setDocument('chapters', newId, updatedChapter);
-
-        // Verify it exists before deleting the old one
-        const newExists = await firebaseServices.document.getDocument('chapters', newId);
-        if (!newExists) {
-          throw new Error(`Failed to shift chapter ${oldId} to ${newId}`);
-        }
-
-        // Delete the old chapter
-        await deleteData(oldId);
-      }
-
-      // Create consistent ID based on order
-      const chapterId = generateChapterId(newOrder);
-
-      // Prepare chapter data with consistent ID and order. Not a complete
-      // Chapter -- attribution is stamped by createDocument below, not supplied
-      // here. See DomainData's doc comment in core/types/common.ts.
-      const newChapter = {
-        ...chapterData,
-        id: chapterId,
-        order: newOrder
-      };
-
-      // Add chapter to Firebase via the attribution-aware create path. This is a
-      // genuine creation (a brand-new chapter, not a re-key of an existing one), so
-      // it is correct for createDocument to stamp created*/modified* attribution
-      // from the current user/live profile — unlike the re-key writes elsewhere in
-      // this file, which must never go through createDocument (see comments below).
-      await firebaseServices.document.createDocument('chapters', newChapter, chapterId);
-
-      // Verify it exists
-      const exists = await firebaseServices.document.getDocument('chapters', chapterId);
-      if (!exists) {
-        throw new Error('Failed to create new chapter');
-      }
-      
-      console.log('New chapter created successfully');
-      return chapterId;
-    } catch (error) {
-      console.error('Failed to create chapter:', error);
-      throw error;
+    // Keep in sync with the identical guard in updateChapter
+    if (newOrder < 1) {
+      throw new Error('Chapter order must be at least 1');
     }
-  }, [chapters, user, deleteData, hasRequiredContext]);
 
-  // Safer method for deleting a chapter
+    const chapterId = generateChapterId();
+
+    await commitChapterWrites([
+      ...chapters.filter(c => c.order >= newOrder).map(c => moveTo(c, c.order + 1)),
+      {
+        type: 'set',
+        collection: 'chapters',
+        id: chapterId,
+        // A genuine creation, so it carries creation attribution for the
+        // current user -- the same fields `createDocument` would stamp. The
+        // chapters moved above are not re-attributed (#1203).
+        data: {
+          ...chapterData,
+          id: chapterId,
+          order: newOrder,
+          ...buildCreationAttribution({ uid: user.uid, activeGroupUserProfile })
+        }
+      }
+    ]);
+
+    return chapterId;
+  }, [chapters, user, activeGroupUserProfile, hasRequiredContext]);
+
+  /** Delete a chapter, and move every later chapter back by one to close the gap. */
   const deleteChapter = useCallback(async (chapterId: string) => {
     if (!user) {
       throw new Error('You must be signed in to delete chapters');
@@ -617,64 +518,18 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('No active group or campaign selected');
     }
 
-    try {
-      const chapter = getChapterById(chapterId);
-      if (!chapter) {
-        throw new Error('Chapter not found');
-      }
-      
-      const deletedOrder = chapter.order;
-      console.log(`Deleting chapter with order ${deletedOrder}`);
-      
-      // Delete the chapter
-      await deleteData(chapterId);
-      
-      // Get chapters that need to be shifted down
-      const chaptersToShift = chapters
-        .filter(c => c.order > deletedOrder)
-        .sort((a, b) => a.order - b.order); // Process in ascending order
-      
-      // Shift all higher chapters down by one
-      for (const chapterToShift of chaptersToShift) {
-        const shiftedOrder = chapterToShift.order - 1;
-        const oldId = chapterToShift.id;
-        const newId = generateChapterId(shiftedOrder);
-        
-        console.log(`Shifting: ${oldId} (${chapterToShift.order}) -> ${newId} (${shiftedOrder})`);
-        
-        // Create the chapter at its new position
-        const updatedChapter = {
-          ...chapterToShift,
-          id: newId,
-          order: shiftedOrder
-        };
-
-        // Re-key: this is an EXISTING chapter being shifted down to close the gap
-        // left by the deletion, not a new creation. `...chapterToShift` carries its
-        // original created*/modified* fields forward unchanged. Do NOT switch this
-        // to createDocument — that would stamp fresh creation attribution from
-        // whoever triggered the delete, overwriting this chapter's true original
-        // author/date (bug #1203).
-        await firebaseServices.document.setDocument('chapters', newId, updatedChapter);
-
-        // Verify it exists before deleting the old one
-        const newExists = await firebaseServices.document.getDocument('chapters', newId);
-        if (!newExists) {
-          throw new Error(`Failed to shift chapter ${oldId} to ${newId}`);
-        }
-
-        // Delete the old chapter
-        await deleteData(oldId);
-      }
-
-      console.log('Chapter deleted successfully');
-    } catch (error) {
-      console.error('Failed to delete chapter:', error);
-      throw error;
+    const chapter = getChapterById(chapterId);
+    if (!chapter) {
+      throw new Error('Chapter not found');
     }
-  }, [deleteData, getChapterById, chapters, user, hasRequiredContext]);
 
-  // Reorder chapters to ensure consistent numbering
+    await commitChapterWrites([
+      { type: 'delete', collection: 'chapters', id: chapterId },
+      ...chapters.filter(c => c.order > chapter.order).map(c => moveTo(c, c.order - 1))
+    ]);
+  }, [getChapterById, chapters, user, hasRequiredContext]);
+
+  /** Renumber the chapters 1, 2, 3, ... in their current order, closing any gaps. */
   const reorderChapters = useCallback(async () => {
     if (!user) {
       throw new Error('You must be signed in to reorder chapters');
@@ -684,47 +539,14 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('No active group or campaign selected');
     }
 
-    try {
-      // Sort chapters by their current order
-      const sortedChapters = [...chapters].sort((a, b) => a.order - b.order);
-      
-      // Update all chapters with new consecutive order numbers and IDs
-      for (let i = 0; i < sortedChapters.length; i++) {
-        const chapter = sortedChapters[i];
-        const newOrder = i + 1;
-        
-        if (chapter.order !== newOrder) {
-          const newId = generateChapterId(newOrder);
-          
-          // Create updated chapter
-          const updatedChapter = {
-            ...chapter,
-            order: newOrder,
-            id: newId
-          };
-
-          // Re-key: this renumbers an EXISTING chapter to close gaps, not a new
-          // creation. `...chapter` carries its original created*/modified* fields
-          // forward unchanged. Do NOT switch this to createDocument — that would
-          // stamp fresh creation attribution from whoever triggered the renumbering,
-          // overwriting the chapter's true original author/date (bug #1203).
-          await firebaseServices.document.setDocument('chapters', newId, updatedChapter);
-          
-          // Verify it exists
-          const newExists = await firebaseServices.document.getDocument('chapters', newId);
-          if (!newExists) {
-            throw new Error(`Failed to reorder chapter ${chapter.id} to ${newId}`);
-          }
-          
-          // Delete the old document
-          await deleteData(chapter.id);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to reorder chapters:', error);
-      throw error;
-    }
-  }, [chapters, user, deleteData, hasRequiredContext]);
+    const sortedChapters = [...chapters].sort((a, b) => a.order - b.order);
+    await commitChapterWrites(
+      sortedChapters
+        .map((chapter, index) => ({ chapter, order: index + 1 }))
+        .filter(({ chapter, order }) => chapter.order !== order)
+        .map(({ chapter, order }) => moveTo(chapter, order))
+    );
+  }, [chapters, user, hasRequiredContext]);
 
   // `isLoading` means "there is nothing to show yet" (T044), so it is exactly
   // `useChapterData`'s `loading` -- which already stops counting a refetch
