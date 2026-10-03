@@ -10,6 +10,8 @@ import Typography from '../../../../core/components/Typography';
 import { useNavigation } from 'shared/hooks/useNavigation';
 import clsx from 'clsx';
 import useHighlightTarget from 'shared/hooks/useHighlightTarget';
+import useSelection from 'shared/hooks/useSelection';
+import EntityBatchActions, { type BatchStatusOption } from '../../shared/EntityBatchActions';
 import QuestRowSummary from './QuestRowSummary';
 import { Plus } from 'lucide-react';
 import {
@@ -96,11 +98,20 @@ const STATUS_COLOR: Record<QuestStatus, string> = {
  * directory, and a change to the roster shape is one edit in four sibling files
  * rather than three plus a page.
  */
+/** The batch actions' statuses, in the order of the status bar and the groups. */
+const BATCH_STATUSES: Array<BatchStatusOption<QuestStatus>> = [
+  { value: 'active', label: 'Mark Active' },
+  { value: 'completed', label: 'Mark Completed' },
+  { value: 'failed', label: 'Mark Failed' },
+];
+
 const QuestDirectory: React.FC<QuestDirectoryProps> = ({
   quests,
   isLoading = false,
 }) => {
-  const { updateQuest, updateQuestObjective } = useQuests();
+  const { updateQuest, updateQuestObjective, updateQuestsStatus, deleteQuests } = useQuests();
+  /** Selection mode for the batch actions (T017). */
+  const selection = useSelection();
   const { getNPCById } = useNPCs();
   const { locations } = useLocations();
   const { navigateToPage, getCurrentQueryParams } = useNavigation();
@@ -268,7 +279,28 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
             label="Filter by location"
           />
         )}
+
+        <Button
+          variant={selection.active ? 'primary' : 'outline'}
+          size="sm"
+          onClick={selection.toggleActive}
+        >
+          {selection.active ? 'Exit Selection' : 'Select Quests'}
+        </Button>
       </RosterFilterBar>
+
+      {/* Batch actions -- only in selection mode, once something is ticked */}
+      {selection.active && (
+        <EntityBatchActions
+          selected={selection.selected}
+          noun={{ one: 'quest', many: 'quests' }}
+          statuses={BATCH_STATUSES}
+          onStatus={updateQuestsStatus}
+          onDelete={deleteQuests}
+          deleteConsequence="Their objectives, leads and rewards go with them."
+          onComplete={selection.clear}
+        />
+      )}
 
       {/* Quest roster by status */}
       {groupedQuests.length > 0 ? (
@@ -300,6 +332,17 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                   expanded={isExpanded}
                   toggleLabel={quest.title}
                   onToggle={() => setExpandedQuestId(isExpanded ? null : quest.id)}
+                  selected={selection.selected.has(quest.id)}
+                  leadingControl={
+                    selection.active ? (
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${quest.title}`}
+                        checked={selection.selected.has(quest.id)}
+                        onChange={(e) => selection.setSelected(quest.id, e.target.checked)}
+                      />
+                    ) : undefined
+                  }
                   expandedContent={
                     <QuestRowSummary
                       quest={quest}

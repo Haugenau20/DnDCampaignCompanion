@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Location } from '../types';
+import { Location, LocationStatus } from '../types';
 import { useNPCs } from '../../npcs/context/NPCContext';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useLocations } from '../context/LocationContext';
@@ -30,7 +30,9 @@ import {
   parentIdOf,
   pathLabelOf,
 } from '../utils/location-tree';
-import { STATUS_ORDER } from '../utils/location-presentation';
+import { STATUS_ORDER, formatLocationStatus } from '../utils/location-presentation';
+import useSelection from 'shared/hooks/useSelection';
+import EntityBatchActions, { type BatchStatusOption } from '../../shared/EntityBatchActions';
 
 interface LocationDirectoryProps {
   locations: Location[];
@@ -79,6 +81,16 @@ const TYPE_FILTERS: RosterFilterOption[] = [
  * the page can now write a parent — so a tree render that does not terminate is
  * no longer a hypothetical (`PERF-11`, T033).
  */
+/**
+ * The batch actions' statuses, in the status bar's order. There is no batch
+ * Delete: deleting one place asks what becomes of what is inside it, and a
+ * selection has no single answer to that yet (T017).
+ */
+const BATCH_STATUSES: Array<BatchStatusOption<LocationStatus>> = STATUS_ORDER.map(({ key }) => ({
+  value: key,
+  label: `Mark ${formatLocationStatus(key)}`,
+}));
+
 const LocationDirectory: React.FC<LocationDirectoryProps> = ({
   locations,
   isLoading = false,
@@ -90,7 +102,12 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
 
   const { getNPCById } = useNPCs();
   const { getQuestById } = useQuests();
-  const { updateLocationStatus } = useLocations();
+  const { updateLocationStatus, updateLocationsStatus } = useLocations();
+  /** Selection mode for the batch actions (T017). */
+  const selection = useSelection();
+  // Unpacked for `renderRow`'s dependency list: calling a method on the object
+  // would make the whole (per-render) object a dependency.
+  const { active: selecting, selected: selectedIds, setSelected } = selection;
 
   // T023: this component used to mount a *fifth* `locations` loader of its own,
   // under a comment claiming real-time updates -- `getDocs` is not a
@@ -285,6 +302,17 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
           npcCount={location.connectedNPCs?.length ?? 0}
           questCount={location.relatedQuests?.length ?? 0}
           summary={expanded ? summaryFor(location) : undefined}
+          selected={selectedIds.has(location.id)}
+          leadingControl={
+            selecting ? (
+              <input
+                type="checkbox"
+                aria-label={`Select ${location.name}`}
+                checked={selectedIds.has(location.id)}
+                onChange={(e) => setSelected(location.id, e.target.checked)}
+              />
+            ) : undefined
+          }
         >
           {children.map((child) => renderRow(child, depth + 1, nextVisited))}
         </LocationTreeRow>
@@ -297,6 +325,9 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
       toggleExpansion,
       highlightedLocationId,
       summaryFor,
+      selecting,
+      selectedIds,
+      setSelected,
     ]
   );
 
@@ -349,7 +380,26 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
           onChange={setTypeFilter}
           label="Filter by location type"
         />
+
+        <Button
+          variant={selection.active ? 'primary' : 'outline'}
+          size="sm"
+          onClick={selection.toggleActive}
+        >
+          {selection.active ? 'Exit Selection' : 'Select Locations'}
+        </Button>
       </RosterFilterBar>
+
+      {/* Batch actions -- only in selection mode, once something is ticked */}
+      {selection.active && (
+        <EntityBatchActions
+          selected={selection.selected}
+          noun={{ one: 'location', many: 'locations' }}
+          statuses={BATCH_STATUSES}
+          onStatus={updateLocationsStatus}
+          onComplete={selection.clear}
+        />
+      )}
 
       {nothingToShow ? (
         locations.length > 0 ? (

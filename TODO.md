@@ -24,7 +24,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T061 | `test` check not required | S | blocked | Every suite is gated in CI now, but a merge waits on none of it until branch protection lists the check |
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
 | medium | T037 | A group cannot be deleted | L | open | Decided 2026-10-02 to build it, plan first: members' data cannot be removed until it exists |
-| low | T017 | Batch actions for quests, locations and chapters | M | open | Convenience; rumours and NPCs have them, and the shared pieces exist now |
+| low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
@@ -121,24 +121,27 @@ Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
 ## Features and enhancements
 
-### T017 — Batch actions for quests, locations and chapters
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-03
+### T017 — Batch delete for locations, and batch actions for chapters
+**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-03
 
-Select several rows, then delete or change status in one go. Rumours and NPCs
-have it; quests, locations and the chapter list do not.
+Rumours, NPCs and quests can be selected and then deleted or given a status in
+one go; locations can be given a status but not deleted; the chapter list has
+neither.
 
-- **The pattern, now shared**: `shared/hooks/useSelection` holds the mode toggle
-  and the set of ticked ids; `RosterBatchBar` (`core/components/Roster.tsx`) is
-  the bar's shell; `RosterRow` already takes `leadingControl` (the checkbox)
-  and `selected`. The actions stay per entity: `NPCBatchActions.tsx` is the
-  plain example to copy, `RumorBatchActions.tsx` the one with entity-only
-  actions (combine, convert to quest). `NPCDirectory.batch.test.tsx` is the
-  test pattern.
-- **Each action is one write.** Give each context a batched pair, as
-  `NPCContext`'s `updateNPCsStatus` and `deleteNPCs` do, through
-  `campaign-entities/shared/commitEntityWrites.ts`: one round trip, and all or
-  nothing. Stamp modification attribution yourself, since a batch writes its
-  data as given. Delete images after the documents, as `deleteNPCs` does.
+- **Locations -- decide first**: deleting one place asks what becomes of what
+  is inside it (`LocationChildStrategy`: delete the subtree, or move the
+  children up to the grandparent). A selection can mix parents, children and
+  unrelated places, so it needs one answer for all of them, and the
+  confirmation has to say how many places that removes in total. One batch is
+  atomic, so the descendants-first ordering `deleteLocation` keeps for its
+  sequential writes stops mattering. Delete pictures after the documents.
+- **The pattern to copy**: `shared/hooks/useSelection` (mode and ticked ids),
+  `campaign-entities/shared/EntityBatchActions.tsx` (the bar: statuses, an
+  optional Delete and its confirmation), and a batched pair on the context that
+  writes through `campaign-entities/shared/commitEntityWrites.ts`, as
+  `QuestContext`'s `updateQuestsStatus` and `deleteQuests` do. Stamp
+  modification attribution yourself: a batch writes its data as given.
+  `QuestDirectory.batch.test.tsx` is the test pattern.
 - **Chapters are different**: the list is `ChapterList.tsx`, not a roster, and
   chapters have no status. Deleting several also has to keep the remaining
   chapters' `order` contiguous, which `StoryContext.deleteChapter` does for one.

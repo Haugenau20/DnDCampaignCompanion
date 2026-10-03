@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { NPC, NPCRelationship } from '../types';
+import { NPC, NPCRelationship, NPCStatus } from '../types';
 import { useLocations } from '../../locations/context/LocationContext';
 import { useNPCs } from '../context/NPCContext';
 import { resolveLocationName } from '../../locations/utils/location-display';
@@ -12,7 +12,7 @@ import useSelection from 'shared/hooks/useSelection';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
-import NPCBatchActions from './NPCBatchActions';
+import EntityBatchActions, { type BatchStatusOption } from '../../shared/EntityBatchActions';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -113,6 +113,18 @@ const STANCE_OPTIONS: Array<{
   { value: 'unknown', label: 'Unknown' },
 ];
 
+/**
+ * The batch actions' statuses, best to worst as the status bar orders them.
+ * Plain words with no icon or hue: presence carries none here (`STATUS_TONE`),
+ * and a death is not an error.
+ */
+const BATCH_STATUSES: Array<BatchStatusOption<NPCStatus>> = [
+  { value: 'alive', label: 'Mark Alive' },
+  { value: 'unknown', label: 'Mark Unknown' },
+  { value: 'missing', label: 'Mark Missing' },
+  { value: 'deceased', label: 'Mark Deceased' },
+];
+
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   npcs: initialNpcs,
   isLoading = false,
@@ -126,7 +138,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all');
   const [expandedNpcId, setExpandedNpcId] = useState<string | null>(null);
   const { locations } = useLocations();
-  const { updateNPCRelationship, deleteNPC } = useNPCs();
+  const { updateNPCRelationship, deleteNPC, updateNPCsStatus, deleteNPCs } = useNPCs();
   /** The NPC whose Delete was pressed, awaiting confirmation. */
   const [confirmingDelete, setConfirmingDelete] = useState<NPC | null>(null);
   /** Selection mode for the batch actions (T017). */
@@ -284,7 +296,15 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
 
       {/* Batch actions -- only in selection mode, once something is ticked */}
       {selection.active && (
-        <NPCBatchActions selected={selection.selected} onComplete={selection.clear} />
+        <EntityBatchActions
+          selected={selection.selected}
+          noun={{ one: 'NPC', many: 'NPCs' }}
+          statuses={BATCH_STATUSES}
+          onStatus={updateNPCsStatus}
+          onDelete={deleteNPCs}
+          deleteConsequence="Their pages, notes and portraits go with them."
+          onComplete={selection.clear}
+        />
       )}
 
       {/* NPC roster by location */}

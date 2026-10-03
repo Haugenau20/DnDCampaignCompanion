@@ -8,6 +8,8 @@ import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { toNoteDate } from 'shared/utils/dateFormatter';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
+import { buildModificationAttribution } from 'core/attribution';
+import { commitEntityWrites } from '../../shared/commitEntityWrites';
 import { discardImage } from 'shared/hooks/useImageAttachment';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
@@ -27,7 +29,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const demand = useListenerDemand();
   const { locations, loading, error, refreshLocations, hasRequiredContext } = useLocationData({ enabled: demand.wanted });
   const { user } = useAuth();
-  const { userProfile } = useUser();
+  const { userProfile, activeGroupUserProfile } = useUser();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
   // `autoFetch: false` because nothing renders off this instance's `data`:
@@ -127,6 +129,28 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     await updateData(locationId, updatedLocation);
   }, [user, activeGroupId, activeCampaignId, getLocationById, updateData]);
+
+  /**
+   * Sets the status of several locations in one batch (T017): one round trip,
+   * and all or nothing. There is no batch delete: deleting one location asks
+   * what becomes of its children, and a selection has no single answer yet.
+   */
+  const updateLocationsStatus = useCallback(async (locationIds: string[], status: LocationStatus): Promise<void> => {
+    if (!user || !activeGroupId || !activeCampaignId) {
+      throw new Error('User must be authenticated and group/campaign context must be set to update location status');
+    }
+
+    if (locationIds.some(id => !getLocationById(id))) {
+      throw new Error('One or more locations not found');
+    }
+
+    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+    await commitEntityWrites<Location>('locations', 'locations', locationIds.map(id => ({
+      type: 'update' as const,
+      id,
+      data: { status, ...modificationAttribution }
+    })));
+  }, [user, activeGroupUserProfile, activeGroupId, activeCampaignId, getLocationById]);
 
   /**
    * Move a location under a new parent.
@@ -279,6 +303,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     moveLocation,
     updateLocationNote,
     updateLocationStatus,
+    updateLocationsStatus,
     deleteLocation,
     createLocation,
     refreshLocations,
