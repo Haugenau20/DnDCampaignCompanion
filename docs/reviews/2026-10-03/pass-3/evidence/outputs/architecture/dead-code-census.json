@@ -1,0 +1,227 @@
+{
+  "sourceMapFiles": 21,
+  "results": [
+    {
+      "file": "src/core/components/Chip.tsx",
+      "lines": 146,
+      "sourceMapEntries": [],
+      "symbolReferences": [
+        {
+          "file": "src/core/components/Chip.tsx",
+          "line": 11,
+          "text": "* They are deliberately not one component with a `mode` prop. `SelectableChip`"
+        },
+        {
+          "file": "src/core/components/Chip.tsx",
+          "line": 12,
+          "text": "* toggles and reports a pressed state; `RemovableChip` is a label with a delete"
+        },
+        {
+          "file": "src/core/components/Chip.tsx",
+          "line": 56,
+          "text": "export const SelectableChip: React.FC<SelectableChipProps> = ({"
+        },
+        {
+          "file": "src/core/components/Chip.tsx",
+          "line": 117,
+          "text": "export const RemovableChip: React.FC<RemovableChipProps> = ({"
+        },
+        {
+          "file": "src/core/components/Chip.tsx",
+          "line": 145,
+          "text": "export default SelectableChip;"
+        }
+      ]
+    },
+    {
+      "file": "src/core/config/buildConfig.ts",
+      "lines": 11,
+      "sourceMapEntries": [],
+      "symbolReferences": [
+        {
+          "file": "src/core/config/buildConfig.ts",
+          "line": 1,
+          "text": "// src/core/config/buildConfig.ts"
+        },
+        {
+          "file": "src/core/config/buildConfig.ts",
+          "line": 2,
+          "text": "const buildConfig = {"
+        },
+        {
+          "file": "src/core/config/buildConfig.ts",
+          "line": 10,
+          "text": "export type BuildConfig = typeof buildConfig;"
+        },
+        {
+          "file": "src/core/config/buildConfig.ts",
+          "line": 11,
+          "text": "export default buildConfig;"
+        }
+      ]
+    },
+    {
+      "file": "src/core/services/index.ts",
+      "lines": 2,
+      "sourceMapEntries": [],
+      "symbolReferences": []
+    },
+    {
+      "file": "src/features/collaboration/notes/utils/note-relationships.ts",
+      "lines": 137,
+      "sourceMapEntries": [],
+      "symbolReferences": [
+        {
+          "file": "src/features/collaboration/notes/utils/note-relationships.ts",
+          "line": 35,
+          "text": "export const linkNoteToEntity = async ("
+        },
+        {
+          "file": "src/features/collaboration/notes/utils/note-relationships.ts",
+          "line": 72,
+          "text": "export const unlinkNoteFromEntity = async ("
+        },
+        {
+          "file": "src/features/collaboration/notes/utils/note-relationships.ts",
+          "line": 107,
+          "text": "export const getEntitiesForNote = async (noteId: string): Promise<EntityReference[]> => {"
+        }
+      ]
+    },
+    {
+      "file": "src/pages/layouts/common/components/LoadingState.tsx",
+      "lines": 58,
+      "sourceMapEntries": [],
+      "symbolReferences": [
+        {
+          "file": "src/pages/layouts/common/components/LoadingState.tsx",
+          "line": 1,
+          "text": "// components/features/layouts/common/components/LoadingState.tsx"
+        },
+        {
+          "file": "src/pages/layouts/common/components/LoadingState.tsx",
+          "line": 17,
+          "text": "const LoadingState: React.FC<LoadingStateProps> = ({"
+        },
+        {
+          "file": "src/pages/layouts/common/components/LoadingState.tsx",
+          "line": 58,
+          "text": "export default LoadingState;"
+        },
+        {
+          "file": "src/pages/layouts/dashboard/sections/ActivityFeed.tsx",
+          "line": 77,
+          "text": "{/* LoadingState's `type=\"card\"` has no branch and silently falls through to a"
+        },
+        {
+          "file": "src/pages/profile/ProfilePage.tsx",
+          "line": 37,
+          "text": "* The skeleton is the gate's rather than `LoadingState`'s, which also means it"
+        }
+      ]
+    },
+    {
+      "file": "src/pages/layouts/common/utils/layoutUtils.ts",
+      "lines": 10,
+      "sourceMapEntries": [],
+      "symbolReferences": [
+        {
+          "file": "src/pages/layouts/common/utils/layoutUtils.ts",
+          "line": 6,
+          "text": "export const calculateCompletionPercentage = (objectives: {completed: boolean}[]): number => {"
+        }
+      ]
+    },
+    {
+      "file": "src/shared/components/attach-tray/useAttachTray.ts",
+      "lines": 52,
+      "sourceMapEntries": [],
+      "symbolReferences": [
+        {
+          "file": "src/shared/components/attach-tray/useAttachTray.ts",
+          "line": 24,
+          "text": "export function useAttachSet("
+        }
+      ]
+    },
+    {
+      "file": "src/features/collaboration/entity-extraction/hooks/useOpenAIExtractor.ts",
+      "lines": 49,
+      "sourceMapEntries": [],
+      "symbolReferences": [
+        {
+          "file": "src/features/collaboration/entity-extraction/hooks/useOpenAIExtractor.ts",
+          "line": 1,
+          "text": "// src/features/collaboration/entity-extraction/hooks/useOpenAIExtractor.ts"
+        },
+        {
+          "file": "src/features/collaboration/entity-extraction/hooks/useOpenAIExtractor.ts",
+          "line": 10,
+          "text": "export const useOpenAIExtractor = () => {"
+        },
+        {
+          "file": "src/features/collaboration/index.ts",
+          "line": 36,
+          "text": "export { useOpenAIExtractor } from './entity-extraction/hooks/useOpenAIExtractor';"
+        },
+        {
+          "file": "src/features/collaboration/index.ts",
+          "line": 56,
+          "text": "// / useOpenAIExtractor hooks and UsageContext, all already re-exported)."
+        }
+      ]
+    },
+    {
+      "file": "src/features/collaboration/entity-extraction/components/EntityExtractor.tsx",
+      "lines": 56,
+      "sourceMapEntries": [],
+      "symbolReferences": [
+        {
+          "file": "src/features/collaboration/entity-extraction/components/EntityExtractor.tsx",
+          "line": 1,
+          "text": "// src/features/collaboration/entity-extraction/components/EntityExtractor.tsx"
+        },
+        {
+          "file": "src/features/collaboration/entity-extraction/components/EntityExtractor.tsx",
+          "line": 36,
+          "text": "* consumers of `EntityExtractor` (and its props, `existingReferences` and"
+        },
+        {
+          "file": "src/features/collaboration/entity-extraction/components/EntityExtractor.tsx",
+          "line": 39,
+          "text": "const EntityExtractor: React.FC<EntityExtractorProps> = ({"
+        },
+        {
+          "file": "src/features/collaboration/entity-extraction/components/EntityExtractor.tsx",
+          "line": 55,
+          "text": "export default EntityExtractor;"
+        },
+        {
+          "file": "src/features/collaboration/index.ts",
+          "line": 19,
+          "text": "// the collaboration domain (e.g. EntityExtractor, pending its own migration)"
+        },
+        {
+          "file": "src/features/collaboration/index.ts",
+          "line": 38,
+          "text": "export { default as EntityExtractor } from './entity-extraction/components/EntityExtractor';"
+        },
+        {
+          "file": "src/features/collaboration/notes/components/NoteEditor.tsx",
+          "line": 84,
+          "text": "* `saveCurrentContent` still rejects directly so EntityExtractor can abort"
+        },
+        {
+          "file": "src/features/collaboration/notes/components/NoteReferences.tsx",
+          "line": 33,
+          "text": "* This function should be used by both NoteReferences and EntityExtractor"
+        },
+        {
+          "file": "src/features/collaboration/notes/utils/entity-matching.ts",
+          "line": 26,
+          "text": "* correct for the entity-vs-entity equality checks in EntityExtractor."
+        }
+      ]
+    }
+  ]
+}

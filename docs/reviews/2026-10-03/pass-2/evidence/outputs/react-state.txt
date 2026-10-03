@@ -1,0 +1,99 @@
+  console.warn
+    ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+
+      68 | }
+      69 | function renderNPC() {
+    > 70 |   return render(React.createElement(MemoryRouter, {initialEntries: ['/npcs/a']},
+         |          ^
+      71 |     React.createElement(NPCProvider, null,
+      72 |       React.createElement(NavControl),
+      73 |       React.createElement(Routes, null, React.createElement(Route, {path: '/npcs/:npcId', element: React.createElement(NPCDetailPage)})))));
+
+      at warn (node_modules/react-router/lib/deprecations.ts:9:13)
+      at warnOnce (node_modules/react-router/lib/deprecations.ts:14:3)
+      at logDeprecation (node_modules/react-router/lib/deprecations.ts:26:5)
+      at logV6DeprecationWarnings (node_modules/react-router/lib/components.tsx:257:25)
+      at commitHookEffectListMount (node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+      at commitPassiveMountOnFiber (node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+      at commitPassiveMountEffects_complete (node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+      at commitPassiveMountEffects_begin (node_modules/react-dom/cjs/react-dom.development.js:24917:7)
+      at commitPassiveMountEffects (node_modules/react-dom/cjs/react-dom.development.js:24905:3)
+      at flushPassiveEffectsImpl (node_modules/react-dom/cjs/react-dom.development.js:27078:3)
+      at flushPassiveEffects (node_modules/react-dom/cjs/react-dom.development.js:27023:14)
+      at node_modules/react-dom/cjs/react-dom.development.js:26808:9
+      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
+      at act (node_modules/react/cjs/react.development.js:2582:11)
+      at node_modules/@testing-library/react/dist/act-compat.js:47:25
+      at renderRoot (node_modules/@testing-library/react/dist/pure.js:188:26)
+      at render (node_modules/@testing-library/react/dist/pure.js:287:10)
+      at render (../../tmp/pass2-react/state-probes.test.js:70:10)
+      at Object.renderNPC (../../tmp/pass2-react/state-probes.test.js:84:3)
+
+  console.warn
+    ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+      68 | }
+      69 | function renderNPC() {
+    > 70 |   return render(React.createElement(MemoryRouter, {initialEntries: ['/npcs/a']},
+         |          ^
+      71 |     React.createElement(NPCProvider, null,
+      72 |       React.createElement(NavControl),
+      73 |       React.createElement(Routes, null, React.createElement(Route, {path: '/npcs/:npcId', element: React.createElement(NPCDetailPage)})))));
+
+      at warn (node_modules/react-router/lib/deprecations.ts:9:13)
+      at warnOnce (node_modules/react-router/lib/deprecations.ts:14:3)
+      at logDeprecation (node_modules/react-router/lib/deprecations.ts:37:5)
+      at logV6DeprecationWarnings (node_modules/react-router/lib/components.tsx:257:25)
+      at commitHookEffectListMount (node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+      at commitPassiveMountOnFiber (node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+      at commitPassiveMountEffects_complete (node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+      at commitPassiveMountEffects_begin (node_modules/react-dom/cjs/react-dom.development.js:24917:7)
+      at commitPassiveMountEffects (node_modules/react-dom/cjs/react-dom.development.js:24905:3)
+      at flushPassiveEffectsImpl (node_modules/react-dom/cjs/react-dom.development.js:27078:3)
+      at flushPassiveEffects (node_modules/react-dom/cjs/react-dom.development.js:27023:14)
+      at node_modules/react-dom/cjs/react-dom.development.js:26808:9
+      at flushActQueue (node_modules/react/cjs/react.development.js:2667:24)
+      at act (node_modules/react/cjs/react.development.js:2582:11)
+      at node_modules/@testing-library/react/dist/act-compat.js:47:25
+      at renderRoot (node_modules/@testing-library/react/dist/pure.js:188:26)
+      at render (node_modules/@testing-library/react/dist/pure.js:287:10)
+      at render (../../tmp/pass2-react/state-probes.test.js:70:10)
+      at Object.renderNPC (../../tmp/pass2-react/state-probes.test.js:84:3)
+
+  console.log
+    {"probe":"npc-route-draft-target","write":["npcs","b",{"id":"b","name":"Bob","description":"Draft belonging only to Alice","status":"alive","relationship":"friendly","connections":{"relatedNPCs":["a"],"relatedQuests":[],"affiliations":[]},"notes":[],"tags":[]}]}
+
+      at Object.log (../../tmp/pass2-react/state-probes.test.js:92:11)
+
+  console.log
+    {"probe":"write-error-gate","editorUnmounted":true,"readRetryInvoked":true,"errorStillBlocksPage":true}
+
+      at Object.log (../../tmp/pass2-react/state-probes.test.js:107:11)
+
+  console.log
+    {"probe":"note-unmount-before-debounce","writes":0,"reopenedContent":"Original content"}
+
+      at Object.log (../../tmp/pass2-react/state-probes.test.js:124:11)
+
+  console.log
+    {"probe":"note-autosave-error","rejectionLogged":true,"visibleFailureReason":false}
+
+      at Object.log (../../tmp/pass2-react/state-probes.test.js:138:11)
+
+  console.log
+    {"probe":"chapter-equal-body-identity","firstChapterMarkedComplete":true,"secondChapterMarkedComplete":false}
+
+      at Object.log (../../tmp/pass2-react/state-probes.test.js:159:11)
+
+PASS ../../tmp/pass2-react/state-probes.test.js (5.879 s)
+  ✓ REACT lead: actual reused NPC detail editor submits Alice draft to Bob (394 ms)
+  ✓ REACT lead: actual write error replaces ready page, destroys draft and Retry cannot clear writeError (178 ms)
+  ✓ REACT lead: typed note content disappears on All notes navigation before debounce (63 ms)
+  ✓ REACT lead: note autosave rejection logs only and does not surface reason (14 ms)
+  ✓ REACT lead: equal-content chapter switch neither restores B nor marks B complete (5 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        6.193 s
+Ran all test suites.

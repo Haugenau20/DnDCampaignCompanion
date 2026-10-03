@@ -1,0 +1,15 @@
+(node:3987) MetadataLookupWarning: received unexpected error = Request failed with status code 403 code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "project": "demo-security-identity-20261003",
+  "results": [
+    {
+      "check": "mutable identity redirects member removal",
+      "result": "unauthorized direct deletion denied; own userId rewrite allowed; row named attacker resolves actual helper to innocent; admin callable deletes innocent profile/private note and revokes innocent access; attacker remains"
+    },
+    {
+      "check": "direct group profile deletion conceals authorized member",
+      "result": "self-delete allowed; user absent from admin roster; global membership unchanged; campaign read and update still allowed"
+    }
+  ]
+}

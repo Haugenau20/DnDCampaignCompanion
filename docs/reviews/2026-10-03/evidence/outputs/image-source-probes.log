@@ -1,0 +1,4 @@
+{"probe":"staleNoteRestoresDeletedImage","result":{"persistedImage":"old","persistedObjectExists":false,"replacementBecameOrphan":true}}
+{"probe":"uploadFollowsSwitchedContext","result":{"savedInSelectedGroup":"g2","binaryGroup":"g1","originalStillReferencesDeletedObject":true}}
+{"probe":"sweepDeletesPendingSave","result":{"pendingFileDeleted":true,"eventualDocumentReferencesMissingObject":true}}
+{"probe":"exactUploadLimit","result":{"preparedBytes":2097152,"acceptedByPreparation":true,"acceptedByRulesSizePredicate":false}}

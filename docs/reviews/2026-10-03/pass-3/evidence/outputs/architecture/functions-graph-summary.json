@@ -1,0 +1,19 @@
+{
+  "files": 30,
+  "sourceEdges": 54,
+  "runtimeEdges": 54,
+  "sourceDynamic": 0,
+  "runtimeDynamic": 0,
+  "sourceSCC": [],
+  "runtimeSCC": [],
+  "runtimeWithDynamicSCC": [],
+  "policyEdges": [],
+  "unresolved": [],
+  "entryReach": 30,
+  "staticEntryReach": 30,
+  "notReachable": [],
+  "noIncoming": [
+    "firebase/functions/src/index.ts"
+  ],
+  "crossAreaRuntime": []
+}

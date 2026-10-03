@@ -1,0 +1,35 @@
+(node:4930) MetadataLookupWarning: received unexpected error = Request failed with status code 403 code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+Error deleting campaign: Error: Injected unavailable recursive deletion
+    at db.recursiveDelete (/tmp/code-review-campaign-failures.cjs:34:38)
+    at /workspace/DnDCampaignCompanion/firebase/functions/lib/campaignManagement/deleteCampaign.js:153:33
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async imageDeletionBeforeFailure (/tmp/code-review-campaign-failures.cjs:36:8)
+    at async /tmp/code-review-campaign-failures.cjs:64:12
+{"probe":"storage-cleanup-before-failed-document-delete","code":"internal","campaignExists":true,"npcExists":true,"fileExists":false,"brokenPersistedImageReference":true}
+Error deleting campaign: GoogleError: 1 delete failed. The last delete failed with:
+    at /workspace/DnDCampaignCompanion/firebase/functions/node_modules/@google-cloud/firestore/build/src/recursive-delete.js:205:29
+Caused by: Error
+    at RecursiveDelete.run (/workspace/DnDCampaignCompanion/firebase/functions/node_modules/@google-cloud/firestore/build/src/recursive-delete.js:105:27)
+    at Firestore._recursiveDelete (/workspace/DnDCampaignCompanion/firebase/functions/node_modules/@google-cloud/firestore/build/src/index.js:1144:24)
+    at Firestore.recursiveDelete (/workspace/DnDCampaignCompanion/firebase/functions/node_modules/@google-cloud/firestore/build/src/index.js:1131:21)
+    at db.recursiveDelete (/tmp/code-review-campaign-failures.cjs:52:23)
+    at /workspace/DnDCampaignCompanion/firebase/functions/lib/campaignManagement/deleteCampaign.js:153:33
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async partialRecursiveDelete (/tmp/code-review-campaign-failures.cjs:55:8)
+    at async /tmp/code-review-campaign-failures.cjs:64:47
+Caused by: Error: Injected terminal descendant delete failure
+    at writer.delete (/tmp/code-review-campaign-failures.cjs:50:38)
+    at RecursiveDelete.deleteRef (/workspace/DnDCampaignCompanion/firebase/functions/node_modules/@google-cloud/firestore/build/src/recursive-delete.js:228:20)
+    at Transform.<anonymous> (/workspace/DnDCampaignCompanion/firebase/functions/node_modules/@google-cloud/firestore/build/src/recursive-delete.js:131:18)
+    at Transform.emit (node:events:519:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+    at Readable.push (node:internal/streams/readable:393:5)
+    at node:internal/streams/transform:178:12
+    at Transform.transform [as _transform] (/workspace/DnDCampaignCompanion/firebase/functions/node_modules/@google-cloud/firestore/build/src/reference/query-util.js:112:17)
+    at Transform._write (node:internal/streams/transform:171:8) {
+  code: 7
+}
+{"probe":"root-deleted-despite-child-failure","first":"internal","campaignExists":false,"descendantExists":true,"retry":"not-found"}
+ALL CAMPAIGN PROBES COMPLETED

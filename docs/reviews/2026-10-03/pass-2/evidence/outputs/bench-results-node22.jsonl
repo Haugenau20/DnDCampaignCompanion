@@ -1,0 +1,21 @@
+{"node":"v22.23.3","method":"One warmup, median of three uninstrumented Node runs; not browser production timing"}
+{"case":"location-flat-search-and-status-filter","n":100,"searchIdReads":20000,"filterIdReads":10000,"searchMedianMs":2.82,"filterMedianMs":1.23}
+{"case":"location-flat-search-and-status-filter","n":500,"searchIdReads":500000,"filterIdReads":250000,"searchMedianMs":38.89,"filterMedianMs":22.08}
+{"case":"location-flat-search-and-status-filter","n":1000,"searchIdReads":2000000,"filterIdReads":1000000,"searchMedianMs":158.88,"filterMedianMs":76.46}
+{"case":"location-flat-search-and-status-filter","n":2000,"searchIdReads":8000000,"filterIdReads":4000000,"searchMedianMs":641.69,"filterMedianMs":320.25}
+{"case":"saga-single-paragraph-pagination","words":1000,"inputBytes":6899,"pages":4,"splitCalls":762,"splitInputCharacters":682723,"medianMs":5.84}
+{"case":"saga-single-paragraph-pagination","words":5000,"inputBytes":34499,"pages":20,"splitCalls":4810,"splitInputCharacters":4562419,"medianMs":30.89}
+{"case":"saga-single-paragraph-pagination","words":10000,"inputBytes":68999,"pages":40,"splitCalls":9870,"splitInputCharacters":10033039,"medianMs":69.13}
+{"case":"saga-single-paragraph-pagination","words":20000,"inputBytes":137999,"pages":80,"splitCalls":19990,"splitInputCharacters":23044279,"medianMs":165.2}
+{"case":"saga-single-paragraph-pagination","words":50000,"inputBytes":344999,"pages":200,"splitCalls":50350,"splitInputCharacters":78637999,"medianMs":633.16}
+{"case":"search","n":100,"query":"  ","inputCharacters":120000,"results":0,"medianMs":0}
+{"case":"search","n":100,"query":"dungeon","inputCharacters":120000,"results":5,"medianMs":1.1}
+{"case":"search","n":100,"query":"missing term","inputCharacters":120000,"results":0,"medianMs":0.07}
+{"case":"search","n":1000,"query":"  ","inputCharacters":1200000,"results":0,"medianMs":0}
+{"case":"search","n":1000,"query":"dungeon","inputCharacters":1200000,"results":5,"medianMs":8.28}
+{"case":"search","n":1000,"query":"missing term","inputCharacters":1200000,"results":0,"medianMs":0.48}
+{"case":"search","n":5000,"query":"  ","inputCharacters":6000000,"results":0,"medianMs":0}
+{"case":"search","n":5000,"query":"dungeon","inputCharacters":6000000,"results":5,"medianMs":37.88}
+{"case":"search","n":5000,"query":"missing term","inputCharacters":6000000,"results":0,"medianMs":2.66}
+{"case":"actual-image-sweep-mocked-io","n":1000,"queries":4,"selectedDocuments":3000,"maxActiveDeletes":1000,"checked":1000,"deleted":1000}
+{"case":"actual-image-sweep-mocked-io","n":5000,"queries":4,"selectedDocuments":15000,"maxActiveDeletes":5000,"checked":5000,"deleted":5000}

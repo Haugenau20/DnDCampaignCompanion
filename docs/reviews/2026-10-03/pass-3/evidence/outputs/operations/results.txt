@@ -1,0 +1,49 @@
+{
+  "diagnostic": "operations-actual-source-local-mocks",
+  "checks": 5,
+  "results": [
+    {
+      "case": "initialization-failure",
+      "generatorError": true,
+      "entryFailure": false,
+      "entrySuccess": true,
+      "completedContent": 0,
+      "exits": [
+        0
+      ]
+    },
+    {
+      "case": "content-failure",
+      "generatorError": true,
+      "entryFailure": false,
+      "entrySuccess": true,
+      "completedContent": 0,
+      "exits": [
+        0
+      ]
+    },
+    {
+      "case": "success-control",
+      "generatorError": false,
+      "entryFailure": false,
+      "entrySuccess": true,
+      "completedContent": 1,
+      "exits": [
+        0
+      ]
+    },
+    {
+      "case": "fresh-functions-without-build",
+      "emittedJsExists": false,
+      "validationRejects": true,
+      "loadTriggersRejects": false,
+      "loadTriggersLogsError": true
+    },
+    {
+      "case": "typescript-edit-with-stale-functions-build",
+      "validationAccepts": true,
+      "sourceVersion": "new-source",
+      "emittedVersionAfterDelegateBuild": "older-emitted-js"
+    }
+  ]
+}

@@ -1,0 +1,336 @@
+{
+  "files": 305,
+  "functions": 1182,
+  "exact": [
+    [
+      {
+        "p": "src/pages/locations/LocationDetailPage.tsx",
+        "start": 479,
+        "end": 500,
+        "tokens": 128,
+        "name": "<anonymous>"
+      },
+      {
+        "p": "src/pages/quests/QuestDetailPage.tsx",
+        "start": 551,
+        "end": 576,
+        "tokens": 128,
+        "name": "<anonymous>"
+      }
+    ],
+    [
+      {
+        "p": "src/features/collaboration/entity-extraction/components/EntityCard.tsx",
+        "start": 52,
+        "end": 65,
+        "tokens": 37,
+        "name": "getEntityTypeName"
+      },
+      {
+        "p": "src/features/collaboration/notes/components/CampaignLinksPanel.tsx",
+        "start": 36,
+        "end": 49,
+        "tokens": 37,
+        "name": "getEntityTypeName"
+      },
+      {
+        "p": "src/features/collaboration/notes/components/NoteReferences.tsx",
+        "start": 158,
+        "end": 171,
+        "tokens": 37,
+        "name": "getEntityTypeName"
+      }
+    ],
+    [
+      {
+        "p": "src/features/campaign-entities/locations/components/LocationRowSummary.tsx",
+        "start": 24,
+        "end": 32,
+        "tokens": 21,
+        "name": "FieldLabel"
+      },
+      {
+        "p": "src/features/campaign-entities/quests/components/QuestRowSummary.tsx",
+        "start": 31,
+        "end": 39,
+        "tokens": 21,
+        "name": "FieldLabel"
+      },
+      {
+        "p": "src/features/campaign-entities/rumors/components/RumorRowEditor.tsx",
+        "start": 96,
+        "end": 104,
+        "tokens": 21,
+        "name": "FieldLabel"
+      },
+      {
+        "p": "src/pages/npcs/NPCDetailPage.tsx",
+        "start": 166,
+        "end": 174,
+        "tokens": 21,
+        "name": "FieldLabel"
+      }
+    ],
+    [
+      {
+        "p": "src/shared/context/NavigationContext.tsx",
+        "start": 64,
+        "end": 71,
+        "tokens": 48,
+        "name": "parseQueryParams"
+      },
+      {
+        "p": "src/shared/utils/navigation.ts",
+        "start": 62,
+        "end": 69,
+        "tokens": 48,
+        "name": "getQueryParams"
+      }
+    ],
+    [
+      {
+        "p": "src/features/campaign-entities/locations/context/LocationContext.tsx",
+        "start": 148,
+        "end": 152,
+        "tokens": 20,
+        "name": "<anonymous>"
+      },
+      {
+        "p": "src/features/campaign-entities/npcs/context/NPCContext.tsx",
+        "start": 214,
+        "end": 218,
+        "tokens": 20,
+        "name": "<anonymous>"
+      },
+      {
+        "p": "src/features/campaign-entities/rumors/context/RumorContext.tsx",
+        "start": 228,
+        "end": 232,
+        "tokens": 20,
+        "name": "<anonymous>"
+      }
+    ],
+    [
+      {
+        "p": "src/core/components/Markdown.tsx",
+        "start": 41,
+        "end": 43,
+        "tokens": 21,
+        "name": "normalizeSource"
+      },
+      {
+        "p": "src/features/storytelling/stories/utils/paginate-prose.ts",
+        "start": 56,
+        "end": 58,
+        "tokens": 21,
+        "name": "normalise"
+      }
+    ]
+  ],
+  "shape": [
+    [
+      {
+        "p": "src/app/layout/Navigation.tsx",
+        "start": 92,
+        "end": 104,
+        "tokens": 63,
+        "name": "<anonymous>"
+      },
+      {
+        "p": "src/shared/components/GlobalActionButton.tsx",
+        "start": 49,
+        "end": 58,
+        "tokens": 63,
+        "name": "<anonymous>"
+      },
+      {
+        "p": "src/shared/components/context-switcher/ContextSwitcher.tsx",
+        "start": 79,
+        "end": 88,
+        "tokens": 63,
+        "name": "<anonymous>"
+      },
+      {
+        "p": "src/shared/components/user-menu/UserMenu.tsx",
+        "start": 35,
+        "end": 47,
+        "tokens": 63,
+        "name": "<anonymous>"
+      }
+    ],
+    [
+      {
+        "p": "src/pages/locations/LocationDetailPage.tsx",
+        "start": 67,
+        "end": 77,
+        "tokens": 77,
+        "name": "LocationNotFound"
+      },
+      {
+        "p": "src/pages/npcs/NPCDetailPage.tsx",
+        "start": 237,
+        "end": 247,
+        "tokens": 77,
+        "name": "NPCNotFound"
+      },
+      {
+        "p": "src/pages/quests/QuestDetailPage.tsx",
+        "start": 77,
+        "end": 87,
+        "tokens": 77,
+        "name": "QuestNotFound"
+      }
+    ],
+    [
+      {
+        "p": "src/shared/components/context-switcher/CampaignStep.tsx",
+        "start": 106,
+        "end": 137,
+        "tokens": 150,
+        "name": "<anonymous>"
+      },
+      {
+        "p": "src/shared/components/context-switcher/GroupStep.tsx",
+        "start": 90,
+        "end": 121,
+        "tokens": 150,
+        "name": "<anonymous>"
+      }
+    ],
+    [
+      {
+        "p": "src/pages/locations/LocationDetailPage.tsx",
+        "start": 479,
+        "end": 500,
+        "tokens": 128,
+        "name": "<anonymous>"
+      },
+      {
+        "p": "src/pages/quests/QuestDetailPage.tsx",
+        "start": 551,
+        "end": 576,
+        "tokens": 128,
+        "name": "<anonymous>"
+      }
+    ],
+    [
+      {
+        "p": "src/pages/locations/LocationsPage.tsx",
+        "start": 17,
+        "end": 43,
+        "tokens": 124,
+        "name": "LocationsPage"
+      },
+      {
+        "p": "src/pages/quests/QuestsPage.tsx",
+        "start": 19,
+        "end": 45,
+        "tokens": 124,
+        "name": "QuestsPage"
+      }
+    ],
+    [
+      {
+        "p": "src/features/campaign-entities/locations/hooks/useLocationData.ts",
+        "start": 15,
+        "end": 27,
+        "tokens": 48,
+        "name": "useLocationData"
+      },
+      {
+        "p": "src/features/campaign-entities/npcs/hooks/useNPCData.ts",
+        "start": 16,
+        "end": 28,
+        "tokens": 48,
+        "name": "useNPCData"
+      },
+      {
+        "p": "src/features/campaign-entities/rumors/hooks/useRumorData.ts",
+        "start": 15,
+        "end": 27,
+        "tokens": 48,
+        "name": "useRumorData"
+      }
+    ],
+    [
+      {
+        "p": "src/pages/locations/LocationDetailPage.tsx",
+        "start": 261,
+        "end": 273,
+        "tokens": 55,
+        "name": "addNote"
+      },
+      {
+        "p": "src/pages/npcs/NPCDetailPage.tsx",
+        "start": 597,
+        "end": 610,
+        "tokens": 55,
+        "name": "addNote"
+      }
+    ],
+    [
+      {
+        "p": "src/shared/context/NavigationContext.tsx",
+        "start": 64,
+        "end": 71,
+        "tokens": 48,
+        "name": "parseQueryParams"
+      },
+      {
+        "p": "src/shared/utils/navigation.ts",
+        "start": 62,
+        "end": 69,
+        "tokens": 48,
+        "name": "getQueryParams"
+      }
+    ],
+    [
+      {
+        "p": "src/core/themes/derive/oklch.ts",
+        "start": 107,
+        "end": 110,
+        "tokens": 47,
+        "name": "contrastRatio"
+      },
+      {
+        "p": "src/core/utils/band-dimming.ts",
+        "start": 190,
+        "end": 193,
+        "tokens": 47,
+        "name": "contrastRatio"
+      }
+    ],
+    [
+      {
+        "p": "src/core/utils/entity-id.ts",
+        "start": 42,
+        "end": 48,
+        "tokens": 47,
+        "name": "slugifyEntityName"
+      },
+      {
+        "p": "src/features/campaign-entities/rumors/components/CombineRumorsDialog.tsx",
+        "start": 40,
+        "end": 46,
+        "tokens": 47,
+        "name": "generateRumorId"
+      }
+    ],
+    [
+      {
+        "p": "src/pages/layouts/dashboard/sections/ActivityFeed.tsx",
+        "start": 81,
+        "end": 88,
+        "tokens": 45,
+        "name": "<anonymous>"
+      },
+      {
+        "p": "src/pages/layouts/dashboard/sections/CampaignStats.tsx",
+        "start": 114,
+        "end": 124,
+        "tokens": 45,
+        "name": "<anonymous>"
+      }
+    ]
+  ]
+}
