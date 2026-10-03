@@ -1,5 +1,5 @@
 // src/context/firebase/FirebaseContext.tsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import firebaseServices from 'core/services/firebase';
 import { UserProfile, GroupUserProfile, Group, Campaign } from 'core/types/user';
@@ -29,6 +29,16 @@ interface FirebaseContextType {
   refreshGroups: () => Promise<Group[]>;
   refreshCampaigns: () => Promise<Campaign[]>;
   refreshUserProfile: () => Promise<void>;
+  /**
+   * Apply a write this client just made to the signed-in user's account
+   * profile, without reading it back (T032, `PERF-13`).
+   */
+  applyUserProfileChanges: (changes: Partial<UserProfile>) => void;
+  /**
+   * Apply a write this client just made to the signed-in user's profile in
+   * the active group, without reading it back (T032, `PERF-13`).
+   */
+  applyGroupUserProfileChanges: (changes: Partial<GroupUserProfile>) => void;
   reloadUserContext: () => Promise<void>;
   switchGroup: (groupId: string) => Promise<void>;
   switchCampaign: (campaignId: string) => Promise<void>;
@@ -80,6 +90,20 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setError(err instanceof Error ? err.message : 'Failed to fetch user profile');
     }
   };
+
+  /*
+    A profile edit used to end in `refreshUserProfile()`, which re-reads the
+    account, the group profile and the campaign list -- about four requests
+    to learn back what was just written, and the edit waited for all of them
+    (PERF-13). The write's own fields are applied to state instead.
+  */
+  const applyUserProfileChanges = useCallback((changes: Partial<UserProfile>) => {
+    setUserProfile(previous => (previous ? { ...previous, ...changes } : previous));
+  }, []);
+
+  const applyGroupUserProfileChanges = useCallback((changes: Partial<GroupUserProfile>) => {
+    setActiveGroupUserProfile(previous => (previous ? { ...previous, ...changes } : previous));
+  }, []);
 
   // Set active group and load related data
   const setActiveGroupContext = async (groupId: string, currentUser: User | null = null) => {
@@ -422,6 +446,8 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     refreshGroups,
     refreshCampaigns,
     refreshUserProfile,
+    applyUserProfileChanges,
+    applyGroupUserProfileChanges,
     reloadUserContext,
     switchGroup,
     switchCampaign

@@ -23,7 +23,7 @@
  */
 
 import React from 'react';
-import { render, waitFor } from '@testing-library/react';
+import { render, waitFor, act } from '@testing-library/react';
 
 const UID = 'uid-1';
 
@@ -140,4 +140,19 @@ test('restore makes one request per document or collection it needs, and no more
     `get users/${UID}`,
     'list groups/g1/campaigns',
   ]);
+});
+
+test('a profile edit is applied to state without reading anything back (PERF-13)', async () => {
+  const restored = restore();
+  await waitFor(() => expect(restored.current?.loading).toBe(false));
+  const before = mockRequests.length;
+
+  act(() => {
+    restored.current?.applyGroupUserProfileChanges({ username: 'Mr Underhill' });
+    restored.current?.applyUserProfileChanges({ preferences: { theme: 'parchment' } } as never);
+  });
+
+  expect(restored.current?.activeGroupUserProfile?.username).toBe('Mr Underhill');
+  expect(restored.current?.userProfile?.preferences).toEqual({ theme: 'parchment' });
+  expect(mockRequests.length).toBe(before);
 });

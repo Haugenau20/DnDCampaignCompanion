@@ -11,7 +11,9 @@ export function useUser() {
     activeGroupId, 
     activeGroupUserProfile, 
     setError,
-    refreshUserProfile
+    refreshUserProfile,
+    applyUserProfileChanges,
+    applyGroupUserProfileChanges
   } = useFirebaseContext();
 
   // Update user profile (global or group-specific)
@@ -22,16 +24,22 @@ export function useUser() {
     try {
       setError(null);
       await firebaseServices.user.updateUserProfile(uid, updates);
-      
-      // Refresh local state if current user
+
+      // Reflect it locally if it is the current user's. What was written is
+      // what is stored, so it is applied rather than read back (PERF-13) --
+      // unless it moves the active group, which the full refresh switches to.
       if (user && user.uid === uid) {
-        await refreshUserProfile();
+        if ('activeGroupId' in updates) {
+          await refreshUserProfile();
+        } else {
+          applyUserProfileChanges(updates);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update user profile');
       throw err;
     }
-  }, [user, setError, refreshUserProfile]);
+  }, [user, setError, refreshUserProfile, applyUserProfileChanges]);
 
   // Update group user profile
   const updateGroupUserProfile = useCallback(async (
@@ -46,16 +54,21 @@ export function useUser() {
       }
       
       await firebaseServices.user.updateGroupUserProfile(activeGroupId, uid, updates);
-      
-      // Refresh local state if current user
+
+      // Applied rather than read back (PERF-13), unless it moves the active
+      // campaign, which the full refresh switches to.
       if (user && user.uid === uid) {
-        await refreshUserProfile();
+        if ('activeCampaignId' in updates) {
+          await refreshUserProfile();
+        } else {
+          applyGroupUserProfileChanges(updates);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update group user profile');
       throw err;
     }
-  }, [user, activeGroupId, setError, refreshUserProfile]);
+  }, [user, activeGroupId, setError, refreshUserProfile, applyGroupUserProfileChanges]);
 
   // Validate username
   const validateUsername = useCallback(async (
@@ -96,16 +109,16 @@ export function useUser() {
       }
       
       await firebaseServices.user.changeGroupUsername(activeGroupId, uid, newUsername);
-      
-      // Refresh profile if current user
+
+      // The profile's only change is the name; applied, not read back (PERF-13).
       if (user && user.uid === uid) {
-        await refreshUserProfile();
+        applyGroupUserProfileChanges({ username: newUsername });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred changing username');
       throw err;
     }
-  }, [activeGroupId, user, setError, refreshUserProfile]);
+  }, [activeGroupId, user, setError, applyGroupUserProfileChanges]);
 
   // Check if username is available
   const isUsernameAvailable = useCallback(async (
