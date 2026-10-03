@@ -1,0 +1,93 @@
+FAIL src/features/campaign-entities/quests/context/__tests__/QuestContext.objectives.test.tsx
+  QuestContext Objective Management Behavior
+    Objective Update Behavior
+      ✕ should update single objective completion status (25 ms)
+      ✕ does not complete the quest when the last objective is ticked (5 ms)
+      ✕ leaves a completed quest completed, with its original date (5 ms)
+      ✕ leaves a failed quest failed (10 ms)
+    Manual Quest Completion Behavior
+      ✓ should complete quest and mark all objectives as done (5 ms)
+      ✓ should complete quest with custom completion date (3 ms)
+      ✓ should mark quest as failed (3 ms)
+    Objective Validation Behavior
+      ✓ should reject objective update for nonexistent quest (8 ms)
+      ✓ should reject objective update for nonexistent objective (5 ms)
+      ✓ should require authentication for objective updates (3 ms)
+
+  ● QuestContext Objective Management Behavior › Objective Update Behavior › should update single objective completion status
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "active"
+    Received: undefined
+
+      158 |
+      159 |       // Quest should still be active (not all objectives complete)
+    > 160 |       expect(updatedQuestData.status).toBe('active');
+          |                                       ^
+      161 |       expect(updatedQuestData.dateCompleted).toBeUndefined();
+      162 |
+      163 |       // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
+
+      at src/features/campaign-entities/quests/context/__tests__/QuestContext.objectives.test.tsx:160:39
+      at fulfilled (src/features/campaign-entities/quests/context/__tests__/QuestContext.objectives.test.tsx:5:58)
+
+  ● QuestContext Objective Management Behavior › Objective Update Behavior › does not complete the quest when the last objective is ticked
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "active"
+    Received: undefined
+
+      220 |       expect(updatedQuestData.objectives.every((obj: any) => obj.completed)).toBe(true);
+      221 |       // ...and the quest is still open, with no completion date invented.
+    > 222 |       expect(updatedQuestData.status).toBe('active');
+          |                                       ^
+      223 |       expect(updatedQuestData.dateCompleted).toBeUndefined();
+      224 |     });
+      225 |
+
+      at src/features/campaign-entities/quests/context/__tests__/QuestContext.objectives.test.tsx:222:39
+      at fulfilled (src/features/campaign-entities/quests/context/__tests__/QuestContext.objectives.test.tsx:5:58)
+
+  ● QuestContext Objective Management Behavior › Objective Update Behavior › leaves a completed quest completed, with its original date
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "completed"
+    Received: undefined
+
+      266 |
+      267 |       // BEHAVIOR: Quest should remain completed with original date
+    > 268 |       expect(updatedQuestData.status).toBe('completed');
+          |                                       ^
+      269 |       expect(updatedQuestData.dateCompleted).toBe('2023-01-01T00:00:00.000Z');
+      270 |     });
+      271 |
+
+      at src/features/campaign-entities/quests/context/__tests__/QuestContext.objectives.test.tsx:268:39
+      at fulfilled (src/features/campaign-entities/quests/context/__tests__/QuestContext.objectives.test.tsx:5:58)
+
+  ● QuestContext Objective Management Behavior › Objective Update Behavior › leaves a failed quest failed
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "failed"
+    Received: undefined
+
+      311 |
+      312 |       // BEHAVIOR: Quest should remain failed
+    > 313 |       expect(updatedQuestData.status).toBe('failed');
+          |                                       ^
+      314 |       expect(updatedQuestData.dateCompleted).toBeUndefined();
+      315 |     });
+      316 |   });
+
+      at src/features/campaign-entities/quests/context/__tests__/QuestContext.objectives.test.tsx:313:39
+      at fulfilled (src/features/campaign-entities/quests/context/__tests__/QuestContext.objectives.test.tsx:5:58)
+
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 6 passed, 10 total
+Snapshots:   0 total
+Time:        3.764 s
+Ran all test suites within paths "src/features/campaign-entities/quests/context/__tests__/QuestContext.objectives.test.tsx".

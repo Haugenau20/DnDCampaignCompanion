@@ -1,0 +1,282 @@
+PASS ../../tmp/pass2-functional/chapter-delete-failure.test.js
+  ● Console
+
+    console.error
+      Error deleting chapter: Error: Synthetic delete refused
+          at /tmp/pass2-functional/chapter-delete-failure.test.js:7:55
+          at /workspace/DnDCampaignCompanion/node_modules/jest-mock/build/index.js:397:39
+          at /workspace/DnDCampaignCompanion/node_modules/jest-mock/build/index.js:404:13
+          at mockConstructor (/workspace/DnDCampaignCompanion/node_modules/jest-mock/build/index.js:148:19)
+          at /workspace/DnDCampaignCompanion/src/pages/story/ChapterEditPage.tsx:53:13
+          at Generator.next (<anonymous>)
+          at /workspace/DnDCampaignCompanion/src/pages/story/ChapterEditPage.tsx:8:71
+          at new Promise (<anonymous>)
+          at Object.<anonymous>.__awaiter (/workspace/DnDCampaignCompanion/src/pages/story/ChapterEditPage.tsx:4:12)
+          at handleDeleteConfirm (/workspace/DnDCampaignCompanion/src/pages/story/ChapterEditPage.tsx:49:42)
+          at /workspace/DnDCampaignCompanion/src/shared/components/DeleteConfirmationDialog.tsx:62:13
+          at Generator.next (<anonymous>)
+          at /workspace/DnDCampaignCompanion/src/shared/components/DeleteConfirmationDialog.tsx:8:71
+          at new Promise (<anonymous>)
+          at Object.<anonymous>.__awaiter (/workspace/DnDCampaignCompanion/src/shared/components/DeleteConfirmationDialog.tsx:4:12)
+          at handleConfirm (/workspace/DnDCampaignCompanion/src/shared/components/DeleteConfirmationDialog.tsx:57:36)
+          at HTMLUnknownElement.callCallback (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+          at HTMLUnknownElement.callTheUserObjectsOperation (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+          at innerInvokeEventListeners (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+          at invokeEventListeners (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+          at HTMLUnknownElementImpl._dispatch (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+          at HTMLUnknownElementImpl.dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+          at HTMLUnknownElement.dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+          at Object.invokeGuardedCallbackDev (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+          at invokeGuardedCallback (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+          at invokeGuardedCallbackAndCatchFirstError (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:4291:25)
+          at executeDispatch (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9041:3)
+          at processDispatchQueueItemsInOrder (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9073:7)
+          at processDispatchQueue (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9086:5)
+          at dispatchEventsForPlugins (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9097:3)
+          at /workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9288:12
+          at batchedUpdates$1 (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:26179:12)
+          at batchedUpdates (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:3991:12)
+          at dispatchEventForPluginEventSystem (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9287:3)
+          at dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:6465:5)
+          at dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:6457:5)
+          at dispatchDiscreteEvent (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:6430:5)
+          at HTMLDivElement.callTheUserObjectsOperation (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+          at innerInvokeEventListeners (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+          at invokeEventListeners (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+          at HTMLButtonElementImpl._dispatch (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+          at HTMLButtonElementImpl.dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+          at HTMLButtonElement.dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+          at /workspace/DnDCampaignCompanion/node_modules/@testing-library/dom/dist/events.js:19:20
+          at /workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/pure.js:108:16
+          at /workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/act-compat.js:48:24
+          at act (/workspace/DnDCampaignCompanion/node_modules/react/cjs/react.development.js:2512:16)
+          at /workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/act-compat.js:47:25
+          at Object.eventWrapper (/workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/pure.js:107:28)
+          at fireEvent (/workspace/DnDCampaignCompanion/node_modules/@testing-library/dom/dist/events.js:12:35)
+          at Function.fireEvent.<computed> [as click] (/workspace/DnDCampaignCompanion/node_modules/@testing-library/dom/dist/events.js:110:36)
+          at Function.fireEvent.<computed> [as click] (/workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/fire-event.js:15:52)
+          at Object.<anonymous> (/tmp/pass2-functional/chapter-delete-failure.test.js:23:13)
+          at Promise.then.completed (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/run.js:316:40)
+          at _runTest (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/run.js:126:9)
+          at run (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/workspace/DnDCampaignCompanion/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/workspace/DnDCampaignCompanion/node_modules/jest-runner/build/runTest.js:444:34)
+
+      55 |       navigateToPage('/story/chapters');
+      56 |     } catch (error) {
+    > 57 |       console.error('Error deleting chapter:', error);
+         |               ^
+      58 |       // Error is handled in the dialog component
+      59 |     }
+      60 |   };
+
+      at src/pages/story/ChapterEditPage.tsx:57:15
+          at Generator.throw (<anonymous>)
+      at rejected (src/pages/story/ChapterEditPage.tsx:6:65)
+
+PASS ../../tmp/pass2-functional/chapter-save-failure.test.js
+  ● Console
+
+    console.error
+      Error saving chapter: Error: Synthetic write refused
+          at /tmp/pass2-functional/chapter-save-failure.test.js:5:55
+          at /workspace/DnDCampaignCompanion/node_modules/jest-mock/build/index.js:397:39
+          at /workspace/DnDCampaignCompanion/node_modules/jest-mock/build/index.js:404:13
+          at mockConstructor (/workspace/DnDCampaignCompanion/node_modules/jest-mock/build/index.js:148:19)
+          at /workspace/DnDCampaignCompanion/src/features/storytelling/chapters/components/ChapterForm.tsx:121:15
+          at Generator.next (<anonymous>)
+          at /workspace/DnDCampaignCompanion/src/features/storytelling/chapters/components/ChapterForm.tsx:8:71
+          at new Promise (<anonymous>)
+          at Object.<anonymous>.__awaiter (/workspace/DnDCampaignCompanion/src/features/storytelling/chapters/components/ChapterForm.tsx:4:12)
+          at handleSubmit (/workspace/DnDCampaignCompanion/src/features/storytelling/chapters/components/ChapterForm.tsx:94:53)
+          at HTMLUnknownElement.callCallback (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+          at HTMLUnknownElement.callTheUserObjectsOperation (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+          at innerInvokeEventListeners (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+          at invokeEventListeners (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+          at HTMLUnknownElementImpl._dispatch (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+          at HTMLUnknownElementImpl.dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+          at HTMLUnknownElement.dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+          at Object.invokeGuardedCallbackDev (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+          at invokeGuardedCallback (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+          at invokeGuardedCallbackAndCatchFirstError (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:4291:25)
+          at executeDispatch (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9041:3)
+          at processDispatchQueueItemsInOrder (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9073:7)
+          at processDispatchQueue (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9086:5)
+          at dispatchEventsForPlugins (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9097:3)
+          at /workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9288:12
+          at batchedUpdates$1 (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:26179:12)
+          at batchedUpdates (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:3991:12)
+          at dispatchEventForPluginEventSystem (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9287:3)
+          at dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:6465:5)
+          at dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:6457:5)
+          at dispatchDiscreteEvent (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:6430:5)
+          at HTMLDivElement.callTheUserObjectsOperation (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+          at innerInvokeEventListeners (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+          at invokeEventListeners (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+          at HTMLFormElementImpl._dispatch (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+          at fireAnEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/helpers/events.js:18:36)
+          at HTMLFormElementImpl.requestSubmit (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/nodes/HTMLFormElement-impl.js:109:10)
+          at HTMLFormElementImpl._doRequestSubmit (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/nodes/HTMLFormElement-impl.js:79:10)
+          at HTMLButtonElementImpl._activationBehavior (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/nodes/HTMLButtonElement-impl.js:23:14)
+          at HTMLButtonElementImpl._dispatch (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:252:26)
+          at HTMLButtonElementImpl.dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+          at HTMLButtonElement.dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+          at /workspace/DnDCampaignCompanion/node_modules/@testing-library/dom/dist/events.js:19:20
+          at /workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/pure.js:108:16
+          at /workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/act-compat.js:48:24
+          at act (/workspace/DnDCampaignCompanion/node_modules/react/cjs/react.development.js:2512:16)
+          at /workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/act-compat.js:47:25
+          at Object.eventWrapper (/workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/pure.js:107:28)
+          at fireEvent (/workspace/DnDCampaignCompanion/node_modules/@testing-library/dom/dist/events.js:12:35)
+          at Function.fireEvent.<computed> [as click] (/workspace/DnDCampaignCompanion/node_modules/@testing-library/dom/dist/events.js:110:36)
+          at Function.fireEvent.<computed> [as click] (/workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/fire-event.js:15:52)
+          at /tmp/pass2-functional/chapter-save-failure.test.js:15:13
+          at Object.<anonymous> (/workspace/DnDCampaignCompanion/node_modules/jest-each/build/bind.js:81:13)
+          at Promise.then.completed (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/run.js:316:40)
+          at _runTest (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/run.js:126:9)
+          at run (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/workspace/DnDCampaignCompanion/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/workspace/DnDCampaignCompanion/node_modules/jest-runner/build/runTest.js:444:34)
+
+      141 |       }
+      142 |     } catch (err) {
+    > 143 |       console.error('Error saving chapter:', err);
+          |               ^
+      144 |       setError(err instanceof Error ? err.message : 'An error occurred while saving the chapter');
+      145 |     } finally {
+      146 |       setIsSubmitting(false);
+
+      at src/features/storytelling/chapters/components/ChapterForm.tsx:143:15
+          at Generator.throw (<anonymous>)
+      at rejected (src/features/storytelling/chapters/components/ChapterForm.tsx:6:65)
+
+    console.error
+      Error saving chapter: Error: Synthetic write refused
+          at /tmp/pass2-functional/chapter-save-failure.test.js:6:55
+          at /workspace/DnDCampaignCompanion/node_modules/jest-mock/build/index.js:397:39
+          at /workspace/DnDCampaignCompanion/node_modules/jest-mock/build/index.js:404:13
+          at mockConstructor (/workspace/DnDCampaignCompanion/node_modules/jest-mock/build/index.js:148:19)
+          at /workspace/DnDCampaignCompanion/src/features/storytelling/chapters/components/ChapterForm.tsx:139:15
+          at Generator.next (<anonymous>)
+          at /workspace/DnDCampaignCompanion/src/features/storytelling/chapters/components/ChapterForm.tsx:8:71
+          at new Promise (<anonymous>)
+          at Object.<anonymous>.__awaiter (/workspace/DnDCampaignCompanion/src/features/storytelling/chapters/components/ChapterForm.tsx:4:12)
+          at handleSubmit (/workspace/DnDCampaignCompanion/src/features/storytelling/chapters/components/ChapterForm.tsx:94:53)
+          at HTMLUnknownElement.callCallback (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+          at HTMLUnknownElement.callTheUserObjectsOperation (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+          at innerInvokeEventListeners (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+          at invokeEventListeners (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+          at HTMLUnknownElementImpl._dispatch (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+          at HTMLUnknownElementImpl.dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+          at HTMLUnknownElement.dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+          at Object.invokeGuardedCallbackDev (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+          at invokeGuardedCallback (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+          at invokeGuardedCallbackAndCatchFirstError (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:4291:25)
+          at executeDispatch (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9041:3)
+          at processDispatchQueueItemsInOrder (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9073:7)
+          at processDispatchQueue (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9086:5)
+          at dispatchEventsForPlugins (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9097:3)
+          at /workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9288:12
+          at batchedUpdates$1 (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:26179:12)
+          at batchedUpdates (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:3991:12)
+          at dispatchEventForPluginEventSystem (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:9287:3)
+          at dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:6465:5)
+          at dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:6457:5)
+          at dispatchDiscreteEvent (/workspace/DnDCampaignCompanion/node_modules/react-dom/cjs/react-dom.development.js:6430:5)
+          at HTMLDivElement.callTheUserObjectsOperation (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+          at innerInvokeEventListeners (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+          at invokeEventListeners (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+          at HTMLFormElementImpl._dispatch (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+          at fireAnEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/helpers/events.js:18:36)
+          at HTMLFormElementImpl.requestSubmit (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/nodes/HTMLFormElement-impl.js:109:10)
+          at HTMLFormElementImpl._doRequestSubmit (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/nodes/HTMLFormElement-impl.js:79:10)
+          at HTMLButtonElementImpl._activationBehavior (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/nodes/HTMLButtonElement-impl.js:23:14)
+          at HTMLButtonElementImpl._dispatch (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:252:26)
+          at HTMLButtonElementImpl.dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+          at HTMLButtonElement.dispatchEvent (/workspace/DnDCampaignCompanion/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+          at /workspace/DnDCampaignCompanion/node_modules/@testing-library/dom/dist/events.js:19:20
+          at /workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/pure.js:108:16
+          at /workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/act-compat.js:48:24
+          at act (/workspace/DnDCampaignCompanion/node_modules/react/cjs/react.development.js:2512:16)
+          at /workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/act-compat.js:47:25
+          at Object.eventWrapper (/workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/pure.js:107:28)
+          at fireEvent (/workspace/DnDCampaignCompanion/node_modules/@testing-library/dom/dist/events.js:12:35)
+          at Function.fireEvent.<computed> [as click] (/workspace/DnDCampaignCompanion/node_modules/@testing-library/dom/dist/events.js:110:36)
+          at Function.fireEvent.<computed> [as click] (/workspace/DnDCampaignCompanion/node_modules/@testing-library/react/dist/fire-event.js:15:52)
+          at /tmp/pass2-functional/chapter-save-failure.test.js:15:13
+          at Object.<anonymous> (/workspace/DnDCampaignCompanion/node_modules/jest-each/build/bind.js:81:13)
+          at Promise.then.completed (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/run.js:316:40)
+          at _runTest (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/run.js:126:9)
+          at run (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/workspace/DnDCampaignCompanion/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/workspace/DnDCampaignCompanion/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/workspace/DnDCampaignCompanion/node_modules/jest-runner/build/runTest.js:444:34)
+
+      141 |       }
+      142 |     } catch (err) {
+    > 143 |       console.error('Error saving chapter:', err);
+          |               ^
+      144 |       setError(err instanceof Error ? err.message : 'An error occurred while saving the chapter');
+      145 |     } finally {
+      146 |       setIsSubmitting(false);
+
+      at src/features/storytelling/chapters/components/ChapterForm.tsx:143:15
+          at Generator.throw (<anonymous>)
+      at rejected (src/features/storytelling/chapters/components/ChapterForm.tsx:6:65)
+
+PASS ../../tmp/pass2-functional/failed-scan-recovery.test.js
+  ● Console
+
+    console.error
+      Entity extraction error: Error: Content is too long (maximum 10,000 characters)
+          at /workspace/DnDCampaignCompanion/src/features/collaboration/entity-extraction/hooks/useEntityExtractor.ts:47:15
+          at Generator.next (<anonymous>)
+          at /workspace/DnDCampaignCompanion/src/features/collaboration/entity-extraction/hooks/useEntityExtractor.ts:41:71
+          at new Promise (<anonymous>)
+          at Object.<anonymous>.__awaiter (/workspace/DnDCampaignCompanion/src/features/collaboration/entity-extraction/hooks/useEntityExtractor.ts:37:12)
+          at /workspace/DnDCampaignCompanion/src/features/collaboration/entity-extraction/hooks/useEntityExtractor.ts:36:95
+          at /workspace/DnDCampaignCompanion/src/features/collaboration/notes/components/CampaignLinksPanel.tsx:238:33
+          at Generator.next (<anonymous>)
+          at fulfilled (/workspace/DnDCampaignCompanion/src/features/collaboration/notes/components/CampaignLinksPanel.tsx:5:58)
+
+      67 |         const errorMessage = err instanceof Error ? err.message : 'Failed to extract entities';
+      68 |         setError(errorMessage);
+    > 69 |         console.error('Entity extraction error:', err);
+         |                 ^
+      70 |         return [];
+      71 |       }
+      72 |     } finally {
+
+      at src/features/collaboration/entity-extraction/hooks/useEntityExtractor.ts:69:17
+      at src/features/collaboration/entity-extraction/hooks/useEntityExtractor.ts:41:71
+      at Object.<anonymous>.__awaiter (src/features/collaboration/entity-extraction/hooks/useEntityExtractor.ts:37:12)
+      at src/features/collaboration/entity-extraction/hooks/useEntityExtractor.ts:36:95
+      at src/features/collaboration/notes/components/CampaignLinksPanel.tsx:238:33
+      at fulfilled (src/features/collaboration/notes/components/CampaignLinksPanel.tsx:5:58)
+
+PASS ../../tmp/pass2-functional/palette-create-query.test.js
+PASS ../../tmp/pass2-functional/optional-field-clear.test.js
+PASS ../../tmp/pass2-functional/cross-campaign-note.test.js
+
+Test Suites: 6 passed, 6 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        4.882 s
+Ran all test suites.

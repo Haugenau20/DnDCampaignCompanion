@@ -21,6 +21,9 @@ docs/
 The first repository review is recorded in
 [`reviews/2026-10-03/pass-1-summary.md`](reviews/2026-10-03/pass-1-summary.md); its
 [record index](reviews/2026-10-03/README.md) links the reports and evidence.
+The [second-pass summary](reviews/2026-10-03/pass-2/summary.md) adds functional,
+React state, performance and test-quality findings, with its own verification
+record and evidence in a separate stacked PR.
 
 - Most of these are records of a decision or a phase, cited by name from code comments. Status
   banners reflect the state when written and may be stale; the code is the source of truth.

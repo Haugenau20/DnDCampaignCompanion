@@ -1,0 +1,33 @@
+import React from '/workspace/DnDCampaignCompanion/node_modules/react';
+import {act,fireEvent,render,screen,cleanup} from '/workspace/DnDCampaignCompanion/node_modules/@testing-library/react';
+import NoteEditor from '/workspace/DnDCampaignCompanion/src/features/collaboration/notes/components/NoteEditor';
+const mockNote = {id:'note-1',title:'Title',content:'Original text',isUnsaved:false,dateModified:'2026-10-01T00:00:00Z'};
+const mockWrites: unknown[]=[];
+const mockUpdate=jest.fn(async(id:string,fields:unknown)=>{mockWrites.push({id,fields});});
+const mockSave=jest.fn(async(id:string,fields:unknown)=>{mockWrites.push({id,fields});});
+jest.mock('/workspace/DnDCampaignCompanion/src/features/collaboration/notes/context/NoteContext',()=>({useNotes:()=>({getNoteById:()=>mockNote,updateNote:mockUpdate,saveNote:mockSave})}));
+beforeEach(()=>{jest.useFakeTimers();mockWrites.length=0;mockUpdate.mockClear();mockSave.mockClear();});
+afterEach(()=>{cleanup();jest.useRealTimers();});
+it('counts manual save followed by the already-scheduled idle autosave with no intervening edit',async()=>{
+ render(<NoteEditor noteId="note-1"/>);
+ fireEvent.change(screen.getByPlaceholderText('Write your note here...'),{target:{value:'Edited text'}});
+ await act(async()=>{fireEvent.keyDown(document,{key:'s',ctrlKey:true});});
+ expect(mockWrites).toHaveLength(1);
+ await act(async()=>{jest.advanceTimersByTime(2000);});
+ expect(mockWrites).toHaveLength(2);
+ expect(mockWrites[0]).toEqual(mockWrites[1]);
+ console.log('PERF2_AUTOSAVE_MANUAL_IDLE',JSON.stringify(mockWrites));
+});
+it('counts unchanged follow-up requested during an in-flight save',async()=>{
+ let finish!:()=>void;
+ mockSave.mockImplementationOnce(async(id:string,fields:unknown)=>{mockWrites.push({id,fields});await new Promise<void>(resolve=>{finish=resolve;});});
+ render(<NoteEditor noteId="note-1"/>);
+ fireEvent.change(screen.getByPlaceholderText('Write your note here...'),{target:{value:'Edited text'}});
+ fireEvent.keyDown(document,{key:'s',ctrlKey:true});
+ await act(async()=>{jest.advanceTimersByTime(2000);});
+ expect(mockWrites).toHaveLength(1);
+ await act(async()=>{finish();});
+ expect(mockWrites).toHaveLength(2);
+ expect(mockWrites[0]).toEqual(mockWrites[1]);
+ console.log('PERF2_AUTOSAVE_UNCHANGED_QUEUE',JSON.stringify(mockWrites));
+});

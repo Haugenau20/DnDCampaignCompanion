@@ -1,0 +1,27 @@
+PASS ../../tmp/pass2-performance/route-budget.test.tsx (6.719 s)
+  ● Console
+
+    console.log
+      PERF2_QUICK_ADD_LISTENERS ["groups/group-1/users/user-1/notes","groups/group-1/campaigns/campaign-1/quests","groups/group-1/campaigns/campaign-1/locations","groups/group-1/campaigns/campaign-1/npcs"]
+
+      at ../../tmp/pass2-performance/route-budget.test.tsx:205:10
+
+PASS ../../tmp/pass2-performance/probes.test.tsx
+  ● Console
+
+    console.log
+      PERF2_AUTOSAVE_MANUAL_IDLE [{"id":"note-1","fields":{"title":"Title","content":"Edited text"}},{"id":"note-1","fields":{"title":"Title","content":"Edited text"}}]
+
+      at ../../tmp/pass2-performance/probes.test.tsx:19:10
+
+    console.log
+      PERF2_AUTOSAVE_UNCHANGED_QUEUE [{"id":"note-1","fields":{"title":"Title","content":"Edited text"}},{"id":"note-1","fields":{"title":"Title","content":"Edited text"}}]
+
+      at ../../tmp/pass2-performance/probes.test.tsx:32:10
+
+
+Test Suites: 2 passed, 2 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        7.387 s
+Ran all test suites.

@@ -1,8 +1,9 @@
 # Code review records — 2026-10-03
 
-Status: first-pass results delivered. Security, data integrity, and uploaded-image
-reviews are complete within their documented scopes. The auth specialist was
-stopped at the maintainer's request and its retained report is explicitly partial.
+Status: first- and second-pass results delivered. Security, data integrity,
+uploaded-image, functional, React state, performance and test-quality reviews
+are complete within their documented scopes. The auth specialist was stopped
+at the maintainer's request and its retained report is explicitly partial.
 
 This directory holds the review plan, specialist reports, verification evidence,
 and consolidated outcomes. It is a review record; `TODO.md` remains the backlog
@@ -22,9 +23,14 @@ Cross-reference those records rather than copying their contents as new findings
 - [04-uploaded-images.md](04-uploaded-images.md): completed image specialist report.
 - [evidence/probe-results.md](evidence/probe-results.md): reproduction outcomes,
   preserved diagnostic source/logs, and their interpretation limits.
+- [pass-2/summary.md](pass-2/summary.md): additional grouped findings, test
+  protection gaps and fix order, supplementing the first pass.
+- [pass-2/README.md](pass-2/README.md): second-pass specialist reports,
+  verification and diagnostic evidence.
 
 Store subsequent pass reports here with their own baseline and summary. The
-remaining agreed angles have not run. This directory is an assessment record;
+remaining architecture/duplication, accessibility, external-AI integration and
+operations angles have not run. This directory is an assessment record;
 it contains no implemented application fixes or changes to the backlog.
 
 ## Specialist report structure
