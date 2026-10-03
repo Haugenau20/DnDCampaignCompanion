@@ -1,4 +1,4 @@
-﻿// src/features/storytelling/chapters/hooks/__tests__/useChapterData.test.ts
+// src/features/storytelling/chapters/hooks/__tests__/useChapterData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useChapterData } from '../useChapterData';
 import { Chapter } from 'features/storytelling/chapters/types';
@@ -6,7 +6,7 @@ import { Chapter } from 'features/storytelling/chapters/types';
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
-const mockGetData = jest.fn();
+const mockRetry = jest.fn();
 
 jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: jest.fn(),
@@ -33,7 +33,7 @@ const makeChapter = (id: string, title: string, order: number): Chapter => ({
 
 const setupFirebaseDataMock = (overrides: Record<string, unknown> = {}) => {
   (useFirebaseData as jest.Mock).mockReturnValue({
-    getData: mockGetData,
+    retry: mockRetry,
     loading: false,
     error: null,
     data: [],
@@ -59,7 +59,6 @@ describe('useChapterData', () => {
     jest.clearAllMocks();
     setupContextMocks();
     setupFirebaseDataMock();
-    mockGetData.mockResolvedValue([]);
   });
 
   describe('return shape', () => {
@@ -103,67 +102,61 @@ describe('useChapterData', () => {
     });
   });
 
-  describe('fetchChapters - sorting', () => {
-    test('should sort chapters by order number ascending', async () => {
-      const chapters = [
-        makeChapter('3', 'Chapter Three', 3),
-        makeChapter('1', 'Chapter One', 1),
-        makeChapter('2', 'Chapter Two', 2),
-      ];
-      mockGetData.mockResolvedValue(chapters);
-
+  // The list is the listener's latest snapshot, and a refresh is a retry of
+  // the listener rather than a read (T032). These replaced tests that fed the
+  // list through `getData`, which nothing calls any more.
+  describe('listening', () => {
+    test('is empty when no activeGroupId', () => {
+      setupContextMocks(null, 'campaign-1');
+      setupFirebaseDataMock({ data: [makeChapter('3', 'Chapter Three', 3), makeChapter('1', 'Chapter One', 1), makeChapter('2', 'Chapter Two', 2)] });
       const { result } = renderHook(() => useChapterData());
-      await waitFor(() => expect(result.current.chapters.length).toBe(3));
-
-      expect(result.current.chapters[0].order).toBe(1);
-      expect(result.current.chapters[1].order).toBe(2);
-      expect(result.current.chapters[2].order).toBe(3);
+      expect(result.current.chapters).toEqual([]);
     });
 
-    test('should return sorted chapters from refreshChapters', async () => {
-      const chapters = [makeChapter('2', 'Ch 2', 2), makeChapter('1', 'Ch 1', 1)];
-      mockGetData.mockResolvedValue(chapters);
-
+    test('is empty when no activeCampaignId', () => {
+      setupContextMocks('group-1', null);
+      setupFirebaseDataMock({ data: [makeChapter('3', 'Chapter Three', 3), makeChapter('1', 'Chapter One', 1), makeChapter('2', 'Chapter Two', 2)] });
       const { result } = renderHook(() => useChapterData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.chapters).toEqual([]);
+    });
 
-      let refreshResult: Chapter[] = [];
+    test('lists the snapshot in reading order', () => {
+      setupFirebaseDataMock({ data: [makeChapter('3', 'Chapter Three', 3), makeChapter('1', 'Chapter One', 1), makeChapter('2', 'Chapter Two', 2)] });
+      const { result } = renderHook(() => useChapterData());
+      expect(result.current.chapters.map((item) => item.order)).toEqual([1, 2, 3]);
+    });
+
+    test('follows a snapshot that empties the collection', () => {
+      setupFirebaseDataMock({ data: [makeChapter('3', 'Chapter Three', 3), makeChapter('1', 'Chapter One', 1), makeChapter('2', 'Chapter Two', 2)] });
+      const { result, rerender } = renderHook(() => useChapterData());
+      expect(result.current.chapters).toHaveLength(3);
+
+      // The last record was deleted, here or by another player.
+      setupFirebaseDataMock({ data: [] });
+      rerender();
+
+      expect(result.current.chapters).toEqual([]);
+    });
+
+    test('refreshChapters retries the listener and resolves to the list', async () => {
+      mockRetry.mockResolvedValue([makeChapter('3', 'Chapter Three', 3), makeChapter('1', 'Chapter One', 1), makeChapter('2', 'Chapter Two', 2)]);
+      const { result } = renderHook(() => useChapterData());
+
+      let refreshed: Chapter[] = [];
       await act(async () => {
-        refreshResult = await result.current.refreshChapters();
+        refreshed = await result.current.refreshChapters();
       });
 
-      expect(refreshResult[0].order).toBe(1);
-      expect(refreshResult[1].order).toBe(2);
-    });
-  });
-
-  describe('fetchChapters - guard conditions', () => {
-    test('should return empty array and not call getData when no activeGroupId', async () => {
-      setupContextMocks(null, 'campaign-1');
-
-      const { result } = renderHook(() => useChapterData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      expect(result.current.chapters).toEqual([]);
+      expect(mockRetry).toHaveBeenCalledTimes(1);
+      expect(refreshed.map((item) => item.order)).toEqual([1, 2, 3]);
     });
 
-    test('should return empty array when no activeCampaignId', async () => {
+    test('refreshChapters leaves the listener alone while no campaign is selected', async () => {
       setupContextMocks('group-1', null);
-
       const { result } = renderHook(() => useChapterData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
 
-      expect(result.current.chapters).toEqual([]);
-    });
-
-    test('should handle getData errors gracefully', async () => {
-      mockGetData.mockRejectedValue(new Error('Firebase error'));
-
-      const { result } = renderHook(() => useChapterData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      const refreshResult = await act(async () => result.current.refreshChapters());
-      expect(refreshResult).toEqual([]);
+      await expect(result.current.refreshChapters()).resolves.toEqual([]);
+      expect(mockRetry).not.toHaveBeenCalled();
     });
   });
 
@@ -171,7 +164,6 @@ describe('useChapterData', () => {
     test('should sort and set chapters when Firebase data is non-empty', async () => {
       const chapters = [makeChapter('2', 'Ch 2', 2), makeChapter('1', 'Ch 1', 1)];
       setupFirebaseDataMock({ data: chapters, loading: false, error: null });
-      mockGetData.mockResolvedValue(chapters);
 
       const { result } = renderHook(() => useChapterData());
       await waitFor(() => expect(result.current.chapters.length).toBe(2));
@@ -198,7 +190,6 @@ describe('useChapterData', () => {
     test('clears the list on sign-out, even though the fetched data is still held', async () => {
       const chapters = [makeChapter('1', 'Ch 1', 1), makeChapter('2', 'Ch 2', 2)];
       setupFirebaseDataMock({ data: chapters, loading: false, error: null });
-      mockGetData.mockResolvedValue(chapters);
 
       const { result, rerender } = renderHook(() => useChapterData());
       await waitFor(() => expect(result.current.chapters).toHaveLength(2));
@@ -242,14 +233,11 @@ describe('useChapterData', () => {
     test('a refetch behind chapters already on screen is not loading', async () => {
       const chapters = [makeChapter('chapter-01', 'Prologue', 1)];
       setupFirebaseDataMock({ data: chapters });
-      // The mounting fetch resolves to the same list, so nothing races it
-      // back to empty behind the assertions.
-      mockGetData.mockResolvedValue(chapters);
       const { result, rerender } = renderHook(() => useChapterData());
 
       await waitFor(() => expect(result.current.chapters).toHaveLength(1));
 
-      // The write's refresh: in flight, with the list still on screen.
+      // In flight again, with the list still on screen.
       setupFirebaseDataMock({ data: chapters, loading: true });
       rerender();
 
@@ -267,17 +255,15 @@ describe('useChapterData', () => {
     test('switching campaign empties the list rather than showing the last one', async () => {
       // Otherwise the rule above would keep the previous campaign's chapters
       // on screen -- no longer behind a skeleton -- for the whole window
-      // between the switch and the new fetch resolving.
+      // between the switch and the new listener's first snapshot.
       const chapters = [makeChapter('chapter-01', 'Prologue', 1)];
       setupFirebaseDataMock({ data: chapters });
-      mockGetData.mockResolvedValue(chapters);
       const { result, rerender } = renderHook(() => useChapterData());
 
       await waitFor(() => expect(result.current.chapters).toHaveLength(1));
 
       setupContextMocks('group-1', 'campaign-2');
       setupFirebaseDataMock({ data: [], loading: true });
-      mockGetData.mockResolvedValue([]);
       rerender();
 
       expect(result.current.chapters).toEqual([]);

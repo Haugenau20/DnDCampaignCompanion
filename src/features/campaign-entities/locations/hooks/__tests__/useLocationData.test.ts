@@ -1,4 +1,4 @@
-﻿// src/features/campaign-entities/locations/hooks/__tests__/useLocationData.test.ts
+// src/features/campaign-entities/locations/hooks/__tests__/useLocationData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useLocationData } from '../useLocationData';
 import { Location, LocationType, LocationStatus } from '../../types';
@@ -6,7 +6,7 @@ import { Location, LocationType, LocationStatus } from '../../types';
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
-const mockGetData = jest.fn();
+const mockRetry = jest.fn();
 
 jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: jest.fn(),
@@ -37,7 +37,7 @@ const makeLocation = (id: string, name: string): Location => ({
 
 const setupFirebaseDataMock = (overrides: Record<string, unknown> = {}) => {
   (useFirebaseData as jest.Mock).mockReturnValue({
-    getData: mockGetData,
+    retry: mockRetry,
     loading: false,
     error: null,
     data: [],
@@ -63,7 +63,6 @@ describe('useLocationData', () => {
     jest.clearAllMocks();
     setupContextMocks();
     setupFirebaseDataMock();
-    mockGetData.mockResolvedValue([]);
   });
 
   describe('return shape', () => {
@@ -107,64 +106,61 @@ describe('useLocationData', () => {
     });
   });
 
-  describe('fetchLocations', () => {
-    test('should return empty array when no activeGroupId', async () => {
+  // The list is the listener's latest snapshot, and a refresh is a retry of
+  // the listener rather than a read (T032). These replaced tests that fed the
+  // list through `getData`, which nothing calls any more.
+  describe('listening', () => {
+    test('is empty when no activeGroupId', () => {
       setupContextMocks(null, 'campaign-1');
+      setupFirebaseDataMock({ data: [makeLocation('2', 'Waterdeep'), makeLocation('1', 'Neverwinter')] });
       const { result } = renderHook(() => useLocationData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.locations).toEqual([]);
     });
 
-    test('should return empty array when no activeCampaignId', async () => {
+    test('is empty when no activeCampaignId', () => {
       setupContextMocks('group-1', null);
+      setupFirebaseDataMock({ data: [makeLocation('2', 'Waterdeep'), makeLocation('1', 'Neverwinter')] });
       const { result } = renderHook(() => useLocationData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.locations).toEqual([]);
     });
 
-    test('should set locations from getData result', async () => {
-      const locations = [makeLocation('1', 'Tavern'), makeLocation('2', 'Castle')];
-      mockGetData.mockResolvedValue(locations);
-
+    test('lists the snapshot in the order Firestore returns them', () => {
+      setupFirebaseDataMock({ data: [makeLocation('2', 'Waterdeep'), makeLocation('1', 'Neverwinter')] });
       const { result } = renderHook(() => useLocationData());
-      await waitFor(() => expect(result.current.locations.length).toBe(2));
+      expect(result.current.locations.map((item) => item.name)).toEqual(['Waterdeep', 'Neverwinter']);
+    });
 
+    test('follows a snapshot that empties the collection', () => {
+      setupFirebaseDataMock({ data: [makeLocation('2', 'Waterdeep'), makeLocation('1', 'Neverwinter')] });
+      const { result, rerender } = renderHook(() => useLocationData());
       expect(result.current.locations).toHaveLength(2);
-    });
 
-    test('should handle getData returning null gracefully', async () => {
-      mockGetData.mockResolvedValue(null as any);
-
-      const { result } = renderHook(() => useLocationData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      // The last record was deleted, here or by another player.
+      setupFirebaseDataMock({ data: [] });
+      rerender();
 
       expect(result.current.locations).toEqual([]);
     });
 
-    test('should handle getData errors gracefully', async () => {
-      mockGetData.mockRejectedValue(new Error('Firestore error'));
-
+    test('refreshLocations retries the listener and resolves to the list', async () => {
+      mockRetry.mockResolvedValue([makeLocation('2', 'Waterdeep'), makeLocation('1', 'Neverwinter')]);
       const { result } = renderHook(() => useLocationData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
 
-      const refreshResult = await act(async () => result.current.refreshLocations());
-      expect(refreshResult).toEqual([]);
-    });
-
-    test('should return fetched locations from refreshLocations', async () => {
-      const locations = [makeLocation('1', 'Forest')];
-      mockGetData.mockResolvedValue(locations);
-
-      const { result } = renderHook(() => useLocationData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      let refreshResult: Location[] = [];
+      let refreshed: Location[] = [];
       await act(async () => {
-        refreshResult = await result.current.refreshLocations();
+        refreshed = await result.current.refreshLocations();
       });
 
-      expect(refreshResult).toHaveLength(1);
-      expect(refreshResult[0].name).toBe('Forest');
+      expect(mockRetry).toHaveBeenCalledTimes(1);
+      expect(refreshed.map((item) => item.name)).toEqual(['Waterdeep', 'Neverwinter']);
+    });
+
+    test('refreshLocations leaves the listener alone while no campaign is selected', async () => {
+      setupContextMocks('group-1', null);
+      const { result } = renderHook(() => useLocationData());
+
+      await expect(result.current.refreshLocations()).resolves.toEqual([]);
+      expect(mockRetry).not.toHaveBeenCalled();
     });
   });
 
@@ -172,7 +168,6 @@ describe('useLocationData', () => {
     test('should update locations when Firebase data is non-empty', async () => {
       const locations = [makeLocation('1', 'Keep'), makeLocation('2', 'Harbor')];
       setupFirebaseDataMock({ data: locations, loading: false, error: null });
-      mockGetData.mockResolvedValue(locations);
 
       const { result } = renderHook(() => useLocationData());
       await waitFor(() => expect(result.current.locations.length).toBe(2));
@@ -200,7 +195,6 @@ describe('useLocationData', () => {
     test('clears the list on sign-out, even though the fetched data is still held', async () => {
       const locations = [makeLocation('1', 'Tavern'), makeLocation('2', 'Castle')];
       setupFirebaseDataMock({ data: locations, loading: false, error: null });
-      mockGetData.mockResolvedValue(locations);
 
       const { result, rerender } = renderHook(() => useLocationData());
       await waitFor(() => expect(result.current.locations).toHaveLength(2));
@@ -244,7 +238,6 @@ describe('useLocationData', () => {
     test('a refetch behind records already on screen is not loading', async () => {
       const records = [makeLocation('loc-1', 'Rivendell')];
       setupFirebaseDataMock({ data: records });
-      mockGetData.mockResolvedValue(records);
       const { result, rerender } = renderHook(() => useLocationData());
 
       await waitFor(() => expect(result.current.locations).toHaveLength(1));
@@ -266,14 +259,12 @@ describe('useLocationData', () => {
     test('switching campaign empties the list rather than showing the last one', async () => {
       const records = [makeLocation('loc-1', 'Rivendell')];
       setupFirebaseDataMock({ data: records });
-      mockGetData.mockResolvedValue(records);
       const { result, rerender } = renderHook(() => useLocationData());
 
       await waitFor(() => expect(result.current.locations).toHaveLength(1));
 
       setupContextMocks('group-1', 'campaign-2');
       setupFirebaseDataMock({ data: [], loading: true });
-      mockGetData.mockResolvedValue([]);
       rerender();
 
       expect(result.current.locations).toEqual([]);

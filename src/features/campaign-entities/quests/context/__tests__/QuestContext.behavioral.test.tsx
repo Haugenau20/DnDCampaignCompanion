@@ -1,4 +1,4 @@
-﻿// src/context/__tests__/QuestContext.behavioral.test.tsx
+// src/context/__tests__/QuestContext.behavioral.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
@@ -320,7 +320,8 @@ describe('QuestContext Behavioral Testing', () => {
       expect(Array.isArray(questDataSent.objectives)).toBe(true);
 
       // BEHAVIOR: Should refresh quests after creation
-      expect(mockRefreshQuests).toHaveBeenCalledTimes(1);
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshQuests).not.toHaveBeenCalled();
     });
   });
 
@@ -741,7 +742,8 @@ describe('QuestContext Behavioral Testing', () => {
       // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
 
       // BEHAVIOR: Should refresh quests after update
-      expect(mockRefreshQuests).toHaveBeenCalledTimes(1);
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshQuests).not.toHaveBeenCalled();
     });
   });
 
@@ -755,7 +757,7 @@ describe('QuestContext Behavioral Testing', () => {
       mockRefreshQuests.mockResolvedValue([]);
     });
 
-    test('should delete quest and refresh data', async () => {
+    test('should delete quest without re-reading the collection', async () => {
       renderQuestContext();
 
       await waitFor(() => {
@@ -771,7 +773,8 @@ describe('QuestContext Behavioral Testing', () => {
       expect(mockDeleteData).toHaveBeenCalledWith('test-quest');
 
       // BEHAVIOR: Should refresh quests after deletion
-      expect(mockRefreshQuests).toHaveBeenCalledTimes(1);
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshQuests).not.toHaveBeenCalled();
     });
 
     test('should reject deletion without authentication', async () => {

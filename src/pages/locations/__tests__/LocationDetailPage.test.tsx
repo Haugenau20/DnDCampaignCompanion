@@ -572,7 +572,8 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
         ],
       })
     );
-    await waitFor(() => expect(mockRefreshLocations).toHaveBeenCalled());
+    // The listener carries the write (T032).
+    expect(mockRefreshLocations).not.toHaveBeenCalled();
   });
 
   it('deletes a note only once the delete is confirmed', async () => {

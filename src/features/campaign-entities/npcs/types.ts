@@ -94,12 +94,10 @@ export interface NPCContextValue extends NPCContextState {
   updateNPC: (npc: NPC) => Promise<void>;
   deleteNPC: (npcId: string) => Promise<void>;
   /**
-   * Re-read the NPC collection.
-   *
-   * Exposed so a page can render this provider's copy and still drive a
-   * refresh, rather than mounting a second loader of its own to get one.
-   * Resolves to the refreshed list, or `[]` when there is no group or
-   * campaign selected.
+   * Retry after a failed load: reopens the NPC listener if Firestore closed it
+   * after an error (T032). Writes never need it -- the listener already
+   * carries them -- and a healthy listener answers without a read.
+   * Resolves to the list, or `[]` when there is no group or campaign selected.
    */
   refreshNPCs: () => Promise<NPC[]>;
   /** Whether a group and a campaign are both selected. */

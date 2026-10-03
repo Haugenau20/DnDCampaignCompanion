@@ -1,4 +1,4 @@
-﻿// src/features/storytelling/chapters/context/__tests__/StoryContext.behavioral.test.tsx
+// src/features/storytelling/chapters/context/__tests__/StoryContext.behavioral.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
@@ -1006,7 +1006,8 @@ describe('StoryContext Behavioral Testing', () => {
           ['chapter-02', 2]
         ])
       );
-      expect(mockRefreshChapters).toHaveBeenCalled();
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshChapters).not.toHaveBeenCalled();
     });
 
     test('should not delete any chapter when a reorder write fails partway (bug #017)', async () => {
@@ -1114,7 +1115,8 @@ describe('StoryContext Behavioral Testing', () => {
       // BEHAVIOR: Should delete chapter and reorder remaining ones
       expect(mockDeleteData).toHaveBeenCalledWith('chapter-01');
       expect(mockFirebaseServices.document.setDocument).toHaveBeenCalled(); // For reordering
-      expect(mockRefreshChapters).toHaveBeenCalled();
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshChapters).not.toHaveBeenCalled();
     });
 
     test('should reject deletion for non-existent chapter', async () => {

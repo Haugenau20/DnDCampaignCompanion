@@ -122,6 +122,7 @@ export interface LocationContextValue extends LocationContextState {
   moveLocation: (locationId: string, nextParentId: string | undefined) => Promise<void>;
   deleteLocation: (locationId: string, childStrategy?: LocationChildStrategy) => Promise<void>;
   createLocation: (locationData: DomainData<Location>) => Promise<string>;
+  /** Retry after a failed load: reopens the listener if it failed (T032). Writes never need it. */
   refreshLocations: () => Promise<Location[]>;
   hasRequiredContext: boolean;
 }

@@ -292,16 +292,16 @@ describe("NPCsPage", () => {
       expect(refreshNPCs).not.toHaveBeenCalled();
     });
 
-    test("a directory delete still refreshes the provider's copy", () => {
-      // The directory's Delete button never calls the provider's `deleteNPC`,
-      // so nothing else refreshes after it.
+    test("a directory delete does not re-read the collection", () => {
+      // The page renders the provider's listener copy (T032), which follows
+      // every change without being asked.
       const refreshNPCs = jest.fn();
       mockNPCData = { ...mockNPCData, npcs: [], refreshNPCs };
 
       renderPage();
       screen.getByTestId("npc-directory-delete").click();
 
-      expect(refreshNPCs).toHaveBeenCalledTimes(1);
+      expect(refreshNPCs).not.toHaveBeenCalled();
     });
   });
 });

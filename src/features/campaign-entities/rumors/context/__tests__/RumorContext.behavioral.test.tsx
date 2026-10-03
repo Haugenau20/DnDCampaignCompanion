@@ -1,4 +1,4 @@
-﻿// src/features/campaign-entities/rumors/context/__tests__/RumorContext.behavioral.test.tsx
+// src/features/campaign-entities/rumors/context/__tests__/RumorContext.behavioral.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
@@ -820,7 +820,8 @@ describe('RumorContext Behavioral Testing', () => {
 
       // BEHAVIOR: Should delete rumor from database
       expect(mockDeleteData).toHaveBeenCalledWith('test-rumor');
-      expect(mockRefreshRumors).toHaveBeenCalled();
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshRumors).not.toHaveBeenCalled();
     });
   });
 

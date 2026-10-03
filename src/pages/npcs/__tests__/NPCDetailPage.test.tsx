@@ -840,15 +840,17 @@ describe("NPCDetailPage", () => {
       );
     });
 
-    it("re-reads the record after writing, so the page shows what was written", async () => {
+    it("does not re-read the record after writing", async () => {
       renderPage();
       const field = openEditor();
       fireEvent.change(field, { target: { value: "Changed." } });
       fireEvent.click(screen.getByText("Save description"));
 
-      // Not an optimistic patch of local state: the refetch is what makes a
-      // concurrent edit by another player visible.
-      await waitFor(() => expect(mockRefreshNPCs).toHaveBeenCalled());
+      // Not an optimistic patch of local state either: the page renders the
+      // listener's copy (T032), which carries this write and any other
+      // player's, so a re-read would only repeat it.
+      await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
+      expect(mockRefreshNPCs).not.toHaveBeenCalled();
     });
 
     it("says the save took, in words", async () => {
@@ -1127,11 +1129,13 @@ describe("NPCDetailPage", () => {
       expect(Object.keys(note).sort()).toEqual(["date", "text"]);
     });
 
-    it("re-reads the record after writing", async () => {
+    it("does not re-read the record after writing", async () => {
       renderPage();
       fireEvent.change(composer(), { target: { value: "Met the Balrog." } });
       fireEvent.click(screen.getByText("Add note"));
-      await waitFor(() => expect(mockRefreshNPCs).toHaveBeenCalled());
+      await waitFor(() => expect(mockUpdateNPCNote).toHaveBeenCalled());
+      // The listener carries the write (T032).
+      expect(mockRefreshNPCs).not.toHaveBeenCalled();
     });
 
     it("empties itself after a note lands, ready for the next one", async () => {
@@ -1185,7 +1189,8 @@ describe("NPCDetailPage", () => {
         { date: "2025-05-31", text: "Rode to Orthanc.", author: "Zendikarr" },
         { date: "2025-04-02", text: "An older note, no author recorded." },
       ]);
-      await waitFor(() => expect(mockRefreshNPCs).toHaveBeenCalled());
+      // The listener carries the write (T032).
+      expect(mockRefreshNPCs).not.toHaveBeenCalled();
     });
 
     it("deletes a note only once the delete is confirmed", async () => {
@@ -1598,13 +1603,14 @@ describe("NPCDetailPage", () => {
       expect(mockImageOptions.prefix).toBeNull();
     });
 
-    it("saves the portrait onto this NPC and re-reads it", async () => {
+    it("saves the portrait onto this NPC without re-reading it", async () => {
       renderPage();
 
       await act(() => mockImageOptions.save(portrait));
 
       expect(mockUpdateNPC).toHaveBeenCalledWith({ ...fullNPC, image: portrait });
-      expect(mockRefreshNPCs).toHaveBeenCalled();
+      // The listener carries the write (T032).
+      expect(mockRefreshNPCs).not.toHaveBeenCalled();
     });
 
     it("clears the portrait by saving null", async () => {

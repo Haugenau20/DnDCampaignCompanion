@@ -180,6 +180,48 @@ describe('useFirebaseData with subscribeTo', () => {
     await expect(result.current.getData()).resolves.toEqual([]);
   });
 
+  test('retry reopens a listener that failed, and resolves with its first snapshot', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { result } = renderSubscribed(PATH_A);
+    act(() => listeners[0].fail(new Error('unavailable')));
+
+    let answered: Item[] | undefined;
+    act(() => {
+      void result.current.retry().then(documents => {
+        answered = documents;
+      });
+    });
+
+    // Firestore closes a failed listener; the page's Retry is the only way
+    // back, so it must open a new one rather than answer from the failure.
+    expect(listeners).toHaveLength(2);
+    expect(listeners[1].path).toBe(PATH_A);
+    expect(result.current.error).toBeNull();
+
+    await act(async () => listeners[1].emit([{ id: '1', name: 'Bilbo' }]));
+    expect(answered).toEqual([{ id: '1', name: 'Bilbo' }]);
+    expect(result.current.data).toEqual([{ id: '1', name: 'Bilbo' }]);
+  });
+
+  test('retry on a healthy listener opens nothing and reads nothing', async () => {
+    const { result } = renderSubscribed(PATH_A);
+    act(() => listeners[0].emit([{ id: '1', name: 'Bilbo' }]));
+
+    await expect(result.current.retry()).resolves.toEqual([{ id: '1', name: 'Bilbo' }]);
+    expect(listeners).toHaveLength(1);
+    expect(mockGetCollection).not.toHaveBeenCalled();
+  });
+
+  test('after a path change, data holds nothing of the old path before the new snapshot', () => {
+    const { result, rerender } = renderSubscribed(PATH_A);
+    act(() => listeners[0].emit([{ id: '1', name: 'Bilbo' }]));
+
+    rerender({ path: PATH_B });
+
+    // Campaign B's page must never list campaign A's records, even briefly.
+    expect(result.current.data).toEqual([]);
+  });
+
   test('a write leaves data to the listener rather than adding the record twice', async () => {
     const { result } = renderSubscribed(PATH_A);
     act(() => listeners[0].emit([]));

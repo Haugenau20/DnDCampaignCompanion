@@ -1,104 +1,25 @@
 // src/features/storytelling/chapters/hooks/useChapterData.ts
-import { useState, useEffect, useCallback } from 'react';
 import { Chapter } from '../types';
-import { useFirebaseData } from 'shared/hooks/useFirebaseData';
-import { campaignCollectionPath } from 'core/services/firebase/data/campaignCollectionPath';
-import { useAuth, useGroups, useCampaigns } from 'features/user-management';
-import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
+import { useCampaignCollection } from 'shared/hooks/useCampaignCollection';
+
+/** In reading order. */
+const byOrder = (chapters: Chapter[]): Chapter[] =>
+  [...chapters].sort((a, b) => a.order - b.order);
 
 /**
- * Hook for managing chapter data fetching and state with proper group/campaign context
- * @returns Object containing chapters data, loading state, error state, and refresh function
+ * The active campaign's chapters, kept current by a Firestore listener (T032).
+ * See `useCampaignCollection` for how the list, `loading` and the refresh behave.
+ * @returns The chapters, loading and error state, a retry, and the campaign context status
  */
 export const useChapterData = () => {
-  const [chapters, setChapters] = useState<Chapter[]>([]);
-  const { user } = useAuth();
-  const { activeGroupId } = useGroups();
-  const { activeCampaignId } = useCampaigns();
-  // A listener on the active campaign's collection (T032), or none while
-  // signed out or unscoped. The list follows every change, a player's own
-  // writes included, so the refresh each write ends with reads nothing.
-  const { getData, loading, error, data } = useFirebaseData<Chapter>({
-    collection: 'chapters',
-    subscribeTo: campaignCollectionPath(Boolean(user), activeGroupId, activeCampaignId, 'chapters')
-  });
-  const { isResolving, hasRequiredContext } = useCampaignContextStatus();
-
-  /**
-   * Fetch chapters from Firebase with appropriate group/campaign context
-   */
-  const fetchChapters = useCallback(async () => {
-    try {
-      if (!activeGroupId) {
-        setChapters([]);
-        return [];
-      }
-      
-      if (!activeCampaignId) {
-        // If group is selected but no campaign, return empty array
-        setChapters([]);
-        return [];
-      }
-      
-      const data = await getData();
-      // Sort chapters by order number
-      const sortedChapters = data.sort((a, b) => a.order - b.order);
-      setChapters(sortedChapters);
-      return sortedChapters;
-    } catch (err) {
-      console.error('Error fetching chapters:', err);
-      setChapters([]);
-      return [];
-    }
-  }, [getData, activeGroupId, activeCampaignId]);
-
-  // Load chapters on mount and when group/campaign changes
-  useEffect(() => {
-    fetchChapters();
-  }, [fetchChapters, activeGroupId, activeCampaignId]);
-
-  /*
-    Switching campaign must not leave the previous campaign's chapters on
-    screen while the new ones load. `loading` below stops counting once there
-    is something to show, so the list is emptied the moment the context it
-    belongs to changes -- otherwise the window between the switch and the
-    fetch resolving would show one campaign's story under another campaign's
-    name.
-  */
-  useEffect(() => {
-    setChapters([]);
-  }, [activeGroupId, activeCampaignId]);
-
-  // Update chapters when Firebase data changes.
-  //
-  // Signed out, or no group/campaign selected, is checked FIRST and returns:
-  // `data` may still hold the previous user's or previous campaign's records,
-  // until the listener above has closed and emptied it a render later, and stale
-  // records must never outrank "you are signed out".
-  useEffect(() => {
-    if (!user || !activeGroupId || !activeCampaignId) {
-      setChapters([]);
-      return;
-    }
-
-    if (data.length > 0) {
-      // Sort chapters by order number
-      const sortedChapters = [...data].sort((a, b) => a.order - b.order);
-      setChapters(sortedChapters);
-    }
-  }, [data, user, activeGroupId, activeCampaignId]);
+  const { items, loading, error, refresh, hasRequiredContext } =
+    useCampaignCollection<Chapter>('chapters', byOrder);
 
   return {
-    chapters,
-    // `loading` means "there is nothing to show yet", never "a fetch is in
-    // flight" (T044) -- every chapter write ends in `refreshChapters()`, and a
-    // gate fed the raw flag swaps the page for its skeleton on every save.
-    // `useQuestData` carries the full reasoning. The `isResolving` half
-    // (bug #1413) stays unconditional -- see useNPCData's identical fold in
-    // campaign-entities for why this can't just be `useGroups().loading`.
-    loading: (Boolean(loading) && chapters.length === 0) || isResolving,
+    chapters: items,
+    loading,
     error,
-    refreshChapters: fetchChapters,
+    refreshChapters: refresh,
     hasRequiredContext
   };
 };

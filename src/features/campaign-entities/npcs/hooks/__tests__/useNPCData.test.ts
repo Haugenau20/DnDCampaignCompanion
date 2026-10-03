@@ -1,4 +1,4 @@
-﻿// src/features/campaign-entities/npcs/hooks/__tests__/useNPCData.test.ts
+// src/features/campaign-entities/npcs/hooks/__tests__/useNPCData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useNPCData } from '../useNPCData';
 import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs/types';
@@ -6,7 +6,7 @@ import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
-const mockGetData = jest.fn();
+const mockRetry = jest.fn();
 
 jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: jest.fn(),
@@ -36,7 +36,7 @@ const makeNPC = (id: string, name: string): NPC => ({
 
 const setupFirebaseDataMock = (overrides: Record<string, unknown> = {}) => {
   (useFirebaseData as jest.Mock).mockReturnValue({
-    getData: mockGetData,
+    retry: mockRetry,
     loading: false,
     error: null,
     data: [],
@@ -63,7 +63,6 @@ describe('useNPCData', () => {
     jest.clearAllMocks();
     setupContextMocks();
     setupFirebaseDataMock();
-    mockGetData.mockResolvedValue([]);
   });
 
   // -------------------------------------------------------------------------
@@ -114,69 +113,61 @@ describe('useNPCData', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // fetchNPCs / refreshNPCs
-  // -------------------------------------------------------------------------
-  describe('fetchNPCs', () => {
-    test('should return empty array and not call getData when no activeGroupId', async () => {
+  // The list is the listener's latest snapshot, and a refresh is a retry of
+  // the listener rather than a read (T032). These replaced tests that fed the
+  // list through `getData`, which nothing calls any more.
+  describe('listening', () => {
+    test('is empty when no activeGroupId', () => {
       setupContextMocks(null, 'campaign-1');
-
+      setupFirebaseDataMock({ data: [makeNPC('3', 'Zara'), makeNPC('1', 'Aelindra'), makeNPC('2', 'Mira')] });
       const { result } = renderHook(() => useNPCData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
       expect(result.current.npcs).toEqual([]);
     });
 
-    test('should return empty array and not call getData when no activeCampaignId', async () => {
+    test('is empty when no activeCampaignId', () => {
       setupContextMocks('group-1', null);
-
+      setupFirebaseDataMock({ data: [makeNPC('3', 'Zara'), makeNPC('1', 'Aelindra'), makeNPC('2', 'Mira')] });
       const { result } = renderHook(() => useNPCData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.npcs).toEqual([]);
+    });
+
+    test('lists the snapshot alphabetically by name', () => {
+      setupFirebaseDataMock({ data: [makeNPC('3', 'Zara'), makeNPC('1', 'Aelindra'), makeNPC('2', 'Mira')] });
+      const { result } = renderHook(() => useNPCData());
+      expect(result.current.npcs.map((item) => item.name)).toEqual(['Aelindra', 'Mira', 'Zara']);
+    });
+
+    test('follows a snapshot that empties the collection', () => {
+      setupFirebaseDataMock({ data: [makeNPC('3', 'Zara'), makeNPC('1', 'Aelindra'), makeNPC('2', 'Mira')] });
+      const { result, rerender } = renderHook(() => useNPCData());
+      expect(result.current.npcs).toHaveLength(3);
+
+      // The last record was deleted, here or by another player.
+      setupFirebaseDataMock({ data: [] });
+      rerender();
 
       expect(result.current.npcs).toEqual([]);
     });
 
-    test('should sort NPCs alphabetically by name', async () => {
-      const npcs = [
-        makeNPC('3', 'Zara'),
-        makeNPC('1', 'Aelindra'),
-        makeNPC('2', 'Mira'),
-      ];
-      mockGetData.mockResolvedValue(npcs);
-
+    test('refreshNPCs retries the listener and resolves to the list', async () => {
+      mockRetry.mockResolvedValue([makeNPC('3', 'Zara'), makeNPC('1', 'Aelindra'), makeNPC('2', 'Mira')]);
       const { result } = renderHook(() => useNPCData());
-      await waitFor(() => expect(result.current.npcs.length).toBeGreaterThan(0));
 
-      expect(result.current.npcs[0].name).toBe('Aelindra');
-      expect(result.current.npcs[1].name).toBe('Mira');
-      expect(result.current.npcs[2].name).toBe('Zara');
-    });
-
-    test('should return sorted npcs from refreshNPCs', async () => {
-      const npcs = [makeNPC('2', 'Zara'), makeNPC('1', 'Aelindra')];
-      mockGetData.mockResolvedValue(npcs);
-
-      const { result } = renderHook(() => useNPCData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      let refreshResult: NPC[] = [];
+      let refreshed: NPC[] = [];
       await act(async () => {
-        refreshResult = await result.current.refreshNPCs();
+        refreshed = await result.current.refreshNPCs();
       });
 
-      expect(refreshResult[0].name).toBe('Aelindra');
-      expect(refreshResult[1].name).toBe('Zara');
+      expect(mockRetry).toHaveBeenCalledTimes(1);
+      expect(refreshed.map((item) => item.name)).toEqual(['Aelindra', 'Mira', 'Zara']);
     });
 
-    test('should handle getData errors gracefully and return empty array', async () => {
-      mockGetData.mockRejectedValue(new Error('Firebase error'));
-
+    test('refreshNPCs leaves the listener alone while no campaign is selected', async () => {
+      setupContextMocks('group-1', null);
       const { result } = renderHook(() => useNPCData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
 
-      const refreshResult = await act(async () => result.current.refreshNPCs());
-      expect(refreshResult).toEqual([]);
-      expect(result.current.npcs).toEqual([]);
+      await expect(result.current.refreshNPCs()).resolves.toEqual([]);
+      expect(mockRetry).not.toHaveBeenCalled();
     });
   });
 
@@ -186,10 +177,7 @@ describe('useNPCData', () => {
   describe('data synchronization', () => {
     test('should update npcs when Firebase data changes and data is non-empty', async () => {
       const npcs = [makeNPC('1', 'Aelindra'), makeNPC('2', 'Mira')];
-      // The hook reads `data` from useFirebaseData AND calls getData() manually.
-      // We need to set both: the data array and the getData return value.
       setupFirebaseDataMock({ data: npcs, loading: false, error: null });
-      mockGetData.mockResolvedValue(npcs);
 
       const { result } = renderHook(() => useNPCData());
       await waitFor(() => expect(result.current.npcs.length).toBe(2));
@@ -218,7 +206,6 @@ describe('useNPCData', () => {
     test('clears the list on sign-out, even though the fetched data is still held', async () => {
       const npcs = [makeNPC('1', 'Aelindra'), makeNPC('2', 'Mira')];
       setupFirebaseDataMock({ data: npcs, loading: false, error: null });
-      mockGetData.mockResolvedValue(npcs);
 
       const { result, rerender } = renderHook(() => useNPCData());
       await waitFor(() => expect(result.current.npcs).toHaveLength(2));
@@ -318,7 +305,6 @@ describe('useNPCData', () => {
     test('a refetch behind records already on screen is not loading', async () => {
       const records = [makeNPC('npc-1', 'Aragorn')];
       setupFirebaseDataMock({ data: records });
-      mockGetData.mockResolvedValue(records);
       const { result, rerender } = renderHook(() => useNPCData());
 
       await waitFor(() => expect(result.current.npcs).toHaveLength(1));
@@ -340,14 +326,12 @@ describe('useNPCData', () => {
     test('switching campaign empties the list rather than showing the last one', async () => {
       const records = [makeNPC('npc-1', 'Aragorn')];
       setupFirebaseDataMock({ data: records });
-      mockGetData.mockResolvedValue(records);
       const { result, rerender } = renderHook(() => useNPCData());
 
       await waitFor(() => expect(result.current.npcs).toHaveLength(1));
 
       setupContextMocks('group-1', 'campaign-2');
       setupFirebaseDataMock({ data: [], loading: true });
-      mockGetData.mockResolvedValue([]);
       rerender();
 
       expect(result.current.npcs).toEqual([]);

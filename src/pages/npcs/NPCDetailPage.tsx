@@ -476,15 +476,13 @@ const NPCDetailPage: React.FC = () => {
   );
 
   /**
-   * Both writes end by re-reading this page's own store rather than patching
-   * state locally. That is what makes the page show what was *written* instead
-   * of what was typed: if another player changed the same record first, the
-   * refetch is where that becomes visible.
+   * Nothing is patched locally after a write: the page shows the listener's
+   * copy (T032), so it shows what was *written* rather than what was typed,
+   * and another player's change to the same record arrives the same way.
    */
   const save = async (patch: Partial<NPC>) => {
     if (!npc) return;
     await updateNPC({ ...npc, ...patch });
-    await refreshNPCs();
   };
 
   const portrait = useImageAttachment({
@@ -560,7 +558,6 @@ const NPCDetailPage: React.FC = () => {
           ...rumor,
           relatedNPCs: Array.from(new Set([...(rumor.relatedNPCs ?? []), npc.id])),
         });
-        await refreshNPCs();
         break;
       }
     }
@@ -585,7 +582,6 @@ const NPCDetailPage: React.FC = () => {
         ...rumor,
         relatedNPCs: rumor.relatedNPCs.filter((existing) => existing !== npc.id),
       });
-      await refreshNPCs();
       return;
     }
 
@@ -611,7 +607,6 @@ const NPCDetailPage: React.FC = () => {
       text,
       ...(author ? { author } : {}),
     });
-    await refreshNPCs();
   };
 
   /**

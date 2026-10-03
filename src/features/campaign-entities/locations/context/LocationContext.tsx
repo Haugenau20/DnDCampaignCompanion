@@ -1,5 +1,5 @@
 // src/features/campaign-entities/locations/context/LocationContext.tsx
-import React, { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { Location, LocationStatus, LocationContextValue, LocationNote, LocationChildStrategy } from '../types';
 import { descendantIdsDeepestFirst, wouldCreateCycle } from '../utils/location-tree';
 import { DomainData } from 'core/types/common';
@@ -10,14 +10,13 @@ import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-managem
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { discardImage } from 'shared/hooks/useImageAttachment';
 
-// Custom event for location changes (deletion, update, etc.)
-export const LOCATION_CHANGED_EVENT = 'location-data-changed';
-
 const LocationContext = createContext<LocationContextValue | undefined>(undefined);
 
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { locations: initialLocations, loading, error, refreshLocations, hasRequiredContext } = useLocationData();
-  const [locations, setLocations] = useState<Location[]>(initialLocations);
+  // The list follows a Firestore listener (T032), which delivers this
+  // client's own writes before their promises resolve -- so nothing below
+  // patches it after a write, or asks for a re-read.
+  const { locations, loading, error, refreshLocations, hasRequiredContext } = useLocationData();
   const { user } = useAuth();
   const { userProfile } = useUser();
   const { activeGroupId } = useGroups();
@@ -30,29 +29,6 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     collection: 'locations',
     autoFetch: false
   });
-
-  // Update locations when initialLocations changes
-  useEffect(() => {
-    setLocations(initialLocations);
-  }, [initialLocations]);
-
-  // Add listener for the custom event
-  useEffect(() => {
-    const handleLocationChanged = () => {
-      refreshLocations();
-    };
-
-    window.addEventListener(LOCATION_CHANGED_EVENT, handleLocationChanged);
-    return () => {
-      window.removeEventListener(LOCATION_CHANGED_EVENT, handleLocationChanged);
-    };
-  }, [refreshLocations]);
-
-  // Dispatch location changed event
-  const dispatchLocationChangedEvent = useCallback(() => {
-    const event = new CustomEvent(LOCATION_CHANGED_EVENT);
-    window.dispatchEvent(event);
-  }, []);
 
   // Get location by ID
   const getLocationById = useCallback((id: string) => {
@@ -97,17 +73,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     await updateData(locationId, updatedData);
-    
-    // Optimistically update the local state
-    setLocations(prevLocations => 
-      prevLocations.map(loc => 
-        loc.id === locationId ? { ...loc, ...updatedData } : loc
-      )
-    );
-    
-    // Trigger refresh of locations
-    dispatchLocationChangedEvent();
-  }, [user, activeGroupId, activeCampaignId, getLocationById, updateData, dispatchLocationChangedEvent]);
+  }, [user, activeGroupId, activeCampaignId, getLocationById, updateData]);
 
   // Update location note
   const updateLocationNote = useCallback(async (locationId: string, note: LocationNote): Promise<void> => {
@@ -132,17 +98,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     await updateData(locationId, updatedLocation);
-    
-    // Optimistically update the local state
-    setLocations(prevLocations => 
-      prevLocations.map(loc => 
-        loc.id === locationId ? updatedLocation : loc
-      )
-    );
-    
-    // Trigger refresh of locations
-    dispatchLocationChangedEvent();
-  }, [user, userProfile, activeGroupId, activeCampaignId, getLocationById, updateData, dispatchLocationChangedEvent]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, getLocationById, updateData]);
 
   // Update location status
   const updateLocationStatus = useCallback(async (locationId: string, status: LocationStatus): Promise<void> => {
@@ -161,17 +117,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     await updateData(locationId, updatedLocation);
-    
-    // Optimistically update the local state
-    setLocations(prevLocations => 
-      prevLocations.map(loc => 
-        loc.id === locationId ? updatedLocation : loc
-      )
-    );
-    
-    // Trigger refresh of locations
-    dispatchLocationChangedEvent();
-  }, [user, activeGroupId, activeCampaignId, getLocationById, updateData, dispatchLocationChangedEvent]);
+  }, [user, activeGroupId, activeCampaignId, getLocationById, updateData]);
 
   /**
    * Move a location under a new parent.
@@ -251,16 +197,6 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await deleteData(locationId);
       // After the document: a failure can then only orphan the file.
       if (location.image) discardImage(location.image.path);
-
-      setLocations(prevLocations =>
-        prevLocations
-          .filter(loc => loc.id !== locationId)
-          .map(loc =>
-            loc.parentId === locationId ? { ...loc, parentId: grandparentId } : loc
-          )
-      );
-
-      dispatchLocationChangedEvent();
       return;
     }
 
@@ -286,25 +222,14 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const image = getLocationById(id)?.image;
       if (image) discardImage(image.path);
     }
+  }, [user, activeGroupId, activeCampaignId, getLocationById, locations, deleteData, updateData]);
 
-    // Optimistically update local state by removing deleted locations
-    setLocations(prevLocations =>
-      prevLocations.filter(loc =>
-        loc.id !== locationId && !childrenIds.includes(loc.id)
-      )
-    );
-
-    // Also trigger a full refresh to ensure data consistency
-    dispatchLocationChangedEvent();
-  }, [user, activeGroupId, activeCampaignId, getLocationById, locations, deleteData, updateData, dispatchLocationChangedEvent]);
-
-  // Ids issued during this session but not yet reflected in `locations`
-  // (local state). Two locations can be created back-to-back within a single
-  // `act()` / event handler before the first create's `setLocations` update
-  // has committed and re-rendered this provider -- a collision check against
-  // `getLocationById` alone would miss that first id and silently let the
-  // second create overwrite it. This ref is the second source of truth
-  // `isTaken` below consults, alongside already-loaded/local state.
+  // Ids issued during this session but not yet reflected in `locations`. Two
+  // locations can be created back-to-back within a single `act()` / event
+  // handler before the first create has re-rendered this provider -- a
+  // collision check against `getLocationById` alone would miss that first id
+  // and silently let the second create overwrite it. This ref is the second
+  // source of truth `isTaken` below consults, alongside the loaded list.
   const issuedIds = useRef<Set<string>>(new Set());
 
   // Create a new location
@@ -313,35 +238,18 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('User must be authenticated and group/campaign context must be set to create a location');
     }
 
-    // `addData` itself no longer needs a full Location (see DomainData in
-    // core/types/common.ts), but this same object is also appended directly to
-    // this context's own `locations` state below, which IS what renders --
-    // unlike the dead `data` state inside useFirebaseData's addData. `Location[]`
-    // requires the full BaseContent attribution fields, which this optimistic
-    // entry genuinely does not have until the next refresh, so the cast stays
-    // load-bearing here (pre-existing behaviour, not introduced by this change).
-    const buildLocation = (candidateId: string) => ({
-      ...locationData,
-      id: candidateId
-    } as Location);
-
     // Generate a location ID from the name, disambiguating on collision --
-    // including with a location another session wrote since our last refresh
-    // (#1402).
+    // including with a location another session wrote that the listener has
+    // not delivered yet (#1402).
     const locationId = await createWithUniqueEntityId({
       name: locationData.name,
       issuedIds: issuedIds.current,
       isLoaded: (candidateId) => Boolean(getLocationById(candidateId)),
-      write: (candidateId) => addData(buildLocation(candidateId), candidateId)
+      write: (candidateId) => addData({ ...locationData, id: candidateId }, candidateId)
     });
-    const newLocation = buildLocation(locationId);
-
-    setLocations(prevLocations => [...prevLocations, newLocation]);
-
-    dispatchLocationChangedEvent();
 
     return locationId;
-  }, [user, activeGroupId, activeCampaignId, getLocationById, addData, dispatchLocationChangedEvent]);
+  }, [user, activeGroupId, activeCampaignId, getLocationById, addData]);
 
   const value: LocationContextValue = {
     locations,

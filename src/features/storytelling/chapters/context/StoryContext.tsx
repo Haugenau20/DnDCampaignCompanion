@@ -96,7 +96,6 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     chapters, 
     loading: chaptersLoading, 
     error: chaptersError, 
-    refreshChapters,
     hasRequiredContext
   } = useChapterData();
   
@@ -380,16 +379,12 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         throw new Error('Chapter not found');
       }
       
-      // Refresh chapters to ensure we have latest data
-      await refreshChapters();
-      
       // First, handle the simple case - no order change
       if (updates.order === undefined || updates.order === chapter.order) {
         await updateData(chapterId, {
           ...updates,
           ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile })
         });
-        await refreshChapters();
         return;
       }
       
@@ -512,15 +507,12 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
 
-      // Refresh chapters to get updated state
-      await refreshChapters();
-      
       console.log('Chapter order change completed successfully');
     } catch (error) {
       console.error('Failed to update chapter order:', error);
       throw error;
     }
-  }, [updateData, refreshChapters, chapters, getChapterById, user, activeGroupUserProfile, deleteData, hasRequiredContext]);
+  }, [updateData, chapters, getChapterById, user, activeGroupUserProfile, deleteData, hasRequiredContext]);
 
   // Safer method for creating a new chapter with proper ordering
   const createChapter = useCallback(async (chapterData: DomainData<Chapter>) => {
@@ -533,9 +525,6 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     try {
-      // Refresh chapters to ensure we have latest data
-      await refreshChapters();
-
       const newOrder = chapterData.order ?? (chapters.length > 0
         ? Math.max(...chapters.map(c => c.order)) + 1
         : 1);
@@ -610,16 +599,13 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         throw new Error('Failed to create new chapter');
       }
       
-      // Refresh chapters
-      await refreshChapters();
-      
       console.log('New chapter created successfully');
       return chapterId;
     } catch (error) {
       console.error('Failed to create chapter:', error);
       throw error;
     }
-  }, [refreshChapters, chapters, user, deleteData, hasRequiredContext]);
+  }, [chapters, user, deleteData, hasRequiredContext]);
 
   // Safer method for deleting a chapter
   const deleteChapter = useCallback(async (chapterId: string) => {
@@ -632,9 +618,6 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     try {
-      // Refresh chapters to ensure we have latest data
-      await refreshChapters();
-      
       const chapter = getChapterById(chapterId);
       if (!chapter) {
         throw new Error('Chapter not found');
@@ -684,15 +667,12 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         await deleteData(oldId);
       }
 
-      // Refresh chapters
-      await refreshChapters();
-
       console.log('Chapter deleted successfully');
     } catch (error) {
       console.error('Failed to delete chapter:', error);
       throw error;
     }
-  }, [deleteData, refreshChapters, getChapterById, chapters, user, hasRequiredContext]);
+  }, [deleteData, getChapterById, chapters, user, hasRequiredContext]);
 
   // Reorder chapters to ensure consistent numbering
   const reorderChapters = useCallback(async () => {
@@ -740,14 +720,11 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           await deleteData(chapter.id);
         }
       }
-      
-      // Refresh chapters
-      await refreshChapters();
     } catch (error) {
       console.error('Failed to reorder chapters:', error);
       throw error;
     }
-  }, [chapters, refreshChapters, user, deleteData, hasRequiredContext]);
+  }, [chapters, user, deleteData, hasRequiredContext]);
 
   // `isLoading` means "there is nothing to show yet" (T044), so it is exactly
   // `useChapterData`'s `loading` -- which already stops counting a refetch

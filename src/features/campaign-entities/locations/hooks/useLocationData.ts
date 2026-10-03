@@ -1,103 +1,24 @@
 // src/features/campaign-entities/locations/hooks/useLocationData.ts
-import { useState, useEffect, useCallback } from 'react';
 import { Location } from '../types';
-import { useFirebaseData } from 'shared/hooks/useFirebaseData';
-import { campaignCollectionPath } from 'core/services/firebase/data/campaignCollectionPath';
-import { useAuth, useGroups, useCampaigns } from 'features/user-management';
-import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
+import { useCampaignCollection } from 'shared/hooks/useCampaignCollection';
+
+/** Locations are shown in the order Firestore returns them. */
+const asStored = (locations: Location[]): Location[] => locations;
 
 /**
- * Hook for managing location data fetching and state with proper group/campaign context
- * @returns Object containing locations data, loading state, error state, and refresh function
+ * The active campaign's locations, kept current by a Firestore listener (T032).
+ * See `useCampaignCollection` for how the list, `loading` and the refresh behave.
+ * @returns The locations, loading and error state, a retry, and the campaign context status
  */
 export const useLocationData = () => {
-  const [locations, setLocations] = useState<Location[]>([]);
-  const { user } = useAuth();
-  const { activeGroupId } = useGroups();
-  const { activeCampaignId } = useCampaigns();
-  // A listener on the active campaign's collection (T032), or none while
-  // signed out or unscoped. The list follows every change, a player's own
-  // writes included, so the refresh each write ends with reads nothing.
-  const { getData, loading, error, data } = useFirebaseData<Location>({
-    collection: 'locations',
-    subscribeTo: campaignCollectionPath(Boolean(user), activeGroupId, activeCampaignId, 'locations')
-  });
-  const { isResolving, hasRequiredContext, missingContext } = useCampaignContextStatus();
-
-  /**
-   * Fetch locations from Firebase with appropriate group/campaign context
-   */
-  const fetchLocations = useCallback(async () => {
-    try {
-      if (!activeGroupId) {
-        setLocations([]);
-        return [];
-      }
-      
-      if (!activeCampaignId) {
-        // If group is selected but no campaign, return empty array or show guidance
-        setLocations([]);
-        return [];
-      }
-      
-      const data = await getData();
-      setLocations(data || []);
-      return data || [];
-    } catch (err) {
-      console.error('Error fetching locations:', err);
-      setLocations([]);
-      return [];
-    }
-  }, [getData, activeGroupId, activeCampaignId]);
-
-  // Load locations on mount and when group/campaign changes
-  useEffect(() => {
-    fetchLocations();
-  }, [fetchLocations, activeGroupId, activeCampaignId]);
-
-  /*
-    Switching campaign must not leave the previous campaign's locations on
-    screen while the new ones load -- `loading` above stops counting once
-    there is something to show, so the list is emptied the moment the
-    context it belongs to changes.
-  */
-  useEffect(() => {
-    setLocations([]);
-  }, [activeGroupId, activeCampaignId]);
-
-  // Update locations when Firebase data changes.
-  //
-  // Signed out, or no group/campaign selected, is checked FIRST and returns:
-  // `data` may still hold the previous user's or previous campaign's records,
-  // until the listener above has closed and emptied it a render later, and stale
-  // records must never outrank "you are signed out".
-  useEffect(() => {
-    if (!user || !activeGroupId || !activeCampaignId) {
-      setLocations([]);
-      return;
-    }
-
-    if (data.length > 0) {
-      setLocations(data);
-    }
-  }, [data, user, activeGroupId, activeCampaignId]);
+  const { items, loading, error, refresh, hasRequiredContext, missingContext } =
+    useCampaignCollection<Location>('locations', asStored);
 
   return {
-    locations,
-    /*
-      `loading` means **"there is nothing to show yet"**, never "a fetch is in
-      flight" -- see `useQuestData` for the measurement behind that. The
-      in-flight flag only counts while there is nothing on screen, so the
-      refresh every write ends with happens behind content someone is
-      already reading instead of unmounting it.
-
-      Folds in `isResolving` (bug #1413) unconditionally, since while auth
-      and the campaign are still restoring, the list is empty for a
-      reason no reader can distinguish from "none recorded".
-    */
-    loading: (Boolean(loading) && locations.length === 0) || isResolving,
+    locations: items,
+    loading,
     error,
-    refreshLocations: fetchLocations,
+    refreshLocations: refresh,
     hasRequiredContext,
     missingContext
   };

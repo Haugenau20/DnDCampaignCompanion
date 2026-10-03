@@ -1,4 +1,4 @@
-﻿// src/features/campaign-entities/npcs/context/__tests__/NPCContext.notes.test.tsx
+// src/features/campaign-entities/npcs/context/__tests__/NPCContext.notes.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
@@ -166,7 +166,8 @@ describe('NPCContext Note Management Behavior', () => {
       // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
 
       // BEHAVIOR: Should refresh NPCs after note addition
-      expect(mockRefreshNPCs).toHaveBeenCalledTimes(1);
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshNPCs).not.toHaveBeenCalled();
     });
 
     test('should add multiple notes to NPC', async () => {

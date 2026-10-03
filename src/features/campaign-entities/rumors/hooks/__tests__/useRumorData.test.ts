@@ -1,4 +1,4 @@
-﻿// src/features/campaign-entities/rumors/hooks/__tests__/useRumorData.test.ts
+// src/features/campaign-entities/rumors/hooks/__tests__/useRumorData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useRumorData } from '../useRumorData';
 import { Rumor, RumorStatus, SourceType } from '../../types';
@@ -6,7 +6,7 @@ import { Rumor, RumorStatus, SourceType } from '../../types';
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
-const mockGetData = jest.fn();
+const mockRetry = jest.fn();
 
 jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: jest.fn(),
@@ -38,7 +38,7 @@ const makeRumor = (id: string, title: string): Rumor => ({
 
 const setupFirebaseDataMock = (overrides: Record<string, unknown> = {}) => {
   (useFirebaseData as jest.Mock).mockReturnValue({
-    getData: mockGetData,
+    retry: mockRetry,
     loading: false,
     error: null,
     data: [],
@@ -64,7 +64,6 @@ describe('useRumorData', () => {
     jest.clearAllMocks();
     setupContextMocks();
     setupFirebaseDataMock();
-    mockGetData.mockResolvedValue([]);
   });
 
   describe('return shape', () => {
@@ -108,62 +107,61 @@ describe('useRumorData', () => {
     });
   });
 
-  describe('fetchRumors', () => {
-    test('should return empty array when no activeGroupId', async () => {
+  // The list is the listener's latest snapshot, and a refresh is a retry of
+  // the listener rather than a read (T032). These replaced tests that fed the
+  // list through `getData`, which nothing calls any more.
+  describe('listening', () => {
+    test('is empty when no activeGroupId', () => {
       setupContextMocks(null, 'campaign-1');
+      setupFirebaseDataMock({ data: [makeRumor('2', 'Lost ship'), makeRumor('1', 'Dragon spotted')] });
       const { result } = renderHook(() => useRumorData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.rumors).toEqual([]);
     });
 
-    test('should return empty array when no activeCampaignId', async () => {
+    test('is empty when no activeCampaignId', () => {
       setupContextMocks('group-1', null);
+      setupFirebaseDataMock({ data: [makeRumor('2', 'Lost ship'), makeRumor('1', 'Dragon spotted')] });
       const { result } = renderHook(() => useRumorData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.rumors).toEqual([]);
     });
 
-    test('should set rumors from getData result', async () => {
-      const rumors = [makeRumor('1', 'Dragon spotted'), makeRumor('2', 'Lost ship')];
-      mockGetData.mockResolvedValue(rumors);
-
+    test('lists the snapshot in the order Firestore returns them', () => {
+      setupFirebaseDataMock({ data: [makeRumor('2', 'Lost ship'), makeRumor('1', 'Dragon spotted')] });
       const { result } = renderHook(() => useRumorData());
-      await waitFor(() => expect(result.current.rumors.length).toBe(2));
+      expect(result.current.rumors.map((item) => item.title)).toEqual(['Lost ship', 'Dragon spotted']);
     });
 
-    test('should return fetched rumors from refreshRumors', async () => {
-      const rumors = [makeRumor('1', 'Strange lights in the forest')];
-      mockGetData.mockResolvedValue(rumors);
+    test('follows a snapshot that empties the collection', () => {
+      setupFirebaseDataMock({ data: [makeRumor('2', 'Lost ship'), makeRumor('1', 'Dragon spotted')] });
+      const { result, rerender } = renderHook(() => useRumorData());
+      expect(result.current.rumors).toHaveLength(2);
 
+      // The last record was deleted, here or by another player.
+      setupFirebaseDataMock({ data: [] });
+      rerender();
+
+      expect(result.current.rumors).toEqual([]);
+    });
+
+    test('refreshRumors retries the listener and resolves to the list', async () => {
+      mockRetry.mockResolvedValue([makeRumor('2', 'Lost ship'), makeRumor('1', 'Dragon spotted')]);
       const { result } = renderHook(() => useRumorData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
 
-      let refreshResult: Rumor[] = [];
+      let refreshed: Rumor[] = [];
       await act(async () => {
-        refreshResult = await result.current.refreshRumors();
+        refreshed = await result.current.refreshRumors();
       });
 
-      expect(refreshResult).toHaveLength(1);
-      expect(refreshResult[0].title).toBe('Strange lights in the forest');
+      expect(mockRetry).toHaveBeenCalledTimes(1);
+      expect(refreshed.map((item) => item.title)).toEqual(['Lost ship', 'Dragon spotted']);
     });
 
-    test('should handle getData returning null gracefully', async () => {
-      mockGetData.mockResolvedValue(null as any);
-
+    test('refreshRumors leaves the listener alone while no campaign is selected', async () => {
+      setupContextMocks('group-1', null);
       const { result } = renderHook(() => useRumorData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
 
-      expect(result.current.rumors).toEqual([]);
-    });
-
-    test('should handle getData errors gracefully', async () => {
-      mockGetData.mockRejectedValue(new Error('Firestore error'));
-
-      const { result } = renderHook(() => useRumorData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      const refreshResult = await act(async () => result.current.refreshRumors());
-      expect(refreshResult).toEqual([]);
+      await expect(result.current.refreshRumors()).resolves.toEqual([]);
+      expect(mockRetry).not.toHaveBeenCalled();
     });
   });
 
@@ -171,7 +169,6 @@ describe('useRumorData', () => {
     test('should update rumors when Firebase data is non-empty', async () => {
       const rumors = [makeRumor('1', 'Rumor A'), makeRumor('2', 'Rumor B')];
       setupFirebaseDataMock({ data: rumors, loading: false, error: null });
-      mockGetData.mockResolvedValue(rumors);
 
       const { result } = renderHook(() => useRumorData());
       await waitFor(() => expect(result.current.rumors.length).toBe(2));
@@ -196,7 +193,6 @@ describe('useRumorData', () => {
     test('clears the list on sign-out, even though the fetched data is still held', async () => {
       const rumors = [makeRumor('1', 'Dragon spotted'), makeRumor('2', 'Lost ship')];
       setupFirebaseDataMock({ data: rumors, loading: false, error: null });
-      mockGetData.mockResolvedValue(rumors);
 
       const { result, rerender } = renderHook(() => useRumorData());
       await waitFor(() => expect(result.current.rumors).toHaveLength(2));
@@ -240,7 +236,6 @@ describe('useRumorData', () => {
     test('a refetch behind records already on screen is not loading', async () => {
       const records = [makeRumor('rumor-1', 'Dwarves in Moria')];
       setupFirebaseDataMock({ data: records });
-      mockGetData.mockResolvedValue(records);
       const { result, rerender } = renderHook(() => useRumorData());
 
       await waitFor(() => expect(result.current.rumors).toHaveLength(1));
@@ -262,14 +257,12 @@ describe('useRumorData', () => {
     test('switching campaign empties the list rather than showing the last one', async () => {
       const records = [makeRumor('rumor-1', 'Dwarves in Moria')];
       setupFirebaseDataMock({ data: records });
-      mockGetData.mockResolvedValue(records);
       const { result, rerender } = renderHook(() => useRumorData());
 
       await waitFor(() => expect(result.current.rumors).toHaveLength(1));
 
       setupContextMocks('group-1', 'campaign-2');
       setupFirebaseDataMock({ data: [], loading: true });
-      mockGetData.mockResolvedValue([]);
       rerender();
 
       expect(result.current.rumors).toEqual([]);

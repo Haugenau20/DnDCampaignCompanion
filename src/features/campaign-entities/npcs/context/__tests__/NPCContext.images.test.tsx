@@ -122,6 +122,7 @@ describe('deleting an NPC', () => {
     });
 
     expect(error).toBeUndefined();
-    expect(mockRefreshNPCs).toHaveBeenCalled();
+    // The listener carries the write (T032): nothing re-reads the collection.
+    expect(mockRefreshNPCs).not.toHaveBeenCalled();
   });
 });

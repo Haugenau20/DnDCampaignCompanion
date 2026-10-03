@@ -1,11 +1,8 @@
 // src/features/campaign-entities/quests/hooks/useQuestData.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Quest } from '../types';
 import { normaliseObjectives } from '../utils/quest-objectives';
-import { useFirebaseData } from 'shared/hooks/useFirebaseData';
-import { campaignCollectionPath } from 'core/services/firebase/data/campaignCollectionPath';
-import { useAuth, useGroups, useCampaigns } from 'features/user-management';
-import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
+import { useCampaignCollection } from 'shared/hooks/useCampaignCollection';
 
 /**
  * Make a batch of stored quests safe to render.
@@ -14,104 +11,25 @@ import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus'
  * quest converted from a note before T050 already holds them, and one is
  * enough to crash `QuestDirectory`'s search on `obj.description.toLowerCase()`.
  * Coercing on read makes existing data safe without waiting for an edit; the
- * next write through `writeObjectives` persists the repair.
- *
- * **Both paths, deliberately.** Quests reach state two ways -- the explicit
- * `fetchQuests` below, and the effect that mirrors `useFirebaseData`'s `data`
- * -- and normalising only the first left the defect fully live, because the
- * effect is what the directory renders from on a warm load. That is the same
- * two-paths mistake the entity-loader consolidation was about, and it was
- * invisible to the suites: they mock `useFirebaseData`, so the effect never
- * runs. Found in Chrome, on a seeded pre-fix document.
+ * next write through `writeObjectives` persists the repair. Every snapshot
+ * passes through here, so there is no second path for a bare string to slip
+ * through (found in Chrome, when there were two).
  */
-const readable = (quests: Quest[] | null | undefined): Quest[] =>
-  (quests || []).map((quest) => ({
+const readable = (quests: Quest[]): Quest[] =>
+  quests.map((quest) => ({
     ...quest,
     objectives: normaliseObjectives(quest.objectives),
   }));
 
 /**
- * Hook for managing Quest data fetching and state with proper group/campaign context
- * @returns Object containing Quests data, loading state, error state, and refresh function
+ * The active campaign's quests, kept current by a Firestore listener (T032).
+ * See `useCampaignCollection` for how the list, `loading` and the refresh behave.
+ * @returns The quests, loading and error state, a lookup by id, a retry, and
+ *   the campaign context status
  */
 export const useQuestData = () => {
-  const [quests, setQuests] = useState<Quest[]>([]);
-  const { user } = useAuth();
-  const { activeGroupId } = useGroups();
-  const { activeCampaignId } = useCampaigns();
-  // A listener on the active campaign's collection (T032), or none while
-  // signed out or unscoped. The list follows every change, a player's own
-  // writes included, so the refresh each write ends with reads nothing.
-  const { getData, loading, error, data } = useFirebaseData<Quest>({
-    collection: 'quests',
-    subscribeTo: campaignCollectionPath(Boolean(user), activeGroupId, activeCampaignId, 'quests')
-  });
-  const { isResolving, hasRequiredContext, missingContext } = useCampaignContextStatus();
-
-  /**
-   * Fetch Quests from Firebase with appropriate group/campaign context
-   */
-  const fetchQuests = useCallback(async () => {
-    try {
-      if (!activeGroupId) {
-        setQuests([]);
-        return [];
-      }
-      
-      if (!activeCampaignId) {
-        // If group is selected but no campaign, return empty array
-        setQuests([]);
-        return [];
-      }
-      
-      const data = await getData();
-      const quests = readable(data);
-      setQuests(quests);
-      return quests;
-    } catch (err) {
-      console.error('Error fetching quests:', err);
-      setQuests([]);
-      return [];
-    }
-  }, [getData, activeGroupId, activeCampaignId]);
-
-  // Load quests on mount and when group/campaign changes
-  useEffect(() => {
-    fetchQuests();
-  }, [fetchQuests, activeGroupId, activeCampaignId]);
-
-  /*
-    Switching campaign must not leave the previous campaign's quests on
-    screen while the new ones load. `loading` above stops counting once there
-    is something to show, so the list is emptied the moment the context it
-    belongs to changes -- otherwise the window between the switch and the
-    fetch resolving would show one campaign's records under another
-    campaign's name.
-  */
-  useEffect(() => {
-    setQuests([]);
-  }, [activeGroupId, activeCampaignId]);
-
-  // Update quests when Firebase data changes.
-  //
-  // Signed out, or no group/campaign selected, is checked FIRST and returns:
-  // `data` may still hold the previous user's or previous campaign's records,
-  // until the listener above has closed and emptied it a render later, and stale
-  // records must never outrank "you are signed out".
-  useEffect(() => {
-    if (!user || !activeGroupId || !activeCampaignId) {
-      setQuests([]);
-      return;
-    }
-
-    if (data.length > 0) {
-      // `readable` here too. This is the second way quests reach state and it
-      // is the one the directory actually renders from on a warm load -- the
-      // browser found that out, because jsdom mocks `useFirebaseData` and
-      // never exercises this effect at all.
-      setQuests(readable(data));
-    }
-  }, [data, user, activeGroupId, activeCampaignId]);
+  const { items: quests, loading, error, refresh, hasRequiredContext, missingContext } =
+    useCampaignCollection<Quest>('quests', readable);
 
   /**
    * Get a quest by ID
@@ -122,30 +40,10 @@ export const useQuestData = () => {
 
   return {
     quests,
-    /*
-      `loading` means **"there is nothing to show yet"**, never "a fetch is in
-      flight". `useFirebaseData` cannot tell the two apart -- it raises the
-      same flag for the first read and for the refresh that every write in
-      this app ends with -- and a consumer that passes this straight to a
-      gate therefore swaps its content for a skeleton on every save.
-      Measured in Chrome on `/quests`: ticking an objective in an open row
-      unmounted the directory and closed the row under the cursor, while the
-      write itself succeeded.
-
-      So the in-flight flag only counts while there is nothing on screen. A
-      refetch behind content someone is already reading is invisible, which
-      is what it should always have been.
-
-      Folds in `isResolving` (bug #1413) -- see `useCampaignContextStatus`
-      for why this can't just be `useGroups().loading`. That half is
-      unconditional: while auth and the campaign are still restoring, the list
-      is empty for a reason the reader has no way to distinguish from "none
-      recorded".
-    */
-    loading: (Boolean(loading) && quests.length === 0) || isResolving,
+    loading,
     error,
     getQuestById,
-    refreshQuests: fetchQuests,
+    refreshQuests: refresh,
     hasRequiredContext,
     missingContext
   };

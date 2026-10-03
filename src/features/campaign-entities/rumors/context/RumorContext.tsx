@@ -12,7 +12,7 @@ import { rumorParagraph } from '../utils/rumor-title';
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 
 export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { rumors, loading, error, refreshRumors } = useRumorData();
+  const { rumors, loading, error } = useRumorData();
   // This second `useFirebaseData` instance is the one whose writes (addData/updateData/
   // deleteData) can actually fail; its `error` is renamed on destructure (`writeError`)
   // because the read instance above already binds the name `error`. Previously this
@@ -82,8 +82,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     await updateData(rumorId, updatedRumor);
-    refreshRumors();
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData, refreshRumors]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData]);
 
   // Update rumor note
   const updateRumorNote = useCallback(async (rumorId: string, note: DomainData<RumorNote> & IdentifiableContent) => {
@@ -111,13 +110,12 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     await updateData(rumorId, updatedRumor);
-    refreshRumors();
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData, refreshRumors]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData]);
 
   // Ids issued during this session but not yet reflected in `rumors` (loaded
   // state). Two rumors can be created back-to-back within a single `act()` /
-  // event handler before the first create's write has round-tripped through
-  // `refreshRumors()` and re-rendered this provider -- a collision check
+  // event handler before the first create's write has come back through
+  // the listener and re-rendered this provider -- a collision check
   // against `getRumorById` alone would miss that first id and silently let
   // the second create overwrite it. This ref is the second source of truth
   // `isTaken` below consults, alongside already-loaded data. Shared across
@@ -154,7 +152,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
 
     // Generate ID from title, disambiguating on collision -- including with a
-    // rumor another session wrote since our last refresh (#1402) -- and add the
+    // rumor another session wrote that the listener has not delivered yet (#1402) -- and add the
     // document with the explicit ID
     const id = await createWithUniqueEntityId({
       name: rumorData.title,
@@ -162,9 +160,8 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isLoaded: isRumorLoaded,
       write: (candidateId) => addData(buildRumor(candidateId), candidateId)
     });
-    refreshRumors();
     return id;
-  }, [user, userProfile, activeGroupUserProfile, addData, refreshRumors, isRumorLoaded]);
+  }, [user, userProfile, activeGroupUserProfile, addData, isRumorLoaded]);
 
   // Update existing rumor
   const updateRumor = useCallback(async (rumor: Rumor) => {
@@ -180,8 +177,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     await updateData(rumor.id, updatedRumor);
-    refreshRumors();
-  }, [user, userProfile, activeGroupUserProfile, updateData, refreshRumors]);
+  }, [user, userProfile, activeGroupUserProfile, updateData]);
 
   // Delete rumor
   const deleteRumor = useCallback(async (rumorId: string) => {
@@ -190,8 +186,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     await deleteData(rumorId);
-    refreshRumors();
-  }, [user, deleteData, refreshRumors]);
+  }, [user, deleteData]);
 
   // Combine multiple rumors into one
   const combineRumors = useCallback(async (rumorIds: string[], newRumorData: Partial<Rumor>) => {
@@ -253,7 +248,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
 
     // Generate ID from title, disambiguating on collision -- including with a
-    // rumor another session wrote since our last refresh (#1402) -- and add the
+    // rumor another session wrote that the listener has not delivered yet (#1402) -- and add the
     // new combined rumor with the explicit ID
     const id = await createWithUniqueEntityId({
       name: title,
@@ -288,9 +283,8 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     }
 
-    refreshRumors();
     return id;
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, addData, updateData, refreshRumors, isRumorLoaded]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, addData, updateData, isRumorLoaded]);
 
   // Convert rumors to quest
   const convertToQuest = useCallback(async (rumorIds: string[], questData: any) => {
@@ -349,9 +343,8 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     }
 
-    refreshRumors();
     return questId;
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData, createDocument, refreshRumors]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData, createDocument]);
 
   const value: RumorContextValue = {
     rumors,

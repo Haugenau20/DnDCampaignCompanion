@@ -50,7 +50,9 @@ interface UseFirebaseDataOptions<T> {
    * first snapshot for the current path has not arrived yet.
    *
    * `loading` is true until that first snapshot. Changing the path closes the
-   * old listener and opens the new one; `null` empties `data`.
+   * old listener and opens the new one, and `data` holds nothing until the new
+   * path's first snapshot -- never the previous path's records; `null` empties
+   * it. A failed listener stays closed until `retry()` reopens it.
    *
    * The write methods do not touch `data` in this mode: the listener already
    * carries the write, and appending it as well would show it twice.
@@ -59,6 +61,9 @@ interface UseFirebaseDataOptions<T> {
   subscribeTo?: string | null;
 }
 
+/** One shared empty list, so an unscoped instance's `data` keeps its identity across renders. */
+const EMPTY: never[] = [];
+
 export function useFirebaseData<T extends Record<string, any>>(
   options: UseFirebaseDataOptions<T>
 ) {
@@ -66,6 +71,12 @@ export function useFirebaseData<T extends Record<string, any>>(
   const subscribeTo = options.subscribeTo ?? null;
   const autoFetch = !subscribing && (options.autoFetch ?? true);
   const [data, setData] = useState<T[]>([]);
+  // Subscription mode: the path `data` was delivered for. `data` is only
+  // returned while it matches the current path, so a campaign switch can
+  // never show the previous campaign's records under the new one's name.
+  const [dataPath, setDataPath] = useState<string | null>(null);
+  // Bumped by `retry()` to reopen a listener Firestore closed after an error.
+  const [attempt, setAttempt] = useState(0);
   // A write-only instance has nothing in flight on mount, so it must not claim
   // to be loading -- that flag would otherwise stay `true` for this instance's
   // entire life and lie to any future consumer.
@@ -112,6 +123,7 @@ export function useFirebaseData<T extends Record<string, any>>(
       subscribeTo,
       (documents) => {
         setData(documents);
+        setDataPath(subscribeTo);
         setLoading(false);
         publishSnapshot(documents);
       },
@@ -121,13 +133,14 @@ export function useFirebaseData<T extends Record<string, any>>(
         console.error(`Error listening to ${subscribeTo}:`, err.message);
         setError(err.message || 'Failed to fetch data');
         setData([]);
+        setDataPath(subscribeTo);
         setLoading(false);
         publishSnapshot([]);
       }
     );
 
     return unsubscribe;
-  }, [subscribing, subscribeTo, subscribeToCollection, publishSnapshot]);
+  }, [subscribing, subscribeTo, subscribeToCollection, publishSnapshot, attempt]);
 
   const getData = useCallback(async () => {
     if (subscribing) {
@@ -155,6 +168,22 @@ export function useFirebaseData<T extends Record<string, any>>(
       setLoading(false);
     }
   }, [subscribing, options.collection, getCollection]);
+
+  /**
+   * Try again after a failure.
+   *
+   * In listener mode this reopens the listener when Firestore has closed it
+   * after an error, and resolves with its first snapshot; a listener that is
+   * healthy is left alone and answers from its latest snapshot -- no read
+   * either way unless the listener had failed. In fetch mode it refetches.
+   */
+  const retry = useCallback(async () => {
+    if (subscribing && subscribeTo !== null && error !== null) {
+      latestSnapshot.current = undefined;
+      setAttempt(previous => previous + 1);
+    }
+    return getData();
+  }, [subscribing, subscribeTo, error, getData]);
 
   // Fetch data on mount -- unless this instance is write-only.
   useEffect(() => {
@@ -279,10 +308,11 @@ export function useFirebaseData<T extends Record<string, any>>(
   }, [subscribing, options.collection, deleteDocument]);
 
   return {
-    data,
+    data: subscribing && dataPath !== subscribeTo ? EMPTY : data,
     loading,
     error,
     getData,
+    retry,
     addData,
     updateData,
     deleteData,
