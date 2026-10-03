@@ -49,7 +49,7 @@ function Show-Help {
     Write-Host ""
     Write-Host "Prerequisites:" -ForegroundColor Cyan
     Write-Host "  1. Start the development environment first:"
-    Write-Host "     .\manage-environment.ps1 -Environment dev -Action start"
+    Write-Host "     .\start-dev.ps1 -Action start"
     Write-Host ""
     Write-Host "  2. Or manually start Firebase emulators:"
     Write-Host "     cd firebase && firebase emulators:start --config firebase.emulators.json"
@@ -71,7 +71,7 @@ function Generate-SampleData {
         Write-Host "Firebase Emulators are not running." -ForegroundColor Red
         Write-Host ""
         Write-Host "Please start them with one of these methods:" -ForegroundColor Yellow
-        Write-Host "  Option 1 (Recommended): .\manage-environment.ps1 -Environment dev -Action start" -ForegroundColor Cyan
+        Write-Host "  Option 1 (Recommended): .\start-dev.ps1 -Action start" -ForegroundColor Cyan
         Write-Host "  Option 2 (Manual): cd firebase && firebase emulators:start --config firebase.emulators.json" -ForegroundColor Cyan
         return
     }
@@ -94,7 +94,7 @@ function Generate-SampleData {
         Write-Host "Failed to generate sample data: $_" -ForegroundColor Red
         Write-Host ""
         Write-Host "Common fixes:" -ForegroundColor Yellow
-        Write-Host "  1. Ensure emulators are running: .\manage-environment.ps1 -Environment dev -Action status" -ForegroundColor Cyan
+        Write-Host "  1. Ensure emulators are running: .\start-dev.ps1 -Action status" -ForegroundColor Cyan
         Write-Host "  2. Check if TypeScript dependencies are installed: npm install" -ForegroundColor Cyan
         Write-Host "  3. Verify .env.development file exists" -ForegroundColor Cyan
     }
@@ -110,7 +110,7 @@ function Export-EmulatorData {
 
     if (-not (Test-EmulatorsRunning)) {
         Write-Host "Firebase Emulators are not running. Cannot export data." -ForegroundColor Red
-        Write-Host "Please start them first: .\manage-environment.ps1 -Environment dev -Action start" -ForegroundColor Yellow
+        Write-Host "Please start them first: .\start-dev.ps1 -Action start" -ForegroundColor Yellow
         return
     }
 

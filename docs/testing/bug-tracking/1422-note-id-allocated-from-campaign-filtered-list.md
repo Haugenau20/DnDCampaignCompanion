@@ -19,7 +19,7 @@ DATA / CRUD
 
 Browser walkthrough on the local dev server, 2026-08-28, while exercising the
 notes → AI entity extraction path that
-`docs/testing/post-test-coverage-roadmap.md` lists as never exercised. The extraction feature was
+`docs/testing/post-test-coverage-roadmap.md` (deleted; `git show 06fc957:docs/testing/post-test-coverage-roadmap.md`) lists as never exercised. The extraction feature was
 not itself at fault: it auto-saves before analysing, and that save is what failed.
 
 ## Affected Files

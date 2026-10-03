@@ -31,7 +31,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; decided 2026-10-02 to move to Vite, plan first |
 | low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
-| low | T067 | Repo carries files nobody reads | M | open | Scoped 2026-10-02: delete uncited docs and dead code; TODO.md becomes "start here" |
+| low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T075 | Header crowded, text truncates | M | needs scoping | Name, logo and the <380px overflow; waits on T076 |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 
@@ -481,38 +481,24 @@ its own service account, read from the GitHub secret
   purpose. PR previews share production's functions and deploy none.
 - **Source**: maintainer, 2026-09-25; the deploy job 2026-09-28
 
----
+### T079 — Do old documents still lack `locationId`?
+**Type** debt · **Size** S · **Status** needs investigation · **Verified** 2026-10-03
 
-## Documentation debt
+NPCs and quests refer to a location by `locationId`. Documents written
+before that field existed carry only the free-text `location`, and still
+resolve through a legacy fallback (`resolveLocationName` and
+`referencesLocation` in `locations/utils/location-display.ts`). The field
+shipped without a migration (`d6d9847`): such a document gains an id the next
+time anyone edits it.
 
-### T067 — The repository carries files nobody reads
-**Type** docs · **Size** M · **Status** open · **Verified** 2026-09-24
-
-**Decided (maintainer, 2026-10-02)**:
-1. **Delete what nothing cites; keep what is cited, where it is.** A doc that
-   no code comment or live doc references is deleted (git history keeps it). A
-   cited handoff stays at its current path, so no reference breaks. Nothing is
-   moved to `docs/archive/`.
-2. **Dead scripts go too**: `scripts/copyFeatureFiles.ps1`, which lists
-   pre-restructure paths. (The dead admin views and `FloatingUsageIndicator`
-   were already deleted, 2026-10-01.)
-3. **`TODO.md` is the one "start here" file.** Point `CLAUDE.md` at it, fold
-   anything still live in `post-test-coverage-roadmap.md` into it, and delete
-   the roadmap (after checking what cites it).
-
-The maintainer wants the repo cleaned up, doc files especially.
-
-- **Measured**: 208 Markdown files under `docs/`: `testing/` 109, `design/` 59,
-  `superpowers/` 21, and a few each in `architecture/`, `project/` and `performance/`.
-  `CLAUDE.md` still names `docs/testing/post-test-coverage-roadmap.md` as
-  "start here", and it was last updated 2026-08-28 (it still warns about deploy
-  steps TODO.md shows were done since).
-- **Scripts**: `scripts/copyFeatureFiles.ps1` lists pre-restructure paths;
-  `scripts/manage-environment.ps1` is Docker-based and unused.
-- **Catch**: `docker/` is *not* dead. `CLAUDE.md` calls it unused, but CI builds
-  the frontend with `docker/Dockerfile.frontend.prod`. And many docs are phase
-  handoffs that code comments cite by name, so deleting one breaks references.
-- **Source**: todo.txt, 2026-09-24; scoped 2026-10-02
+- **Answer first**: how many documents **in production** still have no
+  `locationId`. Not the emulator: its imported data can be arbitrarily old.
+  `src/utils/__dev__/normalizeChapterDateModified.ts` is a working template
+  for an audit / migrate / revert pass.
+- **Then**: none left, and the fallback can go; some left, and either backfill
+  them or keep the fallback on purpose.
+- **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
+  was deleted
 
 ---
 

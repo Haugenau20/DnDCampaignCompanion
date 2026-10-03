@@ -114,7 +114,7 @@ this test failed for exactly that reason and looked like a failing fix.
 Phase 3e's audits traced imports of the Firebase barrel exhaustively and correctly. `index.tsx` was
 invisible to all of them, because it does not reference the barrel — it referenced something that
 referenced it, and depended on what that import *did*. This is the same family as the `user-utils.ts`
-trap recorded in `docs/testing/post-test-coverage-roadmap.md` (a scan for references *to* a moved
+trap recorded in `docs/testing/post-test-coverage-roadmap.md` (deleted; `git show 06fc957:docs/testing/post-test-coverage-roadmap.md`) (a scan for references *to* a moved
 file never sees that file's *own* dependencies), one level further out.
 
 When removing a module-scope side effect, the question is not "who imports this?" but **"what
