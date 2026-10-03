@@ -1,0 +1,10 @@
+PASS ../../tmp/pass3-ai/usage-feedback.test.js
+  ✓ a healthy tab stays gated after its daily allowance naturally resets (104 ms)
+  ✓ an ordinary failed model request leaves displayed usage unchanged and unrefreshed (32 ms)
+  ✓ a configured zero daily allowance is displayed as ten while scanning is disabled (18 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        0.958 s, estimated 1 s
+Ran all test suites matching /\/tmp\/pass3-ai\/usage-feedback.test.js/i.

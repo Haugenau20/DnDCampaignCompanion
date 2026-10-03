@@ -1,8 +1,9 @@
 # Code review records — 2026-10-03
 
-Status: first- and second-pass results delivered. Security, data integrity,
+Status: first-, second- and third-pass results delivered. Security, data integrity,
 uploaded-image, functional, React state, performance and test-quality reviews
-are complete within their documented scopes. The auth specialist was stopped
+are complete within their documented scopes, together with duplication,
+architecture, accessibility, AI integration and operations. The auth specialist was stopped
 at the maintainer's request and its retained report is explicitly partial.
 
 This directory holds the review plan, specialist reports, verification evidence,
@@ -27,10 +28,14 @@ Cross-reference those records rather than copying their contents as new findings
   protection gaps and fix order, supplementing the first pass.
 - [pass-2/README.md](pass-2/README.md): second-pass specialist reports,
   verification and diagnostic evidence.
+- [pass-3/summary.md](pass-3/summary.md): 16 additional findings, duplication
+  and architecture maintenance recommendations, and fix order.
+- [pass-3/README.md](pass-3/README.md): five third-pass specialist reports,
+  verification and diagnostic evidence, stacked on PR #197.
 
 Store subsequent pass reports here with their own baseline and summary. The
-remaining architecture/duplication, accessibility, external-AI integration and
-operations angles have not run. This directory is an assessment record;
+architecture/duplication, accessibility, external-AI integration and operations
+angles are recorded in pass 3. This directory is an assessment record;
 it contains no implemented application fixes or changes to the backlog.
 
 ## Specialist report structure
