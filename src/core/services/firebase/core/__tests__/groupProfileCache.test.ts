@@ -174,6 +174,26 @@ describe('group profile cache', () => {
     expect(lastStampedUsername()).toBe('Strider');
   });
 
+  test('names shown beside content come from the cache: one read for many lookups (PERF-09)', async () => {
+    const users = UserService.getInstance();
+    await users.getCachedGroupUserProfile('g1', 'uid-1');
+    const again = await users.getCachedGroupUserProfile('g1', 'uid-1');
+    await create();
+
+    expect(profileReads()).toBe(1);
+    expect(again?.username).toBe('Aragorn');
+    expect(again?.userId).toBe('uid-1');
+  });
+
+  test('a display lookup after a profile edit sees the edit', async () => {
+    const users = UserService.getInstance();
+    await users.getCachedGroupUserProfile('g1', 'uid-1');
+    mockGetDoc.mockResolvedValue(profileSnapshot('Strider'));
+    await users.updateGroupUserProfile('g1', 'uid-1', { username: 'Strider' } as any);
+
+    expect((await users.getCachedGroupUserProfile('g1', 'uid-1'))?.username).toBe('Strider');
+  });
+
   test('a user with no profile in the group still cannot write', async () => {
     mockGetDoc.mockResolvedValue({ exists: () => false, data: () => undefined, id: 'uid-1' });
     jest.spyOn(console, 'error').mockImplementation(() => undefined);

@@ -91,6 +91,21 @@ import {
       
       return null;
     }
+
+    /**
+     * A user's profile in a group for display only -- a name beside some
+     * content -- from the services' cache when it was read in the last few
+     * minutes (T032, `PERF-09`). Never for decisions: those use
+     * `getGroupUserProfile`, which always reads.
+     *
+     * @param groupId ID of the group
+     * @param userId ID of the user
+     * @returns Group-specific user profile or null if not found
+     */
+    public async getCachedGroupUserProfile(groupId: string, userId: string): Promise<GroupUserProfile | null> {
+      const profile = await this.cachedGroupProfile(groupId, userId);
+      return profile ? ({ ...profile, userId } as GroupUserProfile) : null;
+    }
   
     /**
      * Update a user's profile in a specific group
