@@ -59,6 +59,7 @@ const { useNPCs } = require('features/campaign-entities/npcs/context/NPCContext'
 
 // `15-3` puts stance on the row, using the mutation the context already had.
 const mockUpdateNPCRelationship = jest.fn().mockResolvedValue(undefined);
+const mockDeleteNPC = jest.fn().mockResolvedValue(undefined);
 const { useAuth } = require('@/features/user-management');
 
 function setupMocks(
@@ -76,7 +77,7 @@ function setupMocks(
   });
   (useNPCs as jest.Mock).mockReturnValue({
     updateNPCNote: jest.fn().mockResolvedValue(undefined),
-    deleteNPC: jest.fn().mockResolvedValue(undefined),
+    deleteNPC: mockDeleteNPC,
     updateNPCRelationship: mockUpdateNPCRelationship,
   });
 }
@@ -605,10 +606,50 @@ describe('NPCDirectory', () => {
       await waitFor(() => expect(onNPCUpdate).toHaveBeenCalled());
     });
 
-    test('should propagate onNPCDelete callback to parent when NPC is deleted', () => {
+    // T078: Delete used to hide the row and write nothing, so the NPC came
+    // back on the next change. It now deletes, after the shared confirmation.
+    const pressDelete = () => {
+      fireEvent.click(screen.getByRole('button', { name: /Expand Aldric/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    };
+
+    test('Delete asks before deleting anything', () => {
+      render(<NPCDirectory npcs={[aldric]} />);
+      pressDelete();
+
+      expect(screen.getByRole('heading', { name: /Delete “Aldric”\?/ })).toBeInTheDocument();
+      expect(mockDeleteNPC).not.toHaveBeenCalled();
+    });
+
+    test('confirming deletes the NPC through the provider, then tells the parent', async () => {
       const onNPCDelete = jest.fn();
       render(<NPCDirectory npcs={[aldric]} onNPCDelete={onNPCDelete} />);
+      pressDelete();
+      fireEvent.click(screen.getByRole('button', { name: 'Delete NPC' }));
+
+      await waitFor(() => expect(mockDeleteNPC).toHaveBeenCalledWith(aldric.id));
+      await waitFor(() => expect(onNPCDelete).toHaveBeenCalledWith(aldric.id));
+      expect(screen.queryByRole('heading', { name: /Delete “Aldric”\?/ })).not.toBeInTheDocument();
+    });
+
+    test('cancelling deletes nothing and keeps the row', () => {
+      render(<NPCDirectory npcs={[aldric]} />);
+      pressDelete();
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(mockDeleteNPC).not.toHaveBeenCalled();
       expect(screen.getByText('Aldric')).toBeInTheDocument();
+    });
+
+    test('a failed delete stays in the dialog, and the row stays', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      mockDeleteNPC.mockRejectedValueOnce(new Error('Missing or insufficient permissions.'));
+      render(<NPCDirectory npcs={[aldric]} />);
+      pressDelete();
+      fireEvent.click(screen.getByRole('button', { name: 'Delete NPC' }));
+
+      expect(await screen.findByText('Missing or insufficient permissions.')).toBeInTheDocument();
+      expect(screen.getAllByText('Aldric').length).toBeGreaterThan(0);
     });
   });
 
